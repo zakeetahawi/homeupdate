@@ -348,9 +348,9 @@
                                 <i class="fas fa-eye me-1"></i>
                                 عرض بيانات العميل
                             </a>
-                            <a href="{% url 'orders:order_create' %}?customer={{ existing_customer.pk }}" class="btn btn-success btn-sm">
-                                <i class="fas fa-plus me-1"></i>
-                                إنشاء طلب جديد
+                            <a href="{% url 'orders:wizard_start' %}?customer_id={{ existing_customer.pk }}" class="btn btn-success btn-sm">
+                                <i class="fas fa-magic me-1"></i>
+                                إنشاء طلب إلكتروني
                             </a>
                             <button type="button" class="btn btn-secondary btn-sm" onclick="hideDuplicateAlert()">
                                 <i class="fas fa-times me-1"></i>

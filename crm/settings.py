@@ -483,7 +483,7 @@ CACHES = {
             },
             'IGNORE_EXCEPTIONS': True,
         },
-        'TIMEOUT': 1800,  # 30 minutes
+        'TIMEOUT': 1209600,  # أسبوعين (نفس SESSION_COOKIE_AGE)
         'KEY_PREFIX': 'homeupdate_session',
     },
     'query': {
@@ -703,7 +703,7 @@ if not DEBUG:
     
     # CSRF Security
     CSRF_COOKIE_SECURE = True
-    CSRF_COOKIE_HTTPONLY = True
+    # ملاحظة: لا نضع CSRF_COOKIE_HTTPONLY هنا - يتم تعيينه في القسم العام
     CSRF_COOKIE_SAMESITE = 'Lax'
     CSRF_TRUSTED_ORIGINS = [
         'https://elkhawaga.uk',
@@ -733,7 +733,8 @@ else:
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
     SESSION_COOKIE_HTTPONLY = True  # دائماً مفعّل
-    CSRF_COOKIE_HTTPONLY = True  # دائماً مفعّل
+    # ملاحظة: لا نضع CSRF_COOKIE_HTTPONLY هنا - يتم تعيينه في القسم العام
+    SESSION_COOKIE_AGE = 1209600  # أسبوعين - نفس الإنتاج
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'SAMEORIGIN'  # أقل تقييداً في التطوير
@@ -854,8 +855,9 @@ CSRF_FAILURE_VIEW = 'crm.csrf_views.csrf_failure'  # صفحة خطأ CSRF مخص
 # CSRF_COOKIE_SECURE و CSRF_COOKIE_SAMESITE - انظر قسم Security Settings أعلاه
 
 # إعدادات Session موحدة - محسّنة للأمان والأداء
-SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'  # أسرع من db فقط
-SESSION_CACHE_ALIAS = 'session'
+# تم تغيير من cached_db إلى db لحل مشكلة تسجيل الخروج المتكرر
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # استخدام DB فقط لضمان الاستقرار
+SESSION_CACHE_ALIAS = 'session'  # لا يُستخدم مع db backend لكن نبقيه للتوافق
 SESSION_COOKIE_NAME = 'elkhawaga_sessionid'  # اسم مخصص غير قابل للتخمين
 SESSION_SAVE_EVERY_REQUEST = False  # تحسين الأداء
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # يبقى المستخدم مسجلاً حتى بعد إغلاق المتصفح
@@ -1355,8 +1357,8 @@ CELERY_TASK_ANNOTATIONS = {
 # DATABASES['default']['OPTIONS'] تم توحيدها أعلاه
 
 # Session timeout للعمليات الطويلة
-SESSION_COOKIE_AGE = 86400  # 24 ساعة
-SESSION_SAVE_EVERY_REQUEST = False  # لا نحفظ في كل طلب لتحسين الأداء
+# ملاحظة: تم توحيد إعدادات Session في قسم Security Settings أعلاه
+# SESSION_COOKIE_AGE = 86400  # تم نقلها - انظر أعلاه
 
 # إعدادات Cache للعمليات الكبيرة
 CACHE_MIDDLEWARE_SECONDS = 300  # 5 دقائق
@@ -1399,7 +1401,8 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
-    CSRF_COOKIE_HTTPONLY = True
+    # ملاحظة: CSRF_COOKIE_HTTPONLY = False للسماح لـ JavaScript بقراءة التوكن
+    # تم تعيينه في القسم العام أعلاه
     
     # 4. حماية من Clickjacking
     X_FRAME_OPTIONS = 'DENY'
@@ -1416,9 +1419,10 @@ if not DEBUG:
 # ======================================
 # إعدادات CSRF المحسّنة
 # ======================================
-CSRF_USE_SESSIONS = True
-CSRF_COOKIE_SAMESITE = 'Strict'
-SESSION_COOKIE_SAMESITE = 'Strict'
+# ملاحظة: CSRF_USE_SESSIONS = False في القسم الرئيسي (سطر 853)
+# لا نعيد تعريفه هنا لتجنب التعارض
+CSRF_COOKIE_SAMESITE = 'Lax'  # Lax للسماح بالتنقل الطبيعي
+SESSION_COOKIE_SAMESITE = 'Lax'  # Lax للسماح بالتنقل الطبيعي
 
 # ======================================
 # إعدادات رفع الملفات
@@ -1530,10 +1534,8 @@ LOGGING = {
 USE_ENCRYPTION = True
 
 # إعدادات Session أكثر أماناً
-SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'  # أسرع وأكثر أماناً
-SESSION_COOKIE_AGE = 43200  # 12 ساعة (تقليل من 24 ساعة)
-SESSION_SAVE_EVERY_REQUEST = False
-SESSION_COOKIE_NAME = 'elkhawaga_sessionid'  # اسم مخصص بدلاً من sessionid
+# ملاحظة: تم توحيد إعدادات Session الأساسية أعلاه
+# SESSION_ENGINE, SESSION_COOKIE_AGE, SESSION_COOKIE_NAME - انظر أعلاه
 
 # حماية من BREACH attack
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -1624,10 +1626,9 @@ ACCOUNT_LOCKOUT_THRESHOLD = 5  # بعد 5 محاولات
 ACCOUNT_LOCKOUT_DURATION = 1800  # حظر 30 دقيقة
 
 # Session Security محسّن
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # إنهاء عند إغلاق المتصفح
-SESSION_COOKIE_AGE = 43200  # 12 ساعة max
-SESSION_SAVE_EVERY_REQUEST = False  # لا نحفظ في كل طلب
-CSRF_COOKIE_AGE = 31449600  # سنة للـ CSRF
+# ملاحظة: تم توحيد جميع إعدادات Session في الأقسام أعلاه
+# SESSION_EXPIRE_AT_BROWSER_CLOSE = False  - المستخدم يبقى مسجل
+# SESSION_COOKIE_AGE - انظر Security Settings أعلاه
 
 # Security Monitoring
 SECURITY_MONITORING_ENABLED = True

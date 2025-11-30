@@ -23,15 +23,15 @@ class Step1BasicInfoForm(forms.ModelForm):
         widgets = {
             'customer': forms.Select(attrs={
                 'class': 'form-select select2-customer',
-                'required': True
+                # لا نضع required هنا - التحقق يتم بـ JavaScript
             }),
             'branch': forms.Select(attrs={
                 'class': 'form-select',
-                'required': True
+                # لا نضع required هنا - التحقق يتم بـ JavaScript
             }),
             'salesperson': forms.Select(attrs={
                 'class': 'form-select',
-                'required': True
+                # لا نضع required هنا - التحقق يتم بـ JavaScript
             }),
             'status': forms.Select(attrs={
                 'class': 'form-select'
@@ -49,7 +49,7 @@ class Step1BasicInfoForm(forms.ModelForm):
         
         # العميل: حقل إجباري بدون اختيار افتراضي
         self.fields['customer'].empty_label = "اختر العميل..."
-        self.fields['customer'].required = True
+        self.fields['customer'].required = True  # التحقق من جهة الخادم فقط
         
         # تحديد ما إذا كان المستخدم من الفرع الرئيسي أو مدير
         is_main_branch_user = False

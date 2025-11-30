@@ -101,20 +101,53 @@
                 {{ title }}
             </h2>
             <p class="text-muted mb-0">
-                عدد المسودات: {{ drafts|length }}
+                عدد المسودات: {{ drafts|length }} من {{ max_drafts }}
+                {% if can_create_new %}
+                    <span class="badge bg-success ms-2">يمكنك إنشاء {{ remaining_drafts }} مسودة أخرى</span>
+                {% else %}
+                    <span class="badge bg-danger ms-2">تم الوصول للحد الأقصى</span>
+                {% endif %}
             </p>
         </div>
         <div>
-            <a href="{% url 'orders:wizard_start_new' %}" class="btn btn-success">
+            {% if can_create_new %}
+            <a href="{% url 'orders:wizard_start_new' %}?confirm_new=1" class="btn btn-success">
                 <i class="fas fa-plus me-2"></i>
                 إنشاء طلب جديد
             </a>
+            {% else %}
+            <button class="btn btn-secondary" disabled title="الحد الأقصى للمسودات: {{ max_drafts }}">
+                <i class="fas fa-ban me-2"></i>
+                الحد الأقصى ({{ max_drafts }})
+            </button>
+            {% endif %}
             <a href="{% url 'orders:order_list' %}" class="btn btn-secondary">
                 <i class="fas fa-arrow-right me-2"></i>
                 العودة للطلبات
             </a>
         </div>
     </div>
+    
+    <!-- شريط التقدم للمسودات -->
+    {% if drafts %}
+    <div class="alert alert-info mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>لديك {{ drafts|length }} مسودة محفوظة</strong>
+                {% if not can_create_new %}
+                - يجب إكمال أو حذف بعض المسودات لإنشاء طلبات جديدة
+                {% endif %}
+            </div>
+            <div class="progress" style="width: 150px; height: 10px;">
+                <div class="progress-bar {% if can_create_new %}bg-success{% else %}bg-danger{% endif %}" 
+                     role="progressbar" 
+                     style="width: {% widthratio drafts|length max_drafts 100 %}%">
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     {% if drafts %}
         <div class="row">

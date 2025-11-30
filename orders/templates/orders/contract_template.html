@@ -870,10 +870,9 @@
                     {% endif %}
                     {% if curtain.curtain_box_width or curtain.curtain_box_depth %}
                     <div class="box-dimensions">
-                        <strong>بيت:</strong>
-                        {% if curtain.curtain_box_width %}{{ curtain.curtain_box_width|floatformat:0 }}{% endif %}
-                        {% if curtain.curtain_box_width and curtain.curtain_box_depth %}×{% endif %}
-                        {% if curtain.curtain_box_depth %}{{ curtain.curtain_box_depth|floatformat:0 }}{% endif %}سم
+                        {% if curtain.curtain_box_width %}عرض {{ curtain.curtain_box_width|floatformat:0 }}{% endif %}
+                        {% if curtain.curtain_box_width and curtain.curtain_box_depth %} - {% endif %}
+                        {% if curtain.curtain_box_depth %}عمق {{ curtain.curtain_box_depth|floatformat:0 }}{% endif %}سم
                     </div>
                     {% endif %}
                 </div>
@@ -892,23 +891,31 @@
                         <div class="accessory-row">
                             <div style="flex: 1;">
                                 <span class="acc-name-text">{{ accessory.accessory_name }}</span>
+                                {% if accessory.accessory_type %}
+                                <span style="background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%); color: #333; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-right: 5px;">{{ accessory.accessory_type }}</span>
+                                {% endif %}
                                 {% if accessory.color %}
-                                <div style="font-size: 13px; color: #666; margin-top: 2px;">
+                                <div style="font-size: 11px; color: #666; margin-top: 2px;">
                                     <strong>اللون:</strong> {{ accessory.color }}
                                 </div>
                                 {% endif %}
                             </div>
                             <div class="acc-info-right">
-                                {% if accessory.size %}
+                                {% if accessory.size and accessory.size > 0 %}
                                 <div style="text-align: center; margin-left: 10px;">
-                                    <div style="font-size: 11px; color: #666; margin-bottom: 2px;">مقاس</div>
-                                    <span class="acc-size-pill">{{ accessory.size|stringformat:"g" }}</span>
+                                    <div style="font-size: 10px; color: #666; margin-bottom: 1px;">مقاس</div>
+                                    <span class="acc-size-pill">{{ accessory.size|stringformat:"g" }}م</span>
                                 </div>
-                                {% endif %}
                                 <div style="text-align: center;">
-                                    <div style="font-size: 11px; color: #666; margin-bottom: 2px;">عدد</div>
+                                    <div style="font-size: 10px; color: #666; margin-bottom: 1px;">عدد</div>
                                     <span class="acc-qty-pill">{{ accessory.count }}</span>
                                 </div>
+                                {% else %}
+                                <div style="text-align: center;">
+                                    <div style="font-size: 10px; color: #666; margin-bottom: 1px;">العدد</div>
+                                    <span class="acc-qty-pill">{{ accessory.count }} قطعة</span>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                         {% endfor %}
@@ -935,24 +942,27 @@
                             <span class="fabric-type-badge heavy">ثقيل</span>
                             {% elif fabric.fabric_type == 'blackout' %}
                             <span class="fabric-type-badge blackout">بلاك أوت</span>
+                            {% elif fabric.fabric_type == 'additional' %}
+                            <span class="fabric-type-badge extra">إضافي</span>
                             {% elif fabric.fabric_type == 'extra' %}
                             <span class="fabric-type-badge extra">إضافي</span>
                             {% elif fabric.fabric_type %}
                             <span class="fabric-type-badge light">{{ fabric.get_fabric_type_display }}</span>
                             {% endif %}
                             <span class="fabric-name-bold">{{ fabric.fabric_name|default:"قماش" }}</span>
-                            <span class="fabric-meters">{{ fabric.meters }}م</span>
+                            {% if 'حزام' in fabric.fabric_name or fabric.meters == 0 %}
+                            <span class="fabric-meters">{{ fabric.pieces }} قطعة</span>
+                            {% else %}
+                            <span class="fabric-meters">{{ fabric.meters }}م × {{ fabric.pieces }} قطعة</span>
+                            {% endif %}
                         </div>
+                        {% if fabric.tailoring_type %}
                         <div class="fabric-specs">
-                            <div class="fabric-spec-item large">
-                                <span class="spec-label-text">عدد القطع:</span> {{ fabric.pieces }}
-                            </div>
-                            {% if fabric.tailoring_type %}
                             <div class="fabric-spec-item large">
                                 <span class="spec-label-text">نوع التفصيل:</span> {{ fabric.get_tailoring_type_display }}
                             </div>
-                            {% endif %}
                         </div>
+                        {% endif %}
                         {% if fabric.notes %}
                         <div class="fabric-notes">
                             <strong>ملاحظات:</strong> {{ fabric.notes }}

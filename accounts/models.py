@@ -506,6 +506,14 @@ class SystemSettings(models.Model):
     enable_analytics = models.BooleanField(_('تفعيل التحليلات'), default=True)
     maintenance_mode = models.BooleanField(_('وضع الصيانة'), default=False)
     maintenance_message = models.TextField(_('رسالة الصيانة'), blank=True)
+    
+    # إعدادات الويزارد والدرافتات
+    max_draft_orders_per_user = models.PositiveIntegerField(
+        _('الحد الأقصى للمسودات لكل مستخدم'),
+        default=5,
+        help_text=_('العدد الأقصى للمسودات (الدرافتات) المسموح بها لكل مستخدم')
+    )
+    
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
     class Meta:

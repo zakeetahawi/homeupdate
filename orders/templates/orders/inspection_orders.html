@@ -145,8 +145,8 @@
                 </div>
                 <div class="col-auto">
                     {% if perms.orders.add_order %}
-                    <a href="{% url 'orders:order_create' %}?type=inspection" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> طلب معاينة جديد
+                    <a href="{% url 'orders:wizard_start' %}" class="btn btn-success">
+                        <i class="fas fa-magic"></i> إنشاء طلب إلكتروني
                     </a>
                     {% endif %}
                 </div>
@@ -254,10 +254,10 @@
         <div class="card-body text-center py-5">
             <i class="fas fa-search fa-3x text-muted mb-3"></i>
             <h5 class="text-muted">لا توجد طلبات معاينة</h5>
-            <p class="text-muted">لم يتم العثور على أي طلبات معاينة تطابق معايير الب��ث</p>
+            <p class="text-muted">لم يتم العثور على أي طلبات معاينة تطابق معايير البحث</p>
             {% if perms.orders.add_order %}
-            <a href="{% url 'orders:order_create' %}?type=inspection" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i>إنشاء طلب معاينة جديد
+            <a href="{% url 'orders:wizard_start' %}" class="btn btn-success">
+                <i class="fas fa-magic me-2"></i>إنشاء طلب إلكتروني
             </a>
             {% endif %}
         </div>

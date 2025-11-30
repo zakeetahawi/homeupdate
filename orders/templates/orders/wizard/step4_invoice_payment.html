@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block wizard_content %}
-<form method="post" id="step4-form" enctype="multipart/form-data">
+<form method="post" id="step4-form" enctype="multipart/form-data" novalidate>
     {% csrf_token %}
     
     <div class="row">
@@ -377,7 +377,7 @@ paidAmountInput.addEventListener('input', function() {
     document.getElementById('remaining-amount').textContent = remaining.toFixed(2);
     
     // إزالة الحدود السابقة
-    this.classList.remove('is-invalid', 'is-valid');
+    this.classList.remove('is-invalid', 'is-valid', 'field-required-error');
     
     // السماح بتجاوز المبلغ الإجمالي
     if (paidAmount >= minimumPayment) {
@@ -391,9 +391,28 @@ paidAmountInput.addEventListener('input', function() {
 
 // معالجة إرسال النموذج
 document.getElementById('step4-form').addEventListener('submit', function(e) {
-    // التحقق من صحة رقم المرجع
+    e.preventDefault();
+    
+    // إزالة جميع الأخطاء السابقة
+    clearAllFieldErrors(this);
+    
+    const missingFields = [];
+    let hasErrors = false;
+    
+    // التحقق من رقم المرجع
+    const invoiceNumberField = document.getElementById('{{ form.invoice_number.id_for_label }}');
+    if (!invoiceNumberField || !invoiceNumberField.value.trim()) {
+        hasErrors = true;
+        missingFields.push('رقم المرجع الرئيسي');
+        markFieldAsError(invoiceNumberField, 'يرجى إدخال رقم المرجع');
+    }
+    
+    // التحقق من صحة رقم المرجع (غير مكرر)
     if (!invoiceNumberValid) {
-        e.preventDefault();
+        hasErrors = true;
+        missingFields.push('رقم المرجع مستخدم مسبقاً');
+        markFieldAsError(invoiceNumberField, 'رقم المرجع مستخدم مسبقاً لهذا العميل');
+        
         Swal.fire({
             icon: 'error',
             title: 'لا يمكن المتابعة',
@@ -404,11 +423,38 @@ document.getElementById('step4-form').addEventListener('submit', function(e) {
         return false;
     }
     
+    // التحقق من صورة الفاتورة (إلزامية لغير المعاينة)
+    const draftType = '{{ draft.selected_type }}';
+    const hasExistingImages = {{ draft.invoice_image|yesno:"true,false" }} || {{ draft.invoice_images_new.exists|yesno:"true,false" }};
+    const invoiceImageField = document.getElementById('{{ form.invoice_image.id_for_label }}') || document.querySelector('input[name="invoice_image"]');
+    
+    if (draftType !== 'inspection' && !hasExistingImages) {
+        if (!invoiceImageField || !invoiceImageField.files || invoiceImageField.files.length === 0) {
+            hasErrors = true;
+            missingFields.push('صورة الفاتورة');
+            markFieldAsError(invoiceImageField, 'يرجى رفع صورة الفاتورة');
+        }
+    }
+    
     const paidAmount = parseFloat(paidAmountInput.value) || 0;
     
-    // التحقق من الحد الأدنى فقط
+    // التحقق من المبلغ المدفوع
+    if (paidAmount <= 0) {
+        hasErrors = true;
+        missingFields.push('المبلغ المدفوع');
+        markFieldAsError(paidAmountInput, 'يرجى إدخال المبلغ المدفوع');
+    }
+    
+    // إذا كانت هناك أخطاء أولية، عرضها
+    if (hasErrors) {
+        showValidationAlert(missingFields);
+        return false;
+    }
+    
+    // التحقق من الحد الأدنى
     if (paidAmount < minimumPayment) {
-        e.preventDefault();
+        markFieldAsError(paidAmountInput, `الحد الأدنى المطلوب: ${minimumPayment.toFixed(2)} جنيه`);
+        
         Swal.fire({
             icon: 'warning',
             title: 'المبلغ المدفوع غير كافٍ',
@@ -424,7 +470,6 @@ document.getElementById('step4-form').addEventListener('submit', function(e) {
     
     // تنبيه إذا تجاوز المبلغ الإجمالي (بدون منع الإرسال)
     if (paidAmount > totalAmount) {
-        e.preventDefault();
         const overpayment = paidAmount - totalAmount;
         Swal.fire({
             icon: 'question',

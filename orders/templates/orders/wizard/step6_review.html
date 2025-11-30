@@ -336,7 +336,13 @@
                             {% for fabric in curtain.fabrics.all %}
                             <div class="border-start border-3 border-info ps-2 mb-2">
                                 <p class="mb-0"><small><strong>{{ fabric.get_fabric_type_display }}:</strong> {{ fabric.fabric_name }}</small></p>
-                                <p class="mb-0"><small class="text-muted">{{ fabric.meters }} متر - {{ fabric.pieces }} قطعة</small></p>
+                                <p class="mb-0"><small class="text-muted">
+                                    {% if fabric.source == 'belt' or fabric.unit == 'piece' or 'حزام' in fabric.fabric_name %}
+                                        {{ fabric.pieces }} قطعة
+                                    {% else %}
+                                        {{ fabric.meters }} متر - {{ fabric.pieces }} قطعة
+                                    {% endif %}
+                                </small></p>
                                 {% if fabric.tailoring_type %}
                                 <p class="mb-0"><small class="text-muted">التفصيل: {{ fabric.get_tailoring_type_display }}</small></p>
                                 {% endif %}
@@ -353,10 +359,19 @@
                         <div class="ms-3">
                             {% for accessory in curtain.accessories.all %}
                             <div class="border-start border-3 border-warning ps-2 mb-2">
-                                <p class="mb-0"><small><strong>{{ accessory.accessory_name }}</strong></small></p>
+                                <p class="mb-0">
+                                    <small><strong>{{ accessory.accessory_name }}</strong></small>
+                                    {% if accessory.accessory_type %}
+                                        <span class="badge bg-warning text-dark ms-1">{{ accessory.accessory_type }}</span>
+                                    {% endif %}
+                                </p>
                                 <p class="mb-0">
                                     <small class="text-muted">
-                                        العدد: {{ accessory.count }} × المقاس: {{ accessory.size|stringformat:"g" }} = {{ accessory.quantity|stringformat:"g" }}
+                                        {% if accessory.size and accessory.size > 0 %}
+                                            العدد: {{ accessory.count }} × المقاس: {{ accessory.size|stringformat:"g" }}م = {{ accessory.quantity|stringformat:"g" }}م
+                                        {% else %}
+                                            العدد: {{ accessory.count }} قطعة
+                                        {% endif %}
                                     </small>
                                 </p>
                                 {% if accessory.color %}

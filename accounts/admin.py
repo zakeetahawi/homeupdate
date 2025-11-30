@@ -538,7 +538,7 @@ class PermissionAdmin(admin.ModelAdmin):
 @admin.register(SystemSettings)
 class SystemSettingsAdmin(admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
-    list_display = ('name', 'currency', 'version')
+    list_display = ('name', 'currency', 'version', 'max_draft_orders_per_user')
     readonly_fields = ('created_at', 'updated_at')
 
     fieldsets = (
@@ -552,7 +552,10 @@ class SystemSettingsAdmin(admin.ModelAdmin):
         (_('إعدادات العرض'), {
             'fields': ('items_per_page', 'low_stock_threshold')
         }),
-
+        (_('إعدادات الويزارد والطلبات'), {
+            'fields': ('max_draft_orders_per_user',),
+            'description': _('التحكم في إعدادات إنشاء الطلبات والمسودات')
+        }),
         (_('إعدادات متقدمة'), {
             'fields': ('enable_analytics', 'maintenance_mode', 'maintenance_message'),
             'classes': ('collapse',)

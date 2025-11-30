@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block wizard_content %}
-<form method="post" id="step2-form">
+<form method="post" id="step2-form" novalidate>
     {% csrf_token %}
     
     <!-- عرض أخطاء النموذج العامة -->
@@ -567,9 +567,32 @@ document.getElementById('step2-form').addEventListener('submit', function(e) {
     
     console.log('🔍 بدء التحقق من صحة النموذج...');
     
+    // إزالة جميع الأخطاء السابقة
+    clearAllFieldErrors(this);
+    document.querySelectorAll('.order-type-card').forEach(card => {
+        card.classList.remove('field-required-error');
+    });
+    
+    const missingFields = [];
+    let hasErrors = false;
+    
     const selectedType = document.querySelector('input[name="{{ form.selected_type.name }}"]:checked');
     if (!selectedType) {
-        alert('يرجى اختيار نوع الطلب');
+        hasErrors = true;
+        missingFields.push('نوع الطلب');
+        
+        // تلوين جميع بطاقات الاختيار باللون الأحمر
+        document.querySelectorAll('.order-type-card').forEach(card => {
+            card.classList.add('field-required-error');
+        });
+        
+        // التمرير لأول بطاقة
+        const firstCard = document.querySelector('.order-type-card');
+        if (firstCard) {
+            firstCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        showValidationAlert(missingFields);
         return;
     }
     
@@ -593,33 +616,22 @@ document.getElementById('step2-form').addEventListener('submit', function(e) {
         if (!existingChoice.checked && !customerChoice.checked) {
             console.error('❌ لم يتم اختيار معاينة أو طرف العميل');
             
-            // رسالة خطأ محسّنة للموبايل
-            if (isMobile) {
-                // إضافة تنبيه مرئي أكبر
-                showMobileAlert('⚠️ تنبيه إلزامي', 
-                    hasAvailableInspections 
-                        ? 'يرجى اختيار معاينة مرتبطة أو تحديد "طرف العميل" قبل المتابعة' 
-                        : 'يجب تحديد "طرف العميل" للمتابعة (لا توجد معاينات متاحة)', 
-                    'warning');
-                
-                // تمييز القسم بحد أحمر
-                if (relatedInspectionSection) {
-                    relatedInspectionSection.style.border = '3px solid #dc3545';
-                    relatedInspectionSection.style.borderRadius = '8px';
-                    setTimeout(() => {
-                        relatedInspectionSection.style.border = '';
-                    }, 3000);
-                }
-            } else {
-                alert(hasAvailableInspections 
-                    ? 'يرجى اختيار معاينة مرتبطة أو تحديد "طرف العميل"'
-                    : 'يجب تحديد "طرف العميل" للمتابعة (لا توجد معاينات متاحة)');
-            }
+            hasErrors = true;
+            missingFields.push('المعاينة المرتبطة أو طرف العميل');
             
-            // التمرير للقسم المطلوب
+            // تلوين قسم المعاينة باللون الأحمر
             if (relatedInspectionSection) {
+                relatedInspectionSection.classList.add('field-required-error');
+                relatedInspectionSection.style.border = '3px solid #dc3545';
+                relatedInspectionSection.style.borderRadius = '8px';
+                relatedInspectionSection.style.backgroundColor = '#fff5f5';
                 relatedInspectionSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+            
+            // رسالة خطأ محسّنة
+            showValidationAlert([hasAvailableInspections 
+                ? 'اختيار معاينة مرتبطة أو تحديد "طرف العميل"' 
+                : 'تحديد "طرف العميل" (لا توجد معاينات متاحة)']);
             return;
         }
         
@@ -628,28 +640,23 @@ document.getElementById('step2-form').addEventListener('submit', function(e) {
             if (!hasAvailableInspections) {
                 console.error('❌ لا توجد معاينات متاحة للاختيار');
                 
-                if (isMobile) {
-                    showMobileAlert('⚠️ تنبيه', 'لا توجد معاينات متاحة. يرجى تحديد "طرف العميل"', 'warning');
-                } else {
-                    alert('لا توجد معاينات متاحة. يرجى تحديد "طرف العميل"');
-                }
+                hasErrors = true;
+                missingFields.push('لا توجد معاينات متاحة - يرجى تحديد "طرف العميل"');
+                showValidationAlert(missingFields);
                 return;
             }
             
             if (!inspectionSelect.value) {
                 console.error('❌ لم يتم اختيار معاينة من القائمة');
                 
-                if (isMobile) {
-                    showMobileAlert('⚠️ تنبيه', 'يرجى اختيار معاينة من القائمة', 'warning');
-                } else {
-                    alert('يرجى اختيار معاينة من القائمة');
-                }
+                hasErrors = true;
+                missingFields.push('اختيار معاينة من القائمة');
                 
-                // التركيز على select
-                if (inspectionSelect) {
-                    inspectionSelect.focus();
-                    inspectionSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                // تلوين حقل الاختيار
+                markFieldAsError(inspectionSelect, 'يرجى اختيار معاينة من القائمة');
+                inspectionSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                showValidationAlert(missingFields);
                 return;
             }
         }

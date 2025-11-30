@@ -285,31 +285,27 @@ class XSSProtectionMiddleware(MiddlewareMixin):
 class SecureSessionMiddleware(MiddlewareMixin):
     """
     تعزيز أمان الجلسات
+    ملاحظة: تم تعطيل جميع الفحوصات التي كانت تسبب تسجيل خروج متكرر
     """
     
     def process_request(self, request):
-        # تجديد مفتاح الجلسة بانتظام
-        if request.user.is_authenticated:
-            session_key = f'session_age:{request.session.session_key}'
-            last_rotation = cache.get(session_key)
-            
-            # تجديد المفتاح كل 30 دقيقة
-            if not last_rotation or time.time() - last_rotation > 1800:
-                request.session.cycle_key()
-                cache.set(session_key, time.time(), 1800)
+        # ⚠️ تم تعطيل تجديد مفتاح الجلسة لأنه كان يسبب مشاكل في تسجيل الخروج
+        # cycle_key() يغير session_key مما يسبب فقدان الجلسة أحياناً
+        # خاصة عند استخدام cached_db backend
         
-        # التحقق من تطابق User-Agent
-        if request.user.is_authenticated:
-            session_ua = request.session.get('user_agent')
-            current_ua = request.META.get('HTTP_USER_AGENT', '')
-            
-            if session_ua and session_ua != current_ua:
-                # محاولة اختطاف جلسة محتملة
-                logger.warning(f'Session hijacking attempt detected for user {request.user.id}')
-                request.session.flush()
-                return HttpResponseForbidden('جلستك غير صالحة. يرجى تسجيل الدخول مرة أخرى.')
-            
-            if not session_ua:
-                request.session['user_agent'] = current_ua
+        # الكود المعطل:
+        # if request.user.is_authenticated and hasattr(request, 'session') and request.session.session_key:
+        #     session_key = f'session_age:{request.session.session_key}'
+        #     last_rotation = cache.get(session_key)
+        #     rotation_interval = 6 * 60 * 60  # 6 ساعات
+        #     if not last_rotation or time.time() - last_rotation > rotation_interval:
+        #         try:
+        #             request.session.cycle_key()
+        #             cache.set(session_key, time.time(), rotation_interval)
+        #         except Exception as e:
+        #             logger.debug(f'Session key rotation skipped: {e}')
+        
+        # ⚠️ تم تعطيل التحقق من User-Agent أيضاً
+        # لأنه كان يسبب تسجيل خروج عند تغير User-Agent
         
         return None

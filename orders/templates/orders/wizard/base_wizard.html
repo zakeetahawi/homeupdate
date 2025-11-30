@@ -118,6 +118,114 @@
         color: white;
     }
     
+    /* تنسيقات الحقول الإلزامية الفارغة */
+    .field-required-error {
+        border: 2px solid #dc3545 !important;
+        background-color: #fff5f5 !important;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+        animation: shake 0.5s ease-in-out;
+    }
+    
+    .field-required-error:focus {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+    }
+    
+    .field-error-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .field-error-message i {
+        font-size: 0.75rem;
+    }
+    
+    /* تنسيقات الحقول الصحيحة - علامة خضراء */
+    .field-valid-success {
+        border: 2px solid #198754 !important;
+        background-color: #f0fff4 !important;
+        box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.15) !important;
+    }
+    
+    .field-valid-success:focus {
+        border-color: #198754 !important;
+        box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25) !important;
+    }
+    
+    /* حاوية الحقل مع علامة الصح */
+    .field-wrapper {
+        position: relative;
+    }
+    
+    .field-success-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #198754;
+        font-size: 1.1rem;
+        display: none;
+        z-index: 10;
+        pointer-events: none;
+    }
+    
+    .field-error-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #dc3545;
+        font-size: 1.1rem;
+        display: none;
+        z-index: 10;
+        pointer-events: none;
+    }
+    
+    .field-valid-success + .field-success-icon,
+    .field-wrapper.has-success .field-success-icon {
+        display: block;
+    }
+    
+    .field-required-error + .field-error-icon,
+    .field-wrapper.has-error .field-error-icon {
+        display: block;
+    }
+    
+    /* Select2 مع نجاح */
+    .select2-container--success .select2-selection--single {
+        border: 2px solid #198754 !important;
+        background-color: #f0fff4 !important;
+    }
+    
+    /* بطاقات الاختيار مع نجاح */
+    .order-type-card.field-valid-success {
+        border: 3px solid #198754 !important;
+        background-color: #f0fff4 !important;
+    }
+    
+    /* تأثير الاهتزاز للحقول */
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    /* Select2 مع خطأ */
+    .select2-container--error .select2-selection--single {
+        border: 2px solid #dc3545 !important;
+        background-color: #fff5f5 !important;
+    }
+    
+    /* بطاقات الاختيار مع خطأ */
+    .order-type-card.field-required-error {
+        border: 3px solid #dc3545 !important;
+        background-color: #fff5f5 !important;
+    }
+    
     .btn-wizard-danger {
         background: #dc3545;
         border: none;
@@ -342,6 +450,319 @@
 
 {% block extra_js %}
 <script>
+// ============================================
+// دوال التحقق من الحقول الإلزامية
+// ============================================
+
+/**
+ * إضافة تنسيق الخطأ للحقل
+ */
+function markFieldAsError(field, message) {
+    if (!field) return;
+    
+    // إزالة أي تنسيق سابق (خطأ أو نجاح)
+    clearFieldError(field);
+    clearFieldValid(field);
+    
+    // إضافة class الخطأ
+    field.classList.add('field-required-error');
+    
+    // التعامل مع Select2
+    const select2Container = field.closest('.mb-3, .mb-4')?.querySelector('.select2-container');
+    if (select2Container) {
+        select2Container.classList.add('select2-container--error');
+    }
+    
+    // إضافة أيقونة الخطأ (❌) إذا لم تكن موجودة
+    const wrapper = field.closest('.mb-3, .mb-4, .field-wrapper');
+    if (wrapper && !wrapper.querySelector('.field-error-icon')) {
+        const errorIcon = document.createElement('span');
+        errorIcon.className = 'field-error-icon';
+        errorIcon.innerHTML = '<i class="fas fa-times-circle"></i>';
+        
+        // إضافة الأيقونة بجانب الحقل
+        const inputWrapper = field.closest('.input-group') || field.parentElement;
+        if (inputWrapper) {
+            inputWrapper.style.position = 'relative';
+            inputWrapper.appendChild(errorIcon);
+        }
+    }
+    
+    // إضافة رسالة الخطأ
+    if (message) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'field-error-message';
+        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+        field.parentNode.insertBefore(errorDiv, field.nextSibling);
+    }
+    
+    // التمرير إلى الحقل
+    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/**
+ * إزالة تنسيق الخطأ من الحقل
+ */
+function clearFieldError(field) {
+    if (!field) return;
+    
+    field.classList.remove('field-required-error');
+    
+    // إزالة Select2 error
+    const select2Container = field.closest('.mb-3, .mb-4')?.querySelector('.select2-container');
+    if (select2Container) {
+        select2Container.classList.remove('select2-container--error');
+    }
+    
+    // إزالة أيقونة الخطأ
+    const wrapper = field.closest('.mb-3, .mb-4, .field-wrapper');
+    if (wrapper) {
+        const errorIcon = wrapper.querySelector('.field-error-icon');
+        if (errorIcon) {
+            errorIcon.remove();
+        }
+    }
+    
+    // إزالة رسالة الخطأ
+    const errorMessage = field.parentNode.querySelector('.field-error-message');
+    if (errorMessage) {
+        errorMessage.remove();
+    }
+}
+
+/**
+ * إزالة جميع أخطاء الحقول في النموذج
+ */
+function clearAllFieldErrors(form) {
+    if (!form) return;
+    
+    form.querySelectorAll('.field-required-error').forEach(field => {
+        clearFieldError(field);
+    });
+    
+    form.querySelectorAll('.select2-container--error').forEach(container => {
+        container.classList.remove('select2-container--error');
+    });
+    
+    form.querySelectorAll('.field-error-message').forEach(msg => msg.remove());
+    
+    // إزالة الخطأ من بطاقات الاختيار
+    form.querySelectorAll('.order-type-card.field-required-error').forEach(card => {
+        card.classList.remove('field-required-error');
+    });
+}
+
+/**
+ * إزالة جميع علامات النجاح والخطأ
+ */
+function clearAllFieldValidation(form) {
+    if (!form) return;
+    
+    clearAllFieldErrors(form);
+    
+    form.querySelectorAll('.field-valid-success').forEach(field => {
+        clearFieldValid(field);
+    });
+    
+    form.querySelectorAll('.select2-container--success').forEach(container => {
+        container.classList.remove('select2-container--success');
+    });
+    
+    form.querySelectorAll('.field-success-icon').forEach(icon => icon.remove());
+}
+
+/**
+ * التحقق من حقل واحد
+ */
+function validateField(field, fieldName) {
+    if (!field) return true;
+    
+    const value = field.value?.trim();
+    
+    if (!value || value === '' || value === 'undefined') {
+        markFieldAsError(field, `الحقل "${fieldName}" مطلوب`);
+        return false;
+    }
+    
+    clearFieldError(field);
+    markFieldAsValid(field);
+    return true;
+}
+
+/**
+ * إضافة تنسيق النجاح للحقل (علامة خضراء)
+ */
+function markFieldAsValid(field) {
+    if (!field) return;
+    
+    // إزالة أي تنسيق سابق
+    clearFieldError(field);
+    
+    // إضافة class النجاح
+    field.classList.add('field-valid-success');
+    
+    // التعامل مع Select2
+    const select2Container = field.closest('.mb-3, .mb-4')?.querySelector('.select2-container');
+    if (select2Container) {
+        select2Container.classList.remove('select2-container--error');
+        select2Container.classList.add('select2-container--success');
+    }
+    
+    // إضافة أيقونة النجاح إذا لم تكن موجودة
+    const wrapper = field.closest('.mb-3, .mb-4, .field-wrapper');
+    if (wrapper && !wrapper.querySelector('.field-success-icon')) {
+        const successIcon = document.createElement('span');
+        successIcon.className = 'field-success-icon';
+        successIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
+        
+        // إضافة الأيقونة بجانب الحقل
+        const inputWrapper = field.closest('.input-group') || field.parentElement;
+        if (inputWrapper) {
+            inputWrapper.style.position = 'relative';
+            inputWrapper.appendChild(successIcon);
+        }
+    }
+}
+
+/**
+ * إزالة تنسيق النجاح من الحقل
+ */
+function clearFieldValid(field) {
+    if (!field) return;
+    
+    field.classList.remove('field-valid-success');
+    
+    // إزالة Select2 success
+    const select2Container = field.closest('.mb-3, .mb-4')?.querySelector('.select2-container');
+    if (select2Container) {
+        select2Container.classList.remove('select2-container--success');
+    }
+    
+    // إزالة أيقونة النجاح
+    const wrapper = field.closest('.mb-3, .mb-4, .field-wrapper');
+    if (wrapper) {
+        const successIcon = wrapper.querySelector('.field-success-icon');
+        if (successIcon) {
+            successIcon.remove();
+        }
+    }
+}
+
+/**
+ * عرض تنبيه للحقول الفارغة
+ */
+function showValidationAlert(missingFields) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            icon: 'warning',
+            title: 'حقول مطلوبة',
+            html: `
+                <div class="text-end">
+                    <p class="mb-3">يرجى ملء الحقول التالية:</p>
+                    <ul class="list-unstyled text-danger">
+                        ${missingFields.map(f => `<li><i class="fas fa-exclamation-circle me-2"></i>${f}</li>`).join('')}
+                    </ul>
+                </div>
+            `,
+            confirmButtonText: 'حسناً',
+            confirmButtonColor: '#dc3545'
+        });
+    } else {
+        alert('يرجى ملء الحقول التالية:\n' + missingFields.join('\n'));
+    }
+}
+
+/**
+ * إزالة الخطأ عند تغيير قيمة الحقل وإضافة علامة النجاح
+ */
+function setupFieldValidationListeners(form) {
+    if (!form) return;
+    
+    // الحقول العادية
+    form.querySelectorAll('input, select, textarea').forEach(field => {
+        // تطبيق التحقق عند التحميل للحقول المعبأة مسبقاً
+        if (field.value?.trim() && field.hasAttribute('required')) {
+            markFieldAsValid(field);
+        }
+        
+        field.addEventListener('change', function() {
+            if (this.value?.trim()) {
+                clearFieldError(this);
+                if (this.hasAttribute('required') || this.closest('.mb-4')?.querySelector('.text-danger')) {
+                    markFieldAsValid(this);
+                }
+            } else {
+                clearFieldValid(this);
+            }
+        });
+        
+        field.addEventListener('input', function() {
+            if (this.value?.trim()) {
+                clearFieldError(this);
+                if (this.hasAttribute('required') || this.closest('.mb-4')?.querySelector('.text-danger')) {
+                    markFieldAsValid(this);
+                }
+            } else {
+                clearFieldValid(this);
+            }
+        });
+        
+        // عند فقدان التركيز على الحقل، تحقق من القيمة وأظهر الخطأ إذا كان فارغاً
+        field.addEventListener('blur', function() {
+            const isRequired = this.hasAttribute('required') || this.closest('.mb-4')?.querySelector('.text-danger');
+            if (isRequired) {
+                if (this.value?.trim()) {
+                    markFieldAsValid(this);
+                } else {
+                    // إظهار الخطأ الأحمر وأيقونة ❌ للحقل الفارغ
+                    const label = this.closest('.mb-3, .mb-4')?.querySelector('label')?.textContent?.replace('*', '').trim();
+                    markFieldAsError(this, label ? `${label} مطلوب` : 'هذا الحقل مطلوب');
+                }
+            }
+        });
+    });
+    
+    // Select2 fields
+    if (typeof $ !== 'undefined') {
+        $(form).find('select').on('select2:select', function() {
+            clearFieldError(this);
+            markFieldAsValid(this);
+        });
+        
+        $(form).find('select').on('select2:clear', function() {
+            clearFieldValid(this);
+            // إظهار الخطأ إذا كان الحقل مطلوباً
+            const isRequired = $(this).attr('required') || $(this).closest('.mb-4').find('.text-danger').length > 0;
+            if (isRequired) {
+                const label = $(this).closest('.mb-3, .mb-4').find('label').text().replace('*', '').trim();
+                markFieldAsError(this, label ? `${label} مطلوب` : 'هذا الحقل مطلوب');
+            }
+        });
+        
+        // إضافة مستمع لفتح وإغلاق Select2
+        $(form).find('select').on('select2:close', function() {
+            const value = $(this).val();
+            const isRequired = $(this).attr('required') || $(this).closest('.mb-4').find('.text-danger').length > 0;
+            if (isRequired && (!value || value === '')) {
+                const label = $(this).closest('.mb-3, .mb-4').find('label').text().replace('*', '').trim();
+                markFieldAsError(this, label ? `${label} مطلوب` : 'هذا الحقل مطلوب');
+            }
+        });
+    }
+}
+
+// تهيئة المستمعين عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        setupFieldValidationListeners(form);
+    });
+});
+
+// ============================================
+// دوال إرسال النموذج
+// ============================================
+
 // دالة عامة لإرسال النموذج عبر AJAX
 function submitWizardStep(formElement, nextStepUrl) {
     const formData = new FormData(formElement);
@@ -359,8 +780,9 @@ function submitWizardStep(formElement, nextStepUrl) {
             // الانتقال للخطوة التالية
             window.location.href = nextStepUrl || `/orders/wizard/step/${data.next_step}/`;
         } else {
-            // عرض الأخطاء
+            // عرض الأخطاء مع تلوين الحقول
             showErrors(data.errors || data.message);
+            highlightErrorFields(data.errors);
         }
     })
     .catch(error => {
@@ -369,15 +791,57 @@ function submitWizardStep(formElement, nextStepUrl) {
     });
 }
 
+/**
+ * تلوين الحقول التي بها أخطاء من الخادم
+ */
+function highlightErrorFields(errors) {
+    if (!errors || typeof errors !== 'object') return;
+    
+    for (const [fieldName, msgs] of Object.entries(errors)) {
+        // البحث عن الحقل بالاسم أو المعرف
+        let field = document.querySelector(`[name="${fieldName}"]`) || 
+                    document.querySelector(`#id_${fieldName}`);
+        
+        if (field) {
+            const message = Array.isArray(msgs) ? msgs.join(', ') : msgs;
+            markFieldAsError(field, message);
+        }
+    }
+}
+
 function showErrors(errors) {
     if (typeof errors === 'string') {
-        alert(errors);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'خطأ',
+                text: errors,
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert(errors);
+        }
     } else {
         let errorMessage = '';
+        const fieldNames = [];
         for (const [field, msgs] of Object.entries(errors)) {
-            errorMessage += `${field}: ${msgs.join(', ')}\n`;
+            const message = Array.isArray(msgs) ? msgs.join(', ') : msgs;
+            errorMessage += `${field}: ${message}\n`;
+            fieldNames.push(field);
         }
-        alert(errorMessage);
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'يوجد أخطاء في البيانات',
+                html: `<div class="text-end">${errorMessage.replace(/\n/g, '<br>')}</div>`,
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert(errorMessage);
+        }
     }
 }
 </script>

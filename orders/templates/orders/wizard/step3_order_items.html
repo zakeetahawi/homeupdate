@@ -81,11 +81,11 @@
                             {% for item in items %}
                             <tr data-item-id="{{ item.id }}">
                                 <td>{{ item.product.name }}</td>
-                                <td>{{ item.quantity }}</td>
-                                <td>{{ item.unit_price }}</td>
-                                <td>{{ item.discount_percentage }}%</td>
-                                <td>{{ item.total_price }}</td>
-                                <td class="fw-bold">{{ item.final_price }}</td>
+                                <td>{{ item.quantity|floatformat:"-3" }}</td>
+                                <td>{{ item.unit_price|floatformat:2 }}</td>
+                                <td>{{ item.discount_percentage|floatformat:"-2" }}%</td>
+                                <td>{{ item.total_price|floatformat:2 }}</td>
+                                <td class="fw-bold">{{ item.final_price|floatformat:2 }}</td>
                                 <td>
                                     <button type="button" class="btn btn-sm btn-danger" 
                                             onclick="removeItem({{ item.id }})">
@@ -493,6 +493,22 @@ function showToast(type, message) {
     }, 3000);
 }
 
+// دالة للحصول على CSRF token من الكوكي
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 function addItem() {
     const productId = $('#product-select').val();
     const quantity = $('#item-quantity').val();
@@ -505,12 +521,16 @@ function addItem() {
         return;
     }
     
+    // الحصول على CSRF token - أولاً من الكوكي المخصص، ثم من Django template
+    const csrfToken = getCookie('elkhawaga_csrftoken') || '{{ csrf_token }}';
+    
     fetch('{% url "orders:wizard_add_item" %}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
+            'X-CSRFToken': csrfToken
         },
+        credentials: 'same-origin',
         body: JSON.stringify({
             product_id: productId,
             quantity: quantity,
@@ -518,20 +538,51 @@ function addItem() {
             discount_percentage: discountPercentage
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.status === 401) {
+            // إذا انتهت الجلسة
+            alert('انتهت الجلسة. سيتم إعادة تحميل الصفحة.');
+            window.location.reload();
+            return null;
+        }
+        if (response.status === 403) {
+            // خطأ CSRF - تحديث الصفحة
+            alert('انتهت صلاحية الصفحة. سيتم تحديثها.');
+            window.location.reload();
+            return null;
+        }
+        return response.json();
+    })
     .then(data => {
+        if (!data) return;
         if (data.success) {
             addItemToTable(data.item);
             updateTotals(data.totals);
             clearForm();
         } else {
-            alert(data.message);
+            alert(data.message || 'حدث خطأ');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('حدث خطأ أثناء إضافة العنصر');
+        alert('حدث خطأ أثناء إضافة العنصر. حاول تحديث الصفحة.');
     });
+}
+
+// دالة تنسيق الأرقام - إزالة الأصفار الزائدة
+function formatNumber(num, decimals = 2) {
+    if (num === null || num === undefined) return '0';
+    const parsed = parseFloat(num);
+    if (isNaN(parsed)) return '0';
+    // تنسيق الرقم وإزالة الأصفار الزائدة
+    return parsed.toFixed(decimals).replace(/\.?0+$/, '') || '0';
+}
+
+function formatPrice(num) {
+    if (num === null || num === undefined) return '0.00';
+    const parsed = parseFloat(num);
+    if (isNaN(parsed)) return '0.00';
+    return parsed.toFixed(2);
 }
 
 function addItemToTable(item) {
@@ -545,11 +596,11 @@ function addItemToTable(item) {
     row.dataset.itemId = item.id;
     row.innerHTML = `
         <td>${item.product_name}</td>
-        <td>${item.quantity}</td>
-        <td>${item.unit_price}</td>
-        <td>${item.discount_percentage}%</td>
-        <td>${item.total_price}</td>
-        <td class="fw-bold">${item.final_price}</td>
+        <td>${formatNumber(item.quantity, 3)}</td>
+        <td>${formatPrice(item.unit_price)}</td>
+        <td>${formatNumber(item.discount_percentage, 2)}%</td>
+        <td>${formatPrice(item.total_price)}</td>
+        <td class="fw-bold">${formatPrice(item.final_price)}</td>
         <td>
             <button type="button" class="btn btn-sm btn-danger" onclick="removeItem(${item.id})">
                 <i class="fas fa-trash"></i>
@@ -624,6 +675,25 @@ function clearForm() {
 }
 
 function completeStep3() {
+    // التحقق من وجود عناصر في الطلب
+    const itemsTable = document.getElementById('items-tbody');
+    const noItemsRow = document.getElementById('no-items-row');
+    
+    // حساب عدد العناصر (استثناء صف "لا توجد عناصر")
+    const itemRows = itemsTable.querySelectorAll('tr:not(#no-items-row)');
+    
+    if (itemRows.length === 0 || (noItemsRow && noItemsRow.style.display !== 'none')) {
+        // تلوين قسم إضافة العناصر باللون الأحمر
+        const addItemCard = document.querySelector('.card.mb-4');
+        if (addItemCard) {
+            addItemCard.classList.add('field-required-error');
+            addItemCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        showValidationAlert(['إضافة عنصر واحد على الأقل للطلب']);
+        return;
+    }
+    
     fetch('{% url "orders:wizard_complete_step_3" %}', {
         method: 'POST',
         headers: {
@@ -635,7 +705,17 @@ function completeStep3() {
         if (data.success) {
             window.location.href = `/orders/wizard/step/${data.next_step}/`;
         } else {
-            alert(data.message);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ',
+                    text: data.message,
+                    confirmButtonText: 'حسناً',
+                    confirmButtonColor: '#dc3545'
+                });
+            } else {
+                alert(data.message);
+            }
         }
     })
     .catch(error => {

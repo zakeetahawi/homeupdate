@@ -9,7 +9,7 @@
     const CSRF_CONFIG = {
         tokenName: 'csrfmiddlewaretoken',
         headerName: 'X-CSRFToken',
-        cookieName: 'csrftoken',
+        cookieName: 'elkhawaga_csrftoken',  // اسم الكوكيز المخصص في Django
         refreshUrl: '/csrf-token/',
         maxRetries: 3,
         retryDelay: 1000

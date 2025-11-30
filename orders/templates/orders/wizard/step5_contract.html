@@ -3,19 +3,29 @@
 
 {% block wizard_content %}
 <style>
+/* منع Bootstrap من إخفاء شريط تمرير الصفحة */
+body.modal-open {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
+
 /* ضمان عمل التمرير في النافذة المنبثقة */
 #addCurtainModal .modal-dialog-scrollable .modal-body {
-    max-height: calc(100vh - 200px);
-    overflow-y: auto;
+    max-height: calc(100vh - 180px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 #addCurtainModal .modal-content {
-    max-height: 90vh;
+    max-height: 95vh !important;
+    overflow: hidden;
 }
 
 /* ضمان ظهور النافذة في وسط الشاشة */
 #addCurtainModal .modal-dialog {
-    margin: 1.75rem auto;
+    margin: 0.5rem auto !important;
+    max-height: 98vh !important;
 }
 
 #addCurtainModal.show .modal-dialog {
@@ -25,8 +35,47 @@
 /* تحسين عرض المحتوى في الشاشات الصغيرة */
 @media (max-height: 768px) {
     #addCurtainModal .modal-dialog-scrollable .modal-body {
-        max-height: calc(100vh - 150px);
+        max-height: calc(100vh - 120px) !important;
     }
+}
+
+/* شريط التمرير المخصص */
+#addCurtainModal .modal-body::-webkit-scrollbar {
+    width: 10px;
+}
+
+#addCurtainModal .modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 5px;
+}
+
+#addCurtainModal .modal-body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}
+
+#addCurtainModal .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* ===== تنسيقات الحقول الخاطئة ===== */
+.field-required-error {
+    border: 2px solid #dc3545 !important;
+    background-color: #fff5f5 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.field-error-message {
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
 }
 </style>
 
@@ -114,7 +163,11 @@
                                                 {% endif %}
                                             </div>
                                             <small class="text-muted">
-                                                {{ fabric.meters }}م × {{ fabric.pieces }} قطعة
+                                                {% if 'حزام' in fabric.fabric_name or fabric.meters == 0 %}
+                                                    {{ fabric.pieces }} قطعة
+                                                {% else %}
+                                                    {{ fabric.meters }}م × {{ fabric.pieces }} قطعة
+                                                {% endif %}
                                                 {% if fabric.tailoring_type %}
                                                     - {{ fabric.get_tailoring_type_display }}
                                                 {% endif %}
@@ -139,11 +192,16 @@
                         <div class="col-md-6">
                             <div class="card border-success">
                                 <div class="card-body py-2 px-3">
-                                    <div class="fw-bold">{{ accessory.accessory_name }}</div>
+                                    <div class="fw-bold">
+                                        {{ accessory.accessory_name }}
+                                        {% if accessory.accessory_type %}
+                                            <span class="badge bg-warning text-dark ms-1">{{ accessory.accessory_type }}</span>
+                                        {% endif %}
+                                    </div>
                                     <small class="text-muted">
-                                        العدد: {{ accessory.count }}
-                                        {% if accessory.size %}
-                                            - المقاس: {{ accessory.size|stringformat:"g" }}
+                                        العدد: {{ accessory.count }} قطعة
+                                        {% if accessory.size and accessory.size > 0 %}
+                                            × المقاس: {{ accessory.size|stringformat:"g" }}م = {{ accessory.quantity|stringformat:"g" }}م
                                         {% endif %}
                                         {% if accessory.color %}
                                             - اللون: {{ accessory.color }}
@@ -239,11 +297,10 @@
                         <div class="col-md-3">
                             <label class="form-label fw-bold">نوع التركيب <span class="text-danger">*</span></label>
                             <select id="curtain-installation-type" class="form-select" onchange="toggleCurtainBoxFields()">
-                                <option value="">اختر نوع التركيب</option>
+                                <option value="">-- اختر نوع التركيب --</option>
                                 {% for option in installation_options %}
                                 <option value="{{ option.value }}" 
-                                        data-curtain-box="{{ option.extra_data.requires_curtain_box|default:'false' }}"
-                                        {% if option.is_default %}selected{% endif %}>
+                                        data-curtain-box="{{ option.extra_data.requires_curtain_box|default:'false' }}">
                                     {{ option.display_name }}
                                 </option>
                                 {% endfor %}
@@ -320,21 +377,21 @@
                                     </small>
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label">الكمية (متر)</label>
+                                    <label class="form-label">الكمية (متر) <span class="text-danger">*</span></label>
                                     <input type="number" id="fabric-meters" class="form-control" 
-                                           min="0.01" step="0.01" placeholder="5.5">
+                                           min="0.01" step="0.01" placeholder="مثال: 5.5">
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label">عدد القطع</label>
+                                    <label class="form-label">عدد القطع <span class="text-danger">*</span></label>
                                     <input type="number" id="fabric-pieces" class="form-control" 
-                                           min="1" step="1" value="1">
+                                           min="1" step="1" placeholder="مثال: 2">
                                 </div>
                                 <div class="col-md-2">
-                                    <label class="form-label">طريقة التفصيل</label>
+                                    <label class="form-label">طريقة التفصيل <span class="text-danger">*</span></label>
                                     <select id="fabric-tailoring" class="form-select">
-                                        <option value="">اختر</option>
+                                        <option value="">-- اختر --</option>
                                         {% for option in tailoring_options %}
-                                        <option value="{{ option.value }}" {% if option.is_default %}selected{% endif %}>
+                                        <option value="{{ option.value }}">
                                             {{ option.display_name }}
                                         </option>
                                         {% endfor %}
@@ -344,6 +401,50 @@
                             <button type="button" class="btn btn-sm btn-success mt-2" onclick="addFabricToList()">
                                 <i class="fas fa-plus me-1"></i>إضافة القماش
                             </button>
+                        </div>
+                    </div>
+                    
+                    <!-- ===== قسم الحزام ===== -->
+                    <div class="card mb-3 border-info">
+                        <div class="card-header bg-info text-white">
+                            <i class="fas fa-tape me-2"></i>الحزام (سكوتش)
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="beltChoice" id="noBelt" value="none" onchange="toggleBeltOptions()">
+                                        <label class="form-check-label text-secondary" for="noBelt">
+                                            <i class="fas fa-ban me-1"></i>لا يوجد حزام
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="beltChoice" id="scotchBelt" value="scotch" onchange="toggleBeltOptions()">
+                                        <label class="form-check-label text-success" for="scotchBelt">
+                                            <i class="fas fa-tape me-1"></i>حزام سكوتش
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="beltChoice" id="normalBelt" value="normal" onchange="toggleBeltOptions()">
+                                        <label class="form-check-label text-primary" for="normalBelt">
+                                            <i class="fas fa-grip-lines me-1"></i>حزام عادي
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3" id="beltQtyDiv" style="display:none;">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">العدد</span>
+                                        <input type="number" id="beltQty" class="form-control" min="1" placeholder="أدخل العدد">
+                                        <button type="button" class="btn btn-success" onclick="addBeltToFabrics()">
+                                            <i class="fas fa-plus"></i> إضافة
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -369,15 +470,343 @@
                         <i class="fas fa-puzzle-piece me-2"></i>الإكسسوارات
                     </h6>
                     
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="hasAccessories" onchange="toggleAccessoriesFields()">
-                        <label class="form-check-label fw-bold" for="hasAccessories">
-                            مع إكسسوار
-                        </label>
+                    <!-- خيارات الإكسسوار -->
+                    <div class="card mb-3" id="accessoryChoiceCard">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="accessoryChoice" id="withAccessories" value="with" onchange="toggleAccessoriesChoice()">
+                                        <label class="form-check-label fw-bold text-success" for="withAccessories">
+                                            <i class="fas fa-puzzle-piece me-2"></i>مع إكسسوار
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="accessoryChoice" id="noAccessories" value="none" onchange="toggleAccessoriesChoice()">
+                                        <label class="form-check-label fw-bold text-secondary" for="noAccessories">
+                                            <i class="fas fa-ban me-2"></i>بدون إكسسوار
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="text-muted mt-2 d-block">
+                                <i class="fas fa-info-circle me-1"></i>يجب اختيار أحد الخيارين للمتابعة
+                            </small>
+                        </div>
                     </div>
                     
                     <!-- Accessories Fields (Hidden initially) -->
                     <div id="accessoriesFields" style="display: none;">
+                        <!-- ===== قسم الإكسسوارات الشائعة (سريعة الإضافة) ===== -->
+                        <div class="card mb-3 border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <i class="fas fa-bolt me-2"></i>إكسسوارات شائعة (تأكيد الاختيار)
+                                <small class="d-block text-muted">يجب تحديد كل نوع لتأكيد وجوده أو عدمه - هذا إقرار رسمي</small>
+                            </div>
+                            <div class="card-body">
+                                <!-- حوامل الحائط -->
+                                <div class="card mb-3 border-secondary" id="wallBracketCard">
+                                    <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-grip-lines me-1"></i><strong>حوامل الحائط</strong></span>
+                                        <span id="wallBracketStatus" class="badge bg-secondary">لم يتم الاختيار</span>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-12 mb-2">
+                                                <div class="btn-group w-100" role="group" id="wallBracketBtnGroup">
+                                                    <input type="radio" class="btn-check" name="wallBracketChoice" id="wallBracketNone" value="none" onchange="toggleCommonAccessory('wallBracket')">
+                                                    <label class="btn btn-outline-danger" for="wallBracketNone" id="wallBracketNoneLabel">
+                                                        <i class="fas fa-ban me-1"></i>لا يوجد
+                                                    </label>
+                                                    <input type="radio" class="btn-check" name="wallBracketChoice" id="wallBracket10" value="10" onchange="toggleCommonAccessory('wallBracket')">
+                                                    <label class="btn btn-outline-success" for="wallBracket10" id="wallBracket10Label">10 سنتم</label>
+                                                    <input type="radio" class="btn-check" name="wallBracketChoice" id="wallBracket15" value="15" onchange="toggleCommonAccessory('wallBracket')">
+                                                    <label class="btn btn-outline-success" for="wallBracket15" id="wallBracket15Label">15 سنتم</label>
+                                                    <input type="radio" class="btn-check" name="wallBracketChoice" id="wallBracket20" value="20" onchange="toggleCommonAccessory('wallBracket')">
+                                                    <label class="btn btn-outline-success" for="wallBracket20" id="wallBracket20Label">20 سنتم</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-12" id="wallBracketFields" style="display:none;">
+                                                <div class="row g-2 align-items-end">
+                                                    <div class="col-md-5">
+                                                        <label class="form-label">اختر من المرجع <span class="text-danger">*</span></label>
+                                                        <select id="wallBracketSelect" class="form-select form-select-sm" onchange="updateCommonAccessoryUnit('wallBracket')">
+                                                            <option value="">-- اختر الصنف --</option>
+                                                            {% for item in draft.items.all %}
+                                                            <option value="{{ item.id }}" data-name="{{ item.product.name }}" data-unit="{{ item.product.unit }}" data-available="{{ item.quantity }}">
+                                                                {{ item.product.name }} (متاح: {{ item.quantity }})
+                                                            </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label">المتاح</label>
+                                                        <input type="text" id="wallBracketAvailable" class="form-control form-control-sm bg-light" readonly>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label">العدد <span class="text-danger">*</span></label>
+                                                        <input type="number" id="wallBracketQty" class="form-control form-control-sm" min="1" placeholder="العدد">
+                                                    </div>
+                                                    <div class="col-md-2" id="wallBracketSizeDiv" style="display:none;">
+                                                        <label class="form-label">الطول (متر)</label>
+                                                        <input type="number" id="wallBracketSize" class="form-control form-control-sm" min="0.01" step="0.01" placeholder="الطول">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <button type="button" class="btn btn-success btn-sm w-100" onclick="addCommonAccessory('wallBracket')">
+                                                            <i class="fas fa-plus me-1"></i>إضافة
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- حوامل مجر -->
+                                <div class="card mb-3 border-secondary" id="majarCard">
+                                    <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-arrows-alt-h me-1"></i><strong>حوامل مجر</strong></span>
+                                        <span id="majarStatus" class="badge bg-secondary">لم يتم الاختيار</span>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-12 mb-2">
+                                                <div class="btn-group w-100" role="group" id="majarBtnGroup">
+                                                    <input type="radio" class="btn-check" name="majarChoice" id="majarNone" value="none" onchange="toggleCommonAccessory('majar')">
+                                                    <label class="btn btn-outline-danger" for="majarNone" id="majarNoneLabel">
+                                                        <i class="fas fa-ban me-1"></i>لا يوجد
+                                                    </label>
+                                                    <input type="radio" class="btn-check" name="majarChoice" id="majarSingle" value="single" onchange="toggleCommonAccessory('majar')">
+                                                    <label class="btn btn-outline-success" for="majarSingle" id="majarSingleLabel">مفرد</label>
+                                                    <input type="radio" class="btn-check" name="majarChoice" id="majarDouble" value="double" onchange="toggleCommonAccessory('majar')">
+                                                    <label class="btn btn-outline-success" for="majarDouble" id="majarDoubleLabel">دبل</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-12" id="majarFields" style="display:none;">
+                                                <div class="row g-2 align-items-end">
+                                                    <div class="col-md-5">
+                                                        <label class="form-label">اختر من المرجع <span class="text-danger">*</span></label>
+                                                        <select id="majarSelect" class="form-select form-select-sm" onchange="updateCommonAccessoryUnit('majar')">
+                                                            <option value="">-- اختر الصنف --</option>
+                                                            {% for item in draft.items.all %}
+                                                            <option value="{{ item.id }}" data-name="{{ item.product.name }}" data-unit="{{ item.product.unit }}" data-available="{{ item.quantity }}">
+                                                                {{ item.product.name }} (متاح: {{ item.quantity }})
+                                                            </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label">المتاح</label>
+                                                        <input type="text" id="majarAvailable" class="form-control form-control-sm bg-light" readonly>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label">العدد <span class="text-danger">*</span></label>
+                                                        <input type="number" id="majarQty" class="form-control form-control-sm" min="1" placeholder="العدد">
+                                                    </div>
+                                                    <div class="col-md-2" id="majarSizeDiv" style="display:none;">
+                                                        <label class="form-label">الطول (متر)</label>
+                                                        <input type="number" id="majarSize" class="form-control form-control-sm" min="0.01" step="0.01" placeholder="الطول">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <button type="button" class="btn btn-success btn-sm w-100" onclick="addCommonAccessory('majar')">
+                                                            <i class="fas fa-plus me-1"></i>إضافة
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- حوامل مواسير -->
+                                <div class="card mb-3 border-secondary" id="pipeCard">
+                                    <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-grip-vertical me-1"></i><strong>حوامل مواسير</strong></span>
+                                        <span id="pipeStatus" class="badge bg-secondary">لم يتم الاختيار</span>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-12 mb-2">
+                                                <div class="btn-group w-100" role="group" id="pipeBtnGroup">
+                                                    <input type="radio" class="btn-check" name="pipeChoice" id="pipeNone" value="none" onchange="toggleCommonAccessory('pipe')">
+                                                    <label class="btn btn-outline-danger" for="pipeNone" id="pipeNoneLabel">
+                                                        <i class="fas fa-ban me-1"></i>لا يوجد
+                                                    </label>
+                                                    <input type="radio" class="btn-check" name="pipeChoice" id="pipeSingle" value="single" onchange="toggleCommonAccessory('pipe')">
+                                                    <label class="btn btn-outline-success" for="pipeSingle" id="pipeSingleLabel">مفرد</label>
+                                                    <input type="radio" class="btn-check" name="pipeChoice" id="pipeDouble" value="double" onchange="toggleCommonAccessory('pipe')">
+                                                    <label class="btn btn-outline-success" for="pipeDouble" id="pipeDoubleLabel">دبل</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-12" id="pipeFields" style="display:none;">
+                                                <div class="row g-2 align-items-end">
+                                                    <div class="col-md-5">
+                                                        <label class="form-label">اختر من المرجع <span class="text-danger">*</span></label>
+                                                        <select id="pipeSelect" class="form-select form-select-sm" onchange="updateCommonAccessoryUnit('pipe')">
+                                                            <option value="">-- اختر الصنف --</option>
+                                                            {% for item in draft.items.all %}
+                                                            <option value="{{ item.id }}" data-name="{{ item.product.name }}" data-unit="{{ item.product.unit }}" data-available="{{ item.quantity }}">
+                                                                {{ item.product.name }} (متاح: {{ item.quantity }})
+                                                            </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label">المتاح</label>
+                                                        <input type="text" id="pipeAvailable" class="form-control form-control-sm bg-light" readonly>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label">العدد <span class="text-danger">*</span></label>
+                                                        <input type="number" id="pipeQty" class="form-control form-control-sm" min="1" placeholder="العدد">
+                                                    </div>
+                                                    <div class="col-md-2" id="pipeSizeDiv" style="display:none;">
+                                                        <label class="form-label">الطول (متر)</label>
+                                                        <input type="number" id="pipeSize" class="form-control form-control-sm" min="0.01" step="0.01" placeholder="الطول">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <button type="button" class="btn btn-success btn-sm w-100" onclick="addCommonAccessory('pipe')">
+                                                            <i class="fas fa-plus me-1"></i>إضافة
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- إكسسوارات أخرى -->
+                                <div class="card border-secondary" id="otherAccessoriesCard">
+                                    <div class="card-header bg-light py-2">
+                                        <i class="fas fa-tools me-1"></i><strong>إكسسوارات أخرى</strong>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <!-- مسامير عصفورة -->
+                                        <div class="row mb-3 align-items-center border-bottom pb-3" id="birdScrewsCard">
+                                            <div class="col-md-3">
+                                                <strong><i class="fas fa-screw me-1"></i>مسامير عصفورة</strong>
+                                                <span id="birdScrewsStatus" class="badge bg-secondary ms-1">-</span>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="btn-group w-100" role="group" id="birdScrewsBtnGroup">
+                                                    <input type="radio" class="btn-check" name="birdScrewsChoice" id="birdScrewsNone" value="none" onchange="toggleOtherAccessoryNew('birdScrews')">
+                                                    <label class="btn btn-outline-danger btn-sm" for="birdScrewsNone" id="birdScrewsNoneLabel">لا يوجد</label>
+                                                    <input type="radio" class="btn-check" name="birdScrewsChoice" id="birdScrewsYes" value="yes" onchange="toggleOtherAccessoryNew('birdScrews')">
+                                                    <label class="btn btn-outline-success btn-sm" for="birdScrewsYes" id="birdScrewsYesLabel">يوجد</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6" id="birdScrewsFields" style="display:none;">
+                                                <div class="row g-2 align-items-end">
+                                                    <div class="col-md-4">
+                                                        <select id="birdScrewsSelect" class="form-select form-select-sm" onchange="updateOtherAccessoryUnit('birdScrews')">
+                                                            <option value="">-- اختر الصنف --</option>
+                                                            {% for item in draft.items.all %}
+                                                            <option value="{{ item.id }}" data-name="{{ item.product.name }}" data-unit="{{ item.product.unit }}" data-available="{{ item.quantity }}">
+                                                                {{ item.product.name }} ({{ item.quantity }})
+                                                            </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <input type="text" id="birdScrewsAvailable" class="form-control form-control-sm bg-light text-center" readonly placeholder="المتاح">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <input type="number" id="birdScrewsQty" class="form-control form-control-sm" min="1" placeholder="العدد">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <button type="button" class="btn btn-success btn-sm" onclick="addOtherAccessoryNew('birdScrews', 'مسامير عصفورة')">
+                                                            <i class="fas fa-plus"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- فرانشة -->
+                                        <div class="row mb-3 align-items-center border-bottom pb-3" id="francheCard">
+                                            <div class="col-md-3">
+                                                <strong><i class="fas fa-tape me-1"></i>فرانشة</strong>
+                                                <span id="francheStatus" class="badge bg-secondary ms-1">-</span>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="btn-group w-100" role="group" id="francheBtnGroup">
+                                                    <input type="radio" class="btn-check" name="francheChoice" id="francheNone" value="none" onchange="toggleOtherAccessoryNew('franche')">
+                                                    <label class="btn btn-outline-danger btn-sm" for="francheNone" id="francheNoneLabel">لا يوجد</label>
+                                                    <input type="radio" class="btn-check" name="francheChoice" id="francheYes" value="yes" onchange="toggleOtherAccessoryNew('franche')">
+                                                    <label class="btn btn-outline-success btn-sm" for="francheYes" id="francheYesLabel">يوجد</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6" id="francheFields" style="display:none;">
+                                                <div class="row g-2 align-items-end">
+                                                    <div class="col-md-4">
+                                                        <select id="francheSelect" class="form-select form-select-sm" onchange="updateOtherAccessoryUnit('franche')">
+                                                            <option value="">-- اختر الصنف --</option>
+                                                            {% for item in draft.items.all %}
+                                                            <option value="{{ item.id }}" data-name="{{ item.product.name }}" data-unit="{{ item.product.unit }}" data-available="{{ item.quantity }}">
+                                                                {{ item.product.name }} ({{ item.quantity }})
+                                                            </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <input type="text" id="francheAvailable" class="form-control form-control-sm bg-light text-center" readonly placeholder="المتاح">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <input type="number" id="francheQty" class="form-control form-control-sm" min="1" placeholder="العدد">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <button type="button" class="btn btn-success btn-sm" onclick="addOtherAccessoryNew('franche', 'فرانشة')">
+                                                            <i class="fas fa-plus"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- شماعات -->
+                                        <div class="row align-items-center" id="hangersCard">
+                                            <div class="col-md-3">
+                                                <strong><i class="fas fa-ring me-1"></i>شماعات</strong>
+                                                <span id="hangersStatus" class="badge bg-secondary ms-1">-</span>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="btn-group w-100" role="group" id="hangersBtnGroup">
+                                                    <input type="radio" class="btn-check" name="hangersChoice" id="hangersNone" value="none" onchange="toggleOtherAccessoryNew('hangers')">
+                                                    <label class="btn btn-outline-danger btn-sm" for="hangersNone" id="hangersNoneLabel">لا يوجد</label>
+                                                    <input type="radio" class="btn-check" name="hangersChoice" id="hangersYes" value="yes" onchange="toggleOtherAccessoryNew('hangers')">
+                                                    <label class="btn btn-outline-success btn-sm" for="hangersYes" id="hangersYesLabel">يوجد</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6" id="hangersFields" style="display:none;">
+                                                <div class="row g-2 align-items-end">
+                                                    <div class="col-md-4">
+                                                        <select id="hangersSelect" class="form-select form-select-sm" onchange="updateOtherAccessoryUnit('hangers')">
+                                                            <option value="">-- اختر الصنف --</option>
+                                                            {% for item in draft.items.all %}
+                                                            <option value="{{ item.id }}" data-name="{{ item.product.name }}" data-unit="{{ item.product.unit }}" data-available="{{ item.quantity }}">
+                                                                {{ item.product.name }} ({{ item.quantity }})
+                                                            </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <input type="text" id="hangersAvailable" class="form-control form-control-sm bg-light text-center" readonly placeholder="المتاح">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <input type="number" id="hangersQty" class="form-control form-control-sm" min="1" placeholder="العدد">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <button type="button" class="btn btn-success btn-sm" onclick="addOtherAccessoryNew('hangers', 'شماعات')">
+                                                            <i class="fas fa-plus"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Accessories List -->
                         <div id="accessoriesList" class="mb-3"></div>
                         
@@ -413,6 +842,7 @@
                                                 <option value="{{ item.id }}" 
                                                         data-available="{{ item.quantity|stringformat:'f' }}" 
                                                         data-name="{{ item.product.name }}"
+                                                        data-unit="{{ item.product.unit }}"
                                                         data-is-fabric="false"
                                                         class="accessory-item-option">
                                                     {{ item.product.name }} - متوفر: <span class="available-acc-{{ item.id }}">{{ item.quantity|floatformat:"-3" }}</span>
@@ -424,14 +854,14 @@
                                             </small>
                                         </div>
                                         <div class="col-md-2">
-                                            <label class="form-label">العدد</label>
+                                            <label class="form-label">العدد <span class="text-danger">*</span></label>
                                             <input type="number" id="accessory-invoice-quantity" class="form-control" 
-                                                   min="1" step="1" value="1">
+                                                   min="1" step="1" placeholder="أدخل العدد">
                                         </div>
-                                        <div class="col-md-2">
-                                            <label class="form-label">المقاس (رقم)</label>
+                                        <div class="col-md-2" id="accessory-invoice-size-container">
+                                            <label class="form-label">المقاس (متر) <span class="text-danger">*</span></label>
                                             <input type="number" id="accessory-invoice-size" class="form-control" 
-                                                   min="0.01" step="0.01" value="1"
+                                                   min="0.01" step="0.01"
                                                    placeholder="مثال: 2، 1.5">
                                         </div>
                                         <div class="col-md-2">
@@ -457,14 +887,14 @@
                                                    placeholder="مثال: كورنيش، عصا...">
                                         </div>
                                         <div class="col-md-2">
-                                            <label class="form-label">العدد</label>
+                                            <label class="form-label">العدد <span class="text-danger">*</span></label>
                                             <input type="number" id="accessory-external-quantity" class="form-control" 
-                                                   min="1" step="1" value="1">
+                                                   min="1" step="1" placeholder="أدخل العدد">
                                         </div>
                                         <div class="col-md-2">
-                                            <label class="form-label">المقاس (رقم)</label>
+                                            <label class="form-label">المقاس (رقم) <span class="text-danger">*</span></label>
                                             <input type="number" id="accessory-external-size" class="form-control" 
-                                                   min="0.01" step="0.01" value="1"
+                                                   min="0.01" step="0.01"
                                                    placeholder="مثال: 2، 1.5">
                                         </div>
                                         <div class="col-md-2">
@@ -537,6 +967,31 @@
 {% block extra_js %}
 {{ block.super }}
 <script>
+// ===== دالة مساعدة لإضافة أيقونة الخطأ =====
+function addFieldErrorIcon(field, message) {
+    if (!field) return;
+    
+    const wrapper = field.closest('.mb-3, .col-md-4, .col-md-3');
+    if (wrapper && !wrapper.querySelector('.field-error-icon')) {
+        const errorIcon = document.createElement('span');
+        errorIcon.className = 'field-error-icon';
+        errorIcon.style.cssText = 'position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #dc3545; font-size: 1.2rem; z-index: 10; display: block;';
+        errorIcon.innerHTML = '<i class="fas fa-times-circle"></i>';
+        
+        wrapper.style.position = 'relative';
+        wrapper.appendChild(errorIcon);
+    }
+    
+    // إضافة رسالة الخطأ
+    if (message && !field.parentNode.querySelector('.field-error-message')) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'field-error-message';
+        errorDiv.style.cssText = 'color: #dc3545; font-size: 0.85rem; margin-top: 0.25rem;';
+        errorDiv.innerHTML = `<i class="fas fa-times-circle me-1"></i>${message}`;
+        field.parentNode.appendChild(errorDiv);
+    }
+}
+
 // Global variables to store curtain data
 let tempFabrics = [];
 let tempAccessories = [];
@@ -551,6 +1006,64 @@ fabricUsageTracker['{{ item.id }}'] = {
     name: '{{ item.product.name|escapejs }}'
 };
 {% endfor %}
+
+// دالة للحصول على الكمية المستخدمة من صنف معين - تحسب من كل المصادر
+function getUsedQuantityForItem(itemId) {
+    let used = 0;
+    itemId = String(itemId);
+    
+    // من الأقمشة المؤقتة في النافذة الحالية
+    tempFabrics.forEach(fabric => {
+        if (String(fabric.item_id) === itemId) {
+            used += parseFloat(fabric.meters) || 0;
+        }
+    });
+    
+    // من الإكسسوارات المؤقتة في النافذة الحالية
+    tempAccessories.forEach(acc => {
+        if (String(acc.item_id) === itemId) {
+            used += parseFloat(acc.quantity) || 0;
+        }
+    });
+    
+    // من الستائر الموجودة في الصفحة (باستثناء الستارة المعدّلة)
+    {% for curtain in curtains %}
+    if (editingCurtainId !== {{ curtain.id }} && String(editingCurtainId) !== '{{ curtain.id }}') {
+        {% for fabric in curtain.fabrics.all %}
+        {% if fabric.draft_order_item_id %}
+        if ('{{ fabric.draft_order_item_id }}' === itemId) {
+            used += parseFloat('{{ fabric.meters }}') || 0;
+        }
+        {% endif %}
+        {% endfor %}
+        
+        {% for accessory in curtain.accessories.all %}
+        {% if accessory.draft_order_item_id %}
+        if ('{{ accessory.draft_order_item_id }}' === itemId) {
+            used += parseFloat('{{ accessory.quantity }}') || 0;
+        }
+        {% endif %}
+        {% endfor %}
+    }
+    {% endfor %}
+    
+    return used;
+}
+
+// دالة للحصول على الكمية المتاحة الفعلية
+function getRealAvailableQuantity(itemId) {
+    itemId = String(itemId);
+    if (!fabricUsageTracker[itemId]) return 0;
+    
+    const total = fabricUsageTracker[itemId].total;
+    const used = getUsedQuantityForItem(itemId);
+    return Math.max(0, total - used);
+}
+
+// نفس الدالة باسم آخر للتوافق
+function calculateUsedFromItem(itemId) {
+    return getUsedQuantityForItem(itemId);
+}
 
 // Calculate used quantities from existing curtain fabrics
 function calculateUsedQuantities() {
@@ -689,6 +1202,46 @@ function updateFabricSelectOptions() {
             }
         });
     }
+    
+    // تحديث قوائم الإكسسوارات الشائعة
+    updateCommonAccessorySelects();
+}
+
+// تحديث جميع قوائم الإكسسوارات الشائعة لإظهار الكمية المتاحة الفعلية
+function updateCommonAccessorySelects() {
+    const selectIds = [
+        'wallBracketSelect', 'majarSelect', 'pipeSelect',
+        'birdScrewsSelect', 'francheSelect', 'hangersSelect'
+    ];
+    
+    selectIds.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        
+        Array.from(select.options).forEach(option => {
+            if (option.value === '') return; // Skip placeholder
+            
+            const itemId = option.value;
+            const originalName = option.getAttribute('data-name') || '';
+            const originalAvailable = parseFloat(option.getAttribute('data-available')) || 0;
+            
+            // حساب الكمية المتاحة الفعلية
+            const usedQty = getUsedQuantityForItem(itemId);
+            const realAvailable = originalAvailable - usedQty;
+            
+            // تحديث نص الخيار
+            option.textContent = `${originalName} (متاح: ${Math.max(0, realAvailable).toFixed(0)})`;
+            
+            // إخفاء الخيار إذا نفذت الكمية
+            if (realAvailable <= 0) {
+                option.style.display = 'none';
+                option.disabled = true;
+            } else {
+                option.style.display = '';
+                option.disabled = false;
+            }
+        });
+    });
 }
 
 // Update quantity info when fabric is selected
@@ -712,10 +1265,8 @@ function updateFabricQuantityInfo(selectElement) {
     const metersInput = document.getElementById('fabric-meters');
     metersInput.setAttribute('max', remaining);
     
-    // Auto-fill with remaining quantity if empty
-    if (!metersInput.value && remaining > 0) {
-        metersInput.value = remaining.toFixed(3).replace(/\.?0+$/, '');
-    }
+    // لا نملأ الكمية تلقائياً - نترك الحقل فارغاً للمستخدم
+    // metersInput.value = ''; // الحقل يبقى فارغاً
 }
 
 // Toggle between electronic and PDF contract
@@ -751,35 +1302,108 @@ function toggleCurtainBoxFields() {
 
 // Show fabrics section after basic info
 function showFabricsSection() {
-    const roomName = document.getElementById('curtain-room-name').value.trim();
-    const width = parseFloat(document.getElementById('curtain-width').value);
-    const height = parseFloat(document.getElementById('curtain-height').value);
-    const installationType = document.getElementById('curtain-installation-type').value;
+    const roomNameInput = document.getElementById('curtain-room-name');
+    const widthInput = document.getElementById('curtain-width');
+    const heightInput = document.getElementById('curtain-height');
+    const installationTypeSelect = document.getElementById('curtain-installation-type');
+    const boxWidthInput = document.getElementById('curtain-box-width');
+    const boxDepthInput = document.getElementById('curtain-box-depth');
     
-    if (!roomName || !width || !height || !installationType) {
-        alert('يرجى ملء جميع الحقول الأساسية (اسم الغرفة، العرض، الارتفاع، ونوع التركيب)');
-        return;
+    const roomName = roomNameInput.value.trim();
+    const width = parseFloat(widthInput.value);
+    const height = parseFloat(heightInput.value);
+    const installationType = installationTypeSelect.value;
+    
+    // إزالة الأخطاء السابقة
+    [roomNameInput, widthInput, heightInput, installationTypeSelect, boxWidthInput, boxDepthInput].forEach(field => {
+        if (field) {
+            field.classList.remove('field-required-error');
+            const wrapper = field.closest('.mb-3, .col-md-4, .col-md-3, .col-md-6');
+            if (wrapper) {
+                const errorIcon = wrapper.querySelector('.field-error-icon');
+                const errorMsg = wrapper.querySelector('.field-error-message');
+                if (errorIcon) errorIcon.remove();
+                if (errorMsg) errorMsg.remove();
+            }
+        }
+    });
+    
+    const missingFields = [];
+    let hasErrors = false;
+    
+    // التحقق من اسم الغرفة
+    if (!roomName) {
+        hasErrors = true;
+        missingFields.push('اسم الغرفة');
+        roomNameInput.classList.add('field-required-error');
+        addFieldErrorIcon(roomNameInput, 'اسم الغرفة مطلوب');
     }
     
-    if (width <= 0 || height <= 0) {
-        alert('يجب أن تكون القيم أكبر من صفر');
-        return;
+    // التحقق من العرض
+    if (!width || width <= 0 || isNaN(width)) {
+        hasErrors = true;
+        missingFields.push('العرض');
+        widthInput.classList.add('field-required-error');
+        addFieldErrorIcon(widthInput, 'العرض مطلوب');
     }
     
-    // Check if curtain box fields are required and filled
+    // التحقق من الارتفاع
+    if (!height || height <= 0 || isNaN(height)) {
+        hasErrors = true;
+        missingFields.push('الارتفاع');
+        heightInput.classList.add('field-required-error');
+        addFieldErrorIcon(heightInput, 'الارتفاع مطلوب');
+    }
+    
+    // التحقق من نوع التركيب
+    if (!installationType) {
+        hasErrors = true;
+        missingFields.push('نوع التركيب');
+        installationTypeSelect.classList.add('field-required-error');
+        addFieldErrorIcon(installationTypeSelect, 'نوع التركيب مطلوب');
+    }
+    
+    // التحقق من بيت الستارة إذا كان مطلوباً
     if (installationType === 'curtain_box_concrete' || installationType === 'curtain_box_gypsum') {
-        const boxWidth = parseFloat(document.getElementById('curtain-box-width').value);
-        const boxDepth = parseFloat(document.getElementById('curtain-box-depth').value);
+        const boxWidth = parseFloat(boxWidthInput.value);
+        const boxDepth = parseFloat(boxDepthInput.value);
         
-        if (!boxWidth || !boxDepth) {
-            alert('يرجى إدخال عرض وعمق بيت الستارة');
-            return;
+        if (!boxWidth || boxWidth <= 0 || isNaN(boxWidth)) {
+            hasErrors = true;
+            missingFields.push('عرض بيت الستارة');
+            boxWidthInput.classList.add('field-required-error');
+            addFieldErrorIcon(boxWidthInput, 'عرض بيت الستارة مطلوب');
         }
         
-        if (boxWidth <= 0 || boxDepth <= 0) {
-            alert('يجب أن تكون قيم بيت الستارة أكبر من صفر');
-            return;
+        if (!boxDepth || boxDepth <= 0 || isNaN(boxDepth)) {
+            hasErrors = true;
+            missingFields.push('عمق بيت الستارة');
+            boxDepthInput.classList.add('field-required-error');
+            addFieldErrorIcon(boxDepthInput, 'عمق بيت الستارة مطلوب');
         }
+    }
+    
+    // إذا كانت هناك أخطاء، عرض التنبيه
+    if (hasErrors) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: '<i class="fas fa-exclamation-triangle text-warning"></i> حقول مطلوبة',
+                html: `
+                    <div class="text-end">
+                        <p class="mb-3">يرجى ملء الحقول التالية:</p>
+                        <ul class="list-unstyled text-danger">
+                            ${missingFields.map(f => `<li><i class="fas fa-times-circle me-2"></i>${f}</li>`).join('')}
+                        </ul>
+                    </div>
+                `,
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert('يرجى ملء الحقول التالية:\n' + missingFields.join('\n'));
+        }
+        return;
     }
     
     // Update summary
@@ -804,31 +1428,94 @@ function backToBasicInfo() {
 
 // Add fabric to temporary list
 function addFabricToList() {
-    const fabricType = document.getElementById('fabric-type').value;
+    const fabricTypeSelect = document.getElementById('fabric-type');
+    const fabricType = fabricTypeSelect.value;
     const fabricSelect = document.getElementById('fabric-name');
     const fabricItemId = fabricSelect.value;
     const metersInput = document.getElementById('fabric-meters');
     const meters = parseFloat(metersInput.value);
-    const pieces = parseInt(document.getElementById('fabric-pieces').value);
-    const tailoring = document.getElementById('fabric-tailoring').value;
+    const piecesInput = document.getElementById('fabric-pieces');
+    const pieces = parseInt(piecesInput.value);
+    const tailoringSelect = document.getElementById('fabric-tailoring');
+    const tailoring = tailoringSelect.value;
     
+    // إزالة الأخطاء السابقة
+    [fabricTypeSelect, fabricSelect, metersInput, piecesInput, tailoringSelect].forEach(field => {
+        if (field) {
+            field.classList.remove('field-required-error');
+            const wrapper = field.closest('.mb-3, .col-md-4, .col-md-3, .col-md-6');
+            if (wrapper) {
+                const errorIcon = wrapper.querySelector('.field-error-icon');
+                const errorMsg = wrapper.querySelector('.field-error-message');
+                if (errorIcon) errorIcon.remove();
+                if (errorMsg) errorMsg.remove();
+            }
+        }
+    });
+    
+    const missingFields = [];
+    let hasErrors = false;
+    
+    // التحقق من نوع القماش
     if (!fabricType) {
-        alert('يرجى اختيار نوع القماش');
-        return;
+        hasErrors = true;
+        missingFields.push('نوع القماش');
+        fabricTypeSelect.classList.add('field-required-error');
+        addFieldErrorIcon(fabricTypeSelect, 'نوع القماش مطلوب');
     }
     
+    // التحقق من اسم القماش
     if (!fabricItemId) {
-        alert('يرجى اختيار القماش من المرجع');
-        return;
+        hasErrors = true;
+        missingFields.push('اسم القماش');
+        fabricSelect.classList.add('field-required-error');
+        addFieldErrorIcon(fabricSelect, 'اسم القماش مطلوب');
     }
     
+    // التحقق من الكمية
     if (!meters || meters <= 0 || isNaN(meters)) {
-        alert('يرجى إدخال كمية صحيحة');
-        return;
+        hasErrors = true;
+        missingFields.push('الكمية بالمتر');
+        metersInput.classList.add('field-required-error');
+        addFieldErrorIcon(metersInput, 'الكمية مطلوبة');
     }
     
-    if (!pieces || pieces <= 0) {
-        alert('يرجى إدخال عدد قطع صحيح');
+    // التحقق من عدد القطع
+    if (!pieces || pieces <= 0 || isNaN(pieces)) {
+        hasErrors = true;
+        missingFields.push('عدد القطع');
+        piecesInput.classList.add('field-required-error');
+        addFieldErrorIcon(piecesInput, 'عدد القطع مطلوب');
+    }
+    
+    // التحقق من طريقة التفصيل
+    if (!tailoring) {
+        hasErrors = true;
+        missingFields.push('طريقة التفصيل');
+        tailoringSelect.classList.add('field-required-error');
+        addFieldErrorIcon(tailoringSelect, 'طريقة التفصيل مطلوبة');
+    }
+    
+    // إذا كانت هناك أخطاء، عرض التنبيه
+    if (hasErrors) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: '<i class="fas fa-exclamation-triangle text-warning"></i> حقول مطلوبة',
+                html: `
+                    <div class="text-end">
+                        <p class="mb-3">يرجى ملء الحقول التالية:</p>
+                        <ul class="list-unstyled text-danger">
+                            ${missingFields.map(f => `<li><i class="fas fa-times-circle me-2"></i>${f}</li>`).join('')}
+                        </ul>
+                    </div>
+                `,
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert('يرجى ملء الحقول التالية:\n' + missingFields.join('\n'));
+        }
         return;
     }
     
@@ -859,13 +1546,28 @@ function addFabricToList() {
     tempFabrics.push(fabric);
     updateFabricsList();
     
-    // Clear form
+    // Clear form - إعادة تعيين جميع الحقول بدون قيم افتراضية
     document.getElementById('fabric-type').value = '';
     document.getElementById('fabric-name').value = '';
     metersInput.value = '';
-    document.getElementById('fabric-pieces').value = '1';
+    document.getElementById('fabric-pieces').value = '';
     document.getElementById('fabric-tailoring').value = '';
     document.getElementById('fabric-qty-hint').style.display = 'none';
+    
+    // إظهار رسالة نجاح
+    if (typeof Swal !== 'undefined') {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+        });
+        Toast.fire({
+            icon: 'success',
+            title: 'تم إضافة القماش بنجاح'
+        });
+    }
     
     // Recalculate to update tracking and hide fully used items
     calculateUsedQuantities();
@@ -885,8 +1587,22 @@ function updateFabricsList() {
                           fabric.type === 'heavy' ? 'danger' : 
                           fabric.type === 'blackout' ? 'dark' : 'secondary';
         
-        // Format meters to remove trailing zeros
-        const metersFormatted = parseFloat(fabric.meters).toFixed(3).replace(/\.?0+$/, '');
+        // تحديد إذا كان حزام (من اسم القماش أو source أو unit)
+        const isBelt = fabric.source === 'belt' || fabric.unit === 'piece' || 
+                      (fabric.name && fabric.name.includes('حزام'));
+        
+        // عرض مختلف للحزام (بالقطعة) والأقمشة (بالمتر)
+        let quantityDisplay = '';
+        if (isBelt) {
+            // الحزام: عرض بالقطعة فقط - استخدام pieces أو meters كـ fallback
+            const piecesCount = fabric.pieces || fabric.meters || 1;
+            quantityDisplay = `${parseInt(piecesCount)} قطعة`;
+        } else {
+            // الأقمشة: عرض بالمتر والقطع
+            const metersFormatted = parseFloat(fabric.meters).toFixed(3).replace(/\.?0+$/, '');
+            const piecesCount = fabric.pieces || 1;
+            quantityDisplay = `${metersFormatted}م × ${piecesCount} قطعة`;
+        }
         
         html += `
             <div class="card mb-2 border-${colorClass}">
@@ -895,7 +1611,7 @@ function updateFabricsList() {
                         <div>
                             <span class="badge bg-${colorClass}">${fabric.type_display}</span>
                             <strong>${fabric.name}</strong> - 
-                            ${metersFormatted}م × ${fabric.pieces} قطعة
+                            ${quantityDisplay}
                             ${fabric.tailoring ? ' - ' + fabric.tailoring_display : ''}
                         </div>
                         <button type="button" class="btn btn-sm btn-danger" onclick="removeFabric(${index})">
@@ -920,10 +1636,73 @@ function removeFabric(index) {
 
 // Show accessories section
 function showAccessoriesSection(skipFabricCheck = false) {
-    if (!skipFabricCheck && tempFabrics.length === 0) {
-        if (!confirm('لم تقم بإضافة أي أقمشة. هل تريد المتابعة؟')) {
-            return;
+    // التحقق من اختيار خيار الحزام أو إضافة حزام
+    const noBelt = document.getElementById('noBelt')?.checked;
+    const scotchBelt = document.getElementById('scotchBelt')?.checked;
+    const normalBelt = document.getElementById('normalBelt')?.checked;
+    
+    // التحقق إذا تم إضافة حزام في قائمة الأقمشة (بأي طريقة)
+    const hasBeltAdded = tempFabrics.some(fabric => 
+        fabric.source === 'belt' || 
+        fabric.unit === 'piece' || 
+        (fabric.name && fabric.name.includes('حزام'))
+    );
+    
+    // السماح بالمتابعة إذا: تم اختيار خيار أو تم إضافة حزام
+    if (!noBelt && !scotchBelt && !normalBelt && !hasBeltAdded) {
+        // تحديد بطاقة الحزام بتنسيق الخطأ
+        const beltCard = document.querySelector('.card.border-info');
+        if (beltCard) {
+            beltCard.classList.add('field-required-error');
         }
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'حقل مطلوب',
+            text: 'يرجى اختيار خيار الحزام (لا يوجد / سكوتش / عادي) أو إضافة حزام',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+    
+    // إزالة تنسيق الخطأ من بطاقة الحزام
+    const beltCard = document.querySelector('.card.border-info');
+    if (beltCard) {
+        beltCard.classList.remove('field-required-error');
+    }
+    
+    if (!skipFabricCheck && tempFabrics.length === 0) {
+        // إظهار تنبيه SweetAlert مع منع المتابعة
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: '<i class="fas fa-times-circle text-danger"></i> يجب إضافة قماش',
+                html: `
+                    <div class="text-center">
+                        <p class="mb-3" style="font-size: 1.1rem;">لم تقم بإضافة أي أقمشة للستارة!</p>
+                        <div class="alert alert-warning py-2">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>يجب إضافة قماش واحد على الأقل</strong> للمتابعة
+                        </div>
+                    </div>
+                `,
+                confirmButtonText: '<i class="fas fa-plus me-2"></i>إضافة قماش الآن',
+                confirmButtonColor: '#198754',
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            });
+        } else {
+            alert('يجب إضافة قماش واحد على الأقل للمتابعة!');
+        }
+        
+        // تلوين قسم إضافة الأقمشة
+        const addFabricCard = document.querySelector('#fabricsSection .card');
+        if (addFabricCard) {
+            addFabricCard.classList.add('field-required-error');
+            addFabricCard.style.animation = 'shake 0.5s ease-in-out';
+        }
+        
+        return; // منع المتابعة
     }
     
     document.getElementById('fabricsSection').style.display = 'none';
@@ -939,6 +1718,92 @@ function backToFabricsSection() {
 
 // Show notes section
 function showNotesSection() {
+    // التحقق من اختيار الإكسسوار
+    const withAccessories = document.getElementById('withAccessories')?.checked;
+    const noAccessories = document.getElementById('noAccessories')?.checked;
+    
+    // التحقق: يجب اختيار إما "مع إكسسوار" أو "بدون إكسسوار"
+    if (!withAccessories && !noAccessories) {
+        // تحديد حاوية الاختيار بتنسيق الخطأ
+        const choiceCard = document.getElementById('accessoryChoiceCard');
+        if (choiceCard) {
+            choiceCard.classList.add('field-required-error');
+            choiceCard.style.border = '2px solid #dc3545';
+            choiceCard.style.borderRadius = '8px';
+            choiceCard.style.padding = '10px';
+        }
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'حقل مطلوب',
+            text: 'يرجى اختيار إما "مع إكسسوار" أو "بدون إكسسوار"',
+            confirmButtonText: 'حسناً'
+        });
+        return false;
+    }
+    
+    // إذا اختار "مع إكسسوار" يجب التحقق من جميع الإكسسوارات
+    if (withAccessories) {
+        // التحقق من الإكسسوارات الشائعة (حوامل)
+        const commonTypes = ['wallBracket', 'majar', 'pipe'];
+        const commonNames = {
+            'wallBracket': 'حوامل الحائط',
+            'majar': 'حوامل مجر', 
+            'pipe': 'حوامل مواسير'
+        };
+        
+        for (let type of commonTypes) {
+            const choice = document.querySelector(`input[name="${type}Choice"]:checked`);
+            if (!choice) {
+                const card = document.getElementById(`${type}Card`);
+                if (card) card.classList.add('field-required-error');
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'حقل مطلوب',
+                    html: `يرجى تحديد اختيارك لـ <strong>${commonNames[type]}</strong><br>(لا يوجد أو اختيار النوع)`,
+                    confirmButtonText: 'حسناً'
+                });
+                return false;
+            }
+        }
+        
+        // التحقق من الإكسسوارات الأخرى (مسامير عصفورة، فرانشة، شماعات)
+        const otherTypes = ['birdScrews', 'franche', 'hangers'];
+        const otherNames = {
+            'birdScrews': 'مسامير عصفورة',
+            'franche': 'فرانشة',
+            'hangers': 'شماعات'
+        };
+        
+        for (let type of otherTypes) {
+            const choice = document.querySelector(`input[name="${type}Choice"]:checked`);
+            if (!choice) {
+                const card = document.getElementById(`${type}Card`);
+                if (card) card.classList.add('field-required-error');
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'حقل مطلوب',
+                    html: `يرجى تحديد اختيارك لـ <strong>${otherNames[type]}</strong><br>(لا يوجد أو يوجد)`,
+                    confirmButtonText: 'حسناً'
+                });
+                return false;
+            }
+        }
+        
+        // التحقق من إضافة إكسسوار واحد على الأقل
+        if (tempAccessories.length === 0) {
+            Swal.fire({
+                icon: 'error',
+                title: 'الإكسسوارات مطلوبة',
+                text: 'يرجى إضافة إكسسوار واحد على الأقل أو اختيار "بدون إكسسوار"',
+                confirmButtonText: 'حسناً'
+            });
+            return false;
+        }
+    }
+    
     // Update summary
     const roomName = document.getElementById('curtain-room-name').value;
     document.getElementById('summary3-room-name').textContent = roomName;
@@ -956,9 +1821,620 @@ function backToAccessoriesSection() {
     document.getElementById('fabricsSection').style.display = 'none';
 }
 
-// Toggle accessories fields
+// Toggle accessories choice (with or without)
+function toggleAccessoriesChoice() {
+    const withAccessories = document.getElementById('withAccessories').checked;
+    const noAccessories = document.getElementById('noAccessories').checked;
+    
+    // إزالة تنسيق الخطأ
+    const choiceCard = document.getElementById('accessoryChoiceCard');
+    if (choiceCard) {
+        choiceCard.classList.remove('field-required-error');
+        choiceCard.style.border = '';
+        choiceCard.style.borderRadius = '';
+        choiceCard.style.padding = '';
+        const errorIcon = choiceCard.querySelector('.field-error-icon');
+        const errorMsg = choiceCard.querySelector('.field-error-message');
+        if (errorIcon) errorIcon.remove();
+        if (errorMsg) errorMsg.remove();
+    }
+    
+    if (withAccessories) {
+        document.getElementById('accessoriesFields').style.display = 'block';
+    } else {
+        document.getElementById('accessoriesFields').style.display = 'none';
+    }
+}
+
+// ===== دوال الإكسسوارات الشائعة الجديدة =====
+
+// متغير لحفظ اختيارات الإكسسوارات الشائعة
+let commonAccessoryChoices = {
+    wallBracket: null,
+    majar: null,
+    pipe: null,
+    birdScrews: null,
+    franche: null,
+    hangers: null
+};
+
+// دالة تحديث حالة الاختيار للمحاسبة
+function updateAccessoryStatus(type, choice) {
+    const statusBadge = document.getElementById(`${type}Status`);
+    if (!statusBadge) return;
+    
+    statusBadge.classList.remove('bg-secondary', 'bg-danger', 'bg-success', 'bg-info');
+    
+    if (choice === null || choice === undefined) {
+        statusBadge.textContent = 'لم يتم الاختيار';
+        statusBadge.classList.add('bg-secondary');
+    } else if (choice === 'none') {
+        statusBadge.textContent = '❌ تم اختيار: لا يوجد';
+        statusBadge.classList.add('bg-danger');
+    } else if (choice === 'added') {
+        statusBadge.textContent = '✅ تمت الإضافة';
+        statusBadge.classList.add('bg-success');
+    } else if (choice === 'yes') {
+        statusBadge.textContent = '✓ بانتظار التحديد';
+        statusBadge.classList.add('bg-info');
+    } else {
+        statusBadge.textContent = `✓ تم اختيار: ${choice}`;
+        statusBadge.classList.add('bg-info');
+    }
+}
+
+// تبديل إظهار حقول الإكسسوار الشائع (حوامل حائط، مجر، مواسير)
+function toggleCommonAccessory(type) {
+    const choice = document.querySelector(`input[name="${type}Choice"]:checked`);
+    const fieldsDiv = document.getElementById(`${type}Fields`);
+    const card = document.getElementById(`${type}Card`);
+    const statusBadge = document.getElementById(`${type}Status`);
+    
+    // حفظ الاختيار
+    if (choice) {
+        commonAccessoryChoices[type] = choice.value;
+    }
+    
+    // إزالة تنسيق الخطأ من الكارد
+    if (card) {
+        card.classList.remove('field-required-error');
+        const errorIcon = card.querySelector('.field-error-icon');
+        const errorMsg = card.querySelector('.field-error-message');
+        if (errorIcon) errorIcon.remove();
+        if (errorMsg) errorMsg.remove();
+    }
+    
+    // تحديث ألوان الأزرار ديناميكياً
+    updateCommonAccessoryButtonColors(type, choice ? choice.value : null);
+    
+    // تحديث حالة الاختيار
+    updateAccessoryStatus(type, choice ? choice.value : null);
+    
+    if (choice && choice.value !== 'none') {
+        // تم اختيار نوع - إظهار حقول الإدخال
+        fieldsDiv.style.display = 'block';
+    } else {
+        // تم اختيار "لا يوجد" أو لم يتم الاختيار
+        fieldsDiv.style.display = 'none';
+        // إعادة تعيين الحقول
+        const selectEl = document.getElementById(`${type}Select`);
+        if (selectEl) selectEl.value = '';
+        const qtyEl = document.getElementById(`${type}Qty`);
+        if (qtyEl) qtyEl.value = '';
+        const sizeEl = document.getElementById(`${type}Size`);
+        if (sizeEl) sizeEl.value = '';
+        const sizeDivEl = document.getElementById(`${type}SizeDiv`);
+        if (sizeDivEl) sizeDivEl.style.display = 'none';
+        const availableEl = document.getElementById(`${type}Available`);
+        if (availableEl) availableEl.value = '';
+    }
+}
+
+// تحديث ألوان الأزرار ديناميكياً
+function updateCommonAccessoryButtonColors(type, selectedValue) {
+    // الحصول على جميع الأزرار في المجموعة
+    const btnGroup = document.getElementById(`${type}BtnGroup`);
+    if (!btnGroup) return;
+    
+    const radios = btnGroup.querySelectorAll('input[type="radio"]');
+    radios.forEach(radio => {
+        const label = document.querySelector(`label[for="${radio.id}"]`);
+        if (!label) return;
+        
+        // إزالة جميع الكلاسات اللونية
+        label.classList.remove('btn-danger', 'btn-success', 'btn-outline-danger', 'btn-outline-success', 'btn-outline-secondary');
+        
+        if (radio.checked) {
+            // الزر المختار - لون صلب
+            if (radio.value === 'none') {
+                label.classList.add('btn-danger');
+            } else {
+                label.classList.add('btn-success');
+            }
+        } else {
+            // الأزرار غير المختارة - لون outline
+            if (radio.value === 'none') {
+                label.classList.add('btn-outline-danger');
+            } else {
+                label.classList.add('btn-outline-success');
+            }
+        }
+    });
+}
+
+// تحديث حقل الطول والكمية المتاحة بناء على المنتج المختار
+function updateCommonAccessoryUnit(type) {
+    const select = document.getElementById(`${type}Select`);
+    const sizeDiv = document.getElementById(`${type}SizeDiv`);
+    const availableInput = document.getElementById(`${type}Available`);
+    const qtyInput = document.getElementById(`${type}Qty`);
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (selectedOption && selectedOption.value) {
+        // عرض الكمية المتاحة
+        const available = parseFloat(selectedOption.getAttribute('data-available')) || 0;
+        const usedQty = getUsedQuantityForItem(selectedOption.value);
+        const realAvailable = available - usedQty;
+        
+        if (availableInput) {
+            availableInput.value = realAvailable.toFixed(2);
+            if (realAvailable <= 0) {
+                availableInput.classList.add('text-danger', 'fw-bold');
+            } else {
+                availableInput.classList.remove('text-danger', 'fw-bold');
+            }
+        }
+        
+        // تحديد الحد الأقصى للعدد
+        if (qtyInput) {
+            qtyInput.max = Math.floor(realAvailable);
+        }
+        
+        const unit = selectedOption.getAttribute('data-unit');
+        // إظهار حقل الطول فقط إذا كانت الوحدة متر أو رول
+        if (unit && (unit.toLowerCase() === 'meter' || unit.toLowerCase() === 'متر' || 
+                     unit.toLowerCase() === 'roll' || unit.toLowerCase() === 'رول')) {
+            sizeDiv.style.display = 'block';
+        } else {
+            sizeDiv.style.display = 'none';
+            const sizeEl = document.getElementById(`${type}Size`);
+            if (sizeEl) sizeEl.value = '';
+        }
+    } else {
+        if (sizeDiv) sizeDiv.style.display = 'none';
+        if (availableInput) availableInput.value = '';
+    }
+}
+
+// إضافة إكسسوار شائع
+function addCommonAccessory(type) {
+    const typeNames = {
+        'wallBracket': 'حامل حائط',
+        'majar': 'حامل مجر',
+        'pipe': 'حامل مواسير'
+    };
+    
+    const typeLabels = {
+        'wallBracket': {'10': '10 سنتم', '15': '15 سنتم', '20': '20 سنتم'},
+        'majar': {'single': 'مفرد', 'double': 'دبل'},
+        'pipe': {'single': 'مفرد', 'double': 'دبل'}
+    };
+    
+    const choice = document.querySelector(`input[name="${type}Choice"]:checked`);
+    if (!choice || choice.value === 'none') {
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: 'يرجى اختيار نوع الإكسسوار',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+    
+    const choiceValue = choice.value;
+    const choiceLabel = typeLabels[type][choiceValue] || choiceValue;
+    const qtyInput = document.getElementById(`${type}Qty`);
+    const qty = parseInt(qtyInput.value);
+    
+    // التحقق من إدخال العدد
+    if (!qty || qty <= 0 || isNaN(qty)) {
+        qtyInput.classList.add('field-required-error');
+        Swal.fire({
+            icon: 'error',
+            title: 'حقل مطلوب',
+            text: 'يرجى إدخال العدد',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+    qtyInput.classList.remove('field-required-error');
+    
+    // الحصول على معلومات المنتج من المرجع
+    const select = document.getElementById(`${type}Select`);
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (!selectedOption || !selectedOption.value) {
+        select.classList.add('field-required-error');
+        Swal.fire({
+            icon: 'error',
+            title: 'حقل مطلوب',
+            text: 'يرجى اختيار الصنف من المرجع',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+    select.classList.remove('field-required-error');
+    
+    const itemId = selectedOption.value;
+    const productName = selectedOption.getAttribute('data-name') || '';
+    const displayType = `${typeNames[type]} ${choiceLabel}`;
+    
+    // التحقق من الكمية المتاحة
+    const available = parseFloat(selectedOption.getAttribute('data-available')) || 0;
+    const usedQty = getUsedQuantityForItem(itemId);
+    const realAvailable = available - usedQty;
+    
+    if (qty > realAvailable) {
+        qtyInput.classList.add('field-required-error');
+        Swal.fire({
+            icon: 'error',
+            title: 'الكمية غير متاحة',
+            html: `الكمية المطلوبة (${qty}) أكبر من المتاح (${realAvailable.toFixed(2)})<br><br>الكمية الأصلية: ${available}<br>المستخدم: ${usedQty.toFixed(2)}`,
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+    
+    // الحصول على الطول إن كان بالمتر
+    let size = null;
+    const sizeInput = document.getElementById(`${type}Size`);
+    if (sizeInput && sizeInput.value) {
+        size = parseFloat(sizeInput.value);
+    }
+    
+    const accessory = {
+        name: productName,
+        display_type: displayType,
+        quantity: qty,
+        count: qty,
+        size: size,
+        color: '',
+        source: 'invoice',
+        item_id: itemId
+    };
+    
+    tempAccessories.push(accessory);
+    updateAccessoriesList();
+    calculateUsedQuantities(); // تحديث الكميات المستخدمة
+    updateCommonAccessorySelects(); // تحديث قوائم الإكسسوارات
+    
+    // حفظ الاختيار للمحاسبة
+    commonAccessoryChoices[type] = {
+        choice: choiceValue,
+        item_id: itemId,
+        product_name: productName,
+        quantity: qty,
+        size: size,
+        display_type: displayType,
+        added_at: new Date().toISOString()
+    };
+    
+    // تحديث حالة الاختيار
+    updateAccessoryStatus(type, 'added');
+    
+    // لا نعيد تعيين الاختيار - نحتفظ به للمراجعة
+    // لكن نخفي حقول الإدخال ونمسح القيم
+    document.getElementById(`${type}Fields`).style.display = 'none';
+    select.value = '';
+    qtyInput.value = '';
+    const sizeEl = document.getElementById(`${type}Size`);
+    if (sizeEl) sizeEl.value = '';
+    const sizeDivEl = document.getElementById(`${type}SizeDiv`);
+    if (sizeDivEl) sizeDivEl.style.display = 'none';
+    const availableEl = document.getElementById(`${type}Available`);
+    if (availableEl) availableEl.value = '';
+    
+    // رسالة نجاح
+    let sizeText = size ? ` × ${size}م` : '';
+    Swal.fire({
+        icon: 'success',
+        title: 'تمت الإضافة',
+        text: `تم إضافة ${productName} - ${displayType} (${qty} قطعة${sizeText})`,
+        timer: 2000,
+        showConfirmButton: false
+    });
+}
+
+// تبديل إظهار حقول الإكسسوارات الأخرى (مسامير عصفورة، فرانشة، شماعات)
+function toggleOtherAccessoryNew(type) {
+    const choice = document.querySelector(`input[name="${type}Choice"]:checked`);
+    const fieldsDiv = document.getElementById(`${type}Fields`);
+    
+    // حفظ الاختيار
+    if (choice) {
+        commonAccessoryChoices[type] = choice.value;
+    }
+    
+    // تحديث ألوان الأزرار
+    updateOtherAccessoryButtonColors(type, choice ? choice.value : null);
+    
+    // تحديث حالة الاختيار
+    updateAccessoryStatus(type, choice ? choice.value : null);
+    
+    if (choice && choice.value === 'yes') {
+        fieldsDiv.style.display = 'flex';
+    } else {
+        fieldsDiv.style.display = 'none';
+        const qtyEl = document.getElementById(`${type}Qty`);
+        if (qtyEl) qtyEl.value = '';
+        const selectEl = document.getElementById(`${type}Select`);
+        if (selectEl) selectEl.value = '';
+    }
+}
+
+// تحديث ألوان أزرار الإكسسوارات الأخرى
+function updateOtherAccessoryButtonColors(type, selectedValue) {
+    const btnGroup = document.getElementById(`${type}BtnGroup`);
+    if (!btnGroup) return;
+    
+    const radios = btnGroup.querySelectorAll('input[type="radio"]');
+    radios.forEach(radio => {
+        const label = document.querySelector(`label[for="${radio.id}"]`);
+        if (!label) return;
+        
+        label.classList.remove('btn-danger', 'btn-success', 'btn-outline-danger', 'btn-outline-success');
+        
+        if (radio.checked) {
+            if (radio.value === 'none') {
+                label.classList.add('btn-danger');
+            } else {
+                label.classList.add('btn-success');
+            }
+        } else {
+            if (radio.value === 'none') {
+                label.classList.add('btn-outline-danger');
+            } else {
+                label.classList.add('btn-outline-success');
+            }
+        }
+    });
+}
+
+// تحديث حقل الإكسسوار الآخر - عرض الكمية المتاحة
+function updateOtherAccessoryUnit(type) {
+    const select = document.getElementById(`${type}Select`);
+    const availableInput = document.getElementById(`${type}Available`);
+    const qtyInput = document.getElementById(`${type}Qty`);
+    const selectedOption = select ? select.options[select.selectedIndex] : null;
+    
+    if (selectedOption && selectedOption.value) {
+        // حساب الكمية المتاحة الحقيقية
+        const originalAvailable = parseFloat(selectedOption.getAttribute('data-available')) || 0;
+        const usedQty = getUsedQuantityForItem(selectedOption.value);
+        const realAvailable = originalAvailable - usedQty;
+        
+        if (availableInput) {
+            availableInput.value = Math.floor(realAvailable);
+            if (realAvailable <= 0) {
+                availableInput.classList.add('text-danger', 'fw-bold');
+            } else {
+                availableInput.classList.remove('text-danger', 'fw-bold');
+            }
+        }
+        
+        // تحديد الحد الأقصى للعدد
+        if (qtyInput) {
+            qtyInput.max = Math.floor(realAvailable);
+        }
+    } else {
+        if (availableInput) availableInput.value = '';
+    }
+}
+
+// إضافة إكسسوار آخر (مسامير عصفورة، فرانشة، شماعات)
+function addOtherAccessoryNew(type, displayType) {
+    const qtyInput = document.getElementById(`${type}Qty`);
+    const qty = parseInt(qtyInput.value);
+    
+    // التحقق من إدخال العدد
+    if (!qty || qty <= 0 || isNaN(qty)) {
+        qtyInput.classList.add('field-required-error');
+        Swal.fire({
+            icon: 'error',
+            title: 'حقل مطلوب',
+            text: 'يرجى إدخال العدد',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+    qtyInput.classList.remove('field-required-error');
+    
+    // الحصول على معلومات المنتج - يجب اختيار منتج من المرجع
+    const select = document.getElementById(`${type}Select`);
+    const selectedOption = select ? select.options[select.selectedIndex] : null;
+    
+    if (!selectedOption || !selectedOption.value) {
+        Swal.fire({
+            icon: 'error',
+            title: 'حقل مطلوب',
+            text: 'يرجى اختيار المنتج من القائمة',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+    
+    const itemId = selectedOption.value;
+    const productName = selectedOption.getAttribute('data-name') || displayType;
+    
+    // التحقق من الكمية المتاحة
+    const availableQty = parseFloat(selectedOption.getAttribute('data-available')) || 0;
+    const usedFromItem = calculateUsedFromItem(itemId);
+    const realAvailable = availableQty - usedFromItem;
+    
+    if (qty > realAvailable) {
+        Swal.fire({
+            icon: 'error',
+            title: 'الكمية غير متاحة',
+            text: `الكمية المطلوبة (${qty}) أكبر من المتاح (${Math.floor(realAvailable)})`,
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+    
+    const accessory = {
+        name: productName,
+        display_type: displayType,
+        quantity: qty,
+        count: qty,
+        size: null,
+        color: '',
+        source: 'invoice',
+        item_id: itemId
+    };
+    
+    tempAccessories.push(accessory);
+    updateAccessoriesList();
+    calculateUsedQuantities(); // تحديث الكميات المستخدمة
+    updateCommonAccessorySelects(); // تحديث قوائم الإكسسوارات
+    
+    // حفظ الاختيار للمحاسبة
+    commonAccessoryChoices[type] = {
+        choice: 'yes',
+        item_id: itemId,
+        product_name: productName,
+        quantity: qty,
+        added_at: new Date().toISOString()
+    };
+    
+    // إعادة تعيين
+    const noneRadio = document.getElementById(`${type}None`);
+    if (noneRadio) {
+        noneRadio.checked = true;
+        updateOtherAccessoryButtonColors(type, 'none');
+        // تحديث حالة الاختيار بعد الإضافة
+        updateAccessoryStatus(type, 'added');
+    }
+    document.getElementById(`${type}Fields`).style.display = 'none';
+    qtyInput.value = '';
+    if (select) select.value = '';
+    
+    // رسالة نجاح
+    Swal.fire({
+        icon: 'success',
+        title: 'تمت الإضافة',
+        text: `تم إضافة ${productName} - ${displayType} (${qty} قطعة)`,
+        timer: 2000,
+        showConfirmButton: false
+    });
+}
+
+// دوال قديمة للتوافق
+function toggleQuickAccessory(type) {
+    console.log('Using old toggleQuickAccessory - please update to new system');
+}
+
+function addQuickAccessory(group) {
+    console.log('Using old addQuickAccessory - please update to new system');
+}
+
+function toggleOtherAccessory(type) {
+    console.log('Using old toggleOtherAccessory - please update to new system');
+}
+
+function addOtherAccessory(type, name) {
+    console.log('Using old addOtherAccessory - please update to new system');
+}
+
+// ===== دوال الحزام =====
+
+// تبديل خيارات الحزام
+function toggleBeltOptions() {
+    const scotchBelt = document.getElementById('scotchBelt').checked;
+    const normalBelt = document.getElementById('normalBelt').checked;
+    const beltQtyDiv = document.getElementById('beltQtyDiv');
+    
+    if (scotchBelt || normalBelt) {
+        beltQtyDiv.style.display = 'block';
+    } else {
+        beltQtyDiv.style.display = 'none';
+    }
+}
+
+// إضافة الحزام إلى قائمة الأقمشة
+function addBeltToFabrics() {
+    const scotchBelt = document.getElementById('scotchBelt').checked;
+    const normalBelt = document.getElementById('normalBelt').checked;
+    const qtyInput = document.getElementById('beltQty');
+    const qty = parseInt(qtyInput.value);
+    
+    let beltName = '';
+    if (scotchBelt) {
+        beltName = 'حزام سكوتش';
+    } else if (normalBelt) {
+        beltName = 'حزام عادي';
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: 'يرجى اختيار نوع الحزام',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+    
+    // التحقق من إدخال العدد
+    if (!qty || qty <= 0 || isNaN(qty)) {
+        qtyInput.classList.add('field-required-error');
+        Swal.fire({
+            icon: 'error',
+            title: 'حقل مطلوب',
+            text: 'يرجى إدخال العدد',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+    qtyInput.classList.remove('field-required-error');
+    
+    // إضافة الحزام كقماش إضافي - بالقطعة فقط (بدون أمتار)
+    const fabric = {
+        type: 'additional',
+        type_display: 'إضافي',
+        name: beltName,
+        meters: qty,           // العدد فقط (قطع)
+        pieces: qty,           // نفس العدد
+        tailoring: '',
+        tailoring_display: '-',
+        item_id: null,
+        source: 'belt',
+        unit: 'piece'          // وحدة القياس: قطعة
+    };
+    
+    tempFabrics.push(fabric);
+    updateFabricsList();
+    
+    // إعادة تعيين - بدون تحديد أي خيار
+    document.getElementById('noBelt').checked = false;
+    document.getElementById('scotchBelt').checked = false;
+    document.getElementById('normalBelt').checked = false;
+    document.getElementById('beltQtyDiv').style.display = 'none';
+    document.getElementById('beltQty').value = '';
+    
+    // رسالة نجاح
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            icon: 'success',
+            title: 'تمت الإضافة',
+            text: `تم إضافة ${beltName} (${qty} قطعة)`,
+            timer: 1500,
+            showConfirmButton: false
+        });
+    }
+}
+
+// Toggle accessories fields (legacy support)
 function toggleAccessoriesFields() {
-    const hasAccessories = document.getElementById('hasAccessories').checked;
+    const hasAccessories = document.getElementById('hasAccessories')?.checked || 
+                          document.getElementById('withAccessories')?.checked;
     document.getElementById('accessoriesFields').style.display = hasAccessories ? 'block' : 'none';
 }
 
@@ -976,22 +2452,57 @@ function addAccessoryFromInvoice() {
     const countInput = document.getElementById('accessory-invoice-quantity');
     const count = parseInt(countInput.value);  // العدد يجب أن يكون عدد صحيح
     const sizeInput = document.getElementById('accessory-invoice-size');
-    const size = parseFloat(sizeInput.value);
+    const sizeContainer = document.getElementById('accessory-invoice-size-container');
     const color = document.getElementById('accessory-invoice-color').value.trim();
     
+    // إزالة تنسيق الخطأ السابق
+    select.classList.remove('field-required-error');
+    countInput.classList.remove('field-required-error');
+    sizeInput.classList.remove('field-required-error');
+    
+    // التحقق من اختيار الإكسسوار
     if (!itemId) {
-        alert('يرجى اختيار الإكسسوار من المرجع');
+        select.classList.add('field-required-error');
+        Swal.fire({
+            icon: 'error',
+            title: 'حقل مطلوب',
+            text: 'يرجى اختيار الإكسسوار من المرجع',
+            confirmButtonText: 'حسناً'
+        });
         return;
     }
     
+    // التحقق من العدد
     if (!count || count <= 0 || isNaN(count)) {
-        alert('يرجى إدخال عدد صحيح');
+        countInput.classList.add('field-required-error');
+        Swal.fire({
+            icon: 'error',
+            title: 'حقل مطلوب',
+            text: 'يرجى إدخال العدد',
+            confirmButtonText: 'حسناً'
+        });
         return;
     }
     
-    if (!size || size <= 0 || isNaN(size)) {
-        alert('يرجى إدخال مقاس صحيح');
-        return;
+    // التحقق من وحدة القياس
+    const option = select.options[select.selectedIndex];
+    const unit = option?.dataset?.unit || 'piece';
+    const isMeterBased = (unit === 'meter' || unit === 'roll');
+    
+    // إذا كانت الوحدة متر، نستخدم المقاس المدخل، وإلا نستخدم 1
+    let size = 1;
+    if (isMeterBased) {
+        size = parseFloat(sizeInput.value);
+        if (!size || size <= 0 || isNaN(size)) {
+            sizeInput.classList.add('field-required-error');
+            Swal.fire({
+                icon: 'error',
+                title: 'حقل مطلوب',
+                text: 'يرجى إدخال المقاس',
+                confirmButtonText: 'حسناً'
+            });
+            return;
+        }
     }
     
     // Calculate total quantity = count × size
@@ -1001,39 +2512,68 @@ function addAccessoryFromInvoice() {
     calculateUsedQuantities();
     const tracker = fabricUsageTracker[itemId];
     if (!tracker) {
-        alert('خطأ: لم يتم العثور على بيانات العنصر');
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: 'لم يتم العثور على بيانات العنصر',
+            confirmButtonText: 'حسناً'
+        });
         return;
     }
     
     const remaining = tracker.total - tracker.used;
     
     if (totalQuantity > remaining + 0.001) {
-        alert(`الكمية المطلوبة (${count} × ${size} = ${totalQuantity.toFixed(3)}) أكبر من المتوفر (${remaining.toFixed(3)})`);
+        if (isMeterBased) {
+            Swal.fire({
+                icon: 'error',
+                title: 'الكمية غير كافية',
+                text: `الكمية المطلوبة (${count} × ${size} = ${totalQuantity.toFixed(3)}) أكبر من المتوفر (${remaining.toFixed(3)})`,
+                confirmButtonText: 'حسناً'
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'الكمية غير كافية',
+                text: `العدد المطلوب (${count}) أكبر من المتوفر (${remaining.toFixed(0)})`,
+                confirmButtonText: 'حسناً'
+            });
+        }
         return;
     }
     
-    const option = select.options[select.selectedIndex];
     const accessoryName = option.dataset.name;
     
     const accessory = {
         name: accessoryName,
         quantity: totalQuantity,  // Store calculated quantity
         count: count,             // Store count separately for display
-        size: size,               // Store size as number
+        size: isMeterBased ? size : null,  // Store size only if meter-based
         color: color,
         source: 'invoice',
-        item_id: itemId
+        item_id: itemId,
+        unit: unit                // Store unit for reference
     };
     
     tempAccessories.push(accessory);
     updateAccessoriesList();
     
-    // Clear
+    // Clear - بدون قيم افتراضية
     select.value = '';
-    countInput.value = '1';
-    sizeInput.value = '1';
+    countInput.value = '';
+    sizeInput.value = '';
+    sizeContainer.style.display = 'block';  // إعادة إظهار حقل المقاس
     document.getElementById('accessory-invoice-color').value = '';
     document.getElementById('accessory-qty-hint').style.display = 'none';
+    
+    // رسالة نجاح
+    Swal.fire({
+        icon: 'success',
+        title: 'تمت الإضافة',
+        text: `تم إضافة ${accessoryName}`,
+        timer: 1500,
+        showConfirmButton: false
+    });
     
     // Recalculate to update available quantities
     calculateUsedQuantities();
@@ -1041,25 +2581,49 @@ function addAccessoryFromInvoice() {
 
 // Add external accessory
 function addExternalAccessory() {
-    const name = document.getElementById('accessory-external-name').value.trim();
+    const nameInput = document.getElementById('accessory-external-name');
+    const name = nameInput.value.trim();
     const countInput = document.getElementById('accessory-external-quantity');
     const count = parseInt(countInput.value);  // العدد يجب أن يكون عدد صحيح
     const sizeInput = document.getElementById('accessory-external-size');
     const size = parseFloat(sizeInput.value);
     const color = document.getElementById('accessory-external-color').value.trim();
     
+    // إزالة تنسيق الخطأ السابق
+    nameInput.classList.remove('field-required-error');
+    countInput.classList.remove('field-required-error');
+    sizeInput.classList.remove('field-required-error');
+    
     if (!name) {
-        alert('يرجى إدخال اسم الإكسسوار');
+        nameInput.classList.add('field-required-error');
+        Swal.fire({
+            icon: 'error',
+            title: 'حقل مطلوب',
+            text: 'يرجى إدخال اسم الإكسسوار',
+            confirmButtonText: 'حسناً'
+        });
         return;
     }
     
     if (!count || count <= 0 || isNaN(count)) {
-        alert('يرجى إدخال عدد صحيح');
+        countInput.classList.add('field-required-error');
+        Swal.fire({
+            icon: 'error',
+            title: 'حقل مطلوب',
+            text: 'يرجى إدخال العدد',
+            confirmButtonText: 'حسناً'
+        });
         return;
     }
     
     if (!size || size <= 0 || isNaN(size)) {
-        alert('يرجى إدخال مقاس صحيح');
+        sizeInput.classList.add('field-required-error');
+        Swal.fire({
+            icon: 'error',
+            title: 'حقل مطلوب',
+            text: 'يرجى إدخال المقاس',
+            confirmButtonText: 'حسناً'
+        });
         return;
     }
     
@@ -1078,16 +2642,47 @@ function addExternalAccessory() {
     tempAccessories.push(accessory);
     updateAccessoriesList();
     
-    // Clear
-    document.getElementById('accessory-external-name').value = '';
-    countInput.value = '1';
-    sizeInput.value = '1';
+    // Clear - بدون قيم افتراضية
+    nameInput.value = '';
+    countInput.value = '';
+    sizeInput.value = '';
     document.getElementById('accessory-external-color').value = '';
+    
+    // رسالة نجاح
+    Swal.fire({
+        icon: 'success',
+        title: 'تمت الإضافة',
+        text: `تم إضافة ${name}`,
+        timer: 1500,
+        showConfirmButton: false
+    });
 }
 
 // Update accessory quantity info
 function updateAccessoryQuantityInfo(select) {
+    const selectedOption = select.options[select.selectedIndex];
     const selectedItemId = select.value;
+    const sizeContainer = document.getElementById('accessory-invoice-size-container');
+    const sizeInput = document.getElementById('accessory-invoice-size');
+    
+    // التحقق من وحدة القياس
+    if (selectedOption && selectedOption.dataset.unit) {
+        const unit = selectedOption.dataset.unit;
+        // إذا كانت الوحدة متر، نظهر حقل المقاس
+        if (unit === 'meter' || unit === 'roll') {
+            sizeContainer.style.display = 'block';
+            // لا نضع قيمة افتراضية
+        } else {
+            // إذا كانت الوحدة قطعة أو غيرها، نخفي حقل المقاس ونضع القيمة 1 (داخلياً فقط)
+            sizeContainer.style.display = 'none';
+            sizeInput.value = '1';
+        }
+    } else {
+        // إذا لم يتم اختيار عنصر، نظهر الحقل بشكل افتراضي
+        sizeContainer.style.display = 'block';
+        // لا نضع قيمة افتراضية
+    }
+    
     if (!selectedItemId || !fabricUsageTracker[selectedItemId]) {
         document.getElementById('accessory-qty-hint').style.display = 'none';
         return;
@@ -1101,11 +2696,8 @@ function updateAccessoryQuantityInfo(select) {
     document.getElementById('remaining-acc-qty').textContent = remaining.toFixed(3).replace(/\.?0+$/, '');
     document.getElementById('accessory-qty-hint').style.display = 'block';
     
-    // Auto-fill with remaining quantity if empty
-    const quantityInput = document.getElementById('accessory-invoice-quantity');
-    if (!quantityInput.value && remaining > 0) {
-        quantityInput.value = remaining.toFixed(3).replace(/\.?0+$/, '');
-    }
+    // لا نملأ الكمية تلقائياً - نترك الحقل فارغاً للمستخدم
+    // const quantityInput = document.getElementById('accessory-invoice-quantity');
 }
 
 
@@ -1197,29 +2789,52 @@ function updateAccessoriesList() {
     tempAccessories.forEach((accessory, index) => {
         const colorText = accessory.color ? ` - <span class="badge bg-info">${accessory.color}</span>` : '';
         
-        // Show count × size if both available, otherwise show quantity
+        // إظهار نوع الإكسسوار (مثل: حامل حائط 15 سنتم)
+        let typeDisplay = '';
+        if (accessory.display_type) {
+            typeDisplay = `<span class="badge bg-warning text-dark me-2">${accessory.display_type}</span>`;
+        }
+        
+        // Show count × size if size is available, otherwise show just count
         let quantityDisplay = '';
-        if (accessory.count && accessory.size) {
+        // المقاس يظهر فقط إذا كان موجوداً وأكبر من 0 ومختلف عن العدد
+        const hasValidSize = accessory.size !== null && accessory.size !== undefined && parseFloat(accessory.size) > 0;
+        
+        if (hasValidSize && accessory.count) {
+            // منتج يُقاس بالمتر - عرض العدد × المقاس
             const countFormatted = parseFloat(accessory.count).toFixed(0);
             const sizeFormatted = parseFloat(accessory.size).toFixed(3).replace(/\.?0+$/, '');
             const totalFormatted = parseFloat(accessory.quantity).toFixed(3).replace(/\.?0+$/, '');
-            quantityDisplay = `العدد: ${countFormatted} × المقاس: ${sizeFormatted} = <strong>${totalFormatted}</strong>`;
-        } else if (accessory.size && typeof accessory.size === 'number') {
-            const sizeFormatted = parseFloat(accessory.size).toFixed(3).replace(/\.?0+$/, '');
-            quantityDisplay = `المقاس: ${sizeFormatted}`;
+            quantityDisplay = `العدد: ${countFormatted} × المقاس: ${sizeFormatted}م = <strong>${totalFormatted}م</strong>`;
+        } else if (accessory.count) {
+            // منتج يُقاس بالعدد - عرض العدد فقط
+            const countFormatted = parseFloat(accessory.count).toFixed(0);
+            quantityDisplay = `العدد: <strong>${countFormatted}</strong> قطعة`;
         } else {
+            // حالة احتياطية
             const quantityFormatted = parseFloat(accessory.quantity).toFixed(3).replace(/\.?0+$/, '');
             quantityDisplay = `الكمية: ${quantityFormatted}`;
         }
         
+        // تحديد لون الحدود حسب المصدر
+        let borderClass = 'border-primary';
+        let sourceIcon = '';
+        if (accessory.source === 'invoice') {
+            borderClass = 'border-success';
+            sourceIcon = '<i class="fas fa-file-invoice text-success me-1" title="من المرجع"></i>';
+        } else if (accessory.source === 'external') {
+            borderClass = 'border-warning';
+            sourceIcon = '<i class="fas fa-plus-circle text-warning me-1" title="خارجي"></i>';
+        }
+        
         html += `
-            <div class="card mb-2 border-primary">
+            <div class="card mb-2 ${borderClass}">
                 <div class="card-body py-2">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <strong>${accessory.name}</strong>${colorText}
+                            ${sourceIcon}<strong>${accessory.name}</strong>${colorText}
                             <br>
-                            <small class="text-muted">${quantityDisplay}</small>
+                            <small class="text-muted">${typeDisplay}${quantityDisplay}</small>
                         </div>
                         <button type="button" class="btn btn-sm btn-danger" onclick="removeAccessory(${index})">
                             <i class="fas fa-trash"></i>
@@ -1238,6 +2853,7 @@ function removeAccessory(index) {
     updateAccessoriesList();
     // Recalculate to update available quantities
     calculateUsedQuantities();
+    updateCommonAccessorySelects();
 }
 
 // Save complete curtain with fabrics and accessories
@@ -1248,8 +2864,86 @@ function saveCurtainComplete() {
     const installationType = document.getElementById('curtain-installation-type').value;
     const notes = document.getElementById('curtain-notes').value.trim();
     
-    if (!roomName || !width || !height || !installationType) {
-        alert('يرجى ملء جميع الحقول الأساسية (اسم الغرفة، العرض، الارتفاع، ونوع التركيب)');
+    // إزالة الأخطاء السابقة
+    document.querySelectorAll('.field-required-error').forEach(el => {
+        el.classList.remove('field-required-error');
+    });
+    document.querySelectorAll('.field-error-message').forEach(el => el.remove());
+    document.querySelectorAll('.field-error-icon').forEach(el => el.remove());
+    
+    const missingFields = [];
+    let hasErrors = false;
+    
+    // التحقق من الحقول الأساسية
+    if (!roomName) {
+        hasErrors = true;
+        missingFields.push('اسم الغرفة');
+        const field = document.getElementById('curtain-room-name');
+        field.classList.add('field-required-error');
+        addFieldErrorIcon(field, 'اسم الغرفة مطلوب');
+    }
+    
+    if (!width || width <= 0) {
+        hasErrors = true;
+        missingFields.push('العرض');
+        const field = document.getElementById('curtain-width');
+        field.classList.add('field-required-error');
+        addFieldErrorIcon(field, 'العرض مطلوب');
+    }
+    
+    if (!height || height <= 0) {
+        hasErrors = true;
+        missingFields.push('الارتفاع');
+        const field = document.getElementById('curtain-height');
+        field.classList.add('field-required-error');
+        addFieldErrorIcon(field, 'الارتفاع مطلوب');
+    }
+    
+    if (!installationType) {
+        hasErrors = true;
+        missingFields.push('نوع التركيب');
+        const field = document.getElementById('curtain-installation-type');
+        field.classList.add('field-required-error');
+        addFieldErrorIcon(field, 'نوع التركيب مطلوب');
+    }
+    
+    // ✨ التحقق من وجود قماش واحد على الأقل (إلزامي)
+    if (!tempFabrics || tempFabrics.length === 0) {
+        hasErrors = true;
+        missingFields.push('قماش واحد على الأقل');
+        
+        // تلوين قسم الأقمشة
+        const fabricsSection = document.getElementById('fabricsSection');
+        if (fabricsSection) {
+            fabricsSection.classList.add('field-required-error');
+            fabricsSection.style.border = '2px solid #dc3545';
+            fabricsSection.style.borderRadius = '8px';
+            fabricsSection.style.padding = '10px';
+            fabricsSection.style.backgroundColor = '#fff5f5';
+            fabricsSection.style.animation = 'shake 0.5s ease-in-out';
+        }
+    }
+    
+    // إذا كانت هناك أخطاء، عرض التنبيه
+    if (hasErrors) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'حقول مطلوبة',
+                html: `
+                    <div class="text-end">
+                        <p class="mb-3">يرجى ملء الحقول التالية:</p>
+                        <ul class="list-unstyled text-danger">
+                            ${missingFields.map(f => `<li><i class="fas fa-times-circle me-2"></i>${f}</li>`).join('')}
+                        </ul>
+                    </div>
+                `,
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert('يرجى ملء الحقول التالية:\n' + missingFields.join('\n'));
+        }
         return;
     }
     
@@ -1320,12 +3014,78 @@ function resetCurtainModal() {
     document.getElementById('curtain-box-depth').value = '';
     document.getElementById('curtain-notes').value = '';
     document.getElementById('curtainBoxFields').style.display = 'none';
-    document.getElementById('hasAccessories').checked = false;
+    
+    // إعادة تعيين خيارات الإكسسوار - بدون تحديد أي خيار
+    const hasAccessoriesEl = document.getElementById('hasAccessories');
+    if (hasAccessoriesEl) hasAccessoriesEl.checked = false;
+    const withAccessoriesEl = document.getElementById('withAccessories');
+    if (withAccessoriesEl) withAccessoriesEl.checked = false;
+    const noAccessoriesEl = document.getElementById('noAccessories');
+    if (noAccessoriesEl) noAccessoriesEl.checked = false;
+    
     document.getElementById('curtainBasicInfo').style.display = 'block';
     document.getElementById('fabricsSection').style.display = 'none';
     document.getElementById('accessoriesSection').style.display = 'none';
     document.getElementById('notesSection').style.display = 'none';
     document.getElementById('accessoriesFields').style.display = 'none';
+    
+    // إعادة تعيين خيارات الحزام - بدون تحديد أي خيار
+    const noBeltEl = document.getElementById('noBelt');
+    if (noBeltEl) noBeltEl.checked = false;
+    const scotchBeltEl = document.getElementById('scotchBelt');
+    if (scotchBeltEl) scotchBeltEl.checked = false;
+    const normalBeltEl = document.getElementById('normalBelt');
+    if (normalBeltEl) normalBeltEl.checked = false;
+    const beltQtyDiv = document.getElementById('beltQtyDiv');
+    if (beltQtyDiv) beltQtyDiv.style.display = 'none';
+    const beltQty = document.getElementById('beltQty');
+    if (beltQty) beltQty.value = '';
+    
+    // إعادة تعيين الإكسسوارات الشائعة الجديدة
+    // إعادة تعيين خيارات الراديو للحوامل الرئيسية
+    ['wallBracket', 'majar', 'pipe'].forEach(type => {
+        // إلغاء تحديد جميع الراديو وتحديث الألوان
+        document.querySelectorAll(`input[name="${type}Choice"]`).forEach(radio => {
+            radio.checked = false;
+        });
+        updateCommonAccessoryButtonColors(type, null);
+        
+        // إخفاء حقول الإدخال
+        const fieldsDiv = document.getElementById(`${type}Fields`);
+        if (fieldsDiv) fieldsDiv.style.display = 'none';
+        // إخفاء حقل الطول
+        const sizeDiv = document.getElementById(`${type}SizeDiv`);
+        if (sizeDiv) sizeDiv.style.display = 'none';
+        // إخفاء حقل الإضافة الخارجية
+        const externalDiv = document.getElementById(`${type}ExternalDiv`);
+        if (externalDiv) externalDiv.style.display = 'none';
+        // إعادة تعيين القيم
+        ['Select', 'Qty', 'Size', 'ExternalName'].forEach(suffix => {
+            const el = document.getElementById(`${type}${suffix}`);
+            if (el) el.value = '';
+        });
+    });
+    
+    // إعادة تعيين الإكسسوارات الأخرى (مسامير عصفورة، فرانشة، شماعات)
+    ['birdScrews', 'franche', 'hangers'].forEach(type => {
+        // إلغاء تحديد جميع الراديو وتحديث الألوان
+        document.querySelectorAll(`input[name="${type}Choice"]`).forEach(radio => {
+            radio.checked = false;
+        });
+        updateOtherAccessoryButtonColors(type, null);
+        
+        // إخفاء حقول الإدخال
+        const fieldsDiv = document.getElementById(`${type}Fields`);
+        if (fieldsDiv) fieldsDiv.style.display = 'none';
+        // إخفاء حقل الإضافة الخارجية
+        const externalDiv = document.getElementById(`${type}ExternalDiv`);
+        if (externalDiv) externalDiv.style.display = 'none';
+        // إعادة تعيين القيم
+        ['Select', 'Qty', 'ExternalName'].forEach(suffix => {
+            const el = document.getElementById(`${type}${suffix}`);
+            if (el) el.value = '';
+        });
+    });
     
     // Update modal title
     document.querySelector('#addCurtainModal .modal-title').innerHTML = '<i class="fas fa-plus me-2"></i>إضافة ستارة جديدة';
@@ -1441,6 +3201,9 @@ $('#addCurtainModal').on('shown.bs.modal', function() {
     
     // Recalculate quantities after modal is fully shown
     calculateUsedQuantities();
+    
+    // تحديث قوائم الإكسسوارات الشائعة لإظهار الكميات الفعلية
+    updateCommonAccessorySelects();
 });
 
 function removeCurtain(curtainId) {

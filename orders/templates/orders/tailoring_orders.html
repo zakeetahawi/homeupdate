@@ -159,8 +159,8 @@
                 </div>
                 <div class="col-auto">
                     {% if perms.orders.add_order %}
-                    <a href="{% url 'orders:order_create' %}?type=tailoring" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> طلب تسليم جديد
+                    <a href="{% url 'orders:wizard_start' %}" class="btn btn-success">
+                        <i class="fas fa-magic"></i> إنشاء طلب إلكتروني
                     </a>
                     {% endif %}
                 </div>
@@ -321,8 +321,8 @@
             <h5 class="text-muted">لا توجد طلبات تسليم</h5>
             <p class="text-muted">لم يتم العثور على أي طلبات تسليم تطابق معايير البحث</p>
             {% if perms.orders.add_order %}
-            <a href="{% url 'orders:order_create' %}?type=tailoring" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i>إنشاء طلب تسليم جديد
+            <a href="{% url 'orders:wizard_start' %}" class="btn btn-success">
+                <i class="fas fa-magic me-2"></i>إنشاء طلب إلكتروني
             </a>
             {% endif %}
         </div>

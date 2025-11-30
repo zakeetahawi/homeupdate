@@ -10,6 +10,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib import messages
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -77,39 +78,58 @@ def get_step_number(draft, logical_step):
 def wizard_start(request):
     """
     بداية الويزارد - عرض المسودات المحفوظة أو إنشاء مسودة جديدة
+    مع التحقق من الحد الأقصى للمسودات
     """
-    # البحث عن المسودات غير المكتملة للمستخدم (بناءً على صلاحياته)
-    from accounts.models import Department
+    from accounts.models import SystemSettings
     
-    if request.user.is_superuser or request.user.groups.filter(name='مدير نظام').exists():
-        # مدير النظام - عرض جميع المسودات
-        user_drafts = DraftOrder.objects.filter(is_completed=False)
-    elif request.user.groups.filter(name='مدير عام').exists():
-        # مدير عام - عرض جميع المسودات  
-        user_drafts = DraftOrder.objects.filter(is_completed=False)
-    elif request.user.groups.filter(name='مدير منطقة').exists():
-        # مدير منطقة - عرض مسودات الفروع المرتبطة به
-        user_branches = request.user.branches.all()
-        user_drafts = DraftOrder.objects.filter(
-            is_completed=False,
-            branch__in=user_branches
-        )
-    else:
-        # المستخدم العادي - عرض مسوداته فقط
-        user_drafts = DraftOrder.objects.filter(
-            created_by=request.user,
-            is_completed=False
-        )
+    # الحصول على إعدادات النظام
+    settings = SystemSettings.get_settings()
+    max_drafts = settings.max_draft_orders_per_user
+    
+    # البحث عن المسودات غير المكتملة للمستخدم
+    user_drafts = DraftOrder.objects.filter(
+        created_by=request.user,
+        is_completed=False
+    ).select_related('customer', 'branch').order_by('-updated_at')
+    
+    # التحقق من وجود درافت للعميل المحدد (إن وجد)
+    customer_id = request.GET.get('customer_id')
+    if customer_id:
+        customer_draft = user_drafts.filter(customer_id=customer_id).first()
+        if customer_draft:
+            # إذا وجد درافت لهذا العميل، توجيه مباشر لإكماله
+            request.session['wizard_draft_id'] = customer_draft.id
+            messages.info(request, f'لديك مسودة طلب غير مكتملة لهذا العميل. سيتم إكمالها.')
+            return redirect('orders:wizard_step', step=customer_draft.current_step)
     
     # إذا كان هناك مسودات، توجيه إلى قائمة المسودات
     if user_drafts.exists():
         return redirect('orders:wizard_drafts_list')
     else:
-        # إنشاء مسودة جديدة مباشرة
+        # البحث عن العميل إذا تم تمريره
+        from customers.models import Customer
+        customer = None
+        customer_id = request.GET.get('customer_id')
+        customer_code = request.GET.get('customer')
+        
+        if customer_id:
+            customer = Customer.objects.filter(pk=customer_id).first()
+        elif customer_code:
+            customer = Customer.objects.filter(code=customer_code).first()
+        
+        # تحديد الفرع تلقائياً بناءً على المستخدم
+        user_branch = None
+        if hasattr(request.user, 'branch') and request.user.branch:
+            user_branch = request.user.branch
+        
+        # إنشاء مسودة جديدة مباشرة مع العميل والفرع
         draft = DraftOrder.objects.create(
             created_by=request.user,
-            current_step=1
+            current_step=1,
+            customer=customer,
+            branch=user_branch
         )
+        request.session['wizard_draft_id'] = draft.id
         return redirect('orders:wizard_step', step=1)
 
 
@@ -118,23 +138,20 @@ def wizard_start_new(request):
     """
     إنشاء مسودة جديدة مباشرة (تجاوز المسودات الموجودة)
     يمكن تمرير معرف العميل أو كود العميل كمعامل
+    مع التحقق من الحد الأقصى للمسودات
     """
     from customers.models import Customer
+    from accounts.models import SystemSettings
+    
+    # الحصول على إعدادات النظام
+    settings = SystemSettings.get_settings()
+    max_drafts = settings.max_draft_orders_per_user
     
     # التحقق من وجود مسودات غير مكتملة للمستخدم
     existing_drafts = DraftOrder.objects.filter(
         created_by=request.user,
         is_completed=False
     )
-    
-    # إذا كان هناك مسودات وطلب التأكيد غير موجود
-    if existing_drafts.exists() and not request.GET.get('confirm_new'):
-        # تخزين معاملات الطلب الأصلية في الجلسة
-        request.session['pending_new_order_params'] = {
-            'customer': request.GET.get('customer'),
-            'customer_id': request.GET.get('customer_id')
-        }
-        return redirect('orders:wizard_confirm_new')
     
     customer = None
     customer_code = request.GET.get('customer')
@@ -145,6 +162,31 @@ def wizard_start_new(request):
         customer = Customer.objects.filter(code=customer_code).first()
     elif customer_id:
         customer = Customer.objects.filter(pk=customer_id).first()
+    
+    # التحقق من وجود درافت لنفس العميل
+    if customer:
+        customer_draft = existing_drafts.filter(customer=customer).first()
+        if customer_draft:
+            # إذا وجد درافت لهذا العميل، توجيه مباشر لإكماله
+            request.session['wizard_draft_id'] = customer_draft.id
+            messages.info(request, f'لديك مسودة طلب غير مكتملة للعميل "{customer.name}". سيتم إكمالها.')
+            return redirect('orders:wizard_step', step=customer_draft.current_step)
+    
+    # التحقق من عدد المسودات الحالية
+    current_drafts_count = existing_drafts.count()
+    
+    if current_drafts_count >= max_drafts:
+        messages.error(request, f'لقد وصلت للحد الأقصى المسموح من المسودات ({max_drafts}). يرجى إكمال أو حذف بعض المسودات أولاً.')
+        return redirect('orders:wizard_drafts_list')
+    
+    # إذا كان هناك مسودات وطلب التأكيد غير موجود
+    if existing_drafts.exists() and not request.GET.get('confirm_new'):
+        # تخزين معاملات الطلب الأصلية في الجلسة
+        request.session['pending_new_order_params'] = {
+            'customer': request.GET.get('customer'),
+            'customer_id': request.GET.get('customer_id')
+        }
+        return redirect('orders:wizard_confirm_new')
     
     # تحديد الفرع تلقائياً بناءً على المستخدم
     user_branch = None
@@ -170,14 +212,27 @@ def wizard_confirm_new(request):
     """
     صفحة تأكيد إنشاء مسودة جديدة عند وجود مسودات غير مكتملة
     """
+    from accounts.models import SystemSettings
+    
+    # الحصول على إعدادات النظام
+    settings = SystemSettings.get_settings()
+    max_drafts = settings.max_draft_orders_per_user
+    
     existing_drafts = DraftOrder.objects.filter(
         created_by=request.user,
         is_completed=False
     ).select_related('customer', 'branch').order_by('-updated_at')
     
+    current_drafts_count = existing_drafts.count()
+    can_create_new = current_drafts_count < max_drafts
+    
     context = {
         'existing_drafts': existing_drafts,
-        'pending_params': request.session.get('pending_new_order_params', {})
+        'pending_params': request.session.get('pending_new_order_params', {}),
+        'max_drafts': max_drafts,
+        'current_drafts_count': current_drafts_count,
+        'can_create_new': can_create_new,
+        'remaining_drafts': max_drafts - current_drafts_count
     }
     
     return render(request, 'orders/wizard/confirm_new.html', context)
@@ -211,8 +266,13 @@ def wizard_delete_and_create_new(request):
 def wizard_drafts_list(request):
     """
     عرض قائمة المسودات المحفوظة بناءً على صلاحيات المستخدم
+    مع عرض معلومات الحد الأقصى للمسودات
     """
-    from accounts.models import Department
+    from accounts.models import SystemSettings
+    
+    # الحصول على إعدادات النظام
+    settings = SystemSettings.get_settings()
+    max_drafts = settings.max_draft_orders_per_user
     
     # تحديد الاستعلام بناءً على صلاحيات المستخدم
     if request.user.is_superuser or request.user.groups.filter(name='مدير نظام').exists():
@@ -237,18 +297,33 @@ def wizard_drafts_list(request):
     
     drafts = drafts.order_by('-updated_at')
     
+    # حساب عدد مسودات المستخدم الحالي للتحقق من الحد الأقصى
+    user_drafts_count = DraftOrder.objects.filter(
+        created_by=request.user,
+        is_completed=False
+    ).count()
+    
+    can_create_new = user_drafts_count < max_drafts
+    remaining_drafts = max_drafts - user_drafts_count
+    
     context = {
         'drafts': drafts,
-        'title': 'قائمة المسودات المحفوظة'
+        'title': 'قائمة المسودات المحفوظة',
+        'max_drafts': max_drafts,
+        'current_drafts_count': user_drafts_count,
+        'can_create_new': can_create_new,
+        'remaining_drafts': remaining_drafts
     }
     
     return render(request, 'orders/wizard/drafts_list.html', context)
 
 
 @login_required
+@ensure_csrf_cookie
 def wizard_step(request, step):
     """
     عرض خطوة معينة من الويزارد
+    ensure_csrf_cookie يضمن إرسال CSRF cookie مع الاستجابة
     """
     # التحقق من وجود معرف المسودة في الجلسة (وضع التعديل)
     draft_id = request.session.get('wizard_draft_id')
@@ -356,6 +431,15 @@ def wizard_step_1_basic_info(request, draft):
         except Order.DoesNotExist:
             pass
     
+    # الحصول على العميل المحدد لاستخدامه في Select2
+    selected_customer = None
+    if draft.customer:
+        selected_customer = {
+            'id': draft.customer.id,
+            'name': draft.customer.name,
+            'phone': draft.customer.phone or '',
+        }
+    
     context = {
         'draft': draft,
         'form': form,
@@ -365,6 +449,7 @@ def wizard_step_1_basic_info(request, draft):
         'progress_percentage': round((1 / total_steps) * 100, 2),
         'editing_mode': editing_mode,
         'editing_order': editing_order,
+        'selected_customer': selected_customer,
     }
     
     return render(request, 'orders/wizard/step1_basic_info.html', context)
@@ -439,7 +524,26 @@ def wizard_step_3_order_items(request, draft):
     return render(request, 'orders/wizard/step3_order_items.html', context)
 
 
-@login_required
+def ajax_login_required(view_func):
+    """
+    Decorator للتحقق من تسجيل الدخول لطلبات AJAX
+    يُرجع JSON بدلاً من إعادة توجيه لصفحة تسجيل الدخول
+    """
+    from functools import wraps
+    
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'message': 'يجب تسجيل الدخول أولاً',
+                'redirect': '/accounts/login/'
+            }, status=401)
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+@ajax_login_required
 @require_http_methods(["POST"])
 def wizard_add_item(request):
     """
@@ -448,16 +552,23 @@ def wizard_add_item(request):
     try:
         data = json.loads(request.body)
         
+        logger.info(f"wizard_add_item: Received data: {data}")
+        logger.info(f"wizard_add_item: User: {request.user}")
+        logger.info(f"wizard_add_item: Session key: {request.session.session_key if hasattr(request, 'session') else 'No session'}")
+        
         # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
-        draft_id = request.session.get('wizard_draft_id')
+        draft_id = request.session.get('wizard_draft_id') if hasattr(request, 'session') else None
+        logger.info(f"wizard_add_item: Draft ID from session: {draft_id}")
         
         if draft_id:
-            draft = DraftOrder.objects.filter(pk=draft_id).first()
+            draft = DraftOrder.objects.filter(pk=draft_id, created_by=request.user).first()
+            logger.info(f"wizard_add_item: Draft from session ID: {draft}")
         else:
             draft = DraftOrder.objects.filter(
                 created_by=request.user,
                 is_completed=False
             ).order_by('-updated_at').first()
+            logger.info(f"wizard_add_item: Draft from query: {draft}")
         
         if not draft:
             return JsonResponse({
@@ -466,18 +577,48 @@ def wizard_add_item(request):
             }, status=404)
         
         # الحصول على المنتج
-        product = get_object_or_404(Product, pk=data.get('product_id'))
+        product_id = data.get('product_id')
+        if not product_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'لم يتم تحديد المنتج'
+            }, status=400)
+        
+        product = get_object_or_404(Product, pk=product_id)
+        
+        # التحقق من السعر
+        unit_price = data.get('unit_price')
+        if unit_price is None or unit_price == '':
+            unit_price = product.price if product.price else Decimal('0.00')
+        else:
+            unit_price = Decimal(str(unit_price))
+        
+        # التحقق من الكمية
+        quantity = data.get('quantity', 1)
+        if quantity is None or quantity == '':
+            quantity = Decimal('1')
+        else:
+            quantity = Decimal(str(quantity))
+        
+        # التحقق من نسبة الخصم
+        discount_percentage = data.get('discount_percentage', 0)
+        if discount_percentage is None or discount_percentage == '':
+            discount_percentage = Decimal('0.00')
+        else:
+            discount_percentage = Decimal(str(discount_percentage))
         
         # إنشاء العنصر
         item = DraftOrderItem.objects.create(
             draft_order=draft,
             product=product,
-            quantity=Decimal(str(data.get('quantity', 1))),
-            unit_price=Decimal(str(data.get('unit_price', product.price))),
-            discount_percentage=Decimal(str(data.get('discount_percentage', 0))),
-            item_type=data.get('item_type', 'product'),
-            notes=data.get('notes', '')
+            quantity=quantity,
+            unit_price=unit_price,
+            discount_percentage=discount_percentage,
+            item_type=data.get('item_type', 'product') or 'product',
+            notes=data.get('notes', '') or ''
         )
+        
+        logger.info(f"wizard_add_item: Item created successfully: {item.id}")
         
         # إعادة حساب المجاميع
         totals = draft.calculate_totals()
@@ -503,15 +644,24 @@ def wizard_add_item(request):
             }
         })
     
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error in wizard_add_item: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'بيانات غير صالحة'
+        }, status=400)
+    
     except Exception as e:
+        import traceback
         logger.error(f"Error adding item to draft: {e}")
+        logger.error(traceback.format_exc())
         return JsonResponse({
             'success': False,
             'message': f'حدث خطأ: {str(e)}'
-        }, status=400)
+        }, status=500)
 
 
-@login_required
+@ajax_login_required
 @require_http_methods(["POST"])
 def wizard_remove_item(request, item_id):
     """
@@ -519,10 +669,10 @@ def wizard_remove_item(request, item_id):
     """
     try:
         # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
-        draft_id = request.session.get('wizard_draft_id')
+        draft_id = request.session.get('wizard_draft_id') if hasattr(request, 'session') else None
         
         if draft_id:
-            draft = DraftOrder.objects.filter(pk=draft_id).first()
+            draft = DraftOrder.objects.filter(pk=draft_id, created_by=request.user).first()
         else:
             draft = DraftOrder.objects.filter(
                 created_by=request.user,
@@ -1289,13 +1439,34 @@ def wizard_add_curtain(request):
                 
                 # Get count and size, calculate quantity
                 count = int(accessory_data.get('count', 1))
-                size = Decimal(str(accessory_data.get('size', 1)))
-                quantity = Decimal(str(accessory_data.get('quantity', count * size)))
+                # size قد يكون None للمنتجات بالقطعة
+                size_val = accessory_data.get('size')
+                if size_val and size_val != '' and size_val != 'null' and size_val != 'None':
+                    try:
+                        size = Decimal(str(size_val))
+                    except:
+                        size = Decimal('0')
+                else:
+                    size = Decimal('0')  # بالقطعة
+                
+                # quantity = count فقط للمنتجات بالقطعة، أو count * size للمتر
+                quantity_val = accessory_data.get('quantity')
+                if quantity_val and quantity_val != '' and quantity_val != 'null' and quantity_val != 'None':
+                    try:
+                        quantity = Decimal(str(quantity_val))
+                    except:
+                        quantity = Decimal(str(count))
+                else:
+                    if size > 0:
+                        quantity = Decimal(str(count)) * size
+                    else:
+                        quantity = Decimal(str(count))
                 
                 accessory = CurtainAccessory(
                     curtain=curtain,
                     draft_order_item=draft_order_item,
                     accessory_name=accessory_data.get('name', ''),
+                    accessory_type=accessory_data.get('display_type', ''),
                     count=count,
                     size=size,
                     quantity=quantity,
@@ -1402,6 +1573,9 @@ def wizard_edit_curtain(request, curtain_id):
                         fabric.draft_order_item = matching_item
                         fabric.save(update_fields=['draft_order_item'])
                 
+                # تحديد إذا كان حزام
+                is_belt = 'حزام' in fabric.fabric_name if fabric.fabric_name else False
+                
                 fabrics_data.append({
                     'type': fabric.fabric_type,
                     'type_display': fabric.get_fabric_type_display(),
@@ -1410,7 +1584,9 @@ def wizard_edit_curtain(request, curtain_id):
                     'meters': float(fabric.meters),
                     'pieces': fabric.pieces,
                     'tailoring': fabric.tailoring_type or '',
-                    'tailoring_display': fabric.get_tailoring_type_display() if fabric.tailoring_type else '-'
+                    'tailoring_display': fabric.get_tailoring_type_display() if fabric.tailoring_type else '-',
+                    'source': 'belt' if is_belt else ('invoice' if item_id else 'external'),
+                    'unit': 'piece' if is_belt else 'meter'
                 })
             
             accessories_data = []
@@ -1433,6 +1609,7 @@ def wizard_edit_curtain(request, curtain_id):
                 
                 accessories_data.append({
                     'name': accessory.accessory_name,
+                    'display_type': accessory.accessory_type or '',  # نوع الإكسسوار الشائع
                     'quantity': float(accessory.quantity),
                     'count': accessory.count,
                     'size': float(accessory.size) if accessory.size else 0,
@@ -1579,14 +1756,39 @@ def wizard_edit_curtain(request, curtain_id):
                             logger.warning(f"Could not find draft item {item_id}: {e}")
                     
                     # Get count and size, calculate quantity
-                    count = int(accessory_data.get('count', 1))
-                    size = Decimal(str(accessory_data.get('size', 1)))
-                    quantity = Decimal(str(accessory_data.get('quantity', count * size)))
+                    count_val = accessory_data.get('count', 1)
+                    size_val = accessory_data.get('size')
+                    quantity_val = accessory_data.get('quantity')
+                    
+                    # تحويل القيم بشكل آمن
+                    count = int(count_val) if count_val else 1
+                    
+                    # size قد يكون None أو 0 للمنتجات بالقطعة
+                    if size_val and size_val != '' and size_val != 'null' and size_val != 'None':
+                        try:
+                            size = Decimal(str(size_val))
+                        except:
+                            size = Decimal('0')
+                    else:
+                        size = Decimal('0')  # بالقطعة
+                    
+                    # quantity = count فقط للمنتجات بالقطعة، أو count * size للمتر
+                    if quantity_val and quantity_val != '' and quantity_val != 'null' and quantity_val != 'None':
+                        try:
+                            quantity = Decimal(str(quantity_val))
+                        except:
+                            quantity = Decimal(str(count))
+                    else:
+                        if size > 0:
+                            quantity = Decimal(str(count)) * size
+                        else:
+                            quantity = Decimal(str(count))
                     
                     accessory = CurtainAccessory(
                         curtain=curtain,
                         draft_order_item=draft_order_item,
                         accessory_name=accessory_data.get('name', ''),
+                        accessory_type=accessory_data.get('display_type', ''),  # نوع الإكسسوار الشائع
                         count=count,
                         size=size,
                         quantity=quantity,

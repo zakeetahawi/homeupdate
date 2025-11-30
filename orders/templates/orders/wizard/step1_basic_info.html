@@ -16,7 +16,7 @@
 </div>
 {% endif %}
 
-<form method="post" id="step1-form">
+<form method="post" id="step1-form" novalidate>
     {% csrf_token %}
     
     <div class="row">
@@ -136,7 +136,57 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <style>
-/* تحسينات Select2 للعملاء */
+/* ===== تنسيقات الأخطاء للحقول الإلزامية ===== */
+
+/* Select2 مع خطأ */
+.select2-container--error .select2-selection--single,
+.select2-container.has-error .select2-selection--single {
+    border: 2px solid #dc3545 !important;
+    background-color: #fff5f5 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    animation: shake 0.5s ease-in-out;
+}
+
+/* أيقونة الخطأ */
+.field-error-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #dc3545;
+    font-size: 1.2rem;
+    z-index: 10;
+    display: block !important;
+}
+
+/* رسالة الخطأ */
+.field-error-message {
+    color: #dc3545;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+
+/* تأثير الاهتزاز */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* حقول select العادية مع خطأ */
+select.field-required-error,
+.form-select.field-required-error {
+    border: 2px solid #dc3545 !important;
+    background-color: #fff5f5 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    animation: shake 0.5s ease-in-out;
+}
+
+/* ===== تحسينات Select2 للعملاء ===== */
 .select2-container {
     width: 100% !important;
 }
@@ -417,7 +467,24 @@ $(document).ready(function() {
         customerField.trigger('change');
     });
     
-    // استعادة القيمة المحددة مسبقاً (في حالة التعديل)
+    // استعادة القيمة المحددة مسبقاً (في حالة التعديل أو عند القدوم من صفحة العميل)
+    {% if selected_customer %}
+    // العميل محدد من السيرفر
+    const preSelectedCustomer = {
+        id: '{{ selected_customer.id }}',
+        name: '{{ selected_customer.name|escapejs }}',
+        phone: '{{ selected_customer.phone|escapejs }}'
+    };
+    const displayText = preSelectedCustomer.name + ' - ' + preSelectedCustomer.phone;
+    const preOption = new Option(displayText, preSelectedCustomer.id, true, true);
+    searchSelect.append(preOption).trigger('change');
+    
+    // تعيين قيمة الحقل المخفي
+    const hiddenField = $('#{{ form.customer.id_for_label }}');
+    hiddenField.val(preSelectedCustomer.id);
+    console.log('✅ تم تعيين العميل المحدد مسبقاً من السيرفر:', preSelectedCustomer.id, preSelectedCustomer.name);
+    {% else %}
+    // محاولة استعادة القيمة من الحقل المخفي
     const customerField = $('#{{ form.customer.id_for_label }}');
     const selectedValue = customerField.val();
     
@@ -427,6 +494,7 @@ $(document).ready(function() {
         searchSelect.append(newOption).trigger('change');
         console.log('✅ تم استعادة القيمة المحددة مسبقاً:', selectedValue);
     }
+    {% endif %}
     
     // الفرع والبائع: قوائم منسدلة عادية بدون Select2 (للموبايل والديسكتوب)
     const branchField = document.getElementById('{{ form.branch.id_for_label }}');
@@ -481,18 +549,91 @@ $(document).ready(function() {
     }
 });
 
-// معالجة إرسال النموذج
+// معالجة إرسال النموذج مع التحقق من الحقول الإلزامية
 document.getElementById('step1-form').addEventListener('submit', function(e) {
     e.preventDefault();
     
+    console.log('📝 بدء التحقق من النموذج...');
+    
+    // إزالة جميع الأخطاء السابقة
+    clearAllFieldErrors(this);
+    
+    const missingFields = [];
+    let hasErrors = false;
+    
     // التحقق من اختيار العميل
     const customerField = document.getElementById('{{ form.customer.id_for_label }}');
+    const customerSearchSelect = document.getElementById('customer_search_select');
+    
+    console.log('🔍 حقل العميل:', customerField?.value);
+    
     if (!customerField || !customerField.value) {
-        alert('يرجى اختيار العميل');
-        $('#customer_search_select').select2('open');
+        hasErrors = true;
+        missingFields.push('العميل');
+        
+        console.log('❌ العميل مطلوب - تفعيل الخطأ');
+        
+        // تلوين Select2 مباشرة
+        const select2Container = document.querySelector('#customer_search_select + .select2-container, .select2-container');
+        if (select2Container) {
+            select2Container.classList.add('select2-container--error');
+            select2Container.style.border = '2px solid #dc3545';
+            select2Container.style.borderRadius = '8px';
+            console.log('✅ تم تلوين Select2');
+        }
+        
+        // إضافة رسالة الخطأ
+        const customerWrapper = customerSearchSelect?.closest('.mb-4');
+        if (customerWrapper && !customerWrapper.querySelector('.field-error-message')) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'field-error-message';
+            errorDiv.innerHTML = '<i class="fas fa-times-circle text-danger"></i> يرجى اختيار العميل';
+            customerWrapper.appendChild(errorDiv);
+        }
+        
+        // إضافة أيقونة الخطأ
+        if (customerWrapper && !customerWrapper.querySelector('.field-error-icon')) {
+            const errorIcon = document.createElement('span');
+            errorIcon.className = 'field-error-icon';
+            errorIcon.style.display = 'block';
+            errorIcon.innerHTML = '<i class="fas fa-times-circle"></i>';
+            customerWrapper.appendChild(errorIcon);
+        }
+    }
+    
+    // التحقق من الفرع
+    const branchField = document.getElementById('{{ form.branch.id_for_label }}');
+    console.log('🔍 حقل الفرع:', branchField?.value);
+    
+    if (!branchField || !branchField.value) {
+        hasErrors = true;
+        missingFields.push('الفرع');
+        console.log('❌ الفرع مطلوب');
+        markFieldAsError(branchField, 'يرجى اختيار الفرع');
+    }
+    
+    // التحقق من البائع
+    const salespersonField = document.getElementById('{{ form.salesperson.id_for_label }}');
+    console.log('🔍 حقل البائع:', salespersonField?.value);
+    
+    if (!salespersonField || !salespersonField.value) {
+        hasErrors = true;
+        missingFields.push('البائع');
+        console.log('❌ البائع مطلوب');
+        markFieldAsError(salespersonField, 'يرجى اختيار البائع');
+    }
+    
+    // إذا كانت هناك أخطاء، عرض تنبيه
+    if (hasErrors) {
+        console.log('⚠️ الحقول المفقودة:', missingFields);
+        showValidationAlert(missingFields);
+        
+        // التمرير للأعلى
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
     }
     
+    console.log('✅ جميع الحقول صحيحة - إرسال النموذج');
     submitWizardStep(this);
 });
 </script>

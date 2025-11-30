@@ -832,6 +832,15 @@ class CurtainAccessory(models.Model):
         max_length=200,
         verbose_name='اسم الإكسسوار'
     )
+    
+    # نوع الإكسسوار (مثل: حامل حائط 15 سنتم، مسامير عصفورة، إلخ)
+    accessory_type = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name='نوع الإكسسوار',
+        help_text='نوع الإكسسوار الشائع (مثل: حامل حائط 15 سنتم)'
+    )
+    
     quantity = models.DecimalField(
         max_digits=10,
         decimal_places=3,

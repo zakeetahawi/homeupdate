@@ -3,7 +3,7 @@
 """
 
 from django.shortcuts import render
-from django.views.decorators.csrf import requires_csrf_token
+from django.views.decorators.csrf import requires_csrf_token, ensure_csrf_cookie
 from django.http import HttpResponseForbidden
 import logging
 
@@ -47,9 +47,11 @@ def csrf_failure(request, reason=""):
     )
 
 
+@ensure_csrf_cookie
 def get_csrf_token_view(request):
     """
     API endpoint لجلب CSRF token جديد
+    يستخدم ensure_csrf_cookie لضمان إرسال الكوكي مع الاستجابة
     """
     from django.middleware.csrf import get_token
     from django.http import JsonResponse
