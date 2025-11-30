@@ -1,5 +1,6 @@
 /* تطبيق خط Cairo على كامل المشروع */
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap');
+/* استخدام الخط المحلي بدلاً من Google Fonts */
+@import url('/static/vendor/fonts/cairo.css');
 
 /* تطبيق الخط العربي على العناصر الأساسية - استثناء الأيقونات */
 body, 

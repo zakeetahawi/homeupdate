@@ -27,18 +27,18 @@
         <link rel="apple-touch-icon" href="{% static 'images/favicon.png' %}">
     {% endif %}
 
-    <!-- Bootstrap RTL CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <!-- Bootstrap RTL CSS - محلي -->
+    <link href="{% static 'vendor/bootstrap/bootstrap.rtl.min.css' %}" rel="stylesheet">
 
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Font Awesome - محلي -->
+    <link href="{% static 'vendor/fontawesome/css/all.min.css' %}" rel="stylesheet">
 
-    <!-- Animate.css for SweetAlert animations -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <!-- Animate.css for SweetAlert animations - محلي -->
+    <link rel="stylesheet" href="{% static 'vendor/animate/animate.min.css' %}">
     
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+    <!-- DataTables CSS - محلي -->
+    <link rel="stylesheet" type="text/css" href="{% static 'vendor/datatables/dataTables.bootstrap5.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'vendor/datatables/responsive.bootstrap5.min.css' %}">
     
     <!-- Global Cairo Font CSS -->
     <link rel="stylesheet" href="{% static 'css/global-cairo-font.css' %}">
@@ -72,14 +72,14 @@
     <!-- Anti-Flicker CSS -->
     <link rel="stylesheet" href="{% static 'css/anti-flicker.css' %}">
 
-    <!-- Google Material Icons -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <!-- Google Material Icons - محلي -->
+    <link href="{% static 'vendor/fonts/material-icons.css' %}" rel="stylesheet">
 
-    <!-- Google Fonts - Cairo (Arabic) -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Google Fonts - Cairo (Arabic) - محلي -->
+    <link href="{% static 'vendor/fonts/cairo.css' %}" rel="stylesheet">
     
-    <!-- Google Fonts - Roboto (English) -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts - Roboto (English) - محلي -->
+    <link href="{% static 'vendor/fonts/roboto.css' %}" rel="stylesheet">
 
     <!-- Database Card CSS -->
     {% if 'database' in request.path %}
@@ -1287,20 +1287,20 @@
     }
     </style>
 
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- jQuery - محلي -->
+    <script src="{% static 'vendor/jquery/jquery-3.7.1.min.js' %}"></script>
     
-    <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap Bundle with Popper - محلي -->
+    <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
     
-    <!-- DataTables JS -->
-    <script type="text/javascript" src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    <!-- DataTables JS - محلي -->
+    <script type="text/javascript" src="{% static 'vendor/datatables/jquery.dataTables.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'vendor/datatables/dataTables.bootstrap5.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'vendor/datatables/dataTables.responsive.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'vendor/datatables/responsive.bootstrap5.min.js' %}"></script>
 
-    <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>    <!-- Custom JS -->
+    <!-- SweetAlert2 - محلي -->
+    <script src="{% static 'vendor/sweetalert2/sweetalert2.all.min.js' %}"></script>    <!-- Custom JS -->
     <script src="{% static 'js/main.js' %}"></script>
     <script src="{% static 'js/smooth-navigation.js' %}"></script>
     

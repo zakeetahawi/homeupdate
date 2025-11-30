@@ -284,7 +284,7 @@ if not SECRET_KEY:
         )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 # تحذير إذا كان DEBUG مفعّل بدون وضع التطوير
 if DEBUG and not os.environ.get('DEVELOPMENT_MODE'):
@@ -594,8 +594,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
-# استخدام تخزين أبسط لتجنب مشاكل ملفات source map
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+# استخدام WhiteNoise لخدمة الملفات الثابتة في الإنتاج مع Cache Busting
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# إضافة version للملفات لإجبار المتصفح على تحديث الـ cache
+STATIC_VERSION = '20251130'  # تحديث هذا الرقم عند تغيير الملفات الثابتة
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -720,16 +722,19 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'DENY'
     SECURE_REFERRER_POLICY = 'same-origin'
     
-    # Content Security Policy (CSP) - مفعّل للإنتاج
+    # Content Security Policy (CSP) - مفعّل للإنتاج - جميع الموارد محلية + Cloudflare Insights
     CSP_DEFAULT_SRC = ("'self'",)
-    CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com")
-    CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "fonts.googleapis.com")
-    CSP_IMG_SRC = ("'self'", "data:", "https:", "blob:")
-    CSP_FONT_SRC = ("'self'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "fonts.gstatic.com")
-    CSP_CONNECT_SRC = ("'self'",)
+    CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'", "https://static.cloudflareinsights.com")
+    CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
+    CSP_IMG_SRC = ("'self'", "data:", "blob:")
+    CSP_FONT_SRC = ("'self'", "data:")
+    CSP_CONNECT_SRC = ("'self'", "https://cloudflareinsights.com")
     CSP_FRAME_ANCESTORS = ("'none'",)
     CSP_BASE_URI = ("'self'",)
     CSP_FORM_ACTION = ("'self'",)
+    CSP_UPGRADE_INSECURE_REQUESTS = True
+    # حظر جميع المصادر الخارجية غير المصرح بها
+    CSP_BLOCK_ALL_MIXED_CONTENT = True
     
 else:
     # Development Settings - أقل تقييداً للتطوير
@@ -1018,13 +1023,6 @@ RATELIMIT_USE_CACHE = 'default'
 SECURE_HSTS_SECONDS = 0  # Set to 31536000 in production
 SECURE_HSTS_INCLUDE_SUBDOMAINS = False  # Set to True in production
 SECURE_HSTS_PRELOAD = False  # Set to True in production
-
-# Content Security Policy
-CSP_DEFAULT_SRC = ("'self'",)
-CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com")
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net")
-CSP_FONT_SRC = ("'self'", "https://fonts.gstatic.com")
-CSP_IMG_SRC = ("'self'", "data:", "https:")
 
 # File Upload Security - محسن للملفات الكبيرة
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024 * 1024  # 1GB للعمليات الكبيرة
