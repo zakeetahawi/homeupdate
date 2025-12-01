@@ -18,6 +18,25 @@ from orders.models import Order
 from manufacturing.models import FabricReceipt, FabricReceiptItem
 
 
+def get_user_warehouses_for_user(user):
+    """Helper function للحصول على المستودعات المتاحة للمستخدم"""
+    if user.is_superuser:
+        return Warehouse.objects.filter(is_active=True)
+    # موظف مستودع: الوصول فقط للمستودع المخصص له
+    elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
+        if user.assigned_warehouse:
+            return Warehouse.objects.filter(id=user.assigned_warehouse.id, is_active=True)
+        else:
+            return Warehouse.objects.none()
+    return Warehouse.objects.filter(is_active=True)
+
+
+def user_has_warehouse_access(user, warehouse_id):
+    """التحقق من صلاحية المستخدم للوصول لمستودع معين"""
+    user_warehouses = get_user_warehouses_for_user(user)
+    return user_warehouses.filter(id=warehouse_id).exists()
+
+
 class CuttingDashboardView(LoginRequiredMixin, TemplateView):
     """لوحة تحكم نظام التقطيع"""
     template_name = 'cutting/dashboard.html'
@@ -108,13 +127,21 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
             'order', 'order__customer', 'warehouse', 'assigned_to'
         ).prefetch_related('items')
 
-        # فلترة حسب المستودع إذا تم تحديده
-        warehouse_id = self.kwargs.get('warehouse_id')
+        # الحصول على المستودعات المتاحة للمستخدم أولاً
+        user_warehouses = self.get_user_warehouses()
+        
+        # فلترة حسب المستودع - التحقق من URL أولاً ثم من GET parameters
+        warehouse_id = self.kwargs.get('warehouse_id') or self.request.GET.get('warehouse')
+        
         if warehouse_id:
-            queryset = queryset.filter(warehouse_id=warehouse_id)
+            # التحقق من أن المستودع المطلوب ضمن المستودعات المتاحة للمستخدم
+            if user_warehouses.filter(id=warehouse_id).exists():
+                queryset = queryset.filter(warehouse_id=warehouse_id)
+            else:
+                # المستخدم ليس لديه صلاحية لهذا المستودع - عرض مستودعاته فقط
+                queryset = queryset.filter(warehouse__in=user_warehouses)
         else:
-            # فلترة حسب مستودعات المستخدم
-            user_warehouses = self.get_user_warehouses()
+            # عرض جميع المستودعات المتاحة للمستخدم
             queryset = queryset.filter(warehouse__in=user_warehouses)
 
         # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي (يشمل جميع أرقام الفواتير والعقود)
@@ -197,7 +224,8 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
-        
+        # الحصول على المستودع الحالي من URL أو GET parameters
+        current_warehouse = self.kwargs.get('warehouse_id') or self.request.GET.get('warehouse', '')
         
         # حساب الإحصائيات
         queryset = self.get_queryset()
@@ -209,7 +237,7 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
         
         context.update({
             'warehouses': self.get_user_warehouses(),
-            'current_warehouse': self.kwargs.get('warehouse_id'),
+            'current_warehouse': current_warehouse,
             'status_choices': CuttingOrder.STATUS_CHOICES,
             'search_query': self.request.GET.get('search', ''),
             'current_status': self.request.GET.get('status', ''),
@@ -236,14 +264,21 @@ class CompletedCuttingOrdersView(LoginRequiredMixin, ListView):
             'order', 'order__customer', 'warehouse', 'assigned_to'
         ).prefetch_related('items')
 
-        # فلترة حسب مستودعات المستخدم
+        # الحصول على المستودعات المتاحة للمستخدم أولاً
         user_warehouses = self.get_user_warehouses()
-        queryset = queryset.filter(warehouse__in=user_warehouses)
 
         # فلترة حسب المستودع إذا تم تحديده
         warehouse_id = self.request.GET.get('warehouse')
         if warehouse_id:
-            queryset = queryset.filter(warehouse_id=warehouse_id)
+            # التحقق من أن المستودع المطلوب ضمن المستودعات المتاحة للمستخدم
+            if user_warehouses.filter(id=warehouse_id).exists():
+                queryset = queryset.filter(warehouse_id=warehouse_id)
+            else:
+                # المستخدم ليس لديه صلاحية لهذا المستودع - عرض مستودعاته فقط
+                queryset = queryset.filter(warehouse__in=user_warehouses)
+        else:
+            # عرض جميع المستودعات المتاحة للمستخدم
+            queryset = queryset.filter(warehouse__in=user_warehouses)
 
         # فلترة حسب الحالة
         status_filter = self.request.GET.get('status_filter')
@@ -656,6 +691,13 @@ def generate_cutting_report(request):
             start_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d').date()
             end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d').date()
 
+            # التحقق من صلاحية المستخدم للوصول للمستودع
+            if not user_has_warehouse_access(request.user, warehouse_id):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'ليس لديك صلاحية للوصول لهذا المستودع'
+                })
+
             warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
 
             # حساب الإحصائيات
@@ -700,6 +742,11 @@ def generate_cutting_report(request):
 @login_required
 def daily_cutting_report(request, warehouse_id):
     """تقرير يومي للتقطيع"""
+    # التحقق من صلاحية المستخدم للوصول للمستودع
+    if not user_has_warehouse_access(request.user, warehouse_id):
+        messages.error(request, 'ليس لديك صلاحية للوصول لهذا المستودع')
+        return redirect('cutting:dashboard')
+    
     warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
     date = request.GET.get('date', timezone.now().date())
 
@@ -763,6 +810,13 @@ def print_daily_delivery_report(request, date, receiver):
 @login_required
 def warehouse_cutting_stats(request, warehouse_id):
     """إحصائيات المستودع API"""
+    # التحقق من صلاحية المستخدم للوصول للمستودع
+    if not user_has_warehouse_access(request.user, warehouse_id):
+        return JsonResponse({
+            'success': False,
+            'message': 'ليس لديك صلاحية للوصول لهذا المستودع'
+        }, status=403)
+    
     warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
 
     # إحصائيات أوامر التقطيع
@@ -815,14 +869,33 @@ class CuttingReceiptView(LoginRequiredMixin, ListView):
     context_object_name = 'cutting_orders'
     paginate_by = 20
 
+    def get_user_warehouses(self):
+        """الحصول على المستودعات المتاحة للمستخدم"""
+        user = self.request.user
+        if user.is_superuser:
+            return Warehouse.objects.filter(is_active=True)
+        # موظف مستودع: الوصول فقط للمستودع المخصص له
+        elif hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
+            if user.assigned_warehouse:
+                return Warehouse.objects.filter(id=user.assigned_warehouse.id, is_active=True)
+            else:
+                return Warehouse.objects.none()
+        return Warehouse.objects.filter(is_active=True)
+
     def get_queryset(self):
         """الحصول على أوامر التقطيع الجاهزة للاستلام"""
         from django.db.models import Q
+
+        # الحصول على المستودعات المتاحة للمستخدم
+        user_warehouses = self.get_user_warehouses()
 
         queryset = CuttingOrder.objects.select_related(
             'order', 'order__customer', 'warehouse'
         ).prefetch_related(
             'items'
+        ).filter(
+            # فلترة حسب مستودعات المستخدم
+            warehouse__in=user_warehouses
         ).filter(
             # أوامر التقطيع التي تحتوي على عناصر مكتملة وجاهزة للاستلام
             items__status='completed',
@@ -837,6 +910,12 @@ class CuttingReceiptView(LoginRequiredMixin, ListView):
             Q(order__selected_types__icontains='accessory') |
             Q(order__selected_types__icontains='manufacturing')
         ).distinct().order_by('-created_at')
+
+        # فلتر المستودع إذا تم تحديده
+        warehouse_id = self.request.GET.get('warehouse')
+        if warehouse_id:
+            if user_warehouses.filter(id=warehouse_id).exists():
+                queryset = queryset.filter(warehouse_id=warehouse_id)
 
         # البحث المحسّن - البحث برقم الفاتورة كخيار رئيسي (يشمل جميع أرقام الفواتير والعقود)
         search = self.request.GET.get('search')

@@ -923,6 +923,9 @@ def wizard_step_5_contract(request, draft):
     total_steps = get_total_steps(draft)
     currency = get_currency_context()
     
+    # تحديد ما إذا كان نوع الطلب إكسسوار فقط (يتخطى قسم الأقمشة)
+    is_accessory_only = draft.selected_type == 'accessory'
+    
     context = {
         'draft': draft,
         'curtains': curtains,
@@ -935,6 +938,7 @@ def wizard_step_5_contract(request, draft):
         'progress_percentage': round((5 / total_steps) * 100, 2),
         'currency_symbol': currency['currency_symbol'],
         'currency_code': currency['currency_code'],
+        'is_accessory_only': is_accessory_only,
     }
     
     return render(request, 'orders/wizard/step5_contract.html', context)

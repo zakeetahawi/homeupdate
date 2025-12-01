@@ -324,12 +324,20 @@ body.modal-open {
                         </div>
                     </div>
                     
+                    {% if is_accessory_only %}
+                    <!-- لطلبات الإكسسوار فقط: تخطي الأقمشة والذهاب للإكسسوارات مباشرة -->
+                    <button type="button" class="btn btn-primary mt-3" onclick="showAccessoriesSectionDirect()">
+                        <i class="fas fa-arrow-left me-2"></i>التالي - إضافة الإكسسوارات
+                    </button>
+                    {% else %}
                     <button type="button" class="btn btn-primary mt-3" onclick="showFabricsSection()">
                         <i class="fas fa-arrow-left me-2"></i>التالي - إضافة الأقمشة
                     </button>
+                    {% endif %}
                 </div>
                 
-                <!-- Step 2: Fabrics Section (Hidden initially) -->
+                {% if not is_accessory_only %}
+                <!-- Step 2: Fabrics Section (Hidden initially) - فقط للطلبات غير الإكسسوار -->
                 <div id="fabricsSection" style="display: none;">
                     <div class="alert alert-info">
                         <i class="fas fa-check-circle me-2"></i>
@@ -457,6 +465,7 @@ body.modal-open {
                         </button>
                     </div>
                 </div>
+                {% endif %}
                 
                 <!-- Step 3: Accessories Section (Hidden initially) -->
                 <div id="accessoriesSection" style="display: none;">
@@ -919,9 +928,15 @@ body.modal-open {
                     </div>
                     
                     <div class="d-flex justify-content-between mt-3">
+                        {% if is_accessory_only %}
+                        <button type="button" class="btn btn-secondary" onclick="backToBasicInfoFromAccessories()">
+                            <i class="fas fa-arrow-right me-2"></i>السابق
+                        </button>
+                        {% else %}
                         <button type="button" class="btn btn-secondary" onclick="backToFabricsSection()">
                             <i class="fas fa-arrow-right me-2"></i>السابق
                         </button>
+                        {% endif %}
                         <button type="button" class="btn btn-primary" onclick="showNotesSection()">
                             <i class="fas fa-arrow-left me-2"></i>التالي - حفظ الستارة
                         </button>
@@ -997,6 +1012,7 @@ let tempFabrics = [];
 let tempAccessories = [];
 let fabricUsageTracker = {}; // Track how much of each fabric has been used
 let editingCurtainId = null; // Track if we're editing an existing curtain
+const isAccessoryOnlyOrder = {% if is_accessory_only %}true{% else %}false{% endif %}; // هل الطلب من نوع إكسسوار فقط
 
 // Initialize fabric usage tracker from draft items
 {% for item in draft.items.all %}
@@ -1300,6 +1316,128 @@ function toggleCurtainBoxFields() {
     }
 }
 
+// Show accessories section directly (for accessory-only orders - skip fabrics)
+function showAccessoriesSectionDirect() {
+    const roomNameInput = document.getElementById('curtain-room-name');
+    const widthInput = document.getElementById('curtain-width');
+    const heightInput = document.getElementById('curtain-height');
+    const installationTypeSelect = document.getElementById('curtain-installation-type');
+    const boxWidthInput = document.getElementById('curtain-box-width');
+    const boxDepthInput = document.getElementById('curtain-box-depth');
+    
+    const roomName = roomNameInput.value.trim();
+    const width = parseFloat(widthInput.value);
+    const height = parseFloat(heightInput.value);
+    const installationType = installationTypeSelect.value;
+    
+    // إزالة الأخطاء السابقة
+    [roomNameInput, widthInput, heightInput, installationTypeSelect, boxWidthInput, boxDepthInput].forEach(field => {
+        if (field) {
+            field.classList.remove('field-required-error');
+            const wrapper = field.closest('.mb-3, .col-md-4, .col-md-3, .col-md-6');
+            if (wrapper) {
+                const errorIcon = wrapper.querySelector('.field-error-icon');
+                const errorMsg = wrapper.querySelector('.field-error-message');
+                if (errorIcon) errorIcon.remove();
+                if (errorMsg) errorMsg.remove();
+            }
+        }
+    });
+    
+    const missingFields = [];
+    let hasErrors = false;
+    
+    // التحقق من اسم الغرفة
+    if (!roomName) {
+        hasErrors = true;
+        missingFields.push('اسم الغرفة');
+        roomNameInput.classList.add('field-required-error');
+        addFieldErrorIcon(roomNameInput, 'اسم الغرفة مطلوب');
+    }
+    
+    // التحقق من العرض
+    if (!width || width <= 0 || isNaN(width)) {
+        hasErrors = true;
+        missingFields.push('العرض');
+        widthInput.classList.add('field-required-error');
+        addFieldErrorIcon(widthInput, 'العرض مطلوب');
+    }
+    
+    // التحقق من الارتفاع
+    if (!height || height <= 0 || isNaN(height)) {
+        hasErrors = true;
+        missingFields.push('الارتفاع');
+        heightInput.classList.add('field-required-error');
+        addFieldErrorIcon(heightInput, 'الارتفاع مطلوب');
+    }
+    
+    // التحقق من نوع التركيب
+    if (!installationType) {
+        hasErrors = true;
+        missingFields.push('نوع التركيب');
+        installationTypeSelect.classList.add('field-required-error');
+        addFieldErrorIcon(installationTypeSelect, 'نوع التركيب مطلوب');
+    }
+    
+    // التحقق من بيت الستارة إذا كان مطلوباً
+    if (installationType === 'curtain_box_concrete' || installationType === 'curtain_box_gypsum') {
+        const boxWidth = parseFloat(boxWidthInput.value);
+        const boxDepth = parseFloat(boxDepthInput.value);
+        
+        if (!boxWidth || boxWidth <= 0 || isNaN(boxWidth)) {
+            hasErrors = true;
+            missingFields.push('عرض بيت الستارة');
+            boxWidthInput.classList.add('field-required-error');
+            addFieldErrorIcon(boxWidthInput, 'عرض بيت الستارة مطلوب');
+        }
+        
+        if (!boxDepth || boxDepth <= 0 || isNaN(boxDepth)) {
+            hasErrors = true;
+            missingFields.push('عمق بيت الستارة');
+            boxDepthInput.classList.add('field-required-error');
+            addFieldErrorIcon(boxDepthInput, 'عمق بيت الستارة مطلوب');
+        }
+    }
+    
+    // إذا كانت هناك أخطاء، عرض التنبيه
+    if (hasErrors) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: '<i class="fas fa-exclamation-triangle text-warning"></i> حقول مطلوبة',
+                html: `
+                    <div class="text-end">
+                        <p class="mb-3">يرجى ملء الحقول التالية:</p>
+                        <ul class="list-unstyled text-danger">
+                            ${missingFields.map(f => `<li><i class="fas fa-times-circle me-2"></i>${f}</li>`).join('')}
+                        </ul>
+                    </div>
+                `,
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert('يرجى ملء الحقول التالية:\n' + missingFields.join('\n'));
+        }
+        return;
+    }
+    
+    // Update summary for accessories section
+    document.getElementById('summary2-room-name').textContent = roomName;
+    document.getElementById('summary-fabrics-count').textContent = '0';
+    
+    // Hide basic info, show accessories directly (skip fabrics)
+    document.getElementById('curtainBasicInfo').style.display = 'none';
+    document.getElementById('accessoriesSection').style.display = 'block';
+    
+    // تحديد خيار "مع إكسسوار" تلقائياً
+    const withAccessoriesRadio = document.getElementById('withAccessories');
+    if (withAccessoriesRadio) {
+        withAccessoriesRadio.checked = true;
+        toggleAccessoriesChoice();
+    }
+}
+
 // Show fabrics section after basic info
 function showFabricsSection() {
     const roomNameInput = document.getElementById('curtain-room-name');
@@ -1406,20 +1544,31 @@ function showFabricsSection() {
         return;
     }
     
-    // Update summary
-    document.getElementById('summary-room-name').textContent = roomName;
-    document.getElementById('summary-width').textContent = width.toFixed(2);
-    document.getElementById('summary-height').textContent = height.toFixed(2);
-    document.getElementById('summary2-room-name').textContent = roomName;
+    // Update summary with null checks
+    const summaryRoomName = document.getElementById('summary-room-name');
+    const summaryWidth = document.getElementById('summary-width');
+    const summaryHeight = document.getElementById('summary-height');
+    const summary2RoomName = document.getElementById('summary2-room-name');
     
-    // Hide basic info, show fabrics
-    document.getElementById('curtainBasicInfo').style.display = 'none';
-    document.getElementById('fabricsSection').style.display = 'block';
+    if (summaryRoomName) summaryRoomName.textContent = roomName;
+    if (summaryWidth) summaryWidth.textContent = width.toFixed(2);
+    if (summaryHeight) summaryHeight.textContent = height.toFixed(2);
+    if (summary2RoomName) summary2RoomName.textContent = roomName;
+    
+    // Hide basic info, show fabrics with null checks
+    const curtainBasicInfoEl = document.getElementById('curtainBasicInfo');
+    const fabricsSectionEl = document.getElementById('fabricsSection');
+    
+    if (curtainBasicInfoEl) curtainBasicInfoEl.style.display = 'none';
+    if (fabricsSectionEl) fabricsSectionEl.style.display = 'block';
 }
 
 function editBasicInfo() {
-    document.getElementById('curtainBasicInfo').style.display = 'block';
-    document.getElementById('fabricsSection').style.display = 'none';
+    const curtainBasicInfoEl = document.getElementById('curtainBasicInfo');
+    const fabricsSectionEl = document.getElementById('fabricsSection');
+    
+    if (curtainBasicInfoEl) curtainBasicInfoEl.style.display = 'block';
+    if (fabricsSectionEl) fabricsSectionEl.style.display = 'none';
 }
 
 function backToBasicInfo() {
@@ -1705,15 +1854,34 @@ function showAccessoriesSection(skipFabricCheck = false) {
         return; // منع المتابعة
     }
     
-    document.getElementById('fabricsSection').style.display = 'none';
-    document.getElementById('accessoriesSection').style.display = 'block';
-    document.getElementById('notesSection').style.display = 'none';
+    const fabricsSectionEl = document.getElementById('fabricsSection');
+    const accessoriesSectionEl = document.getElementById('accessoriesSection');
+    const notesSectionEl = document.getElementById('notesSection');
+    
+    if (fabricsSectionEl) fabricsSectionEl.style.display = 'none';
+    if (accessoriesSectionEl) accessoriesSectionEl.style.display = 'block';
+    if (notesSectionEl) notesSectionEl.style.display = 'none';
 }
 
 function backToFabricsSection() {
-    document.getElementById('accessoriesSection').style.display = 'none';
-    document.getElementById('fabricsSection').style.display = 'block';
-    document.getElementById('notesSection').style.display = 'none';
+    const accessoriesSectionEl = document.getElementById('accessoriesSection');
+    const fabricsSectionEl = document.getElementById('fabricsSection');
+    const notesSectionEl = document.getElementById('notesSection');
+    
+    if (accessoriesSectionEl) accessoriesSectionEl.style.display = 'none';
+    if (fabricsSectionEl) fabricsSectionEl.style.display = 'block';
+    if (notesSectionEl) notesSectionEl.style.display = 'none';
+}
+
+// العودة للمعلومات الأساسية من قسم الإكسسوارات (لطلبات الإكسسوار فقط)
+function backToBasicInfoFromAccessories() {
+    const accessoriesSectionEl = document.getElementById('accessoriesSection');
+    const curtainBasicInfoEl = document.getElementById('curtainBasicInfo');
+    const notesSectionEl = document.getElementById('notesSection');
+    
+    if (accessoriesSectionEl) accessoriesSectionEl.style.display = 'none';
+    if (curtainBasicInfoEl) curtainBasicInfoEl.style.display = 'block';
+    if (notesSectionEl) notesSectionEl.style.display = 'none';
 }
 
 // Show notes section
@@ -1804,21 +1972,33 @@ function showNotesSection() {
         }
     }
     
-    // Update summary
-    const roomName = document.getElementById('curtain-room-name').value;
-    document.getElementById('summary3-room-name').textContent = roomName;
-    document.getElementById('summary2-fabrics-count').textContent = tempFabrics.length;
-    document.getElementById('summary-accessories-count').textContent = tempAccessories.length;
+    // Update summary with null checks
+    const roomName = document.getElementById('curtain-room-name');
+    const summary3RoomName = document.getElementById('summary3-room-name');
+    const summary2FabricsCount = document.getElementById('summary2-fabrics-count');
+    const summaryAccessoriesCount = document.getElementById('summary-accessories-count');
     
-    document.getElementById('accessoriesSection').style.display = 'none';
-    document.getElementById('fabricsSection').style.display = 'none';
-    document.getElementById('notesSection').style.display = 'block';
+    if (roomName && summary3RoomName) summary3RoomName.textContent = roomName.value;
+    if (summary2FabricsCount) summary2FabricsCount.textContent = tempFabrics.length;
+    if (summaryAccessoriesCount) summaryAccessoriesCount.textContent = tempAccessories.length;
+    
+    const accessoriesSection = document.getElementById('accessoriesSection');
+    const fabricsSection = document.getElementById('fabricsSection');
+    const notesSection = document.getElementById('notesSection');
+    
+    if (accessoriesSection) accessoriesSection.style.display = 'none';
+    if (fabricsSection) fabricsSection.style.display = 'none';
+    if (notesSection) notesSection.style.display = 'block';
 }
 
 function backToAccessoriesSection() {
-    document.getElementById('notesSection').style.display = 'none';
-    document.getElementById('accessoriesSection').style.display = 'block';
-    document.getElementById('fabricsSection').style.display = 'none';
+    const notesSection = document.getElementById('notesSection');
+    const accessoriesSection = document.getElementById('accessoriesSection');
+    const fabricsSection = document.getElementById('fabricsSection');
+    
+    if (notesSection) notesSection.style.display = 'none';
+    if (accessoriesSection) accessoriesSection.style.display = 'block';
+    if (fabricsSection) fabricsSection.style.display = 'none';
 }
 
 // Toggle accessories choice (with or without)
@@ -2907,8 +3087,8 @@ function saveCurtainComplete() {
         addFieldErrorIcon(field, 'نوع التركيب مطلوب');
     }
     
-    // ✨ التحقق من وجود قماش واحد على الأقل (إلزامي)
-    if (!tempFabrics || tempFabrics.length === 0) {
+    // ✨ التحقق من وجود قماش واحد على الأقل (إلزامي فقط إذا لم يكن الطلب من نوع إكسسوار)
+    if (!isAccessoryOnlyOrder && (!tempFabrics || tempFabrics.length === 0)) {
         hasErrors = true;
         missingFields.push('قماش واحد على الأقل');
         
@@ -3006,14 +3186,24 @@ function resetCurtainModal() {
     tempFabrics = [];
     tempAccessories = [];
     editingCurtainId = null; // Reset edit mode
-    document.getElementById('curtain-room-name').value = '';
-    document.getElementById('curtain-width').value = '';
-    document.getElementById('curtain-height').value = '';
-    document.getElementById('curtain-installation-type').value = '';
-    document.getElementById('curtain-box-width').value = '';
-    document.getElementById('curtain-box-depth').value = '';
-    document.getElementById('curtain-notes').value = '';
-    document.getElementById('curtainBoxFields').style.display = 'none';
+    
+    // إعادة تعيين الحقول الأساسية مع التحقق من وجودها
+    const curtainRoomName = document.getElementById('curtain-room-name');
+    if (curtainRoomName) curtainRoomName.value = '';
+    const curtainWidth = document.getElementById('curtain-width');
+    if (curtainWidth) curtainWidth.value = '';
+    const curtainHeight = document.getElementById('curtain-height');
+    if (curtainHeight) curtainHeight.value = '';
+    const curtainInstallationType = document.getElementById('curtain-installation-type');
+    if (curtainInstallationType) curtainInstallationType.value = '';
+    const curtainBoxWidth = document.getElementById('curtain-box-width');
+    if (curtainBoxWidth) curtainBoxWidth.value = '';
+    const curtainBoxDepth = document.getElementById('curtain-box-depth');
+    if (curtainBoxDepth) curtainBoxDepth.value = '';
+    const curtainNotes = document.getElementById('curtain-notes');
+    if (curtainNotes) curtainNotes.value = '';
+    const curtainBoxFields = document.getElementById('curtainBoxFields');
+    if (curtainBoxFields) curtainBoxFields.style.display = 'none';
     
     // إعادة تعيين خيارات الإكسسوار - بدون تحديد أي خيار
     const hasAccessoriesEl = document.getElementById('hasAccessories');
@@ -3023,11 +3213,17 @@ function resetCurtainModal() {
     const noAccessoriesEl = document.getElementById('noAccessories');
     if (noAccessoriesEl) noAccessoriesEl.checked = false;
     
-    document.getElementById('curtainBasicInfo').style.display = 'block';
-    document.getElementById('fabricsSection').style.display = 'none';
-    document.getElementById('accessoriesSection').style.display = 'none';
-    document.getElementById('notesSection').style.display = 'none';
-    document.getElementById('accessoriesFields').style.display = 'none';
+    // إعادة تعيين الأقسام مع التحقق من وجودها
+    const curtainBasicInfo = document.getElementById('curtainBasicInfo');
+    if (curtainBasicInfo) curtainBasicInfo.style.display = 'block';
+    const fabricsSection = document.getElementById('fabricsSection');
+    if (fabricsSection) fabricsSection.style.display = 'none';
+    const accessoriesSection = document.getElementById('accessoriesSection');
+    if (accessoriesSection) accessoriesSection.style.display = 'none';
+    const notesSection = document.getElementById('notesSection');
+    if (notesSection) notesSection.style.display = 'none';
+    const accessoriesFields = document.getElementById('accessoriesFields');
+    if (accessoriesFields) accessoriesFields.style.display = 'none';
     
     // إعادة تعيين خيارات الحزام - بدون تحديد أي خيار
     const noBeltEl = document.getElementById('noBelt');
