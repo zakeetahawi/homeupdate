@@ -1183,19 +1183,26 @@ def wizard_finalize(request):
         if 'wizard_draft_id' in request.session:
             del request.session['wizard_draft_id']
         
-        # توليد ملف العقد تلقائياً وحفظه
-        try:
-            from .services.contract_generation_service import ContractGenerationService
-            contract_service = ContractGenerationService(order)
-            contract_saved = contract_service.save_contract_to_order(user=request.user)
-            
-            if contract_saved:
-                logger.info(f"Contract PDF auto-generated for order {order.order_number}")
-            else:
-                logger.warning(f"Failed to auto-generate contract PDF for order {order.order_number}")
-        except Exception as e:
-            logger.error(f"Error auto-generating contract PDF: {e}", exc_info=True)
-            # لا نفشل الطلب إذا فشل توليد العقد
+        # توليد ملف العقد تلقائياً وحفظه - فقط لطلبات التركيب والتسليم
+        # لا يتم إنشاء عقد لطلبات المنتجات أو المعاينة
+        selected_type = draft.selected_type
+        should_generate_contract = selected_type not in ['products', 'inspection']
+        
+        if should_generate_contract:
+            try:
+                from .services.contract_generation_service import ContractGenerationService
+                contract_service = ContractGenerationService(order)
+                contract_saved = contract_service.save_contract_to_order(user=request.user)
+                
+                if contract_saved:
+                    logger.info(f"Contract PDF auto-generated for order {order.order_number}")
+                else:
+                    logger.warning(f"Failed to auto-generate contract PDF for order {order.order_number}")
+            except Exception as e:
+                logger.error(f"Error auto-generating contract PDF: {e}", exc_info=True)
+                # لا نفشل الطلب إذا فشل توليد العقد
+        else:
+            logger.info(f"Skipping contract generation for order {order.order_number} (type: {selected_type})")
         
         return JsonResponse({
             'success': True,

@@ -67,8 +67,8 @@
                         </tr>
                         {% with types_list=order.get_selected_types_list %}
                         {% if types_list and types_list|length == 1 %}
-                            {% if types_list.0 == 'inspection' %}
-                                {# لا تعرض ملف العقد والمعاينة المرتبطة #}
+                            {% if types_list.0 == 'inspection' or types_list.0 == 'products' %}
+                                {# لا تعرض ملف العقد والمعاينة المرتبطة لطلبات المعاينة والمنتجات #}
                             {% else %}
                                 <tr>
                                     <th>ملف العقد</th>
