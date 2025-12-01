@@ -2794,7 +2794,7 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
             Q(cutting_order__order__selected_types__icontains='accessory')
         ).distinct().order_by('-cutting_date', '-cutting_order__created_at')
 
-        # البحث (يشمل جميع أرقام الفواتير والعقود)
+        # البحث (يشمل جميع أرقام الفواتير والعقود ورقم الإذن)
         search = self.request.GET.get('search', '').strip()
         if search:
             cutting_items = cutting_items.filter(
@@ -2806,7 +2806,9 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
                 Q(cutting_order__order__invoice_number_2__icontains=search) |
                 Q(cutting_order__order__invoice_number_3__icontains=search) |
                 Q(cutting_order__order__customer__name__icontains=search) |
-                Q(order_item__product__name__icontains=search)
+                Q(order_item__product__name__icontains=search) |
+                Q(permit_number__icontains=search) |
+                Q(receiver_name__icontains=search)
             )
 
         # تجميع العناصر حسب أمر التقطيع لعرض أفضل
