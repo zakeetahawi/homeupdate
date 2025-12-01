@@ -86,11 +86,18 @@ def wizard_start(request):
     settings = SystemSettings.get_settings()
     max_drafts = settings.max_draft_orders_per_user
     
-    # البحث عن المسودات غير المكتملة للمستخدم
+    # البحث عن المسودات غير المكتملة للمستخدم - محسّن
     user_drafts = DraftOrder.objects.filter(
         created_by=request.user,
         is_completed=False
-    ).select_related('customer', 'branch').order_by('-updated_at')
+    ).select_related(
+        'customer', 'customer__branch', 'branch', 'salesperson'
+    ).only(
+        'id', 'current_step', 'updated_at', 'is_completed',
+        'customer__id', 'customer__name', 'customer__phone',
+        'branch__id', 'branch__name',
+        'salesperson__id', 'salesperson__name'
+    ).order_by('-updated_at')
     
     # التحقق من وجود درافت للعميل المحدد (إن وجد)
     customer_id = request.GET.get('customer_id')
@@ -106,16 +113,16 @@ def wizard_start(request):
     if user_drafts.exists():
         return redirect('orders:wizard_drafts_list')
     else:
-        # البحث عن العميل إذا تم تمريره
+        # البحث عن العميل إذا تم تمريره - محسّن
         from customers.models import Customer
         customer = None
         customer_id = request.GET.get('customer_id')
         customer_code = request.GET.get('customer')
         
         if customer_id:
-            customer = Customer.objects.filter(pk=customer_id).first()
+            customer = Customer.objects.select_related('branch').filter(pk=customer_id).first()
         elif customer_code:
-            customer = Customer.objects.filter(code=customer_code).first()
+            customer = Customer.objects.select_related('branch').filter(code=customer_code).first()
         
         # تحديد الفرع تلقائياً بناءً على المستخدم
         user_branch = None
@@ -147,21 +154,23 @@ def wizard_start_new(request):
     settings = SystemSettings.get_settings()
     max_drafts = settings.max_draft_orders_per_user
     
-    # التحقق من وجود مسودات غير مكتملة للمستخدم
+    # التحقق من وجود مسودات غير مكتملة للمستخدم - محسّن
     existing_drafts = DraftOrder.objects.filter(
         created_by=request.user,
         is_completed=False
+    ).select_related('customer', 'branch').only(
+        'id', 'current_step', 'customer__id', 'customer__name', 'branch__id'
     )
     
     customer = None
     customer_code = request.GET.get('customer')
     customer_id = request.GET.get('customer_id')
     
-    # البحث عن العميل بالكود أو المعرف
+    # البحث عن العميل بالكود أو المعرف - محسّن
     if customer_code:
-        customer = Customer.objects.filter(code=customer_code).first()
+        customer = Customer.objects.select_related('branch').filter(code=customer_code).first()
     elif customer_id:
-        customer = Customer.objects.filter(pk=customer_id).first()
+        customer = Customer.objects.select_related('branch').filter(pk=customer_id).first()
     
     # التحقق من وجود درافت لنفس العميل
     if customer:
@@ -881,30 +890,37 @@ def wizard_step_5_contract(request, draft):
             # إعادة توجيه إلى الخطوة التالية
             return redirect('orders:wizard_step', step=6)
     
-    # الحصول على الستائر المرتبطة بالمسودة
-    curtains = ContractCurtain.objects.filter(draft_order=draft).order_by('sequence')
+    # الحصول على الستائر المرتبطة بالمسودة - محسّن مع prefetch
+    curtains = ContractCurtain.objects.filter(draft_order=draft).prefetch_related(
+        'fabrics', 'fabrics__draft_order_item', 'fabrics__draft_order_item__product',
+        'accessories', 'accessories__draft_order_item', 'accessories__draft_order_item__product'
+    ).order_by('sequence')
     
-    # الحصول على عناصر الفاتورة (الأقمشة فقط)
+    # الحصول على عناصر الفاتورة (الأقمشة فقط) - محسّن
     order_items = draft.items.filter(
         item_type__in=['fabric', 'product']
-    ).select_related('product')
+    ).select_related('product', 'product__category')
     
-    # حساب الكميات المتاحة لكل عنصر
+    # حساب الكميات المتاحة لكل عنصر - محسّن: استعلام واحد بدلاً من N+1
+    # جلب مجاميع الأقمشة والإكسسوارات دفعة واحدة
+    fabric_usage = dict(CurtainFabric.objects.filter(
+        curtain__draft_order=draft,
+        draft_order_item__isnull=False
+    ).values('draft_order_item_id').annotate(
+        total=models.Sum('meters')
+    ).values_list('draft_order_item_id', 'total'))
+    
+    accessory_usage = dict(CurtainAccessory.objects.filter(
+        curtain__draft_order=draft,
+        draft_order_item__isnull=False
+    ).values('draft_order_item_id').annotate(
+        total=models.Sum('quantity')
+    ).values_list('draft_order_item_id', 'total'))
+    
     items_with_usage = []
     for item in order_items:
-        # حساب الكمية المستخدمة من الأقمشة (في المسودة الحالية)
-        used_fabrics = CurtainFabric.objects.filter(
-            draft_order_item=item,
-            curtain__draft_order=draft
-        ).aggregate(total=models.Sum('meters'))['total'] or Decimal('0')
-        
-        # حساب الكمية المستخدمة من الإكسسوارات (في المسودة الحالية)
-        used_accessories = CurtainAccessory.objects.filter(
-            draft_order_item=item,
-            curtain__draft_order=draft
-        ).aggregate(total=models.Sum('quantity'))['total'] or Decimal('0')
-        
-        # إجمالي المستخدم
+        used_fabrics = fabric_usage.get(item.id, Decimal('0')) or Decimal('0')
+        used_accessories = accessory_usage.get(item.id, Decimal('0')) or Decimal('0')
         used = used_fabrics + used_accessories
         
         items_with_usage.append({
