@@ -286,13 +286,40 @@ class WarehouseLocation(models.Model):
         verbose_name=_('المستودع')
     )
     description = models.TextField(_('الوصف'), blank=True)
+    capacity = models.PositiveIntegerField(_('السعة'), default=1000, help_text=_('السعة القصوى للموقع'))
+    is_active = models.BooleanField(_('نشط'), default=True)
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+    
     class Meta:
         verbose_name = _('موقع مستودع')
         verbose_name_plural = _('مواقع المستودعات')
         ordering = ['warehouse', 'name']
         unique_together = ['warehouse', 'code']
+    
     def __str__(self):
         return f"{self.warehouse.name} - {self.name} ({self.code})"
+    
+    @property
+    def used_capacity(self):
+        """حساب السعة المستخدمة"""
+        from django.db.models import Sum
+        total = ProductBatch.objects.filter(location=self).aggregate(
+            total=Sum('quantity')
+        )['total'] or 0
+        return total
+    
+    @property
+    def available_capacity(self):
+        """حساب السعة المتاحة"""
+        return self.capacity - self.used_capacity
+    
+    @property
+    def occupancy_rate(self):
+        """نسبة الإشغال"""
+        if self.capacity > 0:
+            return int((self.used_capacity / self.capacity) * 100)
+        return 0
 class ProductBatch(models.Model):
     """
     Model for tracking product batches
@@ -607,12 +634,26 @@ class StockAlert(models.Model):
         verbose_name=_('المنتج')
     )
     alert_type = models.CharField(_('نوع التنبيه'), max_length=15, choices=ALERT_TYPES)
+    title = models.CharField(_('عنوان التنبيه'), max_length=200, blank=True)
     message = models.TextField(_('رسالة التنبيه'))
     description = models.TextField(_('الوصف'), blank=True)
     priority = models.CharField(_('الأولوية'), max_length=10, choices=PRIORITY_CHOICES, default='medium')
     status = models.CharField(_('الحالة'), max_length=10, choices=STATUS_CHOICES, default='active')
+    quantity_before = models.DecimalField(_('الكمية السابقة'), max_digits=10, decimal_places=2, default=0)
+    quantity_after = models.DecimalField(_('الكمية الحالية'), max_digits=10, decimal_places=2, default=0)
+    threshold_limit = models.DecimalField(_('حد التنبيه'), max_digits=10, decimal_places=2, default=0)
+    is_urgent = models.BooleanField(_('عاجل'), default=False)
+    is_pinned = models.BooleanField(_('مثبت'), default=False)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     resolved_at = models.DateTimeField(_('تاريخ المعالجة'), null=True, blank=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_stock_alerts',
+        verbose_name=_('تم الإنشاء بواسطة')
+    )
     resolved_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -621,10 +662,11 @@ class StockAlert(models.Model):
         related_name='resolved_stock_alerts',
         verbose_name=_('تمت المعالجة بواسطة')
     )
+    
     class Meta:
         verbose_name = _('تنبيه مخزون')
         verbose_name_plural = _('تنبيهات المخزون')
-        ordering = ['-created_at']
+        ordering = ['-is_pinned', '-is_urgent', '-created_at']
         indexes = [
             models.Index(fields=['product'], name='alert_product_idx'),
             models.Index(fields=['alert_type'], name='alert_type_idx'),
@@ -632,8 +674,14 @@ class StockAlert(models.Model):
             models.Index(fields=['priority'], name='alert_priority_idx'),
             models.Index(fields=['created_at'], name='alert_created_at_idx'),
         ]
+    
     def __str__(self):
         return f"{self.get_alert_type_display()} - {self.product.name}"
+    
+    def save(self, *args, **kwargs):
+        if not self.title:
+            self.title = f"{self.get_alert_type_display()} - {self.product.name}"
+        super().save(*args, **kwargs)
 
 
 class StockTransfer(models.Model):

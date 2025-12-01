@@ -57,7 +57,7 @@
     }
 
     .products-container {
-        max-height: 500px;
+        max-height: 600px;
         overflow-y: auto;
     }
 
@@ -248,9 +248,15 @@
                         <!-- Search Box -->
                         <div class="search-box">
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <input type="text" id="product-search" class="form-control form-control-lg"
-                                           placeholder="🔍 ابحث عن منتج (الاسم، الكود، الفئة)...">
+                                           placeholder="🔍 ابحث عن منتج (الاسم، الكود)...">
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-primary w-100" onclick="loadAllProducts()">
+                                        <i class="fas fa-download"></i>
+                                        تحميل الكل
+                                    </button>
                                 </div>
                                 <div class="col-md-3">
                                     <button type="button" class="btn btn-outline-success w-100" onclick="selectAll()">
@@ -268,6 +274,9 @@
                             <div class="mt-2">
                                 <span class="badge bg-info">
                                     <span id="selected-count">0</span> منتج محدد
+                                </span>
+                                <span class="badge bg-secondary ms-2">
+                                    <span id="total-products-count">0</span> منتج متاح
                                 </span>
                             </div>
                         </div>
@@ -413,14 +422,62 @@ function goToStep2() {
     $('#step1').removeClass('active').addClass('completed');
     $('#step2').addClass('active');
 
-    // عرض رسالة للبحث بدلاً من تحميل جميع المنتجات
+    // عرض رسالة للبحث أو تحميل الكل
     $('#products-list').html(`
         <div class="alert alert-info text-center">
             <i class="fas fa-search"></i>
-            <h5 class="mt-2">ابحث عن المنتجات</h5>
-            <p class="mb-0">استخدم مربع البحث أعلاه للبحث عن المنتجات (اكتب اسم المنتج أو أول حرف منه)</p>
+            <h5 class="mt-2">ابحث عن المنتجات أو حمّل الكل</h5>
+            <p class="mb-0">استخدم مربع البحث للبحث عن منتجات محددة، أو اضغط "تحميل الكل" لعرض جميع المنتجات</p>
         </div>
     `);
+}
+
+// تحميل جميع المنتجات من المستودع
+function loadAllProducts() {
+    $('#products-loading').addClass('show');
+    $('#products-list').html('');
+
+    $.ajax({
+        url: '{% url "inventory:api_warehouse_products" %}',
+        data: {
+            warehouse_id: fromWarehouseId,
+            limit: 1000  // دعم حتى 1000 صنف
+        },
+        success: function(data) {
+            $('#products-loading').removeClass('show');
+
+            if (data.success && data.products.length > 0) {
+                allProducts = data.products;
+                $('#total-products-count').text(data.count);
+                renderProducts(allProducts);
+                
+                // إظهار عدد المنتجات المحملة
+                Swal.fire({
+                    icon: 'success',
+                    title: 'تم التحميل',
+                    text: `تم تحميل ${data.count} منتج من المستودع`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                $('#products-list').html(`
+                    <div class="alert alert-warning text-center">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        لا توجد منتجات في هذا المستودع
+                    </div>
+                `);
+            }
+        },
+        error: function() {
+            $('#products-loading').removeClass('show');
+            $('#products-list').html(`
+                <div class="alert alert-danger text-center">
+                    <i class="fas fa-times-circle"></i>
+                    حدث خطأ في تحميل المنتجات
+                </div>
+            `);
+        }
+    });
 }
 
 // تحميل المنتجات بناءً على البحث
@@ -444,7 +501,8 @@ function loadProducts(searchQuery = '') {
         url: '{% url "inventory:api_warehouse_products" %}',
         data: {
             warehouse_id: fromWarehouseId,
-            search: searchQuery
+            search: searchQuery,
+            limit: 500  // دعم حتى 500 صنف
         },
         success: function(data) {
             $('#products-loading').removeClass('show');
@@ -452,6 +510,17 @@ function loadProducts(searchQuery = '') {
             if (data.success && data.products.length > 0) {
                 allProducts = data.products;
                 renderProducts(allProducts);
+                
+                // إظهار عدد النتائج
+                if (data.count >= 500) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'نتائج كثيرة',
+                        text: 'تم عرض أول 500 نتيجة. استخدم بحث أدق للحصول على نتائج أفضل.',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
             } else {
                 $('#products-list').html(`
                     <div class="alert alert-warning text-center">

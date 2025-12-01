@@ -798,6 +798,56 @@ def order_post_save(sender, instance, created, **kwargs):
                     modified_fields=modified_fields_data
                 )
 
+
+@receiver(post_save, sender=Order)
+def deduct_inventory_on_order_creation(sender, instance, created, **kwargs):
+    """
+    خصم المخزون تلقائياً عند إنشاء طلب منتجات
+    يتم الخصم فقط للطلبات من نوع 'products'
+    """
+    if created:
+        def process_inventory_deduction():
+            try:
+                order_types = instance.get_selected_types_list()
+                
+                # خصم المخزون فقط للطلبات من نوع منتجات
+                if 'products' in order_types:
+                    from .inventory_integration import OrderInventoryService
+                    
+                    # التحقق من توفر المخزون أولاً
+                    availability = OrderInventoryService.check_stock_availability(instance)
+                    
+                    if not availability['all_available']:
+                        # إرسال تنبيه بنقص المخزون لكن الاستمرار بالخصم
+                        logger.warning(
+                            f"⚠️ نقص في المخزون للطلب {instance.order_number}: "
+                            f"إجمالي النقص: {availability['total_shortage']}"
+                        )
+                    
+                    # خصم المخزون
+                    result = OrderInventoryService.deduct_stock_for_order(
+                        instance, 
+                        getattr(instance, 'created_by', None)
+                    )
+                    
+                    if result['success']:
+                        logger.info(
+                            f"✅ تم خصم المخزون للطلب {instance.order_number}: "
+                            f"{len(result.get('deducted', []))} منتج"
+                        )
+                    else:
+                        logger.error(
+                            f"❌ فشل خصم المخزون للطلب {instance.order_number}: "
+                            f"{result.get('error', 'خطأ غير معروف')}"
+                        )
+                        
+            except Exception as e:
+                logger.error(f"خطأ في خصم المخزون للطلب {instance.order_number}: {e}")
+        
+        from django.db import transaction
+        transaction.on_commit(process_inventory_deduction)
+
+
 @receiver(post_save, sender=OrderItem)
 def order_item_post_save(sender, instance, created, **kwargs):
     """معالج حفظ عنصر الطلب"""

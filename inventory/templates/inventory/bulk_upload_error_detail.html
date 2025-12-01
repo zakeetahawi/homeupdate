@@ -1,0 +1,130 @@
+{% extends 'inventory/inventory_base_custom.html' %}
+{% load static %}
+
+{% block inventory_title %}تفاصيل خطأ الرفع{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
+<li class="breadcrumb-item"><a href="{% url 'inventory:bulk_upload_log_list' %}">سجلات الرفع</a></li>
+<li class="breadcrumb-item active">تفاصيل الخطأ</li>
+{% endblock %}
+
+{% block inventory_content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-exclamation-circle"></i>
+                تفاصيل الخطأ - الصف {{ error.row_number }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <!-- معلومات الخطأ -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card border-danger">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-bug"></i> معلومات الخطأ</h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>رقم الصف</span>
+                                    <strong>{{ error.row_number }}</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>نوع الخطأ</span>
+                                    <span class="badge bg-danger">{{ error.get_error_type_display }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>حالة النتيجة</span>
+                                    <span class="badge bg-{% if error.result_status == 'created' %}success{% elif error.result_status == 'updated' %}info{% elif error.result_status == 'skipped' %}warning{% else %}danger{% endif %}">
+                                        {{ error.get_result_status_display }}
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>تاريخ التسجيل</span>
+                                    <span>{{ error.created_at|date:"Y-m-d H:i" }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-file-alt"></i> معلومات سجل الرفع</h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>الملف</span>
+                                    <strong>{{ error.upload_log.file_name }}</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>نوع العملية</span>
+                                    <span>{{ error.upload_log.get_upload_type_display }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>تاريخ الرفع</span>
+                                    <span>{{ error.upload_log.created_at|date:"Y-m-d H:i" }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- رسالة الخطأ -->
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0"><i class="fas fa-comment-alt"></i> رسالة الخطأ</h6>
+                </div>
+                <div class="card-body">
+                    <pre class="mb-0 bg-light p-3 rounded">{{ error.error_message }}</pre>
+                </div>
+            </div>
+
+            <!-- بيانات الصف -->
+            {% if error.row_data %}
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-database"></i> بيانات الصف</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>الحقل</th>
+                                    <th>القيمة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for key, value in error.row_data.items %}
+                                <tr>
+                                    <td><strong>{{ key }}</strong></td>
+                                    <td>{{ value|default:"-" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- أزرار الإجراءات -->
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'inventory:bulk_upload_report' error.upload_log.id %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> العودة للتقرير
+                </a>
+                <a href="{% url 'inventory:bulk_upload_log_list' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-list"></i> قائمة السجلات
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

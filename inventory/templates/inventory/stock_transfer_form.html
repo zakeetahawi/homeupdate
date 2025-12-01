@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if transfer %}تعديل{% else %}إنشاء{% endif %} تحويل مخزني{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exchange-alt"></i>
+                        {% if transfer %}تعديل التحويل {{ transfer.transfer_number }}{% else %}إنشاء تحويل مخزني جديد{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="transferForm">
+                        {% csrf_token %}
+                        
+                        <!-- بيانات التحويل الأساسية -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-info-circle"></i> بيانات التحويل</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="from_warehouse" class="form-label">من مستودع <span class="text-danger">*</span></label>
+                                        {{ form.from_warehouse }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="to_warehouse" class="form-label">إلى مستودع <span class="text-danger">*</span></label>
+                                        {{ form.to_warehouse }}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="reason" class="form-label">سبب التحويل</label>
+                                        {{ form.reason }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="notes" class="form-label">ملاحظات</label>
+                                        {{ form.notes }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- عناصر التحويل -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0"><i class="fas fa-boxes"></i> عناصر التحويل</h6>
+                                <button type="button" class="btn btn-sm btn-success" id="addItemBtn">
+                                    <i class="fas fa-plus"></i> إضافة عنصر
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                {{ formset.management_form }}
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" id="itemsTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 40%;">المنتج</th>
+                                                <th style="width: 20%;">الكمية</th>
+                                                <th style="width: 30%;">ملاحظات</th>
+                                                <th style="width: 10%;">إجراء</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="formsetBody">
+                                            {% for item_form in formset %}
+                                            <tr class="item-row">
+                                                <td>
+                                                    {{ item_form.product }}
+                                                    {{ item_form.id }}
+                                                    {% if item_form.DELETE %}{{ item_form.DELETE }}{% endif %}
+                                                </td>
+                                                <td>{{ item_form.quantity }}</td>
+                                                <td>{{ item_form.notes }}</td>
+                                                <td class="text-center">
+                                                    <button type="button" class="btn btn-sm btn-danger remove-item">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'inventory:stock_transfer_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> إلغاء
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                {% if transfer %}حفظ التعديلات{% else %}إنشاء التحويل{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // إضافة عنصر جديد
+    $('#addItemBtn').on('click', function() {
+        var totalForms = $('#id_items-TOTAL_FORMS');
+        var formCount = parseInt(totalForms.val());
+        var newForm = $('#formsetBody tr.item-row:first').clone();
+        
+        newForm.find('input, select').each(function() {
+            var name = $(this).attr('name');
+            if (name) {
+                name = name.replace(/-\d+-/, '-' + formCount + '-');
+                $(this).attr('name', name);
+                $(this).attr('id', 'id_' + name);
+            }
+            if ($(this).is('input')) {
+                $(this).val('');
+            }
+            if ($(this).is('select')) {
+                $(this).val('');
+            }
+        });
+        
+        $('#formsetBody').append(newForm);
+        totalForms.val(formCount + 1);
+    });
+    
+    // حذف عنصر
+    $(document).on('click', '.remove-item', function() {
+        var row = $(this).closest('tr');
+        var deleteInput = row.find('input[name$="-DELETE"]');
+        
+        if (deleteInput.length) {
+            deleteInput.prop('checked', true);
+            row.hide();
+        } else {
+            row.remove();
+            // تحديث عدد النماذج
+            var totalForms = $('#id_items-TOTAL_FORMS');
+            totalForms.val(parseInt(totalForms.val()) - 1);
+        }
+    });
+});
+</script>
+{% endblock %}

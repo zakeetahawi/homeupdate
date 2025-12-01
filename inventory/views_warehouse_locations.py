@@ -38,28 +38,19 @@ def warehouse_location_list(request):
     elif status == 'inactive':
         locations = locations.filter(is_active=False)
     
-    # حساب نسبة الإشغال لكل موقع
-    for location in locations:
-        location.used_capacity = 50  # قيمة افتراضية، يجب تحديثها لاحقاً
-        location.occupancy_rate = int((location.used_capacity / location.capacity) * 100)
-    
     # تطبيق الترتيب
     if sort_by == 'name':
-        locations = sorted(locations, key=lambda x: x.name)
+        locations = locations.order_by('name')
     elif sort_by == '-name':
-        locations = sorted(locations, key=lambda x: x.name, reverse=True)
+        locations = locations.order_by('-name')
     elif sort_by == 'warehouse':
-        locations = sorted(locations, key=lambda x: x.warehouse.name)
-    elif sort_by == 'occupancy':
-        locations = sorted(locations, key=lambda x: x.occupancy_rate)
-    elif sort_by == '-occupancy':
-        locations = sorted(locations, key=lambda x: x.occupancy_rate, reverse=True)
+        locations = locations.order_by('warehouse__name')
+    else:
+        locations = locations.order_by('name')
     
     # الإحصائيات
-    total_locations = len(locations)
+    total_locations = locations.count()
     warehouses_count = Warehouse.objects.count()
-    products_count = 1000  # قيمة افتراضية، يجب تحديثها لاحقاً
-    occupancy_rate = 65  # قيمة افتراضية، يجب تحديثها لاحقاً
     
     # الصفحات
     paginator = Paginator(locations, 20)
@@ -86,8 +77,6 @@ def warehouse_location_list(request):
         'warehouses': warehouses,
         'total_locations': total_locations,
         'warehouses_count': warehouses_count,
-        'products_count': products_count,
-        'occupancy_rate': occupancy_rate,
         'search_query': search_query,
         'selected_warehouse': warehouse_id,
         'selected_status': status,
@@ -229,10 +218,6 @@ def warehouse_location_delete(request, pk):
 def warehouse_location_detail(request, pk):
     """View for viewing warehouse location details"""
     location = get_object_or_404(WarehouseLocation, pk=pk)
-    
-    # حساب نسبة الإشغال
-    location.used_capacity = 50  # قيمة افتراضية، يجب تحديثها لاحقاً
-    location.occupancy_rate = int((location.used_capacity / location.capacity) * 100)
     
     # إضافة عدد التنبيهات النشطة
     alerts_count = StockAlert.objects.filter(status='active').count()

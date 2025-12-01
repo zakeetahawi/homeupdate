@@ -37,83 +37,148 @@
                                     {{ transfer.reason|default:"غير محدد" }}
                                 </div>
                                 <div class="col-md-6 mb-2">
-                                    <strong><i class="fas fa-sticky-note"></i> ملاحظات:</strong>
-                                    {{ transfer.notes|default:"لا توجد ملاحظات" }}
+                                    <strong><i class="fas fa-boxes"></i> عدد الأصناف:</strong>
+                                    <span class="badge bg-info">{{ transfer.items.count }} صنف</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <form method="post" id="receiveForm">
-                        {% csrf_token %}
-                        
-                        <div class="table-responsive">
-                            <table class="table table-bordered">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 5%;">#</th>
-                                        <th style="width: 35%;">المنتج</th>
-                                        <th style="width: 15%;">الكمية المطلوبة</th>
-                                        <th style="width: 20%;">الكمية المستلمة</th>
-                                        <th style="width: 25%;">ملاحظات الاستلام</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in transfer.items.all %}
-                                    <tr>
-                                        <td>{{ forloop.counter }}</td>
-                                        <td>
-                                            <strong>{{ item.product.name }}</strong>
+                    <!-- خيارات الاستلام -->
+                    <div class="card mb-3 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-bolt"></i> خيارات الاستلام</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <form method="post" id="quickReceiveForm">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="quick_receive" value="true">
+                                        <button type="button" class="btn btn-success btn-lg w-100" id="quickReceiveBtn">
+                                            <i class="fas fa-bolt"></i>
+                                            <strong>استلام سريع</strong>
                                             <br>
-                                            <small class="text-muted">{{ item.product.code }}</small>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-primary">{{ item.quantity }} {{ item.product.unit }}</span>
-                                        </td>
-                                        <td>
-                                            <input type="number"
-                                                   name="item_{{ item.id }}_received"
-                                                   value="{{ item.quantity }}"
-                                                   step="0.01"
-                                                   min="0"
-                                                   max="{{ item.quantity }}"
-                                                   class="form-control"
-                                                   required>
-                                        </td>
-                                        <td>
-                                            <input type="text"
-                                                   name="item_{{ item.id }}_notes"
-                                                   class="form-control"
-                                                   placeholder="ملاحظات الاستلام...">
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="alert alert-warning mt-3">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <strong>تنبيه:</strong> بعد تأكيد الاستلام، سيتم تحديث المخزون تلقائياً ولن يمكن التراجع عن هذا الإجراء.
-                        </div>
-
-                        <hr class="my-4">
-
-                        <div class="row">
-                            <div class="col-md-6 mb-2">
-                                <a href="{% url 'inventory:stock_transfer_detail' transfer.pk %}" class="btn btn-secondary w-100">
-                                    <i class="fas fa-arrow-left"></i>
-                                    العودة
-                                </a>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <button type="button" class="btn btn-success w-100" id="confirmReceiveBtn">
-                                    <i class="fas fa-check-circle"></i>
-                                    تأكيد الاستلام
-                                </button>
+                                            <small>استلام جميع الأصناف بدون تأكيد الكميات</small>
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <button type="button" class="btn btn-outline-primary btn-lg w-100" id="detailedReceiveBtn">
+                                        <i class="fas fa-list-alt"></i>
+                                        <strong>استلام تفصيلي</strong>
+                                        <br>
+                                        <small>مراجعة وتعديل كميات كل صنف</small>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </form>
+                    </div>
+
+                    <!-- نموذج الاستلام التفصيلي (مخفي افتراضياً) -->
+                    <div id="detailedReceiveSection" style="display: none;">
+                        <form method="post" id="receiveForm">
+                            {% csrf_token %}
+                            
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 5%;">#</th>
+                                            <th style="width: 35%;">المنتج</th>
+                                            <th style="width: 15%;">الكمية المطلوبة</th>
+                                            <th style="width: 20%;">الكمية المستلمة</th>
+                                            <th style="width: 25%;">ملاحظات الاستلام</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in transfer.items.all %}
+                                        <tr>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>
+                                                <strong>{{ item.product.name }}</strong>
+                                                {% if item.product.code %}
+                                                <br>
+                                                <small class="text-muted">{{ item.product.code }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ item.quantity }} {{ item.product.get_unit_display }}</span>
+                                            </td>
+                                            <td>
+                                                <input type="number"
+                                                       name="item_{{ item.id }}_received"
+                                                       value="{{ item.quantity }}"
+                                                       step="0.01"
+                                                       min="0"
+                                                       max="{{ item.quantity }}"
+                                                       class="form-control"
+                                                       required>
+                                            </td>
+                                            <td>
+                                                <input type="text"
+                                                       name="item_{{ item.id }}_notes"
+                                                       class="form-control"
+                                                       placeholder="ملاحظات (اختياري)...">
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="alert alert-warning mt-3">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>تنبيه:</strong> بعد تأكيد الاستلام، سيتم تحديث المخزون تلقائياً ولن يمكن التراجع عن هذا الإجراء.
+                            </div>
+
+                            <hr class="my-4">
+
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <a href="{% url 'inventory:stock_transfer_detail' transfer.pk %}" class="btn btn-secondary w-100">
+                                        <i class="fas fa-arrow-left"></i>
+                                        العودة
+                                    </a>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <button type="button" class="btn btn-outline-secondary w-100" id="hideDetailedBtn">
+                                        <i class="fas fa-eye-slash"></i>
+                                        إخفاء التفاصيل
+                                    </button>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <button type="button" class="btn btn-success w-100" id="confirmReceiveBtn">
+                                        <i class="fas fa-check-circle"></i>
+                                        تأكيد الاستلام
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ملخص الأصناف (يظهر دائماً) -->
+                    <div class="card mt-3" id="itemsSummary">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-list"></i> ملخص الأصناف ({{ transfer.items.count }} صنف)</h6>
+                        </div>
+                        <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                            <div class="row">
+                                {% for item in transfer.items.all %}
+                                <div class="col-md-6 col-lg-4 mb-2">
+                                    <div class="card h-100 border-light">
+                                        <div class="card-body p-2">
+                                            <small class="text-muted">{{ item.product.code|default:"---" }}</small>
+                                            <p class="mb-1"><strong>{{ item.product.name|truncatewords:5 }}</strong></p>
+                                            <span class="badge bg-info">{{ item.quantity }} {{ item.product.get_unit_display }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -125,62 +190,104 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 $(document).ready(function() {
+    // عرض الاستلام التفصيلي
+    $('#detailedReceiveBtn').on('click', function() {
+        $('#detailedReceiveSection').slideDown();
+        $('#itemsSummary').slideUp();
+    });
+
+    // إخفاء الاستلام التفصيلي
+    $('#hideDetailedBtn').on('click', function() {
+        $('#detailedReceiveSection').slideUp();
+        $('#itemsSummary').slideDown();
+    });
+
+    // استلام سريع
+    $('#quickReceiveBtn').on('click', function(e) {
+        e.preventDefault();
+        
+        Swal.fire({
+            title: 'استلام سريع',
+            html: `
+                <div class="text-start">
+                    <p><strong>هل تريد استلام جميع الأصناف بالكميات المطلوبة؟</strong></p>
+                    <div class="alert alert-info mt-2">
+                        <i class="fas fa-info-circle"></i>
+                        سيتم استلام <strong>{{ transfer.items.count }}</strong> صنف بدون تأكيد كل كمية على حدة.
+                    </div>
+                    <div class="alert alert-warning mt-2">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>تنبيه:</strong> لن يمكن التراجع عن هذا الإجراء.
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-bolt"></i> نعم، استلام سريع',
+            cancelButtonText: '<i class="fas fa-times"></i> إلغاء',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // إظهار مؤشر التحميل
+                Swal.fire({
+                    title: 'جاري الاستلام...',
+                    html: 'يرجى الانتظار',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                // إرسال النموذج
+                $('#quickReceiveForm').submit();
+            }
+        });
+    });
+
     // التحقق من الكميات
     $('input[type="number"]').on('change', function() {
         let maxQty = parseFloat($(this).attr('max'));
         let currentQty = parseFloat($(this).val());
 
         if (currentQty > maxQty) {
+            $(this).val(maxQty);
             Swal.fire({
                 icon: 'warning',
                 title: 'تنبيه',
                 text: 'الكمية المستلمة لا يمكن أن تكون أكبر من الكمية المطلوبة',
                 confirmButtonText: 'حسناً'
             });
-            $(this).val(maxQty);
         }
 
         if (currentQty < 0) {
-            Swal.fire({
-                icon: 'error',
-                title: 'خطأ',
-                text: 'الكمية لا يمكن أن تكون سالبة',
-                confirmButtonText: 'حسناً'
-            });
             $(this).val(0);
         }
     });
 
-    // تأكيد الاستلام
+    // تأكيد الاستلام التفصيلي
     $('#confirmReceiveBtn').on('click', function(e) {
         e.preventDefault();
-        console.log('🔘 تم الضغط على زر تأكيد الاستلام');
 
-        // التحقق من الكميات أولاً
+        // التحقق من الكميات
         let hasError = false;
-        let errorMessage = '';
-
         $('input[type="number"]').each(function() {
             let val = parseFloat($(this).val());
             if (isNaN(val) || val < 0) {
                 hasError = true;
-                errorMessage = 'يرجى التحقق من الكميات المدخلة';
                 return false;
             }
         });
 
         if (hasError) {
-            console.log('❌ خطأ في الكميات');
             Swal.fire({
                 icon: 'error',
                 title: 'خطأ',
-                text: errorMessage,
+                text: 'يرجى التحقق من الكميات المدخلة',
                 confirmButtonText: 'حسناً'
             });
             return;
         }
-
-        console.log('✅ الكميات صحيحة، عرض نافذة التأكيد...');
 
         Swal.fire({
             title: 'تأكيد الاستلام',
@@ -193,7 +300,6 @@ $(document).ready(function() {
                         <ul class="mb-0 mt-2">
                             <li>سيتم تحديث المخزون تلقائياً</li>
                             <li>لن يمكن التراجع عن هذا الإجراء</li>
-                            <li>سيتم تغيير حالة التحويل إلى "مكتمل"</li>
                         </ul>
                     </div>
                 </div>
@@ -206,13 +312,16 @@ $(document).ready(function() {
             cancelButtonText: '<i class="fas fa-times"></i> إلغاء',
             reverseButtons: true
         }).then((result) => {
-            console.log('📊 نتيجة SweetAlert:', result);
             if (result.isConfirmed) {
-                console.log('✅ تم التأكيد، إرسال النموذج...');
-                // إرسال النموذج
+                Swal.fire({
+                    title: 'جاري الاستلام...',
+                    html: 'يرجى الانتظار',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
                 $('#receiveForm').submit();
-            } else {
-                console.log('❌ تم الإلغاء');
             }
         });
     });

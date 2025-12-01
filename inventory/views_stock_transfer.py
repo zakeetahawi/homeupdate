@@ -377,7 +377,7 @@ def stock_transfer_approve(request, pk):
 
 @login_required
 def stock_transfer_receive(request, pk):
-    """استلام التحويل"""
+    """استلام التحويل - مع دعم الاستلام السريع بدون تأكيد الكمية"""
     transfer = get_object_or_404(StockTransfer, pk=pk)
 
     if not transfer.can_complete:
@@ -387,8 +387,8 @@ def stock_transfer_receive(request, pk):
     # ✅ التحقق من صلاحيات الاستلام
     user = request.user
 
-    # 1. منع منشئ التحويل من استلامه
-    if transfer.created_by == user:
+    # 1. منع منشئ التحويل من استلامه (إلا إذا كان مدير)
+    if transfer.created_by == user and not user.is_superuser:
         messages.error(request, 'لا يمكنك استلام تحويل قمت بإنشائه بنفسك')
         return redirect('inventory:stock_transfer_detail', pk=pk)
 
@@ -406,52 +406,52 @@ def stock_transfer_receive(request, pk):
             return redirect('inventory:stock_transfer_detail', pk=pk)
     
     if request.method == 'POST':
-        print(f"\n{'='*80}")
-        print(f"📥 استلام POST request للتحويل {transfer.transfer_number}")
-        print(f"{'='*80}")
-        print(f"POST data: {request.POST}")
-
-        form = StockTransferReceiveForm(request.POST, transfer=transfer)
-
-        print(f"\n✅ Form created")
-        print(f"Form is valid: {form.is_valid()}")
-
-        if not form.is_valid():
-            print(f"❌ Form errors: {form.errors}")
-
-        if form.is_valid():
-            print(f"✅ Form is valid, processing...")
+        # ✅ دعم الاستلام السريع بدون تأكيد الكمية
+        quick_receive = request.POST.get('quick_receive', 'false') == 'true'
+        
+        if quick_receive:
+            # استلام سريع - قبول جميع الكميات كما هي
             try:
                 with db_transaction.atomic():
-                    # تحديث الكميات المستلمة
+                    # تعيين الكميات المستلمة = الكميات المطلوبة
                     for item in transfer.items.all():
-                        field_name = f'item_{item.id}_received'
-                        notes_field_name = f'item_{item.id}_notes'
-
-                        received_qty = form.cleaned_data.get(field_name, item.quantity)
-                        notes = form.cleaned_data.get(notes_field_name, '')
-
-                        print(f"  - {item.product.name}: {received_qty} (ملاحظات: {notes})")
-
-                        item.received_quantity = received_qty
-                        if notes:
-                            item.notes = f"{item.notes}\n{notes}" if item.notes else notes
+                        item.received_quantity = item.quantity
                         item.save()
-
+                    
                     # إكمال التحويل
-                    print(f"\n🔄 إكمال التحويل...")
                     transfer.complete(request.user)
-
-                    print(f"✅ تم الاستلام بنجاح!")
-                    messages.success(request, 'تم استلام التحويل بنجاح')
+                    
+                    messages.success(request, f'تم استلام التحويل {transfer.transfer_number} بنجاح (استلام سريع)')
                     return redirect('inventory:stock_transfer_detail', pk=pk)
             except Exception as e:
-                print(f"❌ خطأ: {str(e)}")
-                import traceback
-                traceback.print_exc()
                 messages.error(request, f'حدث خطأ: {str(e)}')
         else:
-            print(f"❌ Form is not valid, showing errors to user")
+            # استلام عادي مع تأكيد الكميات
+            form = StockTransferReceiveForm(request.POST, transfer=transfer)
+
+            if form.is_valid():
+                try:
+                    with db_transaction.atomic():
+                        # تحديث الكميات المستلمة
+                        for item in transfer.items.all():
+                            field_name = f'item_{item.id}_received'
+                            notes_field_name = f'item_{item.id}_notes'
+
+                            received_qty = form.cleaned_data.get(field_name, item.quantity)
+                            notes = form.cleaned_data.get(notes_field_name, '')
+
+                            item.received_quantity = received_qty
+                            if notes:
+                                item.notes = f"{item.notes}\n{notes}" if item.notes else notes
+                            item.save()
+
+                        # إكمال التحويل
+                        transfer.complete(request.user)
+
+                        messages.success(request, 'تم استلام التحويل بنجاح')
+                        return redirect('inventory:stock_transfer_detail', pk=pk)
+                except Exception as e:
+                    messages.error(request, f'حدث خطأ: {str(e)}')
     else:
         form = StockTransferReceiveForm(transfer=transfer)
     
@@ -556,9 +556,10 @@ def get_warehouse_products(request):
         # ترتيب حسب الاسم
         products_with_stock.sort(key=lambda x: x['name'])
 
-        # تحديد النتائج إلى 50 منتج فقط لتحسين الأداء
-        if len(products_with_stock) > 50:
-            products_with_stock = products_with_stock[:50]
+        # السماح بأكثر من 500 منتج لدعم التحويلات الجماعية الكبيرة
+        max_products = int(request.GET.get('limit', 500))
+        if len(products_with_stock) > max_products:
+            products_with_stock = products_with_stock[:max_products]
 
         return JsonResponse({
             'success': True,

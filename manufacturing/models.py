@@ -515,45 +515,109 @@ class ManufacturingOrder(models.Model):
         # تحديد خط الإنتاج المناسب
         self.production_line = ProductionLine.get_default_line_for_branch(customer_branch)
 
+    def _get_display_warehouses(self):
+        """الحصول على المستودعات المحددة للعرض من الإعدادات"""
+        settings = ManufacturingSettings.get_settings()
+        display_warehouses = list(settings.warehouses_for_display.all())
+        return display_warehouses if display_warehouses else None
+
+    def _get_filtered_order_items(self):
+        """الحصول على عناصر الطلب الأصلي المفلترة حسب إعدادات المستودعات"""
+        if not self.order:
+            return []
+        
+        display_warehouses = self._get_display_warehouses()
+        order_items = self.order.items.all()
+        
+        # إذا لم يتم تحديد مستودعات، نعيد جميع العناصر
+        if not display_warehouses:
+            return list(order_items)
+        
+        # فلترة العناصر حسب المستودعات المحددة
+        filtered_items = []
+        for order_item in order_items:
+            # البحث عن عناصر التقطيع المرتبطة
+            cutting_items = order_item.cutting_items.all()
+            
+            if cutting_items.exists():
+                # تحقق من أن أي من عناصر التقطيع في المستودعات المحددة
+                for cutting_item in cutting_items:
+                    if cutting_item.cutting_order and cutting_item.cutting_order.warehouse in display_warehouses:
+                        filtered_items.append(order_item)
+                        break
+            # العناصر غير المقطوعة لا تظهر عندما يكون هناك فلتر مستودعات
+        
+        return filtered_items
+
     @property
     def total_items_count(self):
-        """إجمالي عدد العناصر من الطلب الأصلي"""
-        if self.order:
-            return self.order.items.count()
-        return 0
+        """إجمالي عدد العناصر المفلترة حسب إعدادات المستودعات"""
+        return len(self._get_filtered_order_items())
 
     @property
     def received_items_count(self):
-        """عدد العناصر المستلمة في المصنع"""
-        return self.items.filter(fabric_received=True).count()
+        """عدد العناصر المستلمة في المصنع (مفلترة حسب المستودعات)"""
+        display_warehouses = self._get_display_warehouses()
+        
+        if not self.order:
+            return 0
+        
+        # إذا لم يتم تحديد مستودعات، نستخدم ManufacturingOrderItem.items
+        if not display_warehouses:
+            return self.items.filter(fabric_received=True).count()
+        
+        # مع فلتر المستودعات، نحسب من العناصر المفلترة
+        count = 0
+        for order_item in self._get_filtered_order_items():
+            # البحث عن manufacturing item لهذا العنصر
+            mfg_item = self.items.filter(order_item=order_item, fabric_received=True).first()
+            if mfg_item:
+                count += 1
+        
+        return count
 
     @property
     def pending_items_count(self):
-        """عدد العناصر المعلقة (لم يتم استلامها أو تقطيعها)"""
-        if self.order:
-            total = self.order.items.count()
-            received = self.received_items_count
-            return total - received
-        return 0
+        """عدد العناصر المعلقة (مفلترة حسب المستودعات)"""
+        total = self.total_items_count
+        received = self.received_items_count
+        return max(0, total - received)
 
     @property
     def cut_items_count(self):
-        """عدد العناصر المقطوعة (سواء مستلمة أو لا)"""
-        from django.db.models import Q
-        # العناصر التي لها بيانات تقطيع أو مرتبطة بعنصر تقطيع مكتمل
-        return self.items.filter(
-            Q(receiver_name__isnull=False, permit_number__isnull=False) |
-            Q(cutting_item__status='completed')
-        ).distinct().count()
+        """عدد العناصر المقطوعة (مفلترة حسب المستودعات)"""
+        display_warehouses = self._get_display_warehouses()
+        
+        if not self.order:
+            return 0
+        
+        count = 0
+        filtered_items = self._get_filtered_order_items()
+        
+        for order_item in filtered_items:
+            # البحث عن عناصر التقطيع المرتبطة
+            cutting_items = order_item.cutting_items.all()
+            
+            for cutting_item in cutting_items:
+                # تحقق من فلتر المستودعات
+                if display_warehouses:
+                    if not (cutting_item.cutting_order and cutting_item.cutting_order.warehouse in display_warehouses):
+                        continue
+                
+                # تحقق من اكتمال التقطيع
+                has_cutting_data = bool(cutting_item.receiver_name and cutting_item.permit_number)
+                if cutting_item.status == 'completed' or has_cutting_data:
+                    count += 1
+                    break  # نحسب العنصر مرة واحدة فقط
+        
+        return count
 
     @property
     def uncut_items_count(self):
-        """عدد العناصر غير المقطوعة"""
-        if self.order:
-            total = self.order.items.count()
-            cut = self.cut_items_count
-            return total - cut
-        return 0
+        """عدد العناصر غير المقطوعة (مفلترة حسب المستودعات)"""
+        total = self.total_items_count
+        cut = self.cut_items_count
+        return max(0, total - cut)
 
     @property
     def items_completion_percentage(self):
