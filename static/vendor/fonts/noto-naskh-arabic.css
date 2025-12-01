@@ -1,0 +1,35 @@
+/* Noto Naskh Arabic - الخط العربي الرسمي للنظام */
+/* خط نسخ عربي جميل ورسمي من Google */
+/* يدعم جميع أنظمة التشغيل: Linux, Windows, macOS */
+
+@font-face {
+  font-family: 'Noto Naskh Arabic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('noto-naskh/NotoNaskhArabic-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Noto Naskh Arabic';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('noto-naskh/NotoNaskhArabic-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Noto Naskh Arabic';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('noto-naskh/NotoNaskhArabic-SemiBold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Noto Naskh Arabic';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('noto-naskh/NotoNaskhArabic-Bold.ttf') format('truetype');
+}

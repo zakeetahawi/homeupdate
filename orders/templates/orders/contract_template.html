@@ -5,8 +5,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>عقد رقم {{ order.order_number }}-{{ order.contract_number|default:"c1" }}</title>
-    <link href="{% static 'vendor/fonts/cairo.css' %}" rel="stylesheet">
     <style>
+        /* تحميل خط Noto Naskh Arabic */
+        @font-face {
+            font-family: 'Noto Naskh Arabic';
+            font-style: normal;
+            font-weight: 400;
+            src: url('file:///home/zakee/homeupdate/static/vendor/fonts/noto-naskh/NotoNaskhArabic-Regular.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Naskh Arabic';
+            font-style: normal;
+            font-weight: 500;
+            src: url('file:///home/zakee/homeupdate/static/vendor/fonts/noto-naskh/NotoNaskhArabic-Medium.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Naskh Arabic';
+            font-style: normal;
+            font-weight: 600;
+            src: url('file:///home/zakee/homeupdate/static/vendor/fonts/noto-naskh/NotoNaskhArabic-SemiBold.ttf') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Naskh Arabic';
+            font-style: normal;
+            font-weight: 700;
+            src: url('file:///home/zakee/homeupdate/static/vendor/fonts/noto-naskh/NotoNaskhArabic-Bold.ttf') format('truetype');
+        }
         
         * {
             margin: 0;
@@ -28,7 +52,7 @@
         }
         
         body {
-            font-family: 'Cairo', 'Arial', sans-serif;
+            font-family: 'Noto Naskh Arabic', 'Arial', sans-serif;
             font-size: 11px;
             line-height: 1.2;
             color: #000;
@@ -688,7 +712,7 @@
             font-size: 12px;
             font-weight: 600;
             z-index: 1000;
-            font-family: 'Cairo', sans-serif;
+            font-family: 'Noto Naskh Arabic', 'Arial', sans-serif;
         }
         
         .print-btn:hover {

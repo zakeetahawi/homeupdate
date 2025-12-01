@@ -1,6 +1,6 @@
 /* تخصيص SweetAlert2 للغة العربية */
 .swal2-popup {
-    font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    font-family: 'Arial', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
     direction: rtl !important;
     text-align: right !important;
 }

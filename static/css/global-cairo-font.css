@@ -1,6 +1,6 @@
-/* تطبيق خط Cairo على كامل المشروع */
-/* استخدام الخط المحلي بدلاً من Google Fonts */
-@import url('/static/vendor/fonts/cairo.css');
+/* تطبيق خط Noto Naskh Arabic على كامل المشروع */
+/* الخط العربي الرسمي للنظام */
+@import url('/static/vendor/fonts/noto-naskh-arabic.css');
 
 /* تطبيق الخط العربي على العناصر الأساسية - استثناء الأيقونات */
 body, 
@@ -20,12 +20,12 @@ td,
 ul, 
 ol, 
 li {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على العناصر الأساسية */
 html, body {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
     font-weight: 400;
 }
 
@@ -36,7 +36,7 @@ html, body {
 .card-footer,
 .card-title,
 .card-text {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على الجداول */
@@ -44,7 +44,7 @@ html, body {
 .table thead th,
 .table tbody td,
 .table-responsive {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على النماذج */
@@ -55,7 +55,7 @@ html, body {
 .form-check,
 .form-check-input,
 .form-check-label {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على الأزرار */
@@ -65,7 +65,7 @@ html, body {
 .btn-group,
 .btn-group-sm,
 .btn-group-lg {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على البادجات */
@@ -76,7 +76,7 @@ html, body {
 .badge-danger,
 .badge-warning,
 .badge-info {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على التنبيهات */
@@ -88,14 +88,14 @@ html, body {
 .alert-danger,
 .alert-warning,
 .alert-info {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على القوائم المنسدلة */
 .dropdown-menu,
 .dropdown-item,
 .dropdown-header {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على النافذة المنبثقة */
@@ -104,7 +104,7 @@ html, body {
 .modal-body,
 .modal-footer,
 .modal-title {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على شريط التنقل */
@@ -114,30 +114,30 @@ html, body {
 .nav-link,
 .nav-item,
 .navbar-toggler {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على الشريط الجانبي */
 .sidebar,
 .sidebar-nav,
 .sidebar-item {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على العناوين */
 h1, h2, h3, h4, h5, h6 {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
     font-weight: 600;
 }
 
 /* تطبيق الخط على النصوص */
 p, span, div {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على الروابط */
 a {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* الحفاظ على خط Font Awesome للأيقونات */
@@ -147,7 +147,7 @@ a {
 
 /* تطبيق الخط على النصوص العربية */
 [dir="rtl"] *:not(.fas):not(.far):not(.fab):not(.fa) {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على العناصر المخصصة */
@@ -155,7 +155,7 @@ a {
 .custom-button,
 .custom-text,
 .custom-title {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تطبيق الخط على جميع الأقسام - استثناء الأيقونات */
@@ -167,7 +167,7 @@ a {
 .manufacturing *:not(.fas):not(.far):not(.fab):not(.fa),
 .reports *:not(.fas):not(.far):not(.fab):not(.fa),
 .database *:not(.fas):not(.far):not(.fab):not(.fa) {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 }
 
 /* تحسين مظهر النصوص العربية */
@@ -187,5 +187,5 @@ a {
 
 /* تطبيق الخط على جميع العناصر المتبقية - استثناء الأيقونات */
 *:not(.fas):not(.far):not(.fab):not(.fa) {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
 } 

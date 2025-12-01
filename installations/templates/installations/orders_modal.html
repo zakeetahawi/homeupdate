@@ -174,29 +174,29 @@
                         {% if order.installationschedule_set.exists %}
                             {% with installation=order.installationschedule_set.first %}
                                 {% if installation.status == 'needs_scheduling' %}
-                                    <span class="badge badge-warning" style="background-color: #fd7e14; color: #fff; font-family: 'Cairo', sans-serif;">بحاجة جدولة</span>
+                                    <span class="badge badge-warning" style="background-color: #fd7e14; color: #fff; font-family: 'Arial', sans-serif;">بحاجة جدولة</span>
                                 {% elif installation.status == 'pending' %}
-                                    <span class="badge badge-warning" style="background-color: #ffc107; color: #000; font-family: 'Cairo', sans-serif;">في الانتظار</span>
+                                    <span class="badge badge-warning" style="background-color: #ffc107; color: #000; font-family: 'Arial', sans-serif;">في الانتظار</span>
                                 {% elif installation.status == 'scheduled' %}
-                                    <span class="badge badge-info" style="background-color: #17a2b8; color: #fff; font-family: 'Cairo', sans-serif;">مجدول</span>
+                                    <span class="badge badge-info" style="background-color: #17a2b8; color: #fff; font-family: 'Arial', sans-serif;">مجدول</span>
                                 {% elif installation.status == 'in_installation' %}
-                                    <span class="badge badge-primary" style="background-color: #007bff; color: #fff; font-family: 'Cairo', sans-serif;">قيد التركيب</span>
+                                    <span class="badge badge-primary" style="background-color: #007bff; color: #fff; font-family: 'Arial', sans-serif;">قيد التركيب</span>
                                 {% elif installation.status == 'completed' %}
-                                    <span class="badge badge-success" style="background-color: #28a745; color: #fff; font-family: 'Cairo', sans-serif;">مكتمل</span>
+                                    <span class="badge badge-success" style="background-color: #28a745; color: #fff; font-family: 'Arial', sans-serif;">مكتمل</span>
                                 {% elif installation.status == 'cancelled' %}
-                                    <span class="badge badge-danger" style="background-color: #dc3545; color: #fff; font-family: 'Cairo', sans-serif;">ملغي</span>
+                                    <span class="badge badge-danger" style="background-color: #dc3545; color: #fff; font-family: 'Arial', sans-serif;">ملغي</span>
                                 {% elif installation.status == 'modification_required' %}
-                                    <span class="badge badge-warning" style="background-color: #fd7e14; color: #fff; font-family: 'Cairo', sans-serif;">يحتاج تعديل</span>
+                                    <span class="badge badge-warning" style="background-color: #fd7e14; color: #fff; font-family: 'Arial', sans-serif;">يحتاج تعديل</span>
                                 {% elif installation.status == 'modification_in_progress' %}
-                                    <span class="badge badge-info" style="background-color: #6f42c1; color: #fff; font-family: 'Cairo', sans-serif;">التعديل قيد التنفيذ</span>
+                                    <span class="badge badge-info" style="background-color: #6f42c1; color: #fff; font-family: 'Arial', sans-serif;">التعديل قيد التنفيذ</span>
                                 {% elif installation.status == 'modification_completed' %}
-                                    <span class="badge badge-success" style="background-color: #20c997; color: #fff; font-family: 'Cairo', sans-serif;">التعديل مكتمل</span>
+                                    <span class="badge badge-success" style="background-color: #20c997; color: #fff; font-family: 'Arial', sans-serif;">التعديل مكتمل</span>
                                 {% else %}
-                                    <span class="badge badge-secondary" style="background-color: #6c757d; color: #fff; font-family: 'Cairo', sans-serif;">{{ installation.get_status_display }}</span>
+                                    <span class="badge badge-secondary" style="background-color: #6c757d; color: #fff; font-family: 'Arial', sans-serif;">{{ installation.get_status_display }}</span>
                                 {% endif %}
                             {% endwith %}
                         {% else %}
-                            <span class="badge badge-light" style="background-color: #f8f9fa; color: #6c757d; font-family: 'Cairo', sans-serif;">غير مجدول</span>
+                            <span class="badge badge-light" style="background-color: #f8f9fa; color: #6c757d; font-family: 'Arial', sans-serif;">غير مجدول</span>
                         {% endif %}
                     </td>
                     {% if order_type == 'delivered_manufacturing' %}

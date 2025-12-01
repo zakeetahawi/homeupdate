@@ -1,0 +1,34 @@
+/* Noto Sans Arabic - خط عربي جميل من Google */
+/* يدعم جميع أنظمة التشغيل: Linux, Windows, macOS */
+
+@font-face {
+  font-family: 'Noto Sans Arabic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('noto-arabic/NotoSansArabic-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Noto Sans Arabic';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('noto-arabic/NotoSansArabic-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Noto Sans Arabic';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('noto-arabic/NotoSansArabic-SemiBold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Noto Sans Arabic';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('noto-arabic/NotoSansArabic-Bold.ttf') format('truetype');
+}
