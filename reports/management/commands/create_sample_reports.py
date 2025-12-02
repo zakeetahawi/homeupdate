@@ -22,13 +22,6 @@ class Command(BaseCommand):
                 'created_by': user
             },
             {
-                'title': 'تقرير الإنتاج الأسبوعي',
-                'report_type': 'production',
-                'description': 'تقرير عن حالة الإنتاج الأسبوعي',
-                'parameters': {'date_range': 7},
-                'created_by': user
-            },
-            {
                 'title': 'تقرير المخزون',
                 'report_type': 'inventory',
                 'description': 'تقرير عن حالة المخزون الحالية',

@@ -35,7 +35,6 @@ class Migration(migrations.Migration):
                     models.CharField(
                         choices=[
                             ('sales', 'تقرير المبيعات'),
-                            ('production', 'تقرير الإنتاج'),
                             ('inventory', 'تقرير المخزون'),
                             ('financial', 'تقرير مالي'),
                             ('analytics', 'تقرير تحليلي'),

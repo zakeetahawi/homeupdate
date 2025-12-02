@@ -281,10 +281,6 @@
                                     <li><a class="dropdown-item" href="/manufacturing/fabric-receipt/">
                                         <i class="fas fa-industry"></i> استلام من المصنع
                                     </a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="/manufacturing/production-reports/">
-                                        <i class="fas fa-chart-line"></i> تقارير الإنتاج
-                                    </a></li>
                                 </ul>
                             </li>
                             <li class="nav-item dropdown">
@@ -317,6 +313,9 @@
                                 <ul class="dropdown-menu" aria-labelledby="reportsDropdown">
                                     <li><a class="dropdown-item" href="{% url 'reports:orders_report' %}">
                                         <i class="fas fa-shopping-cart"></i> تقرير الطلبات
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'reports:production_reports_list' %}">
+                                        <i class="fas fa-industry"></i> تقارير الإنتاج
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="{% url 'reports:dashboard' %}">

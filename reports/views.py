@@ -23,6 +23,15 @@ from .forms import ReportForm
 
 
 @permission_required('reports.view_report', raise_exception=True)
+def production_reports_list(request):
+    """عرض قائمة تقارير الإنتاج"""
+    reports = Report.objects.filter(report_type='production').order_by('-created_at')
+    return render(request, 'reports/production_reports_list.html', {
+        'reports': reports,
+    })
+
+
+@permission_required('reports.view_report', raise_exception=True)
 def seller_customer_activity_view(request, report_id):
     report = get_object_or_404(Report, pk=report_id)
     report_data = ReportDetailView().get_initial_report_data(report)
@@ -269,6 +278,9 @@ class ReportDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         report = self.get_object()
 
+        # Add request to context for templates
+        context['request'] = self.request
+
         # Get saved results for this report
         context['saved_results'] = report.saved_results.all()
 
@@ -315,8 +327,8 @@ class ReportDetailView(LoginRequiredMixin, DetailView):
         """جلب البيانات الأولية للتقرير"""
         if report.report_type == 'sales':
             return self.generate_sales_report(report)
-        elif report.report_type == 'inspection':
-            return self.generate_inspection_report(report)
+        if report.report_type == 'sales':
+            return self.generate_sales_report(report)
         elif report.report_type == 'production':
             return self.generate_production_report(report)
         elif report.report_type == 'inventory':
@@ -442,21 +454,329 @@ class ReportDetailView(LoginRequiredMixin, DetailView):
 
     def generate_production_report(self, report):
         """
-        Generate production report data
-        This will be reimplemented after rebuilding the factory system
+        توليد تقرير الإنتاج الشامل
+        يتضمن: الطلبات الواردة للمصنع + الطلبات المنتجة
         """
+        from manufacturing.models import ManufacturingOrder, ManufacturingStatusLog, ManufacturingSettings, ProductionLine
+        from django.db.models import OuterRef, Subquery, Q, Count, Sum
+        from inventory.models import StockTransaction, Warehouse
+        from orders.models import OrderItem
+        from accounts.models import User
+        
+        # الحصول على المعلمات
+        request = getattr(self, 'request', None)
+        
+        if request and request.GET:
+            date_from = request.GET.get('date_from') or report.parameters.get('date_from')
+            date_to = request.GET.get('date_to') or report.parameters.get('date_to')
+            order_types = request.GET.getlist('order_types') or report.parameters.get('order_types', [])
+            view_mode = request.GET.get('view_mode', 'all')  # all, incoming, produced
+            production_line_id = request.GET.get('production_line') or report.parameters.get('production_line')
+            # المستودعات المختارة
+            selected_warehouse_ids = request.GET.getlist('warehouses')
+            if not selected_warehouse_ids:
+                selected_warehouse_ids = report.parameters.get('warehouses', [])
+        else:
+            date_from = report.parameters.get('date_from')
+            date_to = report.parameters.get('date_to')
+            order_types = report.parameters.get('order_types', [])
+            view_mode = 'all'
+            production_line_id = report.parameters.get('production_line')
+            selected_warehouse_ids = report.parameters.get('warehouses', [])
+        
+        # تحديد التواريخ
+        if not date_to:
+            date_to = timezone.now().date()
+        elif isinstance(date_to, str):
+            date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+        
+        if not date_from:
+            date_from = date_to - timedelta(days=30)
+        elif isinstance(date_from, str):
+            date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+        
+        # إعدادات المستودعات
+        settings = ManufacturingSettings.get_settings()
+        default_meters_warehouses = settings.warehouses_for_meters_calculation.all()
+        
+        # كل المستودعات المتاحة للعرض في الفلتر
+        all_warehouses = Warehouse.objects.filter(is_active=True).order_by('name')
+        
+        # تحديد المستودعات المستخدمة للحساب
+        if selected_warehouse_ids:
+            # تحويل إلى أرقام
+            selected_warehouse_ids = [int(wid) for wid in selected_warehouse_ids if wid]
+            warehouse_ids = selected_warehouse_ids
+        else:
+            # استخدام المستودعات الافتراضية من الإعدادات
+            warehouse_ids = list(default_meters_warehouses.values_list('id', flat=True))
+        
+        # المنتجات في المستودعات المختارة
+        products_in_selected_warehouses = set()
+        if warehouse_ids:
+            products_in_selected_warehouses = set(
+                StockTransaction.objects.filter(
+                    warehouse_id__in=warehouse_ids
+                ).values_list('product_id', flat=True).distinct()
+            )
+        
+        # خطوط الإنتاج المتاحة
+        production_lines = ProductionLine.objects.filter(is_active=True)
+        
+        # دالة مساعدة لحساب الأمتار من الطلب الأصلي مباشرة
+        # بناء على المنتجات الموجودة في المستودعات المحددة
+        def calculate_meters(order):
+            """حساب الأمتار من كميات الطلب الأصلي مباشرة"""
+            if not order:
+                return 0
+            meters = 0
+            for item in order.items.select_related('product').all():
+                if item.product and item.product.id in products_in_selected_warehouses:
+                    # الكمية من الطلب الأصلي مباشرة
+                    meters += float(item.quantity) if item.quantity else 0
+            return meters
+        
+        # الحالات
+        completed_statuses = ['completed', 'delivered']
+        ready_install_statuses = ['ready_install']
+        
+        # =====================================================
+        # 1. الطلبات الواردة للمصنع (pending_approval -> pending)
+        # =====================================================
+        incoming_orders_data = []
+        incoming_total = 0
+        incoming_meters = 0
+        incoming_type_dist = {}
+        
+        if view_mode in ['all', 'incoming']:
+            # جلب سجلات التحول من pending_approval إلى pending
+            # استبعاد طلبات المعاينة (delivery)
+            incoming_logs = ManufacturingStatusLog.objects.filter(
+                previous_status='pending_approval',
+                new_status='pending',
+                changed_at__date__gte=date_from,
+                changed_at__date__lte=date_to
+            ).exclude(
+                manufacturing_order__order_type='delivery'
+            ).select_related(
+                'manufacturing_order',
+                'manufacturing_order__order',
+                'manufacturing_order__order__customer',
+                'manufacturing_order__production_line',
+                'changed_by'
+            ).order_by('-changed_at')
+            
+            # فلترة حسب النوع
+            if order_types:
+                incoming_logs = incoming_logs.filter(manufacturing_order__order_type__in=order_types)
+            
+            # فلترة حسب خط الإنتاج
+            if production_line_id:
+                incoming_logs = incoming_logs.filter(manufacturing_order__production_line_id=production_line_id)
+            
+            for log in incoming_logs:
+                mo = log.manufacturing_order
+                order = mo.order
+                meters = calculate_meters(order)
+                
+                incoming_orders_data.append({
+                    'manufacturing_code': mo.manufacturing_code,
+                    'order_number': order.order_number if order else '-',
+                    'customer_name': order.customer.name if order and order.customer else '-',
+                    'order_type': mo.order_type,
+                    'order_type_display': mo.get_order_type_display(),
+                    'current_status': mo.status,
+                    'current_status_display': mo.get_status_display(),
+                    'meters': round(meters, 2),
+                    'received_date': log.changed_at,
+                    'received_by': log.changed_by.get_full_name() if log.changed_by else '-',
+                    'production_line': mo.production_line.name if mo.production_line else '-',
+                })
+                
+                incoming_total += 1
+                incoming_meters += meters
+                
+                type_name = mo.get_order_type_display()
+                if type_name not in incoming_type_dist:
+                    incoming_type_dist[type_name] = {'count': 0, 'meters': 0}
+                incoming_type_dist[type_name]['count'] += 1
+                incoming_type_dist[type_name]['meters'] += meters
+        
+        # =====================================================
+        # 2. الطلبات المنتجة (completed/ready_install)
+        # =====================================================
+        produced_orders_data = []
+        produced_total = 0
+        produced_meters = 0
+        produced_type_dist = {}
+        user_distribution = {}
+        
+        if view_mode in ['all', 'produced']:
+            # آخر تحول لكل أمر تصنيع
+            latest_log_subquery = ManufacturingStatusLog.objects.filter(
+                manufacturing_order=OuterRef('manufacturing_order'),
+                changed_at__date__gte=date_from,
+                changed_at__date__lte=date_to
+            ).order_by('-changed_at').values('id')[:1]
+            
+            produced_logs = ManufacturingStatusLog.objects.filter(
+                id__in=Subquery(latest_log_subquery)
+            ).select_related(
+                'manufacturing_order',
+                'manufacturing_order__order',
+                'manufacturing_order__order__customer',
+                'manufacturing_order__production_line',
+                'changed_by'
+            )
+            
+            # فلترة حسب الحالة المنتجة
+            # استبعاد طلبات المعاينة (delivery)
+            status_filter = Q(
+                manufacturing_order__order_type='custom',
+                new_status__in=completed_statuses
+            ) | Q(
+                manufacturing_order__order_type__in=['accessory', 'installation'],
+                new_status__in=ready_install_statuses
+            ) | Q(
+                manufacturing_order__order_type='modification',
+                new_status__in=completed_statuses + ready_install_statuses
+            )
+            
+            produced_logs = produced_logs.filter(status_filter)
+            
+            # فلترة حسب النوع
+            if order_types:
+                produced_logs = produced_logs.filter(manufacturing_order__order_type__in=order_types)
+            
+            # فلترة حسب خط الإنتاج
+            if production_line_id:
+                produced_logs = produced_logs.filter(manufacturing_order__production_line_id=production_line_id)
+            
+            produced_logs = produced_logs.order_by('-changed_at')
+            
+            for log in produced_logs:
+                mo = log.manufacturing_order
+                order = mo.order
+                meters = calculate_meters(order)
+                
+                produced_orders_data.append({
+                    'manufacturing_code': mo.manufacturing_code,
+                    'order_number': order.order_number if order else '-',
+                    'customer_name': order.customer.name if order and order.customer else '-',
+                    'order_type': mo.order_type,
+                    'order_type_display': mo.get_order_type_display(),
+                    'status': log.new_status,
+                    'status_display': log.get_new_status_display(),
+                    'meters': round(meters, 2),
+                    'production_date': log.changed_at,
+                    'changed_by': log.changed_by.get_full_name() if log.changed_by else '-',
+                    'production_line': mo.production_line.name if mo.production_line else '-',
+                })
+                
+                produced_total += 1
+                produced_meters += meters
+                
+                # توزيع حسب النوع
+                type_name = mo.get_order_type_display()
+                if type_name not in produced_type_dist:
+                    produced_type_dist[type_name] = {'count': 0, 'meters': 0}
+                produced_type_dist[type_name]['count'] += 1
+                produced_type_dist[type_name]['meters'] += meters
+                
+                # توزيع حسب المستلم
+                if log.changed_by:
+                    user_name = log.changed_by.get_full_name() or log.changed_by.username
+                    if user_name not in user_distribution:
+                        user_distribution[user_name] = {'count': 0, 'meters': 0}
+                    user_distribution[user_name]['count'] += 1
+                    user_distribution[user_name]['meters'] += meters
+        
+        # =====================================================
+        # 3. حساب الإحصائيات
+        # =====================================================
+        
+        # نسبة الإنجاز
+        completion_rate = 0
+        if incoming_total > 0:
+            completion_rate = round((produced_total / incoming_total) * 100, 1)
+        
+        # متوسط الأمتار
+        avg_meters_incoming = round(incoming_meters / incoming_total, 2) if incoming_total > 0 else 0
+        avg_meters_produced = round(produced_meters / produced_total, 2) if produced_total > 0 else 0
+        
+        # حساب قيد التصنيع الفعلي من قاعدة البيانات
+        # (الطلبات التي حالتها pending_approval أو pending أو in_progress حالياً)
+        pending_statuses = ['pending_approval', 'pending', 'in_progress']
+        pending_query = ManufacturingOrder.objects.filter(
+            status__in=pending_statuses
+        ).exclude(
+            order_type='delivery'  # استبعاد طلبات المعاينة
+        )
+        
+        # تطبيق نفس الفلاتر
+        if order_types:
+            pending_query = pending_query.filter(order_type__in=order_types)
+        if production_line_id:
+            pending_query = pending_query.filter(production_line_id=production_line_id)
+        
+        pending_count = pending_query.count()
+        
+        # حساب أمتار قيد التصنيع
+        pending_meters = 0
+        for mo in pending_query.select_related('order').prefetch_related('order__items__product'):
+            if mo.order:
+                pending_meters += calculate_meters(mo.order)
+        
+        # تحويل التوزيعات إلى قوائم
+        incoming_type_list = [
+            {'type': k, 'count': v['count'], 'meters': round(v['meters'], 2)}
+            for k, v in sorted(incoming_type_dist.items(), key=lambda x: x[1]['count'], reverse=True)
+        ]
+        
+        produced_type_list = [
+            {'type': k, 'count': v['count'], 'meters': round(v['meters'], 2)}
+            for k, v in sorted(produced_type_dist.items(), key=lambda x: x[1]['count'], reverse=True)
+        ]
+        
+        user_distribution_list = [
+            {'user': k, 'count': v['count'], 'meters': round(v['meters'], 2)}
+            for k, v in sorted(user_distribution.items(), key=lambda x: x[1]['count'], reverse=True)
+        ]
+        
         return {
-            'total_orders': 0,
-            'completed_orders': 0,
-            'completion_rate': 0,
-            'status_stats': [],
-            'line_stats': [],
-            'avg_production_time': None,
-            'recent_orders': [],
-            'date_from': report.parameters.get('date_from') if report else None,
-            'date_to': report.parameters.get('date_to') if report else None,
-            'message': 'سيتم إعادة تنفيذ هذا التقرير بعد إعادة بناء نظام المصنع',
-            'status': 'not_implemented'
+            'view_mode': view_mode,
+            'date_from': date_from,
+            'date_to': date_to,
+            
+            # الطلبات الواردة
+            'incoming_total': incoming_total,
+            'incoming_meters': round(incoming_meters, 2),
+            'incoming_orders_data': incoming_orders_data,
+            'incoming_type_distribution': incoming_type_list,
+            'avg_meters_incoming': avg_meters_incoming,
+            
+            # الطلبات المنتجة
+            'produced_total': produced_total,
+            'produced_meters': round(produced_meters, 2),
+            'produced_orders_data': produced_orders_data,
+            'produced_type_distribution': produced_type_list,
+            'avg_meters_produced': avg_meters_produced,
+            'user_distribution': user_distribution_list,
+            
+            # الإحصائيات العامة
+            'completion_rate': completion_rate,
+            'pending_count': pending_count,
+            'pending_meters': round(pending_meters, 2),
+            
+            # خيارات الفلترة
+            'production_lines': [{'id': pl.id, 'name': pl.name} for pl in production_lines],
+            'selected_production_line': production_line_id,
+            'selected_order_types': order_types,
+            
+            # المستودعات
+            'all_warehouses': [{'id': w.id, 'name': w.name} for w in all_warehouses],
+            'selected_warehouses': warehouse_ids,
+            'default_warehouses': list(default_meters_warehouses.values_list('id', flat=True)),
         }
 
     def generate_inventory_report(self, report):

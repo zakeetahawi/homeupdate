@@ -1,9 +1,70 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
 import json
 
 from .models import Report, ReportSchedule
+
+User = get_user_model()
+
+
+class ProductionReportFilterForm(forms.Form):
+    """
+    نموذج فلترة تقارير الإنتاج
+    """
+    date_from = forms.DateField(
+        required=False,
+        label='من تاريخ',
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+    
+    date_to = forms.DateField(
+        required=False,
+        label='إلى تاريخ',
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+    
+    order_types = forms.MultipleChoiceField(
+        required=False,
+        label='أنواع الطلبات',
+        choices=[],  # سيتم ملؤها في __init__
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+    )
+    
+    production_lines = forms.MultipleChoiceField(
+        required=False,
+        label='خطوط الإنتاج',
+        choices=[],  # سيتم ملؤها في __init__
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+    )
+    
+    changed_by = forms.ModelChoiceField(
+        required=False,
+        label='المستلم',
+        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username'),
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # ملء خيارات أنواع الطلبات
+        from manufacturing.models import ManufacturingOrder
+        self.fields['order_types'].choices = ManufacturingOrder.ORDER_TYPE_CHOICES
+        
+        # ملء خيارات خطوط الإنتاج
+        from manufacturing.models import ProductionLine
+        production_lines = ProductionLine.objects.all()
+        self.fields['production_lines'].choices = [
+            (str(line.id), line.name) for line in production_lines
+        ]
 
 
 class ReportForm(forms.ModelForm):

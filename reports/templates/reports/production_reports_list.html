@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}تقارير الإنتاج{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+    }
+    
+    .report-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+        overflow: hidden;
+    }
+    
+    .report-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    
+    .report-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 1rem 1.5rem;
+    }
+    
+    .report-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .report-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    
+    .btn-view-report {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 10px 25px;
+        border-radius: 25px;
+        color: white;
+        transition: all 0.3s;
+    }
+    
+    .btn-view-report:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 5rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.5;
+    }
+    
+    .table-reports {
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    
+    .table-reports thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .table-reports thead th {
+        border: none;
+        padding: 1rem;
+        font-weight: 500;
+    }
+    
+    .table-reports tbody tr:hover {
+        background-color: rgba(102, 126, 234, 0.08);
+    }
+    
+    .badge-production {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- رأس الصفحة -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-industry me-2"></i>
+                    تقارير الإنتاج
+                </h2>
+                <p class="mb-0 opacity-75">
+                    إدارة ومتابعة تقارير الإنتاج - الطلبات الواردة والمنتجة
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'reports:report_create' %}?type=production" class="btn btn-light">
+                    <i class="fas fa-plus me-1"></i>
+                    إنشاء تقرير جديد
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if reports %}
+    <!-- جدول التقارير -->
+    <div class="card report-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>
+                قائمة تقارير الإنتاج
+            </h5>
+            <span class="badge bg-light text-dark">{{ reports.count }} تقرير</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-reports table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>عنوان التقرير</th>
+                            <th>الوصف</th>
+                            <th>أنشئ بواسطة</th>
+                            <th>تاريخ الإنشاء</th>
+                            <th>آخر تحديث</th>
+                            <th class="text-center">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in reports %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'reports:report_detail' report.pk %}" class="fw-bold text-decoration-none">
+                                    <i class="fas fa-chart-bar text-primary me-1"></i>
+                                    {{ report.title }}
+                                </a>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {{ report.description|truncatewords:10|default:"بدون وصف" }}
+                                </small>
+                            </td>
+                            <td>
+                                {% if report.created_by %}
+                                    <span class="badge bg-light text-dark">
+                                        <i class="fas fa-user me-1"></i>
+                                        {{ report.created_by.get_full_name|default:report.created_by.username }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ report.created_at|date:"Y/m/d" }}</small>
+                                <br>
+                                <small class="text-muted">{{ report.created_at|time:"H:i" }}</small>
+                            </td>
+                            <td>
+                                <small>{{ report.updated_at|date:"Y/m/d" }}</small>
+                                <br>
+                                <small class="text-muted">{{ report.updated_at|time:"H:i" }}</small>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group">
+                                    <a href="{% url 'reports:report_detail' report.pk %}" 
+                                       class="btn btn-sm btn-view-report"
+                                       title="عرض التقرير">
+                                        <i class="fas fa-eye me-1"></i>
+                                        عرض
+                                    </a>
+                                    <a href="{% url 'reports:report_update' report.pk %}" 
+                                       class="btn btn-sm btn-outline-secondary"
+                                       title="تعديل">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'reports:report_delete' report.pk %}" 
+                                       class="btn btn-sm btn-outline-danger"
+                                       title="حذف">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- حالة عدم وجود تقارير -->
+    <div class="card report-card">
+        <div class="card-body">
+            <div class="empty-state">
+                <i class="fas fa-industry"></i>
+                <h4>لا توجد تقارير إنتاج</h4>
+                <p class="text-muted mb-4">
+                    لم يتم إنشاء أي تقارير إنتاج بعد. يمكنك إنشاء تقرير جديد للبدء.
+                </p>
+                <a href="{% url 'reports:report_create' %}?type=production" class="btn btn-view-report btn-lg">
+                    <i class="fas fa-plus me-2"></i>
+                    إنشاء تقرير إنتاج جديد
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- بطاقة معلومات -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card bg-light border-0">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-info-circle text-primary me-2"></i>
+                        معلومات عن تقارير الإنتاج
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-inbox text-primary me-2"></i>
+                                <span><strong>الطلبات الواردة:</strong> جميع ما وصل للمصنع</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span><strong>الطلبات المنتجة:</strong> ما تم إنتاجه</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-ruler text-info me-2"></i>
+                                <span><strong>الأمتار:</strong> محسوبة من مستودعات الأقمشة</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // يمكن إضافة DataTables هنا إذا كان الجدول كبيراً
+    if ($.fn.DataTable && $('.table-reports tbody tr').length > 10) {
+        $('.table-reports').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/ar.json'
+            },
+            pageLength: 10,
+            order: [[4, 'desc']]
+        });
+    }
+});
+</script>
+{% endblock %}

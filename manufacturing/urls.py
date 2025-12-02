@@ -1,7 +1,6 @@
 from django.urls import path
 from . import views
 from .dashboard_view import ImprovedDashboardView
-from . import views_production_reports
 
 app_name = 'manufacturing'
 
@@ -223,27 +222,5 @@ urlpatterns = [
         'get-cutting-order-data/<int:cutting_order_id>/',
         views.get_cutting_order_data,
         name='get_cutting_order_data'
-    ),
-
-    # Production Reports URLs
-    path(
-        'production-reports/',
-        views_production_reports.ProductionReportDashboardView.as_view(),
-        name='production_reports_dashboard'
-    ),
-    path(
-        'production-reports/detail/',
-        views_production_reports.ProductionReportDetailView.as_view(),
-        name='production_reports_detail'
-    ),
-    path(
-        'production-reports/daily-tracking/',
-        views_production_reports.DailyProductionTrackingView.as_view(),
-        name='production_reports_daily_tracking'
-    ),
-    path(
-        'production-reports/export/excel/',
-        views_production_reports.export_production_report_excel,
-        name='production_reports_export_excel'
     ),
 ]

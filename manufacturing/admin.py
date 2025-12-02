@@ -12,9 +12,9 @@ from django import forms
 
 from .models import (
     ManufacturingOrder, ManufacturingOrderItem, ProductionLine, ManufacturingDisplaySettings,
-    FabricReceipt, FabricReceiptItem, ManufacturingSettings, ManufacturingStatusLog,
-    ProductionForecast
+    FabricReceipt, FabricReceiptItem, ManufacturingSettings, ManufacturingStatusLog
 )
+
 
 
 class ProductionLineForm(forms.ModelForm):
@@ -1126,111 +1126,3 @@ class ManufacturingStatusLogAdmin(admin.ModelAdmin):
         return request.user.is_superuser
 
 
-@admin.register(ProductionForecast)
-class ProductionForecastAdmin(admin.ModelAdmin):
-    """
-    إدارة توقعات الإنتاج
-    Production Forecast Admin
-    """
-    list_display = [
-        'id',
-        'forecast_date',
-        'period_type_display',
-        'forecasted_orders_count',
-        'actual_orders_count',
-        'forecasted_meters',
-        'actual_meters',
-        'accuracy_display',
-        'production_line_display',
-        'order_type_display',
-        'created_by_display',
-        'created_at'
-    ]
-    list_filter = [
-        'period_type',
-        'forecast_date',
-        'production_line',
-        'order_type',
-        'created_by',
-        'created_at'
-    ]
-    search_fields = [
-        'notes',
-        'production_line__name',
-        'created_by__username',
-        'created_by__first_name',
-        'created_by__last_name'
-    ]
-    readonly_fields = [
-        'created_by',
-        'created_at',
-        'updated_at',
-        'accuracy_percentage',
-        'meters_accuracy_percentage'
-    ]
-    fieldsets = (
-        ('معلومات التوقع', {
-            'fields': ('forecast_date', 'period_type', 'confidence_level')
-        }),
-        ('التوقعات', {
-            'fields': ('forecasted_orders_count', 'forecasted_meters')
-        }),
-        ('البيانات الفعلية', {
-            'fields': ('actual_orders_count', 'actual_meters')
-        }),
-        ('الدقة', {
-            'fields': ('accuracy_percentage', 'meters_accuracy_percentage'),
-            'classes': ('collapse',)
-        }),
-        ('تفاصيل إضافية', {
-            'fields': ('production_line', 'order_type', 'notes')
-        }),
-        ('معلومات النظام', {
-            'fields': ('created_by', 'created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    date_hierarchy = 'forecast_date'
-    list_per_page = 50
-    ordering = ['-forecast_date']
-
-    def period_type_display(self, obj):
-        """عرض نوع الفترة"""
-        return obj.get_period_type_display()
-    period_type_display.short_description = 'نوع الفترة'
-
-    def production_line_display(self, obj):
-        """عرض خط الإنتاج"""
-        return obj.production_line.name if obj.production_line else 'الكل'
-    production_line_display.short_description = 'خط الإنتاج'
-
-    def order_type_display(self, obj):
-        """عرض نوع الطلب"""
-        return obj.get_order_type_display() if obj.order_type else 'الكل'
-    order_type_display.short_description = 'نوع الطلب'
-
-    def created_by_display(self, obj):
-        """عرض المستخدم الذي أنشأ التوقع"""
-        if obj.created_by:
-            return obj.created_by.get_full_name() or obj.created_by.username
-        return '-'
-    created_by_display.short_description = 'تم الإنشاء بواسطة'
-
-    def accuracy_display(self, obj):
-        """عرض دقة التوقع"""
-        accuracy = obj.accuracy_percentage
-        if accuracy is not None:
-            color = 'green' if accuracy >= 80 else 'orange' if accuracy >= 60 else 'red'
-            return format_html(
-                '<span style="color: {}; font-weight: bold;">{:.1f}%</span>',
-                color,
-                accuracy
-            )
-        return '-'
-    accuracy_display.short_description = 'دقة التوقع'
-
-    def save_model(self, request, obj, form, change):
-        """حفظ النموذج مع تعيين المستخدم"""
-        if not change:  # إنشاء جديد
-            obj.created_by = request.user
-        super().save_model(request, obj, form, change)

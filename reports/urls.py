@@ -6,6 +6,9 @@ app_name = 'reports'
 
 # Main urlpatterns for reports app. Include seller-activity routes alongside the standard CRUD/dashboard routes.
 urlpatterns = [
+    # Production Reports - تقارير الإنتاج
+    path('production/', views.production_reports_list, name='production_reports_list'),
+    
     # Orders Report - تقرير الطلبات
     path('orders/', orders_report_view, name='orders_report'),
     

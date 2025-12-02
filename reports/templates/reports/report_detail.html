@@ -114,7 +114,7 @@
                             {% include 'reports/includes/financial_report.html' with data=report_data %}
                         {% elif report.report_type == 'analytics' %}
                             {% include 'reports/includes/analytics_report.html' with data=report_data %}
-                        {% elif report.report_type in ('seller_customer_activity', 'seller_activity') %}
+                        {% elif report.report_type == 'seller_customer_activity' or report.report_type == 'seller_activity' %}
                             {% include 'reports/seller_customer_activity.html' with report=report date_list=date_list results=results zero_users=zero_users days=days activity=activity %}
                         {% endif %}
                     {% else %}
