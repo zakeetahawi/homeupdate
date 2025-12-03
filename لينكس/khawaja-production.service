@@ -1,0 +1,81 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Khawaja Production System - SystemD Service
+# نظام الخواجة - خدمة الإنتاج للتشغيل التلقائي
+# ═══════════════════════════════════════════════════════════════════════════
+# يبدأ تلقائياً عند تشغيل الكمبيوتر (قبل تسجيل الدخول)
+# يشمل: Gunicorn + Celery + Cloudflare Tunnel + النسخ الاحتياطي
+# ═══════════════════════════════════════════════════════════════════════════
+
+[Unit]
+Description=Khawaja Production System - نظام الخواجة للإنتاج
+Documentation=https://github.com/zakeetahawi/homeupdate
+After=network.target network-online.target postgresql.service mysql.service redis.service
+Wants=network-online.target
+StartLimitIntervalSec=200
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=zakee
+Group=zakee
+WorkingDirectory=/home/zakee/homeupdate
+
+# متغيرات البيئة
+Environment="PATH=/home/zakee/homeupdate/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONDONTWRITEBYTECODE=1"
+Environment="PYTHONUNBUFFERED=1"
+Environment="DJANGO_SETTINGS_MODULE=crm.settings"
+Environment="DEBUG=False"
+Environment="DJANGO_LOG_LEVEL=INFO"
+
+# انتظار قبل البدء للتأكد من جاهزية الشبكة وقاعدة البيانات
+ExecStartPre=/bin/sleep 10
+
+# أمر التشغيل
+ExecStart=/bin/bash /home/zakee/homeupdate/لينكس/run-production-daemon.sh
+
+# أمر الإيقاف
+ExecStop=/bin/bash /home/zakee/homeupdate/لينكس/stop-production.sh
+
+# إعادة تحميل الإعدادات (اختياري)
+ExecReload=/bin/kill -HUP $MAINPID
+
+# إعادة التشغيل التلقائي عند الفشل
+Restart=always
+RestartSec=15
+
+# حدود الموارد
+MemoryMax=2G
+MemoryHigh=1.5G
+CPUQuota=90%
+TasksMax=200
+
+# السجلات
+StandardOutput=append:/home/zakee/homeupdate/logs/systemd-production.log
+StandardError=append:/home/zakee/homeupdate/logs/systemd-production-error.log
+SyslogIdentifier=khawaja-production
+
+# الأمان
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+# المجلدات المسموح بالكتابة فيها
+ReadWritePaths=/home/zakee/homeupdate/logs
+ReadWritePaths=/home/zakee/homeupdate/pids
+ReadWritePaths=/home/zakee/homeupdate/media
+ReadWritePaths=/home/zakee/homeupdate/staticfiles
+ReadWritePaths=/tmp
+ReadWritePaths=/dev/shm
+
+# المهلة الزمنية
+TimeoutStartSec=180
+TimeoutStopSec=60
+
+# الحفاظ على العملية حية
+WatchdogSec=300
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target

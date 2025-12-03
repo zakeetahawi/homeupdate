@@ -1,0 +1,59 @@
+# ملف خدمة SystemD لتشغيل نظام الخواجة تلقائياً
+# يتم التشغيل قبل تسجيل الدخول عند بدء النظام
+
+[Unit]
+Description=نظام الخواجة - Khawaja Management System
+Documentation=https://github.com/zakeetahawi/homeupdate
+After=network.target postgresql.service mysql.service
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=zakee
+Group=zakee
+WorkingDirectory=/home/zakee/homeupdate
+
+# متغيرات البيئة
+Environment="PATH=/home/zakee/homeupdate/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONDONTWRITEBYTECODE=1"
+Environment="PYTHONUNBUFFERED=1"
+Environment="DJANGO_SETTINGS_MODULE=crm.settings"
+
+# أوامر التشغيل
+ExecStartPre=/bin/sleep 5
+ExecStart=/bin/bash /home/zakee/homeupdate/start_optimized_daemon.sh
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/bin/bash /home/zakee/homeupdate/stop_daemon.sh
+
+# ملف الـ PID
+PIDFile=/home/zakee/homeupdate/pids/gunicorn.pid
+
+# إعادة التشغيل التلقائي
+Restart=always
+RestartSec=10
+StartLimitInterval=200
+StartLimitBurst=5
+
+# حدود الموارد (لتقليل استهلاك الموارد)
+MemoryLimit=1G
+CPUQuota=80%
+TasksMax=100
+
+# السجلات
+StandardOutput=append:/home/zakee/homeupdate/logs/systemd-output.log
+StandardError=append:/home/zakee/homeupdate/logs/systemd-error.log
+SyslogIdentifier=khawaja-system
+
+# الأمان
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/zakee/homeupdate/logs /home/zakee/homeupdate/pids /home/zakee/homeupdate/media /tmp
+
+# المهلة الزمنية
+TimeoutStartSec=120
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
