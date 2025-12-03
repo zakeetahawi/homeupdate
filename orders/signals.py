@@ -73,13 +73,19 @@ def track_order_changes(sender, instance, **kwargs):
             # تتبع تغيير العميل (فقط التعديلات اليدوية)
             if (old_instance.customer != instance.customer and
                 hasattr(instance, '_modified_by') and instance._modified_by):
+                
+                # ⚠️ تحديث رقم الطلب ليتوافق مع كود العميل الجديد
+                old_order_number = instance.order_number
+                new_order_number = instance.generate_unique_order_number()
+                instance.order_number = new_order_number
+                
                 OrderStatusLog.create_detailed_log(
                     order=instance,
                     change_type='customer',
                     old_value=old_instance.customer,
                     new_value=instance.customer,
                     changed_by=instance._modified_by,
-                    notes='تم تغيير العميل',
+                    notes=f'تم تغيير العميل - تم تحديث رقم الطلب من {old_order_number} إلى {new_order_number}',
                     is_automatic=False
                 )
 
