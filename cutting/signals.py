@@ -341,17 +341,25 @@ def send_completion_notification(cutting_order):
     """إرسال إشعار اكتمال التقطيع"""
     try:
         from notifications.models import Notification
+        from django.contrib.contenttypes.models import ContentType
         
         # إنشاء إشعار لمنشئ الطلب
         if cutting_order.order.created_by:
-            Notification.objects.create(
-                user=cutting_order.order.created_by,
+            # الحصول على ContentType لأمر التقطيع
+            ct = ContentType.objects.get_for_model(cutting_order)
+            
+            # إنشاء الإشعار
+            notification = Notification.objects.create(
                 title='اكتمال التقطيع',
                 message=f'تم اكتمال تقطيع الطلب {cutting_order.order.contract_number} في المستودع {cutting_order.warehouse.name}',
                 notification_type='cutting_completed',
-                related_object_type='cutting_order',
-                related_object_id=cutting_order.id
+                content_type=ct,
+                object_id=cutting_order.id,
+                created_by=cutting_order.order.created_by
             )
+            
+            # إضافة المستخدم للمستخدمين المرئيين
+            notification.visible_to.add(cutting_order.order.created_by)
             
         logger.info(f"تم إرسال إشعار اكتمال التقطيع لأمر {cutting_order.cutting_code}")
         
@@ -363,16 +371,24 @@ def send_stock_shortage_notification(order_item, warehouse):
     """إرسال إشعار نقص المخزون"""
     try:
         from notifications.models import Notification
+        from django.contrib.contenttypes.models import ContentType
 
         if order_item.order.created_by:
-            Notification.objects.create(
-                user=order_item.order.created_by,
+            # الحصول على ContentType لعنصر الطلب
+            ct = ContentType.objects.get_for_model(order_item)
+            
+            # إنشاء الإشعار
+            notification = Notification.objects.create(
                 title='نقص في المخزون',
                 message=f'الصنف {order_item.product.name} غير متوفر بالكمية المطلوبة في المستودع {warehouse.name}',
                 notification_type='stock_shortage',
-                related_object_type='order_item',
-                related_object_id=order_item.id
+                content_type=ct,
+                object_id=order_item.id,
+                created_by=order_item.order.created_by
             )
+            
+            # إضافة المستخدم للمستخدمين المرئيين
+            notification.visible_to.add(order_item.order.created_by)
 
         logger.info(f"تم إرسال إشعار نقص المخزون للصنف {order_item.product.name}")
 
@@ -458,16 +474,26 @@ def update_order_status_based_on_cutting_orders(order):
     completed_orders = cutting_orders.filter(status='completed').count()
     in_progress_orders = cutting_orders.filter(status='in_progress').count()
 
+    # التحقق من نوع الطلب لتحديد الحالة المناسبة
+    order_types = order.get_selected_types_list()
+    
     # تحديد الحالة الجديدة للطلب
     if completed_orders == total_orders:
         # جميع أوامر التقطيع مكتملة
-        new_status = 'in_progress'  # قيد التنفيذ (جاهز للتصنيع)
+        if 'products' in order_types:
+            # طلبات المنتجات فقط تكتمل بعد التقطيع
+            new_status = 'completed'
+            logger.info(f"✅ طلب منتجات {order.order_number} - اكتمل التقطيع، الحالة: completed")
+        else:
+            # طلبات التفصيل تحتاج تصنيع وتركيب - تبقى قيد التنفيذ
+            new_status = 'in_progress'
+            logger.info(f"🔄 طلب تفصيل {order.order_number} - اكتمل التقطيع، جاهز للتصنيع")
     elif completed_orders > 0 or in_progress_orders > 0:
         # بعض أوامر التقطيع مكتملة أو قيد التنفيذ
-        new_status = 'in_progress'  # قيد التنفيذ
+        new_status = 'in_progress'
     else:
         # لم يبدأ أي أمر تقطيع
-        new_status = 'in_progress'  # قيد التنفيذ (للمنتجات)
+        new_status = 'in_progress'
 
     # تحديث حالة الطلب إذا تغيرت
     # اكتب في الحقل canonical `order_status` بدلاً من `status` لتجنب حذف وسم الـ VIP

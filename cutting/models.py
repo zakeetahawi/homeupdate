@@ -395,8 +395,11 @@ class CuttingOrderItem(models.Model):
         actual_exit_date = exit_date if exit_date else date.today()
         self.exit_date = actual_exit_date
         
-        # تاريخ التقطيع هو التاريخ المدخل يدوياً
-        self.cutting_date = datetime.combine(actual_exit_date, datetime.now().time())
+        # تاريخ التقطيع هو التاريخ المدخل يدوياً - استخدام timezone.now() لتجنب naive datetime
+        current_time = timezone.now()
+        self.cutting_date = datetime.combine(actual_exit_date, current_time.time())
+        if timezone.is_naive(self.cutting_date):
+            self.cutting_date = timezone.make_aware(self.cutting_date)
         self.delivery_date = self.cutting_date
         
         # تسجيل تاريخ المعاملة الفعلية في الملاحظات

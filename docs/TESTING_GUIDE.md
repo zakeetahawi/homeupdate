@@ -1,384 +1,181 @@
-# Testing Guide - Fabric Cutting System Features
+# دليل الاختبار السريع للتحديثات
 
-## Overview
-This guide provides step-by-step instructions for testing the newly implemented features.
+## 1. اختبار تنسيق رقم العقد
 
----
+### الخطوات:
+1. افتح صفحة تفاصيل أي طلب يحتوي على عقد
+2. ابحث عن بطاقة "معلومات العقد"
+3. تحقق من رقم العقد
 
-## Part 1: Installation Orders - Window Count Field
+### النتيجة المتوقعة:
+- يجب أن يكون التنسيق: `1-0020-2511-14`
+- الترتيب: `ايدي الفرع - رقم الطلب - التاريخ - رقم العقد`
 
-### Test 1: Create New Installation Schedule
-**Steps:**
-1. Navigate to the installations section
-2. Click on "Schedule Installation" or create a new installation order
-3. Fill in the required fields
-4. Locate the "عدد الشبابيك" (Number of Windows) field
-5. Enter a number (e.g., 5)
-6. Submit the form
-
-**Expected Results:**
-- ✅ The windows count field should be visible in the form
-- ✅ The field should accept positive integers only
-- ✅ The form should save successfully
-- ✅ No validation errors should occur
-
-### Test 2: Edit Existing Installation Schedule
-**Steps:**
-1. Navigate to an existing installation schedule
-2. Click "Edit" or "تعديل"
-3. Locate the "عدد الشبابيك" field
-4. Change the value (or add a value if empty)
-5. Save the changes
-
-**Expected Results:**
-- ✅ The windows count field should be visible and editable
-- ✅ Changes should save successfully
-- ✅ The new value should persist after saving
-
-### Test 3: View Installation Details
-**Steps:**
-1. Navigate to an installation detail page
-2. Look for the "عدد الشبابيك" field in the details section
-
-**Expected Results:**
-- ✅ If windows count is set, it should display as a badge with the number
-- ✅ If not set, it should show "غير محدد" (Not specified)
-- ✅ The field should be clearly labeled
-
-### Test 4: Daily Schedule View
-**Steps:**
-1. Navigate to the daily installation schedule view
-2. Check the table for the windows count column
-
-**Expected Results:**
-- ✅ Windows count should display for each installation
-- ✅ Empty values should show "غير محدد"
-- ✅ The column should be properly aligned
+### ملاحظة:
+- يجب أن يكون رقم العقد موجود فقط في بطاقة "معلومات العقد"
+- لا يجب أن يظهر في بطاقة "معلومات الطلب"
 
 ---
 
-## Part 2: Warehouse Staff Role and Permissions System
+## 2. اختبار عرض العقد PDF
 
-### Test 5: Create Warehouse Staff User
-**Steps:**
-1. Login as admin/superuser
-2. Navigate to Django Admin: `/admin/`
-3. Go to Users section
-4. Click "Add User" or select an existing user
-5. Scroll to "أدوار المستودع" (Warehouse Roles) section
-6. Check "موظف مستودع" (is_warehouse_staff)
-7. Select a warehouse from "المستودع المخصص" (assigned_warehouse) dropdown
-8. Save the user
+### الخطوات:
+1. افتح صفحة تفاصيل طلب
+2. اضغط على "عرض العقد (جديد)"
+3. تحقق من رأس العقد
 
-**Expected Results:**
-- ✅ The warehouse roles section should be visible
-- ✅ Both fields should be present and functional
-- ✅ User should save successfully
-- ✅ In the user list, the new columns should show the warehouse staff status
-
-### Test 6: Warehouse Staff User Without Assigned Warehouse (Validation Test)
-**Steps:**
-1. In Django Admin, create or edit a user
-2. Check "موظف مستودع" (is_warehouse_staff)
-3. Leave "المستودع المخصص" (assigned_warehouse) empty
-4. Try to save
-
-**Expected Results:**
-- ✅ Validation error should appear
-- ✅ Error message: "يجب تحديد مستودع مخصص لموظف المستودع"
-- ✅ User should NOT save until warehouse is assigned
-
-### Test 7: Warehouse Staff Login and Navigation
-**Steps:**
-1. Logout from admin account
-2. Login as the warehouse staff user created in Test 5
-3. Check the navigation menu
-
-**Expected Results:**
-- ✅ Navigation should show ONLY:
-  - الرئيسية (Home)
-  - نظام التقطيع (Cutting System)
-  - [Warehouse Name] (Their assigned warehouse)
-  - أوامر التقطيع المجمعة (Completed Cutting Orders)
-- ✅ Should NOT see:
-  - العملاء (Customers)
-  - الطلبات (Orders)
-  - المخزون (Full Inventory)
-  - المعاينات (Inspections)
-  - التركيبات (Installations)
-  - المصنع (Manufacturing)
-  - الشكاوى (Complaints)
-  - التقارير (Reports)
-  - إدارة البيانات (Database Management)
-
-### Test 8: Warehouse Staff - Cutting Orders Access
-**Steps:**
-1. As warehouse staff user, click on "نظام التقطيع"
-2. Observe the cutting orders displayed
-
-**Expected Results:**
-- ✅ Should see only orders from their assigned warehouse
-- ✅ Should see only INCOMPLETE orders (pending, in_progress)
-- ✅ Should NOT see completed orders on this page
-- ✅ All filters should work correctly
-
-### Test 9: Warehouse Staff - Assigned Warehouse View
-**Steps:**
-1. As warehouse staff user, click on their warehouse name in navigation
-2. Observe the orders displayed
-
-**Expected Results:**
-- ✅ Should see only orders from their assigned warehouse
-- ✅ Should see only incomplete orders
-- ✅ URL should be: `/cutting/orders/warehouse/{warehouse_id}/`
-
-### Test 10: Warehouse Staff - Completed Orders Page
-**Steps:**
-1. As warehouse staff user, click on "أوامر التقطيع المجمعة"
-2. Test the filters:
-   - Select different warehouses (should only see their warehouse)
-   - Filter by status: completed, incomplete, partially completed
-   - Search by cutting code, contract number, customer name
-3. Check pagination if there are many orders
-
-**Expected Results:**
-- ✅ Page should load successfully
-- ✅ Warehouse filter should only show their assigned warehouse
-- ✅ Status filters should work correctly:
-  - "مكتملة" shows only completed orders
-  - "غير مكتملة" shows only incomplete orders
-  - "مكتملة جزئياً" shows partially completed orders
-- ✅ Search should filter results correctly
-- ✅ Table should display all order details clearly
-- ✅ Progress bars should show correct percentages
-- ✅ Status badges should have correct colors
-- ✅ Pagination should work if applicable
-
-### Test 11: Warehouse Staff - Access Restrictions
-**Steps:**
-1. As warehouse staff user, try to access restricted URLs directly:
-   - `/customers/`
-   - `/orders/`
-   - `/inventory/`
-   - `/inspections/`
-   - `/installations/`
-   - `/manufacturing/`
-   - `/complaints/`
-   - `/reports/list/`
-
-**Expected Results:**
-- ✅ Should be redirected or see "Permission Denied"
-- ✅ Should not be able to access these sections
-
-### Test 12: Regular Staff User - Full Access
-**Steps:**
-1. Logout from warehouse staff account
-2. Login as a regular staff user (is_staff=True, is_warehouse_staff=False)
-3. Check navigation and access
-
-**Expected Results:**
-- ✅ Should see full navigation menu
-- ✅ Should have access to all sections
-- ✅ In cutting system, should see all warehouses
-- ✅ Should see both complete and incomplete orders
-- ✅ Completed orders page should show all warehouses
-
-### Test 13: Cutting Order Cards - Compact Design
-**Steps:**
-1. Login as any user with cutting system access
-2. Navigate to cutting orders page: `/cutting/orders/`
-3. Observe the card layout
-
-**Expected Results:**
-- ✅ Cards should be more compact than before
-- ✅ Should display 2 cards per row (on large screens)
-- ✅ All important information should still be visible:
-  - Cutting code
-  - Customer name
-  - Contract number
-  - Invoice number
-  - Warehouse name
-  - Branch (if applicable)
-  - Salesperson (if applicable)
-  - Order type/destination badge
-  - Status badge
-  - Progress circle with percentage
-  - Item statistics (total, completed, pending)
-  - Creation date
-  - Assigned person
-  - Action buttons
-- ✅ Cards should have proper spacing and alignment
-- ✅ Hover effect should work
-- ✅ Cards should be responsive on mobile devices
-
-### Test 14: Admin Interface - Warehouse Staff Management
-**Steps:**
-1. Login as admin
-2. Go to Django Admin: `/admin/`
-3. Navigate to Users
-4. Check the list view
-
-**Expected Results:**
-- ✅ List should show "is_warehouse_staff" column
-- ✅ List should show "assigned_warehouse" column
-- ✅ Filter sidebar should include "is_warehouse_staff" filter
-- ✅ Clicking filter should show only warehouse staff users
-
-**Steps (continued):**
-5. Click on a user to edit
-6. Scroll to "أدوار المستودع" section
-
-**Expected Results:**
-- ✅ Section should be clearly visible (not collapsed)
-- ✅ Should contain both fields with proper labels
-- ✅ Description should be present
-- ✅ Warehouse dropdown should show all active warehouses
+### النتيجة المتوقعة:
+- رقم العقد في الرأس بالتنسيق الصحيح: `1-0020-2511-14`
 
 ---
 
-## Edge Cases and Error Handling
+## 3. اختبار عرض الإكسسوارات في العقد
 
-### Test 15: Warehouse Staff with Deleted Warehouse
-**Steps:**
-1. Create a warehouse staff user with assigned warehouse
-2. In admin, deactivate or delete the assigned warehouse
-3. Login as that warehouse staff user
+### الخطوات:
+1. افتح عقد يحتوي على إكسسوارات
+2. ابحث عن قسم الإكسسوارات في العقد
 
-**Expected Results:**
-- ✅ System should handle gracefully (no crashes)
-- ✅ User should see empty results or appropriate message
-- ✅ No server errors should occur
+### النتيجة المتوقعة:
+```
+الإكسسوارات:
+━━━━━━━━━━━━━━━━━━━━
+كورنيش
+  مقاس        عدد
+  150سم        2
+━━━━━━━━━━━━━━━━━━━━
+```
 
-### Test 16: Multiple Warehouse Staff Users
-**Steps:**
-1. Create multiple warehouse staff users
-2. Assign different warehouses to each
-3. Login as each user and verify they only see their warehouse
-
-**Expected Results:**
-- ✅ Each user should only see their assigned warehouse
-- ✅ No data leakage between warehouse staff users
-
-### Test 17: Warehouse Staff Promotion to Regular Staff
-**Steps:**
-1. Take a warehouse staff user
-2. In admin, uncheck "is_warehouse_staff"
-3. Check "is_staff" instead
-4. Save and login as that user
-
-**Expected Results:**
-- ✅ User should now see full navigation
-- ✅ User should have access to all sections
-- ✅ No errors should occur
+- يجب ظهور كلمة "مقاس" فوق قيمة المقاس
+- يجب ظهور كلمة "عدد" فوق قيمة العدد
 
 ---
 
-## Performance Testing
+## 4. اختبار ويزارد إضافة الستارة
 
-### Test 18: Large Dataset Performance
-**Steps:**
-1. Ensure there are many cutting orders (100+)
-2. Login as warehouse staff
-3. Navigate through pages
-4. Test filters and search
+### الخطوات:
+1. افتح صفحة "إنشاء طلب جديد"
+2. املأ المعلومات الأساسية حتى الخطوة 5 (العقد)
+3. اضغط "إضافة ستارة جديدة"
 
-**Expected Results:**
-- ✅ Pages should load quickly (< 2 seconds)
-- ✅ Pagination should work smoothly
-- ✅ Filters should respond quickly
-- ✅ No database query timeouts
+### تسلسل الخطوات المتوقع:
 
----
+#### الخطوة 1: معلومات الستارة
+- اسم الغرفة
+- العرض والطول
+- نوع التركيب
+- **زر:** "التالي - الأقمشة"
 
-## Browser Compatibility
+#### الخطوة 2: إضافة الأقمشة
+- اختر نوع القماش
+- اختر القماش من الفاتورة
+- أدخل الكمية بالأمتار
+- عدد القطع
+- نوع التفصيل
+- **زر:** "السابق" | "التالي - الإكسسوارات"
 
-### Test 19: Cross-Browser Testing
-**Browsers to Test:**
-- Chrome
-- Firefox
-- Safari
-- Edge
+#### الخطوة 3: إضافة الإكسسوارات
+- اختر "مع إكسسوار" أو تخطي
+- اختر الإكسسوار من الفاتورة أو خارجي
+- أدخل العدد
+- أدخل المقاس (اختياري)
+- أدخل اللون (اختياري)
+- **زر:** "السابق" | "التالي - حفظ الستارة"
 
-**Steps:**
-1. Test all features in each browser
-2. Check responsive design on mobile browsers
+#### الخطوة 4: الملاحظات (جديد!)
+- **ملخص:** اسم الغرفة - عدد الأقمشة - عدد الإكسسوارات
+- حقل الملاحظات (اختياري)
+- **زر:** "السابق" | "حفظ الستارة"
 
-**Expected Results:**
-- ✅ All features should work in all browsers
-- ✅ Layout should be consistent
-- ✅ No JavaScript errors in console
-- ✅ Mobile responsive design should work properly
-
----
-
-## Checklist Summary
-
-### Part 1 - Installation Orders:
-- [ ] Create new installation with windows count
-- [ ] Edit existing installation windows count
-- [ ] View installation details with windows count
-- [ ] Check daily schedule display
-
-### Part 2 - Warehouse Staff:
-- [ ] Create warehouse staff user in admin
-- [ ] Test validation (warehouse staff without warehouse)
-- [ ] Login as warehouse staff and check navigation
-- [ ] Verify cutting orders access (incomplete only)
-- [ ] Test assigned warehouse view
-- [ ] Test completed orders page with all filters
-- [ ] Verify access restrictions
-- [ ] Test regular staff full access
-- [ ] Check compact card design
-- [ ] Verify admin interface updates
-- [ ] Test edge cases
-- [ ] Performance testing
-- [ ] Cross-browser testing
+### النتيجة المتوقعة:
+✅ الانتقال السلس بين الخطوات
+✅ ظهور ملخص المعلومات في كل خطوة
+✅ حقل الملاحظات منفصل تماماً عن قسم الإكسسوارات
+✅ حفظ جميع البيانات عند الضغط على "حفظ الستارة"
 
 ---
 
-## Reporting Issues
+## 5. اختبار التنقل بين الأقسام
 
-If you encounter any issues during testing:
+### السيناريو:
+1. ابدأ إضافة ستارة جديدة
+2. أدخل معلومات الستارة واضغط "التالي"
+3. أضف قماش واحد واضغط "التالي - الإكسسوارات"
+4. اضغط "السابق" (يجب العودة للأقمشة)
+5. اضغط "التالي - الإكسسوارات"
+6. أضف إكسسوار واضغط "التالي - حفظ الستارة"
+7. تحقق من وجود حقل الملاحظات
+8. اضغط "السابق" (يجب العودة للإكسسوارات)
 
-1. **Document the issue:**
-   - What were you trying to do?
-   - What did you expect to happen?
-   - What actually happened?
-   - Steps to reproduce
-
-2. **Check browser console:**
-   - Are there any JavaScript errors?
-   - Are there any network errors?
-
-3. **Check server logs:**
-   - Are there any Python exceptions?
-   - Are there any database errors?
-
-4. **Provide screenshots:**
-   - Screenshot of the issue
-   - Screenshot of browser console (if applicable)
+### النتيجة المتوقعة:
+✅ التنقل يعمل في جميع الاتجاهات
+✅ البيانات محفوظة عند التنقل
+✅ الملاحظات في قسم منفصل
 
 ---
 
-## Success Criteria
+## حالات اختبار إضافية
 
-All tests should pass with:
-- ✅ No server errors (500 errors)
-- ✅ No database errors
-- ✅ No JavaScript console errors
-- ✅ Proper validation messages
-- ✅ Correct permission enforcement
-- ✅ Responsive design working
-- ✅ All features functioning as specified
+### اختبار 1: ستارة بدون إكسسوارات
+- أضف ستارة
+- أضف أقمشة فقط
+- لا تضع علامة على "مع إكسسوار"
+- اضغط "التالي - حفظ الستارة"
+- **المتوقع:** الانتقال مباشرة لقسم الملاحظات
+
+### اختبار 2: ستارة بدون ملاحظات
+- أضف ستارة كاملة
+- اترك حقل الملاحظات فارغاً
+- **المتوقع:** حفظ الستارة بنجاح بدون ملاحظات
+
+### اختبار 3: تعديل ستارة موجودة
+- اضغط "تعديل" على ستارة موجودة
+- تحقق من تحميل جميع البيانات
+- عدّل أي معلومات
+- **المتوقع:** حفظ التعديلات بنجاح
 
 ---
 
-## Post-Testing
+## الأخطاء المحتملة وحلولها
 
-After successful testing:
-1. Document any issues found and fixed
-2. Update user documentation if needed
-3. Train warehouse staff users on new features
-4. Monitor system for any issues in production
-5. Gather user feedback for future improvements
+### خطأ 1: رقم العقد بالتنسيق القديم
+**السبب:** المتصفح يستخدم نسخة محفوظة من الملف
+**الحل:** امسح الذاكرة المؤقتة (Ctrl+Shift+R) أو افتح في وضع التصفح المتخفي
 
+### خطأ 2: عدم ظهور قسم الملاحظات
+**السبب:** خطأ في JavaScript
+**الحل:** افتح Developer Console (F12) وتحقق من الأخطاء
+
+### خطأ 3: عدم حفظ البيانات
+**السبب:** خطأ في الاتصال بالسيرفر
+**الحل:** تحقق من سجل الأخطاء في السيرفر
+
+---
+
+## تقرير الاختبار
+
+### الميزة 1: تنسيق رقم العقد
+- [ ] ✅ يظهر بالتنسيق الصحيح في تفاصيل الطلب
+- [ ] ✅ يظهر بالتنسيق الصحيح في العقد PDF
+- [ ] ✅ غير موجود في بطاقة معلومات الطلب
+
+### الميزة 2: عرض الإكسسوارات
+- [ ] ✅ تظهر كلمة "مقاس" فوق قيمة المقاس
+- [ ] ✅ تظهر كلمة "عدد" فوق قيمة العدد
+- [ ] ✅ التنسيق واضح ومقروء
+
+### الميزة 3: قسم الملاحظات المنفصل
+- [ ] ✅ قسم الملاحظات منفصل عن الإكسسوارات
+- [ ] ✅ الانتقال السلس بين الأقسام
+- [ ] ✅ حفظ الملاحظات بنجاح
+
+### الميزة 4: التنقل في الويزارد
+- [ ] ✅ التنقل للأمام يعمل
+- [ ] ✅ التنقل للخلف يعمل
+- [ ] ✅ البيانات محفوظة عند التنقل
+
+---
+
+**تاريخ الاختبار:** ___________
+**المختبر:** ___________
+**النتيجة:** [ ] نجح [ ] فشل
+**الملاحظات:** ___________
