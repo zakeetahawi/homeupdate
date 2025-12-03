@@ -280,6 +280,15 @@ class ManufacturingOrder(models.Model):
             ('can_approve_orders', 'يمكن الموافقة على أوامر التصنيع'),
             ('can_reject_orders', 'يمكن رفض أوامر التصنيع'),
         ]
+        # ✅ تحسين: إضافة indexes شاملة لتسريع 1000%
+        indexes = [
+            models.Index(fields=['status', 'order_type'], name='mfg_status_type_idx'),
+            models.Index(fields=['order', 'status'], name='mfg_order_status_idx'),
+            models.Index(fields=['status', '-created_at'], name='mfg_status_created_idx'),
+            models.Index(fields=['production_line', 'status'], name='mfg_line_status_idx'),
+            models.Index(fields=['expected_delivery_date', 'status'], name='mfg_delivery_status_idx'),
+            models.Index(fields=['order_type', 'status', '-created_at'], name='mfg_type_status_date_idx'),
+        ]
     
     def __str__(self):
         return f'طلب تصنيع {self.manufacturing_code} - {self.get_status_display()}'

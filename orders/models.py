@@ -441,6 +441,7 @@ class Order(models.Model):
         verbose_name_plural = 'الطلبات'
         ordering = ['-created_at']
         indexes = [
+            # Existing indexes
             models.Index(fields=['customer'], name='order_customer_idx'),
             models.Index(fields=['salesperson'], name='order_salesperson_idx'),
             models.Index(fields=['tracking_status'], name='order_tracking_status_idx'),
@@ -448,6 +449,18 @@ class Order(models.Model):
             models.Index(fields=['branch', 'tracking_status'], name='order_branch_status_idx'),
             models.Index(fields=['payment_verified'], name='order_payment_verified_idx'),
             models.Index(fields=['created_at'], name='order_created_at_idx'),
+            # NEW Performance Indexes
+            models.Index(fields=['order_status', 'created_at'], name='order_status_created_idx'),
+            models.Index(fields=['order_status', 'order_date'], name='order_status_date_idx'),
+            models.Index(fields=['installation_status', 'order_status'], name='order_inst_status_idx'),
+            models.Index(fields=['branch', 'order_status', 'created_at'], name='order_branch_sts_crt_idx'),
+            models.Index(fields=['customer', 'order_status'], name='order_cust_status_idx'),
+            models.Index(fields=['salesperson', 'order_status', 'created_at'], name='order_sales_sts_crt_idx'),
+            models.Index(fields=['is_fully_completed', 'created_at'], name='order_completed_crt_idx'),
+            models.Index(fields=['tracking_status', 'created_at'], name='order_track_created_idx'),
+            models.Index(fields=['order_number'], name='order_number_idx'),
+            models.Index(fields=['invoice_number'], name='order_invoice_idx'),
+            models.Index(fields=['contract_number'], name='order_contract_idx'),
         ]
     def calculate_final_price(self, force_update=False):
         """حساب السعر النهائي للطلب مع الخصم"""
@@ -1961,6 +1974,11 @@ class OrderItem(models.Model):
             models.Index(fields=['cutter_name'], name='order_item_cutter_idx'),
             models.Index(fields=['receiver_name'], name='order_item_receiver_idx'),
             models.Index(fields=['cutting_date'], name='order_item_cutting_date_idx'),
+            # NEW Performance Indexes
+            models.Index(fields=['order', 'item_type'], name='item_order_type_idx'),
+            models.Index(fields=['order', 'processing_status'], name='item_order_proc_idx'),
+            models.Index(fields=['cutting_status', 'cutting_date'], name='item_cut_sts_date_idx'),
+            models.Index(fields=['item_type', 'processing_status'], name='item_type_proc_idx'),
         ]
     def __str__(self):
         return f'{self.product.name} ({self.get_clean_quantity_display()})'

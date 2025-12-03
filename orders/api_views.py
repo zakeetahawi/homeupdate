@@ -221,46 +221,77 @@ def salespersons_by_branch_api(request):
     """
     API endpoint للحصول على البائعين حسب الفرع
     يستخدم في ويزارد إنشاء الطلب
+    
+    محسّن لتجنب أخطاء 500 وتحسين الأداء
     """
+    from accounts.models import Salesperson
+    from django.core.cache import cache
+    
     try:
         branch_id = request.GET.get('branch', '').strip()
         
-        # الحصول على البائعين
-        salespersons = User.objects.filter(
-            is_active=True,
-            user_type='salesperson'
-        ).select_related('branch')
+        # استخدام الكاش لتحسين الأداء
+        cache_key = f'salespersons_branch:{branch_id or "all"}'
+        cached_results = cache.get(cache_key)
+        
+        if cached_results:
+            return JsonResponse(cached_results)
+        
+        # استخدام نموذج Salesperson بدلاً من User
+        # هذا يحل مشكلة البائعين الذين ليس لديهم حساب مستخدم
+        salespersons = Salesperson.objects.filter(
+            is_active=True
+        ).select_related('branch', 'user')
         
         # تصفية حسب الفرع إذا تم تحديده
         if branch_id:
-            salespersons = salespersons.filter(branch_id=branch_id)
+            try:
+                salespersons = salespersons.filter(branch_id=int(branch_id))
+            except (ValueError, TypeError):
+                pass
         
         # ترتيب النتائج
-        salespersons = salespersons.order_by('first_name', 'last_name')
+        salespersons = salespersons.order_by('name')
         
-        # تحضير النتائج
+        # تحضير النتائج بطريقة آمنة
         results = []
-        for user in salespersons:
-            name = user.get_full_name() or user.username
-            branch_name = user.branch.name if user.branch else ''
-            results.append({
-                'id': user.id,
-                'name': name,
-                'branch': branch_name,
-            })
+        for sp in salespersons:
+            try:
+                # استخدام get_display_name للحصول على أفضل اسم
+                name = sp.get_display_name() if hasattr(sp, 'get_display_name') else sp.name
+                branch_name = sp.branch.name if sp.branch else ''
+                
+                results.append({
+                    'id': sp.id,
+                    'name': name,
+                    'branch': branch_name,
+                    'branch_id': sp.branch_id,
+                })
+            except Exception as item_error:
+                # تسجيل الخطأ والاستمرار
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Error processing salesperson {sp.id}: {item_error}")
+                continue
         
-        return JsonResponse({
+        response_data = {
             'results': results,
             'total': len(results)
-        })
+        }
+        
+        # تخزين في الكاش لمدة 5 دقائق
+        cache.set(cache_key, response_data, 300)
+        
+        return JsonResponse(response_data)
         
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Error in salespersons_by_branch_api: {e}")
+        logger.error(f"Error in salespersons_by_branch_api: {e}", exc_info=True)
         
+        # إرجاع قائمة فارغة بدلاً من خطأ 500
         return JsonResponse({
             'results': [],
             'total': 0,
-            'error': str(e)
-        }, status=500)
+            'error': 'حدث خطأ في جلب البائعين'
+        })

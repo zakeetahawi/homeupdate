@@ -140,6 +140,11 @@ class CuttingOrder(models.Model):
             models.Index(fields=['warehouse'], name='cutting_warehouse_idx'),
             models.Index(fields=['status'], name='cutting_status_idx'),
             models.Index(fields=['created_at'], name='cutting_created_idx'),
+            # NEW Performance Indexes
+            models.Index(fields=['status', 'created_at'], name='cut_status_created_idx'),
+            models.Index(fields=['warehouse', 'status'], name='cut_wareh_status_idx'),
+            models.Index(fields=['order', 'status'], name='cut_order_status_idx'),
+            models.Index(fields=['assigned_to', 'status'], name='cut_assign_status_idx'),
         ]
     
     def __str__(self):
@@ -360,6 +365,10 @@ class CuttingOrderItem(models.Model):
             models.Index(fields=['cutting_order'], name='cutting_item_order_idx'),
             models.Index(fields=['order_item'], name='cutting_item_original_idx'),
             models.Index(fields=['status'], name='cutting_item_status_idx'),
+            # NEW Performance Indexes
+            models.Index(fields=['cutting_order', 'status'], name='cut_item_ord_sts_idx'),
+            models.Index(fields=['status', 'exit_date'], name='cut_item_sts_exit_idx'),
+            models.Index(fields=['inventory_deducted', 'status'], name='cut_item_inv_sts_idx'),
         ]
     
     def __str__(self):

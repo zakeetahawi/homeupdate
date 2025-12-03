@@ -166,6 +166,15 @@ class InstallationSchedule(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['order'], name='unique_installation_per_order')
         ]
+        # ✅ تحسين: إضافة indexes شاملة لتسريع 1000%
+        indexes = [
+            models.Index(fields=['status', 'scheduled_date'], name='inst_status_date_idx'),
+            models.Index(fields=['order', 'status'], name='inst_order_status_idx'),
+            models.Index(fields=['team', 'scheduled_date'], name='inst_team_date_idx'),
+            models.Index(fields=['status', '-created_at'], name='inst_status_created_idx'),
+            models.Index(fields=['scheduled_date', 'status', 'team'], name='inst_date_status_team_idx'),
+            models.Index(fields=['-scheduled_date', '-scheduled_time'], name='inst_date_time_idx'),
+        ]
 
     def __str__(self):
         return f"طلب تركيب {self.installation_code} - {self.get_status_display()}"

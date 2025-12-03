@@ -381,6 +381,7 @@ AUTHENTICATION_BACKENDS = [
 # قائمة الوسطاء الأساسية مع إدارة اتصالات محسنة
 MIDDLEWARE = [
     'crm.middleware.emergency_connection.EmergencyConnectionMiddleware',  # إدارة الاتصالات الطارئة
+    'core.performance_middleware.PerformanceCacheMiddleware',  # 🚀 Cache Middleware للتسريع
     'orders.middleware.CurrentUserMiddleware',  # تتبع المستخدم الحالي
     'django.middleware.security.SecurityMiddleware',
     'core.security_middleware.SecurityHeadersMiddleware',  # 🔒 Security Headers متقدمة
@@ -401,6 +402,7 @@ MIDDLEWARE = [
     'accounts.middleware.log_terminal_activity.TerminalActivityLoggerMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.performance_middleware.QueryMonitorMiddleware',  # 🚀 مراقبة الاستعلامات
     'crm.settings.QueryPerformanceLoggingMiddleware',  # مراقبة الأداء والاستعلامات البطيئة
     # إزالة middleware مؤقتاً لحل المشكلة
     # 'accounts.middleware.RoleBasedPermissionsMiddleware',

@@ -99,6 +99,11 @@ class Product(models.Model):
             models.Index(fields=['name', 'code']),
             models.Index(fields=['category']),
             models.Index(fields=['created_at']),
+            # NEW Performance Indexes
+            models.Index(fields=['code'], name='product_code_idx'),
+            models.Index(fields=['name'], name='product_name_idx'),
+            models.Index(fields=['category', 'created_at'], name='product_cat_crt_idx'),
+            models.Index(fields=['price'], name='product_price_idx'),
         ]
 
     def __str__(self):
@@ -421,6 +426,11 @@ class StockTransaction(models.Model):
             models.Index(fields=['transaction_type'], name='stock_type_idx'),
             models.Index(fields=['transaction_date'], name='stock_date_idx'),
             models.Index(fields=['product', 'warehouse'], name='stock_prod_wareh_idx'),
+            # NEW Performance Indexes
+            models.Index(fields=['product', 'warehouse', 'transaction_date'], name='stock_prd_wrh_dt_idx'),
+            models.Index(fields=['warehouse', 'transaction_date'], name='stock_wrh_date_idx'),
+            models.Index(fields=['transaction_type', 'transaction_date'], name='stock_type_date_idx'),
+            models.Index(fields=['reason', 'transaction_date'], name='stock_reason_date_idx'),
         ]
 
     def __str__(self):

@@ -1,0 +1,20 @@
+
+# Performance Middleware - تحسين الأداء
+# أضف هذا إلى MIDDLEWARE في settings.py بعد SecurityMiddleware:
+# 'core.performance_middleware.QueryMonitorMiddleware',
+# 'core.performance_middleware.PerformanceCacheMiddleware',
+
+# Performance Middleware - تحسين الأداء
+# أضف هذا إلى MIDDLEWARE في settings.py بعد SecurityMiddleware:
+# 'core.performance_middleware.QueryMonitorMiddleware',
+# 'core.performance_middleware.PerformanceCacheMiddleware',
+
+# Performance Middleware - تحسين الأداء
+# أضف هذا إلى MIDDLEWARE في settings.py بعد SecurityMiddleware:
+# 'core.performance_middleware.QueryMonitorMiddleware',
+# 'core.performance_middleware.PerformanceCacheMiddleware',
+
+# Performance Middleware - تحسين الأداء
+# أضف هذا إلى MIDDLEWARE في settings.py بعد SecurityMiddleware:
+# 'core.performance_middleware.QueryMonitorMiddleware',
+# 'core.performance_middleware.PerformanceCacheMiddleware',

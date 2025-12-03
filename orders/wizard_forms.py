@@ -94,7 +94,7 @@ class Step1BasicInfoForm(forms.ModelForm):
             self.fields['branch'].queryset = Branch.objects.filter(is_active=True)
             self.fields['salesperson'].queryset = Salesperson.objects.filter(is_active=True)
         
-        # تعيين الفرع الافتراضي وتصفية البائعين
+        # تعيين الفرع الافتراضي
         active_branch = None
         
         if self.instance and self.instance.branch:
@@ -105,18 +105,43 @@ class Step1BasicInfoForm(forms.ModelForm):
             active_branch = user_branch
             self.fields['branch'].initial = user_branch
         
-        # تصفية البائعين بناءً على الفرع النشط (للمستخدمين العاديين)
-        if active_branch and not (is_admin_user or is_main_branch_user):
+        # تصفية البائعين - المدراء يرون جميع البائعين للسماح باختيار أي بائع
+        if is_admin_user or is_main_branch_user:
+            # مدير النظام أو الفرع الرئيسي - جميع البائعين النشطين
+            # هذا يسمح لهم باختيار أي بائع من أي فرع
+            self.fields['salesperson'].queryset = Salesperson.objects.filter(
+                is_active=True
+            ).select_related('branch').order_by('branch__name', 'name')
+        elif active_branch:
+            # المستخدمين العاديين - بائعين الفرع المحدد فقط
             self.fields['salesperson'].queryset = Salesperson.objects.filter(
                 branch=active_branch,
                 is_active=True
             )
-        elif active_branch and (is_admin_user or is_main_branch_user):
-            # حتى للمدراء، نعرض البائعين المرتبطين بالفرع المحدد أولاً
-            self.fields['salesperson'].queryset = Salesperson.objects.filter(
-                branch=active_branch,
-                is_active=True
-            )
+        
+        # حفظ حالة المستخدم للتحقق في clean
+        self._is_admin_user = is_admin_user
+        self._is_main_branch_user = is_main_branch_user
+    
+    def clean(self):
+        """
+        تحقق مخصص للتأكد من صحة العلاقة بين الفرع والبائع
+        """
+        cleaned_data = super().clean()
+        branch = cleaned_data.get('branch')
+        salesperson = cleaned_data.get('salesperson')
+        
+        # للمدراء: السماح باختيار أي بائع بغض النظر عن الفرع
+        if getattr(self, '_is_admin_user', False) or getattr(self, '_is_main_branch_user', False):
+            # مدير النظام يمكنه اختيار أي بائع
+            return cleaned_data
+        
+        # للمستخدمين العاديين: التحقق من أن البائع ينتمي للفرع المختار
+        if branch and salesperson:
+            if salesperson.branch_id != branch.id:
+                self.add_error('salesperson', 'يجب اختيار بائع من الفرع المحدد')
+        
+        return cleaned_data
 
 
 class Step2OrderTypeForm(forms.ModelForm):
