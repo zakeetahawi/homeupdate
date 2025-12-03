@@ -312,6 +312,7 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '[::1]',  # IPv6 localhost
+    '192.168.1.30',  # IP المحلي
     'elkhawaga.uk',
     'www.elkhawaga.uk',
     '.elkhawaga.uk',  # جميع النطاقات الفرعية
@@ -379,33 +380,21 @@ AUTHENTICATION_BACKENDS = [
 
 
 # قائمة الوسطاء الأساسية مع إدارة اتصالات محسنة
+# قائمة Middleware محسّنة للأداء والاستقرار
 MIDDLEWARE = [
-    'crm.middleware.emergency_connection.EmergencyConnectionMiddleware',  # إدارة الاتصالات الطارئة
-    'core.performance_middleware.PerformanceCacheMiddleware',  # 🚀 Cache Middleware للتسريع
-    'orders.middleware.CurrentUserMiddleware',  # تتبع المستخدم الحالي
+    # الأساسيات - خفيفة وسريعة
     'django.middleware.security.SecurityMiddleware',
-    'core.security_middleware.SecurityHeadersMiddleware',  # 🔒 Security Headers متقدمة
-    # CSP معطل في التطوير - سيتم تفعيله في الإنتاج فقط
-    # 'csp.middleware.CSPMiddleware',  # Content Security Policy
-    'corsheaders.middleware.CorsMiddleware',  # يجب أن يكون قبل CommonMiddleware
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'core.security_middleware.SQLInjectionProtectionMiddleware',  # 🔒 حماية SQL Injection
-    'core.security_middleware.XSSProtectionMiddleware',  # 🔒 حماية XSS
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'core.security_middleware.SecureSessionMiddleware',  # 🔒 حماية الجلسات (بعد Auth)
-    'core.security_middleware.BruteForceProtectionMiddleware',  # 🔒 حماية Brute Force
-    'core.security_middleware.RateLimitMiddleware',  # 🔒 Rate Limiting
-    'accounts.middleware.current_user.CurrentUserMiddleware',  # تتبع المستخدم الحالي
-    'accounts.middleware.log_terminal_activity.TerminalActivityLoggerMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'core.performance_middleware.QueryMonitorMiddleware',  # 🚀 مراقبة الاستعلامات
-    'crm.settings.QueryPerformanceLoggingMiddleware',  # مراقبة الأداء والاستعلامات البطيئة
-    # إزالة middleware مؤقتاً لحل المشكلة
-    # 'accounts.middleware.RoleBasedPermissionsMiddleware',
+    
+    # ضروري للنظام
+    'orders.middleware.CurrentUserMiddleware',
+    'accounts.middleware.current_user.CurrentUserMiddleware',
 ]
 
 # Debug toolbar configuration for performance monitoring
@@ -520,9 +509,9 @@ DATABASES = {
         'HOST': 'localhost',
         'PORT': '5432',
 
-        # ✅ تحسين: إبقاء الاتصالات مفتوحة لمدة 10 دقائق
-        # يوفر 100-150ms لكل طلب (كان 0 = إغلاق فوري)
-        'CONN_MAX_AGE': 600,
+        # ✅ تحسين: إبقاء الاتصالات مفتوحة لمدة 5 دقائق (تقليل من 10 دقائق)
+        # يوفر موارد الذاكرة مع الحفاظ على الأداء
+        'CONN_MAX_AGE': 300,
 
         # ✅ تحسين: تفعيل فحص صحة الاتصالات
         # يمنع استخدام اتصالات معطلة ويحسن الاستقرار
@@ -773,6 +762,9 @@ else:
     CSRF_TRUSTED_ORIGINS = [
         'https://localhost',
         'https://127.0.0.1',
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
+        'http://192.168.1.30:8000',
     ]
 
 # Cross-Origin Opener Policy - explicitly disabled for HTTP development
@@ -1463,7 +1455,7 @@ LOGGING = {
             'style': '{',
         },
         'security': {
-            'format': '[SECURITY] {asctime} | {levelname} | {message} | User: {user} | IP: {ip}',
+            'format': '[SECURITY] {asctime} | {levelname} | {message}',
             'style': '{',
         },
     },

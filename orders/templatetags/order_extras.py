@@ -259,12 +259,31 @@ def currency_format(amount):
     """Format amount with currency"""
     try:
         from accounts.models import SystemSettings
+        from decimal import Decimal
+        
+        # تحويل amount إلى رقم إذا كان string
+        if isinstance(amount, str):
+            # إزالة الفواصل والمسافات
+            amount = amount.replace(',', '').replace(' ', '').strip()
+            # محاولة تحويله لـ float
+            amount = float(amount) if amount else 0
+        elif amount is None:
+            amount = 0
+        
+        # تحويل إلى float للتأكد
+        amount = float(amount)
+        
         settings = SystemSettings.get_settings()
         symbol = settings.currency_symbol
         formatted_amount = f"{amount:,.2f}"
         return f"{formatted_amount} {symbol}"
-    except Exception:
-        return f"{amount:,.2f} ر.س"
+    except Exception as e:
+        # في حالة الخطأ، حاول عرض القيمة كما هي
+        try:
+            amount_float = float(str(amount).replace(',', '').replace(' ', '').strip() or 0)
+            return f"{amount_float:,.2f} ر.س"
+        except:
+            return f"{amount} ر.س"
 
 @register.simple_tag
 def paid_percentage(order):

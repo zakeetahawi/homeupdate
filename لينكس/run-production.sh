@@ -116,13 +116,15 @@ if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
 
     # تشغيل Celery Worker مع جميع الـ queues (مُصلح)
     celery -A crm worker \
-        --loglevel=info \
+        --loglevel=error \
         --queues=celery,file_uploads \
         --pidfile="$LOGS_DIR/celery_worker.pid" \
         --logfile="$LOGS_DIR/celery_worker.log" \
         --pool=solo \
-        --concurrency=2 \
-        --max-tasks-per-child=50 \
+        --concurrency=1 \
+        --max-memory-per-child=200000 \
+        --time-limit=300 \
+        --soft-time-limit=270 \
         --detach
 
     sleep 5  # انتظار بدء العملية
@@ -157,7 +159,7 @@ if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
     
     # تشغيل Celery Beat مع تقليل استهلاك قاعدة البيانات
     celery -A crm beat \
-        --loglevel=info \
+        --loglevel=warning \
         --pidfile="$LOGS_DIR/celery_beat.pid" \
         --logfile="$LOGS_DIR/celery_beat.log" \
         --schedule="$LOGS_DIR/celerybeat-schedule" \
@@ -314,17 +316,19 @@ print_status "✅ الملفات الثابتة: مدعومة بواسطة White
 # استخدام Gunicorn مع إعدادات محسنة للإنتاج
 gunicorn crm.wsgi:application \
     --bind 0.0.0.0:8000 \
-    --workers 2 \
-    --worker-class sync \
-    --worker-connections 25 \
-    --max-requests 100 \
-    --max-requests-jitter 20 \
-    --timeout 60 \
-    --keep-alive 2 \
-    --preload \
+    --workers 1 \
+    --threads 4 \
+    --worker-class gthread \
+    --worker-connections 100 \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    --keep-alive 3 \
+    --worker-tmp-dir /dev/shm \
     --access-logfile - \
     --error-logfile - \
-    --log-level info \
+    --log-level warning \
     --pid /tmp/gunicorn.pid \
     --access-logformat '[%(t)s] "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' 2>&1 | while read line; do
         # تطبيق فلتر logs محسن لتقليل الرسائل غير المهمة
@@ -472,11 +476,13 @@ while true; do
         if [ ! -z "$CELERY_WORKER_PID" ] && ! kill -0 $CELERY_WORKER_PID 2>/dev/null; then
             print_warning "⚠️ Celery Worker توقف - إعادة تشغيل مع الإعدادات المحسنة..."
             celery -A crm worker \
-                --loglevel=info \
+                --loglevel=error \
                 --queues=celery,file_uploads \
-                --pool=prefork \
-                --concurrency=2 \
-                --max-tasks-per-child=100 \
+                --pool=solo \
+                --concurrency=1 \
+                --max-memory-per-child=200000 \
+                --time-limit=300 \
+                --soft-time-limit=270 \
                 --detach \
                 --pidfile="$LOGS_DIR/celery_worker.pid" \
                 --logfile="$LOGS_DIR/celery_worker.log"
@@ -493,7 +499,7 @@ while true; do
         CELERY_BEAT_PID=$(cat "$LOGS_DIR/celery_beat.pid" 2>/dev/null)
         if [ ! -z "$CELERY_BEAT_PID" ] && ! kill -0 $CELERY_BEAT_PID 2>/dev/null; then
             print_warning "⚠️ Celery Beat توقف - إعادة تشغيل..."
-            celery -A crm beat --loglevel=info --detach --pidfile="$LOGS_DIR/celery_beat.pid" --logfile="$LOGS_DIR/celery_beat.log" --schedule="$LOGS_DIR/celerybeat-schedule"
+            celery -A crm beat --loglevel=warning --detach --pidfile="$LOGS_DIR/celery_beat.pid" --logfile="$LOGS_DIR/celery_beat.log" --schedule="$LOGS_DIR/celerybeat-schedule"
             if [ $? -eq 0 ]; then
                 print_status "✔️ تم إعادة تشغيل Celery Beat"
             else
