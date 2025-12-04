@@ -324,7 +324,9 @@
 }
 
 /* Status Badges - أغمق وأوضح للعين */
-.badge {
+/* تخصيص أنماط badges فقط لمحتوى التصنيع */
+.manufacturing-container .badge:not(.badge-primary):not(.badge-secondary):not(.badge-success):not(.badge-danger):not(.badge-warning):not(.badge-info),
+#manufacturing-content .badge:not(.badge-primary):not(.badge-secondary):not(.badge-success):not(.badge-danger):not(.badge-warning):not(.badge-info) {
     display: inline-block;
     padding: 6px 12px;
     border-radius: 15px;
@@ -337,17 +339,20 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.badge.installation {
+.manufacturing-container .badge.installation,
+#manufacturing-content .badge.installation {
     background-color: #1565c0;
     color: white;
 }
 
-.badge.detail {
+.manufacturing-container .badge.detail,
+#manufacturing-content .badge.detail {
     background-color: #2e7d32;
     color: white;
 }
 
-.badge.accessory {
+.manufacturing-container .badge.accessory,
+#manufacturing-content .badge.accessory {
     background-color: #7b1fa2;
     color: white;
 }
@@ -515,18 +520,22 @@
     color: #2c3e50;
 }
 
-.form-group {
+/* تخصيص أنماط النماذج فقط لمحتوى التصنيع */
+.manufacturing-container .form-group,
+#manufacturing-content .form-group {
     margin-bottom: 20px;
 }
 
-.form-group label {
+.manufacturing-container .form-group label,
+#manufacturing-content .form-group label {
     display: block;
     margin-bottom: 8px;
     font-weight: 600;
     color: #495057;
 }
 
-.form-control {
+.manufacturing-container .form-control,
+#manufacturing-content .form-control {
     width: 100%;
     padding: 8px 12px;
     border: 1px solid #ced4da;
@@ -534,7 +543,8 @@
     font-size: 14px;
 }
 
-.form-actions {
+.manufacturing-container .form-actions,
+#manufacturing-content .form-actions {
     display: flex;
     justify-content: flex-start;
     gap: 10px;
