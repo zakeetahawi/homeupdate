@@ -541,7 +541,9 @@
     margin-top: 25px;
 }
 
-.btn {
+/* تخصيص أنماط الأزرار فقط لمحتوى التصنيع */
+.manufacturing-container .btn,
+#manufacturing-content .btn {
     padding: 8px 16px;
     border: none;
     border-radius: 4px;
@@ -550,21 +552,25 @@
     transition: all 0.3s;
 }
 
-.btn-primary {
+.manufacturing-container .btn-primary,
+#manufacturing-content .btn-primary {
     background-color: #3498db;
     color: white;
 }
 
-.btn-primary:hover {
+.manufacturing-container .btn-primary:hover,
+#manufacturing-content .btn-primary:hover {
     background-color: #2980b9;
 }
 
-.btn-secondary {
+.manufacturing-container .btn-secondary,
+#manufacturing-content .btn-secondary {
     background-color: #6c757d;
     color: white;
 }
 
-.btn-secondary:hover {
+.manufacturing-container .btn-secondary:hover,
+#manufacturing-content .btn-secondary:hover {
     background-color: #5a6268;
 }
 
