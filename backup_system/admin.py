@@ -5,11 +5,12 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils import timezone
+from core.admin_mixins import OptimizedAdminMixin
 from .models import BackupJob, RestoreJob, BackupSchedule
 
 
 @admin.register(BackupJob)
-class BackupJobAdmin(admin.ModelAdmin):
+class BackupJobAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     """إدارة مهام النسخ الاحتياطي"""
     
@@ -117,7 +118,7 @@ class BackupJobAdmin(admin.ModelAdmin):
 
 
 @admin.register(RestoreJob)
-class RestoreJobAdmin(admin.ModelAdmin):
+class RestoreJobAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     """إدارة مهام الاستعادة"""
     
@@ -222,7 +223,7 @@ class RestoreJobAdmin(admin.ModelAdmin):
 
 
 @admin.register(BackupSchedule)
-class BackupScheduleAdmin(admin.ModelAdmin):
+class BackupScheduleAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     """إدارة جدولة النسخ الاحتياطية"""
     

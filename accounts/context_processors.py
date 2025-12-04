@@ -9,12 +9,25 @@ def departments(request):
     """
     Context processor to add departments to all templates in a hierarchical
     structure.
+    مُحسّن مع التخزين المؤقت
     """
-    # Get all active departments
-    all_departments = Department.objects.filter(is_active=True).order_by('order')
-
-    # Create hierarchical structure for parent/child departments
-    parent_departments = all_departments.filter(parent__isnull=True)
+    # التخزين المؤقت للأقسام العامة
+    cache_key = 'ctx_departments_all'
+    cached_data = cache.get(cache_key)
+    
+    if cached_data is None:
+        # Get all active departments
+        all_departments = list(Department.objects.filter(is_active=True).order_by('order'))
+        # Create hierarchical structure for parent/child departments
+        parent_departments = [d for d in all_departments if d.parent is None]
+        cached_data = {
+            'all_departments': all_departments,
+            'parent_departments': parent_departments,
+        }
+        cache.set(cache_key, cached_data, 300)  # 5 دقائق
+    
+    all_departments = cached_data['all_departments']
+    parent_departments = cached_data['parent_departments']
 
     # Get user-accessible departments
     user_departments = []
@@ -24,29 +37,40 @@ def departments(request):
         if request.user.is_superuser:
             user_departments = all_departments
             user_parent_departments = parent_departments
-        else:            # Get user departments with ordering
-            user_departments = (
-                request.user.departments
-                .filter(is_active=True)
-                .order_by('order')
-            )
+        else:
+            # Cache per user
+            user_cache_key = f'ctx_user_depts_{request.user.id}'
+            user_cached = cache.get(user_cache_key)
             
-            # Get unique parent departments
-            user_parent_ids = set()
-            for dept in user_departments:
-                # Add either parent id or own id
-                dept_id = dept.parent.id if dept.parent else dept.id
-                user_parent_ids.add(dept_id)
-
-            # Get parent departments
-            user_parent_departments = (
-                Department.objects
-                .filter(
-                    id__in=user_parent_ids, 
-                    is_active=True
+            if user_cached is None:
+                # Get user departments with ordering
+                user_departments = list(
+                    request.user.departments
+                    .filter(is_active=True)
+                    .order_by('order')
                 )
-                .order_by('order')
-            )
+                
+                # Get unique parent departments
+                user_parent_ids = set()
+                for dept in user_departments:
+                    dept_id = dept.parent.id if dept.parent else dept.id
+                    user_parent_ids.add(dept_id)
+
+                # Get parent departments
+                user_parent_departments = list(
+                    Department.objects
+                    .filter(id__in=user_parent_ids, is_active=True)
+                    .order_by('order')
+                )
+                
+                user_cached = {
+                    'user_departments': user_departments,
+                    'user_parent_departments': user_parent_departments
+                }
+                cache.set(user_cache_key, user_cached, 300)
+            else:
+                user_departments = user_cached['user_departments']
+                user_parent_departments = user_cached['user_parent_departments']
             
     return {
         'all_departments': all_departments,
@@ -59,25 +83,30 @@ def departments(request):
 
 
 def company_info(request):
-    """توفير معلومات الشركة لجميع القوالب"""
-    try:
-        company = CompanyInfo.objects.first()
-        if not company:
-            # إنشاء كائن بقيم افتراضية إذا لم يكن موجوداً
-            company = CompanyInfo.objects.create(
+    """توفير معلومات الشركة لجميع القوالب - مُحسّن مع التخزين المؤقت"""
+    cache_key = 'ctx_company_info'
+    company = cache.get(cache_key)
+    
+    if company is None:
+        try:
+            company = CompanyInfo.objects.first()
+            if not company:
+                # إنشاء كائن بقيم افتراضية إذا لم يكن موجوداً
+                company = CompanyInfo.objects.create(
+                    name="الخواجة للستائر والمفروشات",
+                    description="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
+                    version="1.0.0",
+                    release_date="2025-04-30",
+                    developer="zakee tahawi",
+                    working_hours="9 صباحاً - 5 مساءً",
+                    copyright_text="جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi"
+                )
+            cache.set(cache_key, company, 3600)  # ساعة واحدة
+        except Exception:
+            # في حالة حدوث أي خطأ، إنشاء كائن بقيم افتراضية
+            company = CompanyInfo(
                 name="الخواجة للستائر والمفروشات",
                 description="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
-                version="1.0.0",
-                release_date="2025-04-30",
-                developer="zakee tahawi",
-                working_hours="9 صباحاً - 5 مساءً",
-                copyright_text="جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi"
-            )
-    except Exception:
-        # في حالة حدوث أي خطأ، إنشاء كائن بقيم افتراضية
-        company = CompanyInfo(
-            name="الخواجة للستائر والمفروشات",
-            description="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
             version="1.0.0",
             release_date="2025-04-30",
             developer="zakee tahawi",
@@ -97,24 +126,29 @@ def company_info(request):
     return {'company_info': company}
 
 def footer_settings(request):
-    """توفير إعدادات التذييل لجميع القوالب"""
-    try:
-        footer_settings = FooterSettings.objects.first()
-        if not footer_settings:
-            footer_settings = FooterSettings.objects.create(
+    """توفير إعدادات التذييل لجميع القوالب - مُحسّن مع التخزين المؤقت"""
+    cache_key = 'ctx_footer_settings'
+    footer_settings = cache.get(cache_key)
+    
+    if footer_settings is None:
+        try:
+            footer_settings = FooterSettings.objects.first()
+            if not footer_settings:
+                footer_settings = FooterSettings.objects.create(
+                    left_column_title="عن الشركة",
+                    left_column_text="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
+                    middle_column_title="روابط سريعة",
+                    right_column_title="تواصل معنا"
+                )
+            cache.set(cache_key, footer_settings, 3600)  # ساعة واحدة
+        except Exception:
+            # في حالة حدوث أي خطأ، إنشاء كائن بقيم افتراضية
+            footer_settings = FooterSettings(
                 left_column_title="عن الشركة",
                 left_column_text="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
                 middle_column_title="روابط سريعة",
                 right_column_title="تواصل معنا"
             )
-    except Exception:
-        # في حالة حدوث أي خطأ، إنشاء كائن بقيم افتراضية
-        footer_settings = FooterSettings(
-            left_column_title="عن الشركة",
-            left_column_text="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
-            middle_column_title="روابط سريعة",
-            right_column_title="تواصل معنا"
-        )
 
     return {
         'footer_settings': footer_settings,

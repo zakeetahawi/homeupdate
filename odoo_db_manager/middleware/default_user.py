@@ -50,18 +50,22 @@ class DefaultUserMiddleware:
                 print("🔍 لم يتم العثور على مستخدمين في قاعدة البيانات")
                 print("👤 جاري إنشاء مستخدم افتراضي...")
 
+                # 🔒 إنشاء كلمة سر عشوائية آمنة
+                import secrets
+                default_password = os.environ.get('DEFAULT_ADMIN_PASSWORD', secrets.token_urlsafe(16))
+                
                 # إنشاء المستخدم الافتراضي
                 User.objects.create_superuser(
                     username='admin',
                     email='admin@example.com',
-                    password='admin123',
+                    password=default_password,
                     first_name='مدير',
                     last_name='النظام'
                 )
 
                 print("✅ تم إنشاء المستخدم الافتراضي بنجاح:")
                 print("   اسم المستخدم: admin")
-                print("   كلمة المرور: admin123")
+                print(f"   كلمة المرور: {default_password}")
                 print("⚠️  تحذير: يرجى تغيير كلمة المرور من لوحة الإدارة!")
 
         except Exception as e:

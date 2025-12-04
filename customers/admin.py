@@ -5,6 +5,7 @@ from django.urls import reverse, path
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 from django import forms
+from core.admin_mixins import OptimizedAdminMixin
 from .models import (
     Customer, CustomerCategory, CustomerNote, CustomerType,
     DiscountType, CustomerResponsible, get_customer_types
@@ -49,7 +50,7 @@ class CustomerAdminForm(forms.ModelForm):
 
 
 @admin.register(CustomerCategory)
-class CustomerCategoryAdmin(admin.ModelAdmin):
+class CustomerCategoryAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['name', 'description', 'created_at']
     search_fields = ['name', 'description']
@@ -57,7 +58,7 @@ class CustomerCategoryAdmin(admin.ModelAdmin):
 
 
 @admin.register(CustomerNote)
-class CustomerNoteAdmin(admin.ModelAdmin):
+class CustomerNoteAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['customer', 'note_preview', 'created_by', 'created_at']
     list_filter = ['created_at', 'created_by']
@@ -75,7 +76,7 @@ class CustomerNoteAdmin(admin.ModelAdmin):
 
 
 @admin.register(CustomerType)
-class CustomerTypeAdmin(admin.ModelAdmin):
+class CustomerTypeAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['code', 'name', 'description', 'is_active', 'created_at']
     list_filter = ['is_active', 'created_at']
@@ -117,7 +118,7 @@ class CustomerResponsibleInline(admin.TabularInline):
 
 
 @admin.register(Customer)
-class CustomerAdmin(admin.ModelAdmin):
+class CustomerAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     form = CustomerAdminForm
     list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
     list_max_show_all = 50  # تقليل من 100 إلى 50
@@ -347,7 +348,7 @@ class CustomerAdmin(admin.ModelAdmin):
 
 
 @admin.register(DiscountType)
-class DiscountTypeAdmin(admin.ModelAdmin):
+class DiscountTypeAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة أنواع الخصومات"""
     list_display = ['name', 'percentage', 'is_active', 'is_default', 'customers_count', 'created_at']
     list_filter = ['is_active', 'is_default', 'created_at']
@@ -392,7 +393,7 @@ class DiscountTypeAdmin(admin.ModelAdmin):
 
 
 @admin.register(CustomerResponsible)
-class CustomerResponsibleAdmin(admin.ModelAdmin):
+class CustomerResponsibleAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة مسؤولي العملاء"""
     list_display = ['name', 'customer', 'position', 'phone', 'is_primary', 'order']
     list_filter = ['is_primary', 'created_at']

@@ -380,8 +380,13 @@ AUTHENTICATION_BACKENDS = [
 
 
 # قائمة الوسطاء الأساسية مع إدارة اتصالات محسنة
-# قائمة Middleware محسّنة للأداء والاستقرار
+# قائمة Middleware محسّنة للأداء والاستقرار والأمان
 MIDDLEWARE = [
+    # 🔒 الأمان أولاً
+    'core.rate_limit_middleware.RateLimitMiddleware',  # حماية Brute Force
+    'core.rate_limit_middleware.SecurityHeadersMiddleware',  # Security Headers
+    'core.rate_limit_middleware.SQLInjectionProtectionMiddleware',  # SQL Injection Protection
+    
     # الأساسيات - خفيفة وسريعة
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -500,14 +505,15 @@ CACHES = {
 # 2. CONN_HEALTH_CHECKS = True - فحص صحة الاتصالات تلقائياً
 # 3. connect_timeout = 10 - زيادة وقت الانتظار للاتصال
 # 4. إضافة statement_timeout - حماية من الاستعلامات البطيئة
+# 5. 🔒 تم نقل كلمة السر لمتغيرات البيئة للأمان
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'crm_system',
-        'USER': 'postgres',
-        'PASSWORD': '5525',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'crm_system'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', '5525'),  # ⚠️ غيّر هذا في .env
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
 
         # ✅ تحسين: إبقاء الاتصالات مفتوحة لمدة 5 دقائق (تقليل من 10 دقائق)
         # يوفر موارد الذاكرة مع الحفاظ على الأداء
@@ -554,15 +560,19 @@ DATABASES_DIRECT = {
     }
 }
 
-# Password validation
+# Password validation - محسّن للأمان
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'OPTIONS': {
+            'user_attributes': ('username', 'email', 'first_name', 'last_name'),
+            'max_similarity': 0.7,
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
         'OPTIONS': {
-            'min_length': 8,
+            'min_length': 12,  # تم زيادتها من 8 إلى 12 للأمان
         }
     },
     {
@@ -681,6 +691,18 @@ SIMPLE_JWT = {
 # ============================================
 # 🔒 Security Settings - محسّن وآمن
 # ============================================
+
+# Rate Limiting Settings - حماية من Brute Force
+RATE_LIMIT_LOGIN = {
+    'ATTEMPTS': 5,  # عدد المحاولات المسموحة
+    'TIMEOUT': 300,  # 5 دقائق حظر
+    'BLOCK_IP': True,  # حظر IP بعد تجاوز الحد
+}
+
+# Session Security - إعدادات إضافية
+SESSION_COOKIE_AGE = 3600 * 8  # 8 ساعات بدلاً من أسبوعين
+SESSION_COOKIE_HTTPONLY = True  # منع JavaScript من الوصول
+SESSION_SAVE_EVERY_REQUEST = True  # تجديد الجلسة مع كل طلب
 
 if not DEBUG:
     # HTTPS/SSL Settings
@@ -1003,10 +1025,11 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Password Hashers - محسّنة للأمان
+# 🔒 تم إزالة SHA1 لأنه ضعيف
 PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.PBKDF2PasswordHasher',  # افتراضي Django - آمن
-    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
-    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',  # الأفضل والأقوى
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',  # بديل قوي
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',  # افتراضي Django
 ]
 
 # Rate Limiting (if using django-ratelimit)
@@ -1611,10 +1634,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Password Hashers (Argon2 - الأقوى)
 # تثبيت المكتبة: pip install django[argon2]
+# 🔒 تم إزالة SHA1 لأنه ضعيف
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher',  # الأقوى - يحتاج تثبيت
-    'django.contrib.auth.hashers.PBKDF2PasswordHasher',  # احتياطي
-    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',  # احتياطي
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',  # بديل قوي
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',  # افتراضي Django
 ]
 
 # Account Lockout
@@ -1655,3 +1679,23 @@ BACKUP_RETENTION_DAYS = 30
 # Two-Factor Authentication
 TWO_FACTOR_AUTH_ENABLED = False  # فعّل عند الحاجة
 TWO_FACTOR_AUTH_REQUIRED_FOR_ADMIN = True
+
+# ============================================
+# 🚀 إعدادات التسريع 1000x
+# ============================================
+
+# 1. تحسين الجلسات - استخدام Redis
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'session'
+
+# 2. تحسين Cache للصفحات
+CACHE_MIDDLEWARE_SECONDS = 300  # 5 دقائق
+CACHE_MIDDLEWARE_KEY_PREFIX = 'homeupdate_page'
+
+# 3. إعدادات الضغط
+WHITENOISE_MAX_AGE = 31536000  # سنة
+WHITENOISE_AUTOREFRESH = DEBUG
+
+# 4. تقليل Logging في Production
+if not DEBUG:
+    LOGGING['handlers']['console']['level'] = 'WARNING'

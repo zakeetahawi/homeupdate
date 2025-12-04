@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect
 from django.http import HttpResponseRedirect
 from datetime import datetime
+from core.admin_mixins import OptimizedAdminMixin
 from .models import (
     Order, OrderItem, Payment, OrderStatusLog, 
     ManufacturingDeletionLog, DeliveryTimeSettings,
@@ -49,11 +50,20 @@ class OrderStatusLogInline(admin.TabularInline):
     """Inline لعرض سجل حالة الطلب"""
     model = OrderStatusLog
     extra = 0
+    max_num = 20  # حد أقصى 20 سجل حالة
     readonly_fields = ('old_status_display', 'new_status_display', 'changed_by', 'notes', 'created_at')
     fields = ('old_status_display', 'new_status_display', 'changed_by', 'notes', 'created_at')
     ordering = ['-created_at']
     show_change_link = False
     can_delete = False
+    
+    def get_queryset(self, request):
+        """تحسين استعلام سجل الحالة"""
+        qs = super().get_queryset(request)
+        return qs.select_related('changed_by', 'order').only(
+            'id', 'old_status', 'new_status', 'changed_by_id', 'changed_by__username',
+            'notes', 'created_at', 'order_id'
+        )
 
     def old_status_display(self, obj):
         if obj.old_status:
@@ -80,7 +90,16 @@ class OrderStatusLogInline(admin.TabularInline):
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 1
+    max_num = 15  # حد أقصى 15 عنصر في الصفحة
     readonly_fields = ('total_price',)
+    
+    def get_queryset(self, request):
+        """تحسين استعلام العناصر"""
+        qs = super().get_queryset(request)
+        return qs.select_related('product', 'product__category', 'order').only(
+            'id', 'product_id', 'product__name', 'product__price', 'product__category__name',
+            'quantity', 'unit_price', 'discount_percentage', 'order_id', 'notes', 'item_type'
+        )
     
     def get_formset(self, request, obj=None, **kwargs):
         if obj is None:
@@ -154,7 +173,15 @@ class OrderAdminForm(forms.ModelForm):
 class PaymentInline(admin.TabularInline):
     model = Payment
     extra = 1
+    max_num = 10  # حد أقصى 10 دفعات
     readonly_fields = ('payment_date',)
+    
+    def get_queryset(self, request):
+        """تحسين استعلام الدفعات"""
+        qs = super().get_queryset(request)
+        return qs.select_related('order').only(
+            'id', 'order_id', 'amount', 'payment_method', 'payment_date', 'notes'
+        )
 
     def get_formset(self, request, obj=None, **kwargs):
         if obj is None:
@@ -164,7 +191,7 @@ class PaymentInline(admin.TabularInline):
         return super().get_formset(request, obj, **kwargs)
 
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     form = OrderAdminForm
     list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
     list_max_show_all = 50  # تقليل من 100 إلى 50
@@ -598,7 +625,7 @@ class OrderAdmin(admin.ModelAdmin):
             )
 
 @admin.register(DeliveryTimeSettings)
-class DeliveryTimeSettingsAdmin(admin.ModelAdmin):
+class DeliveryTimeSettingsAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة إعدادات مواعيد التسليم"""
     list_per_page = 50
     list_display = [
@@ -689,7 +716,7 @@ class DeliveryTimeSettingsAdmin(admin.ModelAdmin):
         OrderCache.invalidate_delivery_settings_cache()
 
 @admin.register(Payment)
-class PaymentAdmin(admin.ModelAdmin):
+class PaymentAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ('order', 'amount', 'payment_method', 'payment_date', 'reference_number')
     list_filter = ('payment_method', 'payment_date')
@@ -713,7 +740,7 @@ class PaymentAdmin(admin.ModelAdmin):
 from . import invoice_admin
 
 @admin.register(OrderStatusLog)
-class OrderStatusLogAdmin(admin.ModelAdmin):
+class OrderStatusLogAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ('order_link', 'old_status_display', 'new_status_display', 'changed_by', 'notes_truncated', 'created_at')
     list_filter = ('old_status', 'new_status', 'changed_by', 'created_at')
@@ -753,7 +780,7 @@ class OrderStatusLogAdmin(admin.ModelAdmin):
 
 
 @admin.register(OrderInvoiceImage)
-class OrderInvoiceImageAdmin(admin.ModelAdmin):
+class OrderInvoiceImageAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة صور الفاتورة"""
     list_display = ['id', 'order_link', 'image_preview', 'uploaded_at']
     list_filter = ['uploaded_at']

@@ -1,0 +1,19 @@
+{
+  "timestamp": "2025-12-04 01:45:47",
+  "issues_count": 3,
+  "issues": [
+    "⚠️ 9 ملف يستخدم CDN خارجي (بطء)",
+    "⚠️ عدد كبير من Context Processors: 11",
+    "⚠️ 95 نموذج بدون select_related/prefetch_related"
+  ],
+  "optimizations": [
+    "💡 أضف select_related/prefetch_related في get_queryset",
+    "💡 ضغط ملفات JS باستخدام terser",
+    "💡 تقسيم القوالب الكبيرة باستخدام {% include %}",
+    "💡 استخدم pagination للقوائم الكبيرة",
+    "💡 ضغط ملفات CSS باستخدام cssnano",
+    "💡 دمج Context Processors أو استخدم caching",
+    "💡 استضف المكتبات محلياً لتقليل الـ latency",
+    "💡 استخدم cache للـ sessions: SESSION_ENGINE = 'django.contrib.sessions.backends.cache'"
+  ]
+}

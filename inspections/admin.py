@@ -4,6 +4,7 @@ from django.utils.html import format_html
 from django.urls import reverse, path
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
+from core.admin_mixins import OptimizedAdminMixin
 from .models import (
     Inspection,
     InspectionEvaluation,
@@ -12,7 +13,7 @@ from .models import (
 )
 
 @admin.register(Inspection)
-class InspectionAdmin(admin.ModelAdmin):
+class InspectionAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_display = [
         'inspection_code',
         'customer',
@@ -288,7 +289,7 @@ class InspectionAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 @admin.register(InspectionEvaluation)
-class InspectionEvaluationAdmin(admin.ModelAdmin):
+class InspectionEvaluationAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_display = [
         'inspection',
         'criteria',
@@ -311,7 +312,7 @@ class InspectionEvaluationAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 @admin.register(InspectionReport)
-class InspectionReportAdmin(admin.ModelAdmin):
+class InspectionReportAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_display = [
         'title',
         'report_type',
@@ -357,7 +358,7 @@ class InspectionReportAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 @admin.register(InspectionNotification)
-class InspectionNotificationAdmin(admin.ModelAdmin):
+class InspectionNotificationAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_display = [
         'inspection',
         'type',

@@ -9,6 +9,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from core.admin_mixins import OptimizedAdminMixin
 
 from .models import (
     User, CompanyInfo, Branch, Department, Salesperson,
@@ -246,7 +247,7 @@ class CustomUserAdmin(UserAdmin):
 
 
 @admin.register(CompanyInfo)
-class CompanyInfoAdmin(admin.ModelAdmin):
+class CompanyInfoAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('name', 'phone', 'email', 'website')
     fieldsets = (
@@ -329,7 +330,7 @@ class CompanyInfoAdmin(admin.ModelAdmin):
         return super().change_view(request, object_id, form_url, extra_context)
 
 @admin.register(Branch)
-class BranchAdmin(admin.ModelAdmin):
+class BranchAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('code', 'name', 'phone', 'is_active')
     list_filter = ('is_active',)
@@ -339,7 +340,7 @@ class BranchAdmin(admin.ModelAdmin):
 
 
 @admin.register(Department)
-class DepartmentAdmin(admin.ModelAdmin):
+class DepartmentAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('name', 'code', 'department_type', 'is_active', 'is_core', 'parent', 'manager')
     list_filter = (DepartmentFilter, 'department_type', 'is_active', 'is_core', 'parent')
@@ -437,7 +438,7 @@ class DepartmentAdmin(admin.ModelAdmin):
     autocomplete_fields = ['parent', 'manager']
 
 @admin.register(Salesperson)
-class SalespersonAdmin(admin.ModelAdmin):
+class SalespersonAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('name', 'employee_number', 'branch', 'is_active')
     list_filter = (DepartmentFilter, 'is_active', 'branch')
@@ -465,7 +466,7 @@ class SalespersonAdmin(admin.ModelAdmin):
         return qs.none()
 
 # تسجيل نموذج Role في الإدارة ولكن بدون إظهاره في القائمة الرئيسية
-class RoleAdmin(admin.ModelAdmin):
+class RoleAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_display = ('name', 'description', 'is_system_role', 'created_at', 'get_users_count')
     list_filter = ('is_system_role', 'created_at')
     search_fields = ('name', 'description')
@@ -513,7 +514,7 @@ admin.site.register(Role, RoleAdmin)
 # لا نحتاج إلى تسجيل UserRole كنموذج منفصل لأنه متاح الآن من خلال صفحة المستخدم
 
 @admin.register(Permission)
-class PermissionAdmin(admin.ModelAdmin):
+class PermissionAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('name', 'codename', 'content_type')
     list_filter = ('content_type__app_label',)
@@ -536,7 +537,7 @@ class PermissionAdmin(admin.ModelAdmin):
 
 
 @admin.register(SystemSettings)
-class SystemSettingsAdmin(admin.ModelAdmin):
+class SystemSettingsAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('name', 'currency', 'version', 'max_draft_orders_per_user')
     readonly_fields = ('created_at', 'updated_at')
@@ -578,7 +579,7 @@ class SystemSettingsAdmin(admin.ModelAdmin):
         return request.user.is_staff
 
 @admin.register(BranchMessage)
-class BranchMessageAdmin(admin.ModelAdmin):
+class BranchMessageAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ('title', 'branch', 'is_for_all_branches', 'message_type', 'display_style', 'display_duration', 'is_active', 'start_date', 'end_date', 'color_preview', 'icon_preview')
     list_filter = ('branch', 'is_for_all_branches', 'message_type', 'display_style', 'is_active', 'display_duration')
@@ -687,7 +688,7 @@ class BranchMessageAdmin(admin.ModelAdmin):
 
 
 @admin.register(YearFilterExemption)
-class YearFilterExemptionAdmin(admin.ModelAdmin):
+class YearFilterExemptionAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة استثناءات فلتر السنة للأقسام"""
     list_display = ['section', 'get_section_display', 'is_exempt', 'description', 'updated_at']
     list_filter = ['is_exempt', 'section']
@@ -721,7 +722,7 @@ class YearFilterExemptionAdmin(admin.ModelAdmin):
 
 
 @admin.register(DashboardYearSettings)
-class DashboardYearSettingsAdmin(admin.ModelAdmin):
+class DashboardYearSettingsAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة إعدادات السنوات في داش بورد الإدارة"""
     list_display = ('year', 'is_active', 'is_default', 'description')
     list_filter = ('is_active', 'is_default')
@@ -760,7 +761,7 @@ class DashboardYearSettingsAdmin(admin.ModelAdmin):
 
 
 @admin.register(InternalMessage)
-class InternalMessageAdmin(admin.ModelAdmin):
+class InternalMessageAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة الرسائل الداخلية"""
     list_display = ('subject', 'sender', 'recipient', 'is_read', 'is_important', 'created_at', 'read_status_badge')
     list_filter = ('is_read', 'is_important', 'created_at', 'sender', 'recipient')

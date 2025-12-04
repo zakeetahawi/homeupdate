@@ -265,18 +265,23 @@ class Database(models.Model):
         try:
             from django.contrib.auth import get_user_model
             from django.db import connections
+            import secrets
+            import os
             User = get_user_model()
             # التحقق من وجود مستخدمين
             if User.objects.count() == 0:
+                # 🔒 إنشاء كلمة سر عشوائية آمنة
+                default_password = os.environ.get('DEFAULT_ADMIN_PASSWORD', secrets.token_urlsafe(16))
                 # إنشاء مستخدم افتراضي
                 User.objects.create_superuser(
                     username='admin',
                     email='admin@example.com',
-                    password='admin',
+                    password=default_password,
                     first_name='مدير',
                     last_name='النظام'
                 )
-                print("تم إنشاء مستخدم افتراضي (admin/admin)")
+                print(f"تم إنشاء مستخدم افتراضي (admin/{default_password})")
+                print("⚠️ احفظ كلمة السر وغيّرها فوراً!")
                 return True
             return False
         except Exception as e:

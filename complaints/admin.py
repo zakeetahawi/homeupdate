@@ -5,6 +5,7 @@ from django.utils.safestring import mark_safe
 from django.db.models import Count, Q
 from django.db import models
 from django.utils import timezone
+from core.admin_mixins import OptimizedAdminMixin
 from accounts.models import Department
 from .models import (
     ComplaintType, Complaint, ComplaintUpdate, ComplaintAttachment,
@@ -16,7 +17,7 @@ from .models import (
 
 
 @admin.register(ComplaintType)
-class ComplaintTypeAdmin(admin.ModelAdmin):
+class ComplaintTypeAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'name', 'default_priority', 'default_deadline_hours',
@@ -47,7 +48,7 @@ class ComplaintTypeAdmin(admin.ModelAdmin):
 
 
 @admin.register(ComplaintUserPermissions)
-class ComplaintUserPermissionsAdmin(admin.ModelAdmin):
+class ComplaintUserPermissionsAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_display = [
         'user', 'permissions_summary', 'current_assigned_count',
         'max_assigned_complaints', 'is_active'
@@ -332,7 +333,7 @@ class ComplaintAttachmentInline(admin.TabularInline):
 
 
 @admin.register(Complaint)
-class ComplaintAdmin(admin.ModelAdmin):
+class ComplaintAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 25  # تقليل العدد لتحسين الأداء
     list_max_show_all = 100  # حد أقصى للعرض الكامل
     list_display = [
@@ -595,7 +596,7 @@ class ComplaintAdmin(admin.ModelAdmin):
 
 
 @admin.register(ComplaintUpdate)
-class ComplaintUpdateAdmin(admin.ModelAdmin):
+class ComplaintUpdateAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'complaint', 'update_type', 'title', 'created_by',
@@ -648,7 +649,7 @@ class ComplaintUpdateAdmin(admin.ModelAdmin):
 
 
 @admin.register(ComplaintAttachment)
-class ComplaintAttachmentAdmin(admin.ModelAdmin):
+class ComplaintAttachmentAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'complaint', 'filename', 'file_size_display',
@@ -674,7 +675,7 @@ class ComplaintAttachmentAdmin(admin.ModelAdmin):
 
 
 @admin.register(ComplaintEscalation)
-class ComplaintEscalationAdmin(admin.ModelAdmin):
+class ComplaintEscalationAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'complaint', 'reason', 'escalated_from', 'escalated_to',
@@ -691,7 +692,7 @@ class ComplaintEscalationAdmin(admin.ModelAdmin):
 
 
 @admin.register(ComplaintSLA)
-class ComplaintSLAAdmin(admin.ModelAdmin):
+class ComplaintSLAAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'complaint_type', 'response_time_hours', 'resolution_time_hours',
@@ -706,7 +707,7 @@ class ComplaintSLAAdmin(admin.ModelAdmin):
 
 
 @admin.register(ResolutionMethod)
-class ResolutionMethodAdmin(admin.ModelAdmin):
+class ResolutionMethodAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة طرق حل الشكاوى"""
     list_display = ['name', 'description', 'is_active', 'order', 'created_at']
     list_filter = ['is_active', 'created_at']
@@ -727,7 +728,7 @@ class ResolutionMethodAdmin(admin.ModelAdmin):
 
 
 @admin.register(ComplaintTemplate)
-class ComplaintTemplateAdmin(admin.ModelAdmin):
+class ComplaintTemplateAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة قوالب الشكاوى"""
     list_display = ['name', 'complaint_type', 'priority', 'is_active', 'created_at']
     list_filter = ['complaint_type', 'priority', 'is_active', 'created_at']

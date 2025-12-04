@@ -5,6 +5,7 @@
 from django.contrib import admin
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from core.admin_mixins import OptimizedAdminMixin
 from .models import Database, GoogleDriveConfig
 from .google_sync import GoogleSyncConfig, GoogleSyncLog
 from .google_sync_advanced import (
@@ -12,7 +13,7 @@ from .google_sync_advanced import (
 )
 
 @admin.register(Database)
-class DatabaseAdmin(admin.ModelAdmin):
+class DatabaseAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة قواعد البيانات"""
     list_display = ('name', 'db_type', 'is_active', 'created_at')
     list_filter = ('db_type', 'is_active')
@@ -35,7 +36,7 @@ class DatabaseAdmin(admin.ModelAdmin):
 # تم حذف BackupAdmin - استخدم backup_system بدلاً من ذلك
 
 @admin.register(GoogleDriveConfig)
-class GoogleDriveConfigAdmin(admin.ModelAdmin):
+class GoogleDriveConfigAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة إعدادات Google Drive"""
     list_display = ('name', 'is_active', 'total_uploads', 'last_upload')
     list_filter = ('is_active', 'last_upload')
@@ -72,7 +73,7 @@ class GoogleDriveConfigAdmin(admin.ModelAdmin):
     )
 
 @admin.register(GoogleSyncConfig)
-class GoogleSyncConfigAdmin(admin.ModelAdmin):
+class GoogleSyncConfigAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة إعدادات مزامنة غوغل"""
     list_display = ('name', 'is_active', 'last_sync', 'sync_frequency', 'created_at')
     list_filter = ('is_active', 'created_at')
@@ -93,7 +94,7 @@ class GoogleSyncConfigAdmin(admin.ModelAdmin):
     )
 
 @admin.register(GoogleSheetMapping)
-class GoogleSheetMappingAdmin(admin.ModelAdmin):
+class GoogleSheetMappingAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة تعيينات أوراق جوجل"""
     list_display = ('name', 'spreadsheet_id', 'sheet_name', 'is_active', 'created_at')
     list_filter = ('is_active', 'created_at')
@@ -117,7 +118,7 @@ class GoogleSheetMappingAdmin(admin.ModelAdmin):
     list_per_page = 20
 
 @admin.register(GoogleSyncTask)
-class GoogleSyncTaskAdmin(admin.ModelAdmin):
+class GoogleSyncTaskAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة مهام المزامنة"""
     list_display = ('mapping', 'task_type', 'status', 'started_at', 'completed_at', 'created_by')
     list_filter = ('status', 'task_type', 'started_at', 'completed_at')
@@ -158,7 +159,7 @@ class GoogleSyncTaskAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 @admin.register(GoogleSyncConflict)
-class GoogleSyncConflictAdmin(admin.ModelAdmin):
+class GoogleSyncConflictAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة تعارضات المزامنة"""
     list_display = ('task', 'conflict_type', 'row_number', 'resolution_status', 'created_at')
     list_filter = ('resolution_status', 'conflict_type', 'created_at')
@@ -193,7 +194,7 @@ class GoogleSyncConflictAdmin(admin.ModelAdmin):
     mark_as_ignored.short_description = 'تجاهل التعارضات المحددة'
 
 @admin.register(GoogleSyncSchedule)
-class GoogleSyncScheduleAdmin(admin.ModelAdmin):
+class GoogleSyncScheduleAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة جدولة المزامنة"""
     list_display = ('name', 'mapping', 'is_active', 'frequency', 'next_run', 'last_run', 'get_success_rate')
     list_filter = ('is_active', 'frequency', 'task_type')
@@ -234,7 +235,7 @@ class GoogleSyncScheduleAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 @admin.register(GoogleSyncLog)
-class GoogleSyncLogAdmin(admin.ModelAdmin):
+class GoogleSyncLogAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة سجلات مزامنة غوغل"""
     list_display = ('config', 'status', 'message', 'created_at')
     list_filter = ('status', 'created_at', 'config')

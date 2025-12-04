@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from core.admin_mixins import OptimizedAdminMixin
 from .models import CuttingOrder, CuttingOrderItem, CuttingReport
 
 
@@ -22,7 +23,7 @@ class CuttingOrderItemInline(admin.TabularInline):
 
 
 @admin.register(CuttingOrder)
-class CuttingOrderAdmin(admin.ModelAdmin):
+class CuttingOrderAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_display = [
         'cutting_code', 'order_link', 'customer_name', 'warehouse', 
         'status_badge', 'completion_progress', 'created_at', 'assigned_to'
@@ -113,7 +114,7 @@ class CuttingOrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(CuttingOrderItem)
-class CuttingOrderItemAdmin(admin.ModelAdmin):
+class CuttingOrderItemAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_display = [
         'cutting_order_code', 'product_name', 'quantity_display',
         'status_badge', 'cutter_name', 'permit_number', 'receiver_name',
@@ -202,7 +203,7 @@ class CuttingOrderItemAdmin(admin.ModelAdmin):
 
 
 @admin.register(CuttingReport)
-class CuttingReportAdmin(admin.ModelAdmin):
+class CuttingReportAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_display = [
         'report_type', 'warehouse', 'date_range', 'total_orders',
         'completed_items', 'rejected_items', 'pending_items', 'generated_at'

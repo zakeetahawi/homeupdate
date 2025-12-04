@@ -9,6 +9,7 @@ from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_http_methods
 from django.contrib.admin.views.decorators import staff_member_required
 from django import forms
+from core.admin_mixins import OptimizedAdminMixin
 
 from .models import (
     ManufacturingOrder, ManufacturingOrderItem, ProductionLine, ManufacturingDisplaySettings,
@@ -50,6 +51,7 @@ class ProductionLineForm(forms.ModelForm):
 class ManufacturingOrderItemInline(admin.TabularInline):
     model = ManufacturingOrderItem
     extra = 0
+    max_num = 20  # حد أقصى 20 عنصر في الصفحة
     fields = (
         'product_name', 
         'quantity', 
@@ -62,6 +64,15 @@ class ManufacturingOrderItemInline(admin.TabularInline):
         'fabric_received_date'
     )
     readonly_fields = ('status', 'fabric_received_date', 'fabric_received')
+    
+    def get_queryset(self, request):
+        """تحسين استعلام العناصر"""
+        qs = super().get_queryset(request)
+        return qs.select_related('manufacturing_order', 'order_item').only(
+            'id', 'product_name', 'quantity', 'specifications', 'status',
+            'fabric_received', 'bag_number', 'receiver_name', 'permit_number',
+            'fabric_received_date', 'manufacturing_order_id', 'order_item_id'
+        )
     
     def get_formset(self, request, obj=None, **kwargs):
         formset = super().get_formset(request, obj, **kwargs)
@@ -77,19 +88,22 @@ class ManufacturingOrderItemInline(admin.TabularInline):
 
 
 @admin.register(ManufacturingOrder)
-class ManufacturingOrderAdmin(admin.ModelAdmin):
+class ManufacturingOrderAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 15  # تقليل من 25 إلى 15 لتحسين الأداء
     list_max_show_all = 50  # تقليل من 100 إلى 50
     show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
 
     def get_queryset(self, request):
         """تحسين الاستعلامات لتقليل N+1 queries"""
-        return super().get_queryset(request).select_related(
+        qs = super().get_queryset(request)
+        return qs.select_related(
             'order__customer',
             'order__branch',
             'production_line',
             'created_by'
-        ).with_items_count().only(
+        ).prefetch_related(
+            'items'  # تحميل العناصر مسبقاً
+        ).only(
             'id', 'manufacturing_code', 'status', 'created_at',
             'expected_delivery_date', 'completion_date',
             'order__id', 'order__order_number', 'order__contract_number',
@@ -632,7 +646,7 @@ class ManufacturingOrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(ManufacturingOrderItem)
-class ManufacturingOrderItemAdmin(admin.ModelAdmin):
+class ManufacturingOrderItemAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = (
         'manufacturing_order',
@@ -706,7 +720,7 @@ class ManufacturingOrderItemAdmin(admin.ModelAdmin):
 
 
 @admin.register(ProductionLine)
-class ProductionLineAdmin(admin.ModelAdmin):
+class ProductionLineAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة خطوط الإنتاج"""
 
     form = ProductionLineForm
@@ -841,7 +855,7 @@ class ManufacturingDisplaySettingsForm(forms.ModelForm):
 
 
 @admin.register(ManufacturingDisplaySettings)
-class ManufacturingDisplaySettingsAdmin(admin.ModelAdmin):
+class ManufacturingDisplaySettingsAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة إعدادات عرض طلبات التصنيع"""
 
     form = ManufacturingDisplaySettingsForm
@@ -953,7 +967,7 @@ class FabricReceiptItemInline(admin.TabularInline):
 
 
 @admin.register(FabricReceipt)
-class FabricReceiptAdmin(admin.ModelAdmin):
+class FabricReceiptAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة استلام الأقمشة"""
     list_display = ['receipt_code', 'customer_name', 'order_number', 'bag_number', 'receipt_type', 'receipt_date', 'received_by']
     list_filter = ['receipt_type', 'receipt_date', 'received_by']
@@ -987,7 +1001,7 @@ class FabricReceiptAdmin(admin.ModelAdmin):
 
 
 @admin.register(FabricReceiptItem)
-class FabricReceiptItemAdmin(admin.ModelAdmin):
+class FabricReceiptItemAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة عناصر استلام الأقمشة"""
     list_display = ['fabric_receipt', 'product_name', 'quantity_received', 'order_item', 'cutting_item']
     list_filter = ['fabric_receipt__receipt_type', 'fabric_receipt__receipt_date']
@@ -996,7 +1010,7 @@ class FabricReceiptItemAdmin(admin.ModelAdmin):
 
 
 @admin.register(ManufacturingSettings)
-class ManufacturingSettingsAdmin(admin.ModelAdmin):
+class ManufacturingSettingsAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة إعدادات نظام التصنيع"""
 
     fieldsets = (
@@ -1039,7 +1053,7 @@ class ManufacturingSettingsAdmin(admin.ModelAdmin):
 
 
 @admin.register(ManufacturingStatusLog)
-class ManufacturingStatusLogAdmin(admin.ModelAdmin):
+class ManufacturingStatusLogAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """
     إدارة سجلات حالات التصنيع
     Manufacturing Status Log Admin

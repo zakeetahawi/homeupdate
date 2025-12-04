@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
+from core.admin_mixins import OptimizedAdminMixin
 from .models import (
     Category, Product, StockTransaction, Supplier, PurchaseOrder, PurchaseOrderItem,
     Warehouse, WarehouseLocation, ProductBatch, InventoryAdjustment, StockAlert,
@@ -9,14 +10,14 @@ from .models import (
 )
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ('name', 'parent')
     list_filter = ('parent',)
     search_fields = ('name', 'description')
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
     show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
     list_display = ('name', 'code', 'category', 'price', 'get_current_stock', 'get_stock_status')
@@ -71,7 +72,7 @@ class ProductAdmin(admin.ModelAdmin):
         )
 
 @admin.register(StockTransaction)
-class StockTransactionAdmin(admin.ModelAdmin):
+class StockTransactionAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ('product', 'transaction_type', 'reason', 'quantity', 'date')
     list_filter = ('transaction_type', 'reason', 'date')
@@ -97,13 +98,13 @@ class StockTransactionAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 @admin.register(Supplier)
-class SupplierAdmin(admin.ModelAdmin):
+class SupplierAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ('name', 'contact_person', 'phone', 'email')
     search_fields = ('name', 'contact_person', 'phone', 'email', 'address')
 
 @admin.register(PurchaseOrder)
-class PurchaseOrderAdmin(admin.ModelAdmin):
+class PurchaseOrderAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ('order_number', 'supplier', 'status', 'order_date', 'total_amount')
     list_filter = ('status', 'order_date')
@@ -135,28 +136,28 @@ class PurchaseOrderAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 @admin.register(PurchaseOrderItem)
-class PurchaseOrderItemAdmin(admin.ModelAdmin):
+class PurchaseOrderItemAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ('purchase_order', 'product', 'quantity', 'unit_price', 'received_quantity')
     list_filter = ('purchase_order__status',)
     search_fields = ('purchase_order__order_number', 'product__name')
 
 @admin.register(Warehouse)
-class WarehouseAdmin(admin.ModelAdmin):
+class WarehouseAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ('name', 'code', 'branch', 'manager', 'is_active')
     list_filter = ('branch', 'is_active')
     search_fields = ('name', 'code', 'address')
 
 @admin.register(WarehouseLocation)
-class WarehouseLocationAdmin(admin.ModelAdmin):
+class WarehouseLocationAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ('name', 'code', 'warehouse')
     list_filter = ('warehouse',)
     search_fields = ('name', 'code', 'description')
 
 @admin.register(ProductBatch)
-class ProductBatchAdmin(admin.ModelAdmin):
+class ProductBatchAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ('product', 'batch_number', 'location', 'quantity', 'expiry_date')
     list_filter = ('location__warehouse', 'manufacturing_date', 'expiry_date')
@@ -164,7 +165,7 @@ class ProductBatchAdmin(admin.ModelAdmin):
     readonly_fields = ('barcode', 'created_at')
 
 @admin.register(InventoryAdjustment)
-class InventoryAdjustmentAdmin(admin.ModelAdmin):
+class InventoryAdjustmentAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ('product', 'adjustment_type', 'quantity_before', 'quantity_after', 'date')
     list_filter = ('adjustment_type', 'date')
@@ -172,7 +173,7 @@ class InventoryAdjustmentAdmin(admin.ModelAdmin):
     readonly_fields = ('date', 'created_by')
 
 @admin.register(StockAlert)
-class StockAlertAdmin(admin.ModelAdmin):
+class StockAlertAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ('product', 'alert_type', 'status', 'created_at')
     list_filter = ('alert_type', 'status', 'created_at')
@@ -189,7 +190,7 @@ class StockTransferItemInline(admin.TabularInline):
 
 
 @admin.register(StockTransfer)
-class StockTransferAdmin(admin.ModelAdmin):
+class StockTransferAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة التحويلات المخزنية"""
     list_per_page = 50
     list_display = [
@@ -241,7 +242,7 @@ class StockTransferAdmin(admin.ModelAdmin):
 
 
 @admin.register(StockTransferItem)
-class StockTransferItemAdmin(admin.ModelAdmin):
+class StockTransferItemAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة عناصر التحويل المخزني"""
     list_per_page = 50
     list_display = [
@@ -268,7 +269,7 @@ class BulkUploadErrorInline(admin.TabularInline):
 
 
 @admin.register(BulkUploadLog)
-class BulkUploadLogAdmin(admin.ModelAdmin):
+class BulkUploadLogAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة سجلات الرفع الجماعي"""
     list_per_page = 50
     list_display = [
@@ -329,7 +330,7 @@ class BulkUploadLogAdmin(admin.ModelAdmin):
 
 
 @admin.register(BulkUploadError)
-class BulkUploadErrorAdmin(admin.ModelAdmin):
+class BulkUploadErrorAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة أخطاء الرفع الجماعي"""
     list_per_page = 100
     list_display = [

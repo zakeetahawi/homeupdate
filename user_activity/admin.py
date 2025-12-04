@@ -11,10 +11,11 @@ from django.utils import timezone
 from datetime import timedelta
 
 from .models import UserSession, UserActivityLog, OnlineUser, UserLoginHistory
+from core.admin_mixins import OptimizedAdminMixin
 
 
 @admin.register(OnlineUser)
-class OnlineUserAdmin(admin.ModelAdmin):
+class OnlineUserAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة المستخدمين المتصلين"""
     list_display = [
         'user', 'last_seen', 'current_page_title', 'online_duration_display',
@@ -43,7 +44,7 @@ class OnlineUserAdmin(admin.ModelAdmin):
 
 
 @admin.register(UserActivityLog)
-class UserActivityLogAdmin(admin.ModelAdmin):
+class UserActivityLogAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة سجلات نشاط المستخدمين"""
     list_display = [
         'user', 'action_type_display', 'entity_type', 'description_short',
@@ -65,6 +66,21 @@ class UserActivityLogAdmin(admin.ModelAdmin):
     date_hierarchy = 'timestamp'
     ordering = ['-timestamp']
     list_per_page = 50
+    list_max_show_all = 200
+    
+    def get_queryset(self, request):
+        """تحسين استعلام السجلات - جلب آخر 30 يوم فقط"""
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        qs = super().get_queryset(request)
+        # جلب آخر 30 يوم فقط للأداء
+        cutoff_date = timezone.now() - timedelta(days=30)
+        return qs.filter(timestamp__gte=cutoff_date).select_related('user', 'session').only(
+            'id', 'user_id', 'action_type', 'entity_type', 'description',
+            'timestamp', 'success', 'ip_address', 'user__username',
+            'session_id'
+        )
 
     def action_type_display(self, obj):
         """عرض نوع العملية مع الأيقونة"""
@@ -91,7 +107,7 @@ class UserActivityLogAdmin(admin.ModelAdmin):
 
 
 @admin.register(UserSession)
-class UserSessionAdmin(admin.ModelAdmin):
+class UserSessionAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة جلسات المستخدمين"""
     list_display = [
         'user', 'ip_address', 'device_type', 'browser',
@@ -130,7 +146,7 @@ class UserSessionAdmin(admin.ModelAdmin):
 
 
 @admin.register(UserLoginHistory)
-class UserLoginHistoryAdmin(admin.ModelAdmin):
+class UserLoginHistoryAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة سجلات تسجيل الدخول"""
     list_display = [
         'user_display', 'login_time', 'logout_time', 'session_duration_display',

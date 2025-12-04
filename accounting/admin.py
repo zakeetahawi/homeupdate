@@ -7,6 +7,7 @@ from .models import (
     CustomerAdvance, AdvanceUsage, CustomerFinancialSummary,
     AccountingSettings
 )
+from core.admin_mixins import OptimizedAdminMixin
 
 
 # ============================================
@@ -57,7 +58,7 @@ class AccountChildInline(admin.TabularInline):
 # ============================================
 
 @admin.register(AccountType)
-class AccountTypeAdmin(admin.ModelAdmin):
+class AccountTypeAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """
     إدارة أنواع الحسابات
     """
@@ -84,7 +85,7 @@ class AccountTypeAdmin(admin.ModelAdmin):
 
 
 @admin.register(Account)
-class AccountAdmin(admin.ModelAdmin):
+class AccountAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """
     إدارة الحسابات - شجرة الحسابات
     """
@@ -166,7 +167,7 @@ class AccountAdmin(admin.ModelAdmin):
 
 
 @admin.register(Transaction)
-class TransactionAdmin(admin.ModelAdmin):
+class TransactionAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """
     إدارة القيود المحاسبية
     """
@@ -262,7 +263,7 @@ class TransactionAdmin(admin.ModelAdmin):
 
 
 @admin.register(TransactionLine)
-class TransactionLineAdmin(admin.ModelAdmin):
+class TransactionLineAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """
     إدارة سطور القيود
     """
@@ -297,7 +298,7 @@ class TransactionLineAdmin(admin.ModelAdmin):
 
 
 @admin.register(CustomerAdvance)
-class CustomerAdvanceAdmin(admin.ModelAdmin):
+class CustomerAdvanceAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """
     إدارة سلف العملاء
     """
@@ -386,7 +387,7 @@ class CustomerAdvanceAdmin(admin.ModelAdmin):
 
 
 @admin.register(AdvanceUsage)
-class AdvanceUsageAdmin(admin.ModelAdmin):
+class AdvanceUsageAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """
     إدارة استخدامات السلف
     """
@@ -421,7 +422,7 @@ class AdvanceUsageAdmin(admin.ModelAdmin):
 
 
 @admin.register(CustomerFinancialSummary)
-class CustomerFinancialSummaryAdmin(admin.ModelAdmin):
+class CustomerFinancialSummaryAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """
     إدارة الملخص المالي للعملاء
     """
@@ -520,7 +521,7 @@ class CustomerFinancialSummaryAdmin(admin.ModelAdmin):
 
 
 @admin.register(AccountingSettings)
-class AccountingSettingsAdmin(admin.ModelAdmin):
+class AccountingSettingsAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """
     إعدادات النظام المحاسبي
     """

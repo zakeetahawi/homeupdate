@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
+from core.admin_mixins import OptimizedAdminMixin
 
 from .models import Notification, NotificationVisibility, NotificationSettings
 
@@ -21,7 +22,7 @@ class NotificationVisibilityInline(admin.TabularInline):
 
 
 @admin.register(Notification)
-class NotificationAdmin(admin.ModelAdmin):
+class NotificationAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة الإشعارات"""
 
     list_display = [
@@ -159,7 +160,7 @@ class NotificationAdmin(admin.ModelAdmin):
 
 
 @admin.register(NotificationVisibility)
-class NotificationVisibilityAdmin(admin.ModelAdmin):
+class NotificationVisibilityAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة رؤية الإشعارات"""
 
     list_display = [
@@ -220,7 +221,7 @@ class NotificationVisibilityAdmin(admin.ModelAdmin):
 
 
 @admin.register(NotificationSettings)
-class NotificationSettingsAdmin(admin.ModelAdmin):
+class NotificationSettingsAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة إعدادات الإشعارات"""
 
     list_display = [

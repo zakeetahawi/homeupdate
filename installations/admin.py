@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from accounts.models import SystemSettings
+from core.admin_mixins import OptimizedAdminMixin
 from . import admin_filters
 
 from .models import (
@@ -118,7 +119,7 @@ def currency_format(amount):
 
 
 @admin.register(CustomerDebt)
-class CustomerDebtAdmin(admin.ModelAdmin):
+class CustomerDebtAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = [
         'customer_name', 'order_number', 'branch_name', 'salesperson_name',
@@ -512,7 +513,7 @@ class CustomerDebtAdmin(admin.ModelAdmin):
 
 
 @admin.register(Technician)
-class TechnicianAdmin(admin.ModelAdmin):
+class TechnicianAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['name', 'phone', 'specialization', 'is_active', 'created_at']
     list_filter = ['is_active', 'specialization', 'created_at']
@@ -522,7 +523,7 @@ class TechnicianAdmin(admin.ModelAdmin):
 
 
 @admin.register(Driver)
-class DriverAdmin(admin.ModelAdmin):
+class DriverAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['name', 'phone', 'license_number', 'vehicle_number', 'is_active', 'created_at']
     list_filter = ['is_active', 'created_at']
@@ -532,7 +533,7 @@ class DriverAdmin(admin.ModelAdmin):
 
 
 @admin.register(InstallationTeam)
-class InstallationTeamAdmin(admin.ModelAdmin):
+class InstallationTeamAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['name', 'driver', 'technicians_count', 'is_active', 'created_at']
     list_filter = ['is_active', 'created_at']
@@ -547,7 +548,7 @@ class InstallationTeamAdmin(admin.ModelAdmin):
 
 
 @admin.register(InstallationSchedule)
-class InstallationScheduleAdmin(admin.ModelAdmin):
+class InstallationScheduleAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'installation_code', 'customer_name', 'scheduled_date', 'scheduled_time',
@@ -722,7 +723,7 @@ class InstallationScheduleAdmin(admin.ModelAdmin):
 
 
 @admin.register(ModificationRequest)
-class ModificationRequestAdmin(admin.ModelAdmin):
+class ModificationRequestAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['installation', 'customer', 'modification_type', 'priority', 'estimated_cost_formatted', 'customer_approval', 'created_at']
     list_filter = ['priority', 'customer_approval', 'created_at']
@@ -736,7 +737,7 @@ class ModificationRequestAdmin(admin.ModelAdmin):
 
 
 @admin.register(ModificationImage)
-class ModificationImageAdmin(admin.ModelAdmin):
+class ModificationImageAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['modification', 'image_preview', 'description', 'uploaded_at']
     list_filter = ['uploaded_at']
@@ -755,7 +756,7 @@ class ModificationImageAdmin(admin.ModelAdmin):
 
 # إنشاء admin مخصص لأوامر التصنيع في قسم التركيبات
 # سيتم تسجيله يدوياً في نهاية الملف لتجنب التكرار
-class InstallationManufacturingOrderAdmin(admin.ModelAdmin):
+class InstallationManufacturingOrderAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = [
         'manufacturing_code', 'order_number', 'customer_name', 'order_type_display', 
@@ -1153,7 +1154,7 @@ class InstallationManufacturingOrderAdmin(admin.ModelAdmin):
 
 # إزالة تسجيل نموذج أوامر التعديل - سنستخدم admin مخصص لـ manufacturing.models.ManufacturingOrder
 # @admin.register(InstallationManufacturingOrder)
-class ModificationManufacturingOrderAdmin(admin.ModelAdmin):
+class ModificationManufacturingOrderAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         'order_number', 'customer_name', 'order_type', 'status', 
@@ -1272,7 +1273,7 @@ class ModificationManufacturingOrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(ModificationReport)
-class ModificationReportAdmin(admin.ModelAdmin):
+class ModificationReportAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['modification_request', 'manufacturing_order', 'created_by', 'created_at']
     list_filter = ['created_at', 'created_by']
@@ -1281,7 +1282,7 @@ class ModificationReportAdmin(admin.ModelAdmin):
 
 
 @admin.register(ReceiptMemo)
-class ReceiptMemoAdmin(admin.ModelAdmin):
+class ReceiptMemoAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['installation', 'receipt_image_preview', 'customer_signature', 'amount_received_formatted', 'created_at']
     list_filter = ['customer_signature', 'created_at']
@@ -1303,7 +1304,7 @@ class ReceiptMemoAdmin(admin.ModelAdmin):
 
 
 @admin.register(InstallationPayment)
-class InstallationPaymentAdmin(admin.ModelAdmin):
+class InstallationPaymentAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['installation', 'payment_type', 'amount_formatted', 'payment_method', 'created_at']
     list_filter = ['payment_type', 'payment_method', 'created_at']
@@ -1316,7 +1317,7 @@ class InstallationPaymentAdmin(admin.ModelAdmin):
 
 
 @admin.register(InstallationArchive)
-class InstallationArchiveAdmin(admin.ModelAdmin):
+class InstallationArchiveAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['installation', 'completion_date', 'archived_by_display', 'archive_notes_short']
     list_filter = ['completion_date', 'archived_by']
@@ -1345,7 +1346,7 @@ class InstallationArchiveAdmin(admin.ModelAdmin):
 
 
 @admin.register(InstallationStatusLog)
-class InstallationStatusLogAdmin(admin.ModelAdmin):
+class InstallationStatusLogAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة سجل تغيير حالات التركيبات"""
     list_per_page = 50
     list_display = ['installation', 'old_status_display', 'new_status_display', 'changed_by_display', 'created_at', 'reason_short']
@@ -1387,7 +1388,7 @@ class InstallationStatusLogAdmin(admin.ModelAdmin):
 
 
 @admin.register(InstallationEventLog)
-class InstallationEventLogAdmin(admin.ModelAdmin):
+class InstallationEventLogAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     """إدارة سجل أحداث التركيبات"""
     list_per_page = 50
     list_display = ['installation', 'event_type_display', 'description_short', 'user_display', 'created_at']
@@ -1423,7 +1424,7 @@ class InstallationEventLogAdmin(admin.ModelAdmin):
 
 
 @admin.register(InstallationAnalytics)
-class InstallationAnalyticsAdmin(admin.ModelAdmin):
+class InstallationAnalyticsAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['month', 'total_installations', 'completed_installations', 'total_customers', 
                    'total_modifications', 'completion_rate', 'modification_rate']
@@ -1437,7 +1438,7 @@ class InstallationAnalyticsAdmin(admin.ModelAdmin):
 
 
 @admin.register(ModificationErrorAnalysis)
-class ModificationErrorAnalysisAdmin(admin.ModelAdmin):
+class ModificationErrorAnalysisAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['modification_request', 'error_type', 'cost_impact_formatted', 'time_impact_hours', 'created_at']
     list_filter = ['error_type', 'created_at']
@@ -1450,7 +1451,7 @@ class ModificationErrorAnalysisAdmin(admin.ModelAdmin):
 
 
 @admin.register(ModificationErrorType)
-class ModificationErrorTypeAdmin(admin.ModelAdmin):
+class ModificationErrorTypeAdmin(OptimizedAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ['name', 'description', 'is_active', 'created_at']
     list_filter = ['is_active', 'created_at']
