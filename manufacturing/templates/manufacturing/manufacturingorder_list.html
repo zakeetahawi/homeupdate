@@ -16,8 +16,8 @@
 <link rel="stylesheet" href="{% static 'manufacturing/css/dropdown-fix.css' %}">
 <meta name="csrf-token" content="{{ csrf_token }}">
 <style>
-/* استخدام متغيرات الألوان من النظام */
-.container {
+/* استخدام متغيرات الألوان من النظام - تطبيق فقط على محتوى الصفحة */
+#manufacturing-content .container {
     max-width: 100%;
     padding: 1rem;
 }
@@ -1016,7 +1016,7 @@ body:not(.modal-open) .modal-backdrop {
 
 {% block content %}
 {% csrf_token %}
-<div class="container-fluid">
+<div id="manufacturing-content" class="container-fluid">
     <!-- ملاحظة توضيحية -->
 
 
