@@ -535,7 +535,19 @@ class ContractCurtain(models.Model):
         verbose_name = 'ستارة في العقد'
         verbose_name_plural = 'ستائر في العقد'
         ordering = ['order', 'sequence']
-        unique_together = ['order', 'sequence']
+        # استخدام constraints بدلاً من unique_together لدعم NULL values
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'sequence'],
+                condition=models.Q(order__isnull=False),
+                name='unique_order_sequence'
+            ),
+            models.UniqueConstraint(
+                fields=['draft_order', 'sequence'],
+                condition=models.Q(draft_order__isnull=False),
+                name='unique_draft_order_sequence'
+            )
+        ]
 
     def __str__(self):
         return f'{self.room_name} - {self.order.order_number}'
