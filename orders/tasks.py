@@ -246,5 +246,71 @@ def clear_expired_cache():
         return {'success': False, 'message': str(e)}
 
 
-# تم حذف generate_contract_async - يرجى استخدام نظام الويزارد لإنشاء العقود
+@shared_task(bind=True, max_retries=2, default_retry_delay=10)
+def generate_contract_pdf_async(self, order_id, user_id=None):
+    """
+    ⚡ مهمة خلفية لتوليد ملف PDF للعقد - سريعة ولا تعطل إنشاء الطلب
+    
+    Args:
+        order_id: معرف الطلب
+        user_id: معرف المستخدم (اختياري)
+    
+    Returns:
+        dict: حالة النجاح ورسالة
+    """
+    try:
+        from .models import Order
+        from .services.contract_generation_service import ContractGenerationService
+        from django.contrib.auth import get_user_model
+        import time
+        
+        User = get_user_model()
+        start_time = time.time()
+        
+        # الحصول على الطلب
+        order = Order.objects.get(pk=order_id)
+        
+        # الحصول على المستخدم إن وجد
+        user = None
+        if user_id:
+            try:
+                user = User.objects.get(pk=user_id)
+            except User.DoesNotExist:
+                user = None
+        
+        # توليد العقد
+        contract_service = ContractGenerationService(order)
+        contract_saved = contract_service.save_contract_to_order(user=user)
+        
+        elapsed = time.time() - start_time
+        
+        if contract_saved:
+            logger.info(f"✅ Contract PDF generated for order {order.order_number} in {elapsed:.2f}s (background)")
+            return {
+                'success': True, 
+                'message': f'تم توليد العقد بنجاح في {elapsed:.2f} ثانية',
+                'order_id': order_id,
+                'order_number': order.order_number,
+                'elapsed': elapsed
+            }
+        else:
+            logger.error(f"❌ Failed to generate contract PDF for order {order.order_number}")
+            # إعادة المحاولة مرة واحدة
+            raise self.retry(countdown=5, exc=Exception('Failed to generate contract'))
+            
+    except Order.DoesNotExist:
+        logger.error(f"❌ Order {order_id} not found for contract generation")
+        return {'success': False, 'message': f'الطلب {order_id} غير موجود'}
+        
+    except Exception as e:
+        logger.error(f"❌ Error generating contract PDF for order {order_id}: {str(e)}", exc_info=True)
+        
+        # إعادة المحاولة في حالة الخطأ (حتى مرتين فقط)
+        if self.request.retries < self.max_retries:
+            raise self.retry(countdown=10, exc=e)
+        
+        return {'success': False, 'message': f'فشل في توليد العقد: {str(e)}'}
+
+
+# تم حذف generate_contract_async القديم - استخدم generate_contract_pdf_async الجديد
 

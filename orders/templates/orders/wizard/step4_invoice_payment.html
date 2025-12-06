@@ -1,5 +1,5 @@
 {% extends 'orders/wizard/base_wizard.html' %}
-{% load static %}
+{% load static decimal_filters %}
 
 {% block wizard_content %}
 <form method="post" id="step4-form" enctype="multipart/form-data" novalidate>
@@ -123,16 +123,16 @@
                 <h6 class="alert-heading">ملخص المبالغ</h6>
                 <div class="d-flex justify-content-between mb-2">
                     <span>المجموع قبل الخصم:</span>
-                    <strong>{{ totals.subtotal }} جنيه</strong>
+                    <strong>{{ totals.subtotal|format_currency }}</strong>
                 </div>
                 <div class="d-flex justify-content-between mb-2 text-danger">
                     <span>إجمالي الخصم:</span>
-                    <strong>{{ totals.total_discount }} جنيه</strong>
+                    <strong>{{ totals.total_discount|format_currency }}</strong>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between">
                     <span class="h6">المجموع النهائي:</span>
-                    <strong class="h6 text-success">{{ totals.final_total }} جنيه</strong>
+                    <strong class="h6 text-success">{{ totals.final_total|format_currency }}</strong>
                 </div>
             </div>
             
@@ -161,11 +161,11 @@
                     <i class="fas fa-lightbulb me-1"></i>
                     <strong>💡 تنبيه:</strong> يجب دفع 50% على الأقل من القيمة الإجمالية للمتابعة
                     <br>
-                    <small>الحد الأدنى المطلوب: <strong>{{ totals.minimum_payment|default:"0.00" }} جنيه</strong></small>
+                    <small>الحد الأدنى المطلوب: <strong>{{ totals.minimum_payment|format_currency }}</strong></small>
                 </div>
                 <div class="form-text">
                     <i class="fas fa-info-circle me-1"></i>
-                    المتبقي: <span id="remaining-amount">{{ totals.remaining }}</span> جنيه
+                    المتبقي: <span id="remaining-amount">{{ totals.remaining|clean_decimal }}</span> {{ currency_symbol }}
                 </div>
             </div>
             
@@ -374,7 +374,9 @@ paidAmountInput.addEventListener('input', function() {
     const paidAmount = parseFloat(this.value) || 0;
     const remaining = totalAmount - paidAmount;
     
-    document.getElementById('remaining-amount').textContent = remaining.toFixed(2);
+    // تنسيق الرقم بدون أصفار زائدة
+    const formattedRemaining = remaining.toFixed(2).replace(/\.?0+$/, '');
+    document.getElementById('remaining-amount').textContent = formattedRemaining;
     
     // إزالة الحدود السابقة
     this.classList.remove('is-invalid', 'is-valid', 'field-required-error');

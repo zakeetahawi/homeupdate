@@ -1,0 +1,18 @@
+# ⚡ لتفعيل السرعة القصوى، قم بتثبيت Redis:
+
+sudo pamac install redis
+
+# بعد التثبيت، قم بتشغيل Redis:
+sudo systemctl start redis
+sudo systemctl enable redis
+
+# تحقق من تشغيل Redis:
+redis-cli ping
+# يجب أن يرد: PONG
+
+# بعد ذلك، أعد تشغيل Celery:
+cd /home/zakee/homeupdate
+./لينكس/stop-all.sh
+./start_production_service.sh
+
+# الآن ستعمل عملية إنشاء الطلبات بسرعة فائقة! ⚡

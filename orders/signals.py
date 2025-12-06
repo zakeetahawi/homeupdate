@@ -599,13 +599,10 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
         # استخدام transaction.on_commit للتأكد من اكتمال المعاملة قبل إنشاء المعاينة
         def create_inspection():
             order_types = instance.get_selected_types_list()
-            print(f"🔍 تم إنشاء طلب جديد {instance.order_number}")
-            print(f"📋 selected_types (raw): {instance.selected_types}")
-            print(f"📋 الأنواع المستخرجة: {order_types}")
-            print(f"📋 نوع البيانات: {type(order_types)}")
-
+            
+            # تسجيل مختصر فقط
             if 'inspection' in order_types:
-                print(f"📋 الطلب {instance.order_number} من نوع معاينة - سيتم إنشاء معاينة تلقائية")
+                logger.info(f"Creating inspection for order {instance.order_number}")
                 try:
                     from django.db import transaction
                     with transaction.atomic():
@@ -627,9 +624,6 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
                             responsible_employee = instance.salesperson
                             inspector = instance.created_by  # استخدم منشئ الطلب كمعاين
 
-                        print(f"📋 المعاين: {inspector}")
-                        print(f"📋 الموظف المسؤول: {responsible_employee}")
-
                         inspection = Inspection.objects.create(
                             customer=instance.customer,
                             branch=instance.branch,
@@ -646,7 +640,7 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
                             created_by=instance.created_by,
                             windows_count=1  # قيمة افتراضية
                         )
-                        print(f"✅ تم إنشاء معاينة للطلب {instance.order_number} - معرف المعاينة: {inspection.id} (قيد الانتظار)")
+                        logger.info(f"✅ Inspection created for order {instance.order_number} (ID: {inspection.id})")
                         Order.objects.filter(pk=instance.pk).update(
                             tracking_status='processing',
                             order_status='pending'

@@ -1,6 +1,7 @@
 """
 Views للويزارد متعدد الخطوات لإنشاء الطلبات
 Multi-Step Order Creation Wizard Views
+⚡ Performance Optimized - December 2024
 """
 import json
 import logging
@@ -15,6 +16,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.urls import reverse
+from django.core.cache import cache
 
 from .wizard_models import (
     DraftOrder, DraftOrderItem
@@ -29,17 +31,26 @@ from inventory.models import Product
 from customers.models import Customer
 from accounts.models import SystemSettings
 
+# ⚡ استيراد تحسينات الأداء
+from .performance_optimizations import (
+    get_user_drafts_optimized,
+    get_draft_with_relations,
+    get_curtains_with_details,
+    get_cached_system_settings,
+    invalidate_draft_cache,
+)
+
 logger = logging.getLogger(__name__)
 
 
 def get_currency_context():
     """
-    الحصول على سياق العملة من إعدادات النظام
+    ⚡ الحصول على سياق العملة من إعدادات النظام (cached)
     """
-    settings = SystemSettings.get_settings()
+    settings = get_cached_system_settings()
     return {
-        'currency_code': settings.currency,
-        'currency_symbol': settings.currency_symbol,
+        'currency_code': settings.get('currency', 'EGP'),
+        'currency_symbol': settings.get('currency_symbol', 'ج.م'),
     }
 
 
@@ -77,27 +88,15 @@ def get_step_number(draft, logical_step):
 @login_required
 def wizard_start(request):
     """
-    بداية الويزارد - عرض المسودات المحفوظة أو إنشاء مسودة جديدة
-    مع التحقق من الحد الأقصى للمسودات
+    ⚡ بداية الويزارد - عرض المسودات المحفوظة أو إنشاء مسودة جديدة
+    مع التحقق من الحد الأقصى للمسودات (OPTIMIZED)
     """
-    from accounts.models import SystemSettings
+    # ⚡ الحصول على إعدادات النظام من Cache
+    settings = get_cached_system_settings()
+    max_drafts = settings.get('max_draft_orders_per_user', 5)
     
-    # الحصول على إعدادات النظام
-    settings = SystemSettings.get_settings()
-    max_drafts = settings.max_draft_orders_per_user
-    
-    # البحث عن المسودات غير المكتملة للمستخدم - محسّن
-    user_drafts = DraftOrder.objects.filter(
-        created_by=request.user,
-        is_completed=False
-    ).select_related(
-        'customer', 'customer__branch', 'branch', 'salesperson'
-    ).only(
-        'id', 'current_step', 'updated_at', 'is_completed',
-        'customer__id', 'customer__name', 'customer__phone',
-        'branch__id', 'branch__name',
-        'salesperson__id', 'salesperson__name'
-    ).order_by('-updated_at')
+    # ⚡ البحث عن المسودات غير المكتملة للمستخدم - محسّن
+    user_drafts = get_user_drafts_optimized(request.user, is_completed=False, limit=max_drafts)
     
     # التحقق من وجود درافت للعميل المحدد (إن وجد)
     customer_id = request.GET.get('customer_id')
@@ -148,11 +147,9 @@ def wizard_start_new(request):
     مع التحقق من الحد الأقصى للمسودات
     """
     from customers.models import Customer
-    from accounts.models import SystemSettings
-    
-    # الحصول على إعدادات النظام
-    settings = SystemSettings.get_settings()
-    max_drafts = settings.max_draft_orders_per_user
+    # ⚡ الحصول على إعدادات النظام من Cache
+    settings = get_cached_system_settings()
+    max_drafts = settings.get('max_draft_orders_per_user', 5)
     
     # التحقق من وجود مسودات غير مكتملة للمستخدم - محسّن
     existing_drafts = DraftOrder.objects.filter(
@@ -221,11 +218,9 @@ def wizard_confirm_new(request):
     """
     صفحة تأكيد إنشاء مسودة جديدة عند وجود مسودات غير مكتملة
     """
-    from accounts.models import SystemSettings
-    
-    # الحصول على إعدادات النظام
-    settings = SystemSettings.get_settings()
-    max_drafts = settings.max_draft_orders_per_user
+    # ⚡ الحصول على إعدادات النظام من Cache
+    settings = get_cached_system_settings()
+    max_drafts = settings.get('max_draft_orders_per_user', 5)
     
     existing_drafts = DraftOrder.objects.filter(
         created_by=request.user,
@@ -277,11 +272,9 @@ def wizard_drafts_list(request):
     عرض قائمة المسودات المحفوظة بناءً على صلاحيات المستخدم
     مع عرض معلومات الحد الأقصى للمسودات
     """
-    from accounts.models import SystemSettings
-    
-    # الحصول على إعدادات النظام
-    settings = SystemSettings.get_settings()
-    max_drafts = settings.max_draft_orders_per_user
+    # ⚡ الحصول على إعدادات النظام من Cache
+    settings = get_cached_system_settings()
+    max_drafts = settings.get('max_draft_orders_per_user', 5)
     
     # تحديد الاستعلام بناءً على صلاحيات المستخدم
     if request.user.is_superuser or request.user.groups.filter(name='مدير نظام').exists():
@@ -511,12 +504,20 @@ def wizard_step_2_order_type(request, draft):
 
 def wizard_step_3_order_items(request, draft):
     """
-    الخطوة 3: عناصر الطلب
+    ⚡ الخطوة 3: عناصر الطلب (OPTIMIZED)
     """
-    items = draft.items.all()
+    # ⚡ استخدام select_related لتجنب N+1 queries
+    items = draft.items.select_related('product', 'product__category').all()
     
     total_steps = get_total_steps(draft)
     currency = get_currency_context()
+    
+    # ⚡ Cache التفاصيل المحسوبة
+    cache_key = f'draft_totals_{draft.id}'
+    totals = cache.get(cache_key)
+    if totals is None:
+        totals = draft.calculate_totals()
+        cache.set(cache_key, totals, 300)  # 5 دقائق
     
     context = {
         'draft': draft,
@@ -525,7 +526,7 @@ def wizard_step_3_order_items(request, draft):
         'total_steps': total_steps,
         'step_title': 'عناصر الطلب',
         'progress_percentage': round((3 / total_steps) * 100, 2),
-        'totals': draft.calculate_totals(),
+        'totals': totals,
         'currency_symbol': currency['currency_symbol'],
         'currency_code': currency['currency_code'],
     }
@@ -628,6 +629,10 @@ def wizard_add_item(request):
         )
         
         logger.info(f"wizard_add_item: Item created successfully: {item.id}")
+        
+        # ⚡ إبطال الذاكرة المؤقتة للمجاميع
+        invalidate_draft_cache(draft.id)
+        cache.delete(f'draft_totals_{draft.id}')
         
         # إعادة حساب المجاميع
         totals = draft.calculate_totals()
@@ -871,7 +876,7 @@ def delete_draft_invoice_image(request, image_id):
 
 def wizard_step_5_contract(request, draft):
     """
-    الخطوة 5: العقد الإلكتروني أو PDF
+    ⚡ الخطوة 5: العقد الإلكتروني أو PDF (OPTIMIZED)
     """
     # معالجة POST - تحديد الخطوة كمكتملة
     if request.method == 'POST':
@@ -879,6 +884,9 @@ def wizard_step_5_contract(request, draft):
         draft.mark_step_complete(5)
         draft.current_step = 6
         draft.save()
+        
+        # ⚡ إبطال الذاكرة المؤقتة
+        invalidate_draft_cache(draft.id)
         
         # الرد برسالة نجاح
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -890,16 +898,13 @@ def wizard_step_5_contract(request, draft):
             # إعادة توجيه إلى الخطوة التالية
             return redirect('orders:wizard_step', step=6)
     
-    # الحصول على الستائر المرتبطة بالمسودة - محسّن مع prefetch
-    curtains = ContractCurtain.objects.filter(draft_order=draft).prefetch_related(
-        'fabrics', 'fabrics__draft_order_item', 'fabrics__draft_order_item__product',
-        'accessories', 'accessories__draft_order_item', 'accessories__draft_order_item__product'
-    ).order_by('sequence')
+    # ⚡ الحصول على الستائر المرتبطة بالمسودة - استخدام الدالة المحسّنة
+    curtains = get_curtains_with_details(draft=draft)
     
-    # الحصول على عناصر الفاتورة (الأقمشة فقط) - محسّن
+    # ⚡ الحصول على عناصر الفاتورة (الأقمشة فقط) - محسّن
     order_items = draft.items.filter(
         item_type__in=['fabric', 'product']
-    ).select_related('product', 'product__category')
+    ).select_related('product')
     
     # حساب الكميات المتاحة لكل عنصر - محسّن: استعلام واحد بدلاً من N+1
     # جلب مجاميع الأقمشة والإكسسوارات دفعة واحدة
@@ -1014,16 +1019,20 @@ def wizard_step_6_review(request, draft):
 @transaction.atomic
 def wizard_finalize(request):
     """
-    تحويل المسودة إلى طلب نهائي
+    ⚡ تحويل المسودة إلى طلب نهائي - محسّن للسرعة القصوى
     """
     try:
-        # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
+        # ⚡ استعلام واحد محسّن مع جميع العلاقات
         draft_id = request.session.get('wizard_draft_id')
         
         if draft_id:
-            draft = DraftOrder.objects.filter(pk=draft_id).first()
+            draft = DraftOrder.objects.select_related(
+                'customer', 'salesperson', 'branch', 'related_inspection'
+            ).prefetch_related('items__product', 'invoice_images_new').filter(pk=draft_id).first()
         else:
-            draft = DraftOrder.objects.filter(
+            draft = DraftOrder.objects.select_related(
+                'customer', 'salesperson', 'branch', 'related_inspection'
+            ).prefetch_related('items__product', 'invoice_images_new').filter(
                 created_by=request.user,
                 is_completed=False
             ).order_by('-updated_at').first()
@@ -1034,17 +1043,19 @@ def wizard_finalize(request):
                 'message': 'لم يتم العثور على مسودة نشطة'
             }, status=404)
         
-        # التحقق من اكتمال جميع الخطوات المطلوبة (الخطوة 5 اختيارية)
-        required_steps = [1, 2, 3, 4]
-        for step in required_steps:
-            if step not in draft.completed_steps:
-                return JsonResponse({
-                    'success': False,
-                    'message': f'يجب إكمال الخطوة {step} أولاً'
-                }, status=400)
+        # ⚡ تحقق سريع من الخطوات (بدون حلقة)
+        required_steps = {1, 2, 3, 4}
+        completed = set(draft.completed_steps) if draft.completed_steps else set()
+        if not required_steps.issubset(completed):
+            missing = required_steps - completed
+            return JsonResponse({
+                'success': False,
+                'message': f'يجب إكمال الخطوات: {", ".join(map(str, sorted(missing)))}'
+            }, status=400)
         
-        # التحقق من وجود عناصر
-        if not draft.items.exists():
+        # ⚡ التحقق السريع من وجود عناصر (استعلام محسّن)
+        draft_items_list = list(draft.items.all())  # تم تحميلها مسبقاً من prefetch_related
+        if not draft_items_list:
             return JsonResponse({
                 'success': False,
                 'message': 'يجب إضافة عنصر واحد على الأقل'
@@ -1052,71 +1063,62 @@ def wizard_finalize(request):
         
         # التحقق من وضع التعديل
         editing_order_id = request.session.get('editing_order_id')
-        logger.info(f"Finalize - editing_order_id from session: {editing_order_id}")
-        logger.info(f"Finalize - wizard_draft_id from session: {request.session.get('wizard_draft_id')}")
         
         if editing_order_id:
             # وضع التعديل - تحديث الطلب الموجود
             try:
                 order = Order.objects.get(pk=editing_order_id)
                 
-                # تحديث بيانات الطلب
-                order.customer = draft.customer
-                order.salesperson = draft.salesperson
-                order.branch = draft.branch
-                order.status = draft.status
-                order.notes = draft.notes
-                order.selected_types = [draft.selected_type] if draft.selected_type else []
-                order.related_inspection = draft.related_inspection
-                order.related_inspection_type = draft.related_inspection_type
-                order.invoice_number = draft.invoice_number
-                order.invoice_number_2 = draft.invoice_number_2
-                order.invoice_number_3 = draft.invoice_number_3
-                order.contract_number = draft.contract_number
-                order.contract_number_2 = draft.contract_number_2
-                order.contract_number_3 = draft.contract_number_3
-                order.total_amount = draft.subtotal
-                order.final_price = draft.final_total
-                order.paid_amount = draft.paid_amount
+                # ⚡ تحديث مجمّع بدون حفظ متعدد
+                Order.objects.filter(pk=editing_order_id).update(
+                    customer=draft.customer,
+                    salesperson=draft.salesperson,
+                    branch=draft.branch,
+                    status=draft.status,
+                    notes=draft.notes,
+                    selected_types=[draft.selected_type] if draft.selected_type else [],
+                    related_inspection=draft.related_inspection,
+                    related_inspection_type=draft.related_inspection_type,
+                    invoice_number=draft.invoice_number,
+                    invoice_number_2=draft.invoice_number_2,
+                    invoice_number_3=draft.invoice_number_3,
+                    contract_number=draft.contract_number,
+                    contract_number_2=draft.contract_number_2,
+                    contract_number_3=draft.contract_number_3,
+                    total_amount=draft.subtotal,
+                    final_price=draft.final_total,
+                    paid_amount=draft.paid_amount,
+                )
                 
-                # نقل ملف العقد إذا وجد
-                if draft.contract_file:
-                    order.contract_file = draft.contract_file
+                # تحديث الملفات إذا لزم الأمر
+                if draft.contract_file or draft.invoice_image:
+                    order = Order.objects.get(pk=editing_order_id)
+                    if draft.contract_file:
+                        order.contract_file = draft.contract_file
+                    if draft.invoice_image:
+                        order.invoice_image = draft.invoice_image
+                    order.save(update_fields=['contract_file', 'invoice_image'])
                 
-                # نقل صورة الفاتورة إذا وجدت
-                if draft.invoice_image:
-                    order.invoice_image = draft.invoice_image
-                
-                order.save()
-                
-                # نقل الصور الإضافية للفاتورة
+                # ⚡ حذف مجمّع
                 from .models import OrderInvoiceImage
-                from .wizard_models import DraftOrderInvoiceImage
-                
-                # حذف الصور القديمة إذا وجدت
-                order.invoice_images.all().delete()
+                OrderInvoiceImage.objects.filter(order=order).delete()
+                order.items.all().delete()
+                order.contract_curtains.all().delete()
+                order.payments.all().delete()
                 
                 # نقل الصور الجديدة
-                for draft_img in draft.invoice_images_new.all():
-                    OrderInvoiceImage.objects.create(
-                        order=order,
-                        image=draft_img.image
-                    )
-                
-                # حذف العناصر القديمة
-                order.items.all().delete()
-                
-                # حذف الستائر القديمة
-                order.contract_curtains.all().delete()
-                
-                logger.info(f"Updating existing order {order.order_number}")
+                if draft.invoice_images_new.exists():
+                    new_images = [
+                        OrderInvoiceImage(order=order, image=img.image)
+                        for img in draft.invoice_images_new.all()
+                    ]
+                    OrderInvoiceImage.objects.bulk_create(new_images, batch_size=50)
                 
             except Order.DoesNotExist:
-                logger.error(f"Order {editing_order_id} not found, creating new order instead")
                 editing_order_id = None  # إنشاء طلب جديد
         
         if not editing_order_id:
-            # وضع الإنشاء - إنشاء طلب جديد
+            # ⚡ وضع الإنشاء - إنشاء طلب جديد بأقل عمليات ممكنة
             order = Order.objects.create(
                 customer=draft.customer,
                 salesperson=draft.salesperson,
@@ -1135,53 +1137,47 @@ def wizard_finalize(request):
                 total_amount=draft.subtotal,
                 final_price=draft.final_total,
                 paid_amount=draft.paid_amount,
-                contract_file=draft.contract_file if draft.contract_file else None,  # نقل ملف العقد مباشرة
-                invoice_image=draft.invoice_image if draft.invoice_image else None,  # نقل صورة الفاتورة
+                contract_file=draft.contract_file,
+                invoice_image=draft.invoice_image,
                 created_by=request.user,
                 creation_method='wizard',
                 source_draft_id=draft.id,
             )
             
-            # نقل الصور الإضافية للفاتورة
+            # ⚡ نقل الصور مجمّعاً
             from .models import OrderInvoiceImage
-            from .wizard_models import DraftOrderInvoiceImage
-            
-            for draft_img in draft.invoice_images_new.all():
-                OrderInvoiceImage.objects.create(
-                    order=order,
-                    image=draft_img.image
-                )
-            
-            logger.info(f"Created new order {order.order_number}")
+            if draft.invoice_images_new.exists():
+                new_images = [
+                    OrderInvoiceImage(order=order, image=img.image)
+                    for img in draft.invoice_images_new.all()
+                ]
+                OrderInvoiceImage.objects.bulk_create(new_images, batch_size=50)
         
-        # لا حاجة لنقل contract_file هنا - تم نقله في عملية الإنشاء/التحديث
+        # ⚡ نقل الستائر - bulk_update محسّن
+        curtains = list(ContractCurtain.objects.filter(draft_order=draft))
+        if curtains:
+            for c in curtains:
+                c.order = order
+                c.draft_order = None
+            ContractCurtain.objects.bulk_update(curtains, ['order', 'draft_order'], batch_size=200)
         
-        # نقل الستائر من المسودة إلى الطلب النهائي
-        curtains = ContractCurtain.objects.filter(draft_order=draft)
-        for curtain in curtains:
-            curtain.order = order
-            curtain.draft_order = None
-            curtain.save(update_fields=['order', 'draft_order'])
-        
-        # نقل العناصر
-        for draft_item in draft.items.all():
-            OrderItem.objects.create(
+        # ⚡ نقل العناصر - bulk_create محسّن (استخدام القائمة المحملة مسبقاً)
+        order_items_to_create = [
+            OrderItem(
                 order=order,
-                product=draft_item.product,
-                quantity=draft_item.quantity,
-                unit_price=draft_item.unit_price,
-                discount_percentage=draft_item.discount_percentage,
-                item_type=draft_item.item_type,
-                notes=draft_item.notes,
+                product=item.product,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                discount_percentage=item.discount_percentage,
+                item_type=item.item_type,
+                notes=item.notes,
             )
+            for item in draft_items_list
+        ]
+        OrderItem.objects.bulk_create(order_items_to_create, batch_size=200)
         
-        # إنشاء الدفعة إذا وجد مبلغ مدفوع
+        # ⚡ إنشاء الدفعة
         if draft.paid_amount > 0:
-            # في وضع التعديل، نحدث الدفعة الموجودة أو ننشئ جديدة
-            if editing_order_id:
-                # حذف الدفعات القديمة
-                order.payments.all().delete()
-            
             Payment.objects.create(
                 order=order,
                 amount=draft.paid_amount,
@@ -1191,49 +1187,40 @@ def wizard_finalize(request):
                 created_by=request.user,
             )
         
-        # تحديد المسودة كمكتملة
-        draft.is_completed = True
-        draft.completed_at = timezone.now()
-        draft.final_order = order
-        draft.save()
+        # ⚡ تحديث المسودة - update بدلاً من save
+        DraftOrder.objects.filter(pk=draft.pk).update(
+            is_completed=True,
+            completed_at=timezone.now(),
+            final_order=order
+        )
         
-        # مسح معرفات الجلسة للتعديل
-        if 'editing_order_id' in request.session:
-            del request.session['editing_order_id']
-        if 'wizard_draft_id' in request.session:
-            del request.session['wizard_draft_id']
+        # مسح الجلسة
+        request.session.pop('editing_order_id', None)
+        request.session.pop('wizard_draft_id', None)
         
-        # توليد ملف العقد تلقائياً وحفظه - فقط لطلبات التركيب والتسليم
-        # لا يتم إنشاء عقد لطلبات المنتجات أو المعاينة
+        # ⚡ توليد العقد في الخلفية - فوري مع Redis
         selected_type = draft.selected_type
         should_generate_contract = selected_type not in ['products', 'inspection']
         
-        if should_generate_contract:
+        if should_generate_contract and not draft.contract_file:
             try:
-                from .services.contract_generation_service import ContractGenerationService
-                contract_service = ContractGenerationService(order)
-                contract_saved = contract_service.save_contract_to_order(user=request.user)
-                
-                if contract_saved:
-                    logger.info(f"Contract PDF auto-generated for order {order.order_number}")
-                else:
-                    logger.warning(f"Failed to auto-generate contract PDF for order {order.order_number}")
+                from .tasks import generate_contract_pdf_async
+                # تشغيل المهمة في الخلفية - الآن مع Redis متوفر
+                task = generate_contract_pdf_async.delay(order.pk, request.user.pk)
+                logger.info(f"⚡ Contract generation started (task: {task.id})")
             except Exception as e:
-                logger.error(f"Error auto-generating contract PDF: {e}", exc_info=True)
-                # لا نفشل الطلب إذا فشل توليد العقد
-        else:
-            logger.info(f"Skipping contract generation for order {order.order_number} (type: {selected_type})")
+                logger.warning(f"⚠️ Contract task failed: {e}")
         
         return JsonResponse({
             'success': True,
-            'message': 'تم حفظ الطلب بنجاح' if editing_order_id else 'تم إنشاء الطلب بنجاح',
+            'message': 'تم إنشاء الطلب بنجاح' if not editing_order_id else 'تم حفظ الطلب بنجاح',
             'order_id': order.pk,
             'order_number': order.order_number,
             'redirect_url': f'/orders/order/{order.order_number}/'
         })
     
     except Exception as e:
-        logger.error(f"Error finalizing draft order: {e}")
+        logger.error(f"Error finalizing draft order: {e}", exc_info=True)
         return JsonResponse({
             'success': False,
             'message': f'حدث خطأ: {str(e)}'

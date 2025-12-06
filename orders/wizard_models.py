@@ -254,29 +254,52 @@ class DraftOrder(models.Model):
         verbose_name = 'مسودة طلب'
         verbose_name_plural = 'مسودات الطلبات'
         indexes = [
-            models.Index(fields=['created_by', 'is_completed']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['current_step']),
+            # ⚡ Indexes أساسية محسّنة
+            models.Index(fields=['created_by', 'is_completed'], name='draft_user_complete_idx'),
+            models.Index(fields=['created_by', 'is_completed', '-updated_at'], name='draft_user_comp_upd_idx'),
+            models.Index(fields=['created_at'], name='draft_created_idx'),
+            models.Index(fields=['updated_at'], name='draft_updated_idx'),
+            models.Index(fields=['current_step'], name='draft_step_idx'),
+            # ⚡ Indexes للعلاقات
+            models.Index(fields=['customer', 'is_completed'], name='draft_customer_comp_idx'),
+            models.Index(fields=['branch', 'is_completed'], name='draft_branch_comp_idx'),
+            models.Index(fields=['salesperson', 'is_completed'], name='draft_sales_comp_idx'),
+            # ⚡ Indexes للنوع والحالة
+            models.Index(fields=['selected_type', 'is_completed'], name='draft_type_comp_idx'),
+            models.Index(fields=['status', 'is_completed'], name='draft_status_comp_idx'),
+            # ⚡ Index مركّب للبحث السريع
+            models.Index(fields=['created_by', 'is_completed', 'current_step', '-updated_at'], name='draft_search_idx'),
         ]
     
     def __str__(self):
         return f"مسودة #{self.pk} - {self.get_current_step_display()} - {self.created_by.username}"
     
     def calculate_totals(self):
-        """حساب المجاميع من العناصر"""
-        items = self.items.all()
-        subtotal = Decimal('0.00')
-        total_discount = Decimal('0.00')
+        """
+        ⚡ حساب المجاميع من العناصر (OPTIMIZED)
+        استخدام aggregation بدلاً من الحلقات
+        """
+        from django.db.models import Sum, F, DecimalField
+        from django.db.models.functions import Coalesce
         
-        for item in items:
-            item_total = item.quantity * item.unit_price
-            item_discount = item_total * (item.discount_percentage / Decimal('100.0'))
-            subtotal += item_total
-            total_discount += item_discount
+        # ⚡ حساب المجاميع بـ query واحد بدلاً من N+1
+        aggregates = self.items.aggregate(
+            total_amount=Coalesce(
+                Sum(F('quantity') * F('unit_price'), output_field=DecimalField(max_digits=12, decimal_places=2)),
+                Decimal('0.00')
+            ),
+            total_discount_amount=Coalesce(
+                Sum(
+                    F('quantity') * F('unit_price') * F('discount_percentage') / 100,
+                    output_field=DecimalField(max_digits=12, decimal_places=2)
+                ),
+                Decimal('0.00')
+            )
+        )
         
-        self.subtotal = subtotal
-        self.total_discount = total_discount
-        self.final_total = subtotal - total_discount
+        self.subtotal = aggregates['total_amount']
+        self.total_discount = aggregates['total_discount_amount']
+        self.final_total = self.subtotal - self.total_discount
         self.save(update_fields=['subtotal', 'total_discount', 'final_total'])
         
         return {
@@ -356,6 +379,15 @@ class DraftOrderItem(models.Model):
         ordering = ['id']
         verbose_name = 'عنصر مسودة طلب'
         verbose_name_plural = 'عناصر مسودات الطلبات'
+        indexes = [
+            # ⚡ Indexes محسّنة لعناصر المسودة
+            models.Index(fields=['draft_order'], name='draftitem_draft_idx'),
+            models.Index(fields=['product'], name='draftitem_product_idx'),
+            models.Index(fields=['draft_order', 'item_type'], name='draftitem_draft_type_idx'),
+            models.Index(fields=['draft_order', 'product'], name='draftitem_draft_prod_idx'),
+            models.Index(fields=['item_type'], name='draftitem_type_idx'),
+            models.Index(fields=['created_at'], name='draftitem_created_idx'),
+        ]
     
     def __str__(self):
         return f"{self.product.name} - {self.quantity} × {self.unit_price}"

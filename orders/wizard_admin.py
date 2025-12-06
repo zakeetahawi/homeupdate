@@ -12,6 +12,7 @@ from django.db import transaction
 from django import forms
 from .wizard_models import DraftOrder, DraftOrderItem
 from .models import Order
+from accounts.models import SystemSettings
 
 
 class DraftOrderItemInline(admin.TabularInline):
@@ -23,19 +24,22 @@ class DraftOrderItemInline(admin.TabularInline):
     
     def total_price(self, obj):
         if obj.id:
-            return format_html("{} ر.س", f"{obj.total_price:.2f}")
+            currency = SystemSettings.get_settings().currency_symbol
+            return format_html("{} {}", f"{obj.total_price:.2f}", currency)
         return "-"
     total_price.short_description = 'السعر الإجمالي'
     
     def discount_amount(self, obj):
         if obj.id:
-            return format_html("{} ر.س", f"{obj.discount_amount:.2f}")
+            currency = SystemSettings.get_settings().currency_symbol
+            return format_html("{} {}", f"{obj.discount_amount:.2f}", currency)
         return "-"
     discount_amount.short_description = 'الخصم'
     
     def final_price(self, obj):
         if obj.id:
-            return format_html("{} ر.س", f"{obj.final_price:.2f}")
+            currency = SystemSettings.get_settings().currency_symbol
+            return format_html("{} {}", f"{obj.final_price:.2f}", currency)
         return "-"
     final_price.short_description = 'السعر النهائي'
 
@@ -248,13 +252,15 @@ class DraftOrderAdmin(admin.ModelAdmin):
     
     def totals_display(self, obj):
         """عرض المجاميع المالية"""
+        currency = SystemSettings.get_settings().currency_symbol
         return format_html(
             '<div style="font-size: 11px;">'
-            '<strong style="color: #007bff;">{} ر.س</strong><br/>'
+            '<strong style="color: #007bff;">{} {}</strong><br/>'
             '<span style="color: #666;">خصم: {}</span><br/>'
             '<span style="color: #28a745;">مدفوع: {}</span>'
             '</div>',
             f"{obj.final_total:.2f}",
+            currency,
             f"{obj.total_discount:.2f}",
             f"{obj.paid_amount:.2f}"
         )
@@ -326,19 +332,25 @@ class DraftOrderAdmin(admin.ModelAdmin):
     def totals_info(self, obj):
         """معلومات مفصلة عن المجاميع"""
         totals = obj.calculate_totals()
+        currency = SystemSettings.get_settings().currency_symbol
         return format_html(
             '<table style="width: 100%; font-size: 12px;">'
-            '<tr><td><strong>المجموع قبل الخصم:</strong></td><td>{} ر.س</td></tr>'
-            '<tr><td><strong>إجمالي الخصم:</strong></td><td style="color: #dc3545;">{} ر.س</td></tr>'
-            '<tr><td><strong>المجموع النهائي:</strong></td><td style="color: #28a745; font-weight: bold;">{} ر.س</td></tr>'
-            '<tr><td><strong>المبلغ المدفوع:</strong></td><td>{} ر.س</td></tr>'
-            '<tr><td><strong>المتبقي:</strong></td><td style="color: #ffc107;">{} ر.س</td></tr>'
+            '<tr><td><strong>المجموع قبل الخصم:</strong></td><td>{} {}</td></tr>'
+            '<tr><td><strong>إجمالي الخصم:</strong></td><td style="color: #dc3545;">{} {}</td></tr>'
+            '<tr><td><strong>المجموع النهائي:</strong></td><td style="color: #28a745; font-weight: bold;">{} {}</td></tr>'
+            '<tr><td><strong>المبلغ المدفوع:</strong></td><td>{} {}</td></tr>'
+            '<tr><td><strong>المتبقي:</strong></td><td style="color: #ffc107;">{} {}</td></tr>'
             '</table>',
             f"{totals['subtotal']:.2f}",
+            currency,
             f"{totals['total_discount']:.2f}",
+            currency,
             f"{totals['final_total']:.2f}",
+            currency,
             f"{obj.paid_amount:.2f}",
-            f"{totals['remaining']:.2f}"
+            currency,
+            f"{totals['remaining']:.2f}",
+            currency
         )
     totals_info.short_description = 'تفاصيل المبالغ'
     

@@ -1,5 +1,5 @@
 {% extends 'orders/wizard/base_wizard.html' %}
-{% load static %}
+{% load static decimal_filters %}
 
 {% block wizard_content %}
 <div class="row">
@@ -81,11 +81,11 @@
                             {% for item in items %}
                             <tr data-item-id="{{ item.id }}">
                                 <td>{{ item.product.name }}</td>
-                                <td>{{ item.quantity|floatformat:"-3" }}</td>
-                                <td>{{ item.unit_price|floatformat:2 }}</td>
-                                <td>{{ item.discount_percentage|floatformat:"-2" }}%</td>
-                                <td>{{ item.total_price|floatformat:2 }}</td>
-                                <td class="fw-bold">{{ item.final_price|floatformat:2 }}</td>
+                                <td>{{ item.quantity|clean_decimal:3 }}</td>
+                                <td>{{ item.unit_price|format_currency }}</td>
+                                <td>{{ item.discount_percentage|format_percentage }}</td>
+                                <td>{{ item.total_price|format_currency }}</td>
+                                <td class="fw-bold">{{ item.final_price|format_currency }}</td>
                                 <td>
                                     <button type="button" class="btn btn-sm btn-danger" 
                                             onclick="removeItem({{ item.id }})">
@@ -119,16 +119,16 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-2">
                     <span>المجموع قبل الخصم:</span>
-                    <strong id="subtotal">{{ totals.subtotal|default:"0.00" }} {{ currency_symbol }}</strong>
+                    <strong id="subtotal">{{ totals.subtotal|format_currency }}</strong>
                 </div>
                 <div class="d-flex justify-content-between mb-2 text-danger">
                     <span>إجمالي الخصم:</span>
-                    <strong id="total-discount">{{ totals.total_discount|default:"0.00" }} {{ currency_symbol }}</strong>
+                    <strong id="total-discount">{{ totals.total_discount|format_currency }}</strong>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between mb-3">
                     <span class="h5">المجموع النهائي:</span>
-                    <strong class="h5 text-success" id="final-total">{{ totals.final_total|default:"0.00" }} {{ currency_symbol }}</strong>
+                    <strong class="h5 text-success" id="final-total">{{ totals.final_total|format_currency }}</strong>
                 </div>
             </div>
         </div>
@@ -649,6 +649,23 @@ function removeItem(itemId) {
     });
 }
 
+/**
+ * ⚡ تنسيق المبلغ المالي (إزالة الأصفار الزائدة)
+ */
+function formatCurrency(value) {
+    if (value === null || value === undefined || isNaN(value)) {
+        return '0';
+    }
+    
+    // التقريب إلى خانتين عشريتين
+    let num = parseFloat(value).toFixed(2);
+    
+    // إزالة الأصفار الزائدة
+    num = num.replace(/\.?0+$/, '');
+    
+    return num;
+}
+
 function updateTotals(totals) {
     // التحقق من أن totals كائن صحيح وليس null
     if (!totals || typeof totals !== 'object') {
@@ -662,9 +679,10 @@ function updateTotals(totals) {
     const finalTotal = parseFloat(totals.final_total) || 0;
     const currencySymbol = '{{ currency_symbol|default:"ج.م" }}';
     
-    document.getElementById('subtotal').textContent = subtotal.toFixed(2) + ' ' + currencySymbol;
-    document.getElementById('total-discount').textContent = totalDiscount.toFixed(2) + ' ' + currencySymbol;
-    document.getElementById('final-total').textContent = finalTotal.toFixed(2) + ' ' + currencySymbol;
+    // ⚡ استخدام formatCurrency لإزالة الأصفار
+    document.getElementById('subtotal').textContent = formatCurrency(subtotal) + ' ' + currencySymbol;
+    document.getElementById('total-discount').textContent = formatCurrency(totalDiscount) + ' ' + currencySymbol;
+    document.getElementById('final-total').textContent = formatCurrency(finalTotal) + ' ' + currencySymbol;
 }
 
 function clearForm() {
