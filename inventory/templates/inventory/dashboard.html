@@ -114,7 +114,7 @@
         <a href="{% url 'inventory:alert_list' %}" class="icon-card alert-card">
             <div class="icon-card-icon" style="color: #e74a3b;">
                 <i class="fas fa-bell"></i>
-                <span class="alert-count" id="alertCount">0</span>
+                <span class="alert-count" id="alertCount">{{ alerts_count }}</span>
             </div>
             <div class="icon-card-title">التنبيهات</div>
             <div class="icon-card-subtitle">تنبيهات المخزون</div>
@@ -644,6 +644,17 @@ class InventoryDashboardManager {
                 }
             }
         });
+        
+        // تحديث عداد التنبيهات في الأيقونة
+        const alertCountElement = document.getElementById('alertCount');
+        if (alertCountElement && stats.active_alerts_count !== undefined) {
+            alertCountElement.textContent = stats.active_alerts_count;
+            if (stats.active_alerts_count > 0) {
+                alertCountElement.style.display = 'flex';
+            } else {
+                alertCountElement.style.display = 'none';
+            }
+        }
     }
 
     updateAlertsList(alerts) {

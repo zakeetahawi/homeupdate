@@ -55,6 +55,7 @@
                         <select class="form-select" id="alert_type" name="alert_type">
                             <option value="">جميع الأنواع</option>
                             <option value="low_stock" {% if selected_type == 'low_stock' %}selected{% endif %}>مخزون منخفض</option>
+                            <option value="out_of_stock" {% if selected_type == 'out_of_stock' %}selected{% endif %}>نفذ من المخزون</option>
                             <option value="expiry" {% if selected_type == 'expiry' %}selected{% endif %}>قرب انتهاء الصلاحية</option>
                             <option value="overstock" {% if selected_type == 'overstock' %}selected{% endif %}>فائض في المخزون</option>
                             <option value="price_change" {% if selected_type == 'price_change' %}selected{% endif %}>تغير في السعر</option>
@@ -157,19 +158,23 @@
                                     <td>{{ alert.created_at|date:"Y-m-d H:i" }}</td>
                                     <td>
                                         {% if alert.alert_type == 'low_stock' %}
-                                        <span class="badge bg-warning">مخزون منخفض</span>
+                                        <span class="badge bg-warning"><i class="fas fa-exclamation-triangle"></i> مخزون منخفض</span>
+                                        {% elif alert.alert_type == 'out_of_stock' %}
+                                        <span class="badge bg-danger"><i class="fas fa-times-circle"></i> نفذ من المخزون</span>
                                         {% elif alert.alert_type == 'expiry' %}
-                                        <span class="badge bg-danger">قرب انتهاء الصلاحية</span>
+                                        <span class="badge bg-danger"><i class="fas fa-calendar-times"></i> قرب انتهاء الصلاحية</span>
                                         {% elif alert.alert_type == 'overstock' %}
-                                        <span class="badge bg-info">فائض في المخزون</span>
+                                        <span class="badge bg-info"><i class="fas fa-boxes"></i> فائض في المخزون</span>
                                         {% elif alert.alert_type == 'price_change' %}
-                                        <span class="badge bg-primary">تغير في السعر</span>
+                                        <span class="badge bg-primary"><i class="fas fa-dollar-sign"></i> تغير في السعر</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary"><i class="fas fa-question-circle"></i> {{ alert.get_alert_type_display }}</span>
                                         {% endif %}
                                     </td>
                                     <td>
                                         <a href="{% url 'inventory:product_detail' alert.product.id %}">{{ alert.product.name }}</a>
                                     </td>
-                                    <td>{{ alert.description }}</td>
+                                    <td>{{ alert.description|default:alert.message }}</td>
                                     <td>
                                         {% if alert.priority == 'high' %}
                                         <span class="badge bg-danger">عالية</span>

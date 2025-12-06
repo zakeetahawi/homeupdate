@@ -808,6 +808,7 @@ def alert_list(request):
     # الإحصائيات
     active_alerts_count = StockAlert.objects.filter(status='active').count()
     low_stock_alerts_count = StockAlert.objects.filter(status='active', alert_type='low_stock').count()
+    out_of_stock_alerts_count = StockAlert.objects.filter(status='active', alert_type='out_of_stock').count()
     expiry_alerts_count = StockAlert.objects.filter(status='active', alert_type='expiry').count()
     resolved_alerts_count = StockAlert.objects.filter(status='resolved').count()
 
@@ -830,6 +831,7 @@ def alert_list(request):
         'page_obj': page_obj,
         'active_alerts_count': active_alerts_count,
         'low_stock_alerts_count': low_stock_alerts_count,
+        'out_of_stock_alerts_count': out_of_stock_alerts_count,
         'expiry_alerts_count': expiry_alerts_count,
         'resolved_alerts_count': resolved_alerts_count,
         'selected_type': alert_type,

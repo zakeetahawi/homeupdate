@@ -65,6 +65,7 @@ class UserActivityLogAdmin(admin.ModelAdmin):
     date_hierarchy = 'timestamp'
     ordering = ['-timestamp']
     list_per_page = 50
+    actions = ['bulk_delete_selected', 'delete_old_logs_30_days', 'delete_old_logs_60_days', 'delete_old_logs_90_days']
 
     def action_type_display(self, obj):
         """عرض نوع العملية مع الأيقونة"""
@@ -89,6 +90,78 @@ class UserActivityLogAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
+    def bulk_delete_selected(self, request, queryset):
+        """حذف مجمّع سريع بدون تنفيذ signals"""
+        count = queryset.count()
+        
+        if count > 0:
+            # الحذف المباشر من قاعدة البيانات (أسرع بكثير)
+            queryset._raw_delete(queryset.db)
+            
+            self.message_user(
+                request,
+                f'تم حذف {count} سجل بنجاح بطريقة سريعة!',
+                level='success'
+            )
+        else:
+            self.message_user(request, 'لم يتم تحديد أي سجلات للحذف', level='warning')
+    
+    bulk_delete_selected.short_description = '🗑️ حذف سريع للسجلات المحددة'
+
+    def delete_old_logs_30_days(self, request, queryset):
+        """حذف السجلات الأقدم من 30 يوم"""
+        cutoff_date = timezone.now() - timedelta(days=30)
+        old_logs = UserActivityLog.objects.filter(timestamp__lt=cutoff_date)
+        count = old_logs.count()
+        
+        if count > 0:
+            old_logs._raw_delete(old_logs.db)
+            self.message_user(
+                request,
+                f'تم حذف {count} سجل أقدم من 30 يوم',
+                level='success'
+            )
+        else:
+            self.message_user(request, 'لا توجد سجلات أقدم من 30 يوم', level='info')
+    
+    delete_old_logs_30_days.short_description = '🗑️ حذف سجلات أقدم من 30 يوم'
+
+    def delete_old_logs_60_days(self, request, queryset):
+        """حذف السجلات الأقدم من 60 يوم"""
+        cutoff_date = timezone.now() - timedelta(days=60)
+        old_logs = UserActivityLog.objects.filter(timestamp__lt=cutoff_date)
+        count = old_logs.count()
+        
+        if count > 0:
+            old_logs._raw_delete(old_logs.db)
+            self.message_user(
+                request,
+                f'تم حذف {count} سجل أقدم من 60 يوم',
+                level='success'
+            )
+        else:
+            self.message_user(request, 'لا توجد سجلات أقدم من 60 يوم', level='info')
+    
+    delete_old_logs_60_days.short_description = '🗑️ حذف سجلات أقدم من 60 يوم'
+
+    def delete_old_logs_90_days(self, request, queryset):
+        """حذف السجلات الأقدم من 90 يوم"""
+        cutoff_date = timezone.now() - timedelta(days=90)
+        old_logs = UserActivityLog.objects.filter(timestamp__lt=cutoff_date)
+        count = old_logs.count()
+        
+        if count > 0:
+            old_logs._raw_delete(old_logs.db)
+            self.message_user(
+                request,
+                f'تم حذف {count} سجل أقدم من 90 يوم',
+                level='success'
+            )
+        else:
+            self.message_user(request, 'لا توجد سجلات أقدم من 90 يوم', level='info')
+    
+    delete_old_logs_90_days.short_description = '🗑️ حذف سجلات أقدم من 90 يوم'
+
 
 @admin.register(UserSession)
 class UserSessionAdmin(admin.ModelAdmin):
@@ -106,6 +179,7 @@ class UserSessionAdmin(admin.ModelAdmin):
     ]
     date_hierarchy = 'login_time'
     ordering = ['-last_activity']
+    actions = ['bulk_delete_selected', 'delete_inactive_sessions']
 
     def duration_display(self, obj):
         """عرض مدة الجلسة"""
@@ -127,6 +201,29 @@ class UserSessionAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+    def bulk_delete_selected(self, request, queryset):
+        """حذف مجمّع سريع"""
+        count = queryset.count()
+        if count > 0:
+            queryset._raw_delete(queryset.db)
+            self.message_user(request, f'تم حذف {count} جلسة بنجاح', level='success')
+        else:
+            self.message_user(request, 'لم يتم تحديد أي جلسات للحذف', level='warning')
+    
+    bulk_delete_selected.short_description = '🗑️ حذف سريع للجلسات المحددة'
+
+    def delete_inactive_sessions(self, request, queryset):
+        """حذف الجلسات غير النشطة"""
+        inactive = UserSession.objects.filter(is_active=False)
+        count = inactive.count()
+        if count > 0:
+            inactive._raw_delete(inactive.db)
+            self.message_user(request, f'تم حذف {count} جلسة غير نشطة', level='success')
+        else:
+            self.message_user(request, 'لا توجد جلسات غير نشطة', level='info')
+    
+    delete_inactive_sessions.short_description = '🗑️ حذف الجلسات غير النشطة'
 
 
 @admin.register(UserLoginHistory)
@@ -154,6 +251,7 @@ class UserLoginHistoryAdmin(admin.ModelAdmin):
     date_hierarchy = 'login_time'
     ordering = ['-login_time']
     list_per_page = 50
+    actions = ['bulk_delete_selected', 'delete_old_history_30_days', 'delete_old_history_60_days']
 
     def user_display(self, obj):
         """عرض اسم المستخدم مع رابط"""
@@ -180,3 +278,40 @@ class UserLoginHistoryAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+    def bulk_delete_selected(self, request, queryset):
+        """حذف مجمّع سريع"""
+        count = queryset.count()
+        if count > 0:
+            queryset._raw_delete(queryset.db)
+            self.message_user(request, f'تم حذف {count} سجل تسجيل دخول', level='success')
+        else:
+            self.message_user(request, 'لم يتم تحديد أي سجلات للحذف', level='warning')
+    
+    bulk_delete_selected.short_description = '🗑️ حذف سريع للسجلات المحددة'
+
+    def delete_old_history_30_days(self, request, queryset):
+        """حذف سجلات تسجيل الدخول الأقدم من 30 يوم"""
+        cutoff_date = timezone.now() - timedelta(days=30)
+        old_records = UserLoginHistory.objects.filter(login_time__lt=cutoff_date)
+        count = old_records.count()
+        if count > 0:
+            old_records._raw_delete(old_records.db)
+            self.message_user(request, f'تم حذف {count} سجل أقدم من 30 يوم', level='success')
+        else:
+            self.message_user(request, 'لا توجد سجلات أقدم من 30 يوم', level='info')
+    
+    delete_old_history_30_days.short_description = '🗑️ حذف سجلات أقدم من 30 يوم'
+
+    def delete_old_history_60_days(self, request, queryset):
+        """حذف سجلات تسجيل الدخول الأقدم من 60 يوم"""
+        cutoff_date = timezone.now() - timedelta(days=60)
+        old_records = UserLoginHistory.objects.filter(login_time__lt=cutoff_date)
+        count = old_records.count()
+        if count > 0:
+            old_records._raw_delete(old_records.db)
+            self.message_user(request, f'تم حذف {count} سجل أقدم من 60 يوم', level='success')
+        else:
+            self.message_user(request, 'لا توجد سجلات أقدم من 60 يوم', level='info')
+    
+    delete_old_history_60_days.short_description = '🗑️ حذف سجلات أقدم من 60 يوم'

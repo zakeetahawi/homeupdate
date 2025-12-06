@@ -126,7 +126,9 @@ def stock_manager_handler(sender, instance, created, **kwargs):
             )
         
         # فحص مستويات المخزون وإنشاء التنبيهات
-        alert_data = should_create_stock_alert(instance.product.id, running_balance)
+        # ✅ استخدام المخزون الكلي من جميع المستودعات بدلاً من رصيد مستودع واحد
+        total_stock = instance.product.current_stock
+        alert_data = should_create_stock_alert(instance.product.id, total_stock)
         
         if alert_data:
             create_stock_alert_and_notification(
@@ -194,6 +196,19 @@ def create_stock_alert_and_notification(product, alert_data, user=None):
     إنشاء تنبيه المخزون والإشعار المقابل
     """
     try:
+        # ✅ أولاً: حل التنبيهات الخاطئة (المنتج متوفر لكن عليه تنبيه نفاذ)
+        if alert_data['type'] != 'out_of_stock' and alert_data['current_balance'] > 0:
+            # حل تنبيهات النفاذ إذا أصبح المنتج متوفراً
+            StockAlert.objects.filter(
+                product=product,
+                alert_type='out_of_stock',
+                status='active'
+            ).update(
+                status='resolved',
+                resolved_at=timezone.now(),
+                resolved_by=user
+            )
+        
         # التحقق من عدم وجود تنبيه نشط مؤخر من نفس النوع
         existing_alert = StockAlert.objects.filter(
             product=product,
@@ -205,6 +220,7 @@ def create_stock_alert_and_notification(product, alert_data, user=None):
             # تحديث التنبيه الموجود بدلاً من إنشاء جديد
             existing_alert.message = alert_data['message']
             existing_alert.created_at = timezone.now()
+            existing_alert.quantity_after = alert_data['current_balance']
             existing_alert.save()
             return existing_alert
         
@@ -215,7 +231,8 @@ def create_stock_alert_and_notification(product, alert_data, user=None):
             priority=alert_data['priority'],
             title=alert_data['title'],
             message=alert_data['message'],
-            quantity_before=alert_data['current_balance'],  # سيتم تحديثها لاحقاً
+            description=alert_data['message'],  # إضافة الوصف
+            quantity_before=alert_data['current_balance'],
             quantity_after=alert_data['current_balance'],
             threshold_limit=alert_data.get('threshold', 0),
             created_by=user
