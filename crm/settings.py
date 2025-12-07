@@ -863,7 +863,7 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # استخدام DB فق
 SESSION_CACHE_ALIAS = 'session'  # لا يُستخدم مع db backend لكن نبقيه للتوافق
 SESSION_COOKIE_NAME = 'elkhawaga_sessionid'  # اسم مخصص غير قابل للتخمين
 SESSION_SAVE_EVERY_REQUEST = False  # تحسين الأداء
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # يبقى المستخدم مسجلاً حتى بعد إغلاق المتصفح
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # الجلسة تنتهي عند إغلاق المتصفح (للأمان)
 # SESSION_COOKIE_AGE, SESSION_COOKIE_SECURE - انظر قسم Security Settings أعلاه
 
 # إعدادات جدولة المهام
