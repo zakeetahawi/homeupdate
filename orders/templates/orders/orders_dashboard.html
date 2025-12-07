@@ -467,14 +467,24 @@
                 
                 <div class="d-grid gap-2">
                     {% if perms.orders.add_order %}
-                    <a href="{% url 'orders:wizard_start' %}" class="btn btn-success btn-lg">
-                        <i class="fas fa-magic me-2"></i>إنشاء طلب إلكتروني
+                    <a href="{% url 'orders:wizard_start_new' %}" class="btn btn-success btn-lg">
+                        <i class="fas fa-magic me-2"></i>إنشاء طلب إلكتروني جديد
+                    </a>
+                    
+                    <a href="{% url 'orders:wizard_drafts_list' %}" class="btn btn-warning btn-lg">
+                        <i class="fas fa-file-alt me-2"></i>المسودات الحالية
                     </a>
                     {% endif %}
                     
                     <a href="{% url 'orders:order_list' %}" class="btn btn-outline-secondary">
                         <i class="fas fa-list me-2"></i>عرض جميع الطلبات
                     </a>
+                    
+                    {% if user.is_region_manager or user.is_branch_manager or user.is_general_manager %}
+                    <a href="{% url 'orders:edit_tracking_report' %}" class="btn btn-outline-info">
+                        <i class="fas fa-chart-line me-2"></i>تقرير التعديلات
+                    </a>
+                    {% endif %}
                     
                     {% if perms.orders.view_orders_reports %}
                     <a href="#" class="btn btn-outline-info">

@@ -2,6 +2,10 @@
 {% load static decimal_filters %}
 
 {% block wizard_content %}
+
+<!-- Edit History Section -->
+{% include 'orders/wizard/partials/edit_history.html' with draft=draft %}
+
 <form method="post" id="step4-form" enctype="multipart/form-data" novalidate>
     {% csrf_token %}
     

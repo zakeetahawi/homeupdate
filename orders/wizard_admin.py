@@ -5,6 +5,7 @@ Advanced Wizard Admin System - Complete Management from Admin Panel
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.urls import reverse, path
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import HttpResponseRedirect
@@ -24,22 +25,22 @@ class DraftOrderItemInline(admin.TabularInline):
     
     def total_price(self, obj):
         if obj.id:
-            currency = SystemSettings.get_settings().currency_symbol
-            return format_html("{} {}", f"{obj.total_price:.2f}", currency)
+            currency = str(SystemSettings.get_settings().currency_symbol)
+            return format_html("{} {}", f"{float(obj.total_price):.2f}", currency)
         return "-"
     total_price.short_description = 'السعر الإجمالي'
     
     def discount_amount(self, obj):
         if obj.id:
-            currency = SystemSettings.get_settings().currency_symbol
-            return format_html("{} {}", f"{obj.discount_amount:.2f}", currency)
+            currency = str(SystemSettings.get_settings().currency_symbol)
+            return format_html("{} {}", f"{float(obj.discount_amount):.2f}", currency)
         return "-"
     discount_amount.short_description = 'الخصم'
     
     def final_price(self, obj):
         if obj.id:
-            currency = SystemSettings.get_settings().currency_symbol
-            return format_html("{} {}", f"{obj.final_price:.2f}", currency)
+            currency = str(SystemSettings.get_settings().currency_symbol)
+            return format_html("{} {}", f"{float(obj.final_price):.2f}", currency)
         return "-"
     final_price.short_description = 'السعر النهائي'
 
@@ -54,6 +55,7 @@ class DraftOrderAdmin(admin.ModelAdmin):
         'current_step_progress',
         'status_badge',
         'totals_display',
+        'edit_info_display',
         'created_by',
         'created_at',
         'actions_display'
@@ -178,7 +180,7 @@ class DraftOrderAdmin(admin.ModelAdmin):
     def selected_type_display(self, obj):
         """عرض نوع الطلب مع أيقونة"""
         if not obj.selected_type:
-            return format_html('<span style="color: #999;">غير محدد</span>')
+            return mark_safe('<span style="color: #999;">غير محدد</span>')
         
         type_icons = {
             'accessory': '💎',
@@ -239,12 +241,12 @@ class DraftOrderAdmin(admin.ModelAdmin):
     def status_badge(self, obj):
         """عرض حالة المسودة"""
         if obj.is_completed:
-            return format_html(
+            return mark_safe(
                 '<span style="background: #28a745; color: white; padding: 4px 12px; '
                 'border-radius: 12px; font-size: 11px; font-weight: bold;">✓ مكتملة</span>'
             )
         else:
-            return format_html(
+            return mark_safe(
                 '<span style="background: #ffc107; color: #333; padding: 4px 12px; '
                 'border-radius: 12px; font-size: 11px; font-weight: bold;">⏳ قيد العمل</span>'
             )
@@ -252,19 +254,42 @@ class DraftOrderAdmin(admin.ModelAdmin):
     
     def totals_display(self, obj):
         """عرض المجاميع المالية"""
-        currency = SystemSettings.get_settings().currency_symbol
+        currency = str(SystemSettings.get_settings().currency_symbol)
         return format_html(
             '<div style="font-size: 11px;">'
             '<strong style="color: #007bff;">{} {}</strong><br/>'
-            '<span style="color: #666;">خصم: {}</span><br/>'
-            '<span style="color: #28a745;">مدفوع: {}</span>'
+            '<span style="color: #666;">خصم: {} {}</span><br/>'
+            '<span style="color: #28a745;">مدفوع: {} {}</span>'
             '</div>',
-            f"{obj.final_total:.2f}",
+            f"{float(obj.final_total):.2f}",
             currency,
-            f"{obj.total_discount:.2f}",
-            f"{obj.paid_amount:.2f}"
+            f"{float(obj.total_discount):.2f}",
+            currency,
+            f"{float(obj.paid_amount):.2f}",
+            currency
         )
     totals_display.short_description = 'المالية'
+    
+    def edit_info_display(self, obj):
+        """عرض معلومات التعديلات"""
+        if not obj.edit_history or not isinstance(obj.edit_history, list) or len(obj.edit_history) == 0:
+            return mark_safe('<span style="color: #999;">-</span>')
+        
+        edit_count = len(obj.edit_history)
+        last_editor = obj.last_modified_by
+        
+        if last_editor and last_editor != obj.created_by:
+            return format_html(
+                '<div style="font-size: 11px;">'
+                '<span style="background: #ffc107; color: #333; padding: 2px 6px; '
+                'border-radius: 8px; font-weight: bold;">📝 {0} تعديل</span><br/>'
+                '<small style="color: #666;">بواسطة: {1}</small>'
+                '</div>',
+                edit_count,
+                last_editor.get_full_name()
+            )
+        return mark_safe('<span style="color: #999;">-</span>')
+    edit_info_display.short_description = 'التعديلات'
     
     def actions_display(self, obj):
         """عرض أزرار الإجراءات"""
@@ -326,13 +351,13 @@ class DraftOrderAdmin(admin.ModelAdmin):
             )
         html += '</div>'
         
-        return format_html(html)
+        return mark_safe(html)
     wizard_progress.short_description = 'تقدم الخطوات'
     
     def totals_info(self, obj):
         """معلومات مفصلة عن المجاميع"""
         totals = obj.calculate_totals()
-        currency = SystemSettings.get_settings().currency_symbol
+        currency = str(SystemSettings.get_settings().currency_symbol)
         return format_html(
             '<table style="width: 100%; font-size: 12px;">'
             '<tr><td><strong>المجموع قبل الخصم:</strong></td><td>{} {}</td></tr>'
@@ -341,15 +366,15 @@ class DraftOrderAdmin(admin.ModelAdmin):
             '<tr><td><strong>المبلغ المدفوع:</strong></td><td>{} {}</td></tr>'
             '<tr><td><strong>المتبقي:</strong></td><td style="color: #ffc107;">{} {}</td></tr>'
             '</table>',
-            f"{totals['subtotal']:.2f}",
+            f"{float(totals['subtotal']):.2f}",
             currency,
-            f"{totals['total_discount']:.2f}",
+            f"{float(totals['total_discount']):.2f}",
             currency,
-            f"{totals['final_total']:.2f}",
+            f"{float(totals['final_total']):.2f}",
             currency,
-            f"{obj.paid_amount:.2f}",
+            f"{float(obj.paid_amount):.2f}",
             currency,
-            f"{totals['remaining']:.2f}",
+            f"{float(totals['remaining']):.2f}",
             currency
         )
     totals_info.short_description = 'تفاصيل المبالغ'
@@ -525,9 +550,9 @@ class DraftOrderItemAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'updated_at', 'total_price', 'discount_amount', 'final_price')
     
     def total_price_display(self, obj):
-        return format_html("{} ر.س", f"{obj.total_price:.2f}")
+        return format_html("{} ر.س", f"{float(obj.total_price):.2f}")
     total_price_display.short_description = 'السعر الإجمالي'
     
     def final_price_display(self, obj):
-        return format_html("{} ر.س", f"{obj.final_price:.2f}")
+        return format_html("{} ر.س", f"{float(obj.final_price):.2f}")
     final_price_display.short_description = 'السعر النهائي'

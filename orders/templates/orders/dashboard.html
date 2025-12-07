@@ -2,7 +2,17 @@
 {% block title %}لوحة تحكم الطلبات{% endblock %}
 {% block content %}
 <div class="container-fluid">
-    <h2 class="my-4">لوحة تحكم الطلبات</h2>
+    <div class="d-flex justify-content-between align-items-center my-4">
+        <h2>لوحة تحكم الطلبات</h2>
+        <div class="btn-group">
+            <a href="{% url 'orders:wizard_start' %}" class="btn btn-success">
+                <i class="fas fa-magic me-2"></i>إنشاء طلب إلكتروني
+            </a>
+            <a href="{% url 'orders:wizard_drafts_list' %}" class="btn btn-info">
+                <i class="fas fa-file-alt me-2"></i>المسودات
+            </a>
+        </div>
+    </div>
     <div class="row mb-4">
         <div class="col-md-4">
             <div class="card text-center">

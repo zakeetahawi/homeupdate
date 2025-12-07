@@ -30,6 +30,9 @@ from .contract_models import ContractCurtain, CurtainFabric, CurtainAccessory
 from inventory.models import Product
 from customers.models import Customer
 from accounts.models import SystemSettings
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 # ⚡ استيراد تحسينات الأداء
 from .performance_optimizations import (
@@ -280,16 +283,52 @@ def wizard_drafts_list(request):
     if request.user.is_superuser or request.user.groups.filter(name='مدير نظام').exists():
         # مدير النظام - عرض جميع المسودات
         drafts = DraftOrder.objects.filter(is_completed=False).select_related('created_by', 'customer', 'branch')
-    elif request.user.groups.filter(name='مدير عام').exists():
+    elif request.user.groups.filter(name='مدير عام').exists() or (hasattr(request.user, 'is_general_manager') and request.user.is_general_manager):
         # مدير عام - عرض جميع المسودات
         drafts = DraftOrder.objects.filter(is_completed=False).select_related('created_by', 'customer', 'branch')
-    elif request.user.groups.filter(name='مدير منطقة').exists():
-        # مدير منطقة - عرض مسودات الفروع المرتبطة به
-        user_branches = request.user.branches.all()
-        drafts = DraftOrder.objects.filter(
-            is_completed=False,
-            branch__in=user_branches
-        ).select_related('created_by', 'customer', 'branch')
+    elif request.user.groups.filter(name='مدير منطقة').exists() or (hasattr(request.user, 'is_region_manager') and request.user.is_region_manager):
+        # مدير منطقة - عرض مسودات الفروع المُدارة
+        managed_branches = request.user.managed_branches.all() if hasattr(request.user, 'managed_branches') else []
+        if managed_branches:
+            # عرض المسودات من الفروع المُدارة + المسودات التي أنشأها المستخدمون المُدارون
+            from django.db.models import Q
+            # الحصول على المستخدمين الذين يمكن إدارتهم
+            manageable_users = []
+            for branch in managed_branches:
+                # إضافة جميع المستخدمين في الفرع
+                branch_users = User.objects.filter(branch=branch)
+                manageable_users.extend(list(branch_users))
+            
+            # إضافة مسودات المستخدم الحالي أيضاً
+            drafts = DraftOrder.objects.filter(
+                Q(branch__in=managed_branches) | 
+                Q(created_by__in=manageable_users) |
+                Q(created_by=request.user),
+                is_completed=False
+            ).select_related('created_by', 'customer', 'branch').distinct()
+        else:
+            # إذا لم يكن له فروع مُدارة، عرض مسوداته فقط
+            drafts = DraftOrder.objects.filter(
+                created_by=request.user,
+                is_completed=False
+            ).select_related('customer', 'branch')
+    elif hasattr(request.user, 'is_branch_manager') and request.user.is_branch_manager:
+        # مدير فرع - عرض مسودات فرعه + المستخدمين في فرعه
+        if hasattr(request.user, 'branch') and request.user.branch:
+            from django.db.models import Q
+            branch_users = User.objects.filter(branch=request.user.branch)
+            drafts = DraftOrder.objects.filter(
+                Q(branch=request.user.branch) | 
+                Q(created_by__in=branch_users) |
+                Q(created_by=request.user),
+                is_completed=False
+            ).select_related('created_by', 'customer', 'branch').distinct()
+        else:
+            # إذا لم يكن له فرع، عرض مسوداته فقط
+            drafts = DraftOrder.objects.filter(
+                created_by=request.user,
+                is_completed=False
+            ).select_related('customer', 'branch')
     else:
         # المستخدم العادي - عرض مسوداته فقط
         drafts = DraftOrder.objects.filter(
@@ -326,55 +365,46 @@ def wizard_step(request, step):
     """
     عرض خطوة معينة من الويزارد
     ensure_csrf_cookie يضمن إرسال CSRF cookie مع الاستجابة
+    
+    ملاحظة مهمة: يجب أن يكون هناك draft_id في الجلسة للوصول للخطوات
+    المسودة تُنشأ فقط عند البدء الفعلي من wizard_start
     """
-    # التحقق من وجود معرف المسودة في الجلسة (وضع التعديل)
+    # التحقق من وجود معرف المسودة في الجلسة
     draft_id = request.session.get('wizard_draft_id')
     
-    if draft_id:
-        # وضع التعديل - استخدام المسودة من الجلسة
-        try:
-            # محاولة العثور على المسودة - السماح للمستخدمين ذوي الصلاحيات الأعلى
-            draft = DraftOrder.objects.get(pk=draft_id)
-            
-            # التحقق من الصلاحيات
-            if draft.created_by != request.user:
-                # التحقق من أن المستخدم لديه صلاحيات أعلى
-                if not request.user.can_manage_user(draft.created_by):
-                    messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه المسودة')
-                    del request.session['wizard_draft_id']
-                    if 'editing_order_id' in request.session:
-                        del request.session['editing_order_id']
-                    return redirect('orders:wizard_start')
-                # المستخدم لديه صلاحيات أعلى - السماح بالمتابعة
-                messages.info(request, f'تقوم بمتابعة مسودة {draft.created_by.get_full_name() or draft.created_by.username}')
-                
-        except DraftOrder.DoesNotExist:
-            # المسودة غير موجودة، حذف من الجلسة
-            del request.session['wizard_draft_id']
-            if 'editing_order_id' in request.session:
-                del request.session['editing_order_id']
-            messages.error(request, 'المسودة غير موجودة')
-            return redirect('orders:wizard_start')
-    else:
-        # وضع الإنشاء العادي - البحث عن آخر مسودة نشطة
-        # البحث أولاً عن مسودات المستخدم الحالي
-        draft = DraftOrder.objects.filter(
-            created_by=request.user,
-            is_completed=False
-        ).order_by('-updated_at').first()
+    if not draft_id:
+        # لا يوجد draft_id - توجيه للصفحة الرئيسية
+        messages.warning(request, 'يرجى البدء بإنشاء طلب جديد أو اختيار مسودة موجودة')
+        return redirect('orders:wizard_start')
+    
+    # الحصول على المسودة
+    try:
+        draft = DraftOrder.objects.select_related(
+            'created_by',
+            'last_modified_by',
+            'customer',
+            'branch'
+        ).get(pk=draft_id)
         
-        if not draft:
-            # إذا لم توجد مسودة للمستخدم الحالي، إنشاء واحدة جديدة
-            draft = DraftOrder.objects.create(
-                created_by=request.user,
-                current_step=1
-            )
-            # تخزين معرف المسودة في الجلسة
-            request.session['wizard_draft_id'] = draft.id
-            return redirect('orders:wizard_step', step=1)
-        else:
-            # تخزين معرف المسودة في الجلسة
-            request.session['wizard_draft_id'] = draft.id
+        # التحقق من الصلاحيات
+        if draft.created_by != request.user:
+            # التحقق من أن المستخدم لديه صلاحيات أعلى
+            if not request.user.can_manage_user(draft.created_by):
+                messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه المسودة')
+                del request.session['wizard_draft_id']
+                if 'editing_order_id' in request.session:
+                    del request.session['editing_order_id']
+                return redirect('orders:wizard_start')
+            # المستخدم لديه صلاحيات أعلى - السماح بالمتابعة بدون تغيير created_by
+            messages.info(request, f'تقوم بمتابعة مسودة {draft.created_by.get_full_name() or draft.created_by.username}')
+            
+    except DraftOrder.DoesNotExist:
+        # المسودة غير موجودة، حذف من الجلسة
+        del request.session['wizard_draft_id']
+        if 'editing_order_id' in request.session:
+            del request.session['editing_order_id']
+        messages.error(request, 'المسودة غير موجودة')
+        return redirect('orders:wizard_start')
     
     # التحقق من إمكانية الوصول للخطوة
     if not draft.can_access_step(step):
@@ -415,9 +445,32 @@ def wizard_step_1_basic_info(request, draft):
     الخطوة 1: البيانات الأساسية
     """
     if request.method == 'POST':
+        # حفظ القيم القديمة للمقارنة
+        old_customer = draft.customer
+        old_branch = draft.branch
+        old_salesperson = draft.salesperson
+        
         form = Step1BasicInfoForm(request.POST, instance=draft, user=request.user)
         if form.is_valid():
-            form.save()
+            draft = form.save(commit=False)
+            
+            # تسجيل التعديلات إذا كان المستخدم مختلف عن المنشئ
+            if draft.created_by != request.user:
+                changes = []
+                if old_customer != draft.customer:
+                    changes.append(f'تغيير العميل من {old_customer.name if old_customer else "غير محدد"} إلى {draft.customer.name if draft.customer else "غير محدد"}')
+                if old_branch != draft.branch:
+                    changes.append(f'تغيير الفرع من {old_branch.name if old_branch else "غير محدد"} إلى {draft.branch.name if draft.branch else "غير محدد"}')
+                if old_salesperson != draft.salesperson:
+                    changes.append(f'تغيير البائع')
+                
+                if changes:
+                    draft.log_edit(
+                        user=request.user,
+                        action='update_basic_info',
+                        details='تعديل البيانات الأساسية: ' + '، '.join(changes)
+                    )
+            
             draft.mark_step_complete(1)
             draft.current_step = 2
             draft.save()
@@ -482,9 +535,30 @@ def wizard_step_2_order_type(request, draft):
     الخطوة 2: نوع الطلب
     """
     if request.method == 'POST':
+        old_selected_type = draft.selected_type
+        
         form = Step2OrderTypeForm(request.POST, instance=draft, customer=draft.customer)
         if form.is_valid():
-            form.save()
+            draft = form.save()
+            
+            # تسجيل التعديلات
+            if draft.created_by != request.user and old_selected_type != draft.selected_type:
+                type_names = {
+                    'accessory': 'إكسسوار',
+                    'installation': 'تركيب',
+                    'inspection': 'معاينة',
+                    'tailoring': 'تسليم',
+                    'products': 'منتجات'
+                }
+                old_name = type_names.get(old_selected_type, old_selected_type) if old_selected_type else 'غير محدد'
+                new_name = type_names.get(draft.selected_type, draft.selected_type) if draft.selected_type else 'غير محدد'
+                
+                draft.log_edit(
+                    user=request.user,
+                    action='update_order_type',
+                    details=f'تغيير نوع الطلب من {old_name} إلى {new_name}'
+                )
+            
             draft.mark_step_complete(2)
             draft.current_step = 3
             draft.save()
@@ -526,8 +600,13 @@ def wizard_step_3_order_items(request, draft):
     """
     ⚡ الخطوة 3: عناصر الطلب (OPTIMIZED)
     """
-    # ⚡ استخدام select_related لتجنب N+1 queries
-    items = draft.items.select_related('product', 'product__category').all()
+    # ⚡ استخدام select_related لتجنب N+1 queries - مع حقول التتبع
+    items = draft.items.select_related(
+        'product', 
+        'product__category',
+        'added_by',
+        'modified_by'
+    ).all()
     
     total_steps = get_total_steps(draft)
     currency = get_currency_context()
@@ -591,7 +670,8 @@ def wizard_add_item(request):
         logger.info(f"wizard_add_item: Draft ID from session: {draft_id}")
         
         if draft_id:
-            draft = DraftOrder.objects.filter(pk=draft_id, created_by=request.user).first()
+            # البحث عن المسودة بدون فحص created_by (للسماح للمديرين بالتعديل)
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
             logger.info(f"wizard_add_item: Draft from session ID: {draft}")
         else:
             draft = DraftOrder.objects.filter(
@@ -645,10 +725,19 @@ def wizard_add_item(request):
             unit_price=unit_price,
             discount_percentage=discount_percentage,
             item_type=data.get('item_type', 'product') or 'product',
-            notes=data.get('notes', '') or ''
+            notes=data.get('notes', '') or '',
+            added_by=request.user  # تسجيل من أضاف العنصر
         )
         
         logger.info(f"wizard_add_item: Item created successfully: {item.id}")
+        
+        # تسجيل التعديل في سجل المسودة
+        if draft.created_by != request.user:
+            draft.log_edit(
+                user=request.user,
+                action='add_item',
+                details=f'أضاف عنصر: {product.name} (الكمية: {quantity})'
+            )
         
         # ⚡ إبطال الذاكرة المؤقتة للمجاميع
         invalidate_draft_cache(draft.id)
@@ -706,7 +795,8 @@ def wizard_remove_item(request, item_id):
         draft_id = request.session.get('wizard_draft_id') if hasattr(request, 'session') else None
         
         if draft_id:
-            draft = DraftOrder.objects.filter(pk=draft_id, created_by=request.user).first()
+            # البحث عن المسودة بدون فحص created_by (للسماح للمديرين بالتعديل)
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
         else:
             draft = DraftOrder.objects.filter(
                 created_by=request.user,
@@ -721,6 +811,16 @@ def wizard_remove_item(request, item_id):
         
         # حذف العنصر
         item = get_object_or_404(DraftOrderItem, pk=item_id, draft_order=draft)
+        product_name = item.product.name
+        
+        # تسجيل التعديل في سجل المسودة
+        if draft.created_by != request.user:
+            draft.log_edit(
+                user=request.user,
+                action='remove_item',
+                details=f'حذف عنصر: {product_name}'
+            )
+        
         item.delete()
         
         # إعادة حساب المجاميع
@@ -800,6 +900,10 @@ def wizard_step_4_invoice_payment(request, draft):
     الخطوة 4: تفاصيل الفاتورة والدفع
     """
     if request.method == 'POST':
+        old_invoice_number = draft.invoice_number
+        old_paid_amount = draft.paid_amount
+        old_payment_method = draft.payment_method
+        
         form = Step4InvoicePaymentForm(
             request.POST,
             request.FILES,
@@ -808,7 +912,24 @@ def wizard_step_4_invoice_payment(request, draft):
             request=request  # تمرير request للتحقق من وضع التعديل
         )
         if form.is_valid():
-            form.save()
+            draft = form.save()
+            
+            # تسجيل التعديلات
+            if draft.created_by != request.user:
+                changes = []
+                if old_invoice_number != draft.invoice_number:
+                    changes.append(f'تغيير رقم الفاتورة من {old_invoice_number or "غير محدد"} إلى {draft.invoice_number or "غير محدد"}')
+                if old_paid_amount != draft.paid_amount:
+                    changes.append(f'تغيير المبلغ المدفوع من {old_paid_amount} إلى {draft.paid_amount}')
+                if old_payment_method != draft.payment_method:
+                    changes.append(f'تغيير طريقة الدفع')
+                
+                if changes:
+                    draft.log_edit(
+                        user=request.user,
+                        action='update_payment_invoice',
+                        details='تعديل الدفع والفاتورة: ' + '، '.join(changes)
+                    )
             
             # معالجة الصور الإضافية
             from .wizard_models import DraftOrderInvoiceImage
@@ -819,6 +940,14 @@ def wizard_step_4_invoice_payment(request, draft):
                         draft_order=draft,
                         image=image
                     )
+                    
+                    # تسجيل إضافة صورة
+                    if draft.created_by != request.user:
+                        draft.log_edit(
+                            user=request.user,
+                            action='add_invoice_image',
+                            details='إضافة صورة فاتورة'
+                        )
             
             draft.mark_step_complete(4)
             
@@ -1342,7 +1471,8 @@ def wizard_delete_draft(request, draft_id):
 @require_http_methods(["GET", "POST"])
 def wizard_cancel(request):
     """
-    إلغاء الويزارد وحذف المسودة
+    إلغاء الويزارد - حذف المسودة فقط إذا كانت ملك المستخدم الحالي
+    إذا كانت المسودة تابعة لمستخدم آخر، يتم الخروج فقط دون حذف
     """
     try:
         # التحقق من وجود مسودة محددة في الجلسة (للتعديل)
@@ -1361,14 +1491,27 @@ def wizard_cancel(request):
             return redirect('orders:order_list')
         
         if request.method == "POST":
-            draft.delete()
-            messages.success(request, 'تم إلغاء عملية إنشاء الطلب')
+            # التحقق من صاحب المسودة
+            if draft.created_by == request.user:
+                # المسودة تابعة للمستخدم الحالي - يمكن حذفها
+                draft.delete()
+                messages.success(request, 'تم إلغاء عملية إنشاء الطلب وحذف المسودة')
+            else:
+                # المسودة تابعة لمستخدم آخر - الخروج فقط دون حذف
+                messages.info(request, f'تم الخروج من المسودة (المسودة تابعة لـ {draft.created_by.get_full_name()})')
+            
+            # مسح معرف المسودة من الجلسة
+            if 'wizard_draft_id' in request.session:
+                del request.session['wizard_draft_id']
+            
             return redirect('orders:order_list')
         else:
             # GET request - show confirmation page
+            is_owner = draft.created_by == request.user
             context = {
                 'draft': draft,
-                'title': 'تأكيد إلغاء الطلب'
+                'is_owner': is_owner,
+                'title': 'تأكيد إلغاء الطلب' if is_owner else 'تأكيد الخروج من المسودة'
             }
             return render(request, 'orders/wizard/cancel_confirm.html', context)
     

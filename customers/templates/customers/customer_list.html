@@ -88,7 +88,7 @@
                                     
                                     {% if customer.pk in cross_branch_customers %}
                                         <!-- أزرار خاصة للعملاء من فروع أخرى -->
-                                        <a href="{% url 'orders:wizard_start' %}?customer_id={{ customer.pk }}" class="btn btn-success" title="إنشاء طلب إلكتروني" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
+                                        <a href="{% url 'orders:wizard_start_new' %}?customer_id={{ customer.pk }}" class="btn btn-success" title="إنشاء طلب إلكتروني" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
                                             <i class="fas fa-magic" style="font-size: 0.7em;"></i>
                                         </a>
                                         <span class="btn btn-secondary disabled" title="لا يمكن التعديل - عميل من فرع آخر" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">

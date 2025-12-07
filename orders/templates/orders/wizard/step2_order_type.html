@@ -2,6 +2,10 @@
 {% load static %}
 
 {% block wizard_content %}
+
+<!-- Edit History Section -->
+{% include 'orders/wizard/partials/edit_history.html' with draft=draft %}
+
 <form method="post" id="step2-form" novalidate>
     {% csrf_token %}
     

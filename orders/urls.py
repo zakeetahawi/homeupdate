@@ -5,13 +5,17 @@ from . import invoice_views
 from . import contract_views
 from . import wizard_views
 from . import api_views
-from .views import OrdersDashboardView
+from . import edit_tracking_views
 
 app_name = 'orders'
 
 urlpatterns = [
     # الداشبورد الجديد كصفحة رئيسية
     path('', dashboard_views.orders_dashboard, name='orders_dashboard'),
+    
+    # تقارير تتبع التعديلات
+    path('reports/edit-tracking/', edit_tracking_views.edit_tracking_report, name='edit_tracking_report'),
+    path('reports/draft-edit/<int:draft_id>/', edit_tracking_views.draft_edit_detail, name='draft_edit_detail'),
     
     # الجدول الشامل للطلبات
     path('all/', views.order_list, name='order_list'),
@@ -58,15 +62,11 @@ urlpatterns = [
     path('installation/', dashboard_views.installation_orders, name='installation_orders'),
     path('accessory/', dashboard_views.accessory_orders, name='accessory_orders'),
     path('tailoring/', dashboard_views.tailoring_orders, name='tailoring_orders'),
-
-    # Old dashboard (deactivated)
-    path('dashboard/', OrdersDashboardView.as_view(), name='dashboard'),
     
     # URLs باستخدام رقم الطلب (order_number) - الأولوية الأولى
     path('order/<str:order_number>/', views.order_detail_by_number, name='order_detail_by_number'),
     path('order/<str:order_code>/', views.order_detail_by_code, name='order_detail_by_code'),
     path('order/<str:order_number>/success/', views.order_success_by_number, name='order_success_by_number'),
-    path('order/<str:order_number>/update/', views.order_update_by_number, name='order_update_by_number'),
     path('order/<str:order_number>/delete/', views.order_delete_by_number, name='order_delete_by_number'),
     path('order/<str:order_number>/invoice/', views.invoice_print, name='invoice_print'),
     

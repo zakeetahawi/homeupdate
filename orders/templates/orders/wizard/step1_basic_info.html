@@ -3,6 +3,9 @@
 
 {% block wizard_content %}
 
+<!-- Edit History Section -->
+{% include 'orders/wizard/partials/edit_history.html' with draft=draft %}
+
 <!-- رسالة وضع التعديل -->
 {% if editing_mode and editing_order %}
 <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">

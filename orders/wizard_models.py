@@ -57,8 +57,23 @@ class DraftOrder(models.Model):
         related_name='draft_orders',
         verbose_name='أنشأ بواسطة'
     )
+    last_modified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='modified_drafts',
+        verbose_name='آخر تعديل بواسطة'
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='آخر تحديث')
+    
+    # سجل التعديلات
+    edit_history = models.JSONField(
+        default=list,
+        verbose_name='سجل التعديلات',
+        help_text='سجل بجميع التعديلات على المسودة'
+    )
     
     # تتبع الخطوة الحالية
     current_step = models.IntegerField(
@@ -309,6 +324,42 @@ class DraftOrder(models.Model):
             'remaining': self.final_total - self.paid_amount
         }
     
+    def log_edit(self, user, action, details):
+        """تسجيل تعديل على المسودة"""
+        if not isinstance(self.edit_history, list):
+            self.edit_history = []
+        
+        edit_entry = {
+            'timestamp': timezone.now().isoformat(),
+            'user_id': user.id,
+            'user_name': user.get_full_name(),
+            'action': action,
+            'details': details
+        }
+        self.edit_history.append(edit_entry)
+        self.last_modified_by = user
+        self.save(update_fields=['edit_history', 'last_modified_by', 'updated_at'])
+    
+    def get_edit_summary(self):
+        """الحصول على ملخص التعديلات"""
+        if not self.edit_history:
+            return []
+        
+        # تجميع التعديلات حسب المستخدم
+        summary = {}
+        for edit in self.edit_history:
+            user_name = edit.get('user_name', 'مستخدم غير معروف')
+            if user_name not in summary:
+                summary[user_name] = {
+                    'user_name': user_name,
+                    'actions': [],
+                    'count': 0
+                }
+            summary[user_name]['actions'].append(edit)
+            summary[user_name]['count'] += 1
+        
+        return list(summary.values())
+    
     def mark_step_complete(self, step_number):
         """تحديد خطوة كمكتملة"""
         if step_number not in self.completed_steps:
@@ -371,6 +422,29 @@ class DraftOrderItem(models.Model):
         verbose_name='نوع العنصر'
     )
     notes = models.TextField(blank=True, null=True, verbose_name='ملاحظات')
+    
+    # تتبع التعديلات
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='added_draft_items',
+        verbose_name='أضيف بواسطة'
+    )
+    modified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='modified_draft_items',
+        verbose_name='عُدل بواسطة'
+    )
+    modification_note = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='ملاحظة التعديل'
+    )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -67,7 +67,7 @@
         <div class="card-header cancel-card-header text-center">
             <h4 class="mb-0">
                 <i class="fas fa-exclamation-triangle me-2"></i>
-                تأكيد إلغاء الطلب
+                {{ title }}
             </h4>
         </div>
         <div class="card-body cancel-card-body text-center">
@@ -75,12 +75,22 @@
                 <i class="fas fa-times-circle"></i>
             </div>
             
+            {% if is_owner %}
             <h5 class="mb-3">هل أنت متأكد من إلغاء هذا الطلب؟</h5>
             
             <div class="alert alert-warning text-start">
                 <i class="fas fa-info-circle me-2"></i>
                 <strong>تحذير:</strong> سيتم حذف جميع البيانات المدخلة في هذا الطلب بشكل نهائي ولا يمكن استرجاعها.
             </div>
+            {% else %}
+            <h5 class="mb-3">هل تريد الخروج من هذه المسودة؟</h5>
+            
+            <div class="alert alert-info text-start">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>ملاحظة:</strong> هذه المسودة تابعة لـ <strong>{{ draft.created_by.get_full_name }}</strong>.
+                لن يتم حذف المسودة، سيتم الخروج منها فقط.
+            </div>
+            {% endif %}
             
             {% if draft %}
             <div class="text-muted mb-4">
@@ -89,6 +99,9 @@
                     تم إنشاء المسودة: {{ draft.created_at|date:"Y/m/d H:i" }}<br>
                     آخر تحديث: {{ draft.updated_at|date:"Y/m/d H:i" }}<br>
                     الخطوة الحالية: {{ draft.get_current_step_display }}
+                    {% if not is_owner %}
+                    <br>منشئ المسودة: {{ draft.created_by.get_full_name }}
+                    {% endif %}
                 </small>
             </div>
             {% endif %}
@@ -98,7 +111,7 @@
                     {% csrf_token %}
                     <button type="submit" class="btn btn-cancel-confirm">
                         <i class="fas fa-check me-2"></i>
-                        نعم، إلغاء الطلب
+                        {% if is_owner %}نعم، إلغاء الطلب وحذف المسودة{% else %}نعم، الخروج من المسودة{% endif %}
                     </button>
                 </form>
                 

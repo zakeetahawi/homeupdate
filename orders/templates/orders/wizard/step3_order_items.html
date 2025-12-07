@@ -2,6 +2,10 @@
 {% load static decimal_filters %}
 
 {% block wizard_content %}
+
+<!-- Edit History Section -->
+{% include 'orders/wizard/partials/edit_history.html' with draft=draft %}
+
 <div class="row">
     <div class="col-md-8">
         <!-- Add Item Section -->
@@ -79,8 +83,20 @@
                         </thead>
                         <tbody id="items-tbody">
                             {% for item in items %}
-                            <tr data-item-id="{{ item.id }}">
-                                <td>{{ item.product.name }}</td>
+                            <tr data-item-id="{{ item.id }}" {% if item.added_by and item.added_by != draft.created_by %}class="table-warning"{% endif %}>
+                                <td>
+                                    {{ item.product.name }}
+                                    {% if item.added_by and item.added_by != draft.created_by %}
+                                    <br><small class="badge bg-warning text-dark">
+                                        <i class="fas fa-user-edit"></i> أُضيف بواسطة: {{ item.added_by.get_full_name }}
+                                    </small>
+                                    {% endif %}
+                                    {% if item.modified_by and item.modified_by != item.added_by %}
+                                    <br><small class="badge bg-info">
+                                        <i class="fas fa-edit"></i> عُدل بواسطة: {{ item.modified_by.get_full_name }}
+                                    </small>
+                                    {% endif %}
+                                </td>
                                 <td>{{ item.quantity|clean_decimal:3 }}</td>
                                 <td>{{ item.unit_price|format_currency }}</td>
                                 <td>{{ item.discount_percentage|format_percentage }}</td>

@@ -299,7 +299,7 @@
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 {% if perms.orders.change_order %}
-                                <a href="{% url 'orders:order_update' order.pk %}" class="btn btn-primary" title="تعديل">
+                                <a href="{% url 'orders:wizard_edit_options' order_pk=order.pk %}" class="btn btn-primary" title="تعديل">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 {% endif %}
