@@ -49,10 +49,11 @@ class Step1BasicInfoForm(forms.ModelForm):
         
         # ⚡ منع تغيير العميل بعد تحديده (حماية من التداخل في أرقام الطلبات)
         if self.instance and self.instance.pk and self.instance.customer:
-            # إذا كان العميل محدداً مسبقاً، إزالة الحقل من النموذج وإضافة حقل للقراءة فقط
+            # إذا كان العميل محدداً مسبقاً، جعل الحقل للقراءة فقط بدون تعطيله
+            # لا نستخدم disabled لأنه يمنع إرسال القيمة
             self.fields['customer'].widget.attrs['readonly'] = True
-            self.fields['customer'].widget.attrs['disabled'] = 'disabled'
             self.fields['customer'].widget.attrs['class'] = 'form-select bg-light'
+            self.fields['customer'].widget.attrs['data-locked'] = 'true'
             self.fields['customer'].help_text = (
                 '<div class="alert alert-warning mt-2 mb-0">'
                 '<i class="bi bi-exclamation-triangle-fill"></i> '

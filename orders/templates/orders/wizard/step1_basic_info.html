@@ -487,10 +487,17 @@ $(document).ready(function() {
     hiddenField.val(preSelectedCustomer.id);
     console.log('✅ تم تعيين العميل المحدد مسبقاً من السيرفر:', preSelectedCustomer.id, preSelectedCustomer.name);
     
-    // ⚡ تعطيل Select2 لمنع التغيير
-    searchSelect.prop('disabled', true);
-    searchSelect.select2('destroy');
-    searchSelect.addClass('bg-light');
+    // ⚡ إخفاء Select2 وعرض نص ثابت بدلاً منه
+    searchSelect.closest('.mb-4').find('select, .select2-container').hide();
+    
+    // إنشاء حقل عرض فقط
+    const displayField = $(`
+        <div class="form-control bg-light" style="cursor: not-allowed; opacity: 0.7;">
+            <i class="fas fa-user me-2"></i>
+            ${displayText}
+        </div>
+    `);
+    searchSelect.closest('.mb-4').find('label').after(displayField);
     
     // إضافة رسالة تحذير
     const customerWrapper = searchSelect.closest('.mb-4');
@@ -506,7 +513,7 @@ $(document).ready(function() {
         customerWrapper.append(warningDiv);
     }
     
-    console.log('🔒 تم تعطيل حقل العميل لمنع التغيير');
+    console.log('🔒 تم منع تعديل حقل العميل');
     {% else %}
     // محاولة استعادة القيمة من الحقل المخفي
     const customerField = $('#{{ form.customer.id_for_label }}');
