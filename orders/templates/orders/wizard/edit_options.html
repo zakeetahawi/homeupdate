@@ -204,7 +204,7 @@
         </div>
         <div class="info-row">
             <span><i class="fas fa-tag"></i> النوع: <strong>{{ order.get_selected_types_display }}</strong></span>
-            <span><i class="fas fa-money-bill-wave"></i> المبلغ: <strong>{{ order.final_price|floatformat:2 }} ريال</strong></span>
+            <span><i class="fas fa-money-bill-wave"></i> المبلغ: <strong>{{ order.final_price|floatformat:2 }} {{ currency_symbol|default:"ج.م" }}</strong></span>
         </div>
     </div>
 

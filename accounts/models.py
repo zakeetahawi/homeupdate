@@ -606,7 +606,7 @@ class SystemSettings(models.Model):
         'OMR': 'ر.ع',
     }
     name = models.CharField(_('اسم النظام'), max_length=100, default='نظام الخواجه')
-    currency = models.CharField(_('العملة'), max_length=3, choices=CURRENCY_CHOICES, default='SAR')
+    currency = models.CharField(_('العملة'), max_length=3, choices=CURRENCY_CHOICES, default='EGP')
     version = models.CharField(_('إصدار النظام'), max_length=20, default='1.0.0')
 
     enable_notifications = models.BooleanField(_('تفعيل الإشعارات'), default=True)

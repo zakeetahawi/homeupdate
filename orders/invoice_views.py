@@ -126,7 +126,7 @@ def invoice_builder(request, template_id=None):
         'page_title': 'مُنشئ قالب الفاتورة',
         'system_settings': system_settings,
         'company_info': company_info,
-        'currency_symbol': system_settings.currency_symbol if system_settings else 'ريال',
+        'currency_symbol': system_settings.currency_symbol if system_settings else 'ج.م',
         'order': order,
         'print_mode': print_mode,
         'auto_print': auto_print,
@@ -304,8 +304,8 @@ def load_template(request, template_id):
                 'website': template.company_website or (company_info_db.website if company_info_db else ''),
             },
             'system_info': {
-                'currency_code': system_settings.currency if system_settings else 'SAR',
-                'currency_symbol': system_settings.currency_symbol if system_settings else 'ريال',
+                'currency_code': system_settings.currency if system_settings else 'EGP',
+                'currency_symbol': system_settings.currency_symbol if system_settings else 'ج.م',
                 'system_name': system_settings.name if system_settings else 'نظام الخواجه',
             },
             'content_settings': {

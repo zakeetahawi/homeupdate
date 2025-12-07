@@ -320,6 +320,12 @@ class ReportDetailView(LoginRequiredMixin, DetailView):
                     {'value': 'forecast', 'label': 'التنبؤ'},
                 ]
             })
+        
+        # إضافة معلومات العملة من إعدادات النظام
+        from accounts.models import SystemSettings
+        system_settings = SystemSettings.get_settings()
+        context['currency_code'] = system_settings.currency if system_settings else 'EGP'
+        context['currency_symbol'] = system_settings.currency_symbol if system_settings else 'ج.م'
 
         return context
 

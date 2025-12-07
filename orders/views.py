@@ -156,8 +156,10 @@ def order_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Get currency symbol
-    currency_symbol = 'ج.م'
+    # Get currency symbol from system settings
+    from accounts.models import SystemSettings
+    system_settings = SystemSettings.get_settings()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
 
     # معلومات فلتر السنة
     available_years = Order.objects.dates('order_date', 'year', order='DESC')
@@ -319,8 +321,10 @@ def order_detail(request, pk):
                 created_at__gte=order.created_at
             ).order_by('-created_at')
 
-    # Get currency symbol
-    currency_symbol = 'ج.م'
+    # Get currency symbol from system settings
+    from accounts.models import SystemSettings
+    system_settings = SystemSettings.get_settings()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
     
     # Get rejection logs if manufacturing order exists
     rejection_logs = []
@@ -625,7 +629,9 @@ def order_create(request):
         form = OrderForm(user=request.user, customer=customer)
 
     # Get currency symbol from system settings
-    currency_symbol = 'ج.م'
+    from accounts.models import SystemSettings
+    system_settings = SystemSettings.get_settings()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
 
     context = {
         'form': form,
@@ -859,7 +865,9 @@ def order_update(request, pk):
         form = OrderForm(instance=order, user=request.user, customer=customer)
 
     # Get currency symbol from system settings
-    currency_symbol = 'ج.م'
+    from accounts.models import SystemSettings
+    system_settings = SystemSettings.get_settings()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
 
     context = {
         'form': form,
@@ -942,8 +950,10 @@ def payment_create(request, order_pk):
         initial_data = {'reference_number': order.invoice_number or ''}
         form = PaymentForm(initial=initial_data)
 
-    # Get currency symbol
-    currency_symbol = 'ج.م'
+    # Get currency symbol from system settings
+    from accounts.models import SystemSettings
+    system_settings = SystemSettings.get_settings()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
 
     context = {
         'form': form,
@@ -1211,8 +1221,10 @@ def order_detail_by_number(request, order_number):
     # Check if there are manual modifications
     has_manual_modifications = order.modification_logs.filter(is_manual_modification=True).exists()
     
-    # Get currency symbol
-    currency_symbol = 'ج.م'
+    # Get currency symbol from system settings
+    from accounts.models import SystemSettings
+    system_settings = SystemSettings.get_settings()
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
     
     # Get rejection logs if manufacturing order exists
     rejection_logs = []
@@ -1627,7 +1639,7 @@ def invoice_print(request, order_number):
     # إعدادات النظام والعملات
     system_settings = SystemSettings.get_settings()
     company_info = CompanyInfo.objects.first()
-    currency_symbol = system_settings.currency_symbol if system_settings else 'ريال'
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
 
     # إنشاء جدول العناصر مرة واحدة للاستخدام في كلا الفرعين (يشمل عمود الخصم وحساب الإجمالي بعد الخصم)
     items_html_rows = []

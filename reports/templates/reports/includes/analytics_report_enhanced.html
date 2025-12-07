@@ -326,9 +326,9 @@ function initializeCharts() {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.dataset.label + ': ' + context.parsed.y.toLocaleString('ar-SA', {
+                            return context.dataset.label + ': ' + context.parsed.y.toLocaleString('ar-EG', {
                                 style: 'currency',
-                                currency: 'SAR'
+                                currency: '{{ currency_code|default:"EGP" }}'
                             });
                         }
                     }

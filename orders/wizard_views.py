@@ -333,7 +333,21 @@ def wizard_step(request, step):
     if draft_id:
         # وضع التعديل - استخدام المسودة من الجلسة
         try:
-            draft = DraftOrder.objects.get(pk=draft_id, created_by=request.user)
+            # محاولة العثور على المسودة - السماح للمستخدمين ذوي الصلاحيات الأعلى
+            draft = DraftOrder.objects.get(pk=draft_id)
+            
+            # التحقق من الصلاحيات
+            if draft.created_by != request.user:
+                # التحقق من أن المستخدم لديه صلاحيات أعلى
+                if not request.user.can_manage_user(draft.created_by):
+                    messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه المسودة')
+                    del request.session['wizard_draft_id']
+                    if 'editing_order_id' in request.session:
+                        del request.session['editing_order_id']
+                    return redirect('orders:wizard_start')
+                # المستخدم لديه صلاحيات أعلى - السماح بالمتابعة
+                messages.info(request, f'تقوم بمتابعة مسودة {draft.created_by.get_full_name() or draft.created_by.username}')
+                
         except DraftOrder.DoesNotExist:
             # المسودة غير موجودة، حذف من الجلسة
             del request.session['wizard_draft_id']
@@ -2233,9 +2247,13 @@ def wizard_edit_options(request, order_pk):
         for t in order.selected_types
     )
     
+    # ⚡ الحصول على سياق العملة من Cache
+    currency_context = get_currency_context()
+    
     context = {
         'order': order,
         'has_contract': has_contract,
+        **currency_context,
     }
     
     return render(request, 'orders/wizard/edit_options.html', context)

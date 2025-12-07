@@ -385,7 +385,7 @@ def product_detail(request, pk):
 
     # جلب إعدادات النظام
     system_settings = SystemSettings.get_settings()
-    currency_symbol = system_settings.currency_symbol if system_settings else 'ر.س'
+    currency_symbol = system_settings.currency_symbol if system_settings else 'ج.م'
 
     # إضافة عدد التنبيهات النشطة
     from .models import StockAlert
