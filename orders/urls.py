@@ -40,6 +40,7 @@ urlpatterns = [
     path('wizard/upload-contract/', wizard_views.wizard_upload_contract, name='wizard_upload_contract'),
     path('wizard/remove-contract-file/', wizard_views.wizard_remove_contract_file, name='wizard_remove_contract_file'),
     path('wizard/delete-invoice-image/<int:image_id>/', wizard_views.delete_draft_invoice_image, name='delete_draft_invoice_image'),
+    path('wizard/delete-main-invoice-image/', wizard_views.delete_main_draft_invoice_image, name='delete_main_draft_invoice_image'),
     path('wizard/edit-order/<int:order_pk>/', wizard_views.wizard_edit_order, name='wizard_edit_order'),
     
     # Wizard Edit Options - خيارات التعديل الذكية

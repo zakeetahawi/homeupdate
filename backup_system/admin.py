@@ -265,6 +265,6 @@ class BackupScheduleAdmin(admin.ModelAdmin):
 
 
 # تخصيص عنوان الإدارة
-admin.site.site_header = "إدارة نظام النسخ الاحتياطي"
-admin.site.site_title = "نظام النسخ الاحتياطي"
-admin.site.index_title = "لوحة تحكم النسخ الاحتياطي"
+admin.site.site_header = "نظام إدارة الخواجة"
+admin.site.site_title = "لوحة الإدارة"
+admin.site.index_title = "لوحة تحكم"

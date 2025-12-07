@@ -784,7 +784,8 @@ def wizard_step_4_invoice_payment(request, draft):
             request.POST,
             request.FILES,
             instance=draft,
-            draft_order=draft
+            draft_order=draft,
+            request=request  # تمرير request للتحقق من وضع التعديل
         )
         if form.is_valid():
             form.save()
@@ -825,7 +826,7 @@ def wizard_step_4_invoice_payment(request, draft):
                     'message': 'يرجى تصحيح الأخطاء'
                 }, status=400)
     else:
-        form = Step4InvoicePaymentForm(instance=draft, draft_order=draft)
+        form = Step4InvoicePaymentForm(instance=draft, draft_order=draft, request=request)
     
     # حساب المجاميع
     totals = draft.calculate_totals()
@@ -840,6 +841,9 @@ def wizard_step_4_invoice_payment(request, draft):
     total_steps = get_total_steps(draft)
     currency = get_currency_context()
     
+    # التحقق من وجود صور محفوظة
+    has_saved_images = bool(draft.invoice_image) or draft.invoice_images_new.exists()
+    
     context = {
         'draft': draft,
         'form': form,
@@ -850,6 +854,8 @@ def wizard_step_4_invoice_payment(request, draft):
         'totals': totals,
         'currency_symbol': currency['currency_symbol'],
         'currency_code': currency['currency_code'],
+        'has_saved_images': has_saved_images,
+        'is_editing': bool(request.session.get('editing_order_id')),
     }
     
     return render(request, 'orders/wizard/step4_invoice_payment.html', context)
@@ -870,6 +876,36 @@ def delete_draft_invoice_image(request, image_id):
         return JsonResponse({'success': True})
     except DraftOrderInvoiceImage.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'الصورة غير موجودة'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_main_draft_invoice_image(request):
+    """حذف صورة الفاتورة الرئيسية من المسودة"""
+    try:
+        draft_id = request.session.get('wizard_draft_id')
+        if not draft_id:
+            return JsonResponse({'success': False, 'error': 'لا توجد مسودة نشطة'}, status=404)
+        
+        draft = DraftOrder.objects.get(pk=draft_id)
+        
+        # التحقق من الصلاحيات
+        if draft.created_by != request.user:
+            return JsonResponse({'success': False, 'error': 'غير مصرح لك بحذف هذه الصورة'}, status=403)
+        
+        # حذف الصورة
+        if draft.invoice_image:
+            draft.invoice_image.delete()
+            draft.invoice_image = None
+            draft.save(update_fields=['invoice_image'])
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'error': 'لا توجد صورة رئيسية لحذفها'}, status=404)
+            
+    except DraftOrder.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'المسودة غير موجودة'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 

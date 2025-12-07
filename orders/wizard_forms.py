@@ -339,6 +339,7 @@ class Step4InvoicePaymentForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         self.draft_order = kwargs.pop('draft_order', None)
+        self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         
         # جعل رقم المرجع الرئيسي إجبارياً
@@ -372,6 +373,11 @@ class Step4InvoicePaymentForm(forms.ModelForm):
         
         invoice_number = invoice_number.strip()
         
+        # في وضع التعديل: السماح بنفس رقم الفاتورة للطلب الأصلي
+        editing_order_id = None
+        if hasattr(self, 'request') and self.request:
+            editing_order_id = self.request.session.get('editing_order_id')
+        
         # التحقق من تكرار رقم المرجع للعميل نفسه مع نفس نوع الطلب
         if self.draft_order and self.draft_order.customer and self.draft_order.selected_type:
             from orders.models import Order
@@ -384,6 +390,10 @@ class Step4InvoicePaymentForm(forms.ModelForm):
                 Q(invoice_number_2=invoice_number) |
                 Q(invoice_number_3=invoice_number)
             )
+            
+            # استبعاد الطلب الذي يتم تعديله
+            if editing_order_id:
+                existing_orders = existing_orders.exclude(pk=editing_order_id)
             
             # التحقق من وجود طلب بنفس النوع
             for existing_order in existing_orders:

@@ -1,11 +1,48 @@
 """
-نظام الصلاحيات الشامل لقسم الطلبات
+نظام الصلاحيات الشامل لقسم الطلبات مع دعم التسلسل الهرمي
 """
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from functools import wraps
+
+
+def user_has_role_or_higher(user, target_role):
+    """
+    التحقق من أن المستخدم لديه دور معين أو أعلى منه في التسلسل الهرمي
+    """
+    from accounts.models import ROLE_HIERARCHY
+    
+    if user.is_superuser:
+        return True
+    
+    user_role = user.get_user_role()
+    user_level = ROLE_HIERARCHY.get(user_role, {}).get('level', 999)
+    target_level = ROLE_HIERARCHY.get(target_role, {}).get('level', 999)
+    
+    # المستوى الأقل = الصلاحيات الأعلى
+    return user_level <= target_level
+
+
+def get_users_manageable_by(user):
+    """
+    الحصول على المستخدمين الذين يمكن للمستخدم إدارتهم بناءً على التسلسل الهرمي
+    """
+    from accounts.models import User
+    
+    if user.is_superuser:
+        return User.objects.all()
+    
+    user_level = user.get_role_level()
+    
+    # الحصول على المستخدمين الأدنى في التسلسل الهرمي
+    manageable_users = []
+    for potential_user in User.objects.all():
+        if user.can_manage_user(potential_user):
+            manageable_users.append(potential_user.id)
+    
+    return User.objects.filter(id__in=manageable_users)
 
 
 def get_user_orders_queryset(user):
@@ -282,7 +319,7 @@ def apply_order_permissions(user, orders_queryset):
 
 
 def get_user_role_permissions(user):
-    """الحصول على صلاحيات المستخدم حسب دوره"""
+    """الحصول على صلاحيات المستخدم حسب دوره مع دعم الوراثة"""
     permissions = {
         'can_view_all_orders': False,
         'can_view_branch_orders': False,
@@ -291,46 +328,27 @@ def get_user_role_permissions(user):
         'can_edit_orders': False,
         'can_delete_orders': False,
         'can_manage_dashboard': False,
+        'can_manage_users': False,
+        'can_manage_branches': False,
     }
     
     if user.is_superuser:
         # المدير الأعلى له جميع الصلاحيات
         return {key: True for key in permissions.keys()}
     
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
-        # المدير العام له جميع الصلاحيات
+    # الحصول على جميع الصلاحيات بما فيها الموروثة
+    user_permissions = user.get_all_permissions()
+    
+    # تحويل صلاحيات الدور إلى صلاحيات محددة
+    if 'all' in user_permissions:
         return {key: True for key in permissions.keys()}
     
-    if hasattr(user, 'is_factory_manager') and user.is_factory_manager:
-        # مسؤول المصنع له جميع الصلاحيات
+    # المدير العام
+    if user_has_role_or_higher(user, 'general_manager'):
         return {key: True for key in permissions.keys()}
     
-    if hasattr(user, 'is_inspection_manager') and user.is_inspection_manager:
-        # مسؤول المعاينات له صلاحيات واسعة على طلبات المعاينة
-        permissions.update({
-            'can_view_all_orders': True,  # يرى جميع طلبات المعاينة
-            'can_view_branch_orders': True,
-            'can_create_orders': True,
-            'can_edit_orders': True,
-            'can_delete_orders': True,
-            'can_manage_dashboard': True,
-        })
-        return permissions
-    
-    if hasattr(user, 'is_installation_manager') and user.is_installation_manager:
-        # مسؤول التركيبات له صلاحيات واسعة على طلبات التركيب
-        permissions.update({
-            'can_view_all_orders': True,  # يرى جميع طلبات التركيب
-            'can_view_branch_orders': True,
-            'can_create_orders': True,
-            'can_edit_orders': True,
-            'can_delete_orders': True,
-            'can_manage_dashboard': True,
-        })
-        return permissions
-    
-    if hasattr(user, 'is_region_manager') and user.is_region_manager:
-        # مدير المنطقة له صلاحيات واسعة
+    # مدير المنطقة يرث صلاحيات مدير الفرع + صلاحيات إضافية
+    if user_has_role_or_higher(user, 'region_manager'):
         permissions.update({
             'can_view_all_orders': False,  # يرى فروعه فقط
             'can_view_branch_orders': True,
@@ -338,35 +356,84 @@ def get_user_role_permissions(user):
             'can_edit_orders': True,
             'can_delete_orders': True,
             'can_manage_dashboard': True,
+            'can_manage_users': True,
+            'can_manage_branches': True,
         })
+        return permissions
     
-    elif hasattr(user, 'is_branch_manager') and user.is_branch_manager:
-        # مدير الفرع له صلاحيات على فرعه
+    # مدير الفرع يرث صلاحيات البائع + صلاحيات إضافية
+    if user_has_role_or_higher(user, 'branch_manager'):
         permissions.update({
             'can_view_branch_orders': True,
             'can_create_orders': True,
             'can_edit_orders': True,
             'can_delete_orders': True,
             'can_manage_dashboard': True,
+            'can_manage_users': True,
         })
+        return permissions
     
-    elif hasattr(user, 'is_salesperson') and user.is_salesperson:
-        # البائع له صلاحيات محدودة
+    # مسؤول المصنع
+    if user_has_role_or_higher(user, 'factory_manager'):
+        permissions.update({
+            'can_view_all_orders': True,
+            'can_view_branch_orders': True,
+            'can_create_orders': True,
+            'can_edit_orders': True,
+            'can_delete_orders': True,
+            'can_manage_dashboard': True,
+        })
+        return permissions
+    
+    # مسؤول المعاينات يرث صلاحيات فني المعاينة
+    if user_has_role_or_higher(user, 'inspection_manager'):
+        permissions.update({
+            'can_view_all_orders': True,
+            'can_view_branch_orders': True,
+            'can_create_orders': True,
+            'can_edit_orders': True,
+            'can_delete_orders': True,
+            'can_manage_dashboard': True,
+        })
+        return permissions
+    
+    # مسؤول التركيبات
+    if user_has_role_or_higher(user, 'installation_manager'):
+        permissions.update({
+            'can_view_all_orders': True,
+            'can_view_branch_orders': True,
+            'can_create_orders': True,
+            'can_edit_orders': True,
+            'can_delete_orders': True,
+            'can_manage_dashboard': True,
+        })
+        return permissions
+    
+    # البائع - صلاحيات أساسية
+    if user_has_role_or_higher(user, 'salesperson'):
         permissions.update({
             'can_view_own_orders': True,
             'can_create_orders': True,
-            'can_edit_orders': True,  # طلباته فقط
-            'can_manage_dashboard': True,
+            'can_edit_orders': False,  # يعدل طلباته فقط
+            'can_delete_orders': False,
         })
+        return permissions
     
-    elif hasattr(user, 'is_inspection_technician') and user.is_inspection_technician:
-        # فني المعاينة له صلاحيات محدودة جداً
+    # فني المعاينة
+    if user_has_role_or_higher(user, 'inspection_technician'):
         permissions.update({
-            'can_view_own_orders': True,  # طلبات المعاينة فقط
-            'can_create_orders': True,  # طلبات المعاينة فقط
-            'can_manage_dashboard': True,
+            'can_view_own_orders': True,
         })
-
+        return permissions
+    
+    # موظف المستودع
+    if hasattr(user, 'is_warehouse_staff') and user.is_warehouse_staff:
+        permissions.update({
+            'can_view_branch_orders': True,
+        })
+        return permissions
+    
+    # المستخدم العادي
     return permissions
 
 

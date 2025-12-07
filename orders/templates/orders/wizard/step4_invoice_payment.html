@@ -50,34 +50,43 @@
                 <!-- عرض الصور الحالية -->
                 <div id="current-images" class="mb-3">
                     {% if draft.invoice_image %}
-                        <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between">
-                            <div>
+                        <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between bg-light" id="main-invoice-image">
+                            <div class="d-flex align-items-center">
                                 <i class="fas fa-image me-2 text-success"></i>
-                                <span>صورة الفاتورة الرئيسية</span>
+                                <span class="fw-bold">صورة الفاتورة الرئيسية</span>
                             </div>
                             <div>
-                                <a href="{{ draft.invoice_image.url }}" target="_blank" class="btn btn-sm btn-outline-success me-1">
+                                <a href="{{ draft.invoice_image.url }}" target="_blank" class="btn btn-sm btn-outline-success me-1" title="عرض الصورة">
                                     <i class="fas fa-eye me-1"></i>عرض
                                 </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteMainInvoiceImage()" title="حذف الصورة">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </div>
                         </div>
                     {% endif %}
                     {% for img in draft.invoice_images_new.all %}
-                        <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between">
-                            <div>
+                        <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between bg-light" id="invoice-image-{{ img.id }}">
+                            <div class="d-flex align-items-center">
                                 <i class="fas fa-image me-2 text-success"></i>
-                                <span>صورة {{ forloop.counter }}</span>
+                                <span>صورة فاتورة {{ forloop.counter }}</span>
                             </div>
                             <div>
-                                <a href="{{ img.image.url }}" target="_blank" class="btn btn-sm btn-outline-success me-1">
+                                <a href="{{ img.image.url }}" target="_blank" class="btn btn-sm btn-outline-success me-1" title="عرض الصورة">
                                     <i class="fas fa-eye me-1"></i>عرض
                                 </a>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteInvoiceImage({{ img.id }})">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteInvoiceImage({{ img.id }})" title="حذف الصورة">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </div>
                     {% endfor %}
+                    {% if not draft.invoice_image and not draft.invoice_images_new.exists %}
+                        <div class="alert alert-info py-2 mb-2">
+                            <i class="fas fa-info-circle me-2"></i>
+                            لا توجد صور محفوظة. يرجى رفع صورة الفاتورة.
+                        </div>
+                    {% endif %}
                 </div>
                 
                 <!-- حقول رفع الصور -->
@@ -252,8 +261,64 @@ window.deleteInvoiceImage = function(imageId) {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    Swal.fire('تم الحذف!', 'تم حذف الصورة بنجاح', 'success')
-                        .then(() => location.reload());
+                    // إزالة العنصر من DOM بدلاً من إعادة التحميل
+                    const element = document.getElementById(`invoice-image-${imageId}`);
+                    if (element) {
+                        element.remove();
+                    }
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'تم الحذف!',
+                        text: 'تم حذف الصورة بنجاح',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire('خطأ!', data.error || 'حدث خطأ أثناء الحذف', 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال بالخادم', 'error');
+            });
+        }
+    });
+}
+
+// حذف الصورة الرئيسية للفاتورة
+window.deleteMainInvoiceImage = function() {
+    Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'سيتم حذف صورة الفاتورة الرئيسية نهائياً',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، احذف',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/orders/wizard/delete-main-invoice-image/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // إزالة العنصر من DOM
+                    const element = document.getElementById('main-invoice-image');
+                    if (element) {
+                        element.remove();
+                    }
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'تم الحذف!',
+                        text: 'تم حذف صورة الفاتورة الرئيسية بنجاح',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                 } else {
                     Swal.fire('خطأ!', data.error || 'حدث خطأ أثناء الحذف', 'error');
                 }

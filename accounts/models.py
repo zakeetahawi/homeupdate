@@ -7,6 +7,70 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.utils.timesince import timesince
 from django.conf import settings
+
+# التسلسل الهرمي للأدوار من الأعلى إلى الأدنى
+ROLE_HIERARCHY = {
+    'general_manager': {
+        'level': 1,
+        'display': 'مدير عام',
+        'inherits_from': [],
+        'permissions': ['all']
+    },
+    'region_manager': {
+        'level': 2,
+        'display': 'مدير منطقة',
+        'inherits_from': ['branch_manager'],
+        'permissions': ['view_all_region_orders', 'manage_branches', 'manage_users']
+    },
+    'branch_manager': {
+        'level': 3,
+        'display': 'مدير فرع',
+        'inherits_from': ['salesperson'],
+        'permissions': ['view_branch_orders', 'manage_branch_users', 'approve_orders']
+    },
+    'factory_manager': {
+        'level': 2,
+        'display': 'مسؤول مصنع',
+        'inherits_from': [],
+        'permissions': ['view_all_orders', 'manage_manufacturing', 'manage_inventory']
+    },
+    'inspection_manager': {
+        'level': 3,
+        'display': 'مسؤول معاينات',
+        'inherits_from': ['inspection_technician'],
+        'permissions': ['view_all_inspections', 'assign_inspections', 'manage_technicians']
+    },
+    'installation_manager': {
+        'level': 3,
+        'display': 'مسؤول تركيبات',
+        'inherits_from': [],
+        'permissions': ['view_all_installations', 'assign_installations', 'manage_installers']
+    },
+    'warehouse_staff': {
+        'level': 4,
+        'display': 'موظف مستودع',
+        'inherits_from': [],
+        'permissions': ['manage_warehouse_inventory', 'transfer_products']
+    },
+    'salesperson': {
+        'level': 4,
+        'display': 'بائع',
+        'inherits_from': [],
+        'permissions': ['create_orders', 'view_own_orders', 'edit_own_orders']
+    },
+    'inspection_technician': {
+        'level': 5,
+        'display': 'فني معاينة',
+        'inherits_from': [],
+        'permissions': ['view_assigned_inspections', 'update_inspection_status']
+    },
+    'user': {
+        'level': 6,
+        'display': 'مستخدم عادي',
+        'inherits_from': [],
+        'permissions': ['view_dashboard']
+    }
+}
 class User(AbstractUser):
     """Custom User model for the application."""
     image = models.ImageField(upload_to='users/', verbose_name=_('صورة المستخدم'), blank=True, null=True)
@@ -98,19 +162,65 @@ class User(AbstractUser):
 
     def get_user_role_display(self):
         """الحصول على اسم الدور للعرض"""
-        role_names = {
-            "general_manager": "مدير عام",
-            "region_manager": "مدير منطقة",
-            "branch_manager": "مدير فرع",
-            "factory_manager": "مسؤول مصنع",
-            "inspection_manager": "مسؤول معاينات",
-            "installation_manager": "مسؤول تركيبات",
-            "warehouse_staff": "موظف مستودع",
-            "salesperson": "بائع",
-            "inspection_technician": "فني معاينة",
-            "user": "مستخدم عادي"
-        }
-        return role_names.get(self.get_user_role(), "غير محدد")
+        role = self.get_user_role()
+        return ROLE_HIERARCHY.get(role, {}).get('display', 'غير محدد')
+    
+    def get_role_level(self):
+        """الحصول على مستوى الدور في التسلسل الهرمي"""
+        role = self.get_user_role()
+        return ROLE_HIERARCHY.get(role, {}).get('level', 999)
+    
+    def get_inherited_roles(self):
+        """الحصول على الأدوار التي يرثها هذا المستخدم"""
+        role = self.get_user_role()
+        inherited = []
+        
+        def collect_inherited(role_key):
+            role_data = ROLE_HIERARCHY.get(role_key, {})
+            inherits_from = role_data.get('inherits_from', [])
+            for inherited_role in inherits_from:
+                if inherited_role not in inherited:
+                    inherited.append(inherited_role)
+                    collect_inherited(inherited_role)
+        
+        collect_inherited(role)
+        return inherited
+    
+    def get_all_permissions(self):
+        """الحصول على جميع الصلاحيات بما في ذلك الموروثة"""
+        role = self.get_user_role()
+        all_permissions = set()
+        
+        # إضافة صلاحيات الدور الحالي
+        current_perms = ROLE_HIERARCHY.get(role, {}).get('permissions', [])
+        all_permissions.update(current_perms)
+        
+        # إضافة صلاحيات الأدوار الموروثة
+        for inherited_role in self.get_inherited_roles():
+            inherited_perms = ROLE_HIERARCHY.get(inherited_role, {}).get('permissions', [])
+            all_permissions.update(inherited_perms)
+        
+        return list(all_permissions)
+    
+    def has_role_permission(self, permission):
+        """التحقق من امتلاك المستخدم لصلاحية معينة (بما في ذلك الموروثة)"""
+        if self.is_superuser:
+            return True
+        
+        all_perms = self.get_all_permissions()
+        return 'all' in all_perms or permission in all_perms
+    
+    def can_manage_user(self, other_user):
+        """التحقق من إمكانية إدارة مستخدم آخر بناءً على التسلسل الهرمي"""
+        if self.is_superuser:
+            return True
+        
+        # المستخدم لا يمكنه إدارة نفسه
+        if self.id == other_user.id:
+            return False
+        
+        # المستخدم يمكنه إدارة من هم أدنى منه في التسلسل الهرمي فقط
+        return self.get_role_level() < other_user.get_role_level()
 class Branch(models.Model):
     code = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
