@@ -27,6 +27,7 @@ urlpatterns = [
     path('wizard/confirm-new/', wizard_views.wizard_confirm_new, name='wizard_confirm_new'),
     path('wizard/delete-and-create-new/', wizard_views.wizard_delete_and_create_new, name='wizard_delete_and_create_new'),
     path('wizard/drafts/', wizard_views.wizard_drafts_list, name='wizard_drafts_list'),
+    path('wizard/draft/<int:draft_id>/continue/', wizard_views.wizard_continue_draft, name='wizard_continue_draft'),
     path('wizard/draft/<int:draft_id>/delete/', wizard_views.wizard_delete_draft, name='wizard_delete_draft'),
     path('wizard/step/<int:step>/', wizard_views.wizard_step, name='wizard_step'),
     path('wizard/add-item/', wizard_views.wizard_add_item, name='wizard_add_item'),

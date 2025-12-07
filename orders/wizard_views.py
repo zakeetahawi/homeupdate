@@ -357,18 +357,24 @@ def wizard_step(request, step):
             return redirect('orders:wizard_start')
     else:
         # وضع الإنشاء العادي - البحث عن آخر مسودة نشطة
+        # البحث أولاً عن مسودات المستخدم الحالي
         draft = DraftOrder.objects.filter(
             created_by=request.user,
             is_completed=False
         ).order_by('-updated_at').first()
         
         if not draft:
-            # إذا لم توجد مسودة، إنشاء واحدة جديدة
+            # إذا لم توجد مسودة للمستخدم الحالي، إنشاء واحدة جديدة
             draft = DraftOrder.objects.create(
                 created_by=request.user,
                 current_step=1
             )
+            # تخزين معرف المسودة في الجلسة
+            request.session['wizard_draft_id'] = draft.id
             return redirect('orders:wizard_step', step=1)
+        else:
+            # تخزين معرف المسودة في الجلسة
+            request.session['wizard_draft_id'] = draft.id
     
     # التحقق من إمكانية الوصول للخطوة
     if not draft.can_access_step(step):
@@ -1275,6 +1281,35 @@ def wizard_finalize(request):
             'success': False,
             'message': f'حدث خطأ: {str(e)}'
         }, status=500)
+
+
+@login_required
+def wizard_continue_draft(request, draft_id):
+    """
+    متابعة مسودة معينة - مع دعم المستخدمين ذوي الصلاحيات الأعلى
+    """
+    try:
+        draft = get_object_or_404(DraftOrder, id=draft_id, is_completed=False)
+        
+        # التحقق من الصلاحيات
+        if draft.created_by != request.user:
+            # التحقق من أن المستخدم لديه صلاحيات أعلى
+            if not request.user.can_manage_user(draft.created_by):
+                messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه المسودة')
+                return redirect('orders:wizard_drafts_list')
+            # المستخدم لديه صلاحيات أعلى - السماح بالمتابعة
+            messages.info(request, f'تقوم بمتابعة مسودة {draft.created_by.get_full_name() or draft.created_by.username}')
+        
+        # تخزين معرف المسودة في الجلسة
+        request.session['wizard_draft_id'] = draft.id
+        
+        # التوجيه للخطوة الحالية
+        return redirect('orders:wizard_step', step=draft.current_step)
+        
+    except Exception as e:
+        logger.error(f"Error continuing draft: {e}")
+        messages.error(request, f'حدث خطأ أثناء متابعة المسودة: {str(e)}')
+        return redirect('orders:wizard_drafts_list')
 
 
 @login_required

@@ -197,7 +197,7 @@
 
                         <!-- Actions -->
                         <div class="d-flex justify-content-between align-items-center">
-                            <a href="{% url 'orders:wizard_step' step=draft.current_step %}" class="btn btn-continue">
+                            <a href="{% url 'orders:wizard_continue_draft' draft_id=draft.id %}" class="btn btn-continue">
                                 <i class="fas fa-play me-1"></i>
                                 متابعة
                             </a>
