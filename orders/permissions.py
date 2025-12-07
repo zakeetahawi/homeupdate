@@ -416,6 +416,7 @@ def get_user_role_permissions(user):
             'can_create_orders': True,
             'can_edit_orders': False,  # يعدل طلباته فقط
             'can_delete_orders': False,
+            'can_manage_dashboard': True,  # يصل للداشبورد ولكن يرى طلباته فقط
         })
         return permissions
     
