@@ -486,6 +486,27 @@ $(document).ready(function() {
     const hiddenField = $('#{{ form.customer.id_for_label }}');
     hiddenField.val(preSelectedCustomer.id);
     console.log('✅ تم تعيين العميل المحدد مسبقاً من السيرفر:', preSelectedCustomer.id, preSelectedCustomer.name);
+    
+    // ⚡ تعطيل Select2 لمنع التغيير
+    searchSelect.prop('disabled', true);
+    searchSelect.select2('destroy');
+    searchSelect.addClass('bg-light');
+    
+    // إضافة رسالة تحذير
+    const customerWrapper = searchSelect.closest('.mb-4');
+    if (customerWrapper.length && !customerWrapper.find('.customer-locked-warning').length) {
+        const warningDiv = $(`
+            <div class="customer-locked-warning alert alert-warning mt-2 mb-0">
+                <i class="bi bi-lock-fill me-2"></i>
+                <strong>تنبيه:</strong> لا يمكن تغيير العميل بعد تحديده.
+                رقم الطلب مرتبط بالعميل الأصلي.
+                احذف المسودة وأنشئ طلباً جديداً لتغيير العميل.
+            </div>
+        `);
+        customerWrapper.append(warningDiv);
+    }
+    
+    console.log('🔒 تم تعطيل حقل العميل لمنع التغيير');
     {% else %}
     // محاولة استعادة القيمة من الحقل المخفي
     const customerField = $('#{{ form.customer.id_for_label }}');

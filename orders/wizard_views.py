@@ -1383,18 +1383,24 @@ def wizard_finalize(request):
         request.session.pop('editing_order_id', None)
         request.session.pop('wizard_draft_id', None)
         
-        # ⚡ توليد العقد في الخلفية - فوري مع Redis
+        # ⚡ توليد العقد في الخلفية - بعد اكتمال الـ transaction
         selected_type = draft.selected_type
         should_generate_contract = selected_type not in ['products', 'inspection']
         
         if should_generate_contract and not draft.contract_file:
-            try:
-                from .tasks import generate_contract_pdf_async
-                # تشغيل المهمة في الخلفية - الآن مع Redis متوفر
-                task = generate_contract_pdf_async.delay(order.pk, request.user.pk)
-                logger.info(f"⚡ Contract generation started (task: {task.id})")
-            except Exception as e:
-                logger.warning(f"⚠️ Contract task failed: {e}")
+            # استخدام on_commit لضمان اكتمال حفظ الطلب قبل توليد العقد
+            order_pk = order.pk
+            user_pk = request.user.pk
+            
+            def trigger_contract_generation():
+                try:
+                    from .tasks import generate_contract_pdf_async
+                    task = generate_contract_pdf_async.delay(order_pk, user_pk)
+                    logger.info(f"⚡ Contract generation started (task: {task.id}) after commit")
+                except Exception as e:
+                    logger.warning(f"⚠️ Contract task failed: {e}")
+            
+            transaction.on_commit(trigger_contract_generation)
         
         return JsonResponse({
             'success': True,

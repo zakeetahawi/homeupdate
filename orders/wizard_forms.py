@@ -47,6 +47,21 @@ class Step1BasicInfoForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
+        # ⚡ منع تغيير العميل بعد تحديده (حماية من التداخل في أرقام الطلبات)
+        if self.instance and self.instance.pk and self.instance.customer:
+            # إذا كان العميل محدداً مسبقاً، إزالة الحقل من النموذج وإضافة حقل للقراءة فقط
+            self.fields['customer'].widget.attrs['readonly'] = True
+            self.fields['customer'].widget.attrs['disabled'] = 'disabled'
+            self.fields['customer'].widget.attrs['class'] = 'form-select bg-light'
+            self.fields['customer'].help_text = (
+                '<div class="alert alert-warning mt-2 mb-0">'
+                '<i class="bi bi-exclamation-triangle-fill"></i> '
+                '<strong>تنبيه:</strong> لا يمكن تغيير العميل بعد تحديده. '
+                'رقم الطلب مرتبط بالعميل الأصلي. '
+                'احذف المسودة وأنشئ طلباً جديداً لتغيير العميل.'
+                '</div>'
+            )
+        
         # العميل: حقل إجباري بدون اختيار افتراضي
         self.fields['customer'].empty_label = "اختر العميل..."
         self.fields['customer'].required = True  # التحقق من جهة الخادم فقط
@@ -123,6 +138,24 @@ class Step1BasicInfoForm(forms.ModelForm):
         self._is_admin_user = is_admin_user
         self._is_main_branch_user = is_main_branch_user
     
+    def clean_customer(self):
+        """
+        ⚡ منع تغيير العميل بعد تحديده في المسودة
+        """
+        customer = self.cleaned_data.get('customer')
+        
+        # إذا كانت المسودة موجودة ولها عميل محدد مسبقاً
+        if self.instance and self.instance.pk and self.instance.customer:
+            # التحقق من محاولة التغيير
+            if customer and customer.id != self.instance.customer.id:
+                raise ValidationError(
+                    '❌ لا يمكن تغيير العميل بعد تحديده. '
+                    'رقم الطلب مرتبط بالعميل الأصلي. '
+                    'احذف المسودة وأنشئ طلباً جديداً لتغيير العميل.'
+                )
+        
+        return customer
+    
     def clean(self):
         """
         تحقق مخصص للتأكد من صحة العلاقة بين الفرع والبائع
@@ -130,6 +163,14 @@ class Step1BasicInfoForm(forms.ModelForm):
         cleaned_data = super().clean()
         branch = cleaned_data.get('branch')
         salesperson = cleaned_data.get('salesperson')
+        customer = cleaned_data.get('customer')
+        
+        # ⚡ منع تغيير العميل بعد تحديده
+        if self.instance and self.instance.pk and self.instance.customer:
+            if customer and customer.id != self.instance.customer.id:
+                raise ValidationError({
+                    'customer': 'لا يمكن تغيير العميل بعد تحديده. احذف المسودة وأنشئ طلباً جديداً.'
+                })
         
         # للمدراء: السماح باختيار أي بائع بغض النظر عن الفرع
         if getattr(self, '_is_admin_user', False) or getattr(self, '_is_main_branch_user', False):

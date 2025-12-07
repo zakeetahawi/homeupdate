@@ -58,6 +58,13 @@ logs/
 *.cache
 .sass-cache/
 
+# Service management files
+لينكس/start-service.sh
+لينكس/stop-service.sh
+لينكس/monitor-service.sh
+cloudflared.yml
+cloudflared
+
 # Ignore other common files
 .coverage
 htmlcov/

@@ -314,7 +314,7 @@ def find_duplicate_products():
         list - قائمة المنتجات المكررة
     """
     from .models import Product, StockTransaction
-    from django.db.models import Count
+    from django.db.models import Count, Case, When, F, Max, Subquery, OuterRef
     
     duplicates = []
     
@@ -322,13 +322,28 @@ def find_duplicate_products():
     products = Product.objects.all()
     
     for product in products:
-        # المستودعات التي فيها المنتج
-        warehouses_with_stock = StockTransaction.objects.filter(
-            product=product
-        ).values('warehouse__name').annotate(
-            total=Sum('quantity')
-        ).filter(total__gt=0)
+        # المستودعات التي فيها المنتج - باستخدام آخر running_balance لكل مستودع
+        warehouses_with_stock = []
         
+        # الحصول على المستودعات الفريدة للمنتج (set لإزالة التكرار)
+        warehouse_ids = set(StockTransaction.objects.filter(
+            product=product
+        ).values_list('warehouse_id', flat=True))
+        
+        for warehouse_id in warehouse_ids:
+            # آخر حركة مخزون للمنتج في هذا المستودع
+            last_transaction = StockTransaction.objects.filter(
+                product=product,
+                warehouse_id=warehouse_id
+            ).order_by('-transaction_date', '-id').first()
+            
+            if last_transaction and last_transaction.running_balance > 0:
+                warehouses_with_stock.append({
+                    'warehouse__name': last_transaction.warehouse.name,
+                    'total': last_transaction.running_balance
+                })
+        
+        # فقط إذا كان المنتج موجود في أكثر من مستودع واحد
         if len(warehouses_with_stock) > 1:
             duplicates.append({
                 'product': product,

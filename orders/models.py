@@ -530,6 +530,19 @@ class Order(models.Model):
             old_order_status = None
             old_tracking_status = None
 
+            # ⚡ منع تغيير العميل بعد إنشاء الطلب (يسبب تضارب في رقم الطلب)
+            if not is_new and not kwargs.pop('allow_customer_change', False):
+                try:
+                    old_order = Order.objects.get(pk=self.pk)
+                    if old_order.customer_id != self.customer_id:
+                        raise ValidationError(
+                            'لا يمكن تغيير العميل بعد إنشاء الطلب. '
+                            'رقم الطلب مرتبط بالعميل الأصلي. '
+                            'يُرجى إنشاء طلب جديد للعميل الجديد.'
+                        )
+                except Order.DoesNotExist:
+                    pass  # الطلب جديد
+
             # تحقق من وجود العميل
             if not self.customer:
                 raise models.ValidationError('يجب اختيار العميل')

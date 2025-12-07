@@ -120,8 +120,9 @@ def run_scheduled_syncs():
     try:
         logger.info("بدء تشغيل المزامنة المجدولة")
         
-        # تشغيل المجدول
-        SyncScheduler.run_scheduled_syncs()
+        # إنشاء instance من SyncScheduler وتشغيل المجدول
+        scheduler = SyncScheduler()
+        scheduler.run_scheduled_syncs()
         
         logger.info("انتهاء تشغيل المزامنة المجدولة")
         return {'success': True}
