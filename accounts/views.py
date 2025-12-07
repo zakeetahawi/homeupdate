@@ -9,14 +9,53 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 from django.core.cache import cache
 from django.http import HttpResponseForbidden
+import hashlib
+import json
+import traceback
 
-from .models import CompanyInfo, FormField, Department, Salesperson, Branch, Role, UserRole
+from .models import CompanyInfo, FormField, Department, Salesperson, Branch, Role, UserRole, BranchDevice
 from .forms import CompanyInfoForm, FormFieldForm, DepartmentForm, SalespersonForm, RoleForm, RoleAssignForm
 
 # سيتم إضافة دوال الإشعارات هنا
 
 # الحصول على نموذج المستخدم المخصص
 User = get_user_model()
+
+def generate_device_fingerprint(request):
+    """
+    توليد بصمة فريدة للجهاز بناءً على معلومات متعددة
+    """
+    # جمع معلومات من الخادم
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    accept_language = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
+    accept_encoding = request.META.get('HTTP_ACCEPT_ENCODING', '')
+    
+    # جمع معلومات من العميل (JavaScript)
+    device_info = request.POST.get('device_info', '{}')
+    
+    try:
+        device_data = json.loads(device_info)
+    except:
+        device_data = {}
+    
+    # دمج جميع المعلومات
+    fingerprint_data = {
+        'user_agent': user_agent,
+        'accept_language': accept_language,
+        'accept_encoding': accept_encoding,
+        'screen_resolution': device_data.get('screen_resolution', ''),
+        'timezone': device_data.get('timezone', ''),
+        'platform': device_data.get('platform', ''),
+        'canvas_fingerprint': device_data.get('canvas_fingerprint', ''),
+        'webgl_vendor': device_data.get('webgl_vendor', ''),
+        'webgl_renderer': device_data.get('webgl_renderer', ''),
+    }
+    
+    # إنشاء hash من جميع المعلومات
+    fingerprint_string = json.dumps(fingerprint_data, sort_keys=True)
+    fingerprint_hash = hashlib.sha256(fingerprint_string.encode()).hexdigest()
+    
+    return fingerprint_hash
 
 def login_view(request):
     """
@@ -80,16 +119,181 @@ def login_view(request):
                     user = authenticate(request=request, username=username, password=password)
 
                     if user is not None:
-                        # نجاح تسجيل الدخول - إعادة تعيين المحاولات
                         ip = request.META.get('REMOTE_ADDR', 'unknown')
-                        attempts_key = f'login_attempts_{ip}'
-                        cache.delete(attempts_key)
                         
-                        login(request, user)
-                        logger.info(f"✅ Successful login for user: {username} from IP: {ip}")
-                        messages.success(request, f'مرحباً بك {username}!')
-                        next_url = request.GET.get('next', 'home')
-                        return redirect(next_url)
+                        # التحقق من تفعيل نظام قفل الأجهزة
+                        from accounts.models import SystemSettings
+                        device_restriction_enabled = SystemSettings.get_settings().enable_device_restriction
+                        
+                        logger.info(f"🔐 Device restriction: {'Enabled' if device_restriction_enabled else 'Disabled'}")
+                        
+                        # الحصول على معلومات الجهاز
+                        device_info = request.POST.get('device_info', '')
+                        device_data = json.loads(device_info) if device_info else {}
+                        
+                        # الحصول على hardware_serial إذا كان متوفراً
+                        hardware_serial = device_data.get('hardware_serial', '')
+                        
+                        logger.info(f"📍 User branch: {user.branch.name if user.branch else 'None'}")
+                        logger.info(f"🔑 Hardware Serial: {hardware_serial if hardware_serial else 'Not provided'}")
+                        
+                        # التحقق من أن الجهاز مسجل ومرتبط بفرع المستخدم
+                        device_authorized = False
+                        device_obj = None
+                        denial_reason = ""
+                        
+                        # السوبر يوزر والمدير العام يمكنهم الدخول من أي جهاز
+                        if user.is_superuser or user.is_general_manager:
+                            device_authorized = True
+                            logger.info(f"✅ Superuser/General Manager {username} authorized from any device")
+                        # إذا كان نظام قفل الأجهزة معطل، السماح للجميع
+                        elif not device_restriction_enabled:
+                            device_authorized = True
+                            logger.info(f"✅ Device restriction disabled - user {username} authorized")
+                        else:
+                            # نظام قفل الأجهزة مفعل - التحقق من الجهاز
+                            logger.info(f"🔒 Device restriction enabled - checking device...")
+                            try:
+                                # محاولة البحث بالـ hardware_serial أولاً (أكثر استقراراً)
+                                if hardware_serial:
+                                    try:
+                                        device_obj = BranchDevice.objects.get(
+                                            hardware_serial=hardware_serial,
+                                            is_active=True
+                                        )
+                                        logger.info(f"✅ Device found by serial: {device_obj.device_name} - Branch: {device_obj.branch.name}")
+                                    except BranchDevice.DoesNotExist:
+                                        logger.warning(f"⚠️ Device with serial {hardware_serial} not found, trying fingerprint...")
+                                
+                                # إذا لم يُعثر على الجهاز بالسيريال، جرب البصمة
+                                if not device_obj:
+                                    device_fingerprint = generate_device_fingerprint(request, device_data)
+                                    logger.info(f"🔐 Device fingerprint: {device_fingerprint[:16]}...")
+                                    
+                                    try:
+                                        device_obj = BranchDevice.objects.get(
+                                            device_fingerprint=device_fingerprint,
+                                            is_active=True
+                                        )
+                                        logger.info(f"✅ Device found by fingerprint: {device_obj.device_name} - Branch: {device_obj.branch.name}")
+                                    except BranchDevice.DoesNotExist:
+                                        denial_reason = '🚫 جهاز غير مسجل'
+                                        denial_reason_key = 'device_not_registered'
+                                        logger.warning(f"❌ Unknown device attempted login for user {username}")
+                                        logger.warning(f"📊 Total active devices in system: {BranchDevice.objects.filter(is_active=True).count()}")
+                                
+                                # التحقق من الصلاحية إذا وُجد الجهاز
+                                if device_obj:
+                                    if user.branch == device_obj.branch:
+                                        device_authorized = True
+                                        # تحديث معلومات آخر استخدام
+                                        device_obj.mark_used(user=user, ip_address=ip)
+                                        logger.info(f"✅ User {username} authorized from device: {device_obj.device_name} - Branch: {device_obj.branch.name}")
+                                    else:
+                                        denial_reason = f'⛔ فرع غير متطابق: الجهاز لفرع "{device_obj.branch.name}" وأنت من فرع "{user.branch.name if user.branch else "غير محدد"}".'
+                                        denial_reason_key = 'wrong_branch'
+                                        logger.warning(f"❌ User {username} (Branch: {user.branch.name if user.branch else 'None'}) tried to login from device of different branch: {device_obj.branch.name}")
+                            except Exception as device_error:
+                                denial_reason = f'حدث خطأ أثناء التحقق من الجهاز: {str(device_error)}'
+                                logger.error(f"Device check error: {device_error}")
+                                logger.error(traceback.format_exc())
+                        
+                        # تسجيل المحاولة إذا فشلت
+                        if not device_authorized and device_restriction_enabled:
+                            from accounts.models import UnauthorizedDeviceAttempt
+                            from notifications.utils import create_notification
+                            
+                            # جمع بيانات الجهاز
+                            device_log_data = {
+                                'fingerprint': device_data.get('device_fingerprint') if 'device_fingerprint' in locals() else device_data.get('canvas_fingerprint', ''),
+                                'hardware_serial': hardware_serial,
+                                'user_agent': device_data.get('user_agent', request.META.get('HTTP_USER_AGENT', ''))
+                            }
+                            
+                            # تحديد سبب الرفض
+                            reason_key = denial_reason_key if 'denial_reason_key' in locals() else 'device_not_registered'
+                            device_branch = device_obj.branch if device_obj else None
+                            
+                            # تسجيل المحاولة
+                            attempt = UnauthorizedDeviceAttempt.log_attempt(
+                                user=user,
+                                device_data=device_log_data,
+                                denial_reason=reason_key,
+                                user_branch=user.branch,
+                                device_branch=device_branch,
+                                ip_address=ip
+                            )
+                            
+                            logger.error(f"🚨 Unauthorized attempt logged: ID {attempt.id}")
+                            
+                            # إرسال إشعار فوري لمدير النظام
+                            superusers = User.objects.filter(is_superuser=True, is_active=True)
+                            for admin_user in superusers:
+                                create_notification(
+                                    user=admin_user,
+                                    title='🚨 محاولة دخول غير مصرح بها',
+                                    message=f'{user.username} ({user.branch.name if user.branch else "بدون فرع"}) حاول الدخول من جهاز غير مصرح به.\nالسبب: {attempt.get_denial_reason_display()}\nالوقت: {attempt.attempted_at.strftime("%Y-%m-%d %H:%M")}\nIP: {ip}',
+                                    notification_type='security_alert',
+                                    url=f'/admin/accounts/unauthorizeddeviceattempt/{attempt.id}/change/'
+                                )
+                            attempt.is_notified = True
+                            attempt.save()
+                        
+                        # السماح بتسجيل الدخول فقط إذا كان الجهاز مصرح به
+                        if device_authorized:
+                            # نجاح تسجيل الدخول - إعادة تعيين المحاولات
+                            attempts_key = f'login_attempts_{ip}'
+                            cache.delete(attempts_key)
+                            
+                            login(request, user)
+                            logger.info(f"✅ Successful login for user: {username} from IP: {ip}")
+                            messages.success(request, f'مرحباً بك {username}!')
+                            next_url = request.GET.get('next', 'home')
+                            return redirect(next_url)
+                        else:
+                            # الجهاز غير مصرح - عرض رسالة خطأ مفصلة
+                            if denial_reason:
+                                # رسالة خطأ أساسية
+                                error_message = f"<strong>{denial_reason}</strong><br><br>"
+                                
+                                # إضافة تفاصيل حسب السبب
+                                if 'denial_reason_key' in locals():
+                                    if denial_reason_key == 'device_not_registered':
+                                        error_message += """
+                                        <div style='background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107;'>
+                                            <strong>ℹ️ ماذا يعني هذا؟</strong><br>
+                                            • هذا الجهاز لم يتم تسجيله في النظام بعد<br>
+                                            • يجب على المدير تسجيل الجهاز أولاً<br><br>
+                                            
+                                            <strong>📝 ما يجب فعله:</strong><br>
+                                            1. تواصل مع مدير النظام<br>
+                                            2. اطلب منه تسجيل هذا الجهاز لفرعك<br>
+                                            3. بعد التسجيل يمكنك المحاولة مرة أخرى<br><br>
+                                            
+                                            <small>🔒 تم تسجيل هذه المحاولة وإشعار مدير النظام</small>
+                                        </div>
+                                        """
+                                    elif denial_reason_key == 'wrong_branch':
+                                        branch_name = device_obj.branch.name if device_obj else 'غير معروف'
+                                        error_message += f"""
+                                        <div style='background: #f8d7da; padding: 15px; border-radius: 5px; border-left: 4px solid #dc3545;'>
+                                            <strong>⚠️ تفاصيل المشكلة:</strong><br>
+                                            • الجهاز مسجل لفرع: <strong>{branch_name}</strong><br>
+                                            • أنت تنتمي لفرع: <strong>{user.branch.name if user.branch else 'غير محدد'}</strong><br><br>
+                                            
+                                            <strong>💡 الحلول الممكنة:</strong><br>
+                                            1. استخدم جهازاً مسجلاً لفرعك<br>
+                                            2. أو اطلب من المدير نقل الجهاز لفرعك<br>
+                                            3. أو تحديث بيانات حسابك للفرع الصحيح<br><br>
+                                            
+                                            <small>🔒 تم تسجيل هذه المحاولة وإشعار مدير النظام</small>
+                                        </div>
+                                        """
+                                
+                                messages.error(request, mark_safe(error_message))
+                            else:
+                                messages.error(request, '🚫 لا يمكنك تسجيل الدخول من هذا الجهاز. يرجى التواصل مع مدير النظام.')
+                            logger.warning(f"❌ Login denied for {username}: {denial_reason}")
                     else:
                         # فشل تسجيل الدخول - زيادة عدد المحاولات
                         ip = request.META.get('REMOTE_ADDR', 'unknown')
@@ -148,6 +352,107 @@ def admin_logout_view(request):
     logout(request)
     messages.success(request, 'تم تسجيل الخروج بنجاح.')
     return redirect('admin:index')
+
+@staff_member_required
+def register_device_view(request):
+    """
+    صفحة تسجيل جهاز جديد - متاحة فقط للمدراء
+    """
+    import logging
+    logger = logging.getLogger('django')
+    
+    if request.method == 'POST':
+        try:
+            branch_id = request.POST.get('branch')
+            device_name = request.POST.get('device_name')
+            notes = request.POST.get('notes', '')
+            device_fingerprint = request.POST.get('device_fingerprint')
+            device_info_str = request.POST.get('device_info', '{}')
+            
+            # استخراج hardware_serial من device_info
+            try:
+                device_info = json.loads(device_info_str)
+                hardware_serial = device_info.get('hardware_serial', '')
+                user_agent = device_info.get('user_agent', '')
+            except:
+                hardware_serial = ''
+                user_agent = request.META.get('HTTP_USER_AGENT', '')
+            
+            # التحقق من البيانات المطلوبة (يجب توفر إما fingerprint أو hardware_serial)
+            if not all([branch_id, device_name]) or (not device_fingerprint and not hardware_serial):
+                messages.error(request, 'يرجى إدخال جميع الحقول المطلوبة.')
+                return redirect('accounts:register_device')
+            
+            # التحقق من وجود الفرع
+            try:
+                branch = Branch.objects.get(id=branch_id)
+            except Branch.DoesNotExist:
+                messages.error(request, 'الفرع المحدد غير موجود.')
+                return redirect('accounts:register_device')
+            
+            # التحقق من عدم تسجيل نفس الجهاز مسبقاً
+            existing_device = None
+            if hardware_serial and BranchDevice.objects.filter(hardware_serial=hardware_serial).exists():
+                existing_device = BranchDevice.objects.get(hardware_serial=hardware_serial)
+            elif device_fingerprint and BranchDevice.objects.filter(device_fingerprint=device_fingerprint).exists():
+                existing_device = BranchDevice.objects.get(device_fingerprint=device_fingerprint)
+            
+            if existing_device:
+                messages.warning(
+                    request, 
+                    f'هذا الجهاز مسجل بالفعل باسم "{existing_device.device_name}" للفرع "{existing_device.branch.name}".'
+                )
+                return redirect('accounts:register_device')
+            
+            ip_address = request.META.get('REMOTE_ADDR', '')
+            
+            # إنشاء الجهاز الجديد
+            device = BranchDevice.objects.create(
+                branch=branch,
+                device_name=device_name,
+                device_fingerprint=device_fingerprint if device_fingerprint else None,
+                hardware_serial=hardware_serial if hardware_serial else None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                notes=notes,
+                is_active=True
+            )
+            
+            logger.info(f"✅ New device registered: {device_name} (Serial: {hardware_serial or 'N/A'}) for branch {branch.name} by {request.user.username}")
+            messages.success(
+                request, 
+                f'تم تسجيل الجهاز "{device_name}" بنجاح للفرع "{branch.name}". '
+                f'يمكن الآن لموظفي الفرع تسجيل الدخول من هذا الجهاز.'
+            )
+            
+            # إعادة التوجيه إلى صفحة الإدارة
+            return redirect('admin:accounts_branchdevice_changelist')
+            
+        except Exception as e:
+            logger.error(f"Error registering device: {e}")
+            logger.error(traceback.format_exc())
+            messages.error(request, f'حدث خطأ أثناء تسجيل الجهاز: {str(e)}')
+            return redirect('accounts:register_device')
+    
+    # GET request - عرض النموذج
+    branches = Branch.objects.filter(is_active=True).order_by('name')
+    
+    context = {
+        'branches': branches,
+        'title': 'تسجيل جهاز جديد',
+    }
+    
+    return render(request, 'accounts/register_device.html', context)
+
+@login_required
+def device_diagnostic_view(request):
+    """
+    صفحة تشخيص الجهاز - لمعرفة ما إذا كان مسجلاً
+    """
+    context = {
+        'title': 'تشخيص الجهاز',
+    }
+    return render(request, 'accounts/device_diagnostic.html', context)
 
 @login_required
 def profile_view(request):

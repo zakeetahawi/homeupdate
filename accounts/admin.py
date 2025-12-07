@@ -14,7 +14,7 @@ from .models import (
     User, CompanyInfo, Branch, Department, Salesperson,
     Role, UserRole, SystemSettings, BranchMessage, DashboardYearSettings,
     ActivityLog, Employee, FormField, ContactFormSettings, FooterSettings, AboutPageSettings,
-    YearFilterExemption, InternalMessage
+    YearFilterExemption, InternalMessage, BranchDevice, UnauthorizedDeviceAttempt
 )
 
 
@@ -538,7 +538,7 @@ class PermissionAdmin(admin.ModelAdmin):
 @admin.register(SystemSettings)
 class SystemSettingsAdmin(admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
-    list_display = ('name', 'currency', 'version', 'max_draft_orders_per_user')
+    list_display = ('name', 'currency', 'version', 'max_draft_orders_per_user', 'device_restriction_status')
     readonly_fields = ('created_at', 'updated_at')
 
     fieldsets = (
@@ -556,6 +556,10 @@ class SystemSettingsAdmin(admin.ModelAdmin):
             'fields': ('max_draft_orders_per_user',),
             'description': _('التحكم في إعدادات إنشاء الطلبات والمسودات')
         }),
+        (_('إعدادات الأمان'), {
+            'fields': ('enable_device_restriction',),
+            'description': _('⚠️ عند التفعيل: الموظفون يجب أن يدخلوا من الأجهزة المسجلة فقط. السوبر يوزر والمدير العام معفيين. يمكنك تعطيل هذه الميزة مؤقتاً لتوزيع الأجهزة.')
+        }),
         (_('إعدادات متقدمة'), {
             'fields': ('enable_analytics', 'maintenance_mode', 'maintenance_message'),
             'classes': ('collapse',)
@@ -565,6 +569,19 @@ class SystemSettingsAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    
+    def device_restriction_status(self, obj):
+        """عرض حالة قفل الأجهزة بشكل ملون"""
+        if obj.enable_device_restriction:
+            return format_html(
+                '<span style="color: green; font-weight: bold;">{}</span>',
+                '🔒 مفعل'
+            )
+        return format_html(
+            '<span style="color: orange; font-weight: bold;">{}</span>',
+            '🔓 معطل'
+        )
+    device_restriction_status.short_description = 'قفل الأجهزة'
 
     def has_add_permission(self, request):
         # السماح للموظفين بإضافة إعدادات النظام
@@ -824,6 +841,276 @@ class InternalMessageAdmin(admin.ModelAdmin):
         queryset.delete()
         self.message_user(request, f'تم حذف {count} رسالة نهائياً')
     delete_permanently.short_description = 'حذف نهائياً'
+
+
+@admin.register(BranchDevice)
+class BranchDeviceAdmin(admin.ModelAdmin):
+    """إدارة أجهزة الفروع"""
+    list_display = (
+        'device_name', 
+        'branch', 
+        'is_active', 
+        'last_used_by', 
+        'last_used',
+        'fingerprint_short',
+        'ip_address'
+    )
+    list_filter = ('is_active', 'branch', 'created_at', 'last_used')
+    search_fields = (
+        'device_name', 
+        'device_fingerprint', 
+        'ip_address',
+        'branch__name',
+        'last_used_by__username',
+        'notes'
+    )
+    readonly_fields = (
+        'device_fingerprint', 
+        'created_at', 
+        'first_used', 
+        'last_used',
+        'last_used_by',
+        'fingerprint_display'
+    )
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('معلومات الجهاز الأساسية', {
+            'fields': ('branch', 'device_name', 'is_active')
+        }),
+        ('البصمة والتعريف', {
+            'fields': ('fingerprint_display', 'device_fingerprint'),
+            'description': 'بصمة الجهاز يتم توليدها تلقائياً ولا يمكن تعديلها'
+        }),
+        ('معلومات الاتصال', {
+            'fields': ('ip_address', 'user_agent')
+        }),
+        ('معلومات الاستخدام', {
+            'fields': ('first_used', 'last_used', 'last_used_by'),
+            'classes': ('collapse',)
+        }),
+        ('ملاحظات', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        }),
+        ('التواريخ', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['activate_devices', 'deactivate_devices', 'export_device_list', 'toggle_device_restriction']
+    
+    def changelist_view(self, request, extra_context=None):
+        """إضافة معلومات حالة النظام إلى صفحة القائمة"""
+        extra_context = extra_context or {}
+        settings = SystemSettings.get_settings()
+        extra_context['device_restriction_enabled'] = settings.enable_device_restriction
+        extra_context['total_devices'] = BranchDevice.objects.count()
+        extra_context['active_devices'] = BranchDevice.objects.filter(is_active=True).count()
+        return super().changelist_view(request, extra_context=extra_context)
+    
+    def fingerprint_short(self, obj):
+        """عرض أول 12 حرف من البصمة"""
+        if obj.device_fingerprint:
+            return f"{obj.device_fingerprint[:12]}..."
+        return "-"
+    fingerprint_short.short_description = 'البصمة (مختصرة)'
+    
+    def fingerprint_display(self, obj):
+        """عرض البصمة الكاملة بشكل منسق"""
+        if obj.device_fingerprint:
+            return mark_safe(f'<code style="font-size: 11px;">{obj.device_fingerprint}</code>')
+        return "-"
+    fingerprint_display.short_description = 'البصمة الكاملة'
+    
+    def activate_devices(self, request, queryset):
+        """تفعيل الأجهزة المحددة"""
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'تم تفعيل {updated} جهاز')
+    activate_devices.short_description = 'تفعيل الأجهزة المحددة'
+    
+    def deactivate_devices(self, request, queryset):
+        """تعطيل الأجهزة المحددة"""
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'تم تعطيل {updated} جهاز')
+    deactivate_devices.short_description = 'تعطيل الأجهزة المحددة'
+    
+    def export_device_list(self, request, queryset):
+        """تصدير قائمة الأجهزة"""
+        import csv
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = 'attachment; filename="branch_devices.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'اسم الجهاز', 
+            'الفرع', 
+            'البصمة', 
+            'IP', 
+            'نشط',
+            'آخر استخدام',
+            'آخر مستخدم'
+        ])
+        
+        for device in queryset:
+            writer.writerow([
+                device.device_name,
+                device.branch.name,
+                device.device_fingerprint,
+                device.ip_address or '-',
+                'نعم' if device.is_active else 'لا',
+                device.last_used.strftime('%Y-%m-%d %H:%M') if device.last_used else '-',
+                device.last_used_by.username if device.last_used_by else '-'
+            ])
+        
+        return response
+    export_device_list.short_description = 'تصدير قائمة الأجهزة (CSV)'
+    
+    def toggle_device_restriction(self, request, queryset):
+        """تفعيل أو تعطيل نظام قفل الأجهزة"""
+        settings = SystemSettings.get_settings()
+        settings.enable_device_restriction = not settings.enable_device_restriction
+        settings.save()
+        
+        status = "مفعل 🔒" if settings.enable_device_restriction else "معطل 🔓"
+        message = f'نظام قفل الأجهزة الآن: {status}'
+        
+        if settings.enable_device_restriction:
+            message += ' - الموظفون يجب أن يدخلوا من الأجهزة المسجلة فقط'
+        else:
+            message += ' - جميع الموظفين يمكنهم الدخول من أي جهاز'
+        
+        self.message_user(request, message, messages.SUCCESS)
+    toggle_device_restriction.short_description = '🔐 تبديل حالة قفل الأجهزة (تفعيل/تعطيل)'
+    
+    def get_queryset(self, request):
+        """تحسين الاستعلامات"""
+        qs = super().get_queryset(request)
+        return qs.select_related('branch', 'last_used_by')
+
+
+@admin.register(UnauthorizedDeviceAttempt)
+class UnauthorizedDeviceAttemptAdmin(admin.ModelAdmin):
+    """إدارة محاولات الدخول غير المصرح بها"""
+    list_display = (
+        'user',
+        'user_branch_display',
+        'denial_reason',
+        'attempted_at',
+        'ip_address',
+        'hardware_serial_short',
+        'is_notified'
+    )
+    list_filter = ('denial_reason', 'is_notified', 'attempted_at', 'user_branch')
+    search_fields = (
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+        'ip_address',
+        'device_fingerprint',
+        'hardware_serial'
+    )
+    readonly_fields = (
+        'user',
+        'attempted_at',
+        'device_fingerprint',
+        'hardware_serial',
+        'ip_address',
+        'user_agent',
+        'denial_reason',
+        'user_branch',
+        'device_branch'
+    )
+    date_hierarchy = 'attempted_at'
+    
+    fieldsets = (
+        ('معلومات المستخدم', {
+            'fields': ('user', 'user_branch', 'attempted_at')
+        }),
+        ('معلومات الجهاز', {
+            'fields': ('hardware_serial', 'device_fingerprint', 'ip_address', 'user_agent')
+        }),
+        ('سبب الرفض', {
+            'fields': ('denial_reason', 'device_branch'),
+            'description': 'التفاصيل حول سبب رفض محاولة تسجيل الدخول'
+        }),
+        ('الإشعارات', {
+            'fields': ('is_notified',)
+        }),
+    )
+    
+    actions = ['mark_as_notified', 'send_notification_to_admin']
+    
+    def user_branch_display(self, obj):
+        """عرض فرع المستخدم"""
+        if obj.user_branch:
+            return obj.user_branch.name
+        return '-'
+    user_branch_display.short_description = 'فرع المستخدم'
+    
+    def hardware_serial_short(self, obj):
+        """عرض الرقم التسلسلي مختصراً"""
+        if obj.hardware_serial:
+            return f"{obj.hardware_serial[:12]}..."
+        return '-'
+    hardware_serial_short.short_description = 'المعرف الثابت'
+    
+    def mark_as_notified(self, request, queryset):
+        """تحديد المحاولات كتم إشعار بها"""
+        updated = queryset.update(is_notified=True)
+        self.message_user(request, f'تم تحديد {updated} محاولة كتم إشعار بها')
+    mark_as_notified.short_description = 'تحديد كتم الإشعار'
+    
+    def send_notification_to_admin(self, request, queryset):
+        """إرسال إشعار لمدير النظام عن المحاولات المحددة"""
+        from notifications.utils import create_notification
+        
+        unnotified = queryset.filter(is_notified=False)
+        count = unnotified.count()
+        
+        if count == 0:
+            self.message_user(request, 'جميع المحاولات المحددة تم الإشعار بها مسبقاً', messages.WARNING)
+            return
+        
+        # إرسال إشعار جماعي
+        superusers = User.objects.filter(is_superuser=True, is_active=True)
+        
+        for admin_user in superusers:
+            message = f'🚨 تنبيه أمني: {count} محاولة دخول غير مصرح بها'
+            details = '\n'.join([
+                f"- {attempt.user.username} ({attempt.get_denial_reason_display()}) في {attempt.attempted_at.strftime('%Y-%m-%d %H:%M')}"
+                for attempt in unnotified[:5]  # أول 5 محاولات
+            ])
+            if count > 5:
+                details += f"\n... و {count - 5} محاولة أخرى"
+            
+            create_notification(
+                user=admin_user,
+                title='محاولات دخول غير مصرح بها',
+                message=f"{message}\n\n{details}",
+                notification_type='security_alert',
+                url='/admin/accounts/unauthorizeddeviceattempt/'
+            )
+        
+        unnotified.update(is_notified=True)
+        self.message_user(
+            request,
+            f'تم إرسال إشعار لـ {superusers.count()} مدير نظام عن {count} محاولة',
+            messages.SUCCESS
+        )
+    send_notification_to_admin.short_description = '📧 إرسال إشعار لمدير النظام'
+    
+    def has_add_permission(self, request):
+        """منع الإضافة اليدوية"""
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        """السماح بالحذف للمشرفين فقط"""
+        return request.user.is_superuser
+
 
 
 

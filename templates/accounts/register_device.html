@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+
+{% block title %}تسجيل جهاز جديد - نظام الخواجه{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header" style="background-color: var(--primary); color: white;">
+                    <h5 class="mb-0"><i class="fas fa-desktop"></i> تسجيل جهاز جديد</h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                    <div class="messages">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>معلومات:</strong> هذه الصفحة تسمح لك بتسجيل جهاز جديد للفرع. 
+                        بمجرد التسجيل، سيتمكن أي موظف في هذا الفرع من استخدام الجهاز لتسجيل الدخول.
+                    </div>
+
+                    <form method="post" id="registerDeviceForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="device_info" id="deviceInfo">
+                        <input type="hidden" name="device_fingerprint" id="deviceFingerprint">
+
+                        <div class="mb-3">
+                            <label for="branch" class="form-label">الفرع <span class="text-danger">*</span></label>
+                            <select name="branch" id="branch" class="form-select" required>
+                                <option value="">اختر الفرع...</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">اختر الفرع الذي سيتم ربط الجهاز به</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="device_name" class="form-label">اسم الجهاز <span class="text-danger">*</span></label>
+                            <input type="text" name="device_name" id="device_name" class="form-control" 
+                                   placeholder="مثال: كمبيوتر الاستقبال 1" required>
+                            <small class="text-muted">أدخل اسماً وصفياً للجهاز لسهولة التعرف عليه</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">ملاحظات</label>
+                            <textarea name="notes" id="notes" class="form-control" rows="3" 
+                                      placeholder="أي ملاحظات إضافية عن الجهاز..."></textarea>
+                        </div>
+
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="fas fa-fingerprint"></i> معلومات الجهاز المكتشفة</h6>
+                                <div id="deviceInfoDisplay">
+                                    <p class="mb-2"><strong>🔐 المعرف الثابت للجهاز (Hardware Serial):</strong><br>
+                                        <span id="hardwareSerialDisplay" class="font-monospace text-primary fs-5">جارِ الحساب...</span>
+                                        <small class="text-muted d-block">هذا المعرف ثابت ولا يتغير بتغيير المتصفح</small>
+                                    </p>
+                                    <hr>
+                                    <p class="mb-1"><strong>بصمة إضافية (Fingerprint):</strong> <span id="fingerprintDisplay" class="font-monospace text-muted small">جارِ الحساب...</span></p>
+                                    <p class="mb-1"><strong>المتصفح:</strong> <span id="browserDisplay">...</span></p>
+                                    <p class="mb-1"><strong>نظام التشغيل:</strong> <span id="osDisplay">...</span></p>
+                                    <p class="mb-1"><strong>دقة الشاشة:</strong> <span id="screenDisplay">...</span></p>
+                                    <p class="mb-0"><strong>المنطقة الزمنية:</strong> <span id="timezoneDisplay">...</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>تنبيه:</strong> تأكد من أنك تقوم بتسجيل الجهاز من الجهاز نفسه الذي سيستخدمه الموظفون.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-save"></i> تسجيل الجهاز
+                            </button>
+                            <a href="{% url 'admin:accounts_branchdevice_changelist' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> العودة للقائمة
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    // جمع معلومات الجهاز
+    const deviceInfo = {
+        screen_resolution: window.screen.width + 'x' + window.screen.height,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timezone_offset: new Date().getTimezoneOffset(),
+        language: navigator.language,
+        platform: navigator.platform,
+        user_agent: navigator.userAgent,
+        color_depth: window.screen.colorDepth,
+        pixel_ratio: window.devicePixelRatio,
+        has_touch: 'ontouchstart' in window,
+        cpu_cores: navigator.hardwareConcurrency || 0,
+    };
+    
+    // محاولة الحصول على Hardware Serial
+    try {
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const deviceIds = devices.map(d => d.deviceId).filter(id => id && id !== '').sort();
+            if (deviceIds.length > 0) {
+                deviceInfo.hardware_serial = deviceIds[0];
+            }
+        }
+    } catch(e) {
+        console.log('Could not get hardware serial:', e);
+    }
+    
+    // إنشاء معرف ثابت من خصائص الجهاز إذا لم يتوفر
+    if (!deviceInfo.hardware_serial) {
+        const stableInfo = [
+            navigator.hardwareConcurrency,
+            navigator.maxTouchPoints,
+            screen.width,
+            screen.height,
+            screen.colorDepth,
+            navigator.platform,
+            navigator.deviceMemory || 0
+        ].join('|');
+        
+        let hash = 0;
+        for (let i = 0; i < stableInfo.length; i++) {
+            const char = stableInfo.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        deviceInfo.hardware_serial = 'HW' + Math.abs(hash).toString(16);
+    }
+    
+    // Canvas Fingerprint
+    try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#f60';
+        ctx.fillRect(125, 1, 62, 20);
+        ctx.fillStyle = '#069';
+        ctx.fillText('Device Fingerprint', 2, 15);
+        ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+        ctx.fillText('Device Fingerprint', 4, 17);
+        deviceInfo.canvas_fingerprint = canvas.toDataURL();
+    } catch(e) {
+        deviceInfo.canvas_fingerprint = '';
+    }
+    
+    // WebGL Fingerprint
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                deviceInfo.webgl_vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                deviceInfo.webgl_renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            }
+        }
+    } catch(e) {
+        deviceInfo.webgl_vendor = '';
+        deviceInfo.webgl_renderer = '';
+    }
+    
+    // توليد البصمة
+    const fingerprintString = JSON.stringify(deviceInfo, Object.keys(deviceInfo).sort());
+    const fingerprint = CryptoJS.SHA256(fingerprintString).toString();
+    
+    // حفظ المعلومات
+    document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
+    document.getElementById('deviceFingerprint').value = fingerprint;
+    
+    // عرض المعلومات
+    const displaySerial = deviceInfo.hardware_serial || 'غير متوفر';
+    document.getElementById('hardwareSerialDisplay').textContent = displaySerial;
+    document.getElementById('fingerprintDisplay').textContent = fingerprint.substring(0, 16) + '...';
+    document.getElementById('browserDisplay').textContent = getBrowserInfo();
+    document.getElementById('osDisplay').textContent = getOSInfo();
+    document.getElementById('screenDisplay').textContent = deviceInfo.screen_resolution;
+    document.getElementById('timezoneDisplay').textContent = deviceInfo.timezone;
+    
+    function getBrowserInfo() {
+        const ua = navigator.userAgent;
+        if (ua.includes('Firefox')) return 'Firefox';
+        if (ua.includes('Chrome')) return 'Chrome';
+        if (ua.includes('Safari')) return 'Safari';
+        if (ua.includes('Edge')) return 'Edge';
+        return 'متصفح آخر';
+    }
+    
+    function getOSInfo() {
+        const platform = navigator.platform;
+        if (platform.includes('Win')) return 'Windows';
+        if (platform.includes('Mac')) return 'macOS';
+        if (platform.includes('Linux')) return 'Linux';
+        return platform;
+    }
+    
+    // التحقق قبل الإرسال
+    document.getElementById('registerDeviceForm').addEventListener('submit', function(e) {
+        if (!document.getElementById('deviceFingerprint').value) {
+            e.preventDefault();
+            alert('فشل في توليد بصمة الجهاز. يرجى إعادة تحميل الصفحة.');
+        }
+    });
+});
+</script>
+{% endblock %}

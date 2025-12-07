@@ -1,0 +1,39 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block content_title %}
+<div style="margin-bottom: 20px;">
+    <h1>{{ title }}</h1>
+    
+    {% if device_restriction_enabled %}
+    <div class="messagelist">
+        <div class="success" style="padding: 15px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px;">
+            <strong>🔒 نظام قفل الأجهزة: مفعل</strong>
+            <p style="margin: 5px 0 0 0;">
+                الموظفون يجب أن يدخلوا من الأجهزة المسجلة لفرعهم فقط. 
+                السوبر يوزر والمدير العام معفيين.
+                <br>
+                <small>
+                    📊 إجمالي الأجهزة: <strong>{{ total_devices }}</strong> | 
+                    الأجهزة النشطة: <strong>{{ active_devices }}</strong>
+                </small>
+            </p>
+        </div>
+    </div>
+    {% else %}
+    <div class="messagelist">
+        <div class="warning" style="padding: 15px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px;">
+            <strong>🔓 نظام قفل الأجهزة: معطل</strong>
+            <p style="margin: 5px 0 0 0;">
+                جميع الموظفين يمكنهم الدخول من أي جهاز. 
+                يمكنك تفعيل النظام عندما تنتهي من توزيع الأجهزة.
+                <br>
+                <small>
+                    💡 لتفعيل النظام: اختر أي جهاز من القائمة، ثم اختر "🔐 تبديل حالة قفل الأجهزة" من قائمة الإجراءات.
+                </small>
+            </p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
