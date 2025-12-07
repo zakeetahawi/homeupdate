@@ -59,9 +59,7 @@ logs/
 .sass-cache/
 
 # Service management files
-لينكس/start-service.sh
-لينكس/stop-service.sh
-لينكس/monitor-service.sh
+# ملفات الخدمة محفوظة الآن في Git بعد الإصلاحات
 cloudflared.yml
 cloudflared
 
