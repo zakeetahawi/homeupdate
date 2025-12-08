@@ -235,9 +235,13 @@ def login_view(request):
                                 device_authorized = True
                                 logger.info(f"⚠️ Device restriction disabled - allowing login despite device check result")
                             
-                        # تسجيل المحاولة غير المصرح بها (للمراقبة والإحصائيات - يتم دائماً حتى لو كان النظام معطلاً)
+                        # تسجيل المحاولة غير المصرح بها (للمراقبة والإحصائيات)
+                        # يتم التسجيل دائماً حتى لو كان النظام معطلاً، طالما هناك مشكلة في الجهاز
+                        logger.info(f"🔍 Check logging conditions: device_check={device_check_performed}, denial_key={denial_reason_key}, superuser={user.is_superuser}, general_manager={user.is_general_manager}")
+                        
                         if device_check_performed and denial_reason_key and not (user.is_superuser or user.is_general_manager):
-                            from notifications.utils import create_notification
+                            
+                            logger.info(f"📝 Logging unauthorized attempt: {username} - {denial_reason_key}")
                             
                             # جمع بيانات الجهاز
                             device_log_data_full = {
@@ -267,11 +271,12 @@ def login_view(request):
                             
                             logger.error(f"🚨 Unauthorized attempt logged: ID {attempt.id} - Reason: {denial_reason_key}")
                             
-                            # إرسال إشعار فوري لمدير النظام (فقط إذا كان النظام مفعلاً)
-                            if device_restriction_enabled:
+                            # إرسال إشعار فوري لمدير النظام (فقط إذا كان النظام مفعلاً وتم رفض الدخول فعلاً)
+                            if device_restriction_enabled and not device_authorized:
+                                from notifications.models import Notification
                                 superusers = User.objects.filter(is_superuser=True, is_active=True)
                                 for admin_user in superusers:
-                                    create_notification(
+                                    Notification.objects.create(
                                         user=admin_user,
                                         title='🚨 محاولة دخول غير مصرح بها',
                                         message=f'{user.username} ({user.branch.name if user.branch else "بدون فرع"}) حاول الدخول من جهاز غير مصرح به.\nالسبب: {attempt.get_denial_reason_display()}\nالوقت: {attempt.attempted_at.strftime("%Y-%m-%d %H:%M")}\nIP: {ip}',
