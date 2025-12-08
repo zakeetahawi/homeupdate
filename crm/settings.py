@@ -474,7 +474,7 @@ CACHES = {
             },
             'IGNORE_EXCEPTIONS': True,
         },
-        'TIMEOUT': 1209600,  # أسبوعين (نفس SESSION_COOKIE_AGE)
+        'TIMEOUT': 3600,  # ساعة واحدة (نفس SESSION_COOKIE_AGE)
         'KEY_PREFIX': 'homeupdate_session',
     },
     'query': {
@@ -696,7 +696,7 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_AGE = 1209600  # أسبوعين
+    SESSION_COOKIE_AGE = 3600  # ساعة واحدة (1 hour)
     
     # CSRF Security
     CSRF_COOKIE_SECURE = True
@@ -734,7 +734,7 @@ else:
     CSRF_COOKIE_SECURE = False
     SESSION_COOKIE_HTTPONLY = True  # دائماً مفعّل
     # ملاحظة: لا نضع CSRF_COOKIE_HTTPONLY هنا - يتم تعيينه في القسم العام
-    SESSION_COOKIE_AGE = 1209600  # أسبوعين - نفس الإنتاج
+    SESSION_COOKIE_AGE = 3600  # ساعة واحدة (1 hour)
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'SAMEORIGIN'  # أقل تقييداً في التطوير
