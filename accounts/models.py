@@ -908,6 +908,29 @@ class BranchDevice(models.Model):
         default=True,
         help_text=_('هل هذا الجهاز مفعل للاستخدام؟')
     )
+    is_blocked = models.BooleanField(
+        _('محظور'),
+        default=False,
+        help_text=_('هل هذا الجهاز محظور من الاستخدام؟ (الحظر أقوى من التعطيل)')
+    )
+    blocked_reason = models.TextField(
+        _('سبب الحظر'),
+        blank=True,
+        help_text=_('سبب حظر هذا الجهاز')
+    )
+    blocked_at = models.DateTimeField(
+        _('تاريخ الحظر'),
+        null=True,
+        blank=True
+    )
+    blocked_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='blocked_devices',
+        verbose_name=_('تم الحظر بواسطة')
+    )
     created_at = models.DateTimeField(
         _('تاريخ التسجيل'),
         auto_now_add=True
@@ -929,6 +952,13 @@ class BranchDevice(models.Model):
         blank=True,
         related_name='last_used_devices',
         verbose_name=_('آخر مستخدم')
+    )
+    users_logged = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name='devices_used',
+        verbose_name=_('المستخدمون الذين سجلوا الدخول'),
+        help_text=_('قائمة المستخدمين الذين استخدموا هذا الجهاز (بدون تكرار)')
     )
     notes = models.TextField(
         _('ملاحظات'),
@@ -956,6 +986,9 @@ class BranchDevice(models.Model):
         self.last_used = now
         if user:
             self.last_used_by = user
+            # إضافة المستخدم إلى قائمة المستخدمين (بدون تكرار)
+            if not self.users_logged.filter(id=user.id).exists():
+                self.users_logged.add(user)
         if ip_address:
             self.ip_address = ip_address
         self.save(update_fields=['first_used', 'last_used', 'last_used_by', 'ip_address'])
@@ -975,19 +1008,31 @@ class BranchDevice(models.Model):
 
 class UnauthorizedDeviceAttempt(models.Model):
     """
-    تسجيل محاولات الدخول من أجهزة غير مصرح بها
+    تسجيل محاولات الدخول الفاشلة - سواء بسبب الجهاز أو بيانات الدخول
     """
     DENIAL_REASON_CHOICES = [
+        ('invalid_username', 'اسم مستخدم خاطئ'),
+        ('invalid_password', 'كلمة مرور خاطئة'),
         ('device_not_registered', 'جهاز غير مسجل'),
         ('wrong_branch', 'جهاز مسجل لفرع آخر'),
         ('device_inactive', 'جهاز معطل'),
+        ('device_blocked', 'جهاز محظور'),
     ]
     
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         verbose_name=_('المستخدم'),
-        related_name='unauthorized_attempts'
+        related_name='unauthorized_attempts',
+        help_text=_('المستخدم الذي حاول الدخول (null إذا كان اسم المستخدم خاطئ)')
+    )
+    username_attempted = models.CharField(
+        _('اسم المستخدم المحاول'),
+        max_length=150,
+        default='',
+        help_text=_('اسم المستخدم الذي تم محاولة الدخول به')
     )
     attempted_at = models.DateTimeField(
         _('وقت المحاولة'),
@@ -1054,13 +1099,29 @@ class UnauthorizedDeviceAttempt(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.user.username} - {self.get_denial_reason_display()} - {self.attempted_at.strftime('%Y-%m-%d %H:%M')}"
+        username = self.username_attempted if self.username_attempted else (self.user.username if self.user else 'غير معروف')
+        return f"{username} - {self.get_denial_reason_display()} - {self.attempted_at.strftime('%Y-%m-%d %H:%M')}"
     
     @classmethod
-    def log_attempt(cls, user, device_data, denial_reason, user_branch=None, device_branch=None, ip_address=None):
-        """تسجيل محاولة دخول غير مصرح بها"""
+    def log_attempt(cls, username_attempted, user=None, device_data=None, denial_reason='invalid_password', 
+                    user_branch=None, device_branch=None, ip_address=None):
+        """
+        تسجيل محاولة دخول فاشلة
+        
+        Args:
+            username_attempted: اسم المستخدم الذي تم محاولة الدخول به
+            user: كائن المستخدم (None إذا كان اسم المستخدم خاطئ)
+            device_data: بيانات الجهاز (fingerprint, hardware_serial, user_agent)
+            denial_reason: سبب الرفض
+            user_branch: فرع المستخدم
+            device_branch: فرع الجهاز
+            ip_address: عنوان IP
+        """
+        device_data = device_data or {}
+        
         attempt = cls.objects.create(
             user=user,
+            username_attempted=username_attempted,
             device_fingerprint=device_data.get('fingerprint'),
             hardware_serial=device_data.get('hardware_serial'),
             ip_address=ip_address,

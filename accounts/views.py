@@ -104,22 +104,45 @@ def login_view(request):
         # معالجة طلب تسجيل الدخول
         if request.method == 'POST':
             try:
+                # الحصول على معلومات الجهاز أولاً
+                ip = request.META.get('REMOTE_ADDR', 'unknown')
+                device_info = request.POST.get('device_info', '')
+                device_data = json.loads(device_info) if device_info else {}
+                hardware_serial = device_data.get('hardware_serial', '')
+                
+                # بيانات للتسجيل
+                device_log_data = {
+                    'hardware_serial': hardware_serial,
+                    'user_agent': device_data.get('user_agent', request.META.get('HTTP_USER_AGENT', ''))
+                }
+                
                 form = AuthenticationForm(request, data=request.POST)
 
                 # إضافة الأنماط إلى حقول النموذج
                 form.fields['username'].widget.attrs.update({'class': 'form-control', 'placeholder': 'اسم المستخدم'})
                 form.fields['password'].widget.attrs.update({'class': 'form-control', 'placeholder': 'كلمة المرور'})
 
+                # الحصول على username و password من الطلب
+                username = request.POST.get('username', '')
+                password = request.POST.get('password', '')
+                
+                # التحقق من وجود اسم المستخدم
+                from accounts.models import UnauthorizedDeviceAttempt
+                try:
+                    user_obj = User.objects.get(username=username)
+                    user_exists = True
+                except User.DoesNotExist:
+                    user_obj = None
+                    user_exists = False
+                    logger.warning(f"❌ Invalid username attempt: {username}")
+                
                 if form.is_valid():
-                    username = form.cleaned_data.get('username')
-                    password = form.cleaned_data.get('password')
                     logger.info(f"Login attempt for user: {username}")
 
                     # محاولة المصادقة المباشرة
                     user = authenticate(request=request, username=username, password=password)
 
                     if user is not None:
-                        ip = request.META.get('REMOTE_ADDR', 'unknown')
                         
                         # التحقق من تفعيل نظام قفل الأجهزة
                         from accounts.models import SystemSettings
@@ -141,18 +164,17 @@ def login_view(request):
                         device_authorized = False
                         device_obj = None
                         denial_reason = ""
+                        denial_reason_key = ""
+                        device_check_performed = False
                         
                         # السوبر يوزر والمدير العام يمكنهم الدخول من أي جهاز
                         if user.is_superuser or user.is_general_manager:
                             device_authorized = True
                             logger.info(f"✅ Superuser/General Manager {username} authorized from any device")
-                        # إذا كان نظام قفل الأجهزة معطل، السماح للجميع
-                        elif not device_restriction_enabled:
-                            device_authorized = True
-                            logger.info(f"✅ Device restriction disabled - user {username} authorized")
                         else:
-                            # نظام قفل الأجهزة مفعل - التحقق من الجهاز
-                            logger.info(f"🔒 Device restriction enabled - checking device...")
+                            # فحص الجهاز دائماً (حتى لو كان النظام معطلاً) لأغراض التسجيل والمراقبة
+                            device_check_performed = True
+                            logger.info(f"🔍 Checking device (restriction: {'enabled' if device_restriction_enabled else 'disabled'})...")
                             try:
                                 # محاولة البحث بالـ hardware_serial أولاً (أكثر استقراراً)
                                 if hardware_serial:
@@ -184,7 +206,12 @@ def login_view(request):
                                 
                                 # التحقق من الصلاحية إذا وُجد الجهاز
                                 if device_obj:
-                                    if user.branch == device_obj.branch:
+                                    # التحقق من حظر الجهاز أولاً
+                                    if device_obj.is_blocked:
+                                        denial_reason = f'🚫 هذا الجهاز محظور'
+                                        denial_reason_key = 'device_blocked'
+                                        logger.warning(f"❌ Blocked device attempted login: {device_obj.device_name}. Reason: {device_obj.blocked_reason}")
+                                    elif user.branch == device_obj.branch:
                                         device_authorized = True
                                         # تحديث معلومات آخر استخدام
                                         device_obj.mark_used(user=user, ip_address=ip)
@@ -193,51 +220,65 @@ def login_view(request):
                                         denial_reason = f'⛔ فرع غير متطابق: الجهاز لفرع "{device_obj.branch.name}" وأنت من فرع "{user.branch.name if user.branch else "غير محدد"}".'
                                         denial_reason_key = 'wrong_branch'
                                         logger.warning(f"❌ User {username} (Branch: {user.branch.name if user.branch else 'None'}) tried to login from device of different branch: {device_obj.branch.name}")
+                                else:
+                                    # الجهاز غير موجود في النظام
+                                    if not denial_reason_key:
+                                        denial_reason = '🚫 جهاز غير مسجل'
+                                        denial_reason_key = 'device_not_registered'
                             except Exception as device_error:
                                 denial_reason = f'حدث خطأ أثناء التحقق من الجهاز: {str(device_error)}'
                                 logger.error(f"Device check error: {device_error}")
                                 logger.error(traceback.format_exc())
-                        
-                        # تسجيل المحاولة إذا فشلت
-                        if not device_authorized and device_restriction_enabled:
-                            from accounts.models import UnauthorizedDeviceAttempt
+                            
+                            # إذا كان نظام القفل معطل، السماح بالدخول رغم عدم التطابق
+                            if not device_restriction_enabled:
+                                device_authorized = True
+                                logger.info(f"⚠️ Device restriction disabled - allowing login despite device check result")
+                            
+                        # تسجيل المحاولة غير المصرح بها (للمراقبة والإحصائيات - يتم دائماً حتى لو كان النظام معطلاً)
+                        if device_check_performed and denial_reason_key and not (user.is_superuser or user.is_general_manager):
                             from notifications.utils import create_notification
                             
                             # جمع بيانات الجهاز
-                            device_log_data = {
-                                'fingerprint': device_data.get('device_fingerprint') if 'device_fingerprint' in locals() else device_data.get('canvas_fingerprint', ''),
+                            device_log_data_full = {
+                                'fingerprint': device_fingerprint if 'device_fingerprint' in locals() else '',
                                 'hardware_serial': hardware_serial,
                                 'user_agent': device_data.get('user_agent', request.META.get('HTTP_USER_AGENT', ''))
                             }
                             
-                            # تحديد سبب الرفض
-                            reason_key = denial_reason_key if 'denial_reason_key' in locals() else 'device_not_registered'
                             device_branch = device_obj.branch if device_obj else None
+                            
+                            # التحقق من حظر الجهاز
+                            if device_obj and device_obj.is_blocked:
+                                denial_reason_key = 'device_blocked'
+                                denial_reason = f'🚫 هذا الجهاز محظور. السبب: {device_obj.blocked_reason}'
                             
                             # تسجيل المحاولة
                             attempt = UnauthorizedDeviceAttempt.log_attempt(
+                                username_attempted=username,
                                 user=user,
-                                device_data=device_log_data,
-                                denial_reason=reason_key,
+                                device_data=device_log_data_full,
+                                denial_reason=denial_reason_key,
                                 user_branch=user.branch,
                                 device_branch=device_branch,
                                 ip_address=ip
                             )
                             
-                            logger.error(f"🚨 Unauthorized attempt logged: ID {attempt.id}")
+                            logger.error(f"🚨 Unauthorized attempt logged: ID {attempt.id} - Reason: {denial_reason_key}")
                             
-                            # إرسال إشعار فوري لمدير النظام
-                            superusers = User.objects.filter(is_superuser=True, is_active=True)
-                            for admin_user in superusers:
-                                create_notification(
-                                    user=admin_user,
-                                    title='🚨 محاولة دخول غير مصرح بها',
-                                    message=f'{user.username} ({user.branch.name if user.branch else "بدون فرع"}) حاول الدخول من جهاز غير مصرح به.\nالسبب: {attempt.get_denial_reason_display()}\nالوقت: {attempt.attempted_at.strftime("%Y-%m-%d %H:%M")}\nIP: {ip}',
-                                    notification_type='security_alert',
-                                    url=f'/admin/accounts/unauthorizeddeviceattempt/{attempt.id}/change/'
-                                )
-                            attempt.is_notified = True
-                            attempt.save()
+                            # إرسال إشعار فوري لمدير النظام (فقط إذا كان النظام مفعلاً)
+                            if device_restriction_enabled:
+                                superusers = User.objects.filter(is_superuser=True, is_active=True)
+                                for admin_user in superusers:
+                                    create_notification(
+                                        user=admin_user,
+                                        title='🚨 محاولة دخول غير مصرح بها',
+                                        message=f'{user.username} ({user.branch.name if user.branch else "بدون فرع"}) حاول الدخول من جهاز غير مصرح به.\nالسبب: {attempt.get_denial_reason_display()}\nالوقت: {attempt.attempted_at.strftime("%Y-%m-%d %H:%M")}\nIP: {ip}',
+                                        notification_type='security_alert',
+                                        url=f'/admin/accounts/unauthorizeddeviceattempt/{attempt.id}/change/'
+                                    )
+                                attempt.is_notified = True
+                                attempt.save()
                         
                         # السماح بتسجيل الدخول فقط إذا كان الجهاز مصرح به
                         if device_authorized:
@@ -295,21 +336,54 @@ def login_view(request):
                                 messages.error(request, '🚫 لا يمكنك تسجيل الدخول من هذا الجهاز. يرجى التواصل مع مدير النظام.')
                             logger.warning(f"❌ Login denied for {username}: {denial_reason}")
                     else:
-                        # فشل تسجيل الدخول - زيادة عدد المحاولات
-                        ip = request.META.get('REMOTE_ADDR', 'unknown')
+                        # فشل المصادقة - كلمة مرور خاطئة
+                        logger.warning(f"❌ Invalid password for user: {username} from IP: {ip}")
+                        
+                        # تسجيل محاولة فاشلة - كلمة مرور خاطئة
+                        if user_exists and user_obj:
+                            device_log_data['fingerprint'] = generate_device_fingerprint(request, device_data) if device_data else ''
+                            UnauthorizedDeviceAttempt.log_attempt(
+                                username_attempted=username,
+                                user=user_obj,
+                                device_data=device_log_data,
+                                denial_reason='invalid_password',
+                                user_branch=user_obj.branch if user_obj else None,
+                                device_branch=None,
+                                ip_address=ip
+                            )
+                        
+                        # زيادة عدد المحاولات
                         attempts_key = f'login_attempts_{ip}'
                         attempts = cache.get(attempts_key, 0) + 1
-                        cache.set(attempts_key, attempts, 300)  # 5 دقائق
+                        cache.set(attempts_key, 300)  # 5 دقائق
                         
                         remaining = 5 - attempts
-                        logger.warning(f"❌ Failed login attempt for user: {username} from IP: {ip} ({remaining} attempts remaining)")
                         
                         if remaining > 0:
-                            messages.error(request, f'اسم المستخدم أو كلمة المرور غير صحيحة. محاولات متبقية: {remaining}')
+                            messages.error(request, f'❌ كلمة المرور غير صحيحة. محاولات متبقية: {remaining}')
                         else:
-                            messages.error(request, 'اسم المستخدم أو كلمة المرور غير صحيحة.')
+                            messages.error(request, '❌ كلمة المرور غير صحيحة.')
                 else:
-                    messages.error(request, 'اسم المستخدم أو كلمة المرور غير صحيحة.')
+                    # النموذج غير صالح
+                    if not user_exists:
+                        # اسم مستخدم خاطئ
+                        logger.warning(f"❌ Invalid username: {username} from IP: {ip}")
+                        
+                        # تسجيل محاولة فاشلة - اسم مستخدم خاطئ
+                        device_log_data['fingerprint'] = generate_device_fingerprint(request, device_data) if device_data else ''
+                        UnauthorizedDeviceAttempt.log_attempt(
+                            username_attempted=username,
+                            user=None,
+                            device_data=device_log_data,
+                            denial_reason='invalid_username',
+                            user_branch=None,
+                            device_branch=None,
+                            ip_address=ip
+                        )
+                        
+                        messages.error(request, '❌ اسم المستخدم غير موجود.')
+                    else:
+                        messages.error(request, '❌ اسم المستخدم أو كلمة المرور غير صحيحة.')
             except Exception as auth_error:
                 logger.error(f"[Authentication Error] {auth_error}")
                 logger.error(traceback.format_exc())
