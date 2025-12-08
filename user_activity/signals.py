@@ -78,23 +78,11 @@ def handle_user_logout(sender, request, user, **kwargs):
         print(f"خطأ في معالجة تسجيل الخروج: {e}")
 
 
-@receiver(post_save, sender=User)
-def handle_user_update(sender, instance, created, **kwargs):
-    """معالجة تحديث بيانات المستخدم"""
-    try:
-        if not created:  # فقط عند التحديث، ليس الإنشاء
-            UserActivityLog.log_activity(
-                user=instance,
-                action_type='update',
-                entity_type='user',
-                entity_id=instance.id,
-                entity_name=instance.username,
-                description=f'تحديث بيانات المستخدم {instance.username}',
-                ip_address='127.0.0.1',  # سيتم تحديثه بواسطة middleware
-                success=True
-            )
-    except Exception as e:
-        print(f"خطأ في تسجيل تحديث المستخدم: {e}")
+# تم تعطيل تتبع تحديث المستخدم لأنه نشاط نظام وليس نشاط مستخدم
+# @receiver(post_save, sender=User)
+# def handle_user_update(sender, instance, created, **kwargs):
+#     """معالجة تحديث بيانات المستخدم"""
+#     ...
 
 
 @receiver(pre_delete, sender=User)

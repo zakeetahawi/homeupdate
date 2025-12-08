@@ -1,0 +1,153 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .cleanup-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+    }
+    .stat-box {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 6px;
+        text-align: center;
+        border-left: 4px solid #007bff;
+    }
+    .stat-number {
+        font-size: 32px;
+        font-weight: bold;
+        color: #333;
+    }
+    .stat-label {
+        color: #666;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+    .action-btn {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .btn-info { background: #17a2b8; color: white; }
+    .btn-warning { background: #ffc107; color: #333; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-success { background: #28a745; color: white; }
+    .action-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+    .warning-box {
+        background: #fff3cd;
+        border: 2px solid #ffc107;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px 0;
+    }
+    .danger-box {
+        background: #f8d7da;
+        border: 2px solid #dc3545;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>🗑️ حذف الجلسات بشكل جماعي وسريع</h1>
+
+<div class="cleanup-card">
+    <h2>📊 الإحصائيات الحالية</h2>
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="stat-number">{{ total_sessions }}</div>
+            <div class="stat-label">إجمالي الجلسات</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">{{ inactive_sessions }}</div>
+            <div class="stat-label">جلسات غير نشطة</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">{{ old_7days }}</div>
+            <div class="stat-label">أقدم من أسبوع</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">{{ old_30days }}</div>
+            <div class="stat-label">أقدم من شهر</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number">{{ total_logs }}</div>
+            <div class="stat-label">سجلات النشاط</div>
+        </div>
+    </div>
+</div>
+
+<div class="cleanup-card">
+    <h2>⚡ عمليات الحذف السريع</h2>
+    <p>اختر العملية المناسبة. الحذف سيتم فوراً باستخدام SQL مباشر.</p>
+    
+    <form method="post" style="margin-top: 20px;">
+        {% csrf_token %}
+        
+        <button type="submit" name="action" value="inactive" class="action-btn btn-info" 
+                onclick="return confirm('هل تريد حذف {{ inactive_sessions }} جلسة غير نشطة؟')">
+            🗑️ حذف الجلسات غير النشطة ({{ inactive_sessions }} جلسة)
+        </button>
+        
+        <button type="submit" name="action" value="1day" class="action-btn btn-success" 
+                onclick="return confirm('هل تريد حذف {{ old_1day }} جلسة أقدم من يوم؟')">
+            ⏰ حذف الجلسات أقدم من يوم ({{ old_1day }} جلسة)
+        </button>
+        
+        <button type="submit" name="action" value="7days" class="action-btn btn-success" 
+                onclick="return confirm('هل تريد حذف {{ old_7days }} جلسة أقدم من أسبوع؟')">
+            ⏰ حذف الجلسات أقدم من أسبوع ({{ old_7days }} جلسة)
+        </button>
+        
+        <button type="submit" name="action" value="30days" class="action-btn btn-success" 
+                onclick="return confirm('هل تريد حذف {{ old_30days }} جلسة أقدم من شهر؟')">
+            ⏰ حذف الجلسات أقدم من شهر ({{ old_30days }} جلسة)
+        </button>
+        
+        <div class="warning-box">
+            <strong>⚠️ تحذير:</strong> العمليات التالية خطيرة ولا يمكن التراجع عنها!
+        </div>
+        
+        <button type="submit" name="action" value="all_except_super" class="action-btn btn-warning" 
+                onclick="return confirm('⚠️ سيتم حذف جميع الجلسات ماعدا السوبر يوزر!\n\nهل أنت متأكد؟')">
+            🔶 حذف جميع الجلسات (ماعدا السوبر يوزر)
+        </button>
+        
+        <div class="danger-box">
+            <strong>🔴 خطر:</strong> الزر التالي يحذف <strong>كل شيء</strong>!
+        </div>
+        
+        <button type="submit" name="action" value="all_data" class="action-btn btn-danger" 
+                onclick="return confirm('🔴🔴 تحذير نهائي!\n\nسيتم حذف:\n- جميع الجلسات ({{ total_sessions }})\n- جميع سجلات النشاط ({{ total_logs }})\n\nلا يمكن التراجع!\n\nهل أنت متأكد 100%؟')">
+            🔴 حذف كل شيء (جلسات + سجلات)
+        </button>
+    </form>
+</div>
+
+<div class="cleanup-card">
+    <p>
+        <a href="{% url 'admin:user_activity_usersession_changelist' %}" class="button">← العودة للقائمة</a>
+    </p>
+</div>
+
+{% endblock %}

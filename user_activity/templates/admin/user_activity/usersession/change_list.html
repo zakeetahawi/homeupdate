@@ -1,0 +1,14 @@
+{% extends "admin/change_list.html" %}
+
+{% block content_title %}
+    <h1>{{ title }}</h1>
+    {% if quick_cleanup_url %}
+    <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 6px; padding: 15px; margin: 15px 0;">
+        <strong>⚡ حذف سريع:</strong> 
+        إذا كانت الصفحة بطيئة، 
+        <a href="{{ quick_cleanup_url }}" style="color: #dc3545; font-weight: bold; text-decoration: underline;">
+            اضغط هنا للحذف الجماعي السريع بدون تحميل القائمة
+        </a>
+    </div>
+    {% endif %}
+{% endblock %}
