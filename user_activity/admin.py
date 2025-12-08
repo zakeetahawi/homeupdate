@@ -179,7 +179,184 @@ class UserSessionAdmin(admin.ModelAdmin):
     ]
     date_hierarchy = 'login_time'
     ordering = ['-last_activity']
-    actions = ['bulk_delete_selected', 'delete_inactive_sessions']
+    actions = [
+        'bulk_delete_selected', 
+        'delete_inactive_sessions',
+        'delete_old_sessions_1day',
+        'delete_old_sessions_7days',
+        'delete_old_sessions_30days',
+        'delete_all_sessions_keep_superusers',
+    ]
+    list_per_page = 50  # تقليل عدد الصفوف لتسريع التحميل
+    
+    def changelist_view(self, request, extra_context=None):
+        """إضافة رابط للحذف السريع"""
+        extra_context = extra_context or {}
+        extra_context['quick_cleanup_url'] = 'quick-cleanup/'
+        return super().changelist_view(request, extra_context)
+    
+    def get_urls(self):
+        """إضافة URL للحذف السريع"""
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path('quick-cleanup/', self.admin_site.admin_view(self.quick_cleanup_view), name='usersession_quick_cleanup'),
+        ]
+        return custom_urls + urls
+    
+    def quick_cleanup_view(self, request):
+        """صفحة الحذف السريع بدون تحميل القائمة"""
+        from django.shortcuts import render
+        from django.db import connection
+        from django.contrib import messages
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        if request.method == 'POST':
+            action = request.POST.get('action')
+            
+            with connection.cursor() as cursor:
+                if action == 'inactive':
+                    # حذف الجلسات غير النشطة
+                    cursor.execute("DELETE FROM user_activity_useractivitylog WHERE session_id IN (SELECT id FROM user_activity_usersession WHERE is_active = false)")
+                    cursor.execute("DELETE FROM user_activity_usersession WHERE is_active = false")
+                    count = cursor.rowcount
+                    # حذف جلسات Django غير النشطة
+                    cursor.execute("DELETE FROM django_session WHERE expire_date < NOW()")
+                    django_count = cursor.rowcount
+                    messages.success(request, f'✅ تم حذف {count} جلسة تتبع + {django_count} جلسة Django منتهية')
+                    
+                elif action == '1day':
+                    cutoff = timezone.now() - timedelta(days=1)
+                    # جمع session_keys المراد حذفها
+                    cursor.execute("SELECT session_key FROM user_activity_usersession WHERE last_activity < %s", [cutoff])
+                    session_keys = [row[0] for row in cursor.fetchall()]
+                    
+                    # حذف من user_activity
+                    cursor.execute("DELETE FROM user_activity_useractivitylog WHERE session_id IN (SELECT id FROM user_activity_usersession WHERE last_activity < %s)", [cutoff])
+                    cursor.execute("DELETE FROM user_activity_usersession WHERE last_activity < %s", [cutoff])
+                    count = cursor.rowcount
+                    
+                    # حذف من django_session
+                    if session_keys:
+                        placeholders = ','.join(['%s'] * len(session_keys))
+                        cursor.execute(f"DELETE FROM django_session WHERE session_key IN ({placeholders})", session_keys)
+                        django_count = cursor.rowcount
+                    else:
+                        django_count = 0
+                    
+                    messages.success(request, f'✅ تم حذف {count} جلسة تتبع + {django_count} جلسة Django (أقدم من يوم). تم إخراج المستخدمين!')
+                    
+                elif action == '7days':
+                    cutoff = timezone.now() - timedelta(days=7)
+                    # جمع session_keys
+                    cursor.execute("SELECT session_key FROM user_activity_usersession WHERE last_activity < %s", [cutoff])
+                    session_keys = [row[0] for row in cursor.fetchall()]
+                    
+                    cursor.execute("DELETE FROM user_activity_useractivitylog WHERE session_id IN (SELECT id FROM user_activity_usersession WHERE last_activity < %s)", [cutoff])
+                    cursor.execute("DELETE FROM user_activity_usersession WHERE last_activity < %s", [cutoff])
+                    count = cursor.rowcount
+                    
+                    if session_keys:
+                        placeholders = ','.join(['%s'] * len(session_keys))
+                        cursor.execute(f"DELETE FROM django_session WHERE session_key IN ({placeholders})", session_keys)
+                        django_count = cursor.rowcount
+                    else:
+                        django_count = 0
+                    
+                    messages.success(request, f'✅ تم حذف {count} جلسة تتبع + {django_count} جلسة Django (أقدم من أسبوع). تم إخراج المستخدمين!')
+                    
+                elif action == '30days':
+                    cutoff = timezone.now() - timedelta(days=30)
+                    cursor.execute("SELECT session_key FROM user_activity_usersession WHERE last_activity < %s", [cutoff])
+                    session_keys = [row[0] for row in cursor.fetchall()]
+                    
+                    cursor.execute("DELETE FROM user_activity_useractivitylog WHERE session_id IN (SELECT id FROM user_activity_usersession WHERE last_activity < %s)", [cutoff])
+                    cursor.execute("DELETE FROM user_activity_usersession WHERE last_activity < %s", [cutoff])
+                    count = cursor.rowcount
+                    
+                    if session_keys:
+                        placeholders = ','.join(['%s'] * len(session_keys))
+                        cursor.execute(f"DELETE FROM django_session WHERE session_key IN ({placeholders})", session_keys)
+                        django_count = cursor.rowcount
+                    else:
+                        django_count = 0
+                    
+                    messages.success(request, f'✅ تم حذف {count} جلسة تتبع + {django_count} جلسة Django (أقدم من شهر). تم إخراج المستخدمين!')
+                    
+                elif action == 'all_except_super':
+                    # جمع session_keys للمستخدمين العاديين
+                    cursor.execute("SELECT session_key FROM user_activity_usersession WHERE user_id IN (SELECT id FROM accounts_user WHERE is_superuser = false)")
+                    session_keys = [row[0] for row in cursor.fetchall()]
+                    
+                    cursor.execute("DELETE FROM user_activity_useractivitylog WHERE session_id IN (SELECT id FROM user_activity_usersession WHERE user_id IN (SELECT id FROM accounts_user WHERE is_superuser = false))")
+                    cursor.execute("DELETE FROM user_activity_usersession WHERE user_id IN (SELECT id FROM accounts_user WHERE is_superuser = false)")
+                    count = cursor.rowcount
+                    
+                    if session_keys:
+                        placeholders = ','.join(['%s'] * len(session_keys))
+                        cursor.execute(f"DELETE FROM django_session WHERE session_key IN ({placeholders})", session_keys)
+                        django_count = cursor.rowcount
+                    else:
+                        django_count = 0
+                    
+                    messages.warning(request, f'🔴 تم حذف {count} جلسة تتبع + {django_count} جلسة Django. تم إخراج جميع المستخدمين (ماعدا السوبر يوزر)!')
+                    
+                elif action == 'all_data':
+                    # حذف كل شيء
+                    cursor.execute("SELECT session_key FROM user_activity_usersession")
+                    session_keys = [row[0] for row in cursor.fetchall()]
+                    
+                    cursor.execute("DELETE FROM user_activity_useractivitylog WHERE session_id IS NOT NULL")
+                    cursor.execute("DELETE FROM user_activity_usersession")
+                    count = cursor.rowcount
+                    
+                    if session_keys:
+                        placeholders = ','.join(['%s'] * len(session_keys))
+                        cursor.execute(f"DELETE FROM django_session WHERE session_key IN ({placeholders})", session_keys)
+                        django_count = cursor.rowcount
+                    else:
+                        django_count = 0
+                    
+                    messages.error(request, f'🔴🔴 تم حذف {count} جلسة تتبع + {django_count} جلسة Django. تم إخراج الجميع!')
+            
+            return HttpResponseRedirect(request.path)
+        
+        # حساب الإحصائيات
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM user_activity_usersession")
+            total_sessions = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM user_activity_usersession WHERE is_active = false")
+            inactive_sessions = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM user_activity_usersession WHERE last_activity < %s", [timezone.now() - timedelta(days=1)])
+            old_1day = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM user_activity_usersession WHERE last_activity < %s", [timezone.now() - timedelta(days=7)])
+            old_7days = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM user_activity_usersession WHERE last_activity < %s", [timezone.now() - timedelta(days=30)])
+            old_30days = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM user_activity_useractivitylog")
+            total_logs = cursor.fetchone()[0]
+        
+        context = {
+            'title': 'حذف الجلسات السريع',
+            'total_sessions': total_sessions,
+            'inactive_sessions': inactive_sessions,
+            'old_1day': old_1day,
+            'old_7days': old_7days,
+            'old_30days': old_30days,
+            'total_logs': total_logs,
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request),
+        }
+        
+        return render(request, 'admin/user_activity/quick_cleanup.html', context)
 
     def duration_display(self, obj):
         """عرض مدة الجلسة"""
@@ -215,15 +392,158 @@ class UserSessionAdmin(admin.ModelAdmin):
 
     def delete_inactive_sessions(self, request, queryset):
         """حذف الجلسات غير النشطة"""
-        inactive = UserSession.objects.filter(is_active=False)
-        count = inactive.count()
-        if count > 0:
-            inactive._raw_delete(inactive.db)
-            self.message_user(request, f'تم حذف {count} جلسة غير نشطة', level='success')
-        else:
-            self.message_user(request, 'لا توجد جلسات غير نشطة', level='info')
+        from django.db import connection
+        with connection.cursor() as cursor:
+            # حذف السجلات المرتبطة أولاً
+            cursor.execute("""
+                DELETE FROM user_activity_useractivitylog 
+                WHERE session_id IN (
+                    SELECT id FROM user_activity_usersession WHERE is_active = false
+                )
+            """)
+            logs_count = cursor.rowcount
+            
+            # حذف الجلسات
+            cursor.execute("DELETE FROM user_activity_usersession WHERE is_active = false")
+            sessions_count = cursor.rowcount
+            
+        self.message_user(
+            request, 
+            f'✅ تم حذف {sessions_count} جلسة غير نشطة و {logs_count} سجل نشاط', 
+            level='success'
+        )
     
-    delete_inactive_sessions.short_description = '🗑️ حذف الجلسات غير النشطة'
+    delete_inactive_sessions.short_description = '🗑️ حذف الجلسات غير النشطة (سريع)'
+    
+    def delete_old_sessions_1day(self, request, queryset):
+        """حذف الجلسات الأقدم من يوم"""
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db import connection
+        
+        cutoff = timezone.now() - timedelta(days=1)
+        with connection.cursor() as cursor:
+            # حذف السجلات المرتبطة أولاً
+            cursor.execute("""
+                DELETE FROM user_activity_useractivitylog 
+                WHERE session_id IN (
+                    SELECT id FROM user_activity_usersession WHERE last_activity < %s
+                )
+            """, [cutoff])
+            logs_count = cursor.rowcount
+            
+            # حذف الجلسات
+            cursor.execute(
+                "DELETE FROM user_activity_usersession WHERE last_activity < %s",
+                [cutoff]
+            )
+            sessions_count = cursor.rowcount
+            
+        self.message_user(
+            request, 
+            f'✅ تم حذف {sessions_count} جلسة و {logs_count} سجل (أقدم من يوم واحد)', 
+            level='success'
+        )
+    
+    delete_old_sessions_1day.short_description = '⏰ حذف الجلسات (أقدم من يوم)'
+    
+    def delete_old_sessions_7days(self, request, queryset):
+        """حذف الجلسات الأقدم من 7 أيام"""
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db import connection
+        
+        cutoff = timezone.now() - timedelta(days=7)
+        with connection.cursor() as cursor:
+            # حذف السجلات المرتبطة أولاً
+            cursor.execute("""
+                DELETE FROM user_activity_useractivitylog 
+                WHERE session_id IN (
+                    SELECT id FROM user_activity_usersession WHERE last_activity < %s
+                )
+            """, [cutoff])
+            logs_count = cursor.rowcount
+            
+            # حذف الجلسات
+            cursor.execute(
+                "DELETE FROM user_activity_usersession WHERE last_activity < %s",
+                [cutoff]
+            )
+            sessions_count = cursor.rowcount
+            
+        self.message_user(
+            request, 
+            f'✅ تم حذف {sessions_count} جلسة و {logs_count} سجل (أقدم من 7 أيام)', 
+            level='success'
+        )
+    
+    delete_old_sessions_7days.short_description = '⏰ حذف الجلسات (أقدم من أسبوع)'
+    
+    def delete_old_sessions_30days(self, request, queryset):
+        """حذف الجلسات الأقدم من 30 يوم"""
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db import connection
+        
+        cutoff = timezone.now() - timedelta(days=30)
+        with connection.cursor() as cursor:
+            # حذف السجلات المرتبطة أولاً
+            cursor.execute("""
+                DELETE FROM user_activity_useractivitylog 
+                WHERE session_id IN (
+                    SELECT id FROM user_activity_usersession WHERE last_activity < %s
+                )
+            """, [cutoff])
+            logs_count = cursor.rowcount
+            
+            # حذف الجلسات
+            cursor.execute(
+                "DELETE FROM user_activity_usersession WHERE last_activity < %s",
+                [cutoff]
+            )
+            sessions_count = cursor.rowcount
+            
+        self.message_user(
+            request, 
+            f'✅ تم حذف {sessions_count} جلسة و {logs_count} سجل (أقدم من 30 يوم)', 
+            level='success'
+        )
+    
+    delete_old_sessions_30days.short_description = '⏰ حذف الجلسات (أقدم من شهر)'
+    
+    def delete_all_sessions_keep_superusers(self, request, queryset):
+        """حذف جميع الجلسات ماعدا السوبر يوزر"""
+        from django.db import connection
+        
+        with connection.cursor() as cursor:
+            # حذف السجلات المرتبطة أولاً
+            cursor.execute("""
+                DELETE FROM user_activity_useractivitylog 
+                WHERE session_id IN (
+                    SELECT id FROM user_activity_usersession 
+                    WHERE user_id IN (
+                        SELECT id FROM accounts_user WHERE is_superuser = false
+                    )
+                )
+            """)
+            logs_count = cursor.rowcount
+            
+            # حذف جلسات المستخدمين الذين ليسوا superuser
+            cursor.execute("""
+                DELETE FROM user_activity_usersession 
+                WHERE user_id IN (
+                    SELECT id FROM accounts_user WHERE is_superuser = false
+                )
+            """)
+            sessions_count = cursor.rowcount
+            
+        self.message_user(
+            request, 
+            f'🔴 تم حذف {sessions_count} جلسة و {logs_count} سجل. تم الاحتفاظ بجلسات السوبر يوزر فقط.', 
+            level='warning'
+        )
+    
+    delete_all_sessions_keep_superusers.short_description = '🔴 حذف الجميع (ماعدا السوبر يوزر)'
 
 
 @admin.register(UserLoginHistory)

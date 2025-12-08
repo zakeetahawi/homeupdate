@@ -395,6 +395,9 @@ MIDDLEWARE = [
     # ضروري للنظام
     'orders.middleware.CurrentUserMiddleware',
     'accounts.middleware.current_user.CurrentUserMiddleware',
+    
+    # تتبع جلسات المستخدمين
+    'user_activity.middleware.UserSessionTrackingMiddleware',
 ]
 
 # Debug toolbar configuration for performance monitoring
@@ -1565,7 +1568,7 @@ MANAGERS = ADMINS
 # تحديد الحد الأقصى لحجم الرفع (للحماية من DoS)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 MB
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000  # الحد الأقصى لحقول النموذج
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000  # الحد الأقصى لحقول النموذج (زيادة للتعامل مع الجلسات الكثيرة)
 
 # ======================================
 # إعدادات الأمان المطلق - المستوى النهائي
