@@ -29,8 +29,9 @@
                     </div>
                     {% endif %}
 
-                    <form method="post">
+                    <form method="post" id="loginForm">
                         {% csrf_token %}
+                        <input type="hidden" name="device_info" id="deviceInfo">
 
                         {% if form.non_field_errors %}
                         <div class="alert alert-danger">
@@ -88,4 +89,106 @@
         </div>
     </div>
 </div>
+
+<script>
+// جمع بصمة الجهاز عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', async function() {
+    // جمع معلومات الجهاز
+    const deviceInfo = {
+        screen_resolution: window.screen.width + 'x' + window.screen.height,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timezone_offset: new Date().getTimezoneOffset(),
+        language: navigator.language,
+        platform: navigator.platform,
+        user_agent: navigator.userAgent,
+        color_depth: window.screen.colorDepth,
+        pixel_ratio: window.devicePixelRatio,
+        has_touch: 'ontouchstart' in window,
+        cpu_cores: navigator.hardwareConcurrency || 0,
+    };
+    
+    // محاولة الحصول على Hardware Serial باستخدام Web Serial API أو Media Devices
+    try {
+        // طريقة 1: استخدام navigator.mediaDevices للحصول على device ID ثابت
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const deviceIds = devices.map(d => d.deviceId).filter(id => id && id !== '').sort();
+            if (deviceIds.length > 0) {
+                // استخدام أول device ID كـ hardware serial
+                deviceInfo.hardware_serial = deviceIds[0];
+            }
+        }
+    } catch(e) {
+        console.log('Could not get hardware serial:', e);
+    }
+    
+    // طريقة 2: إنشاء معرف ثابت من خصائص الجهاز
+    if (!deviceInfo.hardware_serial) {
+        // إنشاء معرف فريد من المعلومات الثابتة للجهاز
+        const stableInfo = [
+            navigator.hardwareConcurrency,
+            navigator.maxTouchPoints,
+            screen.width,
+            screen.height,
+            screen.colorDepth,
+            navigator.platform,
+            navigator.deviceMemory || 0
+        ].join('|');
+        
+        // حساب hash بسيط
+        let hash = 0;
+        for (let i = 0; i < stableInfo.length; i++) {
+            const char = stableInfo.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        deviceInfo.hardware_serial = 'HW' + Math.abs(hash).toString(16);
+    }
+    
+    // Canvas Fingerprint
+    try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#f60';
+        ctx.fillRect(125, 1, 62, 20);
+        ctx.fillStyle = '#069';
+        ctx.fillText('Device Fingerprint', 2, 15);
+        ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+        ctx.fillText('Device Fingerprint', 4, 17);
+        deviceInfo.canvas_fingerprint = canvas.toDataURL();
+    } catch(e) {
+        deviceInfo.canvas_fingerprint = '';
+    }
+    
+    // WebGL Fingerprint
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                deviceInfo.webgl_vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                deviceInfo.webgl_renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            }
+        }
+    } catch(e) {
+        deviceInfo.webgl_vendor = '';
+        deviceInfo.webgl_renderer = '';
+    }
+    
+    // حفظ المعلومات في حقل مخفي
+    document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
+    console.log('Device info collected:', deviceInfo);
+    
+    // إضافة مستمع لإرسال النموذج للتأكد من وجود البيانات
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        if (!document.getElementById('deviceInfo').value) {
+            document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
+        }
+    });
+});
+</script>
 {% endblock %}

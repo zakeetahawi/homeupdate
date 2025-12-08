@@ -624,6 +624,13 @@ class SystemSettings(models.Model):
         help_text=_('العدد الأقصى للمسودات (الدرافتات) المسموح بها لكل مستخدم')
     )
     
+    # إعدادات أمان الأجهزة
+    enable_device_restriction = models.BooleanField(
+        _('تفعيل قفل الأجهزة'),
+        default=False,
+        help_text=_('عند التفعيل، لن يتمكن الموظفون من تسجيل الدخول إلا من الأجهزة المسجلة لفرعهم. السوبر يوزر والمدير العام معفيين.')
+    )
+    
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
     class Meta:
@@ -850,6 +857,219 @@ class InternalMessage(models.Model):
             sender=user,
             is_deleted_by_sender=False
         ).select_related('recipient')
+
+
+class BranchDevice(models.Model):
+    """
+    نموذج لربط الأجهزة بالفروع - يسمح لأي موظف في الفرع باستخدام أجهزة ذلك الفرع
+    """
+    branch = models.ForeignKey(
+        'Branch',
+        on_delete=models.CASCADE,
+        related_name='devices',
+        verbose_name=_('الفرع')
+    )
+    device_name = models.CharField(
+        _('اسم الجهاز'),
+        max_length=200,
+        help_text=_('اسم تعريفي للجهاز (مثل: كمبيوتر الاستقبال 1)')
+    )
+    device_fingerprint = models.CharField(
+        _('بصمة الجهاز'),
+        max_length=64,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text=_('معرف فريد للجهاز يتم توليده تلقائياً (اختياري)')
+    )
+    hardware_serial = models.CharField(
+        _('الرقم التسلسلي للجهاز'),
+        max_length=200,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text=_('الرقم التسلسلي للجهاز (Hardware UUID/Serial)')
+    )
+    ip_address = models.GenericIPAddressField(
+        _('عنوان IP'),
+        null=True,
+        blank=True,
+        help_text=_('آخر عنوان IP مستخدم')
+    )
+    user_agent = models.TextField(
+        _('معلومات المتصفح'),
+        blank=True,
+        help_text=_('معلومات المتصفح والنظام')
+    )
+    is_active = models.BooleanField(
+        _('نشط'),
+        default=True,
+        help_text=_('هل هذا الجهاز مفعل للاستخدام؟')
+    )
+    created_at = models.DateTimeField(
+        _('تاريخ التسجيل'),
+        auto_now_add=True
+    )
+    first_used = models.DateTimeField(
+        _('أول استخدام'),
+        null=True,
+        blank=True
+    )
+    last_used = models.DateTimeField(
+        _('آخر استخدام'),
+        null=True,
+        blank=True
+    )
+    last_used_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='last_used_devices',
+        verbose_name=_('آخر مستخدم')
+    )
+    notes = models.TextField(
+        _('ملاحظات'),
+        blank=True,
+        help_text=_('ملاحظات إضافية عن الجهاز')
+    )
+    
+    class Meta:
+        verbose_name = _('جهاز الفرع')
+        verbose_name_plural = _('أجهزة الفروع')
+        ordering = ['branch', 'device_name']
+        indexes = [
+            models.Index(fields=['device_fingerprint']),
+            models.Index(fields=['branch', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.device_name} - {self.branch.name}"
+    
+    def mark_used(self, user=None, ip_address=None):
+        """تحديث معلومات آخر استخدام للجهاز"""
+        now = timezone.now()
+        if not self.first_used:
+            self.first_used = now
+        self.last_used = now
+        if user:
+            self.last_used_by = user
+        if ip_address:
+            self.ip_address = ip_address
+        self.save(update_fields=['first_used', 'last_used', 'last_used_by', 'ip_address'])
+    
+    def is_authorized_for_user(self, user):
+        """التحقق من صلاحية الجهاز للمستخدم - يسمح لأي موظف في نفس الفرع"""
+        if not self.is_active:
+            return False
+        
+        # السوبر يوزر والمدير العام يستطيعون الدخول من أي جهاز
+        if user.is_superuser or user.is_general_manager:
+            return True
+        
+        # التحقق من أن المستخدم ينتمي لنفس فرع الجهاز
+        return user.branch == self.branch
+
+
+class UnauthorizedDeviceAttempt(models.Model):
+    """
+    تسجيل محاولات الدخول من أجهزة غير مصرح بها
+    """
+    DENIAL_REASON_CHOICES = [
+        ('device_not_registered', 'جهاز غير مسجل'),
+        ('wrong_branch', 'جهاز مسجل لفرع آخر'),
+        ('device_inactive', 'جهاز معطل'),
+    ]
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name=_('المستخدم'),
+        related_name='unauthorized_attempts'
+    )
+    attempted_at = models.DateTimeField(
+        _('وقت المحاولة'),
+        auto_now_add=True,
+        db_index=True
+    )
+    device_fingerprint = models.CharField(
+        _('بصمة الجهاز'),
+        max_length=64,
+        null=True,
+        blank=True
+    )
+    hardware_serial = models.CharField(
+        _('الرقم التسلسلي للجهاز'),
+        max_length=200,
+        null=True,
+        blank=True
+    )
+    ip_address = models.GenericIPAddressField(
+        _('عنوان IP'),
+        null=True,
+        blank=True
+    )
+    user_agent = models.TextField(
+        _('معلومات المتصفح'),
+        blank=True
+    )
+    denial_reason = models.CharField(
+        _('سبب الرفض'),
+        max_length=50,
+        choices=DENIAL_REASON_CHOICES,
+        default='device_not_registered'
+    )
+    user_branch = models.ForeignKey(
+        'Branch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_('فرع المستخدم'),
+        related_name='unauthorized_login_attempts'
+    )
+    device_branch = models.ForeignKey(
+        'Branch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_('فرع الجهاز'),
+        related_name='device_unauthorized_attempts'
+    )
+    is_notified = models.BooleanField(
+        _('تم الإشعار'),
+        default=False,
+        help_text=_('هل تم إرسال إشعار لمدير النظام؟')
+    )
+    
+    class Meta:
+        verbose_name = _('محاولة دخول غير مصرح بها')
+        verbose_name_plural = _('محاولات الدخول غير المصرح بها')
+        ordering = ['-attempted_at']
+        indexes = [
+            models.Index(fields=['-attempted_at']),
+            models.Index(fields=['user', '-attempted_at']),
+            models.Index(fields=['is_notified']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_denial_reason_display()} - {self.attempted_at.strftime('%Y-%m-%d %H:%M')}"
+    
+    @classmethod
+    def log_attempt(cls, user, device_data, denial_reason, user_branch=None, device_branch=None, ip_address=None):
+        """تسجيل محاولة دخول غير مصرح بها"""
+        attempt = cls.objects.create(
+            user=user,
+            device_fingerprint=device_data.get('fingerprint'),
+            hardware_serial=device_data.get('hardware_serial'),
+            ip_address=ip_address,
+            user_agent=device_data.get('user_agent', ''),
+            denial_reason=denial_reason,
+            user_branch=user_branch,
+            device_branch=device_branch
+        )
+        return attempt
 
 
 class YearFilterExemption(models.Model):

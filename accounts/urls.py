@@ -17,6 +17,13 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('profile/', views.profile_view, name='profile'),
+    
+    # Device Management
+    path('register-device/', views.register_device_view, name='register_device'),
+    path('device-diagnostic/', views.device_diagnostic_view, name='device_diagnostic'),
+    
+    # Device API
+    path('api/check-device/', api_views.check_device_api, name='check_device_api'),
 
     # API Authentication URLs
     path('api/login/', api_views.login_api, name='api_login'),

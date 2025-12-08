@@ -1074,6 +1074,9 @@
         <a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="fas fa-id-card"></i> الملف الشخصي</a>
         {% if user.is_staff %}
         <a class="dropdown-item" href="{% url 'admin:index' %}"><i class="fas fa-cog"></i> لوحة الإدارة</a>
+        <a class="dropdown-item" href="{% url 'accounts:device_diagnostic' %}"><i class="fas fa-stethoscope"></i> تشخيص الجهاز</a>
+        <a class="dropdown-item" href="{% url 'accounts:register_device' %}"><i class="fas fa-desktop"></i> تسجيل جهاز جديد</a>
+        <a class="dropdown-item" href="{% url 'admin:accounts_branchdevice_changelist' %}"><i class="fas fa-list"></i> إدارة الأجهزة</a>
         {% endif %}
         <hr class="my-1">
         <a class="dropdown-item" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>

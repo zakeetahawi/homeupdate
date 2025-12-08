@@ -6,10 +6,13 @@ from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.models import Permission
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import UserSerializer, RoleSerializer, RoleDetailSerializer, UserRoleSerializer, PermissionSerializer
-from .models import Role, UserRole
+from .models import Role, UserRole, BranchDevice
 from .services.dashboard_service import DashboardService
+import json
 
 User = get_user_model()
 
@@ -309,3 +312,47 @@ def dashboard_trends(request):
     days = int(request.GET.get('days', 30))
     data = DashboardService.get_trends_data(days=days)
     return JsonResponse(data)
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def check_device_api(request):
+    """
+    API للتحقق من تسجيل جهاز بناءً على بصمته
+    """
+    try:
+        data = json.loads(request.body)
+        device_fingerprint = data.get('device_fingerprint')
+        
+        if not device_fingerprint:
+            return JsonResponse({
+                'registered': False,
+                'error': 'البصمة مطلوبة'
+            }, status=400)
+        
+        try:
+            device = BranchDevice.objects.get(device_fingerprint=device_fingerprint)
+            
+            return JsonResponse({
+                'registered': True,
+                'device_name': device.device_name,
+                'branch_name': device.branch.name,
+                'is_active': device.is_active,
+                'last_used': device.last_used.strftime('%Y-%m-%d %H:%M') if device.last_used else None,
+                'last_used_by': device.last_used_by.username if device.last_used_by else None,
+            })
+        except BranchDevice.DoesNotExist:
+            return JsonResponse({
+                'registered': False,
+                'message': 'الجهاز غير مسجل في النظام'
+            })
+            
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'registered': False,
+            'error': 'خطأ في البيانات المرسلة'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'registered': False,
+            'error': str(e)
+        }, status=500)
