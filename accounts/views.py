@@ -261,6 +261,7 @@ def login_view(request):
                                 denial_reason=denial_reason_key,
                                 user_branch=user.branch,
                                 device_branch=device_branch,
+                                device=device_obj,
                                 ip_address=ip
                             )
                             

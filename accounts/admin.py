@@ -843,9 +843,29 @@ class InternalMessageAdmin(admin.ModelAdmin):
     delete_permanently.short_description = 'حذف نهائياً'
 
 
+class UnauthorizedDeviceAttemptInline(admin.TabularInline):
+    """عرض محاولات الدخول الفاشلة ضمن صفحة الجهاز"""
+    model = UnauthorizedDeviceAttempt
+    extra = 0
+    can_delete = False
+    fields = ('username_attempted', 'user_display_inline', 'denial_reason', 'attempted_at', 'ip_address')
+    readonly_fields = ('username_attempted', 'user_display_inline', 'denial_reason', 'attempted_at', 'ip_address')
+    
+    def user_display_inline(self, obj):
+        """عرض اسم المستخدم في الـ inline"""
+        if obj.user:
+            return f"{obj.user.get_full_name()}"
+        return "❌ غير موجود"
+    user_display_inline.short_description = 'المستخدم'
+    
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(BranchDevice)
 class BranchDeviceAdmin(admin.ModelAdmin):
     """إدارة أجهزة الفروع"""
+    inlines = [UnauthorizedDeviceAttemptInline]
     list_display = (
         'device_name', 
         'branch', 

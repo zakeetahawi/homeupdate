@@ -1051,6 +1051,15 @@ class UnauthorizedDeviceAttempt(models.Model):
         null=True,
         blank=True
     )
+    device = models.ForeignKey(
+        'BranchDevice',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_('الجهاز'),
+        related_name='unauthorized_attempts',
+        help_text=_('الجهاز الذي تمت المحاولة منه (إذا كان مسجلاً)')
+    )
     ip_address = models.GenericIPAddressField(
         _('عنوان IP'),
         null=True,
@@ -1104,7 +1113,7 @@ class UnauthorizedDeviceAttempt(models.Model):
     
     @classmethod
     def log_attempt(cls, username_attempted, user=None, device_data=None, denial_reason='invalid_password', 
-                    user_branch=None, device_branch=None, ip_address=None):
+                    user_branch=None, device_branch=None, device=None, ip_address=None):
         """
         تسجيل محاولة دخول فاشلة
         
@@ -1115,6 +1124,7 @@ class UnauthorizedDeviceAttempt(models.Model):
             denial_reason: سبب الرفض
             user_branch: فرع المستخدم
             device_branch: فرع الجهاز
+            device: كائن BranchDevice (إذا كان الجهاز مسجلاً)
             ip_address: عنوان IP
         """
         device_data = device_data or {}
@@ -1124,6 +1134,7 @@ class UnauthorizedDeviceAttempt(models.Model):
             username_attempted=username_attempted,
             device_fingerprint=device_data.get('fingerprint'),
             hardware_serial=device_data.get('hardware_serial'),
+            device=device,
             ip_address=ip_address,
             user_agent=device_data.get('user_agent', ''),
             denial_reason=denial_reason,
