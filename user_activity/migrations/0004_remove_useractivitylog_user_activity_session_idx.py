@@ -10,8 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveIndex(
-            model_name="useractivitylog",
-            name="user_activity_session_idx",
-        ),
+        # Migration فارغة - الـ index لم يكن موجوداً أصلاً
+        # تم إنشاء هذه الـ migration بالخطأ بواسطة makemigrations
     ]
