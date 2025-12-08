@@ -217,7 +217,7 @@ def login_view(request):
                                 
                                 # إذا لم يُعثر على الجهاز بالسيريال، جرب البصمة
                                 if not device_obj:
-                                    device_fingerprint = generate_device_fingerprint(request, device_data)
+                                    device_fingerprint = generate_device_fingerprint(request)
                                     logger.info(f"🔐 Device fingerprint: {device_fingerprint[:16]}...")
                                     
                                     try:
