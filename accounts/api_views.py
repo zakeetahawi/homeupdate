@@ -317,33 +317,59 @@ def dashboard_trends(request):
 @csrf_exempt
 def check_device_api(request):
     """
-    API للتحقق من تسجيل جهاز بناءً على بصمته
+    API للتحقق من تسجيل جهاز بناءً على بصمته أو معرفه الثابت
     """
     try:
         data = json.loads(request.body)
         device_fingerprint = data.get('device_fingerprint')
+        hardware_serial = data.get('hardware_serial')
         
-        if not device_fingerprint:
+        if not device_fingerprint and not hardware_serial:
             return JsonResponse({
                 'registered': False,
-                'error': 'البصمة مطلوبة'
+                'error': 'البصمة أو المعرف الثابت مطلوب'
             }, status=400)
         
-        try:
-            device = BranchDevice.objects.get(device_fingerprint=device_fingerprint)
-            
+        device = None
+        found_by = None
+        
+        # البحث أولاً بالـ hardware_serial (أكثر استقراراً)
+        if hardware_serial:
+            try:
+                device = BranchDevice.objects.get(hardware_serial=hardware_serial)
+                found_by = 'hardware_serial'
+            except BranchDevice.DoesNotExist:
+                pass
+        
+        # إذا لم يُعثر عليه، البحث بالـ fingerprint
+        if not device and device_fingerprint:
+            try:
+                device = BranchDevice.objects.get(device_fingerprint=device_fingerprint)
+                found_by = 'fingerprint'
+            except BranchDevice.DoesNotExist:
+                pass
+        
+        if device:
             return JsonResponse({
                 'registered': True,
                 'device_name': device.device_name,
                 'branch_name': device.branch.name,
+                'branch_id': device.branch.id,
                 'is_active': device.is_active,
+                'is_blocked': device.is_blocked,
+                'blocked_reason': device.blocked_reason if device.is_blocked else None,
                 'last_used': device.last_used.strftime('%Y-%m-%d %H:%M') if device.last_used else None,
                 'last_used_by': device.last_used_by.username if device.last_used_by else None,
+                'found_by': found_by,
+                'hardware_serial': device.hardware_serial,
+                'device_fingerprint': device.device_fingerprint[:16] + '...' if device.device_fingerprint else None,
             })
-        except BranchDevice.DoesNotExist:
+        else:
             return JsonResponse({
                 'registered': False,
-                'message': 'الجهاز غير مسجل في النظام'
+                'message': 'الجهاز غير مسجل في النظام',
+                'searched_serial': hardware_serial,
+                'searched_fingerprint': device_fingerprint[:16] + '...' if device_fingerprint else None,
             })
             
     except json.JSONDecodeError:

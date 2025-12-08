@@ -215,19 +215,30 @@ document.getElementById('checkDeviceBtn').addEventListener('click', function() {
             'X-CSRFToken': '{{ csrf_token }}'
         },
         body: JSON.stringify({
-            device_fingerprint: currentFingerprint
+            device_fingerprint: currentFingerprint,
+            hardware_serial: currentHardwareSerial
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.registered) {
+            let statusBadge = data.is_active ? '<span class="badge bg-success">نشط ✅</span>' : '<span class="badge bg-secondary">غير نشط ❌</span>';
+            if (data.is_blocked) {
+                statusBadge = '<span class="badge bg-danger">محظور 🚫</span>';
+            }
+            
             resultDiv.innerHTML = `
                 <div class="alert alert-success">
                     <h5><i class="fas fa-check-circle"></i> الجهاز مسجل ✅</h5>
+                    <hr>
                     <p class="mb-1"><strong>اسم الجهاز:</strong> ${data.device_name}</p>
                     <p class="mb-1"><strong>الفرع:</strong> ${data.branch_name}</p>
-                    <p class="mb-1"><strong>الحالة:</strong> ${data.is_active ? 'نشط ✅' : 'غير نشط ❌'}</p>
-                    ${data.last_used ? `<p class="mb-0"><strong>آخر استخدام:</strong> ${data.last_used}</p>` : '<p class="mb-0"><strong>آخر استخدام:</strong> لم يُستخدم بعد</p>'}
+                    <p class="mb-1"><strong>الحالة:</strong> ${statusBadge}</p>
+                    <p class="mb-1"><strong>المعرف المسجل:</strong> <code>${data.hardware_serial || 'غير متوفر'}</code></p>
+                    ${data.blocked_reason ? `<p class="mb-1 text-danger"><strong>سبب الحظر:</strong> ${data.blocked_reason}</p>` : ''}
+                    ${data.last_used ? `<p class="mb-0"><strong>آخر استخدام:</strong> ${data.last_used}${data.last_used_by ? ' بواسطة ' + data.last_used_by : ''}</p>` : '<p class="mb-0"><strong>آخر استخدام:</strong> لم يُستخدم بعد</p>'}
+                    <hr>
+                    <small class="text-muted">تم العثور على الجهاز بواسطة: ${data.found_by === 'hardware_serial' ? 'المعرف الثابت' : 'البصمة'}</small>
                 </div>
             `;
         } else {
@@ -235,6 +246,12 @@ document.getElementById('checkDeviceBtn').addEventListener('click', function() {
                 <div class="alert alert-warning">
                     <h5><i class="fas fa-exclamation-triangle"></i> الجهاز غير مسجل ⚠️</h5>
                     <p>هذا الجهاز غير مسجل في النظام. يجب تسجيله أولاً لتتمكن من تسجيل الدخول.</p>
+                    <hr>
+                    <small class="text-muted">
+                        تم البحث بـ:<br>
+                        - المعرف الثابت: <code>${data.searched_serial || 'غير متوفر'}</code><br>
+                        - البصمة: <code>${data.searched_fingerprint || 'غير متوفر'}</code>
+                    </small>
                 </div>
             `;
         }

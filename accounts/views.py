@@ -204,6 +204,10 @@ def login_view(request):
                             device_check_performed = True
                             logger.info(f"🔍 Checking device (restriction: {'enabled' if device_restriction_enabled else 'disabled'})...")
                             try:
+                                # توليد البصمة مبكراً للاستخدام في البحث
+                                device_fingerprint = generate_device_fingerprint(request)
+                                logger.info(f"🔐 Device fingerprint: {device_fingerprint[:16]}...")
+                                
                                 # محاولة البحث بالـ hardware_serial أولاً (أكثر استقراراً)
                                 if hardware_serial:
                                     try:
@@ -212,20 +216,28 @@ def login_view(request):
                                             is_active=True
                                         )
                                         logger.info(f"✅ Device found by serial: {device_obj.device_name} - Branch: {device_obj.branch.name}")
+                                        # تحديث البصمة إذا تغيرت
+                                        if device_obj.device_fingerprint != device_fingerprint:
+                                            device_obj.device_fingerprint = device_fingerprint
+                                            device_obj.save(update_fields=['device_fingerprint'])
+                                            logger.info(f"🔄 Updated fingerprint for device: {device_obj.device_name}")
                                     except BranchDevice.DoesNotExist:
                                         logger.warning(f"⚠️ Device with serial {hardware_serial} not found, trying fingerprint...")
                                 
                                 # إذا لم يُعثر على الجهاز بالسيريال، جرب البصمة
                                 if not device_obj:
-                                    device_fingerprint = generate_device_fingerprint(request)
-                                    logger.info(f"🔐 Device fingerprint: {device_fingerprint[:16]}...")
-                                    
                                     try:
                                         device_obj = BranchDevice.objects.get(
                                             device_fingerprint=device_fingerprint,
                                             is_active=True
                                         )
                                         logger.info(f"✅ Device found by fingerprint: {device_obj.device_name} - Branch: {device_obj.branch.name}")
+                                        # تحديث الـ hardware_serial إذا تغير
+                                        if hardware_serial and device_obj.hardware_serial != hardware_serial:
+                                            old_serial = device_obj.hardware_serial
+                                            device_obj.hardware_serial = hardware_serial
+                                            device_obj.save(update_fields=['hardware_serial'])
+                                            logger.info(f"🔄 Updated hardware_serial for device: {device_obj.device_name} (from {old_serial} to {hardware_serial})")
                                     except BranchDevice.DoesNotExist:
                                         denial_reason = '🚫 جهاز غير مسجل'
                                         denial_reason_key = 'device_not_registered'
