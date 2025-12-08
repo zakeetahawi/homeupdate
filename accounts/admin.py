@@ -843,9 +843,29 @@ class InternalMessageAdmin(admin.ModelAdmin):
     delete_permanently.short_description = 'حذف نهائياً'
 
 
+class UnauthorizedDeviceAttemptInline(admin.TabularInline):
+    """عرض محاولات الدخول الفاشلة ضمن صفحة الجهاز"""
+    model = UnauthorizedDeviceAttempt
+    extra = 0
+    can_delete = False
+    fields = ('username_attempted', 'user_display_inline', 'denial_reason', 'attempted_at', 'ip_address')
+    readonly_fields = ('username_attempted', 'user_display_inline', 'denial_reason', 'attempted_at', 'ip_address')
+    
+    def user_display_inline(self, obj):
+        """عرض اسم المستخدم في الـ inline"""
+        if obj.user:
+            return f"{obj.user.get_full_name()}"
+        return "❌ غير موجود"
+    user_display_inline.short_description = 'المستخدم'
+    
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(BranchDevice)
 class BranchDeviceAdmin(admin.ModelAdmin):
     """إدارة أجهزة الفروع"""
+    inlines = [UnauthorizedDeviceAttemptInline]
     list_display = (
         'device_name', 
         'branch', 
@@ -871,13 +891,21 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         'first_used', 
         'last_used',
         'last_used_by',
-        'fingerprint_display'
+        'fingerprint_display',
+        'users_list_display',
+        'blocked_at',
+        'blocked_by'
     )
     date_hierarchy = 'created_at'
     
     fieldsets = (
         ('معلومات الجهاز الأساسية', {
-            'fields': ('branch', 'device_name', 'is_active')
+            'fields': ('branch', 'device_name', 'is_active', 'is_blocked')
+        }),
+        ('معلومات الحظر', {
+            'fields': ('blocked_reason', 'blocked_at', 'blocked_by'),
+            'classes': ('collapse',),
+            'description': 'إذا تم تفعيل الحظر، لن يتمكن أي شخص من استخدام هذا الجهاز'
         }),
         ('البصمة والتعريف', {
             'fields': ('hardware_serial', 'fingerprint_display', 'device_fingerprint'),
@@ -887,7 +915,7 @@ class BranchDeviceAdmin(admin.ModelAdmin):
             'fields': ('ip_address', 'user_agent')
         }),
         ('معلومات الاستخدام', {
-            'fields': ('first_used', 'last_used', 'last_used_by'),
+            'fields': ('first_used', 'last_used', 'last_used_by', 'users_list_display'),
             'classes': ('collapse',)
         }),
         ('ملاحظات', {
@@ -900,7 +928,7 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         }),
     )
     
-    actions = ['activate_devices', 'deactivate_devices', 'export_device_list', 'toggle_device_restriction']
+    actions = ['activate_devices', 'deactivate_devices', 'block_devices', 'unblock_devices', 'export_device_list', 'toggle_device_restriction']
     
     def changelist_view(self, request, extra_context=None):
         """إضافة معلومات حالة النظام إلى صفحة القائمة"""
@@ -910,6 +938,33 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         extra_context['total_devices'] = BranchDevice.objects.count()
         extra_context['active_devices'] = BranchDevice.objects.filter(is_active=True).count()
         return super().changelist_view(request, extra_context=extra_context)
+    
+    def users_list_display(self, obj):
+        """عرض قائمة المستخدمين الذين سجلوا الدخول من هذا الجهاز"""
+        users = obj.users_logged.all()
+        if not users.exists():
+            return mark_safe('<span style="color: #999;">لم يتم تسجيل أي مستخدم بعد</span>')
+        
+        users_html = '<ul style="margin: 0; padding-left: 20px;">'
+        for user in users:
+            # إضافة أيقونة حسب نوع المستخدم
+            if user.is_superuser:
+                icon = '👑'
+            elif user.is_general_manager:
+                icon = '⭐'
+            else:
+                icon = '👤'
+            
+            users_html += f'<li>{icon} <strong>{user.get_full_name()}</strong> ({user.username})'
+            if user.branch:
+                users_html += f' - {user.branch.name}'
+            users_html += '</li>'
+        users_html += '</ul>'
+        
+        count_html = f'<p style="margin-top: 10px; color: #666;"><strong>إجمالي المستخدمين:</strong> {users.count()}</p>'
+        
+        return mark_safe(users_html + count_html)
+    users_list_display.short_description = 'المستخدمون الذين سجلوا الدخول'
     
     def fingerprint_short(self, obj):
         """عرض أول 12 حرف من البصمة"""
@@ -970,6 +1025,27 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         return response
     export_device_list.short_description = 'تصدير قائمة الأجهزة (CSV)'
     
+    def block_devices(self, request, queryset):
+        """حظر الأجهزة المحددة"""
+        from django.utils import timezone
+        for device in queryset:
+            device.is_blocked = True
+            device.blocked_at = timezone.now()
+            device.blocked_by = request.user
+            if not device.blocked_reason:
+                device.blocked_reason = 'تم الحظر من لوحة التحكم'
+            device.save()
+        
+        count = queryset.count()
+        self.message_user(request, f'🚫 تم حظر {count} جهاز')
+    block_devices.short_description = '🚫 حظر الأجهزة المحددة'
+    
+    def unblock_devices(self, request, queryset):
+        """إلغاء حظر الأجهزة المحددة"""
+        updated = queryset.update(is_blocked=False, blocked_reason='', blocked_at=None, blocked_by=None)
+        self.message_user(request, f'✅ تم إلغاء حظر {updated} جهاز')
+    unblock_devices.short_description = '✅ إلغاء حظر الأجهزة المحددة'
+    
     def toggle_device_restriction(self, request, queryset):
         """تفعيل أو تعطيل نظام قفل الأجهزة"""
         settings = SystemSettings.get_settings()
@@ -995,9 +1071,10 @@ class BranchDeviceAdmin(admin.ModelAdmin):
 
 @admin.register(UnauthorizedDeviceAttempt)
 class UnauthorizedDeviceAttemptAdmin(admin.ModelAdmin):
-    """إدارة محاولات الدخول غير المصرح بها"""
+    """إدارة محاولات الدخول الفاشلة"""
     list_display = (
-        'user',
+        'username_attempted',
+        'user_display',
         'user_branch_display',
         'denial_reason',
         'attempted_at',
@@ -1007,6 +1084,7 @@ class UnauthorizedDeviceAttemptAdmin(admin.ModelAdmin):
     )
     list_filter = ('denial_reason', 'is_notified', 'attempted_at', 'user_branch')
     search_fields = (
+        'username_attempted',
         'user__username',
         'user__first_name',
         'user__last_name',
@@ -1015,6 +1093,7 @@ class UnauthorizedDeviceAttemptAdmin(admin.ModelAdmin):
         'hardware_serial'
     )
     readonly_fields = (
+        'username_attempted',
         'user',
         'attempted_at',
         'device_fingerprint',
@@ -1029,7 +1108,7 @@ class UnauthorizedDeviceAttemptAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('معلومات المستخدم', {
-            'fields': ('user', 'user_branch', 'attempted_at')
+            'fields': ('username_attempted', 'user', 'user_branch', 'attempted_at')
         }),
         ('معلومات الجهاز', {
             'fields': ('hardware_serial', 'device_fingerprint', 'ip_address', 'user_agent')
@@ -1044,6 +1123,13 @@ class UnauthorizedDeviceAttemptAdmin(admin.ModelAdmin):
     )
     
     actions = ['mark_as_notified', 'send_notification_to_admin']
+    
+    def user_display(self, obj):
+        """عرض اسم المستخدم"""
+        if obj.user:
+            return f"{obj.user.get_full_name()} ({obj.user.username})"
+        return f"❌ {obj.username_attempted} (غير موجود)"
+    user_display.short_description = 'المستخدم'
     
     def user_branch_display(self, obj):
         """عرض فرع المستخدم"""
