@@ -866,6 +866,7 @@ class BranchDeviceAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         'device_fingerprint', 
+        'hardware_serial',
         'created_at', 
         'first_used', 
         'last_used',
@@ -879,8 +880,8 @@ class BranchDeviceAdmin(admin.ModelAdmin):
             'fields': ('branch', 'device_name', 'is_active')
         }),
         ('البصمة والتعريف', {
-            'fields': ('fingerprint_display', 'device_fingerprint'),
-            'description': 'بصمة الجهاز يتم توليدها تلقائياً ولا يمكن تعديلها'
+            'fields': ('hardware_serial', 'fingerprint_display', 'device_fingerprint'),
+            'description': 'المعرف الثابت والبصمة يتم توليدهما تلقائياً ولا يمكن تعديلهما'
         }),
         ('معلومات الاتصال', {
             'fields': ('ip_address', 'user_agent')
