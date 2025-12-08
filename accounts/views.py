@@ -9,6 +9,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 from django.core.cache import cache
 from django.http import HttpResponseForbidden
+from django.utils.safestring import mark_safe
 import hashlib
 import json
 import traceback
@@ -56,6 +57,33 @@ def generate_device_fingerprint(request):
     fingerprint_hash = hashlib.sha256(fingerprint_string.encode()).hexdigest()
     
     return fingerprint_hash
+
+def get_client_ip(request):
+    """
+    استخراج عنوان IP الحقيقي للمستخدم من HTTP headers
+    يدعم Cloudflare و reverse proxies
+    """
+    import logging
+    logger = logging.getLogger('django')
+    
+    # التحقق من HTTP_X_FORWARDED_FOR أولاً (Cloudflare, nginx, etc)
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    cf_connecting_ip = request.META.get('HTTP_CF_CONNECTING_IP')  # Cloudflare specific
+    
+    if cf_connecting_ip:
+        # Cloudflare يرسل IP الحقيقي في CF-Connecting-IP
+        ip = cf_connecting_ip
+        logger.info(f"🌐 IP from Cloudflare: {ip}")
+    elif x_forwarded_for:
+        # قد يحتوي على عدة IPs مفصولة بفواصل، الأول هو IP العميل الحقيقي
+        ip = x_forwarded_for.split(',')[0].strip()
+        logger.info(f"🌐 IP from X-Forwarded-For: {ip}")
+    else:
+        # إذا لم يكن هناك proxy، استخدم REMOTE_ADDR
+        ip = request.META.get('REMOTE_ADDR', 'unknown')
+        logger.info(f"🖥️ Direct IP (localhost): {ip}")
+    
+    return ip
 
 def login_view(request):
     """
@@ -105,7 +133,7 @@ def login_view(request):
         if request.method == 'POST':
             try:
                 # الحصول على معلومات الجهاز أولاً
-                ip = request.META.get('REMOTE_ADDR', 'unknown')
+                ip = get_client_ip(request)
                 device_info = request.POST.get('device_info', '')
                 device_data = json.loads(device_info) if device_info else {}
                 hardware_serial = device_data.get('hardware_serial', '')
@@ -235,9 +263,13 @@ def login_view(request):
                                 device_authorized = True
                                 logger.info(f"⚠️ Device restriction disabled - allowing login despite device check result")
                             
-                        # تسجيل المحاولة غير المصرح بها (للمراقبة والإحصائيات - يتم دائماً حتى لو كان النظام معطلاً)
+                        # تسجيل المحاولة غير المصرح بها (للمراقبة والإحصائيات)
+                        # يتم التسجيل دائماً حتى لو كان النظام معطلاً، طالما هناك مشكلة في الجهاز
+                        logger.info(f"🔍 Check logging conditions: device_check={device_check_performed}, denial_key={denial_reason_key}, superuser={user.is_superuser}, general_manager={user.is_general_manager}")
+                        
                         if device_check_performed and denial_reason_key and not (user.is_superuser or user.is_general_manager):
-                            from notifications.utils import create_notification
+                            
+                            logger.info(f"📝 Logging unauthorized attempt: {username} - {denial_reason_key}")
                             
                             # جمع بيانات الجهاز
                             device_log_data_full = {
@@ -267,17 +299,19 @@ def login_view(request):
                             
                             logger.error(f"🚨 Unauthorized attempt logged: ID {attempt.id} - Reason: {denial_reason_key}")
                             
-                            # إرسال إشعار فوري لمدير النظام (فقط إذا كان النظام مفعلاً)
-                            if device_restriction_enabled:
+                            # إرسال إشعار فوري لمدير النظام (فقط إذا كان النظام مفعلاً وتم رفض الدخول فعلاً)
+                            if device_restriction_enabled and not device_authorized:
+                                from notifications.models import Notification
                                 superusers = User.objects.filter(is_superuser=True, is_active=True)
                                 for admin_user in superusers:
-                                    create_notification(
-                                        user=admin_user,
+                                    notification = Notification.objects.create(
                                         title='🚨 محاولة دخول غير مصرح بها',
                                         message=f'{user.username} ({user.branch.name if user.branch else "بدون فرع"}) حاول الدخول من جهاز غير مصرح به.\nالسبب: {attempt.get_denial_reason_display()}\nالوقت: {attempt.attempted_at.strftime("%Y-%m-%d %H:%M")}\nIP: {ip}',
-                                        notification_type='security_alert',
-                                        url=f'/admin/accounts/unauthorizeddeviceattempt/{attempt.id}/change/'
+                                        notification_type='order_created',
+                                        priority='urgent',
+                                        created_by=user
                                     )
+                                    notification.visible_to.add(admin_user)
                                 attempt.is_notified = True
                                 attempt.save()
                         
@@ -342,14 +376,24 @@ def login_view(request):
                         
                         # تسجيل محاولة فاشلة - كلمة مرور خاطئة
                         if user_exists and user_obj:
-                            device_log_data['fingerprint'] = generate_device_fingerprint(request, device_data) if device_data else ''
+                            device_log_data['fingerprint'] = generate_device_fingerprint(request) if device_data else ''
+                            
+                            # محاولة العثور على الجهاز
+                            attempt_device = None
+                            if hardware_serial:
+                                try:
+                                    attempt_device = BranchDevice.objects.get(hardware_serial=hardware_serial)
+                                except BranchDevice.DoesNotExist:
+                                    pass
+                            
                             UnauthorizedDeviceAttempt.log_attempt(
                                 username_attempted=username,
                                 user=user_obj,
                                 device_data=device_log_data,
                                 denial_reason='invalid_password',
                                 user_branch=user_obj.branch if user_obj else None,
-                                device_branch=None,
+                                device_branch=attempt_device.branch if attempt_device else None,
+                                device=attempt_device,
                                 ip_address=ip
                             )
                         
@@ -371,14 +415,24 @@ def login_view(request):
                         logger.warning(f"❌ Invalid username: {username} from IP: {ip}")
                         
                         # تسجيل محاولة فاشلة - اسم مستخدم خاطئ
-                        device_log_data['fingerprint'] = generate_device_fingerprint(request, device_data) if device_data else ''
+                        device_log_data['fingerprint'] = generate_device_fingerprint(request) if device_data else ''
+                        
+                        # محاولة العثور على الجهاز
+                        attempt_device = None
+                        if hardware_serial:
+                            try:
+                                attempt_device = BranchDevice.objects.get(hardware_serial=hardware_serial)
+                            except BranchDevice.DoesNotExist:
+                                pass
+                        
                         UnauthorizedDeviceAttempt.log_attempt(
                             username_attempted=username,
                             user=None,
                             device_data=device_log_data,
                             denial_reason='invalid_username',
                             user_branch=None,
-                            device_branch=None,
+                            device_branch=attempt_device.branch if attempt_device else None,
+                            device=attempt_device,
                             ip_address=ip
                         )
                         
