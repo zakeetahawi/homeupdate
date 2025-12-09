@@ -12,74 +12,96 @@ logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=Order)
 def create_cutting_orders_on_order_save(sender, instance, created, **kwargs):
-    """إنشاء أوامر تقطيع تلقائياً عند حفظ الطلب"""
+    """إنشاء أوامر تقطيع تلقائياً عند إنشاء الطلب - مثل أوامر التصنيع
     
-    # التحقق من أن الطلب جديد وليس من نوع معاينة
-    if not created:
-        return
+    ⚠️ ملاحظة: ينشئ أمر تقطيع فارغ لكل مستودع نشط
+    العناصر ستُضاف تلقائياً عند إنشائها بواسطة signal handle_order_item_creation
+    """
     
-    # التحقق من نوع الطلب - لا ننشئ أوامر تقطيع للمعاينة
-    selected_types = instance.get_selected_types_list()
-    logger.info(f"🔍 فحص الطلب {instance.order_number} - الأنواع: {selected_types}")
+    if created:
+        # استخدام transaction.on_commit للتأكد من اكتمال المعاملة قبل إنشاء أوامر التقطيع
+        def create_cutting_orders():
+            # التحقق من نوع الطلب - لا ننشئ أوامر تقطيع للمعاينة فقط
+            selected_types = instance.get_selected_types_list()
+            logger.info(f"🔍 فحص الطلب {instance.order_number} - الأنواع: {selected_types}")
 
-    if 'inspection' in selected_types:
-        logger.info(f"⏭️ تخطي إنشاء أمر تقطيع للطلب {instance.order_number} - يحتوي على معاينة")
-        return
-    
-    try:
-        with transaction.atomic():
-            # الحصول على جميع المستودعات النشطة
-            active_warehouses = Warehouse.objects.filter(is_active=True)
-            logger.info(f"📦 المستودعات النشطة: {active_warehouses.count()}")
-
-            if not active_warehouses.exists():
-                logger.warning(f"❌ لا توجد مستودعات نشطة لإنشاء أوامر تقطيع للطلب {instance.order_number}")
+            if 'inspection' in selected_types:
+                logger.info(f"⏭️ تخطي إنشاء أمر تقطيع للطلب {instance.order_number} - يحتوي على معاينة")
                 return
             
-            # تجميع عناصر الطلب حسب المستودع (بناءً على فئة المنتج أو توزيع افتراضي)
-            warehouse_items = {}
-            order_items = instance.items.all()
-            logger.info(f"📋 عدد عناصر الطلب: {order_items.count()}")
+            try:
+                with transaction.atomic():
+                    # الحصول على جميع المستودعات النشطة
+                    active_warehouses = Warehouse.objects.filter(is_active=True)
+                    logger.info(f"📦 المستودعات النشطة: {active_warehouses.count()}")
 
-            for item in order_items:
-                # تحديد المستودع المناسب للعنصر
-                target_warehouse = determine_warehouse_for_item(item, active_warehouses)
-                
-                if target_warehouse:
-                    if target_warehouse.id not in warehouse_items:
-                        warehouse_items[target_warehouse.id] = {
-                            'warehouse': target_warehouse,
-                            'items': []
-                        }
-                    warehouse_items[target_warehouse.id]['items'].append(item)
-            
-            # إنشاء أمر تقطيع لكل مستودع له عناصر
-            for warehouse_data in warehouse_items.values():
-                warehouse = warehouse_data['warehouse']
-                items = warehouse_data['items']
-                
-                # إنشاء أمر التقطيع
-                cutting_order = CuttingOrder.objects.create(
-                    order=instance,
-                    warehouse=warehouse,
-                    status='pending',
-                    notes=f'أمر تقطيع تلقائي للطلب {instance.contract_number or instance.id}'
-                )
-                
-                # إنشاء عناصر التقطيع باستخدام bulk_create لتحسين الأداء
-                cutting_items = [
-                    CuttingOrderItem(
-                        cutting_order=cutting_order,
-                        order_item=item,
-                        status='pending'
-                    ) for item in items
-                ]
-                CuttingOrderItem.objects.bulk_create(cutting_items)
-                
-                logger.info(f"✅ تم إنشاء أمر تقطيع {cutting_order.cutting_code} للمستودع {warehouse.name} مع {len(items)} عنصر")
-    
-    except Exception as e:
-        logger.error(f"خطأ في إنشاء أوامر التقطيع للطلب {instance.id}: {str(e)}")
+                    if not active_warehouses.exists():
+                        logger.warning(f"❌ لا توجد مستودعات نشطة لإنشاء أوامر تقطيع للطلب {instance.order_number}")
+                        return
+                    
+                    # التحقق من عدم وجود أوامر تقطيع مسبقاً
+                    if CuttingOrder.objects.filter(order=instance).exists():
+                        logger.info(f"⏭️ يوجد أمر تقطيع مسبق للطلب {instance.order_number}")
+                        return
+                    
+                    # إنشاء أمر تقطيع لكل مستودع نشط (فارغ - ستُضاف العناصر لاحقاً)
+                    created_count = 0
+                    for warehouse in active_warehouses:
+                        cutting_order = CuttingOrder.objects.create(
+                            order=instance,
+                            warehouse=warehouse,
+                            status='pending',
+                            notes=f'أمر تقطيع تلقائي للطلب {instance.contract_number or instance.order_number} - مستودع {warehouse.name}'
+                        )
+                        created_count += 1
+                        logger.info(f"✅ تم إنشاء أمر تقطيع {cutting_order.cutting_code} للمستودع {warehouse.name}")
+                    
+                    logger.info(f"📋 تم إنشاء {created_count} أمر تقطيع للطلب {instance.order_number}")
+                    
+                    # ✅ توزيع العناصر الموجودة (إذا تم إنشاؤها قبل الطلب)
+                    # هذا يحدث عندما يتم إنشاء العناصر عبر wizard/formset
+                    if instance.items.exists():
+                        logger.info(f"📦 توزيع {instance.items.count()} عنصر موجود على أوامر التقطيع...")
+                        
+                        for order_item in instance.items.all():
+                            # تحقق من عدم توزيع العنصر مسبقاً
+                            if CuttingOrderItem.objects.filter(order_item=order_item).exists():
+                                continue
+                            
+                            target_warehouse = determine_warehouse_for_item(
+                                order_item,
+                                active_warehouses
+                            )
+                            
+                            if target_warehouse:
+                                cutting_order = CuttingOrder.objects.filter(
+                                    order=instance,
+                                    warehouse=target_warehouse
+                                ).first()
+                                
+                                if cutting_order:
+                                    CuttingOrderItem.objects.create(
+                                        cutting_order=cutting_order,
+                                        order_item=order_item,
+                                        status='pending'
+                                    )
+                                    logger.info(f"✅ تم توزيع {order_item.product.name[:30]} على {target_warehouse.name}")
+                        
+                        # حذف أوامر التقطيع الفارغة
+                        empty_orders = CuttingOrder.objects.filter(
+                            order=instance,
+                            items__isnull=True
+                        )
+                        deleted = empty_orders.count()
+                        if deleted > 0:
+                            empty_orders.delete()
+                            logger.info(f"🗑️ تم حذف {deleted} أمر تقطيع فارغ")
+                    
+            except Exception as e:
+                logger.error(f"❌ خطأ في إنشاء أوامر التقطيع للطلب {instance.id}: {str(e)}")
+        
+        from django.db import transaction
+        transaction.on_commit(create_cutting_orders)
 
 
 def determine_warehouse_for_item(order_item, warehouses):
@@ -88,6 +110,26 @@ def determine_warehouse_for_item(order_item, warehouses):
     if not order_item.product:
         logger.warning(f"عنصر الطلب {order_item.id} لا يحتوي على منتج محدد")
         return warehouses.first()
+
+    # ✅ فحص منتجات الخدمات (تركيب، تفصيل، نقل، معاينة) أولاً
+    product = order_item.product
+    service_product_codes = ['005', '006', '007', '008', '0001', '0002', '0003', '0004']
+    service_keywords = ['تركيب', 'تفصيل', 'نقل', 'معاينة', 'مسمار']
+    
+    is_service_product = (
+        product.code in service_product_codes or
+        any(keyword in product.name for keyword in service_keywords)
+    )
+    
+    if is_service_product:
+        # البحث عن المستودع الخدمي
+        service_warehouse = warehouses.filter(name__icontains='خدم').first()
+        if service_warehouse:
+            logger.info(f"🔧 تم تعيين منتج خدمي {product.name} (كود: {product.code}) للمستودع الخدمي {service_warehouse.name}")
+            return service_warehouse
+        else:
+            logger.warning(f"⚠️ لم يتم العثور على مستودع خدمي للمنتج الخدمي: {product.name}")
+            return None
 
     try:
         from inventory.models import StockTransaction
@@ -228,21 +270,36 @@ def handle_order_item_creation(sender, instance, created, **kwargs):
                     )
                     logger.info(f"✅ تم إنشاء أمر تقطيع جديد {cutting_order.cutting_code} للمستودع {target_warehouse.name}")
             else:
-                # المنتج غير موجود في أي مستودع - لا ننشئ أمر تقطيع
+                # المنتج غير موجود في أي مستودع - تخطي إنشاء أمر تقطيع
                 product_info = f"{instance.product.name} (كود: {instance.product.code})" if instance.product else "غير محدد"
-                logger.error(f"❌ تعذر إنشاء أمر تقطيع للعنصر: {product_info} - المنتج غير موجود في أي مستودع!")
-                logger.error(f"❌ يرجى نقل المنتج إلى أحد المستودعات أولاً")
+                logger.warning(f"⏭️ تخطي العنصر {product_info} - المنتج غير موجود في أي مستودع نشط")
         else:
-            # لا توجد أوامر تقطيع، ننشئ أوامر جديدة للطلب كاملاً
-            logger.info(f"🔄 إنشاء أوامر تقطيع جديدة للطلب {order.order_number}")
-            create_cutting_orders_on_order_save(Order, order, created=True)
-
-            # تحديث حالة الطلب إلى قيد التنفيذ للمنتجات
-            # استخدم الحقل canonical `order_status` بدلاً من `status` حتى لا نكتب فوق علم VIP
-            if order.order_status != 'in_progress':
-                order.order_status = 'in_progress'
-                order.save(update_fields=['order_status'])
-                logger.info(f"📋 تم تحديث order_status للطلب {order.order_number} إلى in_progress")
+            # لا يوجد أمر تقطيع - ننشئ واحد جديد (هذا يحدث للطلبات القديمة أو في حالات خاصة)
+            logger.warning(f"⚠️ لا يوجد أمر تقطيع للطلب {order.order_number} - إنشاء أمر جديد")
+            
+            # تحديد المستودع المناسب
+            target_warehouse = determine_warehouse_for_item(
+                instance,
+                Warehouse.objects.filter(is_active=True)
+            )
+            
+            if target_warehouse:
+                cutting_order = CuttingOrder.objects.create(
+                    order=order,
+                    warehouse=target_warehouse,
+                    status='pending',
+                    notes=f'أمر تقطيع تلقائي للطلب {order.order_number} (تم إنشاؤه عند إضافة عنصر)'
+                )
+                
+                CuttingOrderItem.objects.create(
+                    cutting_order=cutting_order,
+                    order_item=instance,
+                    status='pending'
+                )
+                logger.info(f"✅ تم إنشاء أمر تقطيع {cutting_order.cutting_code} وإضافة العنصر")
+            else:
+                product_info = f"{instance.product.name} (كود: {instance.product.code})" if instance.product else "غير محدد"
+                logger.warning(f"⏭️ تخطي العنصر {product_info} - لا يوجد مستودع مناسب")
 
 
 @receiver(post_save, sender=CuttingOrderItem)
