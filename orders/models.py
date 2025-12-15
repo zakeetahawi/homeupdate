@@ -513,13 +513,13 @@ class Order(models.Model):
     @property
     def final_price_after_discount(self):
         """السعر النهائي بعد الخصم"""
-        # Coerce None to Decimal(0) to avoid TypeError when final_price not yet calculated
-        final = self.final_price if self.final_price is not None else Decimal('0')
+        # استخدم total_amount (المبلغ قبل الخصم) لتجنب خصم الخصم مرتين
+        subtotal = self.total_amount if self.total_amount is not None else Decimal('0')
         try:
-            final_dec = Decimal(str(final))
+            subtotal_dec = Decimal(str(subtotal))
         except Exception:
-            final_dec = Decimal('0')
-        return final_dec - self.total_discount_amount
+            subtotal_dec = Decimal('0')
+        return subtotal_dec - self.total_discount_amount
     def save(self, *args, **kwargs):
         try:
             # ⚡ تحقق مما إذا كان هذا كائن جديد (ليس له مفتاح أساسي)
