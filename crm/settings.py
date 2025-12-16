@@ -311,6 +311,7 @@ if not DEBUG:
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
+    '0.0.0.0',  # للسماح بالوصول من جميع الواجهات
     '[::1]',  # IPv6 localhost
     '192.168.1.30',  # IP المحلي
     'elkhawaga.uk',

@@ -130,8 +130,9 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
         # الحصول على المستودعات المتاحة للمستخدم أولاً
         user_warehouses = self.get_user_warehouses()
         
-        # فلترة حسب المستودع - التحقق من URL أولاً ثم من GET parameters
-        warehouse_id = self.kwargs.get('warehouse_id') or self.request.GET.get('warehouse')
+        # فلترة حسب المستودع - التحقق من GET parameters أولاً ثم من URL
+        # GET parameters لها أولوية أعلى لأنها تأتي من اختيار المستخدم المباشر
+        warehouse_id = self.request.GET.get('warehouse') or self.kwargs.get('warehouse_id')
         
         if warehouse_id:
             # التحقق من أن المستودع المطلوب ضمن المستودعات المتاحة للمستخدم
@@ -160,23 +161,14 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
                 Q(order__order_number__icontains=search)  # إضافة البحث برقم الطلب
             )
 
-        # فلترة حسب الحالة - تعمل فقط عند الضغط على زر البحث
+        # فلترة حسب الحالة
         status = self.request.GET.get('status')
-        submit_search = self.request.GET.get('submit_search')  # للتحقق من ضغط زر البحث
-        
-        if submit_search and status:
-            # فقط عند الضغط على زر البحث وتحديد حالة، قم بالفلترة
+        if status:
             queryset = queryset.filter(status=status)
-        else:
-            # بشكل افتراضي، عرض جميع الأوامر المرتبطة بالمستودع
-            # المستخدم يرى كل شيء في المستودع عند الدخول الأول
-            user = self.request.user
-            # عرض جميع الأوامر بشكل افتراضي للمستودعات
-            # لا يتم استبعاد الأوامر المكتملة عند الدخول الأول
 
-        # فلتر إضافي حسب تاريخ الإنشاء - يعمل فقط عند البحث
+        # فلتر إضافي حسب تاريخ الإنشاء
         date_filter = self.request.GET.get('date_filter')
-        if date_filter and submit_search:
+        if date_filter:
             today = timezone.now().date()
             if date_filter == 'today':
                 queryset = queryset.filter(created_at__date=today)
@@ -191,9 +183,9 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
 
         
 
-        # فلتر حسب نوع الطلب (تسليم المصنع/تسليم الفرع) - يعمل فقط عند البحث
+        # فلتر حسب نوع الطلب (تسليم المصنع/تسليم الفرع)
         order_type = self.request.GET.get('order_type')
-        if order_type and submit_search:
+        if order_type:
             if order_type == 'factory':
                 queryset = queryset.filter(
                     Q(order__selected_types__icontains='installation') |
@@ -224,16 +216,72 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
-        # الحصول على المستودع الحالي من URL أو GET parameters
-        current_warehouse = self.kwargs.get('warehouse_id') or self.request.GET.get('warehouse', '')
+        # الحصول على المستودع الحالي من GET parameters أولاً ثم من URL
+        current_warehouse = self.request.GET.get('warehouse') or self.kwargs.get('warehouse_id', '')
         
-        # حساب الإحصائيات
-        queryset = self.get_queryset()
-        pending_count = queryset.filter(status='pending').count()
-        in_progress_count = queryset.filter(status='in_progress').count()
-        completed_count = queryset.filter(status='completed').count()
-        partially_completed_count = queryset.filter(status='partially_completed').count()
-        cancelled_count = queryset.filter(status='cancelled').count()
+        # حساب الإحصائيات - يجب أن تكون من queryset أساسي بدون فلاتر الحالة
+        # للحصول على إحصائيات صحيحة لجميع الحالات
+        base_queryset = CuttingOrder.objects.select_related(
+            'order', 'order__customer', 'warehouse', 'assigned_to'
+        )
+        
+        # تطبيق فلتر المستودع والمستخدم فقط على الإحصائيات
+        user_warehouses = self.get_user_warehouses()
+        warehouse_id = self.request.GET.get('warehouse') or self.kwargs.get('warehouse_id')
+        
+        if warehouse_id and user_warehouses.filter(id=warehouse_id).exists():
+            base_queryset = base_queryset.filter(warehouse_id=warehouse_id)
+        else:
+            base_queryset = base_queryset.filter(warehouse__in=user_warehouses)
+        
+        # تطبيق فلاتر البحث والتاريخ ونوع الطلب على الإحصائيات (لكن ليس فلتر الحالة)
+        search = self.request.GET.get('search')
+        if search:
+            base_queryset = base_queryset.filter(
+                Q(order__invoice_number__icontains=search) |
+                Q(order__invoice_number_2__icontains=search) |
+                Q(order__invoice_number_3__icontains=search) |
+                Q(cutting_code__icontains=search) |
+                Q(order__contract_number__icontains=search) |
+                Q(order__contract_number_2__icontains=search) |
+                Q(order__contract_number_3__icontains=search) |
+                Q(order__customer__name__icontains=search) |
+                Q(order__customer__phone__icontains=search) |
+                Q(order__order_number__icontains=search)
+            )
+        
+        date_filter = self.request.GET.get('date_filter')
+        if date_filter:
+            today = timezone.now().date()
+            if date_filter == 'today':
+                base_queryset = base_queryset.filter(created_at__date=today)
+            elif date_filter == 'yesterday':
+                yesterday = today - timezone.timedelta(days=1)
+                base_queryset = base_queryset.filter(created_at__date=yesterday)
+            elif date_filter == 'this_week':
+                week_start = today - timezone.timedelta(days=today.weekday())
+                base_queryset = base_queryset.filter(created_at__date__gte=week_start)
+            elif date_filter == 'this_month':
+                base_queryset = base_queryset.filter(created_at__year=today.year, created_at__month=today.month)
+        
+        order_type = self.request.GET.get('order_type')
+        if order_type:
+            if order_type == 'factory':
+                base_queryset = base_queryset.filter(
+                    Q(order__selected_types__icontains='installation') |
+                    Q(order__selected_types__icontains='tailoring')
+                )
+            elif order_type == 'branch':
+                base_queryset = base_queryset.filter(
+                    Q(order__selected_types__icontains='products') |
+                    Q(order__selected_types__icontains='accessory')
+                )
+        
+        # الآن احسب الإحصائيات بشكل صحيح - الحالات الموجودة فعلياً: pending, in_progress, completed, rejected
+        pending_count = base_queryset.filter(status='pending').count()
+        in_progress_count = base_queryset.filter(status='in_progress').count()
+        completed_count = base_queryset.filter(status='completed').count()
+        rejected_count = base_queryset.filter(status='rejected').count()
         
         context.update({
             'warehouses': self.get_user_warehouses(),
@@ -246,8 +294,7 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
             'pending_count': pending_count,
             'in_progress_count': in_progress_count,
             'completed_count': completed_count,
-            'partially_completed_count': partially_completed_count,
-            'cancelled_count': cancelled_count,
+            'rejected_count': rejected_count,
         })
         return context
 

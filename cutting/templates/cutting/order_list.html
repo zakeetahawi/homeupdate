@@ -207,20 +207,11 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card bg-secondary text-white">
-                <div class="card-body text-center py-2">
-                    <i class="fas fa-tasks opacity-75 mb-1"></i>
-                    <h6 class="card-title mb-1">مكتمل جزئياً</h6>
-                    <h4 class="mb-0 fw-bold">{{ partially_completed_count|intcomma }}</h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
             <div class="card bg-danger text-white">
                 <div class="card-body text-center py-2">
                     <i class="fas fa-times-circle opacity-75 mb-1"></i>
-                    <h6 class="card-title mb-1">ملغي</h6>
-                    <h4 class="mb-0 fw-bold">{{ cancelled_count|intcomma }}</h4>
+                    <h6 class="card-title mb-1">مرفوض</h6>
+                    <h4 class="mb-0 fw-bold">{{ rejected_count|intcomma }}</h4>
                 </div>
             </div>
         </div>
