@@ -23,6 +23,96 @@
         font-size: 0.85rem;
         padding: 0.4rem 0.8rem;
     }
+    
+    /* إصلاح عرض SweetAlert Modal على الهاتف المحمول */
+    @media (max-width: 768px) {
+        .swal2-popup {
+            width: 90% !important;
+            max-width: 400px !important;
+            padding: 1rem !important;
+            font-size: 0.9rem !important;
+        }
+        
+        .swal2-title {
+            font-size: 1.3rem !important;
+            padding: 0.5rem 0 !important;
+        }
+        
+        .swal2-html-container {
+            font-size: 0.85rem !important;
+            padding: 0.5rem !important;
+            margin: 0.5rem 0 !important;
+        }
+        
+        .swal2-actions {
+            margin: 0.5rem 0 !important;
+            gap: 0.5rem !important;
+        }
+        
+        .swal2-confirm,
+        .swal2-cancel {
+            font-size: 0.9rem !important;
+            padding: 0.5rem 1.5rem !important;
+            margin: 0.25rem !important;
+        }
+        
+        /* إصلاح حقول النموذج داخل الـ Modal */
+        .swal2-html-container .form-check {
+            text-align: right !important;
+            margin: 0.5rem 0 !important;
+        }
+        
+        .swal2-html-container .form-check-label {
+            font-size: 0.9rem !important;
+            padding-right: 0.5rem !important;
+        }
+        
+        .swal2-html-container .form-control {
+            font-size: 0.85rem !important;
+            padding: 0.5rem !important;
+        }
+        
+        .swal2-html-container textarea.form-control {
+            min-height: 60px !important;
+        }
+        
+        /* تحسين المساحة بين العناصر */
+        .swal2-html-container p {
+            margin-bottom: 0.5rem !important;
+        }
+        
+        .swal2-html-container .text-start {
+            text-align: right !important;
+        }
+        
+        /* إصلاح عرض الـ Radio Buttons */
+        .swal2-html-container .form-check-input {
+            margin-left: 0.5rem !important;
+            margin-right: 0 !important;
+        }
+    }
+    
+    /* إصلاح للشاشات الصغيرة جداً */
+    @media (max-width: 480px) {
+        .swal2-popup {
+            width: 95% !important;
+            padding: 0.75rem !important;
+        }
+        
+        .swal2-title {
+            font-size: 1.1rem !important;
+        }
+        
+        .swal2-html-container {
+            font-size: 0.8rem !important;
+        }
+        
+        .swal2-confirm,
+        .swal2-cancel {
+            font-size: 0.85rem !important;
+            padding: 0.4rem 1rem !important;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -480,7 +570,7 @@ document.querySelectorAll('.production-line-select').forEach(select => {
                 </div>
                 <div class="mt-3">
                     <label class="form-label">ملاحظات (اختياري):</label>
-                    <textarea class="form-control" id="deliveryNotes" rows="2"></textarea>
+                    <textarea class="form-control" id="deliveryNotes" rows="2" placeholder="أدخل ملاحظاتك هنا..."></textarea>
                 </div>
             `,
             icon: 'question',
@@ -488,6 +578,12 @@ document.querySelectorAll('.production-line-select').forEach(select => {
             confirmButtonText: 'تسليم',
             cancelButtonText: 'إلغاء',
             confirmButtonColor: '#28a745',
+            customClass: {
+                popup: 'mobile-friendly-modal',
+                title: 'mobile-modal-title',
+                htmlContainer: 'mobile-modal-content'
+            },
+            width: window.innerWidth < 768 ? '90%' : '500px',
             preConfirm: () => {
                 const deliveryType = document.querySelector('input[name="deliveryType"]:checked').value;
                 const notes = document.getElementById('deliveryNotes').value;
