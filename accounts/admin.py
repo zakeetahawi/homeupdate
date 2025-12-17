@@ -340,11 +340,53 @@ class BranchAdmin(admin.ModelAdmin):
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
-    list_per_page = 50  # عرض 50 صف كافتراضي
-    list_display = ('name', 'code', 'department_type', 'is_active', 'is_core', 'parent', 'manager')
+    list_per_page = 100  # عرض 100 صف لرؤية الهيكل الكامل
+    list_display = ('hierarchical_name', 'code', 'department_type', 'icon_display', 'url_display', 'is_active', 'order')
+    list_display_links = ('hierarchical_name',)
     list_filter = (DepartmentFilter, 'department_type', 'is_active', 'is_core', 'parent')
     search_fields = ('name', 'code', 'description')
     readonly_fields = ('is_core',)
+    
+    fieldsets = (
+        ('المعلومات الأساسية', {
+            'fields': ('name', 'code', 'department_type', 'description', 'icon', 'url_name', 'is_active', 'is_core', 'order', 'parent', 'has_pages', 'manager')
+        }),
+        ('عناصر القائمة الرئيسية (Navbar)', {
+            'fields': (
+                ('show_customers', 'show_orders'),
+                ('show_inventory', 'show_inspections'),
+                ('show_installations', 'show_manufacturing'),
+                ('show_complaints', 'show_reports'),
+                ('show_accounting', 'show_database'),
+            ),
+            'description': 'حدد العناصر التي سيتم عرضها في القائمة الرئيسية للمستخدمين المنتمين لهذا القسم'
+        }),
+    )
+    
+    def hierarchical_name(self, obj):
+        """عرض الاسم مع المستوى الهرمي"""
+        if obj.parent:
+            return format_html('&nbsp;&nbsp;&nbsp;&nbsp;└── {} {}', 
+                             obj.name,
+                             '📂' if obj.has_pages else '')
+        return format_html('<strong>{}</strong>', obj.name)
+    hierarchical_name.short_description = 'القسم / الوحدة'
+    hierarchical_name.admin_order_field = 'order'
+    
+    def icon_display(self, obj):
+        """عرض الأيقونة"""
+        if obj.icon:
+            return format_html('<i class="fa {}"></i>', obj.icon)
+        return '-'
+    icon_display.short_description = 'الأيقونة'
+    
+    def url_display(self, obj):
+        """عرض الرابط بشكل مختصر"""
+        if obj.url_name:
+            url = obj.url_name[:35] + '...' if len(obj.url_name) > 35 else obj.url_name
+            return format_html('<code>{}</code>', url)
+        return '-'
+    url_display.short_description = 'الرابط'
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

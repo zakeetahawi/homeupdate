@@ -289,6 +289,19 @@ class Department(models.Model):
         related_name='managed_departments',
         verbose_name='المدير'
     )
+    
+    # حقول عناصر القائمة الرئيسية (Navbar)
+    show_customers = models.BooleanField(default=False, verbose_name='عرض العملاء')
+    show_orders = models.BooleanField(default=False, verbose_name='عرض الطلبات')
+    show_inventory = models.BooleanField(default=False, verbose_name='عرض المخزون')
+    show_inspections = models.BooleanField(default=False, verbose_name='عرض المعاينات')
+    show_installations = models.BooleanField(default=False, verbose_name='عرض التركيبات')
+    show_manufacturing = models.BooleanField(default=False, verbose_name='عرض المصنع')
+    show_complaints = models.BooleanField(default=False, verbose_name='عرض الشكاوى')
+    show_reports = models.BooleanField(default=False, verbose_name='عرض التقارير')
+    show_accounting = models.BooleanField(default=False, verbose_name='عرض المحاسبة')
+    show_database = models.BooleanField(default=False, verbose_name='عرض إدارة البيانات')
+    
     def get_full_path(self):
         """إرجاع المسار الكامل للقسم من الأعلى إلى الأسفل"""
         path = [self.name]
