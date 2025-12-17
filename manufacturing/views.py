@@ -39,7 +39,7 @@ from weasyprint import HTML
 
 
 
-from .models import ManufacturingOrder, ManufacturingOrderItem, FabricReceipt, FabricReceiptItem
+from .models import ManufacturingOrder, ManufacturingOrderItem, FabricReceipt, FabricReceiptItem, ProductionLine
 from orders.models import Order
 from accounts.models import Department
 from accounts.utils import apply_default_year_filter
@@ -3311,6 +3311,9 @@ class FabricReceiptListView(LoginRequiredMixin, ListView):
             bag_number=''
         ).values_list('bag_number', flat=True).distinct()[:100]  # أول 100 رقم فقط
 
+        # قائمة خطوط الإنتاج النشطة
+        context['production_lines'] = ProductionLine.objects.filter(is_active=True).order_by('name')
+
         # الاحتفاظ بقيم الفلاتر
         context['filters'] = {
             'date_from': self.request.GET.get('date_from', ''),
@@ -3326,6 +3329,80 @@ class FabricReceiptListView(LoginRequiredMixin, ListView):
         }
 
         return context
+
+
+@require_http_methods(["POST"])
+@login_required
+def deliver_to_production_line(request):
+    """تسليم عنصر أو جميع عناصر طلب لخط الإنتاج"""
+    try:
+        import json
+        data = json.loads(request.body)
+        
+        item_id = data.get('item_id')
+        order_id = data.get('order_id')
+        production_line_id = data.get('production_line_id')
+        delivery_type = data.get('delivery_type', 'single')  # single أو all
+        notes = data.get('notes', '')
+        
+        if not all([item_id, production_line_id]):
+            return JsonResponse({
+                'success': False,
+                'message': 'بيانات غير كاملة'
+            })
+        
+        # التحقق من خط الإنتاج
+        try:
+            production_line = ProductionLine.objects.get(id=production_line_id, is_active=True)
+        except ProductionLine.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'خط الإنتاج غير موجود'
+            })
+        
+        # تحديد العناصر المراد تسليمها
+        if delivery_type == 'all' and order_id:
+            # تسليم جميع عناصر الطلب المستلمة وغير المسلمة لخطوط إنتاج
+            items = ManufacturingOrderItem.objects.filter(
+                manufacturing_order_id=order_id,
+                fabric_received=True,
+                delivered_to_production=False
+            )
+        else:
+            # تسليم العنصر المحدد فقط
+            items = ManufacturingOrderItem.objects.filter(
+                id=item_id,
+                fabric_received=True,
+                delivered_to_production=False
+            )
+        
+        if not items.exists():
+            return JsonResponse({
+                'success': False,
+                'message': 'لا توجد عناصر متاحة للتسليم'
+            })
+        
+        # تحديث العناصر
+        from django.utils import timezone
+        delivered_count = items.update(
+            production_line=production_line,
+            delivered_to_production=True,
+            production_delivery_date=timezone.now(),
+            production_delivered_by=request.user,
+            production_delivery_notes=notes
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'تم تسليم {delivered_count} عنصر بنجاح',
+            'delivered_count': delivered_count
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'خطأ: {str(e)}'
+        })
 
 
 @require_http_methods(["POST"])

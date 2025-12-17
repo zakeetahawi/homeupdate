@@ -322,6 +322,7 @@
                             <th>رقم الشنطة</th>
                             <th>تاريخ الاستلام</th>
                             <th>المستلم بالمصنع</th>
+                            <th>خط الإنتاج</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -371,10 +372,33 @@
                                     <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
+                            <td class="text-center">
+                                {% if item.delivered_to_production %}
+                                    <div>
+                                        <span class="badge bg-success mb-1">
+                                            <i class="fas fa-check"></i>
+                                            {{ item.production_line.name }}
+                                        </span>
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ item.production_delivery_date|date:"d/m/Y H:i" }}
+                                        </small>
+                                    </div>
+                                {% else %}
+                                    <select class="form-select form-select-sm production-line-select" 
+                                            data-item-id="{{ item.id }}"
+                                            data-order-id="{{ item.manufacturing_order.id }}">
+                                        <option value="">اختر خط الإنتاج...</option>
+                                        {% for line in production_lines %}
+                                            <option value="{{ line.id }}">{{ line.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="11" class="text-center text-muted py-4">
                                 <i class="fas fa-info-circle me-2"></i>
                                 لا توجد استلامات مسجلة
                             </td>
@@ -422,8 +446,115 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
+// معالجة اختيار خط الإنتاج
+document.querySelectorAll('.production-line-select').forEach(select => {
+    select.addEventListener('change', function() {
+        const itemId = this.dataset.itemId;
+        const orderId = this.dataset.orderId;
+        const lineId = this.value;
+        const lineName = this.options[this.selectedIndex].text;
+        
+        if (!lineId) return;
+        
+        // سؤال المستخدم: تسليم العنصر فقط أم جميع عناصر الطلب
+        Swal.fire({
+            title: 'تسليم لخط الإنتاج',
+            html: `
+                <p>هل تريد تسليم:</p>
+                <div class="text-start">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="deliveryType" id="singleItem" value="single" checked>
+                        <label class="form-check-label" for="singleItem">
+                            هذا العنصر فقط
+                        </label>
+                    </div>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="radio" name="deliveryType" id="allItems" value="all">
+                        <label class="form-check-label" for="allItems">
+                            جميع عناصر الطلب
+                        </label>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="form-label">ملاحظات (اختياري):</label>
+                    <textarea class="form-control" id="deliveryNotes" rows="2"></textarea>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'تسليم',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#28a745',
+            preConfirm: () => {
+                const deliveryType = document.querySelector('input[name="deliveryType"]:checked').value;
+                const notes = document.getElementById('deliveryNotes').value;
+                return { deliveryType, notes };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const { deliveryType, notes } = result.value;
+                
+                // إرسال طلب التسليم
+                fetch('{% url "manufacturing:deliver_to_production_line" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        item_id: itemId,
+                        order_id: orderId,
+                        production_line_id: lineId,
+                        delivery_type: deliveryType,
+                        notes: notes
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'تم التسليم بنجاح',
+                            html: `
+                                <p>تم تسليم ${data.delivered_count} عنصر إلى <strong>${lineName}</strong></p>
+                                <small class="text-muted">${data.message}</small>
+                            `,
+                            confirmButtonColor: '#28a745'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'خطأ',
+                            text: data.message,
+                            confirmButtonColor: '#dc3545'
+                        });
+                        // إعادة تعيين القائمة المنسدلة
+                        select.value = '';
+                    }
+                })
+                .catch(error => {
+                    console.error('خطأ:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'خطأ في الاتصال',
+                        text: 'حدث خطأ أثناء الاتصال بالخادم',
+                        confirmButtonColor: '#dc3545'
+                    });
+                    select.value = '';
+                });
+            } else {
+                // إلغاء - إعادة تعيين القائمة
+                select.value = '';
+            }
+        });
+    });
+});
+
 // تصدير البيانات إلى Excel
 function exportToExcel() {
     // جمع البيانات من الجدول

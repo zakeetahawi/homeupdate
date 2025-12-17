@@ -867,6 +867,41 @@ class ManufacturingOrderItem(models.Model):
         blank=True,
         verbose_name='ملاحظات استلام الأقمشة'
     )
+    
+    # حقول التسليم لخط الإنتاج
+    production_line = models.ForeignKey(
+        'ProductionLine',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='manufacturing_items',
+        verbose_name='خط الإنتاج'
+    )
+    
+    delivered_to_production = models.BooleanField(
+        default=False,
+        verbose_name='تم التسليم لخط الإنتاج'
+    )
+    
+    production_delivery_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='تاريخ التسليم لخط الإنتاج'
+    )
+    
+    production_delivered_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='delivered_production_items',
+        verbose_name='مُسلِّم خط الإنتاج'
+    )
+    
+    production_delivery_notes = models.TextField(
+        blank=True,
+        verbose_name='ملاحظات تسليم خط الإنتاج'
+    )
 
     class Meta:
         verbose_name = 'عنصر أمر تصنيع'
@@ -875,6 +910,8 @@ class ManufacturingOrderItem(models.Model):
             models.Index(fields=['fabric_received', 'fabric_received_date'], name='fabric_rcvd_idx'),
             models.Index(fields=['bag_number'], name='bag_number_idx'),
             models.Index(fields=['fabric_received', 'bag_number'], name='fabric_bag_idx'),
+            models.Index(fields=['delivered_to_production', 'production_delivery_date'], name='prod_delivery_idx'),
+            models.Index(fields=['production_line'], name='prod_line_idx'),
         ]
     
     def __str__(self):

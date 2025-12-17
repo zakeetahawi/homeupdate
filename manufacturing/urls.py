@@ -179,6 +179,11 @@ urlpatterns = [
         name='fabric_receipt_list'
     ),
     path(
+        'deliver-to-production-line/',
+        views.deliver_to_production_line,
+        name='deliver_to_production_line'
+    ),
+    path(
         'fix-manufacturing-items/',
         views.fix_manufacturing_order_items,
         name='fix_manufacturing_items'
