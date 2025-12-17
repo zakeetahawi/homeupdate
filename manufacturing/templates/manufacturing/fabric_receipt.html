@@ -21,9 +21,9 @@
         transform: translateY(-2px);
     }
 
-    /* إصلاح شامل للـ Modal - يظهر فوق كل شيء بما في ذلك الـ footer */
+    /* إصلاح شامل للـ Modal - يظهر في وسط الشاشة مباشرة */
     body.modal-open {
-        overflow: auto !important;
+        overflow: hidden !important;
         padding-right: 0 !important;
     }
 
@@ -33,19 +33,19 @@
         left: 0 !important;
         right: 0 !important;
         bottom: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
+        width: 100vw !important;
+        height: 100vh !important;
         z-index: 99999 !important;
         display: none !important;
         padding: 0 !important;
-        overflow-x: hidden !important;
-        overflow-y: auto !important;
+        overflow: hidden !important;
     }
 
     .modal.show {
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        overflow: hidden !important;
     }
 
     .modal-backdrop {
@@ -54,25 +54,29 @@
         left: 0 !important;
         right: 0 !important;
         bottom: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
+        width: 100vw !important;
+        height: 100vh !important;
         z-index: 99998 !important;
         background-color: rgba(0,0,0,0.6) !important;
     }
 
     .modal-dialog {
-        position: relative !important;
-        margin: 1.75rem auto !important;
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        margin: 0 !important;
         max-width: 480px !important;
         width: 90% !important;
-        z-index: 99999 !important;
+        z-index: 100000 !important;
     }
 
     .modal-dialog-centered {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        min-height: calc(100% - 3.5rem) !important;
+        display: block !important;
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
     }
 
     .modal-content {
@@ -80,7 +84,7 @@
         border-radius: 15px !important;
         border: none !important;
         box-shadow: 0 20px 60px rgba(0,0,0,0.4) !important;
-        max-height: 90vh !important;
+        max-height: 85vh !important;
         overflow-y: auto !important;
         width: 100% !important;
     }
@@ -1073,21 +1077,25 @@ function openItemReceiptModal(itemId, productName, cuttingCode, receiverName, pe
         document.getElementById('bag_number').value = '1';
     });
 
-    // التحويل الفوري لأعلى الصفحة قبل فتح النافذة
-    window.scrollTo(0, 0);
-    
-    // حفظ موقع التمرير وتثبيت الـ body
-    const scrollY = window.scrollY;
-    document.body.style.top = `-${scrollY}px`;
+    // التمرير الفوري لأعلى الصفحة قبل فتح النافذة
+    window.scrollTo({
+        top: 0,
+        behavior: 'instant'  // تمرير فوري بدون animation
+    });
     
     // فتح modal باستخدام Bootstrap 5
     const modalElement = document.getElementById('cuttingReceiptModal');
-    const modal = new bootstrap.Modal(modalElement);
+    const modal = new bootstrap.Modal(modalElement, {
+        backdrop: 'static',  // منع الإغلاق عند النقر خارج النافذة
+        keyboard: true       // السماح بالإغلاق بـ ESC
+    });
     
-    // تنظيف عند الإغلاق
-    modalElement.addEventListener('hidden.bs.modal', function () {
-        document.body.style.top = '';
-        window.scrollTo(0, scrollY);
+    // التمرير لأعلى مرة أخرى بعد فتح الـ modal للتأكد
+    modalElement.addEventListener('shown.bs.modal', function () {
+        window.scrollTo({
+            top: 0,
+            behavior: 'instant'
+        });
     }, { once: true });
     
     modal.show();
