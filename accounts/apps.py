@@ -8,5 +8,6 @@ class AccountsConfig(AppConfig):
     def ready(self):
         # Import signal handlers
         from . import signals  # noqa
+        from .signals import department_signals  # noqa
         # Note: Database operations have been moved to management commands
         # that should be run manually or during deployment
