@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}إدارة الألوان{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-palette text-primary me-2"></i>
+                إدارة الألوان
+            </h2>
+            <p class="text-muted mb-0">تعريف وإدارة ألوان المنتجات</p>
+        </div>
+        <a href="{% url 'inventory:color_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>
+            لون جديد
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card shadow">
+        <div class="card-body">
+            {% if colors %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 60px;">اللون</th>
+                                <th>الاسم</th>
+                                <th>الكود</th>
+                                <th class="text-center">عدد المتغيرات</th>
+                                <th class="text-center">الترتيب</th>
+                                <th class="text-center">الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for color in colors %}
+                                <tr>
+                                    <td>
+                                        {% if color.hex_code %}
+                                            <span class="color-swatch" 
+                                                  style="display: inline-block; width: 32px; height: 32px; border-radius: 50%; background-color: {{ color.hex_code }}; border: 2px solid #ddd;"></span>
+                                        {% else %}
+                                            <span class="color-swatch bg-secondary" 
+                                                  style="display: inline-block; width: 32px; height: 32px; border-radius: 50%;"></span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ color.name }}</strong>
+                                        {% if color.name_en %}
+                                            <br><small class="text-muted">{{ color.name_en }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td><code>{{ color.code }}</code></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info">{{ color.variants.count }}</span>
+                                    </td>
+                                    <td class="text-center">{{ color.display_order }}</td>
+                                    <td class="text-center">
+                                        {% if color.is_active %}
+                                            <span class="badge bg-success">نشط</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">غير نشط</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'inventory:color_update' color.pk %}" 
+                                               class="btn btn-outline-primary" title="تعديل">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-danger"
+                                                    data-bs-toggle="modal" data-bs-target="#deleteColor{{ color.pk }}"
+                                                    {% if color.variants.count > 0 %}disabled title="لا يمكن حذف لون مرتبط بمتغيرات"{% else %}title="حذف"{% endif %}>
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Delete Modal -->
+                                        <div class="modal fade" id="deleteColor{{ color.pk }}" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header bg-danger text-white">
+                                                        <h5 class="modal-title">تأكيد الحذف</h5>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p>هل أنت متأكد من حذف اللون:</p>
+                                                        <p class="fw-bold text-danger">
+                                                            {% if color.hex_code %}
+                                                                <span class="color-swatch me-2" 
+                                                                      style="display: inline-block; width: 20px; height: 20px; border-radius: 50%; background-color: {{ color.hex_code }}; border: 1px solid #ddd; vertical-align: middle;"></span>
+                                                            {% endif %}
+                                                            {{ color.name }} ({{ color.code }})
+                                                        </p>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                        <form action="{% url 'inventory:color_delete' color.pk %}" method="post" style="display:inline;">
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-danger">
+                                                                <i class="fas fa-trash me-1"></i>حذف
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-palette fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">لا توجد ألوان معرفة</h4>
+                    <p class="text-muted">أضف ألواناً لاستخدامها في تصنيف متغيرات المنتجات</p>
+                    <a href="{% url 'inventory:color_create' %}" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus me-1"></i>
+                        إضافة أول لون
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

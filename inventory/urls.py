@@ -39,6 +39,7 @@ from .views_stock_analysis import (
     stock_movement_summary, stock_discrepancy_report
 )
 from . import api_views
+from . import views_variants
 
 app_name = 'inventory'
 
@@ -149,6 +150,44 @@ urlpatterns = [
     path('warehouse/<int:warehouse_id>/stock-analysis/', warehouse_stock_analysis, name='warehouse_stock_analysis'),
     path('stock-movement-summary/', stock_movement_summary, name='stock_movement_summary'),
     path('stock-discrepancy-report/', stock_discrepancy_report, name='stock_discrepancy_report'),
+
+    # ==================== Product Variants System ====================
+    # Base Products
+    path('base-products/', views_variants.base_product_list, name='base_product_list'),
+    path('base-product/create/', views_variants.base_product_create, name='base_product_create'),
+    path('base-product/<int:pk>/', views_variants.base_product_detail, name='base_product_detail'),
+    path('base-product/<int:pk>/update/', views_variants.base_product_update, name='base_product_update'),
+    path('base-product/<int:pk>/delete/', views_variants.base_product_delete, name='base_product_delete'),
+    
+    # Variants
+    path('base-product/<int:base_product_id>/variant/create/', views_variants.variant_create, name='variant_create'),
+    path('base-product/<int:base_product_id>/variants/quick-create/', views_variants.quick_variants_create, name='quick_variants_create'),
+    path('variant/<int:pk>/', views_variants.variant_detail, name='variant_detail'),
+    path('variant/<int:pk>/update/', views_variants.variant_update, name='variant_update'),
+    path('variant/<int:pk>/delete/', views_variants.variant_delete, name='variant_delete'),
+    
+    # Variant Pricing
+    path('base-product/<int:base_product_id>/bulk-price-update/', views_variants.bulk_price_update, name='bulk_price_update'),
+    path('variant/<int:pk>/update-price/', views_variants.update_variant_price, name='update_variant_price'),
+    path('variant/<int:pk>/reset-price/', views_variants.reset_variant_price, name='reset_variant_price'),
+    
+    # Variant Stock
+    path('variant/<int:pk>/stock-update/', views_variants.variant_stock_update, name='variant_stock_update'),
+    path('variant/<int:pk>/stock-transfer/', views_variants.variant_stock_transfer, name='variant_stock_transfer'),
+    
+    # Colors
+    path('colors/', views_variants.color_list, name='color_list'),
+    path('color/create/', views_variants.color_create, name='color_create'),
+    path('color/<int:pk>/update/', views_variants.color_update, name='color_update'),
+    path('color/<int:pk>/delete/', views_variants.color_delete, name='color_delete'),
+    
+    # Migration
+    path('migrate-products/', views_variants.migrate_products, name='migrate_products'),
+    
+    # Variants API
+    path('api/base-product/<int:pk>/variants/', views_variants.api_base_product_variants, name='api_base_product_variants'),
+    path('api/variant/<int:pk>/stock/', views_variants.api_variant_stock, name='api_variant_stock'),
+    path('api/variants/search/', views_variants.api_search_variants, name='api_search_variants'),
 
     # API Endpoints
     path('api/warehouse-products/', get_warehouse_products, name='api_warehouse_products'),

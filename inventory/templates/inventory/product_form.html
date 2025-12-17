@@ -61,8 +61,10 @@
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
+                                {% if form.price %}
+                                <!-- حقل السعر - فقط عند الإضافة -->
                                 <label for="{{ form.price.id_for_label }}" class="form-label">
-                                    {{ form.price.label }}*
+                                    {{ form.price.label }}
                                 </label>
                                 {{ form.price }}
                                 {% if form.price.errors %}
@@ -71,6 +73,17 @@
                                             <small>{{ error }}</small><br>
                                         {% endfor %}
                                     </div>
+                                {% endif %}
+                                {% elif product %}
+                                <!-- عرض السعر الحالي كقراءة فقط عند التعديل -->
+                                <label class="form-label">السعر الحالي</label>
+                                <div class="form-control bg-light" style="cursor: not-allowed;">
+                                    {{ product.price|floatformat:2 }} {{ currency_symbol }}
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i>
+                                    السعر يُدار من <a href="{% url 'inventory:base_product_list' %}">نظام المتغيرات</a>
+                                </small>
                                 {% endif %}
                             </div>
                         </div>
@@ -90,7 +103,7 @@
                         </div>
 
                         <div class="row mb-3">
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label for="{{ form.minimum_stock.id_for_label }}" class="form-label">
                                     {{ form.minimum_stock.label }}*
                                 </label>
@@ -103,20 +116,7 @@
                                     </div>
                                 {% endif %}
                             </div>
-                            <div class="col-md-4">
-                                <label for="{{ form.currency.id_for_label }}" class="form-label">
-                                    {{ form.currency.label }}
-                                </label>
-                                {{ form.currency }}
-                                {% if form.currency.errors %}
-                                    <div class="text-danger">
-                                        {% for error in form.currency.errors %}
-                                            <small>{{ error }}</small><br>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label for="{{ form.unit.id_for_label }}" class="form-label">
                                     {{ form.unit.label }}*
                                 </label>

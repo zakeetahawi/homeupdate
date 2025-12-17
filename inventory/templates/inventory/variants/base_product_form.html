@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}تعديل{% else %}إنشاء{% endif %} منتج أساسي{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'inventory:base_product_list' %}">المنتجات الأساسية</a></li>
+            {% if form.instance.pk %}
+                <li class="breadcrumb-item"><a href="{% url 'inventory:base_product_detail' form.instance.pk %}">{{ form.instance.name }}</a></li>
+                <li class="breadcrumb-item active">تعديل</li>
+            {% else %}
+                <li class="breadcrumb-item active">إنشاء منتج جديد</li>
+            {% endif %}
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-{% if form.instance.pk %}edit{% else %}plus{% endif %} me-2"></i>
+                        {% if form.instance.pk %}تعديل منتج أساسي{% else %}إنشاء منتج أساسي جديد{% endif %}
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Basic Info Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="fas fa-info-circle text-primary me-2"></i>
+                                    المعلومات الأساسية
+                                </h5>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">
+                                    {{ form.name.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.code.id_for_label }}" class="form-label">
+                                    {{ form.code.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.code }}
+                                {% if form.code.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.code.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">مثال: ORION, HARMONY, MM-1159</div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">
+                                    {{ form.category.label }}
+                                </label>
+                                {{ form.category }}
+                                {% if form.category.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.unit.id_for_label }}" class="form-label">
+                                    {{ form.unit.label }}
+                                </label>
+                                {{ form.unit }}
+                                {% if form.unit.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.unit.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">
+                                    {{ form.description.label }}
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Pricing Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="fas fa-dollar-sign text-success me-2"></i>
+                                    التسعير
+                                </h5>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.base_price.id_for_label }}" class="form-label">
+                                    {{ form.base_price.label }} <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    {{ form.base_price }}
+                                    <span class="input-group-text">{{ currency_symbol }}</span>
+                                </div>
+                                {% if form.base_price.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.base_price.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">السعر الذي سيُطبق على جميع المتغيرات افتراضياً</div>
+                            </div>
+                        </div>
+
+                        <!-- Stock Settings Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="fas fa-warehouse text-warning me-2"></i>
+                                    إعدادات المخزون
+                                </h5>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.minimum_stock.id_for_label }}" class="form-label">
+                                    {{ form.minimum_stock.label }}
+                                </label>
+                                {{ form.minimum_stock }}
+                                {% if form.minimum_stock.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.minimum_stock.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">سيتم إنشاء تنبيه عند وصول المخزون لهذا الحد</div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check mt-4">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                        {{ form.is_active.label }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                            <a href="{% url 'inventory:base_product_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-right me-1"></i>
+                                رجوع
+                            </a>
+                            <div>
+                                {% if form.instance.pk %}
+                                    <button type="submit" name="action" value="save" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>
+                                        حفظ التغييرات
+                                    </button>
+                                {% else %}
+                                    <button type="submit" name="action" value="save" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>
+                                        حفظ
+                                    </button>
+                                    <button type="submit" name="action" value="save_and_add_variant" class="btn btn-success">
+                                        <i class="fas fa-plus me-1"></i>
+                                        حفظ وإضافة متغير
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add form-control class to all form inputs
+    document.querySelectorAll('input, select, textarea').forEach(function(el) {
+        if (!el.classList.contains('form-check-input')) {
+            el.classList.add('form-control');
+        }
+    });
+</script>
+{% endblock %}

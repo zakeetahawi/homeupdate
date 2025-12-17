@@ -9,31 +9,29 @@ from .models import Product
 def get_cached_stock_level(product_id):
     """
     الحصول على مستوى المخزون الحالي للمنتج من الذاكرة المؤقتة أو حسابه إذا لم يكن موجوداً
+    يستخدم running_balance من آخر حركة لكل مستودع (متوافق مع models.py)
     """
     cache_key = f'product_stock_{product_id}'
     stock_level = cache.get(cache_key)
 
     if stock_level is None:
-        # حساب المخزون إذا لم يكن في الذاكرة المؤقتة
-        product = Product.objects.annotate(
-            stock_in=Sum(
-                Case(
-                    When(transactions__transaction_type='in', then='transactions__quantity'),
-                    default=0,
-                    output_field=IntegerField()
-                )
-            ),
-            stock_out=Sum(
-                Case(
-                    When(transactions__transaction_type='out', then='transactions__quantity'),
-                    default=0,
-                    output_field=IntegerField()
-                )
-            ),
-            current_stock_calc=F('stock_in') - F('stock_out')
-        ).get(id=product_id)
-
-        stock_level = product.current_stock_calc or 0
+        # حساب المخزون باستخدام running_balance من جميع المستودعات
+        # هذه الطريقة متوافقة مع current_stock property في Product model
+        from .models import StockTransaction, Warehouse
+        
+        total_stock = 0
+        warehouses = Warehouse.objects.filter(is_active=True)
+        
+        for warehouse in warehouses:
+            last_trans = StockTransaction.objects.filter(
+                product_id=product_id,
+                warehouse=warehouse
+            ).order_by('-transaction_date', '-id').first()
+            
+            if last_trans and last_trans.running_balance:
+                total_stock += float(last_trans.running_balance)
+        
+        stock_level = total_stock
         # تخزين في الذاكرة المؤقتة لمدة ساعة
         cache.set(cache_key, stock_level, 3600)
 

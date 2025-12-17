@@ -265,6 +265,7 @@ class BulkStockUpdateForm(forms.Form):
 class ProductForm(forms.ModelForm):
     """
     نموذج لإضافة/تعديل منتج واحد
+    ملاحظة: السعر يُدار الآن من نظام المتغيرات فقط لضمان تتبع جميع التغييرات
     """
     # إضافة حقول إضافية غير موجودة في النموذج
     warehouse = forms.ModelChoiceField(
@@ -289,17 +290,29 @@ class ProductForm(forms.ModelForm):
         }),
         help_text=_('الكمية الحالية في المخزون (اختياري)')
     )
+    
+    # حقل السعر للعرض فقط (للإضافة الجديدة)
+    price = forms.DecimalField(
+        label=_('السعر'),
+        required=False,
+        min_value=0,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': '0.00'
+        }),
+        help_text=_('السعر الافتراضي للمنتج')
+    )
 
     class Meta:
         model = Product
-        fields = ['name', 'code', 'category', 'description', 'price', 'currency', 'unit', 'minimum_stock']
+        fields = ['name', 'code', 'category', 'description', 'unit', 'minimum_stock']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'code': forms.TextInput(attrs={'class': 'form-control'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'currency': forms.Select(attrs={'class': 'form-select'}),
             'unit': forms.Select(attrs={'class': 'form-select'}),
             'minimum_stock': forms.NumberInput(attrs={'class': 'form-control'}),
         }
@@ -312,19 +325,28 @@ class ProductForm(forms.ModelForm):
         self.fields['category'].queryset = Category.objects.all()
         self.fields['category'].empty_label = _('اختر الفئة')
 
-        # إضافة خيارات العملة من النموذج
-        self.fields['currency'].choices = Product.CURRENCY_CHOICES
-
         # إضافة خيارات الوحدات من النموذج
         self.fields['unit'].choices = Product.UNIT_CHOICES
 
-        # إذا كان هذا تعديل منتج موجود، إخفاء حقول المستودع والكمية
+        # إذا كان هذا تعديل منتج موجود
         if self.instance and self.instance.pk:
             # في حالة التعديل، إزالة الحقول الإضافية
             if 'warehouse' in self.fields:
                 del self.fields['warehouse']
             if 'initial_quantity' in self.fields:
                 del self.fields['initial_quantity']
+            # إزالة حقل السعر - يُدار من نظام المتغيرات فقط
+            if 'price' in self.fields:
+                del self.fields['price']
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # إذا كان منتج جديد وتم إدخال سعر
+        if not instance.pk and 'price' in self.cleaned_data and self.cleaned_data['price']:
+            instance.price = self.cleaned_data['price']
+        if commit:
+            instance.save()
+        return instance
 
 
 class StockTransferForm(forms.ModelForm):

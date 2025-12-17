@@ -68,6 +68,7 @@ class Product(models.Model):
 
     CURRENCY_CHOICES = [
         ('EGP', _('جنيه مصري')),
+        ('SAR', _('ريال سعودي')),
         ('USD', _('دولار أمريكي')),
         ('EUR', _('يورو')),
     ]
@@ -442,10 +443,12 @@ class StockTransaction(models.Model):
         
         with transaction.atomic():
             # Get previous balance from the transaction immediately before this one
+            # إضافة warehouse للفلتر لحساب الرصيد الصحيح لكل مستودع
             previous_balance = StockTransaction.objects.filter(
                 product=self.product,
+                warehouse=self.warehouse,
                 transaction_date__lt=self.transaction_date
-            ).order_by('-transaction_date').first()
+            ).order_by('-transaction_date', '-id').first()
 
             # Calculate current balance based on previous balance
             # تحويل إلى Decimal لتجنب خطأ الجمع
@@ -467,10 +470,12 @@ class StockTransaction(models.Model):
             super().save(*args, **kwargs)
 
             # Update all subsequent transactions' running balances
+            # إضافة warehouse للفلتر لتحديث أرصدة نفس المستودع فقط
             next_transactions = StockTransaction.objects.filter(
                 product=self.product,
+                warehouse=self.warehouse,
                 transaction_date__gt=self.transaction_date
-            ).order_by('transaction_date').select_for_update()
+            ).order_by('transaction_date', 'id').select_for_update()
 
             # Recalculate running balances for all subsequent transactions
             current_balance = Decimal(str(self.running_balance))
@@ -1171,3 +1176,475 @@ class BulkUploadError(models.Model):
         if self.row_data:
             return self.row_data.get('الكود', self.row_data.get('code', ''))
         return ''
+
+
+# ==================== نظام المنتجات الأساسية والمتغيرات ====================
+
+class BaseProduct(models.Model):
+    """
+    المنتج الأساسي - يمثل مجموعة من المتغيرات (مثل ORION, HARMONY)
+    Product variants will reference this as their parent
+    """
+    name = models.CharField(_('اسم المنتج الأساسي'), max_length=255)
+    code = models.CharField(_('الكود الأساسي'), max_length=255, unique=True)
+    description = models.TextField(_('الوصف'), blank=True)
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='base_products',
+        verbose_name=_('الفئة')
+    )
+    
+    # السعر الأساسي - يُطبق على جميع المتغيرات افتراضياً
+    base_price = models.DecimalField(
+        _('السعر الأساسي'),
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text=_('السعر الافتراضي لجميع المتغيرات')
+    )
+    currency = models.CharField(
+        _('العملة'),
+        max_length=3,
+        choices=Product.CURRENCY_CHOICES,
+        default='EGP'
+    )
+    unit = models.CharField(
+        _('الوحدة'),
+        max_length=10,
+        choices=Product.UNIT_CHOICES,
+        default='piece'
+    )
+    
+    # الحد الأدنى للمخزون (يُطبق على كل متغير)
+    minimum_stock = models.PositiveIntegerField(
+        _('الحد الأدنى للمخزون'),
+        default=0
+    )
+    
+    is_active = models.BooleanField(_('نشط'), default=True)
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_base_products',
+        verbose_name=_('تم الإنشاء بواسطة')
+    )
+    
+    class Meta:
+        verbose_name = _('منتج أساسي')
+        verbose_name_plural = _('المنتجات الأساسية')
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['code'], name='base_product_code_idx'),
+            models.Index(fields=['name'], name='base_product_name_idx'),
+            models.Index(fields=['category'], name='base_product_cat_idx'),
+            models.Index(fields=['is_active'], name='base_product_active_idx'),
+        ]
+        permissions = [
+            ('manage_base_products', _('إدارة المنتجات الأساسية')),
+            ('bulk_price_update', _('تحديث الأسعار بالجملة')),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+    
+    @property
+    def variants_count(self):
+        """عدد المتغيرات"""
+        return self.variants.count()
+    
+    @property
+    def total_stock(self):
+        """إجمالي المخزون من جميع المتغيرات"""
+        total = 0
+        for variant in self.variants.filter(is_active=True):
+            total += variant.current_stock
+        return total
+    
+    @property
+    def available_variants(self):
+        """المتغيرات المتوفرة في المخزون"""
+        return self.variants.filter(is_active=True).exclude(
+            id__in=[v.id for v in self.variants.all() if v.current_stock <= 0]
+        )
+    
+    def get_variants_summary(self):
+        """ملخص المتغيرات مع المخزون والأسعار"""
+        summary = []
+        for variant in self.variants.filter(is_active=True).select_related('color'):
+            summary.append({
+                'id': variant.id,
+                'code': variant.variant_code,
+                'full_code': variant.full_code,
+                'color': variant.color.name if variant.color else variant.color_code,
+                'color_hex': variant.color.hex_code if variant.color else None,
+                'price': float(variant.effective_price),
+                'has_custom_price': variant.has_custom_price,
+                'stock': variant.current_stock,
+                'status': variant.stock_status,
+            })
+        return summary
+    
+    def apply_bulk_price_update(self, update_type, value, variant_ids=None, user=None):
+        """
+        تطبيق تحديث سعر جماعي على المتغيرات
+        
+        Args:
+            update_type: 'percentage' أو 'fixed' أو 'reset'
+            value: القيمة (نسبة مئوية أو مبلغ ثابت)
+            variant_ids: قائمة معرفات المتغيرات (None = الكل)
+            user: المستخدم الذي قام بالتحديث
+        """
+        from decimal import Decimal
+        
+        variants = self.variants.filter(is_active=True)
+        if variant_ids:
+            variants = variants.filter(id__in=variant_ids)
+        
+        updated_count = 0
+        for variant in variants:
+            if update_type == 'percentage':
+                # زيادة/نقصان بنسبة مئوية من السعر الأساسي
+                percentage = Decimal(str(value))
+                variant.price_override = self.base_price * (1 + percentage / 100)
+            elif update_type == 'fixed':
+                # تعيين سعر ثابت
+                variant.price_override = Decimal(str(value))
+            elif update_type == 'reset':
+                # إعادة إلى السعر الأساسي
+                variant.price_override = None
+            
+            variant.save()
+            updated_count += 1
+            
+            # تسجيل التغيير
+            PriceHistory.objects.create(
+                variant=variant,
+                old_price=variant.effective_price,
+                new_price=variant.price_override or self.base_price,
+                change_type=update_type,
+                change_value=value,
+                changed_by=user
+            )
+        
+        return updated_count
+
+
+class ColorAttribute(models.Model):
+    """
+    سمة اللون - لتصنيف ألوان المتغيرات
+    """
+    name = models.CharField(_('اسم اللون'), max_length=100)
+    code = models.CharField(_('رمز اللون'), max_length=100, unique=True)
+    hex_code = models.CharField(
+        _('كود اللون HEX'),
+        max_length=7,
+        blank=True,
+        help_text=_('مثال: #FF5733')
+    )
+    description = models.TextField(_('الوصف'), blank=True)
+    is_active = models.BooleanField(_('نشط'), default=True)
+    display_order = models.PositiveIntegerField(_('ترتيب العرض'), default=0)
+    
+    class Meta:
+        verbose_name = _('لون')
+        verbose_name_plural = _('الألوان')
+        ordering = ['display_order', 'name']
+        indexes = [
+            models.Index(fields=['code'], name='color_code_idx'),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
+class ProductVariant(models.Model):
+    """
+    متغير المنتج - يمثل نسخة محددة من المنتج الأساسي (مثل ORION/C 004)
+    """
+    base_product = models.ForeignKey(
+        BaseProduct,
+        on_delete=models.CASCADE,
+        related_name='variants',
+        verbose_name=_('المنتج الأساسي')
+    )
+    
+    # ربط بالمنتج القديم للتوافق
+    legacy_product = models.OneToOneField(
+        Product,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='variant_link',
+        verbose_name=_('المنتج القديم'),
+        help_text=_('للتوافق مع النظام القديم')
+    )
+    
+    # كود المتغير (الجزء بعد /)
+    variant_code = models.CharField(
+        _('كود المتغير'),
+        max_length=50,
+        help_text=_('مثال: C 004, C1, OFF WHITE')
+    )
+    
+    # اللون (اختياري - للربط بجدول الألوان)
+    color = models.ForeignKey(
+        ColorAttribute,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='variants',
+        verbose_name=_('اللون')
+    )
+    
+    # كود اللون (للحالات التي لا يوجد فيها لون في الجدول)
+    color_code = models.CharField(
+        _('كود اللون'),
+        max_length=30,
+        blank=True,
+        help_text=_('يُستخدم إذا لم يكن اللون موجوداً في جدول الألوان')
+    )
+    
+    # تجاوز السعر (اختياري)
+    price_override = models.DecimalField(
+        _('تجاوز السعر'),
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('اتركه فارغاً لاستخدام السعر الأساسي')
+    )
+    
+    # الباركود الخاص بالمتغير
+    barcode = models.CharField(
+        _('الباركود'),
+        max_length=100,
+        blank=True,
+        unique=True,
+        null=True
+    )
+    
+    description = models.TextField(_('الوصف'), blank=True)
+    is_active = models.BooleanField(_('نشط'), default=True)
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+    
+    class Meta:
+        verbose_name = _('متغير منتج')
+        verbose_name_plural = _('متغيرات المنتجات')
+        ordering = ['base_product', 'variant_code']
+        unique_together = ['base_product', 'variant_code']
+        indexes = [
+            models.Index(fields=['base_product'], name='variant_base_idx'),
+            models.Index(fields=['variant_code'], name='variant_code_idx'),
+            models.Index(fields=['color'], name='variant_color_idx'),
+            models.Index(fields=['is_active'], name='variant_active_idx'),
+            models.Index(fields=['barcode'], name='variant_barcode_idx'),
+        ]
+        permissions = [
+            ('manage_variants', _('إدارة المتغيرات')),
+            ('override_variant_price', _('تجاوز سعر المتغير')),
+        ]
+    
+    def __str__(self):
+        return self.full_code
+    
+    @property
+    def full_code(self):
+        """الكود الكامل (المنتج الأساسي + المتغير)"""
+        return f"{self.base_product.code}/{self.variant_code}"
+    
+    @property
+    def effective_price(self):
+        """السعر الفعلي (تجاوز أو أساسي)"""
+        if self.price_override is not None:
+            return self.price_override
+        return self.base_product.base_price
+    
+    @property
+    def has_custom_price(self):
+        """هل لديه سعر مخصص"""
+        return self.price_override is not None
+    
+    def get_total_stock(self):
+        """المخزون الإجمالي - للاستخدام في القوالب"""
+        return self.current_stock
+    
+    @property
+    def current_stock(self):
+        """المخزون الحالي من جميع المستودعات"""
+        if self.legacy_product:
+            return self.legacy_product.current_stock
+        
+        # حساب من VariantStock
+        total = 0
+        for stock in self.warehouse_stocks.all():
+            total += stock.current_quantity
+        return total
+    
+    @property
+    def stock_status(self):
+        """حالة المخزون"""
+        current = self.current_stock
+        min_stock = self.base_product.minimum_stock
+        
+        if current <= 0:
+            return _('غير متوفر')
+        elif current <= min_stock:
+            return _('مخزون منخفض')
+        return _('متوفر')
+    
+    def get_stock_by_warehouse(self):
+        """المخزون حسب المستودع"""
+        stocks = {}
+        
+        if self.legacy_product:
+            # استخدام النظام القديم
+            for warehouse in Warehouse.objects.filter(is_active=True):
+                last_trans = self.legacy_product.transactions.filter(
+                    warehouse=warehouse
+                ).order_by('-transaction_date', '-id').first()
+                
+                if last_trans and last_trans.running_balance > 0:
+                    stocks[warehouse.id] = {
+                        'warehouse': warehouse,
+                        'quantity': float(last_trans.running_balance)
+                    }
+        else:
+            # استخدام النظام الجديد
+            for stock in self.warehouse_stocks.select_related('warehouse'):
+                if stock.current_quantity > 0:
+                    stocks[stock.warehouse.id] = {
+                        'warehouse': stock.warehouse,
+                        'quantity': stock.current_quantity
+                    }
+        
+        return stocks
+    
+    def save(self, *args, **kwargs):
+        # توليد باركود تلقائي إذا لم يكن موجوداً
+        if not self.barcode:
+            self.barcode = f"V-{self.base_product.code}-{self.variant_code}".replace(' ', '').replace('/', '-')
+        super().save(*args, **kwargs)
+
+
+class VariantStock(models.Model):
+    """
+    مخزون المتغير حسب المستودع
+    يتيح تتبع المخزون على مستوى المتغير + المستودع
+    """
+    variant = models.ForeignKey(
+        ProductVariant,
+        on_delete=models.CASCADE,
+        related_name='warehouse_stocks',
+        verbose_name=_('المتغير')
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.CASCADE,
+        related_name='variant_stocks',
+        verbose_name=_('المستودع')
+    )
+    current_quantity = models.DecimalField(
+        _('الكمية الحالية'),
+        max_digits=10,
+        decimal_places=2,
+        default=0
+    )
+    reserved_quantity = models.DecimalField(
+        _('الكمية المحجوزة'),
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text=_('الكمية المحجوزة للطلبات غير المكتملة')
+    )
+    last_updated = models.DateTimeField(_('آخر تحديث'), auto_now=True)
+    
+    class Meta:
+        verbose_name = _('مخزون متغير')
+        verbose_name_plural = _('مخزونات المتغيرات')
+        unique_together = ['variant', 'warehouse']
+        indexes = [
+            models.Index(fields=['variant', 'warehouse'], name='var_stock_var_wh_idx'),
+            models.Index(fields=['current_quantity'], name='var_stock_qty_idx'),
+        ]
+    
+    def __str__(self):
+        return f"{self.variant.full_code} @ {self.warehouse.name}: {self.current_quantity}"
+    
+    @property
+    def available_quantity(self):
+        """الكمية المتاحة (الحالية - المحجوزة)"""
+        return self.current_quantity - self.reserved_quantity
+
+
+class PriceHistory(models.Model):
+    """
+    سجل تغييرات الأسعار
+    """
+    CHANGE_TYPES = [
+        ('manual', _('يدوي')),
+        ('percentage', _('نسبة مئوية')),
+        ('fixed', _('قيمة ثابتة')),
+        ('reset', _('إعادة للأساسي')),
+        ('bulk', _('تحديث جماعي')),
+        ('base_update', _('تحديث السعر الأساسي')),
+    ]
+    
+    variant = models.ForeignKey(
+        ProductVariant,
+        on_delete=models.CASCADE,
+        related_name='price_history',
+        verbose_name=_('المتغير')
+    )
+    old_price = models.DecimalField(
+        _('السعر القديم'),
+        max_digits=10,
+        decimal_places=2
+    )
+    new_price = models.DecimalField(
+        _('السعر الجديد'),
+        max_digits=10,
+        decimal_places=2
+    )
+    change_type = models.CharField(
+        _('نوع التغيير'),
+        max_length=20,
+        choices=CHANGE_TYPES,
+        default='manual'
+    )
+    change_value = models.DecimalField(
+        _('قيمة التغيير'),
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('النسبة أو القيمة المطبقة')
+    )
+    changed_at = models.DateTimeField(_('تاريخ التغيير'), auto_now_add=True)
+    changed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='price_changes',
+        verbose_name=_('تم التغيير بواسطة')
+    )
+    notes = models.TextField(_('ملاحظات'), blank=True)
+    
+    class Meta:
+        verbose_name = _('سجل سعر')
+        verbose_name_plural = _('سجل الأسعار')
+        ordering = ['-changed_at']
+        indexes = [
+            models.Index(fields=['variant'], name='price_hist_variant_idx'),
+            models.Index(fields=['changed_at'], name='price_hist_date_idx'),
+        ]
+    
+    def __str__(self):
+        return f"{self.variant.full_code}: {self.old_price} → {self.new_price}"

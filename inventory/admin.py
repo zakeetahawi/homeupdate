@@ -1,11 +1,13 @@
 from django.contrib import admin
-
+from django.utils.html import format_html
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 from .models import (
     Category, Product, StockTransaction, Supplier, PurchaseOrder, PurchaseOrderItem,
     Warehouse, WarehouseLocation, ProductBatch, InventoryAdjustment, StockAlert,
-    StockTransfer, StockTransferItem, BulkUploadLog, BulkUploadError
+    StockTransfer, StockTransferItem, BulkUploadLog, BulkUploadError,
+    # Variant System Models
+    BaseProduct, ProductVariant, ColorAttribute, VariantStock, PriceHistory
 )
 
 @admin.register(Category)
@@ -23,15 +25,6 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ('category', 'created_at')
     search_fields = ('name', 'code', 'description')
     readonly_fields = ('get_current_stock', 'created_at', 'updated_at')
-
-    def get_queryset(self, request):
-        """تحسين الاستعلامات لتقليل N+1 queries"""
-        return super().get_queryset(request).select_related(
-            'category'
-        ).only(
-            'id', 'name', 'code', 'price', 'minimum_stock',
-            'created_at', 'updated_at', 'category__id', 'category__name'
-        )
 
     fieldsets = (
         (_('معلومات المنتج'), {
@@ -372,3 +365,221 @@ class BulkUploadErrorAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False  # لا يمكن إضافة أخطاء يدوياً
+
+
+# ==================== Variant System Admin ====================
+
+class ProductVariantInline(admin.TabularInline):
+    """Inline لعرض المتغيرات داخل المنتج الأساسي"""
+    model = ProductVariant
+    extra = 0
+    fields = ('variant_code', 'color', 'color_code', 'price_override', 'is_active')
+    readonly_fields = ()
+    show_change_link = True
+
+
+@admin.register(BaseProduct)
+class BaseProductAdmin(admin.ModelAdmin):
+    list_per_page = 25
+    list_display = ('code', 'name', 'category', 'base_price', 'variants_count', 'is_active')
+    list_filter = ('category', 'is_active', 'created_at')
+    search_fields = ('name', 'code', 'description')
+    readonly_fields = ('created_at', 'updated_at', 'created_by')
+    inlines = [ProductVariantInline]
+    
+    fieldsets = (
+        (_('معلومات المنتج الأساسي'), {
+            'fields': ('name', 'code', 'category', 'description')
+        }),
+        (_('التسعير'), {
+            'fields': ('base_price', 'currency', 'unit')
+        }),
+        (_('المخزون'), {
+            'fields': ('minimum_stock', 'is_active')
+        }),
+        (_('معلومات النظام'), {
+            'fields': ('created_at', 'updated_at', 'created_by'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def variants_count(self, obj):
+        return obj.variants.count()
+    variants_count.short_description = _('عدد المتغيرات')
+    
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(ProductVariant)
+class ProductVariantAdmin(admin.ModelAdmin):
+    list_per_page = 25
+    list_display = ('full_code', 'base_product', 'variant_code', 'color', 'effective_price', 'has_custom_price', 'is_active')
+    list_filter = ('base_product', 'color', 'is_active')
+    search_fields = ('variant_code', 'base_product__name', 'base_product__code', 'barcode')
+    readonly_fields = ('full_code', 'effective_price', 'created_at', 'updated_at')
+    raw_id_fields = ('base_product', 'legacy_product')
+    
+    fieldsets = (
+        (_('معلومات المتغير'), {
+            'fields': ('base_product', 'variant_code', 'full_code')
+        }),
+        (_('اللون'), {
+            'fields': ('color', 'color_code')
+        }),
+        (_('التسعير'), {
+            'fields': ('price_override', 'effective_price')
+        }),
+        (_('معلومات إضافية'), {
+            'fields': ('barcode', 'description', 'is_active')
+        }),
+        (_('الربط بالنظام القديم'), {
+            'fields': ('legacy_product',),
+            'classes': ('collapse',)
+        }),
+        (_('معلومات النظام'), {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def full_code(self, obj):
+        return obj.full_code
+    full_code.short_description = _('الكود الكامل')
+    
+    def effective_price(self, obj):
+        return obj.effective_price
+    effective_price.short_description = _('السعر الفعلي')
+    
+    def has_custom_price(self, obj):
+        return obj.has_custom_price
+    has_custom_price.short_description = _('سعر مخصص')
+    has_custom_price.boolean = True
+
+
+@admin.register(ColorAttribute)
+class ColorAttributeAdmin(admin.ModelAdmin):
+    list_per_page = 50
+    list_display = ('name', 'code', 'hex_code', 'display_order', 'is_active')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'code')
+    ordering = ('display_order', 'name')
+
+
+@admin.register(VariantStock)
+class VariantStockAdmin(admin.ModelAdmin):
+    list_per_page = 50
+    list_display = ('variant', 'warehouse', 'current_quantity', 'reserved_quantity', 'available_quantity', 'last_updated')
+    list_filter = ('warehouse', 'last_updated')
+    search_fields = ('variant__base_product__name', 'variant__variant_code')
+    raw_id_fields = ('variant',)
+    readonly_fields = ('available_quantity', 'last_updated')
+    
+    def available_quantity(self, obj):
+        return obj.available_quantity
+    available_quantity.short_description = _('المتاح')
+
+
+@admin.register(PriceHistory)
+class PriceHistoryAdmin(admin.ModelAdmin):
+    list_per_page = 50
+    list_display = (
+        'variant_code', 'base_product_name', 'old_price', 'new_price', 
+        'price_change', 'change_percentage', 'change_type', 'changed_at', 'changed_by'
+    )
+    list_filter = (
+        'change_type',
+        ('changed_at', admin.DateFieldListFilter),
+        ('changed_by', admin.RelatedOnlyFieldListFilter),
+        ('variant__base_product', admin.RelatedOnlyFieldListFilter),
+        ('variant__base_product__category', admin.RelatedOnlyFieldListFilter),
+    )
+    search_fields = (
+        'variant__base_product__name', 
+        'variant__base_product__code',
+        'variant__variant_code',
+        'variant__barcode',
+        'notes',
+        'changed_by__username',
+    )
+    readonly_fields = (
+        'variant', 'old_price', 'new_price', 'change_type', 
+        'change_value', 'changed_at', 'changed_by', 'notes'
+    )
+    date_hierarchy = 'changed_at'
+    list_select_related = ('variant', 'variant__base_product', 'changed_by')
+    ordering = ('-changed_at',)
+    
+    fieldsets = (
+        ('معلومات المتغير', {
+            'fields': ('variant',)
+        }),
+        ('تفاصيل التغيير', {
+            'fields': ('old_price', 'new_price', 'change_type', 'change_value')
+        }),
+        ('معلومات إضافية', {
+            'fields': ('changed_at', 'changed_by', 'notes')
+        }),
+    )
+    
+    class Media:
+        css = {
+            'all': ('admin/css/price_history.css',)
+        }
+    
+    def _truncate_text(self, text, max_length=25):
+        """تقصير النص مع إظهار النص الكامل عند التمرير"""
+        if not text:
+            return '-'
+        text = str(text)
+        if len(text) > max_length:
+            return format_html(
+                '<span title="{}" style="cursor:help;">{}&hellip;</span>',
+                text,
+                text[:max_length]
+            )
+        return text
+    
+    @admin.display(description='كود المتغير')
+    def variant_code(self, obj):
+        code = obj.variant.full_code
+        return self._truncate_text(code, 20)
+    
+    @admin.display(description='المنتج الأساسي')
+    def base_product_name(self, obj):
+        name = obj.variant.base_product.name
+        return self._truncate_text(name, 25)
+    
+    @admin.display(description='الفرق')
+    def price_change(self, obj):
+        diff = obj.new_price - obj.old_price
+        diff_str = f'{diff:.2f}'
+        if diff > 0:
+            return format_html('<span style="color:green;">+{}</span>', diff_str)
+        elif diff < 0:
+            return format_html('<span style="color:red;">{}</span>', diff_str)
+        return '0.00'
+    
+    @admin.display(description='النسبة %')
+    def change_percentage(self, obj):
+        if obj.old_price and obj.old_price != 0:
+            perc = ((obj.new_price - obj.old_price) / obj.old_price) * 100
+            perc_str = f'{perc:.1f}%'
+            if perc > 0:
+                return format_html('<span style="color:green;">+{}</span>', perc_str)
+            elif perc < 0:
+                return format_html('<span style="color:red;">{}</span>', perc_str)
+            return '0%'
+        return '-'
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # السماح للمشرفين فقط بالحذف
+        return request.user.is_superuser

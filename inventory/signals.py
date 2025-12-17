@@ -6,6 +6,9 @@ from django.utils import timezone
 from decimal import Decimal
 import logging
 
+# تعريف logger مبكراً لتجنب NameError
+logger = logging.getLogger(__name__)
+
 from accounts.models import SystemSettings, User
 from .models import Product, StockTransaction, StockAlert
 from notifications.models import Notification
@@ -84,12 +87,14 @@ def stock_manager_handler(sender, instance, created, **kwargs):
     
     def process_transaction():
         from decimal import Decimal
+        from .models import Warehouse
         
-        # تحديث الأرصدة المتحركة
+        # ✅ تحديث الأرصدة المتحركة - مع اعتبار المستودع
         previous_balance = StockTransaction.objects.filter(
             product=instance.product,
+            warehouse=instance.warehouse,  # إضافة فلتر المستودع
             transaction_date__lt=instance.transaction_date
-        ).exclude(id=instance.id).order_by('-transaction_date').first()
+        ).exclude(id=instance.id).order_by('-transaction_date', '-id').first()
 
         if previous_balance and previous_balance.running_balance is not None:
             current_balance = Decimal(str(previous_balance.running_balance))
@@ -108,11 +113,12 @@ def stock_manager_handler(sender, instance, created, **kwargs):
             running_balance=new_balance
         )
 
-        # تحديث الأرصدة اللاحقة
+        # ✅ تحديث الأرصدة اللاحقة - لنفس المستودع فقط
         subsequent_transactions = StockTransaction.objects.filter(
             product=instance.product,
+            warehouse=instance.warehouse,  # إضافة فلتر المستودع
             transaction_date__gt=instance.transaction_date
-        ).exclude(id=instance.id).order_by('transaction_date')
+        ).exclude(id=instance.id).order_by('transaction_date', 'id')
 
         running_balance = new_balance
         for trans in subsequent_transactions:
@@ -125,9 +131,34 @@ def stock_manager_handler(sender, instance, created, **kwargs):
                 running_balance=running_balance
             )
         
-        # فحص مستويات المخزون وإنشاء التنبيهات
-        # ✅ استخدام المخزون الكلي من جميع المستودعات بدلاً من رصيد مستودع واحد
-        total_stock = instance.product.current_stock
+        # ✅ فحص مستويات المخزون وإنشاء/حل التنبيهات
+        # حساب المخزون الكلي من جميع المستودعات
+        total_stock = 0
+        for warehouse in Warehouse.objects.filter(is_active=True):
+            last_trans = StockTransaction.objects.filter(
+                product=instance.product,
+                warehouse=warehouse
+            ).order_by('-transaction_date', '-id').first()
+            
+            if last_trans and last_trans.running_balance:
+                total_stock += float(last_trans.running_balance)
+        
+        # ✅ حل التنبيهات الخاطئة أولاً (إذا أصبح المنتج متوفراً)
+        if total_stock > 0:
+            from django.utils import timezone
+            resolved_count = StockAlert.objects.filter(
+                product=instance.product,
+                alert_type='out_of_stock',
+                status='active'
+            ).update(
+                status='resolved',
+                resolved_at=timezone.now(),
+                resolved_by=getattr(instance, 'created_by', None)
+            )
+            if resolved_count > 0:
+                logger.info(f"✅ تم حل {resolved_count} تنبيه نفاذ للمنتج {instance.product.name} (المخزون الجديد: {total_stock})")
+        
+        # إنشاء تنبيه جديد إذا لزم الأمر
         alert_data = should_create_stock_alert(instance.product.id, total_stock)
         
         if alert_data:
@@ -141,8 +172,6 @@ def stock_manager_handler(sender, instance, created, **kwargs):
 
 
 # ========== نظام التنبيهات التلقائية للمخزون ========== *
-
-logger = logging.getLogger(__name__)
 
 def should_create_stock_alert(product_id, new_balance):
     """

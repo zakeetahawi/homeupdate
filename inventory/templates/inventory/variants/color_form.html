@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}تعديل{% else %}إضافة{% endif %} لون{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'inventory:color_list' %}">الألوان</a></li>
+            <li class="breadcrumb-item active">{% if form.instance.pk %}تعديل{% else %}إضافة{% endif %} لون</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-palette me-2"></i>
+                        {% if form.instance.pk %}تعديل لون{% else %}إضافة لون جديد{% endif %}
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                {{ form.name.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">الاسم بالعربية (مثال: أبيض، أسود، رمادي)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.name_en.id_for_label }}" class="form-label">
+                                {{ form.name_en.label }}
+                            </label>
+                            {{ form.name_en }}
+                            {% if form.name_en.errors %}
+                                <div class="invalid-feedback d-block">{{ form.name_en.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.code.id_for_label }}" class="form-label">
+                                {{ form.code.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.code }}
+                            {% if form.code.errors %}
+                                <div class="invalid-feedback d-block">{{ form.code.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">كود مختصر (مثال: C1, C 004, WHT)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.hex_code.id_for_label }}" class="form-label">
+                                {{ form.hex_code.label }}
+                            </label>
+                            <div class="input-group">
+                                {{ form.hex_code }}
+                                <span class="input-group-text p-0" style="width: 42px;">
+                                    <input type="color" id="color_picker" class="form-control form-control-color border-0" 
+                                           style="width: 100%; height: 100%;" value="{{ form.hex_code.value|default:'#000000' }}">
+                                </span>
+                            </div>
+                            {% if form.hex_code.errors %}
+                                <div class="invalid-feedback d-block">{{ form.hex_code.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">اختر لوناً أو أدخل كود HEX مباشرة</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.display_order.id_for_label }}" class="form-label">
+                                {{ form.display_order.label }}
+                            </label>
+                            {{ form.display_order }}
+                            {% if form.display_order.errors %}
+                                <div class="invalid-feedback d-block">{{ form.display_order.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    {{ form.is_active.label }}
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Preview -->
+                        <div class="mb-4 p-3 border rounded">
+                            <label class="form-label">معاينة:</label>
+                            <div class="d-flex align-items-center">
+                                <span id="color_preview" 
+                                      style="width: 50px; height: 50px; border-radius: 50%; background-color: {{ form.hex_code.value|default:'#cccccc' }}; border: 2px solid #ddd; display: inline-block;"></span>
+                                <span class="ms-3">
+                                    <strong id="preview_name">{{ form.name.value|default:'اسم اللون' }}</strong>
+                                    <br><small class="text-muted" id="preview_code">({{ form.code.value|default:'الكود' }})</small>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                            <a href="{% url 'inventory:color_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-right me-1"></i>
+                                رجوع
+                            </a>
+                            <div>
+                                <button type="submit" name="action" value="save" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>
+                                    حفظ
+                                </button>
+                                {% if not form.instance.pk %}
+                                    <button type="submit" name="action" value="save_and_add" class="btn btn-success">
+                                        <i class="fas fa-plus me-1"></i>
+                                        حفظ وإضافة آخر
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add form-control class
+        document.querySelectorAll('input, select, textarea').forEach(function(el) {
+            if (!el.classList.contains('form-check-input') && el.type !== 'color') {
+                el.classList.add('form-control');
+            }
+        });
+
+        // Color picker sync
+        const colorPicker = document.getElementById('color_picker');
+        const hexInput = document.querySelector('[name="hex_code"]');
+        const colorPreview = document.getElementById('color_preview');
+        
+        if (colorPicker && hexInput) {
+            colorPicker.addEventListener('input', function() {
+                hexInput.value = this.value;
+                colorPreview.style.backgroundColor = this.value;
+            });
+            
+            hexInput.addEventListener('input', function() {
+                if (/^#[0-9A-Fa-f]{6}$/.test(this.value)) {
+                    colorPicker.value = this.value;
+                    colorPreview.style.backgroundColor = this.value;
+                }
+            });
+        }
+
+        // Name preview
+        const nameInput = document.querySelector('[name="name"]');
+        const previewName = document.getElementById('preview_name');
+        if (nameInput && previewName) {
+            nameInput.addEventListener('input', function() {
+                previewName.textContent = this.value || 'اسم اللون';
+            });
+        }
+
+        // Code preview
+        const codeInput = document.querySelector('[name="code"]');
+        const previewCode = document.getElementById('preview_code');
+        if (codeInput && previewCode) {
+            codeInput.addEventListener('input', function() {
+                previewCode.textContent = '(' + (this.value || 'الكود') + ')';
+            });
+        }
+    });
+</script>
+{% endblock %}

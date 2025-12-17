@@ -238,6 +238,13 @@
                                         <i class="fas fa-warehouse text-info"></i> إدارة المستودعات
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'inventory:base_product_list' %}">
+                                        <i class="fas fa-palette text-success"></i> <strong>المنتجات والألوان</strong>
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'inventory:color_list' %}">
+                                        <i class="fas fa-fill-drip text-primary"></i> إدارة الألوان
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="{% url 'inventory:stock_transfer_create' %}">
                                         <i class="fas fa-bolt text-warning"></i> <strong>تحويلات مخزنية</strong>
                                     </a></li>

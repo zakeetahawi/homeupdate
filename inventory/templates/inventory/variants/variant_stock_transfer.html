@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}نقل مخزون - {{ variant.full_code }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'inventory:base_product_list' %}">المنتجات الأساسية</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'inventory:variant_detail' variant.pk %}">{{ variant.full_code }}</a></li>
+            <li class="breadcrumb-item active">نقل مخزون</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exchange-alt me-2"></i>
+                        نقل مخزون بين المستودعات
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Variant Info -->
+                    <div class="alert alert-info mb-4">
+                        <strong>المتغير:</strong> {{ variant.full_code }}
+                        {% if variant.color %}
+                            {% if variant.color.hex_code %}
+                                <span class="color-swatch ms-2" 
+                                      style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background-color: {{ variant.color.hex_code }}; border: 1px solid #ddd; vertical-align: middle;"></span>
+                            {% endif %}
+                            {{ variant.color.name }}
+                        {% endif %}
+                    </div>
+
+                    <!-- Current Stock Overview -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2">المخزون الحالي:</h6>
+                        <div class="row">
+                            {% for stock in current_stock %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="border rounded p-3 text-center">
+                                        <strong>{{ stock.warehouse.name }}</strong>
+                                        <br>
+                                        <span class="badge bg-{% if stock.available_quantity > 0 %}success{% else %}secondary{% endif %} fs-5 mt-2">
+                                            {{ stock.available_quantity }}
+                                        </span>
+                                        <small class="d-block text-muted">متاح للنقل</small>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="col-12">
+                                    <div class="alert alert-warning">لا يوجد مخزون لهذا المتغير</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-5 mb-3">
+                                <label for="{{ form.from_warehouse.id_for_label }}" class="form-label">
+                                    {{ form.from_warehouse.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.from_warehouse }}
+                                {% if form.from_warehouse.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.from_warehouse.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">
+                                    المتاح: <strong id="from_available">-</strong>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-2 d-flex align-items-center justify-content-center">
+                                <i class="fas fa-arrow-left fa-2x text-info"></i>
+                            </div>
+                            
+                            <div class="col-md-5 mb-3">
+                                <label for="{{ form.to_warehouse.id_for_label }}" class="form-label">
+                                    {{ form.to_warehouse.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.to_warehouse }}
+                                {% if form.to_warehouse.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.to_warehouse.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">
+                                    الحالي: <strong id="to_current">-</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.quantity.id_for_label }}" class="form-label">
+                                    {{ form.quantity.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.quantity }}
+                                {% if form.quantity.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Transfer Preview -->
+                        <div class="alert alert-light border mb-4" id="transfer_preview">
+                            <h6><i class="fas fa-info-circle me-2"></i>معاينة النقل:</h6>
+                            <div class="row text-center">
+                                <div class="col-5">
+                                    <span id="preview_from_name">المستودع المصدر</span>
+                                    <br>
+                                    <span id="preview_from_before">-</span>
+                                    <i class="fas fa-arrow-down text-danger"></i>
+                                    <span id="preview_from_after" class="text-danger">-</span>
+                                </div>
+                                <div class="col-2">
+                                    <i class="fas fa-arrow-left fa-2x text-info"></i>
+                                    <br>
+                                    <strong id="preview_quantity">0</strong>
+                                </div>
+                                <div class="col-5">
+                                    <span id="preview_to_name">المستودع الهدف</span>
+                                    <br>
+                                    <span id="preview_to_before">-</span>
+                                    <i class="fas fa-arrow-down text-success"></i>
+                                    <span id="preview_to_after" class="text-success">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                {{ form.notes.label }}
+                            </label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                            <a href="{% url 'inventory:variant_detail' variant.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-right me-1"></i>
+                                رجوع
+                            </a>
+                            <button type="submit" class="btn btn-info">
+                                <i class="fas fa-exchange-alt me-1"></i>
+                                تنفيذ النقل
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add form-control class
+        document.querySelectorAll('input, select, textarea').forEach(function(el) {
+            if (!el.classList.contains('form-check-input')) {
+                el.classList.add('form-control');
+            }
+        });
+
+        // Stock data from server
+        const stockData = {
+            {% for stock in current_stock %}
+            '{{ stock.warehouse.pk }}': {
+                name: '{{ stock.warehouse.name }}',
+                current: {{ stock.current_quantity }},
+                available: {{ stock.available_quantity }}
+            },
+            {% endfor %}
+        };
+
+        const fromWarehouse = document.querySelector('[name="from_warehouse"]');
+        const toWarehouse = document.querySelector('[name="to_warehouse"]');
+        const quantityInput = document.querySelector('[name="quantity"]');
+        
+        const fromAvailable = document.getElementById('from_available');
+        const toCurrent = document.getElementById('to_current');
+        
+        const previewFromName = document.getElementById('preview_from_name');
+        const previewToName = document.getElementById('preview_to_name');
+        const previewFromBefore = document.getElementById('preview_from_before');
+        const previewFromAfter = document.getElementById('preview_from_after');
+        const previewToBefore = document.getElementById('preview_to_before');
+        const previewToAfter = document.getElementById('preview_to_after');
+        const previewQuantity = document.getElementById('preview_quantity');
+
+        function updatePreview() {
+            const fromId = fromWarehouse.value;
+            const toId = toWarehouse.value;
+            const quantity = parseInt(quantityInput.value) || 0;
+            
+            const fromStock = stockData[fromId] || {name: '-', current: 0, available: 0};
+            const toStock = stockData[toId] || {name: '-', current: 0, available: 0};
+            
+            fromAvailable.textContent = fromStock.available;
+            toCurrent.textContent = toStock.current;
+            
+            previewFromName.textContent = fromStock.name;
+            previewToName.textContent = toStock.name;
+            previewFromBefore.textContent = fromStock.available;
+            previewFromAfter.textContent = fromStock.available - quantity;
+            previewToBefore.textContent = toStock.current;
+            previewToAfter.textContent = toStock.current + quantity;
+            previewQuantity.textContent = quantity;
+            
+            if (quantity > fromStock.available) {
+                previewFromAfter.classList.add('text-danger');
+                previewFromAfter.textContent += ' (غير كافي!)';
+            } else {
+                previewFromAfter.classList.remove('text-danger');
+            }
+        }
+
+        fromWarehouse.addEventListener('change', updatePreview);
+        toWarehouse.addEventListener('change', updatePreview);
+        quantityInput.addEventListener('input', updatePreview);
+        
+        // Initial update
+        updatePreview();
+    });
+</script>
+{% endblock %}

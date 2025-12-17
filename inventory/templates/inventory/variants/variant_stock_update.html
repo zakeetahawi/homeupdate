@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}تحديث مخزون المتغير{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'inventory:base_product_list' %}">المنتجات الأساسية</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'inventory:base_product_detail' variant.base_product.pk %}">{{ variant.base_product.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'inventory:variant_detail' variant.pk %}">{{ variant.variant_code }}</a></li>
+            <li class="breadcrumb-item active">تحديث المخزون</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-boxes me-2"></i>
+                        تحديث مخزون المتغير
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Variant Info -->
+                    <div class="alert alert-info mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <strong>المتغير:</strong> {{ variant.full_code }}
+                                {% if variant.color %}
+                                    {% if variant.color.hex_code %}
+                                        <span class="color-swatch ms-2" 
+                                              style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background-color: {{ variant.color.hex_code }}; border: 1px solid #ddd; vertical-align: middle;"></span>
+                                    {% endif %}
+                                    {{ variant.color.name }}
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 text-md-end">
+                                <strong>المخزون الحالي الإجمالي:</strong>
+                                <span class="badge bg-{% if total_stock > 0 %}success{% else %}danger{% endif %} fs-6">{{ total_stock }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current Stock by Warehouse -->
+                    {% if current_stock %}
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2">المخزون الحالي حسب المستودع:</h6>
+                        <div class="row">
+                            {% for stock in current_stock %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="border rounded p-2 text-center">
+                                        <small class="text-muted d-block">{{ stock.warehouse.name }}</small>
+                                        <span class="badge bg-primary">{{ stock.current_quantity }}</span>
+                                        {% if stock.reserved_quantity > 0 %}
+                                            <span class="badge bg-warning text-dark" title="محجوز">-{{ stock.reserved_quantity }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.warehouse.id_for_label }}" class="form-label">
+                                    {{ form.warehouse.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.warehouse }}
+                                {% if form.warehouse.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.warehouse.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.operation.id_for_label }}" class="form-label">
+                                    {{ form.operation.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.operation }}
+                                {% if form.operation.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.operation.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.quantity.id_for_label }}" class="form-label">
+                                    {{ form.quantity.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.quantity }}
+                                {% if form.quantity.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">المخزون بعد العملية</label>
+                                <div class="form-control bg-light" id="result_stock">-</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                {{ form.notes.label }}
+                            </label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                            <a href="{% url 'inventory:variant_detail' variant.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-right me-1"></i>
+                                رجوع
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>
+                                تحديث المخزون
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add form-control class
+        document.querySelectorAll('input, select, textarea').forEach(function(el) {
+            if (!el.classList.contains('form-check-input')) {
+                el.classList.add('form-control');
+            }
+        });
+
+        // Stock data from server
+        const stockData = {
+            {% for stock in current_stock %}
+            '{{ stock.warehouse.pk }}': {{ stock.current_quantity }},
+            {% endfor %}
+        };
+
+        // Calculate result stock
+        const warehouseSelect = document.querySelector('[name="warehouse"]');
+        const operationSelect = document.querySelector('[name="operation"]');
+        const quantityInput = document.querySelector('[name="quantity"]');
+        const resultStock = document.getElementById('result_stock');
+
+        function calculateResult() {
+            const warehouse = warehouseSelect.value;
+            const operation = operationSelect.value;
+            const quantity = parseInt(quantityInput.value) || 0;
+            const currentStock = stockData[warehouse] || 0;
+
+            let result;
+            if (operation === 'add') {
+                result = currentStock + quantity;
+            } else if (operation === 'subtract') {
+                result = currentStock - quantity;
+            } else if (operation === 'set') {
+                result = quantity;
+            } else {
+                result = currentStock;
+            }
+
+            if (result < 0) {
+                resultStock.innerHTML = '<span class="text-danger">' + result + ' (غير مسموح)</span>';
+            } else {
+                resultStock.innerHTML = '<span class="text-success fw-bold">' + result + '</span>';
+            }
+        }
+
+        if (warehouseSelect && operationSelect && quantityInput) {
+            warehouseSelect.addEventListener('change', calculateResult);
+            operationSelect.addEventListener('change', calculateResult);
+            quantityInput.addEventListener('input', calculateResult);
+        }
+    });
+</script>
+{% endblock %}
