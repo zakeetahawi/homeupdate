@@ -215,6 +215,13 @@
                                     <i class="fas fa-list-check"></i><span class="nav-text">أوامر التقطيع المجمعة</span>
                                 </a>
                             </li>
+                        {% elif user.is_factory_receiver %}
+                            <!-- مسؤول استلام المصنع يرى رابط استلام الأقمشة مباشرة -->
+                            <li class="nav-item">
+                                <a class="nav-link" href="/manufacturing/fabric-receipt/">
+                                    <i class="fas fa-industry"></i><span class="nav-text">استلام من المصنع</span>
+                                </a>
+                            </li>
                         {% elif user.is_staff %}
                             <!-- الموظفون يرون جميع الأقسام -->                            <li class="nav-item">
                                 <a class="nav-link" href="/customers/">

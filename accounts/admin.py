@@ -149,8 +149,8 @@ class CustomUserAdmin(UserAdmin):
         'is_staff', 'is_superuser', 'is_active', 'branch',
         'is_inspection_technician', 'is_salesperson', 'is_branch_manager',
         'is_region_manager', 'is_general_manager', 'is_factory_manager',
-        'is_inspection_manager', 'is_installation_manager', 'is_warehouse_staff',
-        'user_roles__role'
+        'is_factory_receiver', 'is_inspection_manager', 'is_installation_manager',
+        'is_warehouse_staff', 'user_roles__role'
     )
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone')
     inlines = [UserRoleInline]
@@ -172,8 +172,8 @@ class CustomUserAdmin(UserAdmin):
                 'is_active', 'is_staff', 'is_superuser',
                 'is_inspection_technician', 'is_salesperson', 'is_branch_manager',
                 'is_region_manager', 'is_general_manager', 'is_factory_manager',
-                'is_inspection_manager', 'is_installation_manager', 'managed_branches',
-                'groups', 'user_permissions'
+                'is_factory_receiver', 'is_inspection_manager', 'is_installation_manager',
+                'managed_branches', 'groups', 'user_permissions'
             ),
             'classes': ('collapse',),
             'description': _(

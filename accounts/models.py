@@ -31,8 +31,14 @@ ROLE_HIERARCHY = {
     'factory_manager': {
         'level': 2,
         'display': 'مسؤول مصنع',
-        'inherits_from': [],
+        'inherits_from': ['factory_receiver'],
         'permissions': ['view_all_orders', 'manage_manufacturing', 'manage_inventory']
+    },
+    'factory_receiver': {
+        'level': 4,
+        'display': 'مسؤول استلام مصنع',
+        'inherits_from': [],
+        'permissions': ['receive_fabric', 'deliver_to_production_line', 'view_fabric_receipts']
     },
     'inspection_manager': {
         'level': 3,
@@ -83,6 +89,7 @@ class User(AbstractUser):
     is_region_manager = models.BooleanField(default=False, verbose_name=_("مدير منطقة"))
     is_general_manager = models.BooleanField(default=False, verbose_name=_("مدير عام"))
     is_factory_manager = models.BooleanField(default=False, verbose_name=_("مسؤول مصنع"))
+    is_factory_receiver = models.BooleanField(default=False, verbose_name=_("مسؤول استلام مصنع"))
     is_inspection_manager = models.BooleanField(default=False, verbose_name=_("مسؤول معاينات"))
     is_installation_manager = models.BooleanField(default=False, verbose_name=_("مسؤول تركيبات"))
     is_warehouse_staff = models.BooleanField(default=False, verbose_name=_("موظف مستودع"))
@@ -120,6 +127,7 @@ class User(AbstractUser):
             self.is_region_manager,
             self.is_general_manager,
             self.is_factory_manager,
+            self.is_factory_receiver,
             self.is_inspection_manager,
             self.is_installation_manager,
             self.is_warehouse_staff
@@ -147,6 +155,8 @@ class User(AbstractUser):
             return "branch_manager"
         elif self.is_factory_manager:
             return "factory_manager"
+        elif self.is_factory_receiver:
+            return "factory_receiver"
         elif self.is_inspection_manager:
             return "inspection_manager"
         elif self.is_installation_manager:

@@ -906,6 +906,11 @@ class ManufacturingOrderItem(models.Model):
     class Meta:
         verbose_name = 'عنصر أمر تصنيع'
         verbose_name_plural = 'عناصر أوامر التصنيع'
+        permissions = [
+            ('can_receive_fabric', 'يمكنه استلام الأقمشة من التقطيع'),
+            ('can_deliver_to_production_line', 'يمكنه تسليم الأقمشة لخطوط الإنتاج'),
+            ('can_view_fabric_receipts', 'يمكنه عرض قائمة استلامات الأقمشة'),
+        ]
         indexes = [
             models.Index(fields=['fabric_received', 'fabric_received_date'], name='fabric_rcvd_idx'),
             models.Index(fields=['bag_number'], name='bag_number_idx'),
