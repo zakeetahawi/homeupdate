@@ -5,35 +5,26 @@
 <div style="margin-bottom: 20px;">
     <h1>{{ title }}</h1>
     
-    {% if device_restriction_enabled %}
     <div class="messagelist">
-        <div class="success" style="padding: 15px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px;">
-            <strong>🔒 نظام قفل الأجهزة: مفعل</strong>
+        <div class="info" style="padding: 15px; background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 5px;">
+            <strong>📊 نظام قفل الأجهزة - المنطق الجديد</strong>
             <p style="margin: 5px 0 0 0;">
-                الموظفون يجب أن يدخلوا من الأجهزة المسجلة لفرعهم فقط. 
-                السوبر يوزر والمدير العام معفيين.
-                <br>
-                <small>
-                    📊 إجمالي الأجهزة: <strong>{{ total_devices }}</strong> | 
-                    الأجهزة النشطة: <strong>{{ active_devices }}</strong>
+                <strong>القاعدة الأساسية:</strong><br>
+                • الفرع <strong>بدون أجهزة مسجلة</strong> = 🔓 <strong style="color: #28a745;">مفتوح تلقائياً</strong> (الدخول من أي جهاز)<br>
+                • الفرع <strong>مع أجهزة مسجلة</strong> = 🔒 <strong style="color: #dc3545;">مقفول</strong> (الدخول فقط من الأجهزة المسجلة)
+                <br><br>
+                <strong>📊 إحصائيات الفروع:</strong><br>
+                • مجموع الفروع: <strong>{{ total_branches }}</strong><br>
+                • فروع مقفولة (لديها أجهزة مسجلة): <strong style="color: #dc3545;">{{ locked_branches }} 🔒</strong><br>
+                • فروع مفتوحة (بدون أجهزة): <strong style="color: #28a745;">{{ open_branches }} 🔓</strong>
+                <br><br>
+                <strong>💻 الأجهزة المسجلة:</strong> {{ total_devices }} (نشط: {{ active_devices }})<br>
+                <small style="color: #0c5460;">
+                    💡 لتسجيل جهاز جديد: استخدم صفحة تسجيل الأجهزة<br>
+                    🔐 السوبر يوزر يمكنه الدخول من أي جهاز دائماً
                 </small>
             </p>
         </div>
     </div>
-    {% else %}
-    <div class="messagelist">
-        <div class="warning" style="padding: 15px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px;">
-            <strong>🔓 نظام قفل الأجهزة: معطل</strong>
-            <p style="margin: 5px 0 0 0;">
-                جميع الموظفين يمكنهم الدخول من أي جهاز. 
-                يمكنك تفعيل النظام عندما تنتهي من توزيع الأجهزة.
-                <br>
-                <small>
-                    💡 لتفعيل النظام: اختر أي جهاز من القائمة، ثم اختر "🔐 تبديل حالة قفل الأجهزة" من قائمة الإجراءات.
-                </small>
-            </p>
-        </div>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}

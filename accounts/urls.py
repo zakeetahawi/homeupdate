@@ -21,6 +21,8 @@ urlpatterns = [
     # Device Management
     path('register-device/', views.register_device_view, name='register_device'),
     path('device-diagnostic/', views.device_diagnostic_view, name='device_diagnostic'),
+    path('qr-master/<int:qr_id>/print/', views.print_qr_master, name='print_qr_master'),
+    path('validate-qr-master/', views.validate_qr_master_ajax, name='validate_qr_master'),
     
     # Device API
     path('api/check-device/', api_views.check_device_api, name='check_device_api'),

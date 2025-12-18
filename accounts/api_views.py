@@ -317,40 +317,55 @@ def dashboard_trends(request):
 @csrf_exempt
 def check_device_api(request):
     """
-    API للتحقق من تسجيل جهاز بناءً على بصمته أو معرفه الثابت
+    API للتحقق من تسجيل جهاز بناءً على Token أو Fingerprint
+    يدعم النظام الجديد (Token + Enhanced Fingerprint)
     """
     try:
         data = json.loads(request.body)
+        device_token = data.get('device_token')
         device_fingerprint = data.get('device_fingerprint')
-        hardware_serial = data.get('hardware_serial')
         
-        if not device_fingerprint and not hardware_serial:
+        if not device_token and not device_fingerprint:
             return JsonResponse({
                 'registered': False,
-                'error': 'البصمة أو المعرف الثابت مطلوب'
+                'error': 'Device Token أو Fingerprint مطلوب'
             }, status=400)
         
         device = None
         found_by = None
+        fingerprint_similarity = None
         
-        # البحث أولاً بالـ hardware_serial (أكثر استقراراً)
-        if hardware_serial:
+        # 1. البحث بالـ device_token أولاً (الطريقة المفضلة)
+        if device_token:
             try:
-                device = BranchDevice.objects.get(hardware_serial=hardware_serial)
-                found_by = 'hardware_serial'
-            except BranchDevice.DoesNotExist:
+                import uuid
+                device_token_uuid = uuid.UUID(device_token)
+                device = BranchDevice.objects.get(
+                    device_token=device_token_uuid,
+                    is_active=True
+                )
+                found_by = 'device_token'
+                
+                # حساب تشابه البصمة إذا توفرت
+                if device_fingerprint and device.device_fingerprint:
+                    fingerprint_similarity = device.calculate_fingerprint_similarity(device_fingerprint)
+                
+            except (ValueError, BranchDevice.DoesNotExist):
                 pass
         
-        # إذا لم يُعثر عليه، البحث بالـ fingerprint
+        # 2. Fallback: البحث بالـ fingerprint (للأجهزة القديمة)
         if not device and device_fingerprint:
             try:
-                device = BranchDevice.objects.get(device_fingerprint=device_fingerprint)
+                device = BranchDevice.objects.get(
+                    device_fingerprint=device_fingerprint,
+                    is_active=True
+                )
                 found_by = 'fingerprint'
             except BranchDevice.DoesNotExist:
                 pass
         
         if device:
-            return JsonResponse({
+            response_data = {
                 'registered': True,
                 'device_name': device.device_name,
                 'branch_name': device.branch.name,
@@ -361,14 +376,21 @@ def check_device_api(request):
                 'last_used': device.last_used.strftime('%Y-%m-%d %H:%M') if device.last_used else None,
                 'last_used_by': device.last_used_by.username if device.last_used_by else None,
                 'found_by': found_by,
-                'hardware_serial': device.hardware_serial,
+                'device_token': str(device.device_token) if device.device_token else None,
+                'qr_version': device.registered_with_qr_version,
                 'device_fingerprint': device.device_fingerprint[:16] + '...' if device.device_fingerprint else None,
-            })
+            }
+            
+            # إضافة similarity إذا تم حسابه
+            if fingerprint_similarity is not None:
+                response_data['fingerprint_similarity'] = fingerprint_similarity
+            
+            return JsonResponse(response_data)
         else:
             return JsonResponse({
                 'registered': False,
-                'message': 'الجهاز غير مسجل في النظام',
-                'searched_serial': hardware_serial,
+                'message': 'الجهاز غير مسجل في النظام - يجب التسجيل عبر QR Master',
+                'searched_token': device_token if device_token else None,
                 'searched_fingerprint': device_fingerprint[:16] + '...' if device_fingerprint else None,
             })
             

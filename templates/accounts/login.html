@@ -32,6 +32,8 @@
                     <form method="post" id="loginForm">
                         {% csrf_token %}
                         <input type="hidden" name="device_info" id="deviceInfo">
+                        <input type="hidden" name="device_token" id="deviceToken">
+                        <input type="hidden" name="device_fingerprint" id="deviceFingerprint">
 
                         {% if form.non_field_errors %}
                         <div class="alert alert-danger">
@@ -90,10 +92,58 @@
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <script>
+// ====================
+// IndexedDB Helper
+// ====================
+const DeviceDB = {
+    dbName: 'ElkhawagaDeviceDB',
+    storeName: 'deviceToken',
+    
+    async init() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, 1);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(this.storeName)) {
+                    db.createObjectStore(this.storeName);
+                }
+            };
+        });
+    },
+    
+    async getToken() {
+        const db = await this.init();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction([this.storeName], 'readonly');
+            const store = tx.objectStore(this.storeName);
+            const request = store.get('device_token');
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+};
+
 // جمع بصمة الجهاز عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', async function() {
-    // جمع معلومات الجهاز
+    // 1. محاولة قراءة Token من IndexedDB
+    let deviceToken = null;
+    try {
+        deviceToken = await DeviceDB.getToken();
+        if (deviceToken) {
+            document.getElementById('deviceToken').value = deviceToken;
+            console.log('✅ Device Token loaded from IndexedDB');
+        } else {
+            console.log('⚠️ No device token found in IndexedDB - device not registered');
+        }
+    } catch(err) {
+        console.error('Failed to read device token:', err);
+    }
+    
+    // 2. جمع معلومات الجهاز (Stable factors only)
     const deviceInfo = {
         screen_resolution: window.screen.width + 'x' + window.screen.height,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -107,45 +157,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         cpu_cores: navigator.hardwareConcurrency || 0,
     };
     
-    // محاولة الحصول على Hardware Serial باستخدام Web Serial API أو Media Devices
-    try {
-        // طريقة 1: استخدام navigator.mediaDevices للحصول على device ID ثابت
-        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const deviceIds = devices.map(d => d.deviceId).filter(id => id && id !== '').sort();
-            if (deviceIds.length > 0) {
-                // استخدام أول device ID كـ hardware serial
-                deviceInfo.hardware_serial = deviceIds[0];
-            }
-        }
-    } catch(e) {
-        console.log('Could not get hardware serial:', e);
-    }
-    
-    // طريقة 2: إنشاء معرف ثابت من خصائص الجهاز
-    if (!deviceInfo.hardware_serial) {
-        // إنشاء معرف فريد من المعلومات الثابتة للجهاز
-        const stableInfo = [
-            navigator.hardwareConcurrency,
-            navigator.maxTouchPoints,
-            screen.width,
-            screen.height,
-            screen.colorDepth,
-            navigator.platform,
-            navigator.deviceMemory || 0
-        ].join('|');
-        
-        // حساب hash بسيط
-        let hash = 0;
-        for (let i = 0; i < stableInfo.length; i++) {
-            const char = stableInfo.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32bit integer
-        }
-        deviceInfo.hardware_serial = 'HW' + Math.abs(hash).toString(16);
-    }
-    
-    // Canvas Fingerprint
+    // 3. Canvas Fingerprint (Stable)
     try {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -163,7 +175,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         deviceInfo.canvas_fingerprint = '';
     }
     
-    // WebGL Fingerprint
+    // 4. WebGL Fingerprint (Stable - GPU Info)
     try {
         const canvas = document.createElement('canvas');
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -179,14 +191,62 @@ document.addEventListener('DOMContentLoaded', async function() {
         deviceInfo.webgl_renderer = '';
     }
     
-    // حفظ المعلومات في حقل مخفي
-    document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
-    console.log('Device info collected:', deviceInfo);
+    // 5. Audio Fingerprint (Stable)
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const analyser = audioContext.createAnalyser();
+        const gainNode = audioContext.createGain();
+        const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+        
+        gainNode.gain.value = 0;
+        oscillator.connect(analyser);
+        analyser.connect(scriptProcessor);
+        scriptProcessor.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.start(0);
+        const audioData = [];
+        scriptProcessor.onaudioprocess = function(event) {
+            const output = event.outputBuffer.getChannelData(0);
+            for (let i = 0; i < output.length && audioData.length < 100; i++) {
+                audioData.push(output[i]);
+            }
+        };
+        
+        deviceInfo.audio_fingerprint = CryptoJS.SHA256(audioData.join(',')).toString().substring(0, 16);
+        oscillator.stop();
+        audioContext.close();
+    } catch(e) {
+        deviceInfo.audio_fingerprint = '';
+    }
     
-    // إضافة مستمع لإرسال النموذج للتأكد من وجود البيانات
+    // 6. Generate Enhanced Fingerprint
+    const fingerprintString = JSON.stringify(deviceInfo, Object.keys(deviceInfo).sort());
+    const fingerprint = CryptoJS.SHA256(fingerprintString).toString();
+    
+    // 7. Save to form
+    document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
+    document.getElementById('deviceFingerprint').value = fingerprint;
+    
+    console.log('Device ready for login:', {
+        hasToken: !!deviceToken,
+        fingerprint: fingerprint.substring(0, 16) + '...'
+    });
+    
+    // 8. Form submission handler
     document.getElementById('loginForm').addEventListener('submit', function(e) {
+        // Ensure data is present
         if (!document.getElementById('deviceInfo').value) {
             document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
+        }
+        if (!document.getElementById('deviceFingerprint').value) {
+            document.getElementById('deviceFingerprint').value = fingerprint;
+        }
+        
+        // Warning if no token
+        if (!deviceToken) {
+            console.warn('⚠️ No device token - device may need registration');
         }
     });
 });

@@ -28,10 +28,52 @@
                         بمجرد التسجيل، سيتمكن أي موظف في هذا الفرع من استخدام الجهاز لتسجيل الدخول.
                     </div>
 
-                    <form method="post" id="registerDeviceForm">
+                    <!-- QR Master Scanner -->
+                    <div class="card border-warning mb-3" id="qrScannerSection">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="fas fa-qrcode"></i> مسح QR Master (خطوة إلزامية)</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-3">يجب مسح رمز QR Master من المدير لتسجيل جهاز جديد:</p>
+                            
+                            <div class="text-center mb-3">
+                                <button type="button" class="btn btn-warning btn-lg" id="startQRScanner">
+                                    <i class="fas fa-camera"></i> فتح الكاميرا لمسح QR
+                                </button>
+                            </div>
+                            
+                            <!-- QR Scanner Video -->
+                            <div id="qrVideoContainer" style="display: none;">
+                                <video id="qrVideo" style="width: 100%; max-width: 400px; border: 3px solid #ffc107; border-radius: 8px;"></video>
+                                <div class="text-center mt-2">
+                                    <button type="button" class="btn btn-sm btn-danger" id="stopQRScanner">
+                                        <i class="fas fa-stop"></i> إيقاف الكاميرا
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- OR Manual Entry -->
+                            <div class="text-center my-2">
+                                <small class="text-muted">--- أو ---</small>
+                            </div>
+                            
+                            <div class="input-group">
+                                <input type="text" id="qrMasterInput" name="qr_master_code" class="form-control" 
+                                       placeholder="أدخل كود QR Master يدوياً" required>
+                                <button type="button" class="btn btn-success" id="validateQRBtn">
+                                    <i class="fas fa-check"></i> تحقق
+                                </button>
+                            </div>
+                            
+                            <div id="qrValidationResult" class="mt-2"></div>
+                        </div>
+                    </div>
+
+                    <form method="post" id="registerDeviceForm" style="display: none;">
                         {% csrf_token %}
                         <input type="hidden" name="device_info" id="deviceInfo">
                         <input type="hidden" name="device_fingerprint" id="deviceFingerprint">
+                        <input type="hidden" name="qr_master_code" id="qrMasterCodeHidden">
 
                         <div class="mb-3">
                             <label for="branch" class="form-label">الفرع <span class="text-danger">*</span></label>
@@ -96,9 +138,151 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', async function() {
-    // جمع معلومات الجهاز
+// ====================
+// IndexedDB Helper
+// ====================
+const DeviceDB = {
+    dbName: 'ElkhawagaDeviceDB',
+    storeName: 'deviceToken',
+    
+    async init() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, 1);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(this.storeName)) {
+                    db.createObjectStore(this.storeName);
+                }
+            };
+        });
+    },
+    
+    async saveToken(token) {
+        const db = await this.init();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction([this.storeName], 'readwrite');
+            const store = tx.objectStore(this.storeName);
+            const request = store.put(token, 'device_token');
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    },
+    
+    async getToken() {
+        const db = await this.init();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction([this.storeName], 'readonly');
+            const store = tx.objectStore(this.storeName);
+            const request = store.get('device_token');
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+};
+
+// ====================
+// QR Scanner
+// ====================
+let qrStream = null;
+
+document.getElementById('startQRScanner').addEventListener('click', async function() {
+    try {
+        const video = document.getElementById('qrVideo');
+        qrStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' } 
+        });
+        video.srcObject = qrStream;
+        video.play();
+        document.getElementById('qrVideoContainer').style.display = 'block';
+        this.style.display = 'none';
+        
+        scanQRCode(video);
+    } catch(err) {
+        alert('فشل الوصول للكاميرا: ' + err.message);
+    }
+});
+
+document.getElementById('stopQRScanner').addEventListener('click', function() {
+    if (qrStream) {
+        qrStream.getTracks().forEach(track => track.stop());
+        document.getElementById('qrVideoContainer').style.display = 'none';
+        document.getElementById('startQRScanner').style.display = 'inline-block';
+    }
+});
+
+function scanQRCode(video) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    function tick() {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            if (code) {
+                document.getElementById('qrMasterInput').value = code.data;
+                document.getElementById('stopQRScanner').click();
+                document.getElementById('validateQRBtn').click();
+                return;
+            }
+        }
+        requestAnimationFrame(tick);
+    }
+    
+    tick();
+}
+
+// ====================
+// QR Validation
+// ====================
+document.getElementById('validateQRBtn').addEventListener('click', async function() {
+    const qrCode = document.getElementById('qrMasterInput').value.trim();
+    if (!qrCode) {
+        alert('الرجاء إدخال كود QR Master');
+        return;
+    }
+    
+    const resultDiv = document.getElementById('qrValidationResult');
+    resultDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> جارِ التحقق...</div>';
+    
+    try {
+        const response = await fetch('/accounts/validate-qr-master/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ qr_code: qrCode })
+        });
+        
+        const data = await response.json();
+        
+        if (data.valid) {
+            resultDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> QR Master صحيح! يمكنك الآن تسجيل الجهاز</div>';
+            document.getElementById('qrMasterCodeHidden').value = qrCode;
+            document.getElementById('qrScannerSection').style.display = 'none';
+            document.getElementById('registerDeviceForm').style.display = 'block';
+            await collectDeviceInfo();
+        } else {
+            resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-times-circle"></i> ' + (data.message || 'QR غير صالح') + '</div>';
+        }
+    } catch(err) {
+        resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> خطأ في الاتصال</div>';
+    }
+});
+
+// ====================
+// Device Fingerprint
+// ====================
+async function collectDeviceInfo() {
     const deviceInfo = {
         screen_resolution: window.screen.width + 'x' + window.screen.height,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -112,41 +296,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         cpu_cores: navigator.hardwareConcurrency || 0,
     };
     
-    // محاولة الحصول على Hardware Serial
-    try {
-        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const deviceIds = devices.map(d => d.deviceId).filter(id => id && id !== '').sort();
-            if (deviceIds.length > 0) {
-                deviceInfo.hardware_serial = deviceIds[0];
-            }
-        }
-    } catch(e) {
-        console.log('Could not get hardware serial:', e);
-    }
-    
-    // إنشاء معرف ثابت من خصائص الجهاز إذا لم يتوفر
-    if (!deviceInfo.hardware_serial) {
-        const stableInfo = [
-            navigator.hardwareConcurrency,
-            navigator.maxTouchPoints,
-            screen.width,
-            screen.height,
-            screen.colorDepth,
-            navigator.platform,
-            navigator.deviceMemory || 0
-        ].join('|');
-        
-        let hash = 0;
-        for (let i = 0; i < stableInfo.length; i++) {
-            const char = stableInfo.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        deviceInfo.hardware_serial = 'HW' + Math.abs(hash).toString(16);
-    }
-    
-    // Canvas Fingerprint
+    // Canvas Fingerprint (Stable)
     try {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -164,7 +314,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         deviceInfo.canvas_fingerprint = '';
     }
     
-    // WebGL Fingerprint
+    // WebGL Fingerprint (Stable - GPU Info)
     try {
         const canvas = document.createElement('canvas');
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -180,17 +330,46 @@ document.addEventListener('DOMContentLoaded', async function() {
         deviceInfo.webgl_renderer = '';
     }
     
-    // توليد البصمة
+    // Audio Fingerprint (Stable)
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const analyser = audioContext.createAnalyser();
+        const gainNode = audioContext.createGain();
+        const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+        
+        gainNode.gain.value = 0;
+        oscillator.connect(analyser);
+        analyser.connect(scriptProcessor);
+        scriptProcessor.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.start(0);
+        const audioData = [];
+        scriptProcessor.onaudioprocess = function(event) {
+            const output = event.outputBuffer.getChannelData(0);
+            for (let i = 0; i < output.length && audioData.length < 100; i++) {
+                audioData.push(output[i]);
+            }
+        };
+        
+        deviceInfo.audio_fingerprint = CryptoJS.SHA256(audioData.join(',')).toString().substring(0, 16);
+        oscillator.stop();
+        audioContext.close();
+    } catch(e) {
+        deviceInfo.audio_fingerprint = '';
+    }
+    
+    // Generate Enhanced Fingerprint
     const fingerprintString = JSON.stringify(deviceInfo, Object.keys(deviceInfo).sort());
     const fingerprint = CryptoJS.SHA256(fingerprintString).toString();
     
-    // حفظ المعلومات
+    // Save to form
     document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
     document.getElementById('deviceFingerprint').value = fingerprint;
     
-    // عرض المعلومات
-    const displaySerial = deviceInfo.hardware_serial || 'غير متوفر';
-    document.getElementById('hardwareSerialDisplay').textContent = displaySerial;
+    // Display info
+    document.getElementById('hardwareSerialDisplay').textContent = 'سيتم توليد Token فريد';
     document.getElementById('fingerprintDisplay').textContent = fingerprint.substring(0, 16) + '...';
     document.getElementById('browserDisplay').textContent = getBrowserInfo();
     document.getElementById('osDisplay').textContent = getOSInfo();
@@ -213,14 +392,39 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (platform.includes('Linux')) return 'Linux';
         return platform;
     }
+}
+
+// ====================
+// Form Submission
+// ====================
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('registerDeviceForm');
+    if (!form) return;
     
-    // التحقق قبل الإرسال
-    document.getElementById('registerDeviceForm').addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
         if (!document.getElementById('deviceFingerprint').value) {
             e.preventDefault();
-            alert('فشل في توليد بصمة الجهاز. يرجى إعادة تحميل الصفحة.');
+            alert('فشل في توليد بصمة الجهاز. يرجى إعادة المحاولة.');
+            return;
         }
+        
+        // After successful submission, save token to IndexedDB
+        // Note: Token will be returned in response, handled by server redirect
     });
+});
+
+// Listen for successful registration (if redirected back with token in URL)
+window.addEventListener('load', async function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const deviceToken = urlParams.get('device_token');
+    if (deviceToken) {
+        try {
+            await DeviceDB.saveToken(deviceToken);
+            console.log('✅ Device Token saved to IndexedDB');
+        } catch(err) {
+            console.error('Failed to save token:', err);
+        }
+    }
 });
 </script>
 {% endblock %}

@@ -14,7 +14,7 @@ from .models import (
     User, CompanyInfo, Branch, Department, Salesperson,
     Role, UserRole, SystemSettings, BranchMessage, DashboardYearSettings,
     ActivityLog, Employee, FormField, ContactFormSettings, FooterSettings, AboutPageSettings,
-    YearFilterExemption, InternalMessage, BranchDevice, UnauthorizedDeviceAttempt
+    YearFilterExemption, InternalMessage, BranchDevice, UnauthorizedDeviceAttempt, MasterQRCode
 )
 
 
@@ -335,6 +335,7 @@ class BranchAdmin(admin.ModelAdmin):
     list_filter = ('is_active',)
     search_fields = ('code', 'name', 'phone', 'email')
     ordering = ['code']
+    exclude = ('require_device_lock',)  # إخفاء حقل القفل تماماً
 
 
 
@@ -910,7 +911,8 @@ class BranchDeviceAdmin(admin.ModelAdmin):
     inlines = [UnauthorizedDeviceAttemptInline]
     list_display = (
         'device_name', 
-        'branch', 
+        'branch',
+        'branch_devices_count',
         'is_active', 
         'last_used_by', 
         'last_used',
@@ -970,16 +972,49 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         }),
     )
     
-    actions = ['activate_devices', 'deactivate_devices', 'block_devices', 'unblock_devices', 'export_device_list', 'toggle_device_restriction']
+    actions = ['activate_devices', 'deactivate_devices', 'block_devices', 'unblock_devices', 'export_device_list']
     
     def changelist_view(self, request, extra_context=None):
         """إضافة معلومات حالة النظام إلى صفحة القائمة"""
         extra_context = extra_context or {}
-        settings = SystemSettings.get_settings()
-        extra_context['device_restriction_enabled'] = settings.enable_device_restriction
+        
+        # حساب الفروع التي لديها أجهزة مسجلة (مقفولة) والفروع بدون أجهزة (مفتوحة)
+        from accounts.models import Branch
+        from django.db.models import Count, Q
+        
+        total_branches = Branch.objects.count()
+        
+        # الفروع التي لديها أجهزة مسجلة = مقفولة
+        branches_with_devices = Branch.objects.annotate(
+            device_count=Count('devices', filter=Q(devices__is_active=True))
+        ).filter(device_count__gt=0).count()
+        
+        # الفروع بدون أجهزة = مفتوحة
+        branches_without_devices = total_branches - branches_with_devices
+        
         extra_context['total_devices'] = BranchDevice.objects.count()
         extra_context['active_devices'] = BranchDevice.objects.filter(is_active=True).count()
+        extra_context['locked_branches'] = branches_with_devices  # فروع لديها أجهزة
+        extra_context['open_branches'] = branches_without_devices  # فروع بدون أجهزة
+        extra_context['total_branches'] = total_branches
+        
         return super().changelist_view(request, extra_context=extra_context)
+    
+    @admin.display(description='أجهزة الفرع')
+    def branch_devices_count(self, obj):
+        """عرض عدد الأجهزة المسجلة للفرع (يحدد حالة القفل)"""
+        if not obj.branch:
+            return '-'
+        
+        devices_count = BranchDevice.objects.filter(
+            branch=obj.branch,
+            is_active=True
+        ).count()
+        
+        if devices_count == 0:
+            return format_html('<span style="color: #28a745;">🔓 مفتوح (0 أجهزة)</span>')
+        else:
+            return format_html('<span style="color: #dc3545;">🔒 {} جهاز</span>', devices_count)
     
     def users_list_display(self, obj):
         """عرض قائمة المستخدمين الذين سجلوا الدخول من هذا الجهاز"""
@@ -1088,22 +1123,8 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         self.message_user(request, f'✅ تم إلغاء حظر {updated} جهاز')
     unblock_devices.short_description = '✅ إلغاء حظر الأجهزة المحددة'
     
-    def toggle_device_restriction(self, request, queryset):
-        """تفعيل أو تعطيل نظام قفل الأجهزة"""
-        settings = SystemSettings.get_settings()
-        settings.enable_device_restriction = not settings.enable_device_restriction
-        settings.save()
-        
-        status = "مفعل 🔒" if settings.enable_device_restriction else "معطل 🔓"
-        message = f'نظام قفل الأجهزة الآن: {status}'
-        
-        if settings.enable_device_restriction:
-            message += ' - الموظفون يجب أن يدخلوا من الأجهزة المسجلة فقط'
-        else:
-            message += ' - جميع الموظفين يمكنهم الدخول من أي جهاز'
-        
-        self.message_user(request, message, messages.SUCCESS)
-    toggle_device_restriction.short_description = '🔐 تبديل حالة قفل الأجهزة (تفعيل/تعطيل)'
+    # تم إلغاء نظام القفل العام وقفل الفروع
+    # المنطق الجديد: الفرع بدون أجهزة = مفتوح، الفرع مع أجهزة = مقفول على أجهزته فقط
     
     def get_queryset(self, request):
         """تحسين الاستعلامات"""
@@ -1239,6 +1260,156 @@ class UnauthorizedDeviceAttemptAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """السماح بالحذف للمشرفين فقط"""
         return request.user.is_superuser
+
+
+@admin.register(MasterQRCode)
+class MasterQRCodeAdmin(admin.ModelAdmin):
+    """إدارة QR Master - مفتاح التسجيل الرئيسي"""
+    list_display = (
+        'version_display',
+        'is_active',
+        'usage_count',
+        'created_at',
+        'created_by',
+        'last_used_at',
+    )
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('code', 'notes', 'created_by__username')
+    readonly_fields = (
+        'code',
+        'version',
+        'created_at',
+        'created_by',
+        'deactivated_at',
+        'deactivated_by',
+        'usage_count',
+        'last_used_at',
+        'qr_code_display',
+    )
+    fieldsets = (
+        ('معلومات QR Master', {
+            'fields': ('code', 'version', 'is_active', 'qr_code_display')
+        }),
+        ('إحصائيات الاستخدام', {
+            'fields': ('usage_count', 'last_used_at')
+        }),
+        ('معلومات الإنشاء', {
+            'fields': ('created_at', 'created_by')
+        }),
+        ('معلومات الإلغاء', {
+            'fields': ('deactivated_at', 'deactivated_by'),
+            'classes': ('collapse',)
+        }),
+        ('ملاحظات', {
+            'fields': ('notes',)
+        }),
+    )
+    actions = ['generate_new_qr_master']
+    
+    def version_display(self, obj):
+        """عرض رقم الإصدار مع رمز"""
+        if obj.is_active:
+            return mark_safe(f'<span style="color: green; font-weight: bold;">🟢 v{obj.version}</span>')
+        return mark_safe(f'<span style="color: red;">🔴 v{obj.version}</span>')
+    version_display.short_description = 'الإصدار'
+    
+    def qr_code_display(self, obj):
+        """عرض QR Code قابل للطباعة"""
+        if not obj.code:
+            return '-'
+        
+        import qrcode
+        from io import BytesIO
+        import base64
+        
+        # توليد QR Code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(obj.code)
+        qr.make(fit=True)
+        
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # تحويل إلى base64
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        return mark_safe(f'''
+            <div style="text-align: center; padding: 20px; background: white; border: 2px solid #ddd; border-radius: 8px;">
+                <img src="data:image/png;base64,{img_base64}" alt="QR Master Code" style="max-width: 300px;" />
+                <p style="margin-top: 15px; font-family: monospace; font-size: 12px; color: #666;">
+                    {obj.code}
+                </p>
+                <p style="margin-top: 10px;">
+                    <a href="/accounts/qr-master/{obj.pk}/print/" 
+                       class="button" target="_blank">
+                        🖨️ طباعة QR Code
+                    </a>
+                </p>
+            </div>
+        ''')
+    qr_code_display.short_description = 'QR Code'
+    
+    def changelist_view(self, request, extra_context=None):
+        """إضافة معلومات إضافية لصفحة القائمة"""
+        extra_context = extra_context or {}
+        active_qr = MasterQRCode.get_active()
+        
+        if active_qr:
+            extra_context['active_qr'] = active_qr
+            extra_context['total_devices_registered'] = BranchDevice.objects.filter(
+                registered_with_qr_version=active_qr.version
+            ).count()
+        
+        extra_context['total_qr_masters'] = MasterQRCode.objects.count()
+        extra_context['active_count'] = MasterQRCode.objects.filter(is_active=True).count()
+        
+        return super().changelist_view(request, extra_context=extra_context)
+    
+    def generate_new_qr_master(self, request, queryset):
+        """توليد QR Master جديد"""
+        from django.contrib import messages
+        
+        # السماح فقط للـ superuser
+        if not request.user.is_superuser:
+            self.message_user(request, '❌ فقط مدير النظام يمكنه توليد QR Master جديد', messages.ERROR)
+            return
+        
+        # التأكيد
+        active_qr = MasterQRCode.get_active()
+        old_version = active_qr.version if active_qr else 0
+        
+        # توليد QR جديد
+        new_qr = MasterQRCode.generate_new(
+            user=request.user,
+            notes=f'تم التجديد من Admin Panel بواسطة {request.user.username}'
+        )
+        
+        self.message_user(
+            request,
+            mark_safe(
+                f'✅ تم توليد QR Master جديد بنجاح!<br>'
+                f'<strong>الإصدار:</strong> v{new_qr.version}<br>'
+                f'<strong>الإصدار القديم:</strong> v{old_version} (تم إلغاؤه)<br>'
+                f'<a href="{reverse("admin:accounts_masterqrcode_change", args=[new_qr.pk])}">عرض QR الجديد</a>'
+            ),
+            messages.SUCCESS
+        )
+    
+    generate_new_qr_master.short_description = '🔄 توليد QR Master جديد'
+    
+    def has_add_permission(self, request):
+        """منع الإضافة اليدوية - يجب استخدام Action"""
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        """منع الحذف - فقط الإلغاء"""
+        return False
 
 
 

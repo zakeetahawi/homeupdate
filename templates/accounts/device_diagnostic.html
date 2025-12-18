@@ -20,21 +20,29 @@
                         <div class="card-body">
                             <h6 class="card-title"><i class="fas fa-fingerprint"></i> معلومات الجهاز الحالي</h6>
                             <div id="deviceInfoDisplay">
-                                <p class="mb-2"><strong>🔐 المعرف الثابت للجهاز (Hardware Serial):</strong></p>
-                                <p class="font-monospace bg-white p-2 border rounded text-primary fw-bold" id="hardwareSerialDisplay">جارِ الحساب...</p>
-                                <small class="text-muted d-block mb-3">هذا المعرف ثابت ولا يتغير بتغيير المتصفح</small>
+                                <p class="mb-2"><strong>🎫 Device Token (UUID):</strong></p>
+                                <p class="font-monospace bg-white p-2 border rounded text-primary fw-bold" id="deviceTokenDisplay">جارِ التحقق من IndexedDB...</p>
+                                <small class="text-muted d-block mb-3">المعرف الدائم للجهاز - يُحفظ في المتصفح بعد التسجيل</small>
                                 
-                                <p class="mb-2"><strong>بصمة إضافية (Fingerprint):</strong></p>
+                                <p class="mb-2"><strong>🔐 Enhanced Fingerprint (SHA-256):</strong></p>
                                 <p class="font-monospace bg-white p-2 border rounded small text-muted" id="fingerprintDisplay">جارِ الحساب...</p>
+                                <small class="text-muted d-block mb-3">البصمة المحسّنة (GPU + Canvas + Audio + Platform)</small>
                                 
                                 <hr>
                                 
-                                <p class="mb-1"><strong>المتصفح:</strong> <span id="browserDisplay">...</span></p>
-                                <p class="mb-1"><strong>نظام التشغيل:</strong> <span id="osDisplay">...</span></p>
-                                <p class="mb-1"><strong>دقة الشاشة:</strong> <span id="screenDisplay">...</span></p>
-                                <p class="mb-1"><strong>المنطقة الزمنية:</strong> <span id="timezoneDisplay">...</span></p>
-                                <p class="mb-1"><strong>عدد الأنوية:</strong> <span id="coresDisplay">...</span></p>
-                                <p class="mb-0"><strong>عمق الألوان:</strong> <span id="colorDepthDisplay">...</span></p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>المتصفح:</strong> <span id="browserDisplay">...</span></p>
+                                        <p class="mb-1"><strong>نظام التشغيل:</strong> <span id="osDisplay">...</span></p>
+                                        <p class="mb-1"><strong>دقة الشاشة:</strong> <span id="screenDisplay">...</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>المنطقة الزمنية:</strong> <span id="timezoneDisplay">...</span></p>
+                                        <p class="mb-1"><strong>عدد الأنوية:</strong> <span id="coresDisplay">...</span></p>
+                                        <p class="mb-1"><strong>GPU:</strong> <span id="gpuDisplay">...</span></p>
+                                        <p class="mb-0"><strong>عمق الألوان:</strong> <span id="colorDepthDisplay">...</span></p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -71,11 +79,62 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <script>
+// ====================
+// IndexedDB Helper
+// ====================
+const DeviceDB = {
+    dbName: 'ElkhawagaDeviceDB',
+    storeName: 'deviceToken',
+    
+    async init() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, 1);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(this.storeName)) {
+                    db.createObjectStore(this.storeName);
+                }
+            };
+        });
+    },
+    
+    async getToken() {
+        const db = await this.init();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction([this.storeName], 'readonly');
+            const store = tx.objectStore(this.storeName);
+            const request = store.get('device_token');
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+};
+
 let currentFingerprint = '';
-let currentHardwareSerial = '';
+let currentDeviceToken = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
-    // جمع معلومات الجهاز
+    // 1. محاولة قراءة Token من IndexedDB
+    try {
+        currentDeviceToken = await DeviceDB.getToken();
+        if (currentDeviceToken) {
+            document.getElementById('deviceTokenDisplay').innerHTML = 
+                `<span class="text-success">${currentDeviceToken}</span><br>` +
+                `<small class="text-success">✅ تم العثور على Token محلياً - الجهاز مسجل</small>`;
+        } else {
+            document.getElementById('deviceTokenDisplay').innerHTML = 
+                `<span class="text-warning">لا يوجد Token</span><br>` +
+                `<small class="text-warning">⚠️ الجهاز غير مسجل - يجب التسجيل أولاً</small>`;
+        }
+    } catch(err) {
+        document.getElementById('deviceTokenDisplay').innerHTML = 
+            `<span class="text-danger">خطأ في IndexedDB</span><br>` +
+            `<small class="text-danger">❌ ${err.message}</small>`;
+    }
+    
+    // 2. جمع معلومات الجهاز (Stable factors)
     const deviceInfo = {
         screen_resolution: window.screen.width + 'x' + window.screen.height,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -89,43 +148,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         cpu_cores: navigator.hardwareConcurrency || 0,
     };
     
-    // محاولة الحصول على Hardware Serial
-    try {
-        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const deviceIds = devices.map(d => d.deviceId).filter(id => id && id !== '').sort();
-            if (deviceIds.length > 0) {
-                deviceInfo.hardware_serial = deviceIds[0];
-                currentHardwareSerial = deviceIds[0];
-            }
-        }
-    } catch(e) {
-        console.log('Could not get hardware serial:', e);
-    }
-    
-    // إنشاء معرف ثابت إذا لم يتوفر
-    if (!deviceInfo.hardware_serial) {
-        const stableInfo = [
-            navigator.hardwareConcurrency,
-            navigator.maxTouchPoints,
-            screen.width,
-            screen.height,
-            screen.colorDepth,
-            navigator.platform,
-            navigator.deviceMemory || 0
-        ].join('|');
-        
-        let hash = 0;
-        for (let i = 0; i < stableInfo.length; i++) {
-            const char = stableInfo.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        deviceInfo.hardware_serial = 'HW' + Math.abs(hash).toString(16);
-        currentHardwareSerial = deviceInfo.hardware_serial;
-    }
-    
-    // Canvas Fingerprint
+    // 3. Canvas Fingerprint (Stable)
     try {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -135,15 +158,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         ctx.fillStyle = '#f60';
         ctx.fillRect(125, 1, 62, 20);
         ctx.fillStyle = '#069';
-        ctx.fillText('Device Fingerprint', 2, 15);
+        ctx.fillText('Elkhawaga Device', 2, 15);
         ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-        ctx.fillText('Device Fingerprint', 4, 17);
+        ctx.fillText('Elkhawaga Device', 4, 17);
         deviceInfo.canvas_fingerprint = canvas.toDataURL();
     } catch(e) {
         deviceInfo.canvas_fingerprint = '';
     }
     
-    // WebGL Fingerprint
+    // 4. WebGL Fingerprint (GPU - Very Stable)
     try {
         const canvas = document.createElement('canvas');
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -159,31 +182,51 @@ document.addEventListener('DOMContentLoaded', async function() {
         deviceInfo.webgl_renderer = '';
     }
     
-    // توليد البصمة بنفس طريقة النظام
-    const fingerprintData = {
-        'accept_encoding': '',
-        'accept_language': '',
-        'canvas_fingerprint': deviceInfo.canvas_fingerprint,
-        'platform': deviceInfo.platform,
-        'screen_resolution': deviceInfo.screen_resolution,
-        'timezone': deviceInfo.timezone,
-        'user_agent': deviceInfo.user_agent,
-        'webgl_renderer': deviceInfo.webgl_renderer || '',
-        'webgl_vendor': deviceInfo.webgl_vendor || ''
-    };
+    // 5. Audio Fingerprint (Stable)
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const analyser = audioContext.createAnalyser();
+        const gainNode = audioContext.createGain();
+        const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+        
+        gainNode.gain.value = 0;
+        oscillator.connect(analyser);
+        analyser.connect(scriptProcessor);
+        scriptProcessor.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.start(0);
+        const audioData = [];
+        scriptProcessor.onaudioprocess = function(event) {
+            const output = event.outputBuffer.getChannelData(0);
+            for (let i = 0; i < output.length && audioData.length < 100; i++) {
+                audioData.push(output[i]);
+            }
+        };
+        
+        deviceInfo.audio_fingerprint = CryptoJS.SHA256(audioData.join(',')).toString().substring(0, 16);
+        oscillator.stop();
+        audioContext.close();
+    } catch(e) {
+        deviceInfo.audio_fingerprint = '';
+    }
     
-    const fingerprintString = JSON.stringify(fingerprintData, Object.keys(fingerprintData).sort());
+    // 6. Generate Enhanced Fingerprint (Same as backend)
+    const fingerprintString = JSON.stringify(deviceInfo, Object.keys(deviceInfo).sort());
     currentFingerprint = CryptoJS.SHA256(fingerprintString).toString();
     
-    // عرض المعلومات
-    document.getElementById('hardwareSerialDisplay').textContent = currentHardwareSerial || 'غير متوفر';
+    // 7. Display info
     document.getElementById('fingerprintDisplay').textContent = currentFingerprint;
     document.getElementById('browserDisplay').textContent = getBrowserInfo();
     document.getElementById('osDisplay').textContent = getOSInfo();
     document.getElementById('screenDisplay').textContent = deviceInfo.screen_resolution;
     document.getElementById('timezoneDisplay').textContent = deviceInfo.timezone;
     document.getElementById('coresDisplay').textContent = deviceInfo.cpu_cores || 'غير معروف';
-    document.getElementById('colorDepthDisplay').textContent = deviceInfo.color_depth + ' bit';
+    document.getElementById('colorDepthDisplay').textContent = (deviceInfo.color_depth || 24) + ' bit';
+    
+    const gpuInfo = deviceInfo.webgl_renderer || deviceInfo.webgl_vendor || 'غير متوفر';
+    document.getElementById('gpuDisplay').textContent = gpuInfo.substring(0, 40) + (gpuInfo.length > 40 ? '...' : '');
     
     function getBrowserInfo() {
         const ua = navigator.userAgent;
@@ -203,7 +246,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
+// ====================
 // التحقق من تسجيل الجهاز
+// ====================
 document.getElementById('checkDeviceBtn').addEventListener('click', function() {
     const resultDiv = document.getElementById('checkResult');
     resultDiv.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div><p>جارِ التحقق...</p></div>';
@@ -215,8 +260,8 @@ document.getElementById('checkDeviceBtn').addEventListener('click', function() {
             'X-CSRFToken': '{{ csrf_token }}'
         },
         body: JSON.stringify({
-            device_fingerprint: currentFingerprint,
-            hardware_serial: currentHardwareSerial
+            device_token: currentDeviceToken,
+            device_fingerprint: currentFingerprint
         })
     })
     .then(response => response.json())
@@ -227,31 +272,53 @@ document.getElementById('checkDeviceBtn').addEventListener('click', function() {
                 statusBadge = '<span class="badge bg-danger">محظور 🚫</span>';
             }
             
+            // Calculate similarity if provided
+            let similarityBadge = '';
+            if (data.fingerprint_similarity !== undefined) {
+                const similarity = (data.fingerprint_similarity * 100).toFixed(1);
+                const color = similarity >= 80 ? 'success' : similarity >= 60 ? 'warning' : 'danger';
+                similarityBadge = `<span class="badge bg-${color}">تطابق البصمة: ${similarity}%</span>`;
+            }
+            
             resultDiv.innerHTML = `
                 <div class="alert alert-success">
                     <h5><i class="fas fa-check-circle"></i> الجهاز مسجل ✅</h5>
                     <hr>
                     <p class="mb-1"><strong>اسم الجهاز:</strong> ${data.device_name}</p>
                     <p class="mb-1"><strong>الفرع:</strong> ${data.branch_name}</p>
-                    <p class="mb-1"><strong>الحالة:</strong> ${statusBadge}</p>
-                    <p class="mb-1"><strong>المعرف المسجل:</strong> <code>${data.hardware_serial || 'غير متوفر'}</code></p>
+                    <p class="mb-1"><strong>الحالة:</strong> ${statusBadge} ${similarityBadge}</p>
+                    <p class="mb-1"><strong>Device Token:</strong> <code class="text-primary">${data.device_token || 'غير متوفر'}</code></p>
+                    <p class="mb-1"><strong>مسجل بـ QR Master v${data.qr_version || 'N/A'}</strong></p>
                     ${data.blocked_reason ? `<p class="mb-1 text-danger"><strong>سبب الحظر:</strong> ${data.blocked_reason}</p>` : ''}
                     ${data.last_used ? `<p class="mb-0"><strong>آخر استخدام:</strong> ${data.last_used}${data.last_used_by ? ' بواسطة ' + data.last_used_by : ''}</p>` : '<p class="mb-0"><strong>آخر استخدام:</strong> لم يُستخدم بعد</p>'}
                     <hr>
-                    <small class="text-muted">تم العثور على الجهاز بواسطة: ${data.found_by === 'hardware_serial' ? 'المعرف الثابت' : 'البصمة'}</small>
+                    <small class="text-muted">
+                        طريقة العثور: ${data.found_by === 'device_token' ? '🎫 Device Token (مفضل)' : '🔐 Fingerprint (legacy)'}
+                    </small>
                 </div>
             `;
         } else {
             resultDiv.innerHTML = `
                 <div class="alert alert-warning">
                     <h5><i class="fas fa-exclamation-triangle"></i> الجهاز غير مسجل ⚠️</h5>
-                    <p>هذا الجهاز غير مسجل في النظام. يجب تسجيله أولاً لتتمكن من تسجيل الدخول.</p>
+                    <p>هذا الجهاز غير مسجل في النظام. يجب تسجيله أولاً باستخدام QR Master لتتمكن من تسجيل الدخول.</p>
                     <hr>
-                    <small class="text-muted">
-                        تم البحث بـ:<br>
-                        - المعرف الثابت: <code>${data.searched_serial || 'غير متوفر'}</code><br>
-                        - البصمة: <code>${data.searched_fingerprint || 'غير متوفر'}</code>
-                    </small>
+                    <p class="mb-2"><strong>تم البحث بـ:</strong></p>
+                    <ul class="mb-0">
+                        ${currentDeviceToken ? `<li>🎫 Device Token: <code>${currentDeviceToken}</code></li>` : '<li>⚠️ لا يوجد Token محفوظ</li>'}
+                        <li>🔐 Fingerprint: <code>${currentFingerprint.substring(0, 16)}...</code></li>
+                    </ul>
+                    <hr>
+                    <div class="alert alert-info mb-0 mt-2">
+                        <strong>📋 خطوات التسجيل:</strong>
+                        <ol class="mb-0 mt-2">
+                            <li>احصل على QR Master من المدير</li>
+                            <li>اذهب لصفحة "تسجيل جهاز جديد"</li>
+                            <li>امسح QR Master</li>
+                            <li>أدخل بيانات الجهاز</li>
+                            <li>سيتم حفظ Token تلقائياً</li>
+                        </ol>
+                    </div>
                 </div>
             `;
         }

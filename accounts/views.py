@@ -14,7 +14,7 @@ import hashlib
 import json
 import traceback
 
-from .models import CompanyInfo, FormField, Department, Salesperson, Branch, Role, UserRole, BranchDevice
+from .models import CompanyInfo, FormField, Department, Salesperson, Branch, Role, UserRole, BranchDevice, MasterQRCode, UnauthorizedDeviceAttempt
 from .forms import CompanyInfoForm, FormFieldForm, DepartmentForm, SalespersonForm, RoleForm, RoleAssignForm
 
 # سيتم إضافة دوال الإشعارات هنا
@@ -24,14 +24,9 @@ User = get_user_model()
 
 def generate_device_fingerprint(request):
     """
-    توليد بصمة فريدة للجهاز بناءً على معلومات متعددة
+    توليد بصمة محسّنة للجهاز - تركز على العوامل الثابتة
+    تستبعد العوامل المتغيرة (دقة الشاشة، user agent version)
     """
-    # جمع معلومات من الخادم
-    user_agent = request.META.get('HTTP_USER_AGENT', '')
-    accept_language = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
-    accept_encoding = request.META.get('HTTP_ACCEPT_ENCODING', '')
-    
-    # جمع معلومات من العميل (JavaScript)
     device_info = request.POST.get('device_info', '{}')
     
     try:
@@ -39,24 +34,36 @@ def generate_device_fingerprint(request):
     except:
         device_data = {}
     
-    # دمج جميع المعلومات
-    fingerprint_data = {
-        'user_agent': user_agent,
-        'accept_language': accept_language,
-        'accept_encoding': accept_encoding,
-        'screen_resolution': device_data.get('screen_resolution', ''),
-        'timezone': device_data.get('timezone', ''),
-        'platform': device_data.get('platform', ''),
-        'canvas_fingerprint': device_data.get('canvas_fingerprint', ''),
+    # العوامل الثابتة فقط - لا تتغير بسهولة
+    stable_fingerprint_data = {
+        # GPU Info (ثابت جداً)
         'webgl_vendor': device_data.get('webgl_vendor', ''),
         'webgl_renderer': device_data.get('webgl_renderer', ''),
+        
+        # Canvas (ثابت نسبياً)
+        'canvas_hash': device_data.get('canvas_fingerprint', ''),
+        
+        # Audio (ثابت جداً)
+        'audio_hash': device_data.get('audio_fingerprint', ''),
+        
+        # Hardware (ثابت)
+        'cpu_cores': device_data.get('hardware_concurrency', ''),
+        'device_memory': device_data.get('device_memory', ''),
+        
+        # Platform (شبه ثابت)
+        'platform': device_data.get('platform', ''),
+        
+        # Timezone (نادر التغيير)
+        'timezone': device_data.get('timezone', ''),
+        
+        # استبعدنا: screen_resolution, user_agent (يتغيران كثيراً)
     }
     
-    # إنشاء hash من جميع المعلومات
-    fingerprint_string = json.dumps(fingerprint_data, sort_keys=True)
+    # إنشاء hash من العوامل الثابتة فقط
+    fingerprint_string = json.dumps(stable_fingerprint_data, sort_keys=True)
     fingerprint_hash = hashlib.sha256(fingerprint_string.encode()).hexdigest()
     
-    return fingerprint_hash
+    return fingerprint_hash, device_data
 
 def get_client_ip(request):
     """
@@ -172,11 +179,24 @@ def login_view(request):
 
                     if user is not None:
                         
-                        # التحقق من تفعيل نظام قفل الأجهزة
-                        from accounts.models import SystemSettings
-                        device_restriction_enabled = SystemSettings.get_settings().enable_device_restriction
+                        # المنطق الجديد: الفرع بدون أجهزة مسجلة = مفتوح تلقائياً
+                        # الفرع مع أجهزة مسجلة = مقفول على هذه الأجهزة فقط
+                        from accounts.models import BranchDevice
                         
-                        logger.info(f"🔐 Device restriction: {'Enabled' if device_restriction_enabled else 'Disabled'}")
+                        # التحقق من وجود أجهزة مسجلة لفرع المستخدم
+                        user_branch_has_devices = False
+                        if user.branch:
+                            user_branch_has_devices = BranchDevice.objects.filter(
+                                branch=user.branch,
+                                is_active=True
+                            ).exists()
+                        
+                        # القفل مفعل فقط إذا كان لفرع المستخدم أجهزة مسجلة
+                        device_restriction_enabled = user_branch_has_devices
+                        
+                        logger.info(f"🏢 User branch: {user.branch.name if user.branch else 'None'}")
+                        logger.info(f"💻 User branch has registered devices: {user_branch_has_devices}")
+                        logger.info(f"✅ Device restriction enabled: {device_restriction_enabled}")
                         
                         # الحصول على معلومات الجهاز
                         device_info = request.POST.get('device_info', '')
@@ -195,71 +215,101 @@ def login_view(request):
                         denial_reason_key = ""
                         device_check_performed = False
                         
-                        # السوبر يوزر والمدير العام يمكنهم الدخول من أي جهاز
+                        # السوبر يوزر والمدير العام يمكنهما الدخول من أي جهاز
                         if user.is_superuser or user.is_general_manager:
                             device_authorized = True
-                            logger.info(f"✅ Superuser/General Manager {username} authorized from any device")
+                            logger.info(f"✅ {'Superuser' if user.is_superuser else 'General Manager'} {username} authorized from any device (bypass device lock)")
                         else:
-                            # فحص الجهاز دائماً (حتى لو كان النظام معطلاً) لأغراض التسجيل والمراقبة
+                            # فحص الجهاز دائماً لجميع المستخدمين (للمراقبة والتسجيل)
                             device_check_performed = True
-                            logger.info(f"🔍 Checking device (restriction: {'enabled' if device_restriction_enabled else 'disabled'})...")
+                            logger.info(f"🔍 Checking device (User branch restriction: {'enabled' if device_restriction_enabled else 'disabled'})...")
                             try:
-                                # توليد البصمة مبكراً للاستخدام في البحث
-                                device_fingerprint = generate_device_fingerprint(request)
-                                logger.info(f"🔐 Device fingerprint: {device_fingerprint[:16]}...")
+                                # 1. الحصول على device_token من الطلب
+                                device_token_str = request.POST.get('device_token', '').strip()
                                 
-                                # محاولة البحث بالـ hardware_serial أولاً (أكثر استقراراً)
-                                if hardware_serial:
+                                # 2. توليد البصمة المحسّنة
+                                device_fingerprint, full_device_data = generate_device_fingerprint(request)
+                                logger.info(f"🔐 Device fingerprint: {device_fingerprint[:16]}...")
+                                if device_token_str:
+                                    logger.info(f"🎫 Device token provided: {device_token_str[:8]}...")
+                                else:
+                                    logger.warning(f"⚠️ No device token provided")
+                                
+                                # 3. البحث بالـ device_token أولاً (الطريقة المفضلة)
+                                if device_token_str:
                                     try:
+                                        import uuid
+                                        device_token_uuid = uuid.UUID(device_token_str)
                                         device_obj = BranchDevice.objects.get(
-                                            hardware_serial=hardware_serial,
+                                            device_token=device_token_uuid,
                                             is_active=True
                                         )
-                                        logger.info(f"✅ Device found by serial: {device_obj.device_name} - Branch: {device_obj.branch.name}")
-                                        # تحديث البصمة إذا تغيرت
-                                        if device_obj.device_fingerprint != device_fingerprint:
-                                            device_obj.device_fingerprint = device_fingerprint
-                                            device_obj.save(update_fields=['device_fingerprint'])
-                                            logger.info(f"🔄 Updated fingerprint for device: {device_obj.device_name}")
+                                        logger.info(f"✅ Device found by TOKEN: {device_obj.device_name} (Branch: {device_obj.branch.name})")
+                                        
+                                        # 4. حساب تشابه البصمة (Similarity Check)
+                                        similarity = device_obj.calculate_fingerprint_similarity(device_fingerprint)
+                                        logger.info(f"📊 Fingerprint similarity: {similarity:.2%}")
+                                        
+                                        if similarity >= 0.80:
+                                            # البصمة متطابقة بدرجة كافية
+                                            logger.info(f"✅ Fingerprint similarity OK ({similarity:.2%} >= 80%)")
+                                            
+                                            # تحديث البصمة تلقائياً إذا تغيرت
+                                            if device_obj.device_fingerprint != device_fingerprint:
+                                                old_fingerprint = device_obj.device_fingerprint[:16] if device_obj.device_fingerprint else 'None'
+                                                device_obj.update_fingerprint(device_fingerprint, full_device_data)
+                                                logger.info(f"🔄 Auto-updated fingerprint: {old_fingerprint}... → {device_fingerprint[:16]}...")
+                                        else:
+                                            # البصمة مختلفة جداً - مشكوك فيه!
+                                            denial_reason = f'⚠️ تغيير كبير في بصمة الجهاز (تشابه: {similarity:.1%})'
+                                            denial_reason_key = 'fingerprint_mismatch'
+                                            logger.warning(f"❌ Fingerprint similarity too low: {similarity:.2%} < 80%")
+                                            logger.warning(f"⚠️ Possible token theft or major hardware change!")
+                                            device_obj = None
+                                            
+                                    except ValueError:
+                                        logger.warning(f"⚠️ Invalid device_token format: {device_token_str}")
                                     except BranchDevice.DoesNotExist:
-                                        logger.warning(f"⚠️ Device with serial {hardware_serial} not found, trying fingerprint...")
+                                        logger.warning(f"⚠️ Device token not found in database, trying fingerprint fallback...")
                                 
-                                # إذا لم يُعثر على الجهاز بالسيريال، جرب البصمة
+                                # 5. Fallback: البحث بالبصمة فقط (للأجهزة القديمة قبل Token system)
                                 if not device_obj:
                                     try:
                                         device_obj = BranchDevice.objects.get(
                                             device_fingerprint=device_fingerprint,
                                             is_active=True
                                         )
-                                        logger.info(f"✅ Device found by fingerprint: {device_obj.device_name} - Branch: {device_obj.branch.name}")
-                                        # تحديث الـ hardware_serial إذا تغير
-                                        if hardware_serial and device_obj.hardware_serial != hardware_serial:
-                                            old_serial = device_obj.hardware_serial
-                                            device_obj.hardware_serial = hardware_serial
-                                            device_obj.save(update_fields=['hardware_serial'])
-                                            logger.info(f"🔄 Updated hardware_serial for device: {device_obj.device_name} (from {old_serial} to {hardware_serial})")
+                                        logger.info(f"✅ Device found by FINGERPRINT (legacy): {device_obj.device_name}")
+                                        logger.warning(f"⚠️ Device using legacy fingerprint-only method. Consider re-registering.")
                                     except BranchDevice.DoesNotExist:
-                                        denial_reason = '🚫 جهاز غير مسجل'
+                                        denial_reason = '🚫 جهاز غير مسجل - يجب تسجيل الجهاز عبر QR Master أولاً'
                                         denial_reason_key = 'device_not_registered'
                                         logger.warning(f"❌ Unknown device attempted login for user {username}")
-                                        logger.warning(f"📊 Total active devices in system: {BranchDevice.objects.filter(is_active=True).count()}")
+                                        logger.warning(f"📊 Total active devices: {BranchDevice.objects.filter(is_active=True).count()}")
                                 
                                 # التحقق من الصلاحية إذا وُجد الجهاز
                                 if device_obj:
                                     # التحقق من حظر الجهاز أولاً
                                     if device_obj.is_blocked:
+                                        device_authorized = False
                                         denial_reason = f'🚫 هذا الجهاز محظور'
                                         denial_reason_key = 'device_blocked'
                                         logger.warning(f"❌ Blocked device attempted login: {device_obj.device_name}. Reason: {device_obj.blocked_reason}")
-                                    elif user.branch == device_obj.branch:
+                                    # التحقق من تطابق الفرع - يجب أن يكون كلاهما موجود ومتطابق
+                                    elif user.branch and device_obj.branch and user.branch.id == device_obj.branch.id:
                                         device_authorized = True
                                         # تحديث معلومات آخر استخدام
                                         device_obj.mark_used(user=user, ip_address=ip)
                                         logger.info(f"✅ User {username} authorized from device: {device_obj.device_name} - Branch: {device_obj.branch.name}")
                                     else:
-                                        denial_reason = f'⛔ فرع غير متطابق: الجهاز لفرع "{device_obj.branch.name}" وأنت من فرع "{user.branch.name if user.branch else "غير محدد"}".'
+                                        # الفرع غير متطابق أو أحدهما غير موجود
+                                        device_authorized = False
+                                        user_branch_name = user.branch.name if user.branch else "غير محدد"
+                                        device_branch_name = device_obj.branch.name if device_obj.branch else "غير محدد"
+                                        denial_reason = f'⛔ فرع غير متطابق: الجهاز لفرع "{device_branch_name}" وأنت من فرع "{user_branch_name}"'
                                         denial_reason_key = 'wrong_branch'
-                                        logger.warning(f"❌ User {username} (Branch: {user.branch.name if user.branch else 'None'}) tried to login from device of different branch: {device_obj.branch.name}")
+                                        logger.warning(f"❌ BRANCH MISMATCH: User {username} (Branch: {user_branch_name}) attempted login from device of branch: {device_branch_name}")
+                                        logger.warning(f"🔒 Device restriction enabled for user's branch: {device_restriction_enabled}")
                                 else:
                                     # الجهاز غير موجود في النظام
                                     if not denial_reason_key:
@@ -270,10 +320,35 @@ def login_view(request):
                                 logger.error(f"Device check error: {device_error}")
                                 logger.error(traceback.format_exc())
                             
-                            # إذا كان نظام القفل معطل، السماح بالدخول رغم عدم التطابق
-                            if not device_restriction_enabled:
-                                device_authorized = True
-                                logger.info(f"⚠️ Device restriction disabled - allowing login despite device check result")
+                            # === منطق القرار النهائي ===
+                            # القاعدة الجديدة: إذا كان الجهاز مسجل لفرع معين، يجب أن يستخدمه فقط موظفي هذا الفرع
+                            
+                            # السيناريو 1: الجهاز موجود ومسجل في النظام
+                            if device_obj:
+                                # الجهاز مسجل لفرع معين - يجب أن يستخدمه فقط موظفي هذا الفرع
+                                if device_authorized:
+                                    # الفرع متطابق - السماح بالدخول
+                                    logger.info(f"✅ LOGIN ALLOWED - User and device from same branch: {device_obj.branch.name}")
+                                else:
+                                    # الفرع غير متطابق أو الجهاز محظور - منع الدخول
+                                    logger.error(f"🔒 LOGIN BLOCKED - Device belongs to different branch")
+                                    logger.error(f"❌ Denial reason: {denial_reason_key} - {denial_reason}")
+                            
+                            # السيناريو 2: الجهاز غير موجود في النظام
+                            else:
+                                # التحقق: هل فرع المستخدم لديه أجهزة مسجلة؟
+                                if device_restriction_enabled:
+                                    # فرع المستخدم لديه أجهزة مسجلة - يجب الدخول من أحدها
+                                    device_authorized = False
+                                    if not denial_reason_key:
+                                        denial_reason = '🚫 يجب تسجيل الدخول من أحد الأجهزة المسجلة لفرعك'
+                                        denial_reason_key = 'device_not_registered'
+                                    logger.error(f"🔒 LOGIN BLOCKED - User's branch has registered devices, must use one of them")
+                                    logger.error(f"❌ Denial reason: {denial_reason_key}")
+                                else:
+                                    # فرع المستخدم بدون أجهزة مسجلة - السماح بالدخول من أي جهاز
+                                    device_authorized = True
+                                    logger.info(f"✅ User's branch has no registered devices - allowing login from any device")
                             
                         # تسجيل المحاولة غير المصرح بها (للمراقبة والإحصائيات)
                         # يتم التسجيل دائماً حتى لو كان النظام معطلاً، طالما هناك مشكلة في الجهاز
@@ -311,21 +386,43 @@ def login_view(request):
                             
                             logger.error(f"🚨 Unauthorized attempt logged: ID {attempt.id} - Reason: {denial_reason_key}")
                             
-                            # إرسال إشعار فوري لمدير النظام (فقط إذا كان النظام مفعلاً وتم رفض الدخول فعلاً)
-                            if device_restriction_enabled and not device_authorized:
-                                from notifications.models import Notification
-                                superusers = User.objects.filter(is_superuser=True, is_active=True)
-                                for admin_user in superusers:
-                                    notification = Notification.objects.create(
-                                        title='🚨 محاولة دخول غير مصرح بها',
-                                        message=f'{user.username} ({user.branch.name if user.branch else "بدون فرع"}) حاول الدخول من جهاز غير مصرح به.\nالسبب: {attempt.get_denial_reason_display()}\nالوقت: {attempt.attempted_at.strftime("%Y-%m-%d %H:%M")}\nIP: {ip}',
-                                        notification_type='order_created',
-                                        priority='urgent',
-                                        created_by=user
-                                    )
-                                    notification.visible_to.add(admin_user)
-                                attempt.is_notified = True
-                                attempt.save()
+                            # إرسال إشعار فوري لمدير النظام في جميع حالات رفض الدخول
+                            # (سواء كان القفل مفعل لفرع المستخدم أو الجهاز مسجل لفرع آخر)
+                            if not device_authorized and denial_reason_key in ['wrong_branch', 'device_not_registered', 'device_blocked', 'fingerprint_mismatch']:
+                                try:
+                                    from notifications.models import Notification
+                                    superusers = User.objects.filter(is_superuser=True, is_active=True)
+                                    
+                                    # تخصيص رسالة الإشعار حسب السبب
+                                    if denial_reason_key == 'wrong_branch':
+                                        device_info = f"جهاز {device_obj.device_name} (فرع: {device_obj.branch.name})" if device_obj else "جهاز غير معروف"
+                                        notification_message = f'🚨 محاولة دخول من فرع خاطئ!\n\n'
+                                        notification_message += f'المستخدم: {user.username}\n'
+                                        notification_message += f'فرع المستخدم: {user.branch.name if user.branch else "غير محدد"}\n'
+                                        notification_message += f'الجهاز المستخدم: {device_info}\n'
+                                        notification_message += f'الوقت: {attempt.attempted_at.strftime("%Y-%m-%d %H:%M")}\n'
+                                        notification_message += f'IP: {ip}'
+                                    else:
+                                        notification_message = f'{user.username} ({user.branch.name if user.branch else "بدون فرع"}) حاول الدخول من جهاز غير مصرح به.\n'
+                                        notification_message += f'السبب: {attempt.get_denial_reason_display()}\n'
+                                        notification_message += f'الوقت: {attempt.attempted_at.strftime("%Y-%m-%d %H:%M")}\n'
+                                        notification_message += f'IP: {ip}'
+                                    
+                                    for admin_user in superusers:
+                                        notification = Notification.objects.create(
+                                            title='🚨 محاولة دخول غير مصرح بها',
+                                            message=notification_message,
+                                            notification_type='order_created',
+                                            priority='urgent',
+                                            created_by=user
+                                        )
+                                        notification.visible_to.add(admin_user)
+                                    
+                                    attempt.is_notified = True
+                                    attempt.save()
+                                    logger.info(f"✅ Notification sent to {superusers.count()} admins")
+                                except Exception as notif_error:
+                                    logger.error(f"❌ Failed to send notification: {notif_error}")
                         
                         # السماح بتسجيل الدخول فقط إذا كان الجهاز مصرح به
                         if device_authorized:
@@ -347,32 +444,55 @@ def login_view(request):
                                 # إضافة تفاصيل حسب السبب
                                 if 'denial_reason_key' in locals():
                                     if denial_reason_key == 'device_not_registered':
-                                        error_message += """
+                                        branch_lock_status = "مفعّل ✅" if (user.branch and user.branch.require_device_lock) else "معطّل ❌"
+                                        error_message += f"""
                                         <div style='background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107;'>
                                             <strong>ℹ️ ماذا يعني هذا؟</strong><br>
                                             • هذا الجهاز لم يتم تسجيله في النظام بعد<br>
-                                            • يجب على المدير تسجيل الجهاز أولاً<br><br>
+                                            • فرعك ({user.branch.name if user.branch else 'غير محدد'}) يتطلب تسجيل الأجهزة<br>
+                                            • حالة قفل الأجهزة لفرعك: <strong>{branch_lock_status}</strong><br><br>
                                             
                                             <strong>📝 ما يجب فعله:</strong><br>
                                             1. تواصل مع مدير النظام<br>
-                                            2. اطلب منه تسجيل هذا الجهاز لفرعك<br>
+                                            2. اطلب منه تسجيل هذا الجهاز لفرعك باستخدام QR Master<br>
                                             3. بعد التسجيل يمكنك المحاولة مرة أخرى<br><br>
                                             
                                             <small>🔒 تم تسجيل هذه المحاولة وإشعار مدير النظام</small>
                                         </div>
                                         """
                                     elif denial_reason_key == 'wrong_branch':
+                                        # حساب حالة القفل بناءً على وجود أجهزة مسجلة (المنطق الجديد)
                                         branch_name = device_obj.branch.name if device_obj else 'غير معروف'
+                                        
+                                        # حساب عدد الأجهزة المسجلة لكل فرع
+                                        device_branch_devices_count = 0
+                                        user_branch_devices_count = 0
+                                        
+                                        if device_obj and device_obj.branch:
+                                            device_branch_devices_count = BranchDevice.objects.filter(
+                                                branch=device_obj.branch,
+                                                is_active=True
+                                            ).count()
+                                        
+                                        if user.branch:
+                                            user_branch_devices_count = BranchDevice.objects.filter(
+                                                branch=user.branch,
+                                                is_active=True
+                                            ).count()
+                                        
+                                        # تحديد حالة القفل
+                                        device_branch_status = f"لديه {device_branch_devices_count} جهاز مسجل 🔒" if device_branch_devices_count > 0 else "مفتوح (بدون أجهزة) 🔓"
+                                        user_branch_status = f"لديه {user_branch_devices_count} جهاز مسجل 🔒" if user_branch_devices_count > 0 else "مفتوح (بدون أجهزة) 🔓"
+                                        
                                         error_message += f"""
                                         <div style='background: #f8d7da; padding: 15px; border-radius: 5px; border-left: 4px solid #dc3545;'>
                                             <strong>⚠️ تفاصيل المشكلة:</strong><br>
-                                            • الجهاز مسجل لفرع: <strong>{branch_name}</strong><br>
-                                            • أنت تنتمي لفرع: <strong>{user.branch.name if user.branch else 'غير محدد'}</strong><br><br>
+                                            • الجهاز مسجل لفرع: <strong>{branch_name}</strong> ({device_branch_status})<br>
+                                            • أنت تنتمي لفرع: <strong>{user.branch.name if user.branch else 'غير محدد'}</strong> ({user_branch_status})<br><br>
                                             
-                                            <strong>💡 الحلول الممكنة:</strong><br>
-                                            1. استخدم جهازاً مسجلاً لفرعك<br>
-                                            2. أو اطلب من المدير نقل الجهاز لفرعك<br>
-                                            3. أو تحديث بيانات حسابك للفرع الصحيح<br><br>
+                                            <strong>💡 الحل:</strong><br>
+                                            • <strong>الأجهزة المسجلة يمكن استخدامها فقط من قبل موظفي فرعها</strong><br>
+                                            • يجب استخدام جهاز غير مسجل، أو تسجيل جهاز جديد لفرعك<br><br>
                                             
                                             <small>🔒 تم تسجيل هذه المحاولة وإشعار مدير النظام</small>
                                         </div>
@@ -495,33 +615,102 @@ def admin_logout_view(request):
     return redirect('admin:index')
 
 @staff_member_required
+def validate_qr_master_ajax(request):
+    """
+    AJAX endpoint للتحقق من صحة QR Master
+    """
+    if request.method != 'POST':
+        return JsonResponse({'valid': False, 'message': 'Method not allowed'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        qr_code = data.get('qr_code', '').strip()
+        
+        if not qr_code:
+            return JsonResponse({'valid': False, 'message': 'QR code is required'})
+        
+        # Get active QR Master
+        qr_master = MasterQRCode.get_active()
+        
+        if not qr_master:
+            return JsonResponse({'valid': False, 'message': 'لا يوجد QR Master نشط'})
+        
+        if qr_master.code == qr_code:
+            return JsonResponse({
+                'valid': True,
+                'version': qr_master.version,
+                'message': f'QR Master صحيح (v{qr_master.version})'
+            })
+        else:
+            # Check if it's an old/deactivated QR
+            old_qr = MasterQRCode.objects.filter(code=qr_code, is_active=False).first()
+            if old_qr:
+                return JsonResponse({
+                    'valid': False,
+                    'message': f'QR منتهي الصلاحية (v{old_qr.version}). استخدم الإصدار الحالي v{qr_master.version}'
+                })
+            else:
+                return JsonResponse({'valid': False, 'message': 'QR غير صحيح'})
+                
+    except Exception as e:
+        return JsonResponse({'valid': False, 'message': f'خطأ: {str(e)}'})
+
+@staff_member_required
 def register_device_view(request):
     """
-    صفحة تسجيل جهاز جديد - متاحة فقط للمدراء
+    صفحة تسجيل جهاز جديد - يتطلب QR Master للتصريح
     """
     import logging
     logger = logging.getLogger('django')
     
     if request.method == 'POST':
         try:
+            # التحقق من QR Master أولاً
+            qr_master_code = request.POST.get('qr_master_code')
+            
+            if not qr_master_code:
+                messages.error(request, '⚠️ يرجى مسح QR Master للمتابعة. QR Master مطلوب للتصريح بتسجيل أجهزة جديدة.')
+                return redirect('accounts:register_device')
+            
+            # التحقق من صحة QR Master
+            qr_master = MasterQRCode.get_active()
+            
+            if not qr_master:
+                messages.error(request, '❌ لا يوجد QR Master نشط في النظام. اتصل بمدير النظام.')
+                logger.error("No active QR Master found in system")
+                return redirect('accounts:register_device')
+            
+            if qr_master.code != qr_master_code:
+                # محاولة استخدام QR ملغي أو خاطئ
+                old_qr = MasterQRCode.objects.filter(code=qr_master_code, is_active=False).first()
+                if old_qr:
+                    messages.error(request, f'🚫 QR Master منتهي الصلاحية! تم إلغاؤه في {old_qr.deactivated_at.strftime("%Y-%m-%d")}. استخدم QR Master الحالي (v{qr_master.version}).')
+                    logger.warning(f"⚠️ Attempt to use deactivated QR Master v{old_qr.version} by {request.user.username} from IP {get_client_ip(request)}")
+                else:
+                    messages.error(request, '❌ QR Master غير صحيح. تأكد من مسح QR الصحيح من المدير.')
+                    logger.warning(f"⚠️ Invalid QR Master code attempted by {request.user.username}")
+                return redirect('accounts:register_device')
+            
+            # QR Master صحيح - المتابعة في التسجيل
             branch_id = request.POST.get('branch')
             device_name = request.POST.get('device_name')
             notes = request.POST.get('notes', '')
-            device_fingerprint = request.POST.get('device_fingerprint')
             device_info_str = request.POST.get('device_info', '{}')
             
-            # استخراج hardware_serial من device_info
+            # استخراج معلومات الجهاز
             try:
                 device_info = json.loads(device_info_str)
-                hardware_serial = device_info.get('hardware_serial', '')
-                user_agent = device_info.get('user_agent', '')
             except:
-                hardware_serial = ''
-                user_agent = request.META.get('HTTP_USER_AGENT', '')
+                device_info = {}
             
-            # التحقق من البيانات المطلوبة (يجب توفر إما fingerprint أو hardware_serial)
-            if not all([branch_id, device_name]) or (not device_fingerprint and not hardware_serial):
-                messages.error(request, 'يرجى إدخال جميع الحقول المطلوبة.')
+            # توليد البصمة المحسّنة
+            device_fingerprint, full_device_data = generate_device_fingerprint(request)
+            hardware_serial = device_info.get('hardware_serial', '')
+            user_agent = device_info.get('user_agent', request.META.get('HTTP_USER_AGENT', ''))
+            
+            # التحقق من البيانات المطلوبة
+            if not all([branch_id, device_name]):
+                messages.error(request, 'يرجى إدخال اسم الجهاز والفرع.')
                 return redirect('accounts:register_device')
             
             # التحقق من وجود الفرع
@@ -531,43 +720,51 @@ def register_device_view(request):
                 messages.error(request, 'الفرع المحدد غير موجود.')
                 return redirect('accounts:register_device')
             
-            # التحقق من عدم تسجيل نفس الجهاز مسبقاً
-            existing_device = None
-            if hardware_serial and BranchDevice.objects.filter(hardware_serial=hardware_serial).exists():
-                existing_device = BranchDevice.objects.get(hardware_serial=hardware_serial)
-            elif device_fingerprint and BranchDevice.objects.filter(device_fingerprint=device_fingerprint).exists():
-                existing_device = BranchDevice.objects.get(device_fingerprint=device_fingerprint)
+            # التحقق من عدم تسجيل نفس الجهاز مسبقاً (بناءً على token الذي سيُولد)
+            # البحث بالبصمة فقط لأن token سيكون جديد
+            existing_device = BranchDevice.objects.filter(
+                device_fingerprint=device_fingerprint
+            ).first()
             
             if existing_device:
                 messages.warning(
                     request, 
-                    f'هذا الجهاز مسجل بالفعل باسم "{existing_device.device_name}" للفرع "{existing_device.branch.name}".'
+                    f'⚠️ هذا الجهاز مسجل بالفعل باسم "{existing_device.device_name}" للفرع "{existing_device.branch.name}".'
                 )
                 return redirect('accounts:register_device')
             
-            ip_address = request.META.get('REMOTE_ADDR', '')
+            ip_address = get_client_ip(request)
             
-            # إنشاء الجهاز الجديد
+            # إنشاء الجهاز الجديد (device_token يُولد تلقائياً)
             device = BranchDevice.objects.create(
                 branch=branch,
                 device_name=device_name,
-                device_fingerprint=device_fingerprint if device_fingerprint else None,
+                device_fingerprint=device_fingerprint,
                 hardware_serial=hardware_serial if hardware_serial else None,
                 ip_address=ip_address,
                 user_agent=user_agent,
                 notes=notes,
-                is_active=True
+                is_active=True,
+                registered_with_qr_version=qr_master.version
             )
             
-            logger.info(f"✅ New device registered: {device_name} (Serial: {hardware_serial or 'N/A'}) for branch {branch.name} by {request.user.username}")
+            # تسجيل استخدام QR Master
+            qr_master.mark_used()
+            
+            logger.info(f"✅ New device registered with QR Master v{qr_master.version}: {device_name} (Token: {device.device_token}) for branch {branch.name} by {request.user.username}")
+            
             messages.success(
                 request, 
-                f'تم تسجيل الجهاز "{device_name}" بنجاح للفرع "{branch.name}". '
-                f'يمكن الآن لموظفي الفرع تسجيل الدخول من هذا الجهاز.'
+                mark_safe(
+                    f'✅ تم تسجيل الجهاز "{device_name}" بنجاح للفرع: {branch.name}<br>'
+                    f'يمكن الآن لموظفي الفرع تسجيل الدخول من هذا الجهاز.'
+                )
             )
             
-            # إعادة التوجيه إلى صفحة الإدارة
-            return redirect('admin:accounts_branchdevice_changelist')
+            # إعادة التوجيه مع device_token في URL لحفظه في IndexedDB
+            from django.http import HttpResponseRedirect
+            redirect_url = f"{request.path}?device_token={device.device_token}&success=1"
+            return HttpResponseRedirect(redirect_url)
             
         except Exception as e:
             logger.error(f"Error registering device: {e}")
@@ -577,10 +774,13 @@ def register_device_view(request):
     
     # GET request - عرض النموذج
     branches = Branch.objects.filter(is_active=True).order_by('name')
+    active_qr = MasterQRCode.get_active()
     
     context = {
         'branches': branches,
         'title': 'تسجيل جهاز جديد',
+        'qr_master_required': True,
+        'active_qr_version': active_qr.version if active_qr else None,
     }
     
     return render(request, 'accounts/register_device.html', context)
@@ -594,6 +794,43 @@ def device_diagnostic_view(request):
         'title': 'تشخيص الجهاز',
     }
     return render(request, 'accounts/device_diagnostic.html', context)
+
+
+@staff_member_required
+def print_qr_master(request, qr_id):
+    """
+    صفحة طباعة QR Master - تعرض QR كبير قابل للطباعة
+    """
+    qr_master = get_object_or_404(MasterQRCode, pk=qr_id)
+    
+    import qrcode
+    from io import BytesIO
+    import base64
+    
+    # توليد QR Code كبير للطباعة
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        box_size=15,  # أكبر للطباعة
+        border=5,
+    )
+    qr.add_data(qr_master.code)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # تحويل إلى base64
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    img_base64 = base64.b64encode(buffer.getvalue()).decode()
+    
+    context = {
+        'qr_master': qr_master,
+        'qr_image': img_base64,
+        'title': f'QR Master v{qr_master.version}',
+    }
+    
+    return render(request, 'accounts/print_qr_master.html', context)
 
 @login_required
 def profile_view(request):
