@@ -7,9 +7,8 @@ def create_departments_structure(apps, schema_editor):
     """إنشاء هيكل الأقسام والوحدات الافتراضي"""
     Department = apps.get_model('accounts', 'Department')
     
-    # حذف الأقسام القديمة إذا وجدت
-    Department.objects.filter(code__startswith='navbar_').delete()
-    Department.objects.filter(code='main_navbar').delete()
+    # لا نحذف الأقسام الموجودة - نحدثها فقط أو ننشئها إذا لم تكن موجودة
+    # هذا يحافظ على الإعدادات المخصصة للمستخدم
     
     # تعريف الأقسام الرئيسية
     main_departments = {
@@ -92,45 +91,43 @@ def create_departments_structure(apps, schema_editor):
         },
     }
     
-    # إنشاء أو تحديث الأقسام الرئيسية
+    # إنشاء أو الحصول على الأقسام الرئيسية (get_or_create)
     created_parents = {}
     for code, data in main_departments.items():
-        defaults = {
-            'name': data['name'],
-            'department_type': 'department',
-            'icon': data['icon'],
-            'order': data['order'],
-            'url_name': data['url_name'],
-            'is_active': True,
-            'is_core': True,
-            'parent': None,
-            'description': f'قسم {data["name"]}',
-            'show_customers': data.get('show_customers', False),
-            'show_orders': data.get('show_orders', False),
-            'show_inventory': data.get('show_inventory', False),
-            'show_inspections': data.get('show_inspections', False),
-            'show_installations': data.get('show_installations', False),
-            'show_manufacturing': data.get('show_manufacturing', False),
-            'show_complaints': data.get('show_complaints', False),
-            'show_reports': data.get('show_reports', False),
-            'show_accounting': data.get('show_accounting', False),
-            'show_database': data.get('show_database', False),
-        }
-        
-        dept, created = Department.objects.update_or_create(
+        dept, created = Department.objects.get_or_create(
             code=code,
-            defaults=defaults
+            defaults={
+                'name': data['name'],
+                'department_type': 'department',
+                'icon': data['icon'],
+                'order': data['order'],
+                'url_name': data['url_name'],
+                'is_active': True,
+                'is_core': True,
+                'parent': None,
+                'description': f'قسم {data["name"]}',
+                'show_customers': data.get('show_customers', False),
+                'show_orders': data.get('show_orders', False),
+                'show_inventory': data.get('show_inventory', False),
+                'show_inspections': data.get('show_inspections', False),
+                'show_installations': data.get('show_installations', False),
+                'show_manufacturing': data.get('show_manufacturing', False),
+                'show_complaints': data.get('show_complaints', False),
+                'show_reports': data.get('show_reports', False),
+                'show_accounting': data.get('show_accounting', False),
+                'show_database': data.get('show_database', False),
+            }
         )
         created_parents[code] = dept
     
-    # تعريف الوحدات الفرعية
+    # تعريف الوحدات الفرعية (نسخة من السكريبت العامل)
     navbar_units = [
         # العملاء
         {
             'parent_code': 'customers',
             'code': 'customers_list',
             'name': 'قائمة العملاء',
-            'url_name': 'customers:customer_list',
+            'url_name': '/customers/',
             'icon': 'fa-list',
             'order': 1,
             'show_customers': True,
@@ -140,45 +137,45 @@ def create_departments_structure(apps, schema_editor):
             'parent_code': 'orders',
             'code': 'orders_list',
             'name': 'قائمة الطلبات',
-            'url_name': 'orders:order_list',
+            'url_name': '/orders/',
             'icon': 'fa-list',
             'order': 1,
             'show_orders': True,
         },
-        # المخزون
+        # المخزون - وحدات متعددة
         {
             'parent_code': 'inventory',
-            'code': 'inventory_management',
+            'code': 'inventory_dashboard',
             'name': 'إدارة المخزون',
-            'url_name': 'inventory:inventory_list',
+            'url_name': '/inventory/',
             'icon': 'fa-warehouse',
             'order': 1,
             'show_inventory': True,
         },
         {
             'parent_code': 'inventory',
-            'code': 'warehouse_management',
+            'code': 'inventory_warehouses',
             'name': 'إدارة المستودعات',
-            'url_name': 'inventory:warehouse_list',
-            'icon': 'fa-building',
+            'url_name': '/inventory/warehouses/',
+            'icon': 'fa-warehouse',
             'order': 2,
             'show_inventory': True,
         },
         {
             'parent_code': 'inventory',
-            'code': 'products_colors',
+            'code': 'inventory_products',
             'name': 'المنتجات والألوان',
-            'url_name': 'inventory:product_list',
-            'icon': 'fa-box',
+            'url_name': '/inventory/base-products/',
+            'icon': 'fa-palette',
             'order': 3,
             'show_inventory': True,
         },
         {
             'parent_code': 'inventory',
-            'code': 'color_management',
+            'code': 'inventory_colors',
             'name': 'إدارة الألوان',
-            'url_name': 'inventory:color_attribute_list',
-            'icon': 'fa-palette',
+            'url_name': '/inventory/colors/',
+            'icon': 'fa-fill-drip',
             'order': 4,
             'show_inventory': True,
         },
@@ -186,27 +183,27 @@ def create_departments_structure(apps, schema_editor):
             'parent_code': 'inventory',
             'code': 'inventory_transfers',
             'name': 'تحويلات مخزنية',
-            'url_name': 'inventory:transfer_list',
+            'url_name': '/inventory/transfers/',
             'icon': 'fa-exchange-alt',
             'order': 5,
             'show_inventory': True,
         },
-        # التقطيع (تحت المخزون)
+        # التقطيع
         {
             'parent_code': 'cutting',
             'code': 'cutting_system',
             'name': 'نظام التقطيع',
-            'url_name': 'cutting:cutting_order_list',
+            'url_name': '/cutting/',
             'icon': 'fa-cut',
             'order': 1,
             'show_inventory': True,
         },
         {
             'parent_code': 'cutting',
-            'code': 'batch_cutting_orders',
+            'code': 'cutting_batch_orders',
             'name': 'أوامر التقطيع المجمعة',
-            'url_name': 'cutting:batch_cutting_order_list',
-            'icon': 'fa-layer-group',
+            'url_name': '/cutting/orders/completed/',
+            'icon': 'fa-list-check',
             'order': 2,
             'show_inventory': True,
         },
@@ -214,9 +211,19 @@ def create_departments_structure(apps, schema_editor):
             'parent_code': 'cutting',
             'code': 'cutting_reports',
             'name': 'تقارير التقطيع',
-            'url_name': 'cutting:cutting_reports',
-            'icon': 'fa-chart-line',
+            'url_name': '/cutting/reports/',
+            'icon': 'fa-chart-bar',
             'order': 3,
+            'show_inventory': True,
+        },
+        # استلام المنتجات
+        {
+            'parent_code': 'manufacturing',
+            'code': 'product_receipt',
+            'name': 'استلام المنتجات',
+            'url_name': '/manufacturing/product-receipt/',
+            'icon': 'fa-box-open',
+            'order': 1,
             'show_inventory': True,
         },
         # المعاينات
@@ -224,8 +231,8 @@ def create_departments_structure(apps, schema_editor):
             'parent_code': 'inspections',
             'code': 'inspections_list',
             'name': 'قائمة المعاينات',
-            'url_name': 'inspections:inspection_list',
-            'icon': 'fa-list',
+            'url_name': '/inspections/',
+            'icon': 'fa-clipboard-check',
             'order': 1,
             'show_inspections': True,
         },
@@ -234,36 +241,27 @@ def create_departments_structure(apps, schema_editor):
             'parent_code': 'installations',
             'code': 'installations_dashboard',
             'name': 'لوحة التركيبات',
-            'url_name': 'installations:installation_dashboard',
-            'icon': 'fa-tachometer-alt',
+            'url_name': '/installations/',
+            'icon': 'fa-tools',
             'order': 1,
             'show_installations': True,
         },
         # المصنع
         {
             'parent_code': 'manufacturing',
-            'code': 'product_receipt',
-            'name': 'استلام المنتجات',
-            'url_name': 'manufacturing:product_receipt_list',
-            'icon': 'fa-inbox',
-            'order': 1,
-            'show_manufacturing': True,
-        },
-        {
-            'parent_code': 'manufacturing',
             'code': 'manufacturing_orders',
             'name': 'أوامر التصنيع',
-            'url_name': 'manufacturing:manufacturing_order_list',
-            'icon': 'fa-cogs',
+            'url_name': '/manufacturing/',
+            'icon': 'fa-list',
             'order': 2,
             'show_manufacturing': True,
         },
         {
             'parent_code': 'manufacturing',
-            'code': 'factory_receipt',
+            'code': 'factory_receiver',
             'name': 'استلام من المصنع',
-            'url_name': 'manufacturing:fabric_receipt_list',
-            'icon': 'fa-truck-loading',
+            'url_name': '/manufacturing/fabric-receipt/',
+            'icon': 'fa-industry',
             'order': 3,
             'show_manufacturing': True,
         },
@@ -272,7 +270,7 @@ def create_departments_structure(apps, schema_editor):
             'parent_code': 'complaints',
             'code': 'complaints_dashboard',
             'name': 'لوحة الشكاوى',
-            'url_name': 'complaints:dashboard',
+            'url_name': '/complaints/',
             'icon': 'fa-tachometer-alt',
             'order': 1,
             'show_complaints': True,
@@ -281,17 +279,17 @@ def create_departments_structure(apps, schema_editor):
             'parent_code': 'complaints',
             'code': 'complaints_list',
             'name': 'قائمة الشكاوى',
-            'url_name': 'complaints:complaint_list',
+            'url_name': '/complaints/list/',
             'icon': 'fa-list',
             'order': 2,
             'show_complaints': True,
         },
         {
             'parent_code': 'complaints',
-            'code': 'unresolved_complaints',
+            'code': 'complaints_unsolved',
             'name': 'الشكاوى غير المحلولة',
-            'url_name': 'complaints:unresolved_complaints',
-            'icon': 'fa-exclamation-circle',
+            'url_name': '/complaints/admin/',
+            'icon': 'fa-shield-alt',
             'order': 3,
             'show_complaints': True,
         },
@@ -300,25 +298,25 @@ def create_departments_structure(apps, schema_editor):
             'parent_code': 'reports',
             'code': 'reports_dashboard',
             'name': 'لوحة التقارير',
-            'url_name': 'reports:dashboard',
+            'url_name': '/reports/',
             'icon': 'fa-tachometer-alt',
             'order': 1,
             'show_reports': True,
         },
         {
             'parent_code': 'reports',
-            'code': 'orders_report',
+            'code': 'reports_orders',
             'name': 'تقرير الطلبات',
-            'url_name': 'reports:orders_report',
-            'icon': 'fa-file-alt',
+            'url_name': '/reports/orders/',
+            'icon': 'fa-shopping-cart',
             'order': 2,
             'show_reports': True,
         },
         {
             'parent_code': 'reports',
-            'code': 'production_reports',
+            'code': 'reports_production',
             'name': 'تقارير الإنتاج',
-            'url_name': 'reports:production_report',
+            'url_name': '/reports/production/',
             'icon': 'fa-industry',
             'order': 3,
             'show_reports': True,
@@ -328,35 +326,35 @@ def create_departments_structure(apps, schema_editor):
             'parent_code': 'accounting',
             'code': 'accounting_dashboard',
             'name': 'لوحة المحاسبة',
-            'url_name': 'accounting:dashboard',
+            'url_name': '/accounting/',
             'icon': 'fa-tachometer-alt',
             'order': 1,
             'show_accounting': True,
         },
         {
             'parent_code': 'accounting',
-            'code': 'chart_of_accounts',
+            'code': 'accounting_accounts_tree',
             'name': 'شجرة الحسابات',
-            'url_name': 'accounting:account_list',
+            'url_name': '/accounting/accounts/',
             'icon': 'fa-sitemap',
             'order': 2,
             'show_accounting': True,
         },
         {
             'parent_code': 'accounting',
-            'code': 'journal_entries',
+            'code': 'accounting_transactions',
             'name': 'القيود المحاسبية',
-            'url_name': 'accounting:transaction_list',
-            'icon': 'fa-book',
+            'url_name': '/accounting/transactions/',
+            'icon': 'fa-file-invoice',
             'order': 3,
             'show_accounting': True,
         },
         {
             'parent_code': 'accounting',
-            'code': 'customer_advances',
+            'code': 'accounting_advances',
             'name': 'سلف العملاء',
-            'url_name': 'accounting:customer_advance_list',
-            'icon': 'fa-money-bill-wave',
+            'url_name': '/accounting/advances/',
+            'icon': 'fa-hand-holding-usd',
             'order': 4,
             'show_accounting': True,
         },
@@ -365,7 +363,7 @@ def create_departments_structure(apps, schema_editor):
             'parent_code': 'database',
             'code': 'database_management',
             'name': 'إدارة قاعدة البيانات',
-            'url_name': 'odoo_db_manager:database_list',
+            'url_name': '/database/',
             'icon': 'fa-database',
             'order': 1,
             'show_database': True,
@@ -378,6 +376,7 @@ def create_departments_structure(apps, schema_editor):
         parent = created_parents.get(parent_code)
         
         if parent:
+            code = unit_data.pop('code')
             unit_data['parent_id'] = parent.id
             unit_data['department_type'] = 'unit'
             unit_data['is_active'] = True
@@ -391,8 +390,7 @@ def create_departments_structure(apps, schema_editor):
                 if field not in unit_data:
                     unit_data[field] = False
             
-            code = unit_data.pop('code')
-            Department.objects.update_or_create(
+            Department.objects.get_or_create(
                 code=code,
                 defaults=unit_data
             )
