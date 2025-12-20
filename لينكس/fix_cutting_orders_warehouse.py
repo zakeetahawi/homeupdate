@@ -29,6 +29,25 @@ from collections import defaultdict
 from datetime import datetime
 
 
+def is_service_product(product):
+    """
+    التحقق من أن المنتج خدمي (تركيب، تفصيل، نقل، معاينة)
+    هذه المنتجات يجب ألا يُنشأ لها أوامر تقطيع
+    """
+    if not product:
+        return False
+    
+    service_product_codes = ['005', '006', '007', '008', '0001', '0002', '0003', '0004']
+    service_keywords = ['تركيب', 'تفصيل', 'نقل', 'معاينة', 'مسمار']
+    
+    is_service = (
+        product.code in service_product_codes or
+        any(keyword in product.name for keyword in service_keywords)
+    )
+    
+    return is_service
+
+
 def get_product_warehouse(product):
     """
     الحصول على المستودع الذي يتوفر فيه المنتج بأكبر كمية
@@ -64,6 +83,10 @@ def get_product_stock_in_warehouse(product, warehouse):
 def analyze_cutting_order_items():
     """
     تحليل أصناف أوامر التقطيع - تجميع الأصناف حسب المستودع الصحيح لكل منها
+    ويشمل الفحص:
+    1. الأصناف في مستودعات خاطئة
+    2. الأصناف الخدمية (يجب حذفها من أوامر التقطيع)
+    3. التكرارات (نفس order_item في نفس cutting_order)
     """
     issues = []
     
@@ -71,12 +94,34 @@ def analyze_cutting_order_items():
         # تجميع الأصناف حسب المستودع الصحيح لكل منها
         items_by_warehouse = defaultdict(list)
         items_without_stock = []
+        service_items = []  # الأصناف الخدمية التي يجب حذفها
+        duplicate_items = {}  # التكرارات
+        
+        # ✅ فحص التكرارات أولاً
+        items_by_order_item = defaultdict(list)
+        for item in cutting_order.items.all():
+            items_by_order_item[item.order_item_id].append(item)
+        
+        for order_item_id, items in items_by_order_item.items():
+            if len(items) > 1:
+                # يوجد تكرار - الاحتفاظ بالمكتمل أو الأحدث
+                duplicate_items[order_item_id] = items
         
         for item in cutting_order.items.all():
             if not item.order_item or not item.order_item.product:
                 continue
             
             product = item.order_item.product
+            
+            # ✅ فحص المنتجات الخدمية أولاً - يجب حذفها من أوامر التقطيع
+            if is_service_product(product):
+                service_items.append({
+                    'item': item,
+                    'product': product,
+                    'severity': 'service'  # نوع خاص للأصناف الخدمية
+                })
+                continue  # تخطي هذا الصنف من الفحوصات الأخرى
+            
             current_warehouse = cutting_order.warehouse
             
             # الحصول على المستودع الصحيح للمنتج
@@ -101,8 +146,8 @@ def analyze_cutting_order_items():
                     'current_warehouse': current_warehouse
                 })
         
-        # إذا وُجدت أصناف تحتاج نقل
-        if items_by_warehouse or items_without_stock:
+        # إذا وُجدت أصناف تحتاج نقل أو أصناف خدمية أو تكرارات
+        if items_by_warehouse or items_without_stock or service_items or duplicate_items:
             issues.append({
                 'cutting_order': cutting_order,
                 'cutting_code': cutting_order.cutting_code,
@@ -111,8 +156,12 @@ def analyze_cutting_order_items():
                 'current_warehouse': cutting_order.warehouse,
                 'items_by_warehouse': dict(items_by_warehouse),
                 'items_without_stock': items_without_stock,
+                'service_items': service_items,  # الأصناف الخدمية
+                'duplicate_items': duplicate_items,  # التكرارات
                 'total_items': cutting_order.items.count(),
                 'items_to_move': sum(len(items) for items in items_by_warehouse.values()),
+                'items_to_delete': len(service_items),  # عدد الأصناف الخدمية للحذف
+                'duplicates_count': len(duplicate_items),  # عدد العناصر المكررة
             })
     
     return issues
@@ -133,10 +182,14 @@ def display_issues(issues):
     
     total_items_to_move = sum(i['items_to_move'] for i in issues)
     total_without_stock = sum(len(i['items_without_stock']) for i in issues)
+    total_service_items = sum(i.get('items_to_delete', 0) for i in issues)
+    total_duplicates = sum(i.get('duplicates_count', 0) for i in issues)
     
     print(f"\n📊 ملخص:")
-    print(f"   - أوامر تقطيع بها أصناف تحتاج نقل: {len(issues)}")
-    print(f"   - إجمالي الأصناف التي تحتاج نقل: {total_items_to_move}")
+    print(f"   - أوامر تقطيع بها أصناف تحتاج معالجة: {len(issues)}")
+    print(f"   - أصناف تحتاج نقل لمستودعات أخرى: {total_items_to_move}")
+    print(f"   - أصناف خدمية (يجب حذفها): {total_service_items} ⚠️")
+    print(f"   - عناصر مكررة (يجب حذفها): {total_duplicates} 🔄")
     print(f"   - أصناف بدون مخزون: {total_without_stock}")
     
     print("\n" + "-" * 80)
@@ -150,6 +203,10 @@ def display_issues(issues):
         print(f"    المستودع الحالي: {issue['current_warehouse'].name}")
         print(f"    إجمالي الأصناف: {issue['total_items']}")
         print(f"    أصناف تحتاج نقل: {issue['items_to_move']}")
+        if issue.get('items_to_delete', 0) > 0:
+            print(f"    ⚠️  أصناف خدمية (يجب حذفها): {issue['items_to_delete']}")
+        if issue.get('duplicates_count', 0) > 0:
+            print(f"    🔄 عناصر مكررة (يجب حذفها): {issue['duplicates_count']}")
         
         if issue['items_by_warehouse']:
             print(f"\n    📦 توزيع الأصناف حسب المستودعات:")
@@ -169,6 +226,23 @@ def display_issues(issues):
                 
                 if len(items) > 3:
                     print(f"          ... و {len(items) - 3} صنف آخر")
+        
+        if issue.get('service_items'):
+            print(f"\n    🔧 أصناف خدمية (يجب حذفها من أوامر التقطيع): {len(issue['service_items'])}")
+            for item_data in issue['service_items'][:3]:
+                print(f"       ⛔ {item_data['product'].name} (كود: {item_data['product'].code or 'N/A'})")
+            if len(issue['service_items']) > 3:
+                print(f"       ... و {len(issue['service_items']) - 3} صنف آخر")
+        
+        if issue.get('duplicate_items'):
+            print(f"\n    🔄 عناصر مكررة (نفس OrderItem في نفس CuttingOrder): {len(issue['duplicate_items'])}")
+            for order_item_id, items in list(issue['duplicate_items'].items())[:3]:
+                product_name = items[0].order_item.product.name
+                completed_count = sum(1 for i in items if i.status == 'completed')
+                pending_count = sum(1 for i in items if i.status == 'pending')
+                print(f"       🔁 {product_name}: {len(items)} نسخ (مكتمل: {completed_count}, قيد الانتظار: {pending_count})")
+            if len(issue['duplicate_items']) > 3:
+                print(f"       ... و {len(issue['duplicate_items']) - 3} منتج آخر")
         
         if issue['items_without_stock']:
             print(f"\n    ⚠️  أصناف بدون مخزون في أي مستودع: {len(issue['items_without_stock'])}")
@@ -208,8 +282,11 @@ def generate_cutting_code(order, warehouse):
 @transaction.atomic
 def fix_cutting_order_items(issue):
     """
-    إصلاح أصناف أمر التقطيع - نقل الأصناف للمستودعات الصحيحة
-    وإنشاء أوامر تقطيع جديدة عند الحاجة
+    إصلاح أصناف أمر التقطيع:
+    1. حذف الأصناف الخدمية (تركيب، تفصيل، نقل، معاينة)
+    2. حذف التكرارات (الاحتفاظ بالمكتمل أو الأحدث)
+    3. نقل الأصناف للمستودعات الصحيحة
+    4. إنشاء أوامر تقطيع جديدة عند الحاجة
     """
     cutting_order = issue['cutting_order']
     results = {
@@ -217,10 +294,59 @@ def fix_cutting_order_items(issue):
         'moved_items': [],
         'new_orders_created': [],
         'moved_to_existing': [],
+        'deleted_service_items': [],  # الأصناف الخدمية المحذوفة
+        'deleted_duplicates': [],  # التكرارات المحذوفة
         'errors': []
     }
     
-    # معالجة كل مستودع
+    # ✅ الخطوة 1: حذف الأصناف الخدمية
+    if issue.get('service_items'):
+        for item_data in issue['service_items']:
+            item = item_data['item']
+            product = item_data['product']
+            try:
+                item.delete()
+                results['deleted_service_items'].append({
+                    'product': product.name,
+                    'code': product.code or 'N/A',
+                    'reason': 'منتج خدمي - لا يجب أن يكون في أوامر التقطيع'
+                })
+            except Exception as e:
+                results['errors'].append({
+                    'product': product.name,
+                    'error': f'خطأ في حذف الصنف الخدمي: {str(e)}'
+                })
+    
+    # ✅ الخطوة 2: حذف التكرارات
+    if issue.get('duplicate_items'):
+        for order_item_id, items in issue['duplicate_items'].items():
+            # ترتيب حسب الأولوية: completed > in_progress > pending
+            priority = {'completed': 3, 'in_progress': 2, 'pending': 1, 'rejected': 0}
+            items_sorted = sorted(items, key=lambda x: (priority.get(x.status, 0), x.id), reverse=True)
+            
+            # الاحتفاظ بالأول (الأعلى أولوية)
+            keep_item = items_sorted[0]
+            delete_items = items_sorted[1:]
+            
+            product_name = keep_item.order_item.product.name
+            
+            # حذف المكررات
+            for item in delete_items:
+                try:
+                    status_display = item.get_status_display()
+                    item.delete()
+                    results['deleted_duplicates'].append({
+                        'product': product_name,
+                        'status': status_display,
+                        'kept_status': keep_item.get_status_display()
+                    })
+                except Exception as e:
+                    results['errors'].append({
+                        'product': product_name,
+                        'error': f'خطأ في حذف التكرار: {str(e)}'
+                    })
+    
+    # ✅ الخطوة 3: معالجة كل مستودع (نقل الأصناف)
     for warehouse_id, items in issue['items_by_warehouse'].items():
         warehouse = items[0]['warehouse']
         

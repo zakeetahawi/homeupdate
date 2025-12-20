@@ -112,6 +112,7 @@ def determine_warehouse_for_item(order_item, warehouses):
         return warehouses.first()
 
     # ✅ فحص منتجات الخدمات (تركيب، تفصيل، نقل، معاينة) أولاً
+    # هذه المنتجات لا يُنشأ لها أوامر تقطيع - نرجع None
     product = order_item.product
     service_product_codes = ['005', '006', '007', '008', '0001', '0002', '0003', '0004']
     service_keywords = ['تركيب', 'تفصيل', 'نقل', 'معاينة', 'مسمار']
@@ -122,14 +123,9 @@ def determine_warehouse_for_item(order_item, warehouses):
     )
     
     if is_service_product:
-        # البحث عن المستودع الخدمي
-        service_warehouse = warehouses.filter(name__icontains='خدم').first()
-        if service_warehouse:
-            logger.info(f"🔧 تم تعيين منتج خدمي {product.name} (كود: {product.code}) للمستودع الخدمي {service_warehouse.name}")
-            return service_warehouse
-        else:
-            logger.warning(f"⚠️ لم يتم العثور على مستودع خدمي للمنتج الخدمي: {product.name}")
-            return None
+        # منتجات الخدمات لا يُنشأ لها أوامر تقطيع - يجب أن تكون في المستودع الخدمي فقط
+        logger.info(f"🔧 منتج خدمي {product.name} (كود: {product.code}) - لا يُنشأ له أمر تقطيع")
+        return None  # إرجاع None لمنع إنشاء أمر تقطيع
 
     try:
         from inventory.models import StockTransaction
@@ -233,6 +229,20 @@ def handle_order_item_creation(sender, instance, created, **kwargs):
         if 'inspection' in selected_types:
             logger.info(f"⏭️ تخطي إنشاء أمر تقطيع للطلب {order.order_number} - يحتوي على معاينة")
             return
+
+        # ✅ فحص المنتجات الخدمية (تركيب، تفصيل، نقل، معاينة) - لا ننشئ لها أوامر تقطيع
+        if instance.product:
+            service_product_codes = ['005', '006', '007', '008', '0001', '0002', '0003', '0004']
+            service_keywords = ['تركيب', 'تفصيل', 'نقل', 'معاينة', 'مسمار']
+            
+            is_service_product = (
+                instance.product.code in service_product_codes or
+                any(keyword in instance.product.name for keyword in service_keywords)
+            )
+            
+            if is_service_product:
+                logger.info(f"🔧 تخطي إنشاء أمر تقطيع للمنتج الخدمي: {instance.product.name} (كود: {instance.product.code})")
+                return
 
         # التحقق من وجود أوامر تقطيع للطلب
         existing_cutting_orders = CuttingOrder.objects.filter(order=order)
