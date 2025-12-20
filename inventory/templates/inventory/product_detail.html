@@ -15,7 +15,7 @@
                 </a>
             </div>
         </div>
-        
+
         <div class="card-body">
             <div class="row">
                 <!-- Product Information -->
@@ -48,7 +48,8 @@
                         <tr>
                             <th width="35%">المخزون الحالي:</th>
                             <td>
-                                <span class="{% if product.current_stock <= product.minimum_stock %}text-danger{% endif %}">
+                                <span
+                                    class="{% if product.current_stock <= product.minimum_stock %}text-danger{% endif %}">
                                     {{ product.current_stock }}
                                 </span>
                             </td>
@@ -65,15 +66,54 @@
                             <th>حالة المخزون:</th>
                             <td>
                                 {% if product.current_stock == 0 %}
-                                    <span class="badge bg-danger">نفذ من المخزون</span>
-                                {% elif product.current_stock <= product.minimum_stock %}
-                                    <span class="badge bg-warning">مخزون منخفض</span>
-                                {% else %}
+                                <span class="badge bg-danger">نفذ من المخزون</span>
+                                {% elif product.current_stock <= product.minimum_stock %} <span
+                                    class="badge bg-warning">مخزون منخفض</span>
+                                    {% else %}
                                     <span class="badge bg-success">متوفر</span>
-                                {% endif %}
+                                    {% endif %}
                             </td>
                         </tr>
                     </table>
+                </div>
+            </div>
+
+            <!-- QR Code Section -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    {% if product.code %}
+                                    <div class="text-center p-3 bg-white rounded border">
+                                        <img src="{% url 'public:product_qr_image' product.code %}" alt="QR Code"
+                                            style="width: 150px; height: 150px;">
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col">
+                                    <h5><i class="fas fa-qrcode text-warning"></i> رمز QR للمنتج</h5>
+                                    <p class="text-muted mb-2">استخدم هذا الرمز للوصول السريع لصفحة المنتج العامة</p>
+                                    {% if product.code %}
+                                    <div class="btn-group">
+                                        <a href="{% url 'public:product_qr_page' product.code %}"
+                                            class="btn btn-warning" target="_blank">
+                                            <i class="fas fa-external-link-alt"></i> الصفحة العامة
+                                        </a>
+                                        <a href="{% url 'public:product_qr_image' product.code %}"
+                                            class="btn btn-outline-secondary" download="qr_{{ product.code }}.png">
+                                            <i class="fas fa-download"></i> تحميل QR
+                                        </a>
+                                    </div>
+                                    {% else %}
+                                    <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> لا يوجد كود
+                                        للمنتج - لا يمكن توليد QR</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -88,9 +128,9 @@
                         <i class="fas fa-exchange-alt"></i> إضافة معاملة
                     </a>
                     {% if user.is_superuser %}
-                        <a href="{% url 'inventory:product_delete' product.id %}" class="btn btn-danger">
-                            <i class="fas fa-trash"></i> حذف المنتج
-                        </a>
+                    <a href="{% url 'inventory:product_delete' product.id %}" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> حذف المنتج
+                    </a>
                     {% endif %}
                 </div>
             </div>
@@ -111,23 +151,23 @@
                         </thead>
                         <tbody>
                             {% for transaction in product.transactions.all %}
-                                <tr>
-                                    <td>{{ transaction.created_at|date:"Y-m-d H:i" }}</td>
-                                    <td>
-                                        {% if transaction.transaction_type == 'in' %}
-                                            <span class="badge bg-success">وارد</span>
-                                        {% else %}
-                                            <span class="badge bg-warning">صادر</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ transaction.quantity }}</td>
-                                    <td>{{ transaction.notes|default:"-" }}</td>
-                                    <td>{{ transaction.created_by.get_full_name }}</td>
-                                </tr>
+                            <tr>
+                                <td>{{ transaction.created_at|date:"Y-m-d H:i" }}</td>
+                                <td>
+                                    {% if transaction.transaction_type == 'in' %}
+                                    <span class="badge bg-success">وارد</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">صادر</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ transaction.quantity }}</td>
+                                <td>{{ transaction.notes|default:"-" }}</td>
+                                <td>{{ transaction.created_by.get_full_name }}</td>
+                            </tr>
                             {% empty %}
-                                <tr>
-                                    <td colspan="5" class="text-center">لا توجد معاملات سابقة</td>
-                                </tr>
+                            <tr>
+                                <td colspan="5" class="text-center">لا توجد معاملات سابقة</td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>

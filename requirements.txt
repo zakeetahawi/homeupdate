@@ -1,8 +1,3 @@
-# ======================================
-# ملف متطلبات بايثون - نظام إدارة الشكاوى والعملاء
-# ======================================
-# تم تحديثه تلقائياً باستخدام pip freeze ليشمل جميع الحزم المثبتة
-
 aiohappyeyeballs==2.6.1
 aiohttp==3.12.15
 aiohttp-retry==2.9.1
@@ -40,7 +35,7 @@ contourpy==1.3.2
 coreapi==2.3.3
 coreschema==0.0.4
 coverage==7.10.6
-cron_descriptor==2.0.6
+cron-descriptor==1.4.5
 cryptography==46.0.1
 cssselect2==0.8.0
 cycler==0.12.1
@@ -48,12 +43,12 @@ decorator==5.2.1
 defusedxml==0.7.1
 diff-match-patch==20241021
 dj-database-url==3.0.0
-Django==5.2.6
+Django==6.0
 django-admin-interface==0.30.1
 django-allauth==65.9.0
 django-apscheduler==0.7.0
 django-cacheops==7.2
-django-celery-beat==2.8.1
+django-celery-beat @ git+https://github.com/celery/django-celery-beat.git@7b4cf16c2aa38d8ff7aa2f2e6b27a16c41d8859b
 django-colorfield==0.14.0
 django-cors-headers==4.9.0
 django-crispy-forms==2.4
@@ -72,7 +67,7 @@ django-notifications-hq==1.8.3
 django-ratelimit==4.1.0
 django-redis==6.0.0
 django-tables2==2.7.5
-django-timezone-field==7.1
+django-timezone-field==7.2.1
 django-widget-tweaks==1.5.0
 django_celery_results==2.6.0
 djangorestframework==3.16.1
@@ -117,13 +112,13 @@ Markdown==3.8
 markdown-it-py==3.0.0
 MarkupPy==1.18
 MarkupSafe==3.0.2
-marshmallow>=3.20.0
+marshmallow==4.1.1
 matplotlib==3.10.6
 matplotlib-inline==0.1.7
 mccabe==0.7.0
 mdurl==0.1.2
 multidict==6.6.4
-mypy_extensions>=1.0.0
+mypy_extensions==1.1.0
 nltk==3.9.1
 numpy==2.2.6
 oauthlib==3.2.2
@@ -134,6 +129,7 @@ packaging==25.0
 pandas==2.2.3
 parso==0.8.5
 pathspec==0.12.1
+pbr==7.0.3
 pexpect==4.9.0
 pillow==11.3.0
 platformdirs==4.4.0
@@ -150,8 +146,8 @@ pyasn1==0.6.1
 pyasn1_modules==0.4.0
 pycodestyle==2.14.0
 pycparser==2.22
-pydantic>=2.6.0,<2.10.0
-# pydantic_core - managed by pydantic
+pydantic==2.9.2
+pydantic_core==2.23.4
 pydyf==0.11.0
 pyflakes==3.4.0
 Pygments==2.19.1
@@ -175,6 +171,7 @@ python-slugify==8.0.4
 pytokens==0.1.10
 pytz==2025.2
 PyYAML==6.0.2
+qrcode==8.2
 redis==6.4.0
 regex==2024.11.6
 reportlab==4.4.4
@@ -184,7 +181,7 @@ rich==13.9.4
 rsa==4.9.1
 ruamel.yaml==0.18.8
 ruamel.yaml.clib==0.2.12
-safety>=3.0.0
+safety==3.2.3
 safety-schemas==0.0.10
 scikit-learn==1.6.1
 scipy==1.15.3
@@ -200,18 +197,18 @@ stevedore==5.3.0
 svglib==1.5.1
 swapper==1.4.0
 tablib==3.5.0
-tenacity>=8.0.0
+tenacity==9.1.2
 text-unidecode==1.3
 threadpoolctl==3.6.0
 tinycss2==1.4.0
 tinyhtml5==2.0.0
-tomlkit>=0.12.0
+tomlkit==0.13.3
 tqdm==4.67.1
 traitlets==5.14.3
 twilio==9.8.1
 typer==0.17.0
+typing-inspection==0.4.2
 typing_extensions==4.14.0
-typing-inspection>=0.4.0
 tzdata==2025.2
 tzlocal==5.3.1
 ua-parser==1.0.1

@@ -21,10 +21,11 @@ class CategoryAdmin(admin.ModelAdmin):
 class ProductAdmin(admin.ModelAdmin):
     list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
     show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
-    list_display = ('name', 'code', 'category', 'price', 'get_current_stock', 'get_stock_status')
-    list_filter = ('category', 'created_at')
+    list_display = ('name', 'code', 'category', 'price', 'get_current_stock', 'get_stock_status', 'has_qr')
+    list_filter = ('category', 'created_at', ('qr_code_base64', admin.EmptyFieldListFilter))
     search_fields = ('name', 'code', 'description')
-    readonly_fields = ('get_current_stock', 'created_at', 'updated_at')
+    readonly_fields = ('get_current_stock', 'created_at', 'updated_at', 'qr_preview')
+    actions = ['regenerate_qr_codes']
 
     fieldsets = (
         (_('معلومات المنتج'), {
@@ -33,11 +34,39 @@ class ProductAdmin(admin.ModelAdmin):
         (_('التفاصيل'), {
             'fields': ('unit', 'price', 'minimum_stock')
         }),
+        (_('رمز QR'), {
+            'fields': ('qr_preview',),
+            'classes': ('collapse',)
+        }),
         (_('معلومات المخزون'), {
             'fields': ('get_current_stock', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
+
+    def has_qr(self, obj):
+        return bool(obj.qr_code_base64)
+    has_qr.boolean = True
+    has_qr.short_description = _('QR')
+
+    def qr_preview(self, obj):
+        if obj.qr_code_base64:
+            return format_html(
+                '<img src="data:image/png;base64,{}" style="width:150px; height:150px; border:1px solid #ddd; border-radius:8px;" />',
+                obj.qr_code_base64
+            )
+        return _('لا يوجد QR - سيتم توليده عند الحفظ')
+    qr_preview.short_description = _('معاينة QR')
+
+    @admin.action(description=_('إعادة توليد رموز QR للمنتجات المحددة'))
+    def regenerate_qr_codes(self, request, queryset):
+        count = 0
+        for product in queryset:
+            if product.code:
+                product.generate_qr(force=True)
+                product.save(update_fields=['qr_code_base64'])
+                count += 1
+        self.message_user(request, f'تم توليد {count} رمز QR بنجاح')
 
     def get_current_stock(self, obj):
         # استخدام خاصية current_stock المحسنة من النموذج
@@ -59,7 +88,7 @@ class ProductAdmin(admin.ModelAdmin):
             'category'
         ).only(
             'id', 'name', 'code', 'description', 'unit', 'price', 'minimum_stock',
-            'created_at', 'updated_at',
+            'created_at', 'updated_at', 'qr_code_base64',
             'category__id', 'category__name'
         )
 

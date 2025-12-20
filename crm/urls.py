@@ -24,6 +24,9 @@ from rest_framework_simplejwt.views import (
 
 # تعريف المسارات الرئيسية
 urlpatterns = [
+    # صفحات عامة (بدون تسجيل دخول) - للمنتجات QR Code
+    path("p/", include("public.urls", namespace="public")),
+    
     # المسارات الأساسية
     path("", views.home, name="home"),
     path("admin-dashboard/", views.admin_dashboard, name="admin_dashboard"),

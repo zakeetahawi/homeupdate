@@ -9,6 +9,9 @@
             <a href="{% url 'inventory:dashboard' %}" class="btn btn-secondary">
                 <i class="fas fa-tachometer-alt"></i> لوحة التحكم
             </a>
+            <a href="{% url 'public:qr_export' %}" class="btn btn-warning" target="_blank">
+                <i class="fas fa-qrcode"></i> تصدير QR
+            </a>
             <a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> إضافة منتج
             </a>
@@ -20,23 +23,27 @@
         <div class="card-body">
             <form method="get" class="row g-3">
                 <div class="col-md-4">
-                    <input type="text" name="search" class="form-control" placeholder="بحث..." value="{{ request.GET.search }}">
+                    <input type="text" name="search" class="form-control" placeholder="بحث..."
+                        value="{{ request.GET.search }}">
                 </div>
                 <div class="col-md-3">
                     <select name="category" class="form-select">
                         <option value="">كل الأصناف</option>
                         {% for category in categories %}
-                            <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"i" %}selected{% endif %}>
-                                {{ category.name }}
-                            </option>
+                        <option value="{{ category.id }}" {% if request.GET.category==category.id|stringformat:"i"
+                            %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-3">
                     <select name="filter" class="form-select">
                         <option value="">كل المنتجات</option>
-                        <option value="low_stock" {% if request.GET.filter == 'low_stock' %}selected{% endif %}>منتجات منخفضة المخزون</option>
-                        <option value="out_of_stock" {% if request.GET.filter == 'out_of_stock' %}selected{% endif %}>نفذت من المخزون</option>
+                        <option value="low_stock" {% if request.GET.filter=='low_stock' %}selected{% endif %}>منتجات
+                            منخفضة المخزون</option>
+                        <option value="out_of_stock" {% if request.GET.filter=='out_of_stock' %}selected{% endif %}>نفذت
+                            من المخزون</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -47,96 +54,110 @@
     </div>
 
     {% if page_obj %}
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>اسم المنتج</th>
-                                <th>الصنف</th>
-                                <th>المخزون</th>
-                                <th>الحد الأدنى</th>
-                                <th>السعر</th>
-                                <th>الحالة</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for product in page_obj %}
-                            <tr>
-                                <td>{{ product.name }}</td>
-                                <td>{{ product.category.name }}</td>
-                                <td>
-                                    <span class="{% if product.current_stock_calc < product.minimum_stock %}text-danger{% endif %}">
-                                        {{ product.current_stock_calc|default:0 }}
-                                    </span>
-                                </td>
-                                <td>{{ product.minimum_stock }}</td>
-                                <td>{{ product.price }}</td>
-                                <td>
-                                    {% if product.current_stock_calc == 0 or not product.current_stock_calc %}
-                                        <span class="badge bg-danger">نفذ من المخزون</span>
-                                    {% elif product.current_stock_calc < product.minimum_stock %}
-                                        <span class="badge bg-warning">مخزون منخفض</span>
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>اسم المنتج</th>
+                            <th>الصنف</th>
+                            <th>المخزون</th>
+                            <th>الحد الأدنى</th>
+                            <th>السعر</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in page_obj %}
+                        <tr>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.category.name }}</td>
+                            <td>
+                                <span
+                                    class="{% if product.current_stock_calc < product.minimum_stock %}text-danger{% endif %}">
+                                    {{ product.current_stock_calc|default:0 }}
+                                </span>
+                            </td>
+                            <td>{{ product.minimum_stock }}</td>
+                            <td>{{ product.price }}</td>
+                            <td>
+                                {% if product.current_stock_calc == 0 or not product.current_stock_calc %}
+                                <span class="badge bg-danger">نفذ من المخزون</span>
+                                {% elif product.current_stock_calc < product.minimum_stock %} <span
+                                    class="badge bg-warning">مخزون منخفض</span>
                                     {% else %}
-                                        <span class="badge bg-success">متوفر</span>
+                                    <span class="badge bg-success">متوفر</span>
                                     {% endif %}
-                                </td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <a href="{% url 'inventory:product_detail' product.id %}" class="btn btn-info btn-sm">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <a href="{% url 'inventory:product_update' product.id %}" class="btn btn-primary btn-sm">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <a href="{% url 'inventory:transaction_create' product.id %}" class="btn btn-success btn-sm">
-                                            <i class="fas fa-exchange-alt"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="7" class="text-center">لا توجد منتجات</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                {% if page_obj.has_other_pages %}
-                <nav aria-label="Page navigation" class="mt-4">
-                    <ul class="pagination justify-content-center">
-                        {% if page_obj.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}">
-                                    السابق
-                                </a>
-                            </li>
-                        {% endif %}
-
-                        <li class="page-item active">
-                            <span class="page-link">
-                                صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
-                            </span>
-                        </li>
-
-                        {% if page_obj.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}">
-                                    التالي
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'inventory:product_detail' product.id %}"
+                                        class="btn btn-info btn-sm" title="عرض">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:product_update' product.id %}"
+                                        class="btn btn-primary btn-sm" title="تعديل">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:transaction_create' product.id %}"
+                                        class="btn btn-success btn-sm" title="حركة مخزون">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </a>
+                                    {% if product.code %}
+                                    <a href="{% url 'public:product_qr_page' product.code %}"
+                                        class="btn btn-warning btn-sm" target="_blank" title="صفحة QR العامة">
+                                        <i class="fas fa-qrcode"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">لا توجد منتجات</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
+
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link"
+                            href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}">
+                            السابق
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link"
+                            href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}">
+                            التالي
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
         </div>
+    </div>
     {% else %}
-        <div class="alert alert-info">
-            لا توجد منتجات تطابق معايير البحث.
-        </div>
+    <div class="alert alert-info">
+        لا توجد منتجات تطابق معايير البحث.
+    </div>
     {% endif %}
 </div>
 {% endblock %}

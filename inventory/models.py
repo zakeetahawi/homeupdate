@@ -87,6 +87,8 @@ class Product(models.Model):
     )
     description = models.TextField(_('الوصف'), blank=True)
     minimum_stock = models.PositiveIntegerField(_('الحد الأدنى للمخزون'), default=0)
+    # QR Code Cache - تخزين رمز QR لتحسين الأداء
+    qr_code_base64 = models.TextField(_('رمز QR (مخزن)'), blank=True, null=True)
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
 
@@ -169,10 +171,51 @@ class Product(models.Model):
         """إرجاع عرض الوحدة"""
         return dict(self.UNIT_CHOICES).get(self.unit, self.unit)
 
+    def generate_qr(self, force=False):
+        """
+        توليد رمز QR وتخزينه في الحقل qr_code_base64
+        يعيد True إذا تم التوليد، False إذا لم يكن مطلوباً
+        """
+        if not self.code:
+            return False
+        
+        if self.qr_code_base64 and not force:
+            return False  # QR موجود مسبقاً ولا يوجد إجبار
+        
+        try:
+            import qrcode
+            from io import BytesIO
+            import base64
+            from django.conf import settings
+            
+            base_url = getattr(settings, 'SITE_URL', 'https://www.elkhawaga.uk')
+            qr_url = f"{base_url}/p/{self.code}/"
+            
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=2,
+            )
+            qr.add_data(qr_url)
+            qr.make(fit=True)
+            
+            qr_img = qr.make_image(fill_color="black", back_color="white")
+            buffer = BytesIO()
+            qr_img.save(buffer, format='PNG')
+            self.qr_code_base64 = base64.b64encode(buffer.getvalue()).decode()
+            return True
+        except Exception:
+            return False
+
     def save(self, *args, **kwargs):
         # إنشاء كود للمنتج إذا لم يكن موجوداً
         if not self.code:
             self.code = f"P-{uuid.uuid4().hex[:8].upper()}"
+        
+        # توليد QR تلقائياً إذا لم يكن موجوداً
+        if self.code and not self.qr_code_base64:
+            self.generate_qr()
         
         # تنظيف ذاكرة التخزين المؤقت عند حفظ المنتج
         from django.core.cache import cache

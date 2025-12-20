@@ -14,12 +14,12 @@
     .card {
         border: none;
         border-radius: 15px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
         transition: all 0.3s ease;
     }
 
     .card:hover {
-        box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
         transform: translateY(-2px);
     }
 
@@ -141,6 +141,9 @@
 <a href="{% url 'inventory:transaction_create' product.id %}" class="btn btn-success btn-sm">
     <i class="fas fa-exchange-alt"></i> إضافة حركة
 </a>
+<a href="{% url 'public:qr_export' %}" class="btn btn-warning btn-sm" target="_blank">
+    <i class="fas fa-qrcode"></i> تصدير QR
+</a>
 <a href="{% url 'inventory:product_delete' product.id %}" class="btn btn-danger btn-sm">
     <i class="fas fa-trash"></i> حذف
 </a>
@@ -174,10 +177,48 @@
                         <h6>الوصف:</h6>
                         <p>{{ product.description|default:"لا يوجد وصف" }}</p>
                     </div>
+
+                    <!-- QR Code Section -->
+                    {% if product.code %}
+                    <hr>
+                    <div class="qr-code-section text-center" id="qrSection">
+                        <h6><i class="fas fa-qrcode text-warning"></i> رمز QR</h6>
+
+                        <!-- QR Status Message -->
+                        {% if product.qr_code_base64 %}
+                        <div class="alert alert-success py-1 px-2 mb-2" style="font-size: 0.8rem;">
+                            <i class="fas fa-check-circle"></i> QR موجود ومخزن
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning py-1 px-2 mb-2" style="font-size: 0.8rem;">
+                            <i class="fas fa-exclamation-triangle"></i> لا يوجد QR مخزن (سيتم توليده عند الطلب)
+                        </div>
+                        {% endif %}
+
+                        <div class="bg-white p-3 rounded border d-inline-block my-2">
+                            <img src="{% url 'public:product_qr_image' product.code %}" alt="QR Code"
+                                style="width: 120px; height: 120px;" id="qrImage">
+                        </div>
+                        <div class="btn-group-vertical d-block mt-2">
+                            <a href="{% url 'public:product_qr_page' product.code %}"
+                                class="btn btn-warning btn-sm mb-1" target="_blank">
+                                <i class="fas fa-external-link-alt"></i> الصفحة العامة
+                            </a>
+                            <a href="{% url 'public:product_qr_image' product.code %}"
+                                class="btn btn-outline-secondary btn-sm mb-1" download="qr_{{ product.code }}.png">
+                                <i class="fas fa-download"></i> تحميل QR
+                            </a>
+                            <button type="button" class="btn btn-outline-warning btn-sm" id="regenerateQr"
+                                data-product-id="{{ product.id }}">
+                                <i class="fas fa-sync-alt"></i> إعادة توليد QR
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
-        
+
         <div class="col-lg-8">
             <div class="row">
                 <!-- بطاقة حالة المخزون -->
@@ -189,228 +230,231 @@
                         <div class="card-body">
                             <div class="stock-status text-center">
                                 <div class="stock-gauge">
-                                    {% if current_stock <= 0 %}
-                                    <div class="gauge-value danger">{{ current_stock }}</div>
-                                    <div class="gauge-label">نفذ من المخزون</div>
-                                    {% elif current_stock <= product.minimum_stock %}
-                                    <div class="gauge-value warning">{{ current_stock }}</div>
-                                    <div class="gauge-label">مخزون منخفض</div>
-                                    {% else %}
-                                    <div class="gauge-value success">{{ current_stock }}</div>
-                                    <div class="gauge-label">متوفر</div>
-                                    {% endif %}
+                                    {% if current_stock <= 0 %} <div class="gauge-value danger">{{ current_stock }}
                                 </div>
-                                <div class="stock-details mt-3">
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <div class="detail-label">الحد الأدنى</div>
-                                            <div class="detail-value">{{ product.minimum_stock }}</div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="detail-label">الحالة</div>
-                                            <div class="detail-value">
-                                                {% if current_stock <= 0 %}
-                                                <span class="badge bg-danger">{{ stock_status }}</span>
-                                                {% elif current_stock <= product.minimum_stock %}
-                                                <span class="badge bg-warning">{{ stock_status }}</span>
+                                <div class="gauge-label">نفذ من المخزون</div>
+                                {% elif current_stock <= product.minimum_stock %} <div class="gauge-value warning">{{
+                                    current_stock }}
+                            </div>
+                            <div class="gauge-label">مخزون منخفض</div>
+                            {% else %}
+                            <div class="gauge-value success">{{ current_stock }}</div>
+                            <div class="gauge-label">متوفر</div>
+                            {% endif %}
+                        </div>
+                        <div class="stock-details mt-3">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="detail-label">الحد الأدنى</div>
+                                    <div class="detail-value">{{ product.minimum_stock }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="detail-label">الحالة</div>
+                                    <div class="detail-value">
+                                        {% if current_stock <= 0 %} <span class="badge bg-danger">{{ stock_status
+                                            }}</span>
+                                            {% elif current_stock <= product.minimum_stock %} <span
+                                                class="badge bg-warning">{{ stock_status }}</span>
                                                 {% else %}
                                                 <span class="badge bg-success">{{ stock_status }}</span>
                                                 {% endif %}
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- بطاقة الإحصائيات -->
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">إحصائيات</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="stats-item">
-                                <div class="stats-label">تاريخ الإضافة</div>
-                                <div class="stats-value">{{ product.created_at|date:"Y-m-d" }}</div>
-                            </div>
-                            <div class="stats-item">
-                                <div class="stats-label">آخر تحديث</div>
-                                <div class="stats-value">{{ product.updated_at|date:"Y-m-d" }}</div>
-                            </div>
-                            <div class="stats-item">
-                                <div class="stats-label">عدد الحركات</div>
-                                <div class="stats-value">{{ transactions|length }}</div>
-                            </div>
-                            <div class="stats-item">
-                                <div class="stats-label">إجمالي الوارد</div>
-                                <div class="stats-value text-success">
-                                    {{ transactions_in_total }}
-                                </div>
-                            </div>
-                            <div class="stats-item">
-                                <div class="stats-label">إجمالي الصادر</div>
-                                <div class="stats-value text-danger">
-                                    {{ transactions_out_total }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
+        </div>
 
-            <!-- بطاقة المخزون حسب المستودع -->
-            {% if warehouses_stock %}
-            <div class="card mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-warehouse"></i>
-                        المخزون حسب المستودع
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th><i class="fas fa-warehouse"></i> المستودع</th>
-                                    <th><i class="fas fa-boxes"></i> الكمية</th>
-                                    <th><i class="fas fa-clock"></i> آخر تحديث</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in warehouses_stock %}
-                                <tr {% if item.stock == 0 %}class="table-secondary"{% endif %}>
-                                    <td>
-                                        <a href="{% url 'inventory:warehouse_detail' item.warehouse.id %}" class="text-decoration-none">
-                                            <i class="fas fa-warehouse me-2"></i>
-                                            <strong>{{ item.warehouse.name }}</strong>
-                                        </a>
-                                        {% if item.warehouse.branch %}
-                                        <br>
-                                        <small class="text-muted ms-4">
-                                            <i class="fas fa-map-marker-alt"></i>
-                                            {{ item.warehouse.branch.name }}
-                                        </small>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if item.stock > 0 %}
-                                            <span class="badge bg-success fs-6">
-                                                <i class="fas fa-check-circle"></i>
-                                                {{ item.stock|floatformat:0 }} {{ product.unit }}
-                                            </span>
-                                        {% else %}
-                                            <span class="badge bg-secondary fs-6">
-                                                <i class="fas fa-times-circle"></i>
-                                                0 {{ product.unit }}
-                                            </span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">
-                                            <i class="fas fa-clock"></i>
-                                            {{ item.last_update|date:"Y-m-d H:i" }}
-                                        </small>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot>
-                                <tr class="table-primary">
-                                    <th>الإجمالي</th>
-                                    <th>
-                                        <span class="badge bg-primary fs-6">
-                                            {{ current_stock|floatformat:0 }} {{ product.unit }}
-                                        </span>
-                                    </th>
-                                    <th></th>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            {% else %}
-            <div class="card mb-4">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        المخزون حسب المستودع
-                    </h5>
-                </div>
-                <div class="card-body text-center">
-                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">لا يوجد مخزون في أي مستودع</p>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- بطاقة الرسم البياني -->
+        <!-- بطاقة الإحصائيات -->
+        <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">حركة المخزون</h5>
+                    <h5 class="card-title mb-0">إحصائيات</h5>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="stockMovementChart" height="200"></canvas>
+                    <div class="stats-item">
+                        <div class="stats-label">تاريخ الإضافة</div>
+                        <div class="stats-value">{{ product.created_at|date:"Y-m-d" }}</div>
+                    </div>
+                    <div class="stats-item">
+                        <div class="stats-label">آخر تحديث</div>
+                        <div class="stats-value">{{ product.updated_at|date:"Y-m-d" }}</div>
+                    </div>
+                    <div class="stats-item">
+                        <div class="stats-label">عدد الحركات</div>
+                        <div class="stats-value">{{ transactions|length }}</div>
+                    </div>
+                    <div class="stats-item">
+                        <div class="stats-label">إجمالي الوارد</div>
+                        <div class="stats-value text-success">
+                            {{ transactions_in_total }}
+                        </div>
+                    </div>
+                    <div class="stats-item">
+                        <div class="stats-label">إجمالي الصادر</div>
+                        <div class="stats-value text-danger">
+                            {{ transactions_out_total }}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- جدول حركات المخزون -->
-    <div class="data-table-container">
-        <div class="data-table-header">
-            <h5 class="data-table-title">حركات المخزون</h5>
-            <div class="data-table-actions">
-                <a href="{% url 'inventory:transaction_create' product.id %}" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus"></i> إضافة حركة
-                </a>
-            </div>
+
+    <!-- بطاقة المخزون حسب المستودع -->
+    {% if warehouses_stock %}
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-warehouse"></i>
+                المخزون حسب المستودع
+            </h5>
         </div>
-        <div class="data-table-body">
+        <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-hover datatable">
+                <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>التاريخ</th>
-                            <th>نوع الحركة</th>
-                            <th>الكمية</th>
-                            <th>السبب</th>
-                            <th>المرجع</th>
-                            <th>بواسطة</th>
-                            <th>ملاحظات</th>
+                            <th><i class="fas fa-warehouse"></i> المستودع</th>
+                            <th><i class="fas fa-boxes"></i> الكمية</th>
+                            <th><i class="fas fa-clock"></i> آخر تحديث</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for transaction in transactions %}
-                        <tr>
-                            <td>{{ transaction.date|date:"Y-m-d H:i" }}</td>
+                        {% for item in warehouses_stock %}
+                        <tr {% if item.stock == 0 %}class="table-secondary" {% endif %}>
                             <td>
-                                <span class="badge {% if transaction.transaction_type == 'in' %}bg-success{% elif transaction.transaction_type == 'out' %}bg-danger{% else %}bg-info{% endif %}">
-                                    {{ transaction.get_transaction_type_display }}
-                                </span>
+                                <a href="{% url 'inventory:warehouse_detail' item.warehouse.id %}"
+                                    class="text-decoration-none">
+                                    <i class="fas fa-warehouse me-2"></i>
+                                    <strong>{{ item.warehouse.name }}</strong>
+                                </a>
+                                {% if item.warehouse.branch %}
+                                <br>
+                                <small class="text-muted ms-4">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    {{ item.warehouse.branch.name }}
+                                </small>
+                                {% endif %}
                             </td>
-                            <td>{{ transaction.quantity }}</td>
-                            <td>{{ transaction.get_reason_display }}</td>
-                            <td>{{ transaction.reference|default:"-" }}</td>
-                            <td>{{ transaction.created_by.get_full_name }}</td>
-                            <td>{{ transaction.notes|default:"-" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center">لا توجد حركات مخزون لهذا المنتج</td>
+                            <td>
+                                {% if item.stock > 0 %}
+                                <span class="badge bg-success fs-6">
+                                    <i class="fas fa-check-circle"></i>
+                                    {{ item.stock|floatformat:0 }} {{ product.unit }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary fs-6">
+                                    <i class="fas fa-times-circle"></i>
+                                    0 {{ product.unit }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock"></i>
+                                    {{ item.last_update|date:"Y-m-d H:i" }}
+                                </small>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
+                    <tfoot>
+                        <tr class="table-primary">
+                            <th>الإجمالي</th>
+                            <th>
+                                <span class="badge bg-primary fs-6">
+                                    {{ current_stock|floatformat:0 }} {{ product.unit }}
+                                </span>
+                            </th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
     </div>
+    {% else %}
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-exclamation-triangle"></i>
+                المخزون حسب المستودع
+            </h5>
+        </div>
+        <div class="card-body text-center">
+            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+            <p class="text-muted">لا يوجد مخزون في أي مستودع</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- بطاقة الرسم البياني -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">حركة المخزون</h5>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="stockMovementChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- جدول حركات المخزون -->
+<div class="data-table-container">
+    <div class="data-table-header">
+        <h5 class="data-table-title">حركات المخزون</h5>
+        <div class="data-table-actions">
+            <a href="{% url 'inventory:transaction_create' product.id %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> إضافة حركة
+            </a>
+        </div>
+    </div>
+    <div class="data-table-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover datatable">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>نوع الحركة</th>
+                        <th>الكمية</th>
+                        <th>السبب</th>
+                        <th>المرجع</th>
+                        <th>بواسطة</th>
+                        <th>ملاحظات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr>
+                        <td>{{ transaction.date|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <span
+                                class="badge {% if transaction.transaction_type == 'in' %}bg-success{% elif transaction.transaction_type == 'out' %}bg-danger{% else %}bg-info{% endif %}">
+                                {{ transaction.get_transaction_type_display }}
+                            </span>
+                        </td>
+                        <td>{{ transaction.quantity }}</td>
+                        <td>{{ transaction.get_reason_display }}</td>
+                        <td>{{ transaction.reference|default:"-" }}</td>
+                        <td>{{ transaction.created_by.get_full_name }}</td>
+                        <td>{{ transaction.notes|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">لا توجد حركات مخزون لهذا المنتج</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 </div>
 {% endblock %}
 
@@ -418,86 +462,129 @@
 {{ block.super }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // بيانات الرسم البياني
         const ctx = document.getElementById('stockMovementChart').getContext('2d');
         const stockMovementChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: [{% for date in transaction_dates %}'{{ date|date:"d/m" }}',{% endfor %}],
-                datasets: [
-                    {
-                        label: 'الرصيد',
-                        data: [{% for balance in transaction_balances %}{{ balance }},{% endfor %}],
-                        borderColor: '#4e73df',
-                        backgroundColor: 'rgba(78, 115, 223, 0.1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: '#4e73df',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        fill: true
+        datasets: [
+        {
+            label: 'الرصيد',
+            data: [{% for balance in transaction_balances %}{{ balance }}, {% endfor %}],
+        borderColor: '#4e73df',
+        backgroundColor: 'rgba(78, 115, 223, 0.1)',
+        borderWidth: 2,
+        pointBackgroundColor: '#4e73df',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        fill: true
                     }
                 ]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)',
-                            zeroLineColor: 'rgba(0, 0, 0, 0.1)'
-                        },
-                        beginAtZero: true
-                    }
-                },
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        rtl: true
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        rtl: true
-                    }
-                }
-            }
-        });
-        
-        // تهيئة جدول البيانات
-        $('.datatable').DataTable({
-            language: {
-                processing: "جارٍ التحميل...",
-                search: "بحث:",
-                lengthMenu: "عرض _MENU_ سجلات",
-                info: "عرض _START_ إلى _END_ من أصل _TOTAL_ سجل",
-                infoEmpty: "عرض 0 إلى 0 من أصل 0 سجل",
-                infoFiltered: "(منتقاة من مجموع _MAX_ سجل)",
-                infoPostFix: "",
-                loadingRecords: "جارٍ التحميل...",
-                zeroRecords: "لم يعثر على أية سجلات",
-                emptyTable: "لا توجد بيانات متاحة في الجدول",
-                paginate: {
-                    first: "الأول",
-                    previous: "السابق",
-                    next: "التالي",
-                    last: "الأخير"
-                },
-                aria: {
-                    sortAscending: ": تفعيل لترتيب العمود تصاعدياً",
-                    sortDescending: ": تفعيل لترتيب العمود تنازلياً"
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: {
+                grid: {
+                    display: false
                 }
             },
-            order: [[0, 'desc']],
-            pageLength: 10
+            y: {
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)',
+                    zeroLineColor: 'rgba(0, 0, 0, 0.1)'
+                },
+                beginAtZero: true
+            }
+        },
+        plugins: {
+            legend: {
+                position: 'top',
+                rtl: true
+            },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+                rtl: true
+            }
+        }
+    }
         });
+
+    // تهيئة جدول البيانات
+    $('.datatable').DataTable({
+        language: {
+            processing: "جارٍ التحميل...",
+            search: "بحث:",
+            lengthMenu: "عرض _MENU_ سجلات",
+            info: "عرض _START_ إلى _END_ من أصل _TOTAL_ سجل",
+            infoEmpty: "عرض 0 إلى 0 من أصل 0 سجل",
+            infoFiltered: "(منتقاة من مجموع _MAX_ سجل)",
+            infoPostFix: "",
+            loadingRecords: "جارٍ التحميل...",
+            zeroRecords: "لم يعثر على أية سجلات",
+            emptyTable: "لا توجد بيانات متاحة في الجدول",
+            paginate: {
+                first: "الأول",
+                previous: "السابق",
+                next: "التالي",
+                last: "الأخير"
+            },
+            aria: {
+                sortAscending: ": تفعيل لترتيب العمود تصاعدياً",
+                sortDescending: ": تفعيل لترتيب العمود تنازلياً"
+            }
+        },
+        order: [[0, 'desc']],
+        pageLength: 10
+    });
+    });
+
+    // Regenerate QR button handler
+    document.getElementById('regenerateQr')?.addEventListener('click', async function () {
+        const btn = this;
+        const productId = btn.dataset.productId;
+        const originalHtml = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري...';
+
+        try {
+            const response = await fetch(`/inventory/api/product/${productId}/generate-qr/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Refresh the QR image
+                const qrImg = document.getElementById('qrImage');
+                if (qrImg) {
+                    qrImg.src = qrImg.src + '?t=' + Date.now();
+                }
+                btn.innerHTML = '<i class="fas fa-check"></i> تم التوليد';
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }, 2000);
+            } else {
+                alert('خطأ: ' + data.error);
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        } catch (err) {
+            alert('حدث خطأ: ' + err.message);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
     });
 </script>
 {% endblock %}

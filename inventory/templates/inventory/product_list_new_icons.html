@@ -26,12 +26,13 @@
                 <form method="get" class="row g-3">
                     <div class="col-md-4">
                         <label for="search" class="form-label">بحث</label>
-                        <input type="text" class="form-control" id="search" name="search" value="{{ search_query }}" placeholder="اسم المنتج، الكود، الوصف...">
+                        <input type="text" class="form-control" id="search" name="search" value="{{ search_query }}"
+                            placeholder="اسم المنتج، الكود، الوصف...">
                     </div>
                     <div class="col-md-3">
                         <label for="category" class="form-label">الفئة</label>
                         <select class="form-select" id="category" name="category">
-                            <option value="">جميع الفئات</option>
+                                                        <option value="">جميع الفئات</option>
                             {% for category in categories %}
                             <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
                             {% endfor %}
@@ -54,6 +55,7 @@
                             <option value="price" {% if sort_by == 'price' %}selected{% endif %}>السعر (تصاعدي)</option>
                             <option value="-price" {% if sort_by == '-price' %}selected{% endif %}>السعر (تنازلي)</option>
                         </select>
+                    </div>
                     </div>
                     <div class="col-12 mt-3">
                         <button type="submit" class="btn btn-primary">
@@ -78,8 +80,18 @@
                 {% endif %}
             </h4>
             <div class="data-table-actions">
+                <!-- QR Actions -->
+                <a href="{% url 'public:qr_export' %}" class="btn btn-warning" target="_blank" title="تصدير QR للطباعة">
+                    <i class="fas fa-qrcode"></i> تصدير QR
+                </a>
+                <button type="button" class="btn btn-outline-warning" id="generateAllQr"
+                    title="توليد QR للمنتجات الناقصة">
+                    <i class="fas fa-sync-alt"></i> توليد جميع QR
+                </button>
+
                 <div class="dropdown">
-                    <button class="btn btn-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="exportDropdown"
+                        data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-download"></i> تصدير
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="exportDropdown">
@@ -120,36 +132,40 @@
                             <td>{{ product.category }}</td>
                             <td>{{ product.price }} {{ product.currency }}</td>
                             <td>
-                                {% if product.current_stock_calc <= 0 %}
-                                <span class="badge bg-danger">نفذ من المخزون</span>
-                                {% elif product.current_stock_calc <= product.minimum_stock %}
-                                <span class="badge bg-warning">{{ product.current_stock_calc }}</span>
-                                {% else %}
-                                <span class="badge bg-success">{{ product.current_stock_calc }}</span>
-                                {% endif %}
+                                {% if product.current_stock_calc <= 0 %} <span class="badge bg-danger">نفذ من
+                                    المخزون</span>
+                                    {% elif product.current_stock_calc <= product.minimum_stock %} <span
+                                        class="badge bg-warning">{{ product.current_stock_calc }}</span>
+                                        {% else %}
+                                        <span class="badge bg-success">{{ product.current_stock_calc }}</span>
+                                        {% endif %}
                             </td>
                             <td>
                                 <small class="text-muted" style="font-size: 0.75rem;">
                                     {% if product.warehouses_with_stock %}
-                                        {{ product.warehouses_with_stock }}
+                                    {{ product.warehouses_with_stock }}
                                     {% else %}
-                                        <span class="text-danger">لا يوجد</span>
+                                    <span class="text-danger">لا يوجد</span>
                                     {% endif %}
                                 </small>
                             </td>
                             <td>{{ product.minimum_stock }}</td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <a href="{% url 'inventory:product_detail' product.id %}" class="btn btn-info btn-sm" title="عرض التفاصيل">
+                                    <a href="{% url 'inventory:product_detail' product.id %}"
+                                        class="btn btn-info btn-sm" title="عرض التفاصيل">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{% url 'inventory:product_update' product.id %}" class="btn btn-primary btn-sm" title="تعديل">
+                                    <a href="{% url 'inventory:product_update' product.id %}"
+                                        class="btn btn-primary btn-sm" title="تعديل">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="{% url 'inventory:transaction_create' product.id %}" class="btn btn-success btn-sm" title="إضافة حركة">
+                                    <a href="{% url 'inventory:transaction_create' product.id %}"
+                                        class="btn btn-success btn-sm" title="إضافة حركة">
                                         <i class="fas fa-exchange-alt"></i>
                                     </a>
-                                    <a href="{% url 'inventory:product_delete' product.id %}" class="btn btn-danger btn-sm" title="حذف">
+                                    <a href="{% url 'inventory:product_delete' product.id %}"
+                                        class="btn btn-danger btn-sm" title="حذف">
                                         <i class="fas fa-trash"></i>
                                     </a>
                                 </div>
@@ -164,7 +180,7 @@
                 </table>
             </div>
         </div>
-        
+
         <!-- الصفحات -->
         {% if page_obj.has_other_pages %}
         <div class="data-table-footer">
@@ -172,12 +188,16 @@
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_filter %}&filter={{ selected_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" aria-label="First">
+                        <a class="page-link"
+                            href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_filter %}&filter={{ selected_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+                            aria-label="First">
                             <span aria-hidden="true">&laquo;&laquo;</span>
                         </a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_filter %}&filter={{ selected_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" aria-label="Previous">
+                        <a class="page-link"
+                            href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_filter %}&filter={{ selected_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+                            aria-label="Previous">
                             <span aria-hidden="true">&laquo;</span>
                         </a>
                     </li>
@@ -193,42 +213,96 @@
                         </a>
                     </li>
                     {% endif %}
-                    
+
                     {% for i in page_obj.paginator.page_range %}
-                        {% if page_obj.number == i %}
-                        <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
-                        {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
-                        <li class="page-item"><a class="page-link" href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_filter %}&filter={{ selected_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">{{ i }}</a></li>
+                    {% if page_obj.number == i %}
+                    <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                    {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %} <li class="page-item"><a
+                            class="page-link"
+                            href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_filter %}&filter={{ selected_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">{{
+                            i }}</a></li>
                         {% endif %}
-                    {% endfor %}
-                    
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_filter %}&filter={{ selected_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" aria-label="Next">
-                            <span aria-hidden="true">&raquo;</span>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_filter %}&filter={{ selected_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" aria-label="Last">
-                            <span aria-hidden="true">&raquo;&raquo;</span>
-                        </a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#" aria-label="Next">
-                            <span aria-hidden="true">&raquo;</span>
-                        </a>
-                    </li>
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#" aria-label="Last">
-                            <span aria-hidden="true">&raquo;&raquo;</span>
-                        </a>
-                    </li>
-                    {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link"
+                                href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_filter %}&filter={{ selected_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+                                aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link"
+                                href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_filter %}&filter={{ selected_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+                                aria-label="Last">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" aria-label="Last">
+                                <span aria-hidden="true">&raquo;&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
                 </ul>
             </nav>
         </div>
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Generate All QR functionality
+    document.getElementById('generateAllQr')?.addEventListener('click', async function () {
+        const btn = this;
+        const originalHtml = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التوليد...';
+
+        try {
+            const response = await fetch('{% url "inventory:generate_all_qr_api" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert(data.message);
+                if (data.remaining > 0) {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    // If there are more, let user click again
+                } else {
+                    btn.innerHTML = '<i class="fas fa-check"></i> تم التوليد';
+                    setTimeout(() => {
+                        btn.innerHTML = originalHtml;
+                        btn.disabled = false;
+                    }, 3000);
+                }
+            } else {
+                alert('خطأ: ' + data.error);
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        } catch (err) {
+            alert('حدث خطأ أثناء توليد QR: ' + err.message);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    });
+</script>
 {% endblock %}

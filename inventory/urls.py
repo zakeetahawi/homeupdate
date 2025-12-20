@@ -216,5 +216,9 @@ urlpatterns = [
     
     # Stock Transfers API
     path('api/pending-transfers/', api_views.pending_transfers_api, name='pending_transfers_api'),
+    
+    # QR Code Generation APIs
+    path('api/product/<int:pk>/generate-qr/', views.generate_single_qr_api, name='generate_single_qr_api'),
+    path('api/generate-all-qr/', views.generate_all_qr_api, name='generate_all_qr_api'),
 ]
 

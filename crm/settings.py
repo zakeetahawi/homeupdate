@@ -362,6 +362,7 @@ INSTALLED_APPS = [
     'accounting.apps.AccountingConfig',  # النظام المحاسبي المتكامل
     'odoo_db_manager.apps.OdooDbManagerConfig',
     'backup_system.apps.BackupSystemConfig',  # نظام النسخ الاحتياطي والاستعادة الجديد
+    'public',  # صفحات عامة للمنتجات (QR Code)
 
 
     'corsheaders',
@@ -634,6 +635,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Forms URLField settings (Django 5.2+)
 # استخدام https كافتراضي لحقول URL
 FORMS_URLFIELD_ASSUME_HTTPS = True
+
+# QR Code Settings - رابط الموقع للمنتجات العامة
+SITE_URL = os.environ.get('SITE_URL', 'https://www.elkhawaga.uk')
 
 # Authentication settings
 LOGIN_URL = '/accounts/login/'

@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{ product.name }} - {{ site_name }}">
+    <meta property="og:title" content="{{ product.name }} | {{ site_name }}">
+    <meta property="og:description" content="{{ product.description|truncatewords:30 }}">
+    <meta property="og:url" content="{{ share_url }}">
+    <meta property="og:type" content="product">
+    <title>{{ product.name }} | {{ site_name }}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-light: #f4d03f;
+            --gold-dark: #b8860b;
+            --dark: #1a1a2e;
+            --dark-light: #16213e;
+            --dark-surface: #0f3460;
+            --text-light: #ffffff;
+            --text-muted: #a0a0a0;
+            --gradient-gold: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
+            --shadow-gold: 0 4px 30px rgba(212, 175, 55, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, var(--dark) 0%, var(--dark-light) 50%, var(--dark-surface) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.03) 0%, transparent 30%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Brand Header */
+        .brand-header {
+            text-align: center;
+            margin-bottom: 24px;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .brand-logo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: var(--gradient-gold);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+            letter-spacing: 2px;
+        }
+
+        .brand-tagline {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        /* Product Card */
+        .product-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* Product Image Placeholder */
+        .product-visual {
+            height: 200px;
+            background: linear-gradient(135deg, var(--dark-surface) 0%, var(--dark-light) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-visual::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg,
+                    transparent 0deg 90deg,
+                    rgba(212, 175, 55, 0.1) 90deg 180deg,
+                    transparent 180deg 270deg,
+                    rgba(212, 175, 55, 0.05) 270deg 360deg);
+            animation: rotate 20s linear infinite;
+        }
+
+        .product-icon {
+            font-size: 4rem;
+            color: var(--gold);
+            opacity: 0.8;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Category Badge */
+        .category-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: var(--gradient-gold);
+            color: var(--dark);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 2;
+            box-shadow: var(--shadow-gold);
+        }
+
+        /* Product Content */
+        .product-content {
+            padding: 24px;
+        }
+
+        .product-code {
+            display: inline-block;
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--gold);
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-family: monospace;
+            letter-spacing: 1px;
+        }
+
+        .product-name {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-light);
+            margin-bottom: 16px;
+            line-height: 1.3;
+        }
+
+        .product-description {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        /* Price Section */
+        .price-section {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.05) 100%);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .price-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .price-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: var(--gradient-gold);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .price-unit {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+
+        /* Product Meta */
+        .product-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .meta-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .meta-label {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* QR Code Section */
+        .qr-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .qr-title {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+        }
+
+        .qr-image {
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            display: inline-block;
+        }
+
+        .qr-image img {
+            width: 120px;
+            height: 120px;
+        }
+
+        /* Actions */
+        .actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--gradient-gold);
+            color: var(--dark);
+            box-shadow: var(--shadow-gold);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 35px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-light);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        /* Footer */
+        .card-footer {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 16px 24px;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .footer-link {
+            color: var(--gold);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .footer-link:hover {
+            color: var(--gold-light);
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--gradient-gold);
+            color: var(--dark);
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            box-shadow: var(--shadow-gold);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .brand-logo {
+                font-size: 2rem;
+            }
+
+            .product-name {
+                font-size: 1.4rem;
+            }
+
+            .price-value {
+                font-size: 1.8rem;
+            }
+
+            .product-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Brand Header -->
+        <header class="brand-header">
+            <div class="brand-logo">الخواجة</div>
+            <div class="brand-tagline">جودة لا تُضاهى</div>
+        </header>
+
+        <!-- Product Card -->
+        <article class="product-card">
+            <!-- Product Visual -->
+            <div class="product-visual">
+                <span class="category-badge">
+                    <i class="fas fa-tag"></i>
+                    {{ category_name }}
+                </span>
+                <i class="fas fa-box-open product-icon"></i>
+            </div>
+
+            <!-- Product Content -->
+            <div class="product-content">
+                <!-- Product Code -->
+                <span class="product-code">
+                    <i class="fas fa-barcode"></i>
+                    {{ product.code }}
+                </span>
+
+                <!-- Product Name -->
+                <h1 class="product-name">{{ product.name }}</h1>
+
+                <!-- Product Description -->
+                {% if product.description %}
+                <p class="product-description">{{ product.description }}</p>
+                {% endif %}
+
+                <!-- Price Section -->
+                <div class="price-section">
+                    <div class="price-label">السعر</div>
+                    <div class="price-value">{{ product.price }} {{ currency_display }}</div>
+                    <span class="price-unit">لكل {{ unit_display }}</span>
+                </div>
+
+                <!-- Product Meta -->
+                <div class="product-meta">
+                    <div class="meta-item">
+                        <div class="meta-label">الفئة</div>
+                        <div class="meta-value">{{ category_name }}</div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-label">الوحدة</div>
+                        <div class="meta-value">{{ unit_display }}</div>
+                    </div>
+                </div>
+
+                <!-- QR Code Section -->
+                <div class="qr-section">
+                    <div class="qr-title">امسح للمشاركة</div>
+                    <div class="qr-image">
+                        <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="shareProduct()">
+                        <i class="fas fa-share-alt"></i>
+                        مشاركة
+                    </button>
+                    <button class="btn btn-secondary" onclick="copyLink()">
+                        <i class="fas fa-link"></i>
+                        نسخ الرابط
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="card-footer">
+                <a href="{{ site_url }}" class="footer-link" target="_blank">
+                    <i class="fas fa-globe"></i>
+                    www.elkhawaga.uk
+                </a>
+            </footer>
+        </article>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function copyLink() {
+            const url = '{{ share_url }}';
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('تم نسخ الرابط بنجاح!');
+            }).catch(() => {
+                // Fallback for older browsers
+                const input = document.createElement('input');
+                input.value = url;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                showToast('تم نسخ الرابط بنجاح!');
+            });
+        }
+
+        function shareProduct() {
+            const shareData = {
+                title: '{{ product.name }} | الخواجة',
+                text: '{{ product.name }} - {{ product.price }} {{ currency_display }}',
+                url: '{{ share_url }}'
+            };
+
+            if (navigator.share) {
+                navigator.share(shareData)
+                    .then(() => console.log('Shared successfully'))
+                    .catch((error) => {
+                        console.log('Share cancelled:', error);
+                        copyLink();
+                    });
+            } else {
+                copyLink();
+            }
+        }
+    </script>
+</body>
+
+</html>

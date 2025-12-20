@@ -33,6 +33,19 @@ def base_product_list(request):
     category_id = request.GET.get('category', '')
     status = request.GET.get('status', '')
     
+    # حساب الإحصائيات الإجمالية (قبل التصفية)
+    from django.db.models import Count, Sum
+    
+    total_base_products = BaseProduct.objects.count()
+    total_variants = ProductVariant.objects.filter(is_active=True).count()
+    active_base_products = BaseProduct.objects.filter(is_active=True).count()
+    inactive_base_products = BaseProduct.objects.filter(is_active=False).count()
+    
+    # حساب إجمالي قيمة المخزون
+    total_inventory_value = BaseProduct.objects.aggregate(
+        total=Sum('base_price')
+    )['total'] or 0
+    
     queryset = BaseProduct.objects.select_related('category').prefetch_related(
         Prefetch('variants', queryset=ProductVariant.objects.filter(is_active=True))
     )
@@ -56,6 +69,9 @@ def base_product_list(request):
     
     queryset = queryset.order_by('-created_at')
     
+    # عدد النتائج المفلترة
+    filtered_count = queryset.count()
+    
     # Pagination
     paginator = Paginator(queryset, 25)
     page_obj = paginator.get_page(request.GET.get('page'))
@@ -68,6 +84,13 @@ def base_product_list(request):
         'selected_category': category_id,
         'selected_status': status,
         'active_menu': 'variants',
+        # إحصائيات
+        'total_base_products': total_base_products,
+        'total_variants': total_variants,
+        'active_base_products': active_base_products,
+        'inactive_base_products': inactive_base_products,
+        'total_inventory_value': total_inventory_value,
+        'filtered_count': filtered_count,
     }
     
     return render(request, 'inventory/variants/base_product_list.html', context)

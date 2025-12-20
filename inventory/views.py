@@ -864,3 +864,85 @@ def barcode_scan_api(request):
             'error': 'حدث خطأ أثناء البحث عن المنتج',
             'message': str(e)
         }, status=500)
+
+
+# ==================== QR Code Generation APIs ====================
+
+@login_required
+def generate_single_qr_api(request, pk):
+    """
+    API لتوليد QR لمنتج واحد
+    POST /inventory/api/product/<pk>/generate-qr/
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+    
+    product = get_object_or_404(Product, pk=pk)
+    
+    if not product.code:
+        return JsonResponse({
+            'success': False, 
+            'error': 'لا يوجد كود للمنتج - لا يمكن توليد QR'
+        })
+    
+    # التحقق من وجود QR مسبق
+    had_existing = bool(product.qr_code_base64)
+    
+    # توليد QR (مع الإجبار لإعادة التوليد)
+    product.generate_qr(force=True)
+    product.save(update_fields=['qr_code_base64'])
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'تم إعادة توليد رمز QR بنجاح' if had_existing else 'تم توليد رمز QR بنجاح',
+        'qr_exists': True,
+        'product_code': product.code
+    })
+
+
+@login_required
+def generate_all_qr_api(request):
+    """
+    API لتوليد QR لجميع المنتجات التي ليس لديها QR
+    POST /inventory/api/generate-all-qr/
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+    
+    # الحصول على المنتجات بدون QR
+    products_without_qr = Product.objects.filter(
+        qr_code_base64__isnull=True
+    ).exclude(code__isnull=True).exclude(code='')
+    
+    total = products_without_qr.count()
+    
+    if total == 0:
+        return JsonResponse({
+            'success': True,
+            'message': 'جميع المنتجات لديها رموز QR بالفعل!',
+            'generated': 0,
+            'total': 0
+        })
+    
+    # توليد بشكل متزامن (للأعداد الكبيرة يفضل استخدام Celery)
+    generated = 0
+    errors = 0
+    
+    for product in products_without_qr[:500]:  # تحديد بـ 500 لتجنب timeout
+        try:
+            if product.generate_qr():
+                product.save(update_fields=['qr_code_base64'])
+                generated += 1
+        except Exception:
+            errors += 1
+    
+    remaining = total - generated - errors
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'تم توليد {generated} رمز QR. الأخطاء: {errors}. المتبقي: {remaining}',
+        'generated': generated,
+        'errors': errors,
+        'remaining': remaining,
+        'total': total
+    })

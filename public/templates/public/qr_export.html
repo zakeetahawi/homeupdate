@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تصدير QR Code للمنتجات | {{ site_name }}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #f5f5f5;
+        }
+
+        /* Screen styles - controls panel */
+        .controls-panel {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .controls-title {
+            color: #d4af37;
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls-title .badge {
+            background: rgba(212, 175, 55, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .filters-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-input,
+        .filter-select {
+            padding: 10px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        .filter-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .filter-select option {
+            background: #1a1a2e;
+            color: white;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Cairo', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .btn-filter {
+            background: #d4af37;
+            color: #1a1a2e;
+        }
+
+        .btn-print {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Print area preview */
+        .print-preview {
+            max-width: 210mm;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        /* QR Grid */
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            padding: 2mm;
+        }
+
+        .qr-item {
+            border: 1px dashed #ddd;
+            padding: 4mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            page-break-inside: avoid;
+            min-height: 85mm;
+        }
+
+        .qr-image {
+            width: 55mm;
+            height: 55mm;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .product-name {
+            font-size: 11pt;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-top: 3mm;
+            line-height: 1.3;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .product-code {
+            font-size: 9pt;
+            color: #666;
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 2mm 3mm;
+            border-radius: 4px;
+            margin-top: 2mm;
+        }
+
+        .product-price {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #d4af37;
+            margin-top: 2mm;
+        }
+
+        /* Print Styles */
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 2mm;
+            }
+
+            body {
+                background: white;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .controls-panel {
+                display: none !important;
+            }
+
+            .print-preview {
+                box-shadow: none;
+                margin: 0;
+                max-width: none;
+                width: 100%;
+            }
+
+            .qr-grid {
+                padding: 1mm;
+            }
+
+            .qr-item {
+                border-color: #ccc;
+                min-height: 90mm;
+            }
+
+            .qr-image {
+                width: 60mm;
+                height: 60mm;
+            }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Controls Panel (hidden when printing) -->
+    <div class="controls-panel">
+        <div class="controls-content">
+            <div class="controls-title">
+                <i class="fas fa-qrcode"></i>
+                تصدير QR Code للمنتجات
+                <span class="badge">{{ total_products }} منتج</span>
+            </div>
+
+            <form method="get" class="filters-form">
+                <input type="text" name="search" class="filter-input" placeholder="بحث بالاسم..."
+                    value="{{ request.GET.search }}">
+
+                <select name="category" class="filter-select">
+                    <option value="">جميع الفئات</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"i" %}selected{% endif %}>{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit" class="btn btn-filter">
+                    <i class="fas fa-filter"></i>
+                    تصفية
+                </button>
+            </form>
+
+            <button onclick="window.print()" class="btn btn-print">
+                <i class="fas fa-print"></i>
+                طباعة الصفحة الحالية
+            </button>
+
+            <a href="{% url 'public:qr_pdf_download' %}?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.search %}search={{ request.GET.search }}{% endif %}"
+                class="btn btn-download" style="background: #28a745; color: white; margin-right: 10px;">
+                <i class="fas fa-file-pdf"></i>
+                تحميل PDF (جميع QR)
+            </a>
+        </div>
+    </div>
+
+    <!-- Print Preview -->
+    <div class="print-preview">
+        {% if products_with_qr %}
+        <div class="qr-grid">
+            {% for item in products_with_qr %}
+            <div class="qr-item">
+                <div class="qr-image">
+                    <img src="data:image/png;base64,{{ item.qr_code }}" alt="QR {{ item.product.code }}">
+                </div>
+                <div class="product-name">{{ item.product.name }}</div>
+                <div class="product-code">{{ item.product.code }}</div>
+                <div class="product-price">{{ item.product.price }} {{ item.product.get_currency_display }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination (hidden when printing) -->
+        {% if total_pages > 1 %}
+        <div class="pagination-controls" style="text-align: center; padding: 20px; background: #f8f9fa;">
+            <div style="margin-bottom: 10px; color: #666;">
+                صفحة {{ page }} من {{ total_pages }} | إجمالي {{ total_products }} منتج
+            </div>
+            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                {% if has_prev %}
+                <a href="?page={{ page|add:'-1' }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+                    class="btn btn-filter" style="text-decoration: none;">
+                    <i class="fas fa-arrow-right"></i> السابق
+                </a>
+                {% endif %}
+
+                <span
+                    style="padding: 10px 20px; background: #d4af37; color: #1a1a2e; border-radius: 8px; font-weight: 600;">
+                    {{ page }}
+                </span>
+
+                {% if has_next %}
+                <a href="?page={{ page|add:'1' }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+                    class="btn btn-filter" style="text-decoration: none;">
+                    التالي <i class="fas fa-arrow-left"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-box-open"></i>
+            <h3>لا توجد منتجات</h3>
+            <p>لم يتم العثور على منتجات تطابق معايير البحث</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Auto detect Ctrl+P and trigger print
+        document.addEventListener('keydown', function (e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                window.print();
+            }
+        });
+    </script>
+</body>
+
+</html>
