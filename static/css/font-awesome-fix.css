@@ -1,17 +1,40 @@
-/* إصلاح مشكلة Font Awesome مع خط Cairo */
+/* إصلاح شامل لمشكلة Font Awesome مع خط Cairo */
 
-/* الحفاظ على خط Font Awesome للأيقونات */
-.fas, .far, .fab, .fa {
-    font-family: 'Font Awesome 5 Free' !important;
+/* الحفاظ على خط Font Awesome للأيقونات - جميع الأنواع */
+.fas, .far, .fab, .fa, .fal, .fad, .fa-solid, .fa-regular, .fa-brands {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'FontAwesome' !important;
+    font-style: normal !important;
+    font-variant: normal !important;
+    text-rendering: auto !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Solid icons */
+.fas, .fa-solid {
     font-weight: 900 !important;
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free' !important;
+}
+
+/* Regular icons */
+.far, .fa-regular {
+    font-weight: 400 !important;
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free' !important;
+}
+
+/* Brand icons */
+.fab, .fa-brands {
+    font-weight: 400 !important;
+    font-family: 'Font Awesome 6 Brands', 'Font Awesome 5 Brands' !important;
 }
 
 /* إصلاح الأيقونات في الأزرار */
 .btn .fas,
 .btn .far,
 .btn .fab,
-.btn .fa {
-    font-family: 'Font Awesome 5 Free' !important;
+.btn .fa,
+.btn i[class*="fa-"] {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'FontAwesome' !important;
     font-weight: 900 !important;
 }
 
@@ -19,8 +42,10 @@
 .navbar .fas,
 .navbar .far,
 .navbar .fab,
-.navbar .fa {
-    font-family: 'Font Awesome 5 Free' !important;
+.navbar .fa,
+.navbar i[class*="fa-"],
+.navbar-nav i[class*="fa-"] {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'FontAwesome' !important;
     font-weight: 900 !important;
 }
 
@@ -28,8 +53,9 @@
 .card .fas,
 .card .far,
 .card .fab,
-.card .fa {
-    font-family: 'Font Awesome 5 Free' !important;
+.card .fa,
+.card i[class*="fa-"] {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'FontAwesome' !important;
     font-weight: 900 !important;
 }
 
@@ -37,8 +63,9 @@
 .table .fas,
 .table .far,
 .table .fab,
-.table .fa {
-    font-family: 'Font Awesome 5 Free' !important;
+.table .fa,
+.table i[class*="fa-"] {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'FontAwesome' !important;
     font-weight: 900 !important;
 }
 
@@ -46,8 +73,9 @@
 .dropdown-menu .fas,
 .dropdown-menu .far,
 .dropdown-menu .fab,
-.dropdown-menu .fa {
-    font-family: 'Font Awesome 5 Free' !important;
+.dropdown-menu .fa,
+.dropdown-menu i[class*="fa-"] {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'FontAwesome' !important;
     font-weight: 900 !important;
 }
 
@@ -55,8 +83,9 @@
 .modal .fas,
 .modal .far,
 .modal .fab,
-.modal .fa {
-    font-family: 'Font Awesome 5 Free' !important;
+.modal .fa,
+.modal i[class*="fa-"] {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'FontAwesome' !important;
     font-weight: 900 !important;
 }
 
@@ -64,8 +93,9 @@
 .alert .fas,
 .alert .far,
 .alert .fab,
-.alert .fa {
-    font-family: 'Font Awesome 5 Free' !important;
+.alert .fa,
+.alert i[class*="fa-"] {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'FontAwesome' !important;
     font-weight: 900 !important;
 }
 
@@ -73,53 +103,31 @@
 .badge .fas,
 .badge .far,
 .badge .fab,
-.badge .fa {
-    font-family: 'Font Awesome 5 Free' !important;
+.badge .fa,
+.badge i[class*="fa-"] {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'FontAwesome' !important;
     font-weight: 900 !important;
 }
 
-/* إصلاح جميع الأيقونات في أي مكان */
-[class*="fas"],
-[class*="far"],
-[class*="fab"],
-[class*="fa"] {
-    font-family: 'Font Awesome 5 Free' !important;
+/* إصلاح شامل لجميع الأيقونات */
+i[class*="fa-"],
+[class^="fa-"],
+[class*=" fa-"] {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'FontAwesome' !important;
     font-weight: 900 !important;
+    font-style: normal !important;
+    font-variant: normal !important;
+    text-rendering: auto !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    display: inline-block !important;
 }
 
-/* إصلاح الأيقونات في جميع الأقسام */
-.customers [class*="fas"],
-.customers [class*="far"],
-.customers [class*="fab"],
-.customers [class*="fa"],
-.orders [class*="fas"],
-.orders [class*="far"],
-.orders [class*="fab"],
-.orders [class*="fa"],
-.inventory [class*="fas"],
-.inventory [class*="far"],
-.inventory [class*="fab"],
-.inventory [class*="fa"],
-.inspections [class*="fas"],
-.inspections [class*="far"],
-.inspections [class*="fab"],
-.inspections [class*="fa"],
-.installations [class*="fas"],
-.installations [class*="far"],
-.installations [class*="fab"],
-.installations [class*="fa"],
-.manufacturing [class*="fas"],
-.manufacturing [class*="far"],
-.manufacturing [class*="fab"],
-.manufacturing [class*="fa"],
-.reports [class*="fas"],
-.reports [class*="far"],
-.reports [class*="fab"],
-.reports [class*="fa"],
-.database [class*="fas"],
-.database [class*="far"],
-.database [class*="fab"],
-.database [class*="fa"] {
-    font-family: 'Font Awesome 5 Free' !important;
-    font-weight: 900 !important;
+/* منع خط Cairo من التطبيق على الأيقونات */
+.fas::before,
+.far::before,
+.fab::before,
+.fa::before,
+i[class*="fa-"]::before {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'FontAwesome' !important;
 } 

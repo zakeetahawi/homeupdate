@@ -694,6 +694,7 @@ def register_device_view(request):
             # QR Master صحيح - المتابعة في التسجيل
             branch_id = request.POST.get('branch')
             device_name = request.POST.get('device_name')
+            manual_identifier = request.POST.get('manual_identifier', '').strip()
             notes = request.POST.get('notes', '')
             device_info_str = request.POST.get('device_info', '{}')
             
@@ -720,18 +721,23 @@ def register_device_view(request):
                 messages.error(request, 'الفرع المحدد غير موجود.')
                 return redirect('accounts:register_device')
             
-            # التحقق من عدم تسجيل نفس الجهاز مسبقاً (بناءً على token الذي سيُولد)
-            # البحث بالبصمة فقط لأن token سيكون جديد
-            existing_device = BranchDevice.objects.filter(
-                device_fingerprint=device_fingerprint
-            ).first()
+            # التحقق من المعرّف اليدوي إذا تم إدخاله
+            if manual_identifier:
+                existing_manual = BranchDevice.objects.filter(
+                    branch=branch,
+                    manual_identifier=manual_identifier
+                ).first()
+                
+                if existing_manual:
+                    messages.error(
+                        request, 
+                        f'⚠️ المعرّف اليدوي "{manual_identifier}" مستخدم بالفعل للجهاز "{existing_manual.device_name}" في هذا الفرع. '
+                        f'يرجى استخدام معرّف مختلف أو ترك الحقل فارغاً.'
+                    )
+                    return redirect('accounts:register_device')
             
-            if existing_device:
-                messages.warning(
-                    request, 
-                    f'⚠️ هذا الجهاز مسجل بالفعل باسم "{existing_device.device_name}" للفرع "{existing_device.branch.name}".'
-                )
-                return redirect('accounts:register_device')
+            # ملاحظة: تم إزالة التحقق من device_fingerprint لحل مشكلة الأجهزة المتشابهة في بيئات الدومين
+            # كل جهاز سيحصل على device_token فريد تلقائياً
             
             ip_address = get_client_ip(request)
             
@@ -739,6 +745,7 @@ def register_device_view(request):
             device = BranchDevice.objects.create(
                 branch=branch,
                 device_name=device_name,
+                manual_identifier=manual_identifier,
                 device_fingerprint=device_fingerprint,
                 hardware_serial=hardware_serial if hardware_serial else None,
                 ip_address=ip_address,

@@ -1053,6 +1053,12 @@ class BranchDevice(models.Model):
         db_index=True,
         help_text=_('الرقم التسلسلي للجهاز (Hardware UUID/Serial) - احتياطي')
     )
+    manual_identifier = models.CharField(
+        _('معرّف الجهاز اليدوي'),
+        max_length=100,
+        blank=True,
+        help_text=_('رقم تعريفي يدوي للجهاز (مثل: Asset Tag، رقم الجهاز، أو معرّف من اختيارك) - يساعد في التمييز بين الأجهزة المتشابهة')
+    )
     registered_with_qr_version = models.IntegerField(
         _('رقم إصدار QR المستخدم للتسجيل'),
         null=True,

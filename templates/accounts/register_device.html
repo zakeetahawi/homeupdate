@@ -94,6 +94,21 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="manual_identifier" class="form-label">
+                                معرّف الجهاز اليدوي
+                                <span class="badge bg-info">اختياري</span>
+                            </label>
+                            <input type="text" name="manual_identifier" id="manual_identifier" class="form-control" 
+                                   placeholder="مثال: PC-001، LAP-AHMED، DESK-BRANCH1-01">
+                            <small class="text-muted">
+                                <i class="fas fa-lightbulb"></i>
+                                <strong>مفيد في بيئات Domain:</strong> 
+                                أدخل رقم Asset Tag، الرقم التسلسلي، أو أي معرّف فريد يساعدك في التمييز بين الأجهزة المتشابهة.
+                                يمكنك تركه فارغاً إذا لم تحتاجه.
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="notes" class="form-label">ملاحظات</label>
                             <textarea name="notes" id="notes" class="form-control" rows="3" 
                                       placeholder="أي ملاحظات إضافية عن الجهاز..."></textarea>

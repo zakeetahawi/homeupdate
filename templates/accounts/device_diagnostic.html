@@ -285,6 +285,7 @@ document.getElementById('checkDeviceBtn').addEventListener('click', function() {
                     <h5><i class="fas fa-check-circle"></i> الجهاز مسجل ✅</h5>
                     <hr>
                     <p class="mb-1"><strong>اسم الجهاز:</strong> ${data.device_name}</p>
+                    ${data.manual_identifier ? `<p class="mb-1"><strong>المعرّف اليدوي:</strong> <code class="bg-light px-2 py-1 rounded">${data.manual_identifier}</code></p>` : ''}
                     <p class="mb-1"><strong>الفرع:</strong> ${data.branch_name}</p>
                     <p class="mb-1"><strong>الحالة:</strong> ${statusBadge} ${similarityBadge}</p>
                     <p class="mb-1"><strong>Device Token:</strong> <code class="text-primary">${data.device_token || 'غير متوفر'}</code></p>

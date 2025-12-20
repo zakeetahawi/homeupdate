@@ -364,6 +364,8 @@ class DepartmentAdmin(admin.ModelAdmin):
         }),
     )
     
+    autocomplete_fields = ['parent', 'manager']
+    
     def hierarchical_name(self, obj):
         """عرض الاسم مع المستوى الهرمي"""
         if obj.parent:
@@ -459,25 +461,6 @@ class DepartmentAdmin(admin.ModelAdmin):
             request,
             f"تم حذف {total_count} قسم بنجاح (منها {core_departments.count()} أساسي و {non_core_departments.count()} غير أساسي)."
         )
-
-    fieldsets = (
-        (_('معلومات أساسية'), {
-            'fields': ('name', 'code', 'department_type', 'description', 'is_active')
-        }),
-        (_('العلاقات'), {
-            'fields': ('parent', 'manager')
-        }),
-        (_('خيارات إضافية'), {
-            'fields': ('order', 'icon', 'url_name', 'has_pages'),
-            'classes': ('collapse',),
-        }),
-        (_('معلومات النظام'), {
-            'fields': ('is_core',),
-            'classes': ('collapse',),
-            'description': _('الأقسام الأساسية هي جزء من أساس التطبيق ولا يمكن حذفها أو تعديلها بشكل كامل.'),
-        }),
-    )
-    autocomplete_fields = ['parent', 'manager']
 
 @admin.register(Salesperson)
 class SalespersonAdmin(admin.ModelAdmin):
@@ -911,6 +894,7 @@ class BranchDeviceAdmin(admin.ModelAdmin):
     inlines = [UnauthorizedDeviceAttemptInline]
     list_display = (
         'device_name', 
+        'manual_identifier',
         'branch',
         'branch_devices_count',
         'is_active', 
@@ -922,6 +906,7 @@ class BranchDeviceAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'branch', 'created_at', 'last_used')
     search_fields = (
         'device_name', 
+        'manual_identifier',
         'device_fingerprint', 
         'ip_address',
         'branch__name',
@@ -944,7 +929,8 @@ class BranchDeviceAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('معلومات الجهاز الأساسية', {
-            'fields': ('branch', 'device_name', 'is_active', 'is_blocked')
+            'fields': ('branch', 'device_name', 'manual_identifier', 'is_active', 'is_blocked'),
+            'description': 'المعرّف اليدوي: رقم اختياري يساعد في التمييز بين الأجهزة المتشابهة (مثل: PC-001, LAP-AHMED)'
         }),
         ('معلومات الحظر', {
             'fields': ('blocked_reason', 'blocked_at', 'blocked_by'),
@@ -1012,7 +998,7 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         ).count()
         
         if devices_count == 0:
-            return format_html('<span style="color: #28a745;">🔓 مفتوح (0 أجهزة)</span>')
+            return format_html('<span style="color: #28a745;">{}</span>', '🔓 مفتوح (0 أجهزة)')
         else:
             return format_html('<span style="color: #dc3545;">🔒 {} جهاز</span>', devices_count)
     
@@ -1407,10 +1393,10 @@ class MasterQRCodeAdmin(admin.ModelAdmin):
         """منع الإضافة اليدوية - يجب استخدام Action"""
         return False
     
+    
     def has_delete_permission(self, request, obj=None):
         """منع الحذف - فقط الإلغاء"""
         return False
-
 
 
 

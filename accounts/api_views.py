@@ -368,6 +368,7 @@ def check_device_api(request):
             response_data = {
                 'registered': True,
                 'device_name': device.device_name,
+                'manual_identifier': device.manual_identifier if device.manual_identifier else None,
                 'branch_name': device.branch.name,
                 'branch_id': device.branch.id,
                 'is_active': device.is_active,
