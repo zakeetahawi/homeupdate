@@ -12,7 +12,7 @@ from accounts.models import User
 
 def is_manager(user):
     """التحقق من أن المستخدم مدير"""
-    return user.is_general_manager or user.is_region_manager or user.is_branch_manager
+    return user.is_sales_manager or user.is_region_manager or user.is_branch_manager
 
 
 @login_required

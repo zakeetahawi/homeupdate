@@ -1393,6 +1393,7 @@ logger = logging.getLogger(__name__)
 
 @require_http_methods(["POST"])
 @login_required
+@permission_required('manufacturing.change_manufacturingorder', raise_exception=True)
 def update_order_status(request, pk):
     """
     API endpoint to update the status of a manufacturing order.
@@ -1577,13 +1578,36 @@ def update_order_status(request, pk):
         # Set the user who changed the status for the signal handler
         order._changed_by = request.user
 
-        # Save the order
+        # Save the order with transaction to ensure integrity
         try:
-            save_fields = ['status', 'updated_at', 'completion_date']
-            if new_status == 'delivered':
-                save_fields.extend(['delivery_permit_number', 'delivery_recipient_name', 'delivery_date'])
-            order.save(update_fields=save_fields)
-            # logger.info(f"[update_order_status] Successfully updated order {pk}")  # معطل لتجنب الرسائل الكثيرة
+            with transaction.atomic():
+                save_fields = ['status', 'updated_at', 'completion_date']
+                if new_status == 'delivered':
+                    save_fields.extend(['delivery_permit_number', 'delivery_recipient_name', 'delivery_date'])
+                
+                # Check for cached signal issues by explicitly setting _changed_by
+                if not hasattr(order, '_changed_by'):
+                    order._changed_by = request.user
+                    
+                order.save(update_fields=save_fields)
+                
+                # Log the status change in Django admin within the same transaction
+                try:
+                    from django.contrib.admin.models import LogEntry, CHANGE
+                    from django.contrib.contenttypes.models import ContentType
+                    
+                    LogEntry.objects.create(
+                        user_id=request.user.id,
+                        content_type_id=ContentType.objects.get_for_model(order).pk,
+                        object_id=order.id,
+                        object_repr=str(order),
+                        action_flag=CHANGE,
+                        change_message=f'تم تغيير الحالة من {dict(ManufacturingOrder.STATUS_CHOICES).get(old_status, "")} إلى {dict(ManufacturingOrder.STATUS_CHOICES).get(new_status, "")}'
+                    )
+                except Exception as log_error:
+                    logger.error(f"[update_order_status] Error adding admin log entry: {str(log_error)}", exc_info=True)
+                    # Continue even if admin logging fails
+
         except Exception as e:
             logger.error(f"[update_order_status] Error saving order {pk}: {str(e)}", exc_info=True)
             return JsonResponse({
@@ -1593,23 +1617,10 @@ def update_order_status(request, pk):
                 'exception_type': e.__class__.__name__
             }, status=500)
         
-        # Log the status change in Django admin
-        try:
-            from django.contrib.admin.models import LogEntry, CHANGE
-            from django.contrib.contenttypes.models import ContentType
-            
-            LogEntry.objects.log_action(
-                user_id=request.user.id,
-                content_type_id=ContentType.objects.get_for_model(order).pk,
-                object_id=order.id,
-                object_repr=str(order),
-                action_flag=CHANGE,
-                change_message=f'تم تغيير الحالة من {dict(ManufacturingOrder.STATUS_CHOICES).get(old_status, "")} إلى {dict(ManufacturingOrder.STATUS_CHOICES).get(new_status, "")}'
-            )
-            logger.debug(f"[update_order_status] Added admin log entry for order {pk}")
-        except Exception as e:
-            logger.error(f"[update_order_status] Error adding admin log entry: {str(e)}", exc_info=True)
-            # Continue even if admin logging fails
+        # Verify the update
+        order.refresh_from_db()
+        if order.status != new_status:
+            logger.warning(f"[update_order_status] Status Mismatch! Expected {new_status}, got {order.status} for order {pk}")
         
         # Prepare success response
         response_data = {
@@ -1619,9 +1630,12 @@ def update_order_status(request, pk):
             'updated_at': order.updated_at.strftime('%Y-%m-%d %H:%M'),
             'message': 'تم تحديث حالة الطلب بنجاح'
         }
-        # logger.info(f"[update_order_status] Success response: {response_data}")  # معطل لتجنب الرسائل الكثيرة
         
-        return JsonResponse(response_data)
+        response = JsonResponse(response_data)
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response['Pragma'] = 'no-cache'
+        return response
+        # logger.info(f"[update_order_status] Success response: {response_data}")  # معطل لتجنب الرسائل الكثيرة
         
     except Exception as e:
         import traceback

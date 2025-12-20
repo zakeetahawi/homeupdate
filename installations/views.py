@@ -236,6 +236,7 @@ def dashboard(request):
 
 
 @login_required
+@permission_required('installations.change_installationschedule', raise_exception=True)
 def change_installation_status(request, installation_id):
     """تغيير حالة التركيب مع نافذة منبثقة ذكية"""
     installation = get_object_or_404(InstallationSchedule, id=installation_id)
@@ -710,6 +711,7 @@ def installation_detail(request, installation_id):
 
 
 @login_required
+@permission_required('installations.change_installationschedule', raise_exception=True)
 def schedule_installation(request, installation_id):
     """جدولة تركيب"""
     installation = get_object_or_404(InstallationSchedule, id=installation_id)
@@ -790,6 +792,7 @@ def schedule_installation(request, installation_id):
 
 
 @login_required
+@permission_required('installations.change_installationschedule', raise_exception=True)
 def update_status(request, installation_id):
     """تحديث حالة التركيب"""
     try:
@@ -935,6 +938,7 @@ def update_status(request, installation_id):
 
 
 @login_required
+@permission_required('installations.change_installationschedule', raise_exception=True)
 def update_status_by_code(request, installation_code):
     """تحديث حالة التركيب باستخدام كود التركيب"""
     try:
@@ -1516,6 +1520,7 @@ def check_debt_before_schedule(request, order_id):
 
 
 @login_required
+@permission_required('installations.add_installationschedule', raise_exception=True)
 def quick_schedule_installation(request, order_id):
     """جدولة سريعة للتركيب من الطلب"""
 

@@ -27,7 +27,7 @@ class CompletedInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, Lis
 
     def get_queryset(self):
         queryset = Inspection.objects.filter(status='completed')
-        if not self.request.user.is_superuser:
+        if not self.request.user.is_superuser and not self.request.user.has_perm('inspections.view_inspection'):
             queryset = queryset.filter(
                 Q(inspector=self.request.user) | Q(created_by=self.request.user)
             )
@@ -45,7 +45,7 @@ class CancelledInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, Lis
 
     def get_queryset(self):
         queryset = Inspection.objects.filter(status='cancelled')
-        if not self.request.user.is_superuser:
+        if not self.request.user.is_superuser and not self.request.user.has_perm('inspections.view_inspection'):
             queryset = queryset.filter(
                 Q(inspector=self.request.user) | Q(created_by=self.request.user)
             )
@@ -63,7 +63,7 @@ class PendingInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, ListV
 
     def get_queryset(self):
         queryset = Inspection.objects.filter(status='pending')
-        if not self.request.user.is_superuser:
+        if not self.request.user.is_superuser and not self.request.user.has_perm('inspections.view_inspection'):
             queryset = queryset.filter(
                 Q(inspector=self.request.user) | Q(created_by=self.request.user)
             )
@@ -93,9 +93,14 @@ class InspectionListView(PaginationFixMixin, LoginRequiredMixin, ListView):
     def get_queryset(self):
         from .forms import InspectionSearchForm
         form = InspectionSearchForm(self.request.GET)
-        queryset = Inspection.objects.all() if self.request.user.is_superuser else Inspection.objects.filter(
-            Q(inspector=self.request.user) | Q(created_by=self.request.user)
-        )
+        
+        # Check if user has permission to view all inspections
+        if self.request.user.is_superuser or self.request.user.has_perm('inspections.view_inspection'):
+            queryset = Inspection.objects.all()
+        else:
+            queryset = Inspection.objects.filter(
+                Q(inspector=self.request.user) | Q(created_by=self.request.user)
+            )
 
         # تم إلغاء الفلترة الافتراضية
         if form.is_valid():
@@ -155,9 +160,12 @@ class InspectionListView(PaginationFixMixin, LoginRequiredMixin, ListView):
         today = timezone.now().date()
 
         # بناء queryset للداشبورد بنفس منطق الفلترة
-        dashboard_qs = Inspection.objects.all() if self.request.user.is_superuser else Inspection.objects.filter(
-            Q(inspector=self.request.user) | Q(created_by=self.request.user)
-        )
+        if self.request.user.is_superuser or self.request.user.has_perm('inspections.view_inspection'):
+            dashboard_qs = Inspection.objects.all()
+        else:
+            dashboard_qs = Inspection.objects.filter(
+                Q(inspector=self.request.user) | Q(created_by=self.request.user)
+            )
         if branch_id:
             dashboard_qs = dashboard_qs.filter(order__customer__branch_id=branch_id)
         if status == 'pending' and from_orders == '1':
@@ -310,7 +318,7 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         user = self.request.user
 
         # السماح للمديرين والمستخدمين المخولين
-        if user.is_superuser or user.is_staff:
+        if user.is_superuser or user.is_staff or user.has_perm('inspections.change_inspection'):
             return True
 
         # السماح لمنشئ المعاينة أو المعاين المُعيَّن

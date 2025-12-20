@@ -216,7 +216,7 @@ def login_view(request):
                         device_check_performed = False
                         
                         # السوبر يوزر والمدير العام يمكنهما الدخول من أي جهاز
-                        if user.is_superuser or user.is_general_manager:
+                        if user.is_superuser or user.is_sales_manager:
                             device_authorized = True
                             logger.info(f"✅ {'Superuser' if user.is_superuser else 'General Manager'} {username} authorized from any device (bypass device lock)")
                         else:
@@ -352,9 +352,9 @@ def login_view(request):
                             
                         # تسجيل المحاولة غير المصرح بها (للمراقبة والإحصائيات)
                         # يتم التسجيل دائماً حتى لو كان النظام معطلاً، طالما هناك مشكلة في الجهاز
-                        logger.info(f"🔍 Check logging conditions: device_check={device_check_performed}, denial_key={denial_reason_key}, superuser={user.is_superuser}, general_manager={user.is_general_manager}")
+                        logger.info(f"🔍 Check logging conditions: device_check={device_check_performed}, denial_key={denial_reason_key}, superuser={user.is_superuser}, sales_manager={user.is_sales_manager}")
                         
-                        if device_check_performed and denial_reason_key and not (user.is_superuser or user.is_general_manager):
+                        if device_check_performed and denial_reason_key and not (user.is_superuser or user.is_sales_manager):
                             
                             logger.info(f"📝 Logging unauthorized attempt: {username} - {denial_reason_key}")
                             

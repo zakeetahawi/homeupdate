@@ -11,22 +11,27 @@
         color: white;
         border-radius: 15px;
     }
+
     .info-card {
         border-radius: 10px;
         transition: all 0.3s ease;
         border-left: 4px solid #28a745;
     }
+
     .info-card:hover {
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         transform: translateY(-2px);
     }
+
     .item-row {
         border-bottom: 1px solid #e3e6f0;
         padding: 0.75rem 0;
     }
+
     .item-row:last-child {
         border-bottom: none;
     }
+
     .badge-custom {
         font-size: 0.9rem;
         padding: 0.5rem 1rem;
@@ -82,7 +87,7 @@
                             </small>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-6">
                             <p class="mb-2">
@@ -97,15 +102,20 @@
                             </p>
                         </div>
                     </div>
-                    
+
                     {% if fabric_receipt.cutting_order %}
                     <div class="row">
                         <div class="col-12">
                             <p class="mb-0">
                                 <strong>أمر التقطيع:</strong><br>
-                                <a href="{% url 'cutting:order_detail' fabric_receipt.cutting_order.id %}" class="text-primary">
+                                {% if perms.cutting.view_cuttingorder %}
+                                <a href="{% url 'cutting:order_detail' fabric_receipt.cutting_order.id %}"
+                                    class="text-primary">
                                     {{ fabric_receipt.cutting_order.cutting_code }}
                                 </a>
+                                {% else %}
+                                <span class="text-muted">{{ fabric_receipt.cutting_order.cutting_code }}</span>
+                                {% endif %}
                             </p>
                         </div>
                     </div>
@@ -142,7 +152,7 @@
                             </p>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-6">
                             <p class="mb-3">
@@ -153,11 +163,12 @@
                         <div class="col-6">
                             <p class="mb-3">
                                 <strong>المستلم:</strong><br>
-                                <span class="text-muted">{{ fabric_receipt.received_by.get_full_name|default:"غير محدد" }}</span>
+                                <span class="text-muted">{{ fabric_receipt.received_by.get_full_name|default:"غير محدد"
+                                    }}</span>
                             </p>
                         </div>
                     </div>
-                    
+
                     {% if fabric_receipt.notes %}
                     <div class="row">
                         <div class="col-12">
@@ -192,7 +203,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-4">
             <div class="card border-left-success shadow h-100 py-2">
                 <div class="card-body">
@@ -210,7 +221,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-4">
             <div class="card border-left-info shadow h-100 py-2">
                 <div class="card-body">
@@ -221,11 +232,12 @@
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
                                 {% if fabric_receipt.manufacturing_order %}
-                                    <a href="{% url 'manufacturing:order_detail_by_code' fabric_receipt.manufacturing_order.manufacturing_code %}" class="text-info">
-                                        {{ fabric_receipt.manufacturing_order.manufacturing_code }}
-                                    </a>
+                                <a href="{% url 'manufacturing:order_detail_by_code' fabric_receipt.manufacturing_order.manufacturing_code %}"
+                                    class="text-info">
+                                    {{ fabric_receipt.manufacturing_order.manufacturing_code }}
+                                </a>
                                 {% else %}
-                                    غير محدد
+                                غير محدد
                                 {% endif %}
                             </div>
                         </div>
@@ -270,33 +282,33 @@
                             <td>
                                 <div class="fw-bold">{{ item.product_name }}</div>
                                 {% if item.order_item.product %}
-                                    <small class="text-muted">{{ item.order_item.product.code|default:"" }}</small>
+                                <small class="text-muted">{{ item.order_item.product.code|default:"" }}</small>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if item.order_item %}
-                                    <div class="small">
-                                        {% if item.order_item.fabric_type %}
-                                            <div class="text-primary mb-1">
-                                                <i class="fas fa-tshirt me-1"></i>
-                                                <strong>{{ item.order_item.fabric_type }}</strong>
-                                            </div>
-                                        {% endif %}
-                                        {% if item.order_item.fabric_meters %}
-                                            <div class="text-success">
-                                                <i class="fas fa-ruler me-1"></i>
-                                                {{ item.order_item.fabric_meters }} متر
-                                            </div>
-                                        {% endif %}
-                                        {% if item.order_item.fabric_color %}
-                                            <div class="text-info">
-                                                <i class="fas fa-palette me-1"></i>
-                                                {{ item.order_item.fabric_color }}
-                                            </div>
-                                        {% endif %}
+                                <div class="small">
+                                    {% if item.order_item.fabric_type %}
+                                    <div class="text-primary mb-1">
+                                        <i class="fas fa-tshirt me-1"></i>
+                                        <strong>{{ item.order_item.fabric_type }}</strong>
                                     </div>
+                                    {% endif %}
+                                    {% if item.order_item.fabric_meters %}
+                                    <div class="text-success">
+                                        <i class="fas fa-ruler me-1"></i>
+                                        {{ item.order_item.fabric_meters }} متر
+                                    </div>
+                                    {% endif %}
+                                    {% if item.order_item.fabric_color %}
+                                    <div class="text-info">
+                                        <i class="fas fa-palette me-1"></i>
+                                        {{ item.order_item.fabric_color }}
+                                    </div>
+                                    {% endif %}
+                                </div>
                                 {% else %}
-                                    <span class="text-muted">غير متوفر</span>
+                                <span class="text-muted">غير متوفر</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -304,38 +316,38 @@
                             </td>
                             <td>
                                 {% if item.order_item %}
-                                    <div class="text-center">
-                                        <div class="fw-bold">{{ item.order_item.quantity }}</div>
-                                        <small class="text-muted">كمية الطلب</small>
-                                    </div>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ item.order_item.quantity }}</div>
+                                    <small class="text-muted">كمية الطلب</small>
+                                </div>
                                 {% else %}
-                                    <span class="text-muted">غير محدد</span>
+                                <span class="text-muted">غير محدد</span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if item.cutting_item %}
-                                    <div class="text-center">
-                                        <div class="fw-bold">{{ item.cutting_item.status|default:"غير محدد" }}</div>
-                                        <small class="text-muted">حالة التقطيع</small>
-                                    </div>
+                                <div class="text-center">
+                                    <div class="fw-bold">{{ item.cutting_item.status|default:"غير محدد" }}</div>
+                                    <small class="text-muted">حالة التقطيع</small>
+                                </div>
                                 {% else %}
-                                    <span class="text-muted">غير محدد</span>
+                                <span class="text-muted">غير محدد</span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if item.item_notes %}
-                                    <small class="text-muted">{{ item.item_notes|truncatechars:50 }}</small>
+                                <small class="text-muted">{{ item.item_notes|truncatechars:50 }}</small>
                                 {% else %}
-                                    <span class="text-muted">لا توجد ملاحظات</span>
+                                <span class="text-muted">لا توجد ملاحظات</span>
                                 {% endif %}
                             </td>
                             <td>
                                 <div class="text-center">
-                                    {% if item.cutting_item %}
-                                        <a href="{% url 'cutting:order_detail' item.cutting_item.cutting_order.id %}" 
-                                           class="btn btn-sm btn-outline-primary" title="عرض التقطيع">
-                                            <i class="fas fa-cut"></i>
-                                        </a>
+                                    {% if item.cutting_item and perms.cutting.view_cuttingorder %}
+                                    <a href="{% url 'cutting:order_detail' item.cutting_item.cutting_order.id %}"
+                                        class="btn btn-sm btn-outline-primary" title="عرض التقطيع">
+                                        <i class="fas fa-cut"></i>
+                                    </a>
                                     {% endif %}
                                 </div>
                             </td>
@@ -356,8 +368,8 @@
 </div>
 
 <script>
-function printReceipt() {
-    window.print();
-}
+    function printReceipt() {
+        window.print();
+    }
 </script>
 {% endblock %}

@@ -21,7 +21,7 @@ def get_notification_recipients(notification_type, related_object=None, created_
 
     # مديرو النظام يرون جميع الإشعارات
     super_admins = User.objects.filter(
-        Q(is_superuser=True) | Q(is_general_manager=True),
+        Q(is_superuser=True) | Q(is_sales_manager=True),
         is_active=True
     ).values_list('id', flat=True)
     recipient_ids.update(super_admins)
@@ -244,7 +244,7 @@ def get_complaint_notification_recipients(complaint, created_by):
         
         # مديرو خدمة العملاء أو الشكاوى
         complaint_managers = User.objects.filter(
-            Q(is_general_manager=True) | Q(is_region_manager=True),
+            Q(is_sales_manager=True) | Q(is_region_manager=True),
             is_active=True
         )
         recipients = recipients.union(complaint_managers)

@@ -148,8 +148,8 @@ class CustomUserAdmin(UserAdmin):
     list_filter = (
         'is_staff', 'is_superuser', 'is_active', 'branch',
         'is_inspection_technician', 'is_salesperson', 'is_branch_manager',
-        'is_region_manager', 'is_general_manager', 'is_factory_manager',
-        'is_factory_receiver', 'is_inspection_manager', 'is_installation_manager',
+        'is_region_manager', 'is_sales_manager', 'is_factory_manager',
+        'is_factory_accountant', 'is_factory_receiver', 'is_inspection_manager', 'is_installation_manager',
         'is_warehouse_staff', 'user_roles__role'
     )
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone')
@@ -171,8 +171,8 @@ class CustomUserAdmin(UserAdmin):
             'fields': (
                 'is_active', 'is_staff', 'is_superuser',
                 'is_inspection_technician', 'is_salesperson', 'is_branch_manager',
-                'is_region_manager', 'is_general_manager', 'is_factory_manager',
-                'is_factory_receiver', 'is_inspection_manager', 'is_installation_manager',
+                'is_region_manager', 'is_sales_manager', 'is_factory_manager',
+                'is_factory_accountant', 'is_factory_receiver', 'is_inspection_manager', 'is_installation_manager',
                 'managed_branches', 'groups', 'user_permissions'
             ),
             'classes': ('collapse',),
@@ -1013,7 +1013,7 @@ class BranchDeviceAdmin(admin.ModelAdmin):
             # إضافة أيقونة حسب نوع المستخدم
             if user.is_superuser:
                 icon = '👑'
-            elif user.is_general_manager:
+            elif user.is_sales_manager:
                 icon = '⭐'
             else:
                 icon = '👤'

@@ -72,7 +72,14 @@ def navbar_departments(request):
         
         for unit in all_units:
             # التحقق من أن المستخدم ينتمي لهذا القسم
-            if unit.id in user_dept_ids_flat or unit.parent_id in user_dept_ids_flat:
+            is_authorized = (unit.id in user_dept_ids_flat or unit.parent_id in user_dept_ids_flat)
+            
+            # صلاحيات خاصة لمدير التركيبات لرؤية أقسام التركيبات والمصنع
+            if not is_authorized and hasattr(user, 'is_installation_manager') and user.is_installation_manager:
+                if unit.show_installations or unit.show_manufacturing:
+                    is_authorized = True
+            
+            if is_authorized:
                 if unit.show_customers and 'customers' in navbar_items:
                     navbar_items['customers']['units'].append(unit)
                 if unit.show_orders and 'orders' in navbar_items:

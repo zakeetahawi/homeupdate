@@ -12,11 +12,11 @@ import secrets
 
 # التسلسل الهرمي للأدوار من الأعلى إلى الأدنى
 ROLE_HIERARCHY = {
-    'general_manager': {
+    'sales_manager': {
         'level': 1,
-        'display': 'مدير عام',
-        'inherits_from': [],
-        'permissions': ['all']
+        'display': 'مدير مبيعات',
+        'inherits_from': ['region_manager'],
+        'permissions': ['view_all_customers', 'view_all_orders', 'view_all_manufacturing', 'view_all_installations']
     },
     'region_manager': {
         'level': 2,
@@ -34,7 +34,13 @@ ROLE_HIERARCHY = {
         'level': 2,
         'display': 'مسؤول مصنع',
         'inherits_from': ['factory_receiver'],
-        'permissions': ['view_all_orders', 'manage_manufacturing', 'manage_inventory']
+        'permissions': ['view_all_orders', 'search_orders', 'manage_manufacturing', 'manage_inventory', 'approve_manufacturing_orders', 'start_manufacturing']
+    },
+    'factory_accountant': {
+        'level': 3,
+        'display': 'محاسب مصنع',
+        'inherits_from': ['factory_receiver'],
+        'permissions': ['complete_manufacturing', 'view_manufacturing_financials']
     },
     'factory_receiver': {
         'level': 4,
@@ -46,13 +52,13 @@ ROLE_HIERARCHY = {
         'level': 3,
         'display': 'مسؤول معاينات',
         'inherits_from': ['inspection_technician'],
-        'permissions': ['view_all_inspections', 'assign_inspections', 'manage_technicians']
+        'permissions': ['view_all_inspections', 'manage_all_inspections', 'assign_inspections', 'view_all_customers', 'manage_all_customers']
     },
     'installation_manager': {
         'level': 3,
         'display': 'مسؤول تركيبات',
         'inherits_from': [],
-        'permissions': ['view_all_installations', 'assign_installations', 'manage_installers']
+        'permissions': ['view_all_installations', 'manage_installations', 'view_all_manufacturing']
     },
     'warehouse_staff': {
         'level': 4,
@@ -89,8 +95,9 @@ class User(AbstractUser):
     is_salesperson = models.BooleanField(default=False, verbose_name=_("بائع"))
     is_branch_manager = models.BooleanField(default=False, verbose_name=_("مدير فرع"))
     is_region_manager = models.BooleanField(default=False, verbose_name=_("مدير منطقة"))
-    is_general_manager = models.BooleanField(default=False, verbose_name=_("مدير عام"))
+    is_sales_manager = models.BooleanField(default=False, verbose_name=_("مدير مبيعات"))
     is_factory_manager = models.BooleanField(default=False, verbose_name=_("مسؤول مصنع"))
+    is_factory_accountant = models.BooleanField(default=False, verbose_name=_("محاسب مصنع"))
     is_factory_receiver = models.BooleanField(default=False, verbose_name=_("مسؤول استلام مصنع"))
     is_inspection_manager = models.BooleanField(default=False, verbose_name=_("مسؤول معاينات"))
     is_installation_manager = models.BooleanField(default=False, verbose_name=_("مسؤول تركيبات"))
@@ -127,8 +134,9 @@ class User(AbstractUser):
             self.is_salesperson,
             self.is_branch_manager,
             self.is_region_manager,
-            self.is_general_manager,
+            self.is_sales_manager,
             self.is_factory_manager,
+            self.is_factory_accountant,
             self.is_factory_receiver,
             self.is_inspection_manager,
             self.is_installation_manager,
@@ -149,14 +157,16 @@ class User(AbstractUser):
     
     def get_user_role(self):
         """الحصول على دور المستخدم"""
-        if self.is_general_manager:
-            return "general_manager"
+        if self.is_sales_manager:
+            return "sales_manager"
         elif self.is_region_manager:
             return "region_manager"
         elif self.is_branch_manager:
             return "branch_manager"
         elif self.is_factory_manager:
             return "factory_manager"
+        elif self.is_factory_accountant:
+            return "factory_accountant"
         elif self.is_factory_receiver:
             return "factory_receiver"
         elif self.is_inspection_manager:
@@ -1181,7 +1191,7 @@ class BranchDevice(models.Model):
             return False
         
         # السوبر يوزر والمدير العام يستطيعون الدخول من أي جهاز
-        if user.is_superuser or user.is_general_manager:
+        if user.is_superuser or user.is_sales_manager:
             return True
         
         # التحقق من أن المستخدم ينتمي لنفس فرع الجهاز

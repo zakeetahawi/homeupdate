@@ -11,9 +11,13 @@ def get_user_customers_queryset(user, search_term=None):
     
     if user.is_superuser:
         return Customer.objects.all()
+
+    # Check for view all customers permission (Sales Manager, Inspection Manager, etc.)
+    if user.has_perm('customers.view_customer'):
+        return Customer.objects.all()
     
     # المدير العام يرى جميع العملاء
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+    if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
         return Customer.objects.all()
     
     # مدير المنطقة يرى عملاء الفروع المُدارة
@@ -109,9 +113,13 @@ def can_user_view_customer(user, customer, allow_cross_branch=False):
     """التحقق من إمكانية المستخدم لعرض عميل معين"""
     if user.is_superuser:
         return True
+
+    # Check for view permission
+    if user.has_perm('customers.view_customer'):
+        return True
     
     # المدير العام يرى جميع العملاء
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+    if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
         return True
     
     # مدير المنطقة يرى عملاء الفروع المُدارة
@@ -145,10 +153,15 @@ def can_user_edit_customer(user, customer):
     """التحقق من إمكانية المستخدم لتعديل عميل معين"""
     if user.is_superuser:
         return True
+
+    # Check for change permission
+    if user.has_perm('customers.change_customer'):
+        return True
     
     # المدير العام يمكنه تعديل جميع العملاء
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
-        return True
+    # Sales Manager restriction
+    # if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
+    #    return True
     
     # مدير المنطقة يمكنه تعديل عملاء الفروع المُدارة
     if hasattr(user, 'is_region_manager') and user.is_region_manager:
@@ -176,10 +189,15 @@ def can_user_delete_customer(user, customer):
     """التحقق من إمكانية المستخدم لحذف عميل معين"""
     if user.is_superuser:
         return True
+
+    # Check for delete permission
+    if user.has_perm('customers.delete_customer'):
+        return True
     
     # المدير العام يمكنه حذف جميع العملاء
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
-        return True
+    # Sales Manager restriction
+    # if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
+    #    return True
     
     # مدير المنطقة يمكنه حذف عملاء الفروع المُدارة
     if hasattr(user, 'is_region_manager') and user.is_region_manager:
@@ -198,9 +216,13 @@ def can_user_create_customer(user):
     """التحقق من إمكانية المستخدم لإنشاء عميل جديد"""
     if user.is_superuser:
         return True
+
+    # Check for add permission
+    if user.has_perm('customers.add_customer'):
+        return True
     
     # المدير العام يمكنه إنشاء عملاء
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+    if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
         return True
     
     # مدير المنطقة يمكنه إنشاء عملاء
@@ -229,7 +251,7 @@ def can_user_create_order_for_customer(user, customer):
         return True
     
     # المدير العام يمكنه إنشاء طلبات لجميع العملاء
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+    if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
         return True
     
     # مدير المنطقة يمكنه إنشاء طلبات لعملاء الفروع المُدارة
@@ -260,7 +282,7 @@ def can_user_access_cross_branch_customer(user, customer):
         return True
     
     # المدير العام يمكنه الوصول لجميع العملاء
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+    if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
         return True
     
     # مدير المنطقة يمكنه الوصول لعملاء الفروع المُدارة
@@ -277,9 +299,13 @@ def apply_customer_permissions(user, customers_queryset):
     """تطبيق الصلاحيات على queryset العملاء"""
     if user.is_superuser:
         return customers_queryset
+
+    # Check for view permission
+    if user.has_perm('customers.view_customer'):
+        return customers_queryset
     
     # المدير العام يرى جميع العملاء
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+    if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
         return customers_queryset
     
     # مدير المنطقة يرى عملاء الفروع المُدارة
@@ -340,9 +366,26 @@ def get_user_customer_permissions(user):
         # المدير الأعلى له جميع الصلاحيات
         return {key: True for key in permissions.keys()}
     
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
-        # المدير العام له جميع الصلاحيات
-        return {key: True for key in permissions.keys()}
+    # Check explicitly for permissions (e.g. Sales Manager, Inspection Manager)
+    if user.has_perm('customers.view_customer') and user.has_perm('customers.change_customer'):
+        perms = {key: True for key in permissions.keys()}
+        # If they lack delete permission, set it to False
+        if not user.has_perm('customers.delete_customer'):
+            perms['can_delete_customers'] = False
+        return perms
+    
+    if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
+        # المدير العام (معدل: ممنوع التعديل والحذف)
+        permissions.update({
+             'can_view_all_customers': True,
+             'can_view_branch_customers': True,
+             'can_view_own_customers': True,
+             'can_create_customers': True,
+             'can_edit_customers': False,
+             'can_delete_customers': False,
+             'can_export_customers': True,
+        })
+        return permissions
     
     if hasattr(user, 'is_region_manager') and user.is_region_manager:
         # مدير المنطقة له صلاحيات واسعة

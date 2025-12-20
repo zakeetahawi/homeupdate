@@ -283,7 +283,7 @@ def wizard_drafts_list(request):
     if request.user.is_superuser or request.user.groups.filter(name='مدير نظام').exists():
         # مدير النظام - عرض جميع المسودات
         drafts = DraftOrder.objects.filter(is_completed=False).select_related('created_by', 'customer', 'branch')
-    elif request.user.groups.filter(name='مدير عام').exists() or (hasattr(request.user, 'is_general_manager') and request.user.is_general_manager):
+    elif request.user.groups.filter(name='مدير عام').exists() or (hasattr(request.user, 'is_sales_manager') and request.user.is_sales_manager):
         # مدير عام - عرض جميع المسودات
         drafts = DraftOrder.objects.filter(is_completed=False).select_related('created_by', 'customer', 'branch')
     elif request.user.groups.filter(name='مدير منطقة').exists() or (hasattr(request.user, 'is_region_manager') and request.user.is_region_manager):

@@ -58,7 +58,7 @@ class Command(BaseCommand):
         user.is_salesperson = False
         user.is_branch_manager = False
         user.is_region_manager = False
-        user.is_general_manager = False
+        user.is_sales_manager = False
         user.managed_branches.clear()
 
         # تطبيق الدور الجديد
@@ -104,7 +104,7 @@ class Command(BaseCommand):
                 )
 
         elif role == 'general_manager':
-            user.is_general_manager = True
+            user.is_sales_manager = True
             self.stdout.write(
                 self.style.SUCCESS(f'تم تعيين {user.username} كمدير عام')
             )

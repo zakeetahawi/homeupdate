@@ -1367,7 +1367,7 @@ def sync_comprehensive_users(service, spreadsheet_id):
                 'نعم' if user.is_salesperson else 'لا',
                 'نعم' if user.is_branch_manager else 'لا',
                 'نعم' if user.is_region_manager else 'لا',
-                'نعم' if user.is_general_manager else 'لا',
+                'نعم' if user.is_sales_manager else 'لا',
                 'نعم' if user.is_factory_manager else 'لا',
                 user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '',
                 user.date_joined.strftime('%Y-%m-%d') if user.date_joined else ''
