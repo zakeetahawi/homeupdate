@@ -53,7 +53,7 @@ def get_user_orders_queryset(user):
         return Order.objects.all()
     
     # المدير العام يرى جميع الطلبات
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+    if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
         return Order.objects.all()
     
     # مسؤول المصنع يرى جميع الطلبات
@@ -114,7 +114,7 @@ def can_user_view_order(user, order):
         pass
 
     # المدير العام يرى جميع الطلبات
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+    if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
         return True
 
     # مسؤول المصنع يرى جميع الطلبات
@@ -128,7 +128,7 @@ def can_user_view_order(user, order):
         return user_orders.filter(id=order.id).exists()
     
     # المدير العام يرى جميع الطلبات
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+    if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
         return True
     
     # مسؤول المصنع يرى جميع الطلبات
@@ -176,8 +176,9 @@ def can_user_edit_order(user, order):
         return True
     
     # المدير العام يمكنه تعديل جميع الطلبات
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
-        return True
+    # Sales Manager restriction
+    # if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
+    #    return True
     
     # مسؤول المصنع يمكنه تعديل جميع الطلبات
     if hasattr(user, 'is_factory_manager') and user.is_factory_manager:
@@ -214,8 +215,9 @@ def can_user_delete_order(user, order):
         return True
     
     # المدير العام يمكنه حذف جميع الطلبات
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
-        return True
+    # Sales Manager restriction
+    # if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
+    #    return True
     
     # مسؤول المصنع يمكنه حذف جميع الطلبات
     if hasattr(user, 'is_factory_manager') and user.is_factory_manager:
@@ -248,7 +250,7 @@ def can_user_create_order_type(user, order_type):
         return True
     
     # المدير العام يمكنه إنشاء جميع أنواع الطلبات
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+    if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
         return True
     
     # مسؤول المصنع يمكنه إنشاء جميع أنواع الطلبات
@@ -288,7 +290,7 @@ def apply_order_permissions(user, orders_queryset):
         return orders_queryset
     
     # المدير العام يرى جميع الطلبات
-    if hasattr(user, 'is_general_manager') and user.is_general_manager:
+    if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
         return orders_queryset
     
     # مدير المنطقة يرى طلبات الفروع المُدارة
@@ -344,8 +346,20 @@ def get_user_role_permissions(user):
         return {key: True for key in permissions.keys()}
     
     # المدير العام
-    if user_has_role_or_higher(user, 'general_manager'):
-        return {key: True for key in permissions.keys()}
+    # مدير المبيعات
+    if user_has_role_or_higher(user, 'sales_manager'):
+        permissions.update({
+            'can_view_all_orders': True,
+            'can_view_branch_orders': True,
+            'can_view_own_orders': True,
+            'can_create_orders': True,
+            'can_edit_orders': False,
+            'can_delete_orders': False,
+            'can_manage_dashboard': True,
+            'can_manage_users': False,
+            'can_manage_branches': False,
+        })
+        return permissions
     
     # مدير المنطقة يرث صلاحيات مدير الفرع + صلاحيات إضافية
     if user_has_role_or_higher(user, 'region_manager'):
@@ -513,7 +527,16 @@ def order_edit_permission_required(view_func):
 
         # التحقق من صلاحية التعديل
         if not can_user_edit_order(request.user, order):
-            raise PermissionDenied('ليس لديك صلاحية لتعديل هذا الطلب')
+            from django.contrib import messages
+            from django.shortcuts import redirect
+            messages.error(request, 'ليس لديك صلاحية لتعديل هذا الطلب')
+            # إعادة التوجيه إلى صفحة تفاصيل الطلب
+            if pk:
+                return redirect('orders:order_detail', pk=pk)
+            elif order_number:
+                return redirect('orders:order_detail_by_number', order_number=order_number)
+            else:
+                return redirect('orders:order_list')
 
         # تمرير جميع الـ arguments المحتملة
         if pk:
@@ -578,7 +601,16 @@ def order_delete_permission_required(view_func):
 
         # التحقق من صلاحية الحذف
         if not can_user_delete_order(request.user, order):
-            raise PermissionDenied('ليس لديك صلاحية لحذف هذا الطلب')
+            from django.contrib import messages
+            from django.shortcuts import redirect
+            messages.error(request, 'ليس لديك صلاحية لحذف هذا الطلب')
+            # إعادة التوجيه إلى صفحة تفاصيل الطلب
+            if pk:
+                return redirect('orders:order_detail', pk=pk)
+            elif order_number:
+                return redirect('orders:order_detail_by_number', order_number=order_number)
+            else:
+                return redirect('orders:order_list')
 
         # تمرير جميع الـ arguments المحتملة
         if pk:

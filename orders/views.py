@@ -267,14 +267,11 @@ def order_detail(request, pk):
     """
     order = get_object_or_404(Order, pk=pk)
 
-    # التحقق من صلاحية المستخدم لحذف أو تعديل أو عرض هذا الطلب
+    # التحقق من صلاحية المستخدم لعرض هذا الطلب
     if not can_user_view_order(request.user, order):
         messages.error(request, "ليس لديك صلاحية لعرض هذا الطلب.")
         return redirect("orders:order_list")
-    if not can_user_edit_order(request.user, order):
-        messages.warning(request, "ليس لديك صلاحية لتعديل هذا الطلب.")
-    if not can_user_delete_order(request.user, order):
-        messages.warning(request, "ليس لديك صلاحية لحذف هذا الطلب.")
+    
     payments = order.payments.all().order_by('-payment_date')
 
     # Now all information is in the Order model
@@ -622,20 +619,7 @@ def order_update(request, pk):
     """
     order = get_object_or_404(Order, pk=pk)
 
-    # التحقق من صلاحية المستخدم لتعديل هذا الطلب
-
-    # التحقق من صلاحية المستخدم لحذف هذا الطلب
-    if not can_user_delete_order(request.user, order):
-        messages.error(request, "ليس لديك صلاحية لحذف هذا الطلب.")
-        return redirect("orders:order_detail", pk=pk)
-    if not can_user_edit_order(request.user, order):
-        messages.error(request, "ليس لديك صلاحية لتعديل هذا الطلب.")
-        return redirect("orders:order_detail", pk=pk)
-
-    # التحقق من صلاحية المستخدم لعرض هذا الطلب
-    if not can_user_view_order(request.user, order):
-        messages.error(request, "ليس لديك صلاحية لعرض هذا الطلب.")
-        return redirect("orders:order_list")
+    # الصلاحيات يتم فحصها بواسطة الـ decorator
     
     if request.method == 'POST':
         # الحصول على معرف العميل من POST
@@ -858,20 +842,7 @@ def order_delete(request, pk):
     """
     order = get_object_or_404(Order, pk=pk)
 
-    # التحقق من صلاحية المستخدم لتعديل هذا الطلب
-
-    # التحقق من صلاحية المستخدم لحذف هذا الطلب
-    if not can_user_delete_order(request.user, order):
-        messages.error(request, "ليس لديك صلاحية لحذف هذا الطلب.")
-        return redirect("orders:order_detail", pk=pk)
-    if not can_user_edit_order(request.user, order):
-        messages.error(request, "ليس لديك صلاحية لتعديل هذا الطلب.")
-        return redirect("orders:order_detail", pk=pk)
-
-    # التحقق من صلاحية المستخدم لعرض هذا الطلب
-    if not can_user_view_order(request.user, order):
-        messages.error(request, "ليس لديك صلاحية لعرض هذا الطلب.")
-        return redirect("orders:order_list")
+    # الصلاحيات يتم فحصها بواسطة الـ decorator
 
     if request.method == 'POST':
         try:
