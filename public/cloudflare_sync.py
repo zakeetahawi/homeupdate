@@ -57,14 +57,36 @@ class CloudflareSync:
     def format_product(self, product):
         """Format product data for Cloudflare KV"""
         from django.utils import timezone
-        
+        # Ensure all values are JSON serializable (convert lazy gettext proxies to str)
+        def _safe_str(value):
+            try:
+                return None if value is None else str(value)
+            except Exception:
+                return None
+
+        unit = None
+        if hasattr(product, 'get_unit_display'):
+            try:
+                unit = product.get_unit_display()
+            except Exception:
+                unit = getattr(product, 'unit', None)
+        else:
+            unit = getattr(product, 'unit', None)
+
+        category_name = None
+        try:
+            if getattr(product, 'category', None):
+                category_name = product.category.name
+        except Exception:
+            category_name = None
+
         return {
-            'code': product.code,
-            'name': product.name,
-            'price': str(product.price),
-            'currency': product.currency,
-            'unit': product.get_unit_display() if hasattr(product, 'get_unit_display') else product.unit,
-            'category': product.category.name if product.category else None,
+            'code': _safe_str(product.code),
+            'name': _safe_str(product.name),
+            'price': _safe_str(product.price),
+            'currency': _safe_str(getattr(product, 'currency', None)),
+            'unit': _safe_str(unit),
+            'category': _safe_str(category_name),
             'updated_at': timezone.now().strftime('%Y-%m-%d %H:%M'),
         }
     

@@ -26,11 +26,13 @@ class PublicConfig(AppConfig):
             dispatch_uid='cloudflare_sync_product_delete'
         )
     
-    def _on_product_save(self, sender, instance, **kwargs):
+    def _on_product_save(self, sender, instance, created, **kwargs):
         """Handle product save - sync to Cloudflare"""
         from . import signals
-        if instance.pk and instance.code:
-            signals.sync_product_to_cloudflare_async(instance.pk)
+        # Only sync after the transaction is committed to ensure product is saved
+        if instance.code:
+            from django.db import transaction
+            transaction.on_commit(lambda: signals.sync_product_to_cloudflare_async(instance.pk))
     
     def _on_product_delete(self, sender, instance, **kwargs):
         """Handle product delete - remove from Cloudflare"""

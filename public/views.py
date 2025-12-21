@@ -10,8 +10,8 @@ from django.conf import settings
 
 
 def get_base_url():
-    """Get the base URL for QR codes"""
-    return getattr(settings, 'SITE_URL', 'https://www.elkhawaga.uk')
+    """Get the base URL for QR codes - uses Cloudflare Worker for fast access"""
+    return getattr(settings, 'CLOUDFLARE_WORKER_URL', 'https://qr.elkhawaga.uk')
 
 
 def generate_qr_base64(url):
@@ -49,8 +49,8 @@ def product_qr_view(request, product_code):
     # Get unit display
     unit_display = dict(Product.UNIT_CHOICES).get(product.unit, product.unit)
     
-    # Generate QR code for sharing
-    qr_url = f"{get_base_url()}/p/{product.code}/"
+    # Generate QR code for sharing - direct format without /p/
+    qr_url = f"{get_base_url()}/{product.code}"
     qr_base64 = generate_qr_base64(qr_url)
     
     context = {
@@ -74,7 +74,7 @@ def generate_product_qr(request, product_code):
     """
     product = get_object_or_404(Product, code=product_code)
     
-    qr_url = f"{get_base_url()}/p/{product.code}/"
+    qr_url = f"{get_base_url()}/{product.code}"
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_M,

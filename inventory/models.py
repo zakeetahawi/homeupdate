@@ -188,8 +188,9 @@ class Product(models.Model):
             import base64
             from django.conf import settings
             
-            base_url = getattr(settings, 'SITE_URL', 'https://www.elkhawaga.uk')
-            qr_url = f"{base_url}/p/{self.code}/"
+            # Use Cloudflare Worker URL for fast QR access
+            base_url = getattr(settings, 'CLOUDFLARE_WORKER_URL', 'https://qr.elkhawaga.uk')
+            qr_url = f"{base_url}/{self.code}"
             
             qr = qrcode.QRCode(
                 version=1,
