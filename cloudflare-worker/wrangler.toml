@@ -1,0 +1,29 @@
+name = "elkhawaga-qr"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+workers_dev = true
+
+# KV Namespace binding
+[[kv_namespaces]]
+binding = "PRODUCTS_KV"
+id = "5dad2f4d72b246758bdafa17dfe4eb10"
+
+# Environment variables
+[vars]
+SITE_NAME = "الخواجة"
+MAIN_SITE_URL = "https://www.elkhawaga.uk"
+
+# Production environment
+[env.production]
+name = "elkhawaga-qr"
+workers_dev = false
+route = { pattern = "qr.elkhawaga.uk/*", zone_name = "elkhawaga.uk" }
+
+# KV for production
+[[env.production.kv_namespaces]]
+binding = "PRODUCTS_KV"
+id = "5dad2f4d72b246758bdafa17dfe4eb10"
+
+[env.production.vars]
+SITE_NAME = "الخواجة"
+MAIN_SITE_URL = "https://www.elkhawaga.uk"

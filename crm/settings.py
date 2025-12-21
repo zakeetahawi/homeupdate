@@ -639,6 +639,15 @@ FORMS_URLFIELD_ASSUME_HTTPS = True
 # QR Code Settings - رابط الموقع للمنتجات العامة
 SITE_URL = os.environ.get('SITE_URL', 'https://www.elkhawaga.uk')
 
+# ======================================
+# Cloudflare Workers Settings
+# للمزامنة التلقائية مع QR Scanner
+# ======================================
+CLOUDFLARE_WORKER_URL = os.environ.get('CLOUDFLARE_WORKER_URL', 'https://qr.elkhawaga.uk')
+CLOUDFLARE_SYNC_API_KEY = os.environ.get('CLOUDFLARE_SYNC_API_KEY', '')
+CLOUDFLARE_SYNC_ENABLED = os.environ.get('CLOUDFLARE_SYNC_ENABLED', 'False').lower() in ('true', '1', 'yes')
+CLOUDFLARE_KV_NAMESPACE_ID = os.environ.get('CLOUDFLARE_KV_NAMESPACE_ID', '5dad2f4d72b246758bdafa17dfe4eb10')
+
 # Authentication settings
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
