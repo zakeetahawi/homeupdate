@@ -77,6 +77,28 @@ body.modal-open {
     font-size: 0.85rem;
     margin-top: 0.25rem;
 }
+
+/* ===== تنسيق زر بدون أقمشة ===== */
+.btn-outline-warning:hover {
+    color: #fff;
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.btn-outline-warning {
+    transition: all 0.3s ease;
+}
+
+.btn-outline-warning:active {
+    transform: scale(0.97);
+}
+
+@media (max-width: 768px) {
+    .btn-outline-warning.btn-sm {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+    }
+}
 </style>
 
 <div class="alert alert-info mb-4">
@@ -348,9 +370,15 @@ body.modal-open {
                         </button>
                     </div>
                     
-                    <h6 class="text-primary mb-3">
-                        <i class="fas fa-cut me-2"></i>الأقمشة
-                    </h6>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-primary mb-0">
+                            <i class="fas fa-cut me-2"></i>الأقمشة
+                        </h6>
+                        <!-- زر بدون أقمشة -->
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="skipFabricsSection()">
+                            <i class="fas fa-forward me-1"></i>بدون أقمشة - الانتقال للإكسسوارات
+                        </button>
+                    </div>
                     
                     <!-- Fabrics List -->
                     <div id="fabricsList" class="mb-3"></div>
@@ -1575,6 +1603,75 @@ function backToBasicInfo() {
     editBasicInfo();
 }
 
+// تخطي مرحلة الأقمشة والانتقال مباشرة للإكسسوارات
+function skipFabricsSection() {
+    // تأكيد من المستخدم قبل التخطي
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: '<i class="fas fa-forward text-warning"></i> تخطي الأقمشة؟',
+            html: `
+                <div class="text-center">
+                    <p class="mb-3">هل تريد المتابعة بدون إضافة أقمشة؟</p>
+                    <div class="alert alert-info py-2">
+                        <i class="fas fa-info-circle me-2"></i>
+                        ستتمكن من إضافة الإكسسوارات فقط لهذه الستارة
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-check me-2"></i>نعم، المتابعة',
+            cancelButtonText: '<i class="fas fa-times me-2"></i>إلغاء',
+            confirmButtonColor: '#ffc107',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // تنظيف قائمة الأقمشة المؤقتة
+                tempFabrics = [];
+                
+                // تحديث العداد
+                document.getElementById('summary-fabrics-count').textContent = '0';
+                document.getElementById('summary2-fabrics-count').textContent = '0';
+                
+                // إخفاء قسم الأقمشة وإظهار قسم الإكسسوارات
+                const fabricsSectionEl = document.getElementById('fabricsSection');
+                const accessoriesSectionEl = document.getElementById('accessoriesSection');
+                
+                if (fabricsSectionEl) fabricsSectionEl.style.display = 'none';
+                if (accessoriesSectionEl) accessoriesSectionEl.style.display = 'block';
+                
+                // رسالة نجاح
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2500,
+                    timerProgressBar: true
+                });
+                Toast.fire({
+                    icon: 'info',
+                    title: 'تم تخطي مرحلة الأقمشة',
+                    text: 'يمكنك الآن إضافة الإكسسوارات'
+                });
+            }
+        });
+    } else {
+        // للمتصفحات التي لا تدعم SweetAlert
+        if (confirm('هل تريد المتابعة بدون إضافة أقمشة؟\n\nستتمكن من إضافة الإكسسوارات فقط لهذه الستارة.')) {
+            tempFabrics = [];
+            document.getElementById('summary-fabrics-count').textContent = '0';
+            document.getElementById('summary2-fabrics-count').textContent = '0';
+            
+            const fabricsSectionEl = document.getElementById('fabricsSection');
+            const accessoriesSectionEl = document.getElementById('accessoriesSection');
+            
+            if (fabricsSectionEl) fabricsSectionEl.style.display = 'none';
+            if (accessoriesSectionEl) accessoriesSectionEl.style.display = 'block';
+        }
+    }
+}
+
 // Add fabric to temporary list
 function addFabricToList() {
     const fabricTypeSelect = document.getElementById('fabric-type');
@@ -1798,7 +1895,8 @@ function showAccessoriesSection(skipFabricCheck = false) {
     );
     
     // السماح بالمتابعة إذا: تم اختيار خيار أو تم إضافة حزام
-    if (!noBelt && !scotchBelt && !normalBelt && !hasBeltAdded) {
+    // ولكن فقط إذا كان هناك أقمشة - في حال عدم وجود أقمشة لا نتحقق من الحزام
+    if (tempFabrics.length > 0 && !noBelt && !scotchBelt && !normalBelt && !hasBeltAdded) {
         // تحديد بطاقة الحزام بتنسيق الخطأ
         const beltCard = document.querySelector('.card.border-info');
         if (beltCard) {
@@ -1820,6 +1918,7 @@ function showAccessoriesSection(skipFabricCheck = false) {
         beltCard.classList.remove('field-required-error');
     }
     
+    // التحقق من وجود أقمشة فقط إذا لم يتم تخطي التحقق
     if (!skipFabricCheck && tempFabrics.length === 0) {
         // إظهار تنبيه SweetAlert مع منع المتابعة
         if (typeof Swal !== 'undefined') {
@@ -1832,6 +1931,10 @@ function showAccessoriesSection(skipFabricCheck = false) {
                         <div class="alert alert-warning py-2">
                             <i class="fas fa-exclamation-triangle me-2"></i>
                             <strong>يجب إضافة قماش واحد على الأقل</strong> للمتابعة
+                        </div>
+                        <div class="alert alert-info py-2 mt-2">
+                            <i class="fas fa-info-circle me-2"></i>
+                            أو يمكنك استخدام زر <strong>"بدون أقمشة"</strong> للتخطي
                         </div>
                     </div>
                 `,
@@ -3087,22 +3190,11 @@ function saveCurtainComplete() {
         addFieldErrorIcon(field, 'نوع التركيب مطلوب');
     }
     
-    // ✨ التحقق من وجود قماش واحد على الأقل (إلزامي فقط إذا لم يكن الطلب من نوع إكسسوار)
-    if (!isAccessoryOnlyOrder && (!tempFabrics || tempFabrics.length === 0)) {
-        hasErrors = true;
-        missingFields.push('قماش واحد على الأقل');
-        
-        // تلوين قسم الأقمشة
-        const fabricsSection = document.getElementById('fabricsSection');
-        if (fabricsSection) {
-            fabricsSection.classList.add('field-required-error');
-            fabricsSection.style.border = '2px solid #dc3545';
-            fabricsSection.style.borderRadius = '8px';
-            fabricsSection.style.padding = '10px';
-            fabricsSection.style.backgroundColor = '#fff5f5';
-            fabricsSection.style.animation = 'shake 0.5s ease-in-out';
-        }
-    }
+    // ✨ التحقق من وجود قماش واحد على الأقل 
+    // السماح بالحفظ بدون أقمشة إذا كان:
+    // 1. الطلب من نوع إكسسوار فقط
+    // 2. أو إذا كانت قائمة الأقمشة فارغة (تم تخطي مرحلة الأقمشة بزر "بدون أقمشة")
+    // لا حاجة للتحقق - السماح بحفظ الستارة بدون أقمشة
     
     // إذا كانت هناك أخطاء، عرض التنبيه
     if (hasErrors) {

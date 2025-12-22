@@ -717,6 +717,10 @@ def wizard_add_item(request):
         else:
             discount_percentage = Decimal(str(discount_percentage))
         
+        # حساب مبلغ الخصم
+        total_price = quantity * unit_price
+        discount_amount = total_price * (discount_percentage / Decimal('100.0'))
+        
         # إنشاء العنصر
         item = DraftOrderItem.objects.create(
             draft_order=draft,
@@ -724,6 +728,7 @@ def wizard_add_item(request):
             quantity=quantity,
             unit_price=unit_price,
             discount_percentage=discount_percentage,
+            discount_amount=discount_amount,  # إضافة مبلغ الخصم المحسوب
             item_type=data.get('item_type', 'product') or 'product',
             notes=data.get('notes', '') or '',
             added_by=request.user  # تسجيل من أضاف العنصر
@@ -1273,6 +1278,8 @@ def wizard_finalize(request):
                     total_amount=draft.subtotal,
                     final_price=draft.final_total,
                     paid_amount=draft.paid_amount,
+                    financial_addition=Decimal('0.00'),
+                    used_customer_balance=Decimal('0.00'),
                 )
                 
                 # تحديث الملفات إذا لزم الأمر
@@ -1322,6 +1329,8 @@ def wizard_finalize(request):
                 total_amount=draft.subtotal,
                 final_price=draft.final_total,
                 paid_amount=draft.paid_amount,
+                financial_addition=Decimal('0.00'),
+                used_customer_balance=Decimal('0.00'),
                 contract_file=draft.contract_file,
                 invoice_image=draft.invoice_image,
                 created_by=request.user,
@@ -1354,6 +1363,7 @@ def wizard_finalize(request):
                 quantity=item.quantity,
                 unit_price=item.unit_price,
                 discount_percentage=item.discount_percentage,
+                discount_amount=item.discount_amount if item.discount_amount else Decimal('0.00'),
                 item_type=item.item_type,
                 notes=item.notes,
             )

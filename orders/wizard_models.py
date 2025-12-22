@@ -411,6 +411,14 @@ class DraftOrderItem(models.Model):
         ],
         verbose_name='نسبة الخصم %'
     )
+    discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name='مبلغ الخصم',
+        help_text='يُحسب تلقائياً من الكمية والسعر ونسبة الخصم'
+    )
     item_type = models.CharField(
         max_length=20,
         choices=[
@@ -472,12 +480,14 @@ class DraftOrderItem(models.Model):
         return self.quantity * self.unit_price
     
     @property
-    def discount_amount(self):
-        """مبلغ الخصم"""
-        return self.total_price * (self.discount_percentage / Decimal('100.0'))
-    
-    @property
     def final_price(self):
         """السعر النهائي بعد الخصم"""
         return self.total_price - self.discount_amount
+    
+    def save(self, *args, **kwargs):
+        """حساب مبلغ الخصم تلقائياً قبل الحفظ"""
+        if self.quantity and self.unit_price:
+            total = self.quantity * self.unit_price
+            self.discount_amount = total * (self.discount_percentage / Decimal('100.0'))
+        super().save(*args, **kwargs)
 
