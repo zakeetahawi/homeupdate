@@ -804,10 +804,7 @@
                                 {% with mfg_item=item.manufacturing_items.first %}
                                 {% if not mfg_item.fabric_received %}
                                 <button class="btn btn-success btn-sm"
-                                    onclick="openItemReceiptModal({{ mfg_item.id }}, '{{ item.order_item.product.name|default:"
-                                    منتج"|escapejs }}', '{{ order_data.cutting_order.cutting_code|escapejs }}'
-                                    , '{{ item.receiver_name|default:""|escapejs }}'
-                                    , '{{ item.permit_number|default:""|escapejs }}' )">
+                                    onclick="openItemReceiptModal({{ mfg_item.id }}, '{{ item.order_item.product.name|default:"منتج"|escapejs }}', '{{ order_data.cutting_order.cutting_code|escapejs }}', '{{ item.receiver_name|default:""|escapejs }}', '{{ item.permit_number|default:""|escapejs }}')">
                                     <i class="fas fa-download"></i> استلام
                                 </button>
                                 {% else %}
@@ -1002,19 +999,30 @@
 
 {% block extra_js %}
 <script>
-    // التحقق من وجود jQuery
-    if (typeof $ === 'undefined') {
-        console.error('jQuery غير محمل!');
-    } else {
-        console.log('jQuery محمل بنجاح');
-    }
+    // التحقق من تحميل المكتبات بعد تحميل الصفحة بالكامل
+    document.addEventListener('DOMContentLoaded', function() {
+        // التحقق من وجود jQuery
+        if (typeof $ === 'undefined') {
+            console.error('jQuery غير محمل!');
+        } else {
+            console.log('jQuery محمل بنجاح');
+        }
 
-    // التحقق من وجود Bootstrap modal
-    if (typeof $.fn.modal === 'undefined') {
-        console.error('Bootstrap modal غير محمل!');
-    } else {
-        console.log('Bootstrap modal محمل بنجاح');
-    }
+        // التحقق من وجود Bootstrap
+        if (typeof bootstrap === 'undefined') {
+            console.error('Bootstrap غير محمل!');
+        } else {
+            console.log('Bootstrap محمل بنجاح');
+            
+            // التحقق من وجود Bootstrap modal
+            if (typeof bootstrap.Modal === 'undefined') {
+                console.error('Bootstrap Modal غير محمل!');
+            } else {
+                console.log('Bootstrap Modal محمل بنجاح');
+            }
+        }
+    });
+
     // Toggle between new bag and existing bag options
     function toggleBagNumberInput() {
         const useNewBag = document.getElementById('use_new_bag').checked;
