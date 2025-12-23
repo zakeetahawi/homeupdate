@@ -1259,37 +1259,35 @@ def wizard_finalize(request):
             try:
                 order = Order.objects.get(pk=editing_order_id)
                 
-                # ⚡ تحديث مجمّع بدون حفظ متعدد
-                Order.objects.filter(pk=editing_order_id).update(
-                    customer=draft.customer,
-                    salesperson=draft.salesperson,
-                    branch=draft.branch,
-                    status=draft.status,
-                    notes=draft.notes,
-                    selected_types=[draft.selected_type] if draft.selected_type else [],
-                    related_inspection=draft.related_inspection,
-                    related_inspection_type=draft.related_inspection_type,
-                    invoice_number=draft.invoice_number,
-                    invoice_number_2=draft.invoice_number_2,
-                    invoice_number_3=draft.invoice_number_3,
-                    contract_number=draft.contract_number,
-                    contract_number_2=draft.contract_number_2,
-                    contract_number_3=draft.contract_number_3,
-                    total_amount=draft.subtotal,
-                    final_price=draft.final_total,
-                    paid_amount=draft.paid_amount,
-                    financial_addition=Decimal('0.00'),
-                    used_customer_balance=Decimal('0.00'),
-                )
+                # ⚡ تحديث الحقول مباشرة
+                order.customer = draft.customer
+                order.salesperson = draft.salesperson
+                order.branch = draft.branch
+                order.status = draft.status
+                order.notes = draft.notes
+                order.selected_types = [draft.selected_type] if draft.selected_type else []
+                order.related_inspection = draft.related_inspection
+                order.related_inspection_type = draft.related_inspection_type
+                order.invoice_number = draft.invoice_number
+                order.invoice_number_2 = draft.invoice_number_2
+                order.invoice_number_3 = draft.invoice_number_3
+                order.contract_number = draft.contract_number
+                order.contract_number_2 = draft.contract_number_2
+                order.contract_number_3 = draft.contract_number_3
+                order.total_amount = draft.subtotal
+                order.final_price = draft.final_total
+                order.paid_amount = draft.paid_amount
+                order.financial_addition = Decimal('0.00')
+                order.used_customer_balance = Decimal('0.00')
                 
                 # تحديث الملفات إذا لزم الأمر
-                if draft.contract_file or draft.invoice_image:
-                    order = Order.objects.get(pk=editing_order_id)
-                    if draft.contract_file:
-                        order.contract_file = draft.contract_file
-                    if draft.invoice_image:
-                        order.invoice_image = draft.invoice_image
-                    order.save(update_fields=['contract_file', 'invoice_image'])
+                if draft.contract_file:
+                    order.contract_file = draft.contract_file
+                if draft.invoice_image:
+                    order.invoice_image = draft.invoice_image
+                
+                # حفظ بدون update_fields لإطلاق signals
+                order.save()
                 
                 # ⚡ حذف مجمّع
                 from .models import OrderInvoiceImage
@@ -2286,6 +2284,11 @@ def wizard_edit_order(request, order_pk):
     # الحصول على الطلب
     order = get_object_or_404(Order, pk=order_pk)
     
+    # منع البائع من تعديل الطلبات
+    if request.user.is_salesperson and not request.user.is_superuser:
+        messages.error(request, '❌ عذراً، البائع لا يمكنه تعديل الطلبات بعد إنشائها')
+        return redirect('orders:order_detail', pk=order_pk)
+    
     # التحقق من الصلاحيات
     if not request.user.has_perm('orders.change_order'):
         if order.created_by != request.user:
@@ -2343,6 +2346,7 @@ def _create_draft_from_order(order, user):
         contract_number_2=order.contract_number_2,
         contract_number_3=order.contract_number_3,
         contract_file=order.contract_file,
+        invoice_image=order.invoice_image,  # نسخ صورة الفاتورة
         payment_method='cash',  # افتراضي
         paid_amount=order.paid_amount,
         related_inspection=order.related_inspection,
@@ -2424,6 +2428,11 @@ def wizard_edit_options(request, order_pk):
     """
     order = get_object_or_404(Order, pk=order_pk)
     
+    # منع البائع من تعديل الطلبات
+    if request.user.is_salesperson and not request.user.is_superuser:
+        messages.error(request, '❌ عذراً، البائع لا يمكنه تعديل الطلبات بعد إنشائها')
+        return redirect('orders:order_detail', pk=order_pk)
+    
     # التحقق من الصلاحيات
     if not request.user.has_perm('orders.change_order'):
         if order.created_by != request.user:
@@ -2460,6 +2469,11 @@ def wizard_edit_type(request, order_pk):
     Edit order type and service - uses service types from customization system
     """
     order = get_object_or_404(Order, pk=order_pk)
+    
+    # منع البائع من تعديل الطلبات
+    if request.user.is_salesperson and not request.user.is_superuser:
+        messages.error(request, '❌ عذراً، البائع لا يمكنه تعديل الطلبات بعد إنشائها')
+        return redirect('orders:order_detail', pk=order_pk)
     
     # التحقق من الصلاحيات
     if not request.user.has_perm('orders.change_order'):
@@ -2518,6 +2532,11 @@ def wizard_edit_items(request, order_pk):
     """
     order = get_object_or_404(Order, pk=order_pk)
     
+    # منع البائع من تعديل الطلبات
+    if request.user.is_salesperson and not request.user.is_superuser:
+        messages.error(request, '❌ عذراً، البائع لا يمكنه تعديل الطلبات بعد إنشائها')
+        return redirect('orders:order_detail', pk=order_pk)
+    
     # التحقق من الصلاحيات
     if not request.user.has_perm('orders.change_order'):
         if order.created_by != request.user:
@@ -2558,6 +2577,11 @@ def wizard_edit_contract(request, order_pk):
     Edit contract - open wizard at step 5
     """
     order = get_object_or_404(Order, pk=order_pk)
+    
+    # منع البائع من تعديل الطلبات
+    if request.user.is_salesperson and not request.user.is_superuser:
+        messages.error(request, '❌ عذراً، البائع لا يمكنه تعديل الطلبات بعد إنشائها')
+        return redirect('orders:order_detail', pk=order_pk)
     
     # التحقق من الصلاحيات
     if not request.user.has_perm('orders.change_order'):

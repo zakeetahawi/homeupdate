@@ -295,6 +295,13 @@ class ManufacturingOrder(models.Model):
     
     def save(self, *args, **kwargs):
         """حفظ أمر التصنيع وتسجيل حالات الرفض"""
+        # تحويل الأرقام العربية إلى إنجليزية
+        from core.utils import convert_model_arabic_numbers
+        convert_model_arabic_numbers(self, [
+            'contract_number', 'invoice_number', 
+            'exit_permit_number', 'delivery_permit_number'
+        ])
+        
         # التحقق من تغيير الحالة إلى rejected
         if self.pk:  # الكائن موجود مسبقاً
             try:

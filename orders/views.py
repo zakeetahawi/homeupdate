@@ -842,6 +842,16 @@ def order_delete(request, pk):
     """
     order = get_object_or_404(Order, pk=pk)
 
+    # السماح فقط لمدير النظام بحذف الطلبات
+    if not request.user.is_superuser:
+        messages.error(request, '❌ عذراً، فقط مدير النظام يمكنه حذف الطلبات')
+        return redirect('orders:order_detail', pk=pk)
+
+    # منع البائع من حذف الطلبات
+    if request.user.is_salesperson and not request.user.is_superuser:
+        messages.error(request, '❌ عذراً، البائع لا يمكنه حذف الطلبات')
+        return redirect('orders:order_detail', pk=pk)
+
     # الصلاحيات يتم فحصها بواسطة الـ decorator
 
     if request.method == 'POST':

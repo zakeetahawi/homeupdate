@@ -348,6 +348,10 @@ class Transaction(models.Model):
         self.save(update_fields=['status', 'posted_by', 'posted_at'])
     
     def save(self, *args, **kwargs):
+        # تحويل الأرقام العربية إلى إنجليزية
+        from core.utils import convert_model_arabic_numbers
+        convert_model_arabic_numbers(self, ['transaction_number'])
+        
         if not self.transaction_number:
             self.transaction_number = self.generate_transaction_number()
         super().save(*args, **kwargs)
@@ -521,6 +525,10 @@ class CustomerAdvance(models.Model):
         return f"{self.advance_number} - {self.customer.name} ({self.amount} ج.م)"
     
     def save(self, *args, **kwargs):
+        # تحويل الأرقام العربية إلى إنجليزية
+        from core.utils import convert_model_arabic_numbers
+        convert_model_arabic_numbers(self, ['receipt_number'])
+        
         if not self.advance_number:
             self.advance_number = self.generate_advance_number()
         if not self.pk:  # جديد

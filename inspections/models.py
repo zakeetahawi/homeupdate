@@ -321,6 +321,10 @@ class Inspection(models.Model):
         # 2. مديرو النظام يحتاجون تحديث أي معاينة بغض النظر عن نقل الموظفين
         # 3. الفحص هنا كان يعتمد على created_by وليس المستخدم الحالي
     def save(self, *args, **kwargs):
+        # تحويل الأرقام العربية إلى إنجليزية
+        from core.utils import convert_model_arabic_numbers
+        convert_model_arabic_numbers(self, ['contract_number'])
+        
         if not self.branch and self.created_by:
             self.branch = self.created_by.branch
         # تتبع التغييرات في حقل status

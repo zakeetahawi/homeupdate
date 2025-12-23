@@ -564,6 +564,13 @@ class Order(models.Model):
             if not self.order_number:
                 self.order_number = self.generate_unique_order_number()
 
+            # تحويل الأرقام العربية إلى إنجليزية في الحقول النصية
+            from core.utils import convert_model_arabic_numbers
+            convert_model_arabic_numbers(self, [
+                'invoice_number', 'invoice_number_2', 'invoice_number_3',
+                'contract_number', 'contract_number_2', 'contract_number_3'
+            ])
+
             # ⚡ Validate selected types - محسّن
             selected_types = self.selected_types or []
             if isinstance(selected_types, str):

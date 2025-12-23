@@ -10,28 +10,52 @@ User = get_user_model()
 @receiver(post_save, sender=User)
 def assign_default_departments(sender, instance, created, **kwargs):
     """
-    Assign default departments to new users
+    Assign default departments to new users ONLY when created
+    This should NOT run when updating existing users
     """
-    if created:
-        # Use transaction.on_commit to delay database operations
-        from django.db import transaction
-        
-        def assign_departments():
-            try:
-                # Get the default departments
-                default_departments = Department.objects.filter(
-                    Q(code='customers') | Q(code='orders')
-                )
+    # Log every time the signal is triggered
+    print(f"📢 Signal triggered for user {instance.username} - created={created}")
+    
+    # Only assign default departments to NEW users
+    # NOT when updating existing users
+    if not created:
+        print(f"⏭️ Skipping department assignment - user {instance.username} is being UPDATED, not created")
+        return
+    
+    print(f"🆕 New user detected: {instance.username} - will assign default departments")
+    
+    # Use transaction.on_commit to delay database operations
+    from django.db import transaction
+    
+    def assign_departments():
+        try:
+            # Only assign if user has NO departments already
+            existing_depts = list(instance.departments.values_list('name', flat=True))
+            if existing_depts:
+                print(f"⏭️ User {instance.username} already has departments: {', '.join(existing_depts)} - skipping default assignment")
+                return
+            
+            # Get the default departments
+            default_departments = Department.objects.filter(
+                Q(code='customers') | Q(code='orders')
+            )
+            
+            if not default_departments.exists():
+                print(f"⚠️ No default departments found (customers/orders)")
+                return
+            
+            # Assign departments to user
+            for dept in default_departments:
+                instance.departments.add(dept)
                 
-                # Assign departments to user
-                for dept in default_departments:
-                    instance.departments.add(dept)
-                    
-                print(f"Default departments assigned to user {instance.username}")
-            except Exception as e:
-                print(f"Error assigning default departments: {e}")
-        
-        transaction.on_commit(assign_departments)
+            assigned_names = ', '.join([d.name for d in default_departments])
+            print(f"✅ Default departments assigned to NEW user {instance.username}: {assigned_names}")
+        except Exception as e:
+            print(f"❌ Error assigning default departments to {instance.username}: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    transaction.on_commit(assign_departments)
 
 
 @receiver(user_logged_in)

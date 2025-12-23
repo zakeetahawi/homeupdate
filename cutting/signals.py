@@ -6,8 +6,12 @@ from orders.models import Order, OrderItem
 from inventory.models import Warehouse
 from .models import CuttingOrder, CuttingOrderItem
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
+
+# متغير thread-local لتتبع ما إذا كنا داخل signal لتجنب التكرار
+_cutting_signal_lock = threading.local()
 
 
 @receiver(post_save, sender=Order)
@@ -18,16 +22,23 @@ def create_cutting_orders_on_order_save(sender, instance, created, **kwargs):
     العناصر ستُضاف تلقائياً عند إنشائها بواسطة signal handle_order_item_creation
     """
     
-    if created:
-        # استخدام transaction.on_commit للتأكد من اكتمال المعاملة قبل إنشاء أوامر التقطيع
-        def create_cutting_orders():
-            # التحقق من نوع الطلب - لا ننشئ أوامر تقطيع للمعاينة فقط
-            selected_types = instance.get_selected_types_list()
-            logger.info(f"🔍 فحص الطلب {instance.order_number} - الأنواع: {selected_types}")
+    # منع التكرار اللانهائي - إذا كان الحفظ من خلال update_fields، لا نفعل شيء
+    if kwargs.get('update_fields'):
+        return
+    
+    # منع التكرار باستخدام thread-local lock
+    if getattr(_cutting_signal_lock, 'processing', False):
+        return
+    
+    # استخدام transaction.on_commit للتأكد من اكتمال المعاملة قبل إنشاء أوامر التقطيع
+    def create_cutting_orders():
+        # التحقق من نوع الطلب - لا ننشئ أوامر تقطيع للمعاينة فقط
+        selected_types = instance.get_selected_types_list()
+        logger.info(f"🔍 فحص الطلب {instance.order_number} - الأنواع: {selected_types} - جديد: {created}")
 
-            if 'inspection' in selected_types:
-                logger.info(f"⏭️ تخطي إنشاء أمر تقطيع للطلب {instance.order_number} - يحتوي على معاينة")
-                return
+        if 'inspection' in selected_types:
+            logger.info(f"⏭️ تخطي إنشاء أمر تقطيع للطلب {instance.order_number} - يحتوي على معاينة")
+            return
             
             try:
                 with transaction.atomic():
@@ -102,6 +113,103 @@ def create_cutting_orders_on_order_save(sender, instance, created, **kwargs):
         
         from django.db import transaction
         transaction.on_commit(create_cutting_orders)
+    
+    # ✅ جديد: معالجة حالة التعديل - توزيع العناصر الجديدة
+    if not created and instance.items.exists():
+        def distribute_new_items():
+            # تفعيل القفل لمنع التكرار
+            _cutting_signal_lock.processing = True
+            try:
+                # الحصول على جميع أوامر التقطيع للطلب
+                cutting_orders = CuttingOrder.objects.filter(order=instance)
+                
+                # إذا لم توجد أوامر تقطيع، نتحقق من نوع الطلب ونُنشئها
+                if not cutting_orders.exists():
+                    selected_types = instance.get_selected_types_list()
+                    
+                    # إذا كان الطلب معاينة فقط، لا نُنشئ أوامر تقطيع
+                    if selected_types == ['inspection']:
+                        logger.info(f"⏭️ تخطي إنشاء أوامر تقطيع للطلب {instance.order_number} - معاينة فقط")
+                        return
+                    
+                    # إنشاء أوامر تقطيع للمستودعات النشطة
+                    logger.info(f"📦 إنشاء أوامر تقطيع للطلب {instance.order_number} (تحديث)")
+                    active_warehouses = Warehouse.objects.filter(is_active=True)
+                    
+                    if not active_warehouses.exists():
+                        logger.warning(f"❌ لا توجد مستودعات نشطة")
+                        return
+                    
+                    for warehouse in active_warehouses:
+                        CuttingOrder.objects.create(
+                            order=instance,
+                            warehouse=warehouse,
+                            status='pending',
+                            notes=f'أمر تقطيع للطلب {instance.order_number} - مستودع {warehouse.name}'
+                        )
+                    
+                    # إعادة الحصول على أوامر التقطيع
+                    cutting_orders = CuttingOrder.objects.filter(order=instance)
+                
+                # البحث عن عناصر جديدة غير موزعة
+                active_warehouses = Warehouse.objects.filter(is_active=True)
+                distributed_count = 0
+                
+                for order_item in instance.items.all():
+                    # تحقق من عدم توزيع العنصر مسبقاً
+                    if CuttingOrderItem.objects.filter(order_item=order_item).exists():
+                        continue
+                    
+                    # العنصر جديد - يجب توزيعه
+                    target_warehouse = determine_warehouse_for_item(
+                        order_item,
+                        active_warehouses
+                    )
+                    
+                    if target_warehouse:
+                        cutting_order = CuttingOrder.objects.filter(
+                            order=instance,
+                            warehouse=target_warehouse
+                        ).first()
+                        
+                        # إنشاء أمر تقطيع إذا لم يكن موجوداً للمستودع المحدد
+                        if not cutting_order:
+                            cutting_order = CuttingOrder.objects.create(
+                                order=instance,
+                                warehouse=target_warehouse,
+                                status='pending',
+                                notes=f'أمر تقطيع للطلب {instance.order_number} - مستودع {target_warehouse.name}'
+                            )
+                        
+                        CuttingOrderItem.objects.create(
+                            cutting_order=cutting_order,
+                            order_item=order_item,
+                            status='pending'
+                        )
+                        distributed_count += 1
+                        logger.info(f"✅ تم توزيع عنصر جديد {order_item.product.name[:30]} على {target_warehouse.name}")
+                
+                if distributed_count > 0:
+                    logger.info(f"📦 تم توزيع {distributed_count} عنصر جديد على أوامر التقطيع للطلب {instance.order_number}")
+                
+                # ✅ حذف أوامر التقطيع الفارغة (التي لا تحتوي على عناصر)
+                empty_orders = CuttingOrder.objects.filter(
+                    order=instance,
+                    items__isnull=True
+                )
+                deleted_count = empty_orders.count()
+                if deleted_count > 0:
+                    empty_orders.delete()
+                    logger.info(f"🗑️ تم حذف {deleted_count} أمر تقطيع فارغ")
+                
+            except Exception as e:
+                logger.error(f"❌ خطأ في توزيع العناصر الجديدة للطلب {instance.id}: {str(e)}")
+            finally:
+                # تحرير القفل
+                _cutting_signal_lock.processing = False
+        
+        from django.db import transaction
+        transaction.on_commit(distribute_new_items)
 
 
 def determine_warehouse_for_item(order_item, warehouses):

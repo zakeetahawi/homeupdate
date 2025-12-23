@@ -73,6 +73,12 @@ class Technician(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.get_department_display()})"
+    
+    def save(self, *args, **kwargs):
+        # تحويل الأرقام العربية إلى إنجليزية
+        from core.utils import convert_model_arabic_numbers
+        convert_model_arabic_numbers(self, ['phone'])
+        super().save(*args, **kwargs)
 
 
 class Driver(models.Model):
@@ -92,6 +98,12 @@ class Driver(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        # تحويل الأرقام العربية إلى إنجليزية
+        from core.utils import convert_model_arabic_numbers
+        convert_model_arabic_numbers(self, ['phone', 'license_number', 'vehicle_number'])
+        super().save(*args, **kwargs)
 
 
 class InstallationTeam(models.Model):
@@ -197,6 +209,10 @@ class InstallationSchedule(models.Model):
             raise ValidationError(_('لا يمكن جدولة تركيب في تاريخ ماضي'))
 
     def save(self, *args, **kwargs):
+        # تحويل الأرقام العربية إلى إنجليزية
+        from core.utils import convert_model_arabic_numbers
+        convert_model_arabic_numbers(self, ['location_address'])
+        
         # حفظ الحالة السابقة قبل التحديث
         old_status = None
         old_scheduled_date = None

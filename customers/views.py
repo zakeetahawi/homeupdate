@@ -429,6 +429,11 @@ def customer_delete(request, pk):
     """View for deleting a customer with proper error handling."""
     customer = get_object_or_404(Customer, pk=pk)
 
+    # السماح فقط لمدير النظام بحذف العملاء
+    if not request.user.is_superuser:
+        messages.error(request, "❌ عذراً، فقط مدير النظام يمكنه حذف العملاء")
+        return redirect("customers:customer_detail", pk=pk)
+
     # التحقق من صلاحية المستخدم لحذف هذا العميل
     if not can_user_delete_customer(request.user, customer):
         messages.error(request, "ليس لديك صلاحية لحذف هذا العميل.")

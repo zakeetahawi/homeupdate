@@ -99,7 +99,7 @@
                                         <small class="d-block">مرتبط بفرعك</small>
                                     {% endif %}
                                 </a>
-                                {% if can_edit %}
+                                {% if perms.customers.change_customer and can_edit %}
                                     <a href="{% url 'customers:customer_update' customer.pk %}" class="btn btn-primary btn-sm">
                                         <i class="fas fa-edit"></i> {% trans 'تعديل' %}
                                     </a>
@@ -108,9 +108,13 @@
                                         <button class="btn btn-secondary btn-sm disabled" title="لا يمكن التعديل - عميل من فرع آخر">
                                             <i class="fas fa-lock"></i> {% trans 'محظور التعديل' %}
                                         </button>
+                                    {% elif not perms.customers.change_customer %}
+                                        <button class="btn btn-secondary btn-sm disabled" title="ليس لديك صلاحية التعديل">
+                                            <i class="fas fa-lock"></i> {% trans 'محظور التعديل' %}
+                                        </button>
                                     {% endif %}
                                 {% endif %}
-                                {% if perms.customers.delete_customer and not is_cross_branch %}
+                                {% if user.is_superuser and not is_cross_branch %}
                                     <a href="{% url 'customers:customer_delete' customer.pk %}" class="btn btn-outline-danger btn-sm">
                                         <i class="fas fa-trash"></i> {% trans 'حذف' %}
                                     </a>

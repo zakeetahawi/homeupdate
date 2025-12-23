@@ -151,6 +151,10 @@ class CuttingOrder(models.Model):
         return f"تقطيع {self.cutting_code} - {self.order.customer.name}"
     
     def save(self, *args, **kwargs):
+        # تحويل الأرقام العربية إلى إنجليزية
+        from core.utils import convert_model_arabic_numbers
+        convert_model_arabic_numbers(self, ['cutting_code', 'notes'])
+        
         if not self.cutting_code:
             if self.order and self.order.order_number:
                 # استخدام رقم الطلب الأساسي مع إضافة C

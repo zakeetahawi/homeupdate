@@ -12,12 +12,16 @@ def get_user_customers_queryset(user, search_term=None):
     if user.is_superuser:
         return Customer.objects.all()
 
-    # Check for view all customers permission (Sales Manager, Inspection Manager, etc.)
-    if user.has_perm('customers.view_customer'):
-        return Customer.objects.all()
-    
     # المدير العام يرى جميع العملاء
     if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
+        return Customer.objects.all()
+    
+    # مدير المعاينات يرى جميع العملاء
+    if hasattr(user, 'is_inspection_manager') and user.is_inspection_manager:
+        return Customer.objects.all()
+    
+    # مدير التركيبات يرى جميع العملاء
+    if hasattr(user, 'is_installation_manager') and user.is_installation_manager:
         return Customer.objects.all()
     
     # مدير المنطقة يرى عملاء الفروع المُدارة

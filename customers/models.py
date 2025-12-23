@@ -481,6 +481,10 @@ class Customer(models.Model):
                 raise ValidationError({'phone': _('رقم الهاتف مستخدم بالفعل لعميل آخر')})
 
     def save(self, *args, **kwargs):
+        # تحويل الأرقام العربية إلى إنجليزية
+        from core.utils import convert_model_arabic_numbers
+        convert_model_arabic_numbers(self, ['phone', 'phone2', 'national_id', 'tax_number'])
+        
         if not self.code:
             self.code = self.generate_unique_code()
         super().save(*args, **kwargs)

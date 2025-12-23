@@ -234,6 +234,47 @@ class CustomUserAdmin(UserAdmin):
             return []
         return super().get_inline_instances(request, obj)
 
+    def save_model(self, request, obj, form, change):
+        """
+        حفظ النموذج مع طباعة البيانات المرسلة
+        """
+        if change:  # عند تحديث مستخدم موجود
+            print(f"\n{'='*60}")
+            print(f"📝 حفظ المستخدم: {obj.username}")
+            print(f"📋 البيانات المرسلة من الـ form:")
+            print(f"   - POST data departments: {request.POST.getlist('departments')}")
+            if 'departments' in form.cleaned_data:
+                dept_ids = [d.id for d in form.cleaned_data['departments']]
+                dept_names = [d.name for d in form.cleaned_data['departments']]
+                print(f"   - Form cleaned departments IDs: {dept_ids}")
+                print(f"   - Form cleaned departments names: {dept_names}")
+            print(f"{'='*60}\n")
+        
+        super().save_model(request, obj, form, change)
+
+    def save_related(self, request, form, formsets, change):
+        """
+        حفظ العلاقات المرتبطة (ManyToMany) مثل الأقسام
+        تأكد من عدم حذف الأقسام بعد الحفظ
+        """
+        # قبل الحفظ - تسجيل الأقسام الحالية
+        if change:
+            old_departments = list(form.instance.departments.values_list('name', flat=True))
+            print(f"🔍 الأقسام قبل الحفظ للمستخدم {form.instance.username}: {', '.join(old_departments) if old_departments else 'لا توجد'}")
+        
+        super().save_related(request, form, formsets, change)
+        
+        # بعد الحفظ - تسجيل الأقسام المحفوظة
+        if change:
+            new_departments = list(form.instance.departments.values_list('name', flat=True))
+            print(f"✅ الأقسام بعد الحفظ للمستخدم {form.instance.username}: {', '.join(new_departments) if new_departments else 'لا توجد'}")
+            
+            if not new_departments and old_departments:
+                print(f"⚠️ تحذير: تم حذف جميع الأقسام للمستخدم {form.instance.username}!")
+                messages.warning(request, f"تحذير: تم حذف جميع الأقسام للمستخدم {form.instance.username}")
+            elif new_departments:
+                messages.success(request, f"تم حفظ الأقسام بنجاح: {', '.join(new_departments)}")
+
     def change_view(self, request, object_id, form_url='', extra_context=None):
         """Add a link to the roles management page."""
         extra_context = extra_context or {}
