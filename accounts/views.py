@@ -257,7 +257,7 @@ def login_view(request):
                                             # تحديث البصمة تلقائياً إذا تغيرت
                                             if device_obj.device_fingerprint != device_fingerprint:
                                                 old_fingerprint = device_obj.device_fingerprint[:16] if device_obj.device_fingerprint else 'None'
-                                                device_obj.update_fingerprint(device_fingerprint, full_device_data)
+                                                device_obj.update_fingerprint(device_fingerprint)
                                                 logger.info(f"🔄 Auto-updated fingerprint: {old_fingerprint}... → {device_fingerprint[:16]}...")
                                         else:
                                             # البصمة مختلفة جداً - مشكوك فيه!
