@@ -3,7 +3,7 @@
 Accounting URLs
 """
 from django.urls import path
-from . import views
+from . import views, views_bank
 
 app_name = 'accounting'
 
@@ -68,4 +68,11 @@ urlpatterns = [
     path('api/customer/<int:customer_id>/badge/', views.api_customer_badge, name='api_customer_badge'),
     path('api/accounts/search/', views.api_accounts_search, name='api_accounts_search'),
     path('api/dashboard-stats/', views.api_dashboard_stats, name='api_dashboard_stats'),
+    
+    # ============================================
+    # Bank Accounts QR System
+    # ============================================
+    path('bank-qr/<str:unique_code>/', views_bank.bank_qr_view, name='bank_qr'),
+    path('bank-qr-all/', views_bank.all_banks_qr_view, name='all_banks_qr'),
+    path('bank-qr-pdf/', views_bank.export_bank_qr_pdf, name='bank_qr_pdf'),
 ]

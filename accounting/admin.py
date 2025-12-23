@@ -2,10 +2,12 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.db.models import Sum
+from django.utils import timezone
+from django.contrib import messages
 from .models import (
     AccountType, Account, Transaction, TransactionLine,
     CustomerAdvance, AdvanceUsage, CustomerFinancialSummary,
-    AccountingSettings
+    AccountingSettings, BankAccount
 )
 
 
@@ -558,3 +560,330 @@ class AccountingSettingsAdmin(admin.ModelAdmin):
     
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+# ============================================
+# Bank Account Admin
+# ============================================
+
+@admin.register(BankAccount)
+class BankAccountAdmin(admin.ModelAdmin):
+    """
+    لوحة تحكم الحسابات البنكية
+    Bank Accounts Administration
+    """
+    list_display = [
+        'unique_code', 'bank_name_display', 'account_number_display',
+        'iban_display', 'currency', 'is_primary_display',
+        'is_active_display', 'qr_preview', 'display_order'
+    ]
+    list_display_links = ['unique_code', 'bank_name_display']
+    list_filter = ['is_active', 'is_primary', 'currency', 'show_in_qr']
+    search_fields = ['bank_name', 'bank_name_en', 'account_number', 'iban', 'unique_code']
+    list_editable = ['display_order']
+    readonly_fields = [
+        'unique_code', 'qr_code_display', 'qr_url_display',
+        'cloudflare_synced', 'last_synced_at', 
+        'created_at', 'updated_at'
+    ]
+    
+    def get_readonly_fields(self, request, obj=None):
+        """تحديد الحقول readonly حسب الحالة"""
+        if obj:  # Editing existing object
+            return self.readonly_fields
+        else:  # Adding new object
+            # في صفحة الإضافة، لا نعرض التواريخ لأنها لا توجد بعد
+            return ['unique_code', 'qr_code_display', 'qr_url_display']
+    
+    def get_fieldsets(self, request, obj=None):
+        """تحديد fieldsets حسب الحالة (إضافة/تعديل)"""
+        if obj:  # Editing existing object
+            return [
+                ('معلومات البنك الأساسية', {
+                    'fields': [
+                        ('bank_name', 'bank_name_en'),
+                        'bank_logo',
+                    ]
+                }),
+                ('معلومات الحساب', {
+                    'fields': [
+                        'account_number',
+                        ('iban', 'swift_code'),
+                        ('branch', 'branch_en'),
+                        ('account_holder', 'account_holder_en'),
+                        'currency',
+                        'linked_account',
+                    ]
+                }),
+                ('QR Code System', {
+                    'fields': [
+                        'unique_code',
+                        'qr_code_display',
+                        'qr_url_display',
+                    ],
+                    'classes': ['collapse'],
+                }),
+                ('إعدادات العرض', {
+                    'fields': [
+                        ('is_active', 'is_primary'),
+                        ('show_in_qr', 'display_order'),
+                    ]
+                }),
+                ('Cloudflare Integration', {
+                    'fields': [
+                        'cloudflare_synced',
+                        'last_synced_at',
+                    ],
+                    'classes': ['collapse'],
+                }),
+                ('معلومات إضافية', {
+                    'fields': [
+                        'notes',
+                        ('created_at', 'updated_at'),
+                        'created_by',
+                    ],
+                    'classes': ['collapse'],
+                }),
+            ]
+        else:  # Adding new object
+            return [
+                ('معلومات البنك الأساسية', {
+                    'fields': [
+                        ('bank_name', 'bank_name_en'),
+                        'bank_logo',
+                    ]
+                }),
+                ('معلومات الحساب', {
+                    'fields': [
+                        'account_number',
+                        ('iban', 'swift_code'),
+                        ('branch', 'branch_en'),
+                        ('account_holder', 'account_holder_en'),
+                        'currency',
+                        'linked_account',
+                    ]
+                }),
+                ('إعدادات العرض', {
+                    'fields': [
+                        ('is_active', 'is_primary'),
+                        ('show_in_qr', 'display_order'),
+                    ]
+                }),
+                ('ملاحظات', {
+                    'fields': [
+                        'notes',
+                    ],
+                    'classes': ['collapse'],
+                }),
+            ]
+    
+    actions = [
+        'generate_qr_codes',
+        'sync_to_cloudflare',
+        'mark_as_primary',
+        'activate_accounts',
+        'deactivate_accounts',
+        'export_qr_pdf',
+    ]
+    
+    def save_model(self, request, obj, form, change):
+        """حفظ مع تسجيل المستخدم"""
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+    
+    # ============================================
+    # Display Methods
+    # ============================================
+    
+    def bank_name_display(self, obj):
+        """عرض اسم البنك مع الشعار"""
+        if obj.bank_logo:
+            return format_html(
+                '<img src="{0}" style="height:25px; margin-left:10px; vertical-align:middle;"><span style="font-weight:bold;">{1}</span>',
+                obj.bank_logo.url, obj.bank_name
+            )
+        return format_html('<span style="font-weight:bold;">{0}</span>', obj.bank_name)
+    bank_name_display.short_description = 'اسم البنك'
+    
+    def account_number_display(self, obj):
+        """عرض رقم الحساب مع أيقونة نسخ"""
+        return format_html(
+            '<span style="font-family:monospace; direction:ltr; display:inline-block;">{}</span>',
+            obj.account_number
+        )
+    account_number_display.short_description = 'رقم الحساب'
+    
+    def iban_display(self, obj):
+        """عرض IBAN"""
+        from django.utils.safestring import mark_safe
+        if obj.iban:
+            return format_html(
+                '<span style="font-family:monospace; font-size:11px; direction:ltr;">{}</span>',
+                obj.iban
+            )
+        return mark_safe('<span>-</span>')
+    iban_display.short_description = 'IBAN'
+    
+    def is_primary_display(self, obj):
+        """عرض حالة الحساب الرئيسي"""
+        from django.utils.safestring import mark_safe
+        if obj.is_primary:
+            return mark_safe(
+                '<span style="color:#28a745; font-weight:bold;">⭐ رئيسي</span>'
+            )
+        return mark_safe('<span>-</span>')
+    is_primary_display.short_description = 'رئيسي'
+    
+    def is_active_display(self, obj):
+        """عرض حالة النشاط"""
+        from django.utils.safestring import mark_safe
+        if obj.is_active:
+            return mark_safe(
+                '<span style="color:#28a745; font-weight:bold;">✓ نشط</span>'
+            )
+        return mark_safe(
+            '<span style="color:#dc3545;">✗ غير نشط</span>'
+        )
+    is_active_display.short_description = 'الحالة'
+    
+    def qr_preview(self, obj):
+        """معاينة QR Code صغيرة"""
+        from django.utils.safestring import mark_safe
+        if obj.qr_code_base64:
+            # إنشاء ID فريد للـ modal
+            modal_id = f'qr-modal-{obj.pk}'
+            return mark_safe(f'''
+                <img src="{obj.qr_code_base64}" 
+                     style="width:60px; height:60px; cursor:pointer; border:1px solid #ddd; border-radius:4px;" 
+                     onclick="document.getElementById('{modal_id}').style.display='flex'"
+                     title="انقر للتكبير">
+                <div id="{modal_id}" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;" onclick="this.style.display='none'">
+                    <div style="background:white; padding:30px; border-radius:10px; text-align:center; max-width:90%; max-height:90%;">
+                        <h3 style="margin:0 0 20px 0; color:#333;">{obj.bank_name}</h3>
+                        <img src="{obj.qr_code_base64}" style="max-width:400px; max-height:400px; border:2px solid #ddd; padding:10px;">
+                        <p style="margin:15px 0 0 0; color:#666; font-family:monospace;">الكود: {obj.unique_code}</p>
+                        <p style="margin:5px 0; color:#666;">رقم الحساب: {obj.account_number}</p>
+                        <a href="{obj.get_qr_url()}" target="_blank" style="display:inline-block; margin-top:15px; padding:8px 20px; background:#007bff; color:white; text-decoration:none; border-radius:5px;">🔗 فتح الصفحة</a>
+                        <button onclick="event.stopPropagation(); this.parentElement.parentElement.style.display='none'" style="display:block; margin:15px auto 0; padding:8px 20px; background:#dc3545; color:white; border:none; border-radius:5px; cursor:pointer;">✖ إغلاق</button>
+                    </div>
+                </div>
+            ''')
+        return mark_safe(
+            '<button type="button" onclick="alert(\'قم بتوليد QR Code أولاً\')" style="padding:5px 10px; cursor:pointer;">توليد QR</button>'
+        )
+    qr_preview.short_description = 'QR Code'
+    
+    def qr_code_display(self, obj):
+        """عرض كامل لـ QR Code"""
+        from django.utils.safestring import mark_safe
+        if not obj or not obj.pk:
+            return mark_safe(
+                '<p style="color:#999;">احفظ الحساب أولاً لتوليد QR Code</p>'
+            )
+        
+        if obj.qr_code_base64:
+            return format_html(
+                '<div style="text-align:center;"><img src="{0}" style="max-width:300px; border:2px solid #ddd; padding:10px;"><p style="margin-top:10px;"><a href="{1}" target="_blank" style="color:#007bff;">🔗 {1}</a></p></div>',
+                obj.qr_code_base64, obj.get_qr_url()
+            )
+        return mark_safe(
+            '<p style="color:#dc3545;">لم يتم توليد QR Code بعد. استخدم الإجراء "توليد QR Codes"</p>'
+        )
+    qr_code_display.short_description = 'QR Code'
+    
+    def qr_url_display(self, obj):
+        """عرض رابط QR"""
+        from django.utils.safestring import mark_safe
+        if not obj or not obj.pk:
+            return mark_safe(
+                '<p style="color:#999;">سيتم إنشاء الرابط بعد الحفظ</p>'
+            )
+        
+        url = obj.get_qr_url()
+        return format_html(
+            '<a href="{0}" target="_blank" style="font-family:monospace; color:#007bff;">{0}</a>',
+            url
+        )
+    qr_url_display.short_description = 'رابط QR'
+    
+    # ============================================
+    # Admin Actions
+    # ============================================
+    
+    def generate_qr_codes(self, request, queryset):
+        """توليد QR Codes للحسابات المحددة"""
+        count = 0
+        for account in queryset:
+            try:
+                account.generate_qr_code()
+                count += 1
+            except Exception as e:
+                messages.error(request, f'خطأ في توليد QR لـ {account.bank_name}: {str(e)}')
+        
+        messages.success(request, f'تم توليد QR Code لـ {count} حساب بنكي بنجاح ✓')
+    generate_qr_codes.short_description = '🔲 توليد QR Codes'
+    
+    def sync_to_cloudflare(self, request, queryset):
+        """مزامنة الحسابات مع Cloudflare"""
+        try:
+            from accounting.cloudflare_sync import sync_bank_accounts_to_cloudflare
+            
+            result = sync_bank_accounts_to_cloudflare(list(queryset))
+            
+            if result.get('success'):
+                messages.success(
+                    request,
+                    f'✓ تم مزامنة {result.get("count", 0)} حساب بنكي مع Cloudflare'
+                )
+            else:
+                messages.error(
+                    request,
+                    f'خطأ: {result.get("error", "فشلت المزامنة")}'
+                )
+        except Exception as e:
+            messages.error(request, f'خطأ في المزامنة: {str(e)}')
+    sync_to_cloudflare.short_description = '☁️ مزامنة مع Cloudflare'
+    
+    def mark_as_primary(self, request, queryset):
+        """تحديد كحساب رئيسي"""
+        if queryset.count() > 1:
+            messages.error(request, 'يمكن تحديد حساب واحد فقط كحساب رئيسي')
+            return
+        
+        # إلغاء الحساب الرئيسي الحالي
+        BankAccount.objects.filter(is_primary=True).update(is_primary=False)
+        
+        # تحديد الحساب الجديد
+        queryset.update(is_primary=True)
+        
+        messages.success(request, f'✓ تم تحديد {queryset.first().bank_name} كحساب رئيسي')
+    mark_as_primary.short_description = '⭐ تحديد كحساب رئيسي'
+    
+    def activate_accounts(self, request, queryset):
+        """تفعيل الحسابات"""
+        count = queryset.update(is_active=True)
+        messages.success(request, f'✓ تم تفعيل {count} حساب بنكي')
+    activate_accounts.short_description = '✓ تفعيل الحسابات'
+    
+    def deactivate_accounts(self, request, queryset):
+        """إلغاء تفعيل الحسابات"""
+        count = queryset.update(is_active=False)
+        messages.success(request, f'✓ تم إلغاء تفعيل {count} حساب بنكي')
+    deactivate_accounts.short_description = '✗ إلغاء التفعيل'
+    
+    def export_qr_pdf(self, request, queryset):
+        """تصدير QR Codes كـ PDF"""
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
+        
+        # جمع أكواد الحسابات
+        codes = ','.join([acc.unique_code for acc in queryset])
+        
+        # إعادة توجيه إلى صفحة تصدير PDF
+        url = reverse('accounting:bank_qr_pdf') + f'?codes={codes}'
+        
+        messages.info(request, f'جاري تصدير QR لـ {queryset.count()} حساب بنكي...')
+        return HttpResponseRedirect(url)
+    export_qr_pdf.short_description = '📄 تصدير PDF'
+

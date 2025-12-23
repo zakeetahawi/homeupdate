@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ bank.bank_name }} - {{ site_name }}</title>
+  <meta name="description" content="الحساب البنكي لـ {{ site_name }} - {{ bank.bank_name }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --gold: #d4af37;
+      --gold-light: #f4d03f;
+      --gold-dark: #b8860b;
+      --dark: #1a1a2e;
+      --dark-light: #16213e;
+      --dark-surface: #0f3460;
+      --success: #28a745;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: linear-gradient(135deg, var(--dark) 0%, var(--dark-light) 50%, var(--dark-surface) 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 500px;
+      width: 100%;
+    }
+    
+    .brand-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    
+    .logo-icon {
+      font-size: 3.5rem;
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));
+    }
+    
+    .brand-name {
+      font-size: 2rem;
+      font-weight: 800;
+      color: white;
+      margin-top: 8px;
+    }
+    
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .bank-header {
+      text-align: center;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+    }
+    
+    .bank-icon {
+      font-size: 3rem;
+      color: var(--gold);
+      margin-bottom: 12px;
+    }
+    
+    .bank-name {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 4px;
+    }
+    
+    .bank-name-en {
+      font-size: 1.1rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .info-group {
+      margin-bottom: 20px;
+    }
+    
+    .info-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: var(--gold-light);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    
+    .info-value {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 600;
+      direction: ltr;
+      text-align: center;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .info-value:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: var(--gold);
+    }
+    
+    .copy-btn {
+      position: absolute;
+      top: 50%;
+      left: 12px;
+      transform: translateY(-50%);
+      background: var(--gold);
+      color: var(--dark);
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      opacity: 0;
+    }
+    
+    .info-value:hover .copy-btn {
+      opacity: 1;
+    }
+    
+    .copy-btn:hover {
+      background: var(--gold-light);
+      transform: translateY(-50%) scale(1.05);
+    }
+    
+    .visit-btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+      color: var(--dark);
+      text-decoration: none;
+      border-radius: 16px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-align: center;
+      margin-top: 24px;
+      transition: all 0.3s ease;
+    }
+    
+    .visit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+    }
+    
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--success);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      display: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand-header">
+      <div class="logo-icon">
+        <i class="fas fa-gem"></i>
+      </div>
+      <h1 class="brand-name">{{ site_name }}</h1>
+    </div>
+
+    <div class="card">
+      <div class="bank-header">
+        <div class="bank-icon">
+          <i class="fas fa-university"></i>
+        </div>
+        <h2 class="bank-name">{{ bank.bank_name }}</h2>
+        <p class="bank-name-en">{{ bank.bank_name_en }}</p>
+      </div>
+
+      {% if bank.account_holder %}
+      <div class="info-group">
+        <div class="info-label">
+          <i class="fas fa-user"></i>
+          <span>اسم صاحب الحساب</span>
+        </div>
+        <div class="info-value">
+          {{ bank.account_holder }}
+          <button class="copy-btn" onclick="copyText('{{ bank.account_holder }}', this)">
+            <i class="fas fa-copy"></i> نسخ
+          </button>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="info-group">
+        <div class="info-label">
+          <i class="fas fa-hashtag"></i>
+          <span>رقم الحساب</span>
+        </div>
+        <div class="info-value">
+          {{ bank.account_number }}
+          <button class="copy-btn" onclick="copyText('{{ bank.account_number }}', this)">
+            <i class="fas fa-copy"></i> نسخ
+          </button>
+        </div>
+      </div>
+
+      {% if bank.iban %}
+      <div class="info-group">
+        <div class="info-label">
+          <i class="fas fa-barcode"></i>
+          <span>IBAN</span>
+        </div>
+        <div class="info-value">
+          {{ bank.iban }}
+          <button class="copy-btn" onclick="copyText('{{ bank.iban }}', this)">
+            <i class="fas fa-copy"></i> نسخ
+          </button>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if bank.swift_code %}
+      <div class="info-group">
+        <div class="info-label">
+          <i class="fas fa-code"></i>
+          <span>SWIFT Code</span>
+        </div>
+        <div class="info-value">
+          {{ bank.swift_code }}
+          <button class="copy-btn" onclick="copyText('{{ bank.swift_code }}', this)">
+            <i class="fas fa-copy"></i> نسخ
+          </button>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if bank.branch %}
+      <div class="info-group">
+        <div class="info-label">
+          <i class="fas fa-map-marker-alt"></i>
+          <span>الفرع</span>
+        </div>
+        <div class="info-value">
+          {{ bank.branch }}
+        </div>
+      </div>
+      {% endif %}
+
+      <a href="{{ main_site_url }}" class="visit-btn">
+        <i class="fas fa-globe"></i> زيارة الموقع
+      </a>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">
+    <i class="fas fa-check-circle"></i> تم النسخ بنجاح!
+  </div>
+
+  <script>
+    function copyText(text, button) {
+      navigator.clipboard.writeText(text).then(() => {
+        const toast = document.getElementById('toast');
+        toast.style.display = 'block';
+        button.innerHTML = '<i class="fas fa-check"></i> تم';
+        button.style.background = '#28a745';
+        
+        setTimeout(() => {
+          toast.style.display = 'none';
+          button.innerHTML = '<i class="fas fa-copy"></i> نسخ';
+          button.style.background = '';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

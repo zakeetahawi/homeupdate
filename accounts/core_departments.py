@@ -167,18 +167,22 @@ def create_core_departments():
     Department.objects.filter(code__in=core_dept_codes).update(is_core=True)
     Department.objects.filter(code__in=core_child_codes).update(is_core=True)
 
-    # حذف الأقسام الوهمية والإدارات والوحدات الإضافية
-    real_departments = [
-        'customers', 'orders', 'inventory', 'inspections',
-        'installations', 'factory', 'complaints', 'reports', 'data_management'
-    ]
+    # ⚠️ تم تعطيل حذف الأقسام الإضافية للحفاظ على الأقسام المخصصة
+    # إذا كنت تريد حذف الأقسام الإضافية، استخدم الأمر: python manage.py cleanup_departments
+    
+    # # حذف الأقسام الوهمية والإدارات والوحدات الإضافية
+    # real_departments = [
+    #     'customers', 'orders', 'inventory', 'inspections',
+    #     'installations', 'factory', 'complaints', 'reports', 'data_management'
+    # ]
+    # 
+    # # حذف جميع الأقسام التي ليست في القائمة الحقيقية
+    # fake_departments = Department.objects.exclude(code__in=real_departments)
+    # deleted_count = fake_departments.count()
+    # fake_departments.delete()
+    # 
+    # if deleted_count > 0:
+    #     print(f"تم حذف {deleted_count} قسم/إدارة/وحدة إضافية")
 
-    # حذف جميع الأقسام التي ليست في القائمة الحقيقية
-    fake_departments = Department.objects.exclude(code__in=real_departments)
-    deleted_count = fake_departments.count()
-    fake_departments.delete()
-
-    if deleted_count > 0:
-        print(f"تم حذف {deleted_count} قسم/إدارة/وحدة إضافية")
-
-    print(f"تم إنشاء {len(core_dept_codes)} قسم أساسي و {len(core_child_codes)} قسم فرعي أساسي")
+    print(f"✅ تم التأكد من وجود {len(core_dept_codes)} قسم أساسي و {len(core_child_codes)} قسم فرعي أساسي")
+    print(f"ℹ️  إيقاف العمليات...")

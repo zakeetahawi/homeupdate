@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الحسابات البنكية - {{ site_name }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --gold: #d4af37;
+      --gold-light: #f4d03f;
+      --gold-dark: #b8860b;
+      --dark: #1a1a2e;
+      --success: #28a745;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: linear-gradient(135deg, var(--dark) 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+      color: white;
+    }
+    
+    .header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 8px;
+      color: var(--gold);
+    }
+    
+    .header p {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 1.1rem;
+    }
+    
+    .bank-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease;
+    }
+    
+    .bank-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+    
+    .bank-card-header {
+      text-align: center;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+    }
+    
+    .bank-card-header i {
+      font-size: 2.5rem;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+    
+    .bank-card-header h3 {
+      color: white;
+      font-size: 1.5rem;
+      margin-bottom: 4px;
+    }
+    
+    .bank-card-header p {
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .info-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      gap: 12px;
+    }
+    
+    .info-row .label {
+      color: var(--gold-light);
+      font-weight: 600;
+      min-width: 100px;
+    }
+    
+    .info-row .value {
+      color: white;
+      font-family: monospace;
+      font-size: 1.1rem;
+      flex: 1;
+      direction: ltr;
+      text-align: left;
+    }
+    
+    .info-row button {
+      background: var(--gold);
+      color: var(--dark);
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+    
+    .info-row button:hover {
+      background: var(--gold-light);
+      transform: scale(1.05);
+    }
+    
+    .primary-badge {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--dark);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-right: 8px;
+    }
+    
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--success);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      display: none;
+      z-index: 1000;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .empty-state i {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      color: rgba(212, 175, 55, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-gem"></i> {{ site_name }}</h1>
+      <p>الحسابات البنكية ({{ count }})</p>
+    </div>
+    
+    {% if banks %}
+      {% for bank in banks %}
+        <div class="bank-card">
+          <div class="bank-card-header">
+            <i class="fas fa-university"></i>
+            <h3>
+              {% if bank.is_primary %}
+                <span class="primary-badge">⭐ رئيسي</span>
+              {% endif %}
+              {{ bank.bank_name }}
+            </h3>
+            <p>{{ bank.bank_name_en }}</p>
+          </div>
+          <div class="bank-card-body">
+            {% if bank.account_holder %}
+            <div class="info-row">
+              <span class="label">صاحب الحساب:</span>
+              <span class="value">{{ bank.account_holder }}</span>
+              <button onclick="copyText('{{ bank.account_holder }}', this)">
+                <i class="fas fa-copy"></i> نسخ
+              </button>
+            </div>
+            {% endif %}
+            
+            <div class="info-row">
+              <span class="label">رقم الحساب:</span>
+              <span class="value">{{ bank.account_number }}</span>
+              <button onclick="copyText('{{ bank.account_number }}', this)">
+                <i class="fas fa-copy"></i> نسخ
+              </button>
+            </div>
+            
+            {% if bank.iban %}
+            <div class="info-row">
+              <span class="label">IBAN:</span>
+              <span class="value">{{ bank.iban }}</span>
+              <button onclick="copyText('{{ bank.iban }}', this)">
+                <i class="fas fa-copy"></i> نسخ
+              </button>
+            </div>
+            {% endif %}
+            
+            {% if bank.swift_code %}
+            <div class="info-row">
+              <span class="label">SWIFT:</span>
+              <span class="value">{{ bank.swift_code }}</span>
+              <button onclick="copyText('{{ bank.swift_code }}', this)">
+                <i class="fas fa-copy"></i> نسخ
+              </button>
+            </div>
+            {% endif %}
+            
+            {% if bank.branch %}
+            <div class="info-row">
+              <span class="label">الفرع:</span>
+              <span class="value">{{ bank.branch }}</span>
+              <button onclick="copyText('{{ bank.branch }}', this)" style="visibility:hidden;">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <p>لا توجد حسابات بنكية نشطة</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="toast" id="toast">
+    <i class="fas fa-check-circle"></i> تم النسخ بنجاح!
+  </div>
+
+  <script>
+    function copyText(text, button) {
+      navigator.clipboard.writeText(text).then(() => {
+        const toast = document.getElementById('toast');
+        toast.style.display = 'block';
+        
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check"></i> تم';
+        button.style.background = '#28a745';
+        
+        setTimeout(() => {
+          toast.style.display = 'none';
+          button.innerHTML = originalHTML;
+          button.style.background = '';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

@@ -846,3 +846,183 @@ class AccountingSettings(models.Model):
         """الحصول على الإعدادات أو إنشاؤها"""
         settings_obj, created = cls.objects.get_or_create(pk=1)
         return settings_obj
+
+
+class BankAccount(models.Model):
+    """
+    نموذج الحسابات البنكية للشركة
+    Company Bank Accounts Model
+    """
+    # معلومات البنك الأساسية
+    bank_name = models.CharField(_('اسم البنك'), max_length=200, db_index=True)
+    bank_name_en = models.CharField(_('اسم البنك بالإنجليزية'), max_length=200)
+    bank_logo = models.ImageField(_('شعار البنك'), upload_to='bank_logos/', blank=True, null=True)
+    
+    # معلومات الحساب
+    account_number = models.CharField(_('رقم الحساب'), max_length=100)
+    iban = models.CharField(_('IBAN'), max_length=34, blank=True, help_text='International Bank Account Number')
+    swift_code = models.CharField(_('SWIFT Code'), max_length=11, blank=True, help_text='BIC/SWIFT Code')
+    branch = models.CharField(_('الفرع'), max_length=200, blank=True)
+    branch_en = models.CharField(_('Branch Name'), max_length=200, blank=True)
+    
+    # معلومات صاحب الحساب
+    account_holder = models.CharField(_('اسم صاحب الحساب'), max_length=200, default='الخواجة')
+    account_holder_en = models.CharField(_('Account Holder'), max_length=200, default='Elkhawaga')
+    
+    # العملة والحساب المحاسبي
+    currency = models.CharField(_('العملة'), max_length=3, default='EGP')
+    linked_account = models.ForeignKey(
+        'Account',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_('الحساب المحاسبي المرتبط'),
+        help_text='الحساب المحاسبي الذي يمثل هذا الحساب البنكي'
+    )
+    
+    # QR Code System
+    qr_code_base64 = models.TextField(_('QR Code Base64'), blank=True, help_text='Cached QR code image')
+    unique_code = models.CharField(
+        _('الكود الفريد'),
+        max_length=20,
+        unique=True,
+        db_index=True,
+        help_text='كود فريد للحساب البنكي (مثال: CIB001, NBE001)'
+    )
+    
+    # إعدادات العرض
+    is_active = models.BooleanField(_('نشط'), default=True, db_index=True)
+    is_primary = models.BooleanField(_('حساب رئيسي'), default=False, help_text='الحساب الافتراضي للتحصيل')
+    display_order = models.IntegerField(_('ترتيب العرض'), default=0, help_text='ترتيب عرض الحساب في القوائم')
+    show_in_qr = models.BooleanField(_('عرض في QR'), default=True, help_text='عرض في صفحة جميع الحسابات')
+    
+    # Cloudflare Integration
+    cloudflare_synced = models.BooleanField(_('متزامن مع Cloudflare'), default=False)
+    last_synced_at = models.DateTimeField(_('آخر مزامنة'), null=True, blank=True)
+    
+    # ملاحظات وتفاصيل
+    notes = models.TextField(_('ملاحظات'), blank=True)
+    
+    # تواريخ
+    created_at = models.DateTimeField(_('تاريخ الإضافة'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_bank_accounts',
+        verbose_name=_('أضيف بواسطة')
+    )
+    
+    class Meta:
+        verbose_name = _('حساب بنكي')
+        verbose_name_plural = _('الحسابات البنكية')
+        ordering = ['display_order', 'bank_name']
+        indexes = [
+            models.Index(fields=['unique_code']),
+            models.Index(fields=['is_active', 'display_order']),
+            models.Index(fields=['is_primary']),
+        ]
+    
+    def __str__(self):
+        return f"{self.bank_name} - {self.account_number}"
+    
+    def save(self, *args, **kwargs):
+        """حفظ الحساب مع توليد كود فريد تلقائياً"""
+        if not self.unique_code:
+            # توليد كود فريد من اسم البنك
+            import re
+            from django.utils.text import slugify
+            
+            # استخراج الأحرف الكبيرة من اسم البنك بالإنجليزية
+            bank_initials = ''.join([c for c in self.bank_name_en.upper() if c.isalpha()])[:3]
+            
+            # البحث عن آخر رقم مستخدم
+            last_account = BankAccount.objects.filter(
+                unique_code__startswith=bank_initials
+            ).order_by('-unique_code').first()
+            
+            if last_account:
+                # استخراج الرقم وزيادته
+                last_number = int(re.findall(r'\d+', last_account.unique_code)[-1])
+                new_number = last_number + 1
+            else:
+                new_number = 1
+            
+            self.unique_code = f"{bank_initials}{new_number:03d}"
+        
+        # التأكد من وجود حساب رئيسي واحد فقط
+        if self.is_primary:
+            BankAccount.objects.filter(is_primary=True).exclude(pk=self.pk).update(is_primary=False)
+        
+        super().save(*args, **kwargs)
+    
+    def generate_qr_code(self):
+        """توليد QR Code للحساب البنكي"""
+        import qrcode
+        import base64
+        from io import BytesIO
+        from django.conf import settings
+        
+        # الحصول على رابط Cloudflare Worker
+        cloudflare_url = getattr(settings, 'CLOUDFLARE_WORKER_URL', 'https://qr.elkhawaga.uk')
+        qr_url = f"{cloudflare_url}/bank/{self.unique_code}"
+        
+        # إنشاء QR Code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(qr_url)
+        qr.make(fit=True)
+        
+        # توليد الصورة
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # تحويل إلى Base64
+        buffered = BytesIO()
+        img.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        
+        self.qr_code_base64 = f"data:image/png;base64,{img_str}"
+        self.save(update_fields=['qr_code_base64'])
+        
+        return self.qr_code_base64
+    
+    def get_qr_url(self):
+        """الحصول على رابط صفحة QR"""
+        from django.conf import settings
+        cloudflare_url = getattr(settings, 'CLOUDFLARE_WORKER_URL', 'https://qr.elkhawaga.uk')
+        return f"{cloudflare_url}/bank/{self.unique_code}"
+    
+    def to_cloudflare_dict(self):
+        """تحويل الحساب إلى قاموس للمزامنة مع Cloudflare"""
+        return {
+            'code': self.unique_code,
+            'bank_name': self.bank_name,
+            'bank_name_en': self.bank_name_en,
+            'account_number': self.account_number,
+            'iban': self.iban or '',
+            'swift_code': self.swift_code or '',
+            'branch': self.branch or '',
+            'branch_en': self.branch_en or '',
+            'account_holder': self.account_holder,
+            'account_holder_en': self.account_holder_en,
+            'currency': self.currency,
+            'is_active': self.is_active,
+            'is_primary': self.is_primary,
+            'display_order': self.display_order,
+        }
+    
+    @staticmethod
+    def get_active_accounts():
+        """الحصول على جميع الحسابات النشطة"""
+        return BankAccount.objects.filter(is_active=True).order_by('display_order', 'bank_name')
+    
+    @staticmethod
+    def get_primary_account():
+        """الحصول على الحساب الرئيسي"""
+        return BankAccount.objects.filter(is_primary=True, is_active=True).first()

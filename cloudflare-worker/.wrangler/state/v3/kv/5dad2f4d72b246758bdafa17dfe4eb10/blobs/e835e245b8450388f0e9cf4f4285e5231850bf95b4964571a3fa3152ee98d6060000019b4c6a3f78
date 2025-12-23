@@ -1,0 +1,16 @@
+{
+  "code": "CIB002",
+  "bank_name": "بنك CIB شركات",
+  "bank_name_en": "cib",
+  "account_number": "100054913731",
+  "iban": "",
+  "swift_code": "",
+  "branch": "",
+  "branch_en": "",
+  "account_holder": "الخواجة",
+  "account_holder_en": "Elkhawaga",
+  "currency": "EGP",
+  "is_active": true,
+  "is_primary": true,
+  "display_order": 0
+}
