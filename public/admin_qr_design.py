@@ -4,6 +4,7 @@ QR Design Settings Admin
 """
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.urls import reverse, path
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -26,7 +27,7 @@ class QRDesignSettingsAdmin(admin.ModelAdmin):
                 'logo',
                 'logo_preview',
                 ('logo_text', 'logo_text_en'),
-                'show_logo',
+                ('show_logo', 'logo_size'),
             ],
             'classes': ['collapse'],
         }),
@@ -36,6 +37,10 @@ class QRDesignSettingsAdmin(admin.ModelAdmin):
                 ('color_primary', 'color_secondary'),
                 ('color_background', 'color_surface'),
                 ('color_text', 'color_text_secondary'),
+                'background_image',
+                ('color_card', 'color_price'),
+                ('color_button', 'color_button_text'),
+                ('color_badge', 'color_badge_text'),
                 'live_preview',
             ],
             'description': '💡 نصيحة: بعد تعديل الألوان، احفظ الإعدادات ثم أعد تحميل الصفحة (F5) لرؤية المعاينة المحدثة',
@@ -307,127 +312,323 @@ class QRDesignSettingsAdmin(admin.ModelAdmin):
     sync_status_display.short_description = 'حالة المزامنة'
     
     def live_preview(self, obj):
-        """معاينة فورية مع JavaScript"""
-        from django.utils.safestring import mark_safe
+        """معاينة فورية - نسخة مطابقة 100% لقالب Cloudflare Worker"""
         if not obj:
-            return ''
+            return mark_safe('<p style="color:#999;">لا توجد إعدادات</p>')
         
-        # حساب قيم الأزرار
-        button_border_radius = {
-            'square': '4px',
-            'rounded': '14px',
-            'pill': '50px'
-        }.get(obj.button_style, '14px')
-        
-        button_padding = {
-            'small': '10px 20px',
-            'medium': '16px 32px',
-            'large': '20px 40px'
-        }.get(obj.button_size, '16px 32px')
-        
-        # حساب الظل
-        box_shadow = {
-            'none': 'none',
-            'light': '0 4px 15px rgba(0,0,0,0.1)',
-            'medium': '0 8px 32px rgba(0,0,0,0.3)',
-            'strong': '0 12px 48px rgba(0,0,0,0.5)'
-        }.get(obj.card_shadow_intensity, '0 8px 32px rgba(0,0,0,0.3)')
+        # Background image style
+        bg_image_style = ''
+        if obj.background_image:
+            bg_image_style = f'background-image: url({obj.background_image.url});background-size: cover;background-position: center;background-blend-mode: overlay;'
         
         return mark_safe(f'''
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
         
-        <div id="qr-live-preview-container" style="background:#f5f5f5;padding:20px;border-radius:10px;margin:20px 0;">
-            <div id="qr-preview-bg" style="
-                background: linear-gradient(135deg, {obj.color_background} 0%, #0f1419 100%);
-                padding: 40px 20px;
-                border-radius: 16px;
+        <style>
+            #qr-preview-wrapper {{
+                --gold: {obj.color_primary};
+                --gold-light: {obj.color_secondary};
+                --gold-dark: {obj.color_primary};
+                --dark: {obj.color_background};
+                --dark-light: {obj.color_surface};
+                --dark-surface: {obj.color_surface};
+                --card-bg: {obj.color_card};
+                --button-bg: {obj.color_button};
+                --button-text: {obj.color_button_text};
+                --badge-bg: {obj.color_badge};
+                --badge-text: {obj.color_badge_text};
+                --price-color: {obj.color_price};
+            }}
+            
+            #qr-preview-wrapper * {{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }}
+            
+            #qr-preview-wrapper {{
                 font-family: 'Cairo', sans-serif;
-                font-size: {obj.font_size_base}px;
-            ">
-                <div id="qr-preview-card" style="
-                    max-width: {obj.card_max_width}px;
-                    margin: 0 auto;
-                    background: {obj.color_surface}{'cc' if obj.enable_glassmorphism else ''};
-                    {'backdrop-filter: blur(10px);' if obj.enable_glassmorphism else ''}
-                    border-radius: {obj.card_border_radius}px;
-                    padding: {obj.card_padding}px;
-                    box-shadow: {box_shadow};
-                    border: 1px solid {obj.color_primary}33;
-                    position: relative;
-                ">
-                    <div style="position:absolute;top:10px;left:10px;background:#28a745;color:white;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;">
-                        <i class="fas fa-eye"></i> معاينة فورية ⚡
+                background: linear-gradient(135deg, var(--dark) 0%, var(--dark-light) 50%, var(--dark-surface) 100%);
+                {bg_image_style}
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                position: relative;
+                overflow-x: hidden;
+                border-radius: 12px;
+                margin: 20px 0;
+            }}
+            
+            #qr-preview-wrapper::before {{
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-image:
+                    radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 50%);
+                pointer-events: none;
+                z-index: 0;
+            }}
+            
+            #qr-preview-wrapper .container {{
+                max-width: 450px;
+                width: 100%;
+                position: relative;
+                z-index: 1;
+            }}
+            
+            #qr-preview-wrapper .card {{
+                background: var(--card-bg);
+                opacity: 0.95;
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border: 1px solid rgba(212, 175, 55, 0.2);
+                border-radius: 24px;
+                overflow: hidden;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+                animation: fadeInUp 0.6s ease-out;
+            }}
+            
+            @keyframes fadeInDown {{
+                from {{ opacity: 0; transform: translateY(-20px); }}
+                to {{ opacity: 1; transform: translateY(0); }}
+            }}
+            
+            @keyframes fadeInUp {{
+                from {{ opacity: 0; transform: translateY(30px); }}
+                to {{ opacity: 1; transform: translateY(0); }}
+            }}
+            
+            #qr-preview-wrapper .product-visual {{
+                height: 180px;
+                background: linear-gradient(135deg, var(--dark-surface) 0%, var(--dark-light) 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                overflow: hidden;
+            }}
+            
+            #qr-preview-wrapper .product-visual::before {{
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: conic-gradient(from 0deg,
+                    transparent 0deg 90deg,
+                    rgba(212, 175, 55, 0.1) 90deg 180deg,
+                    transparent 180deg 270deg,
+                    rgba(212, 175, 55, 0.05) 270deg 360deg);
+                animation: rotate 20s linear infinite;
+            }}
+            
+            @keyframes rotate {{
+                from {{ transform: rotate(0deg); }}
+                to {{ transform: rotate(360deg); }}
+            }}
+            
+            #qr-preview-wrapper .product-logo {{
+                max-width: {obj.logo_size}px;
+                max-height: {int(obj.logo_size * 0.7)}px;
+                object-fit: contain;
+                position: relative;
+                z-index: 1;
+                filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+            }}
+            
+            #qr-preview-wrapper .category-badge {{
+                position: absolute;
+                top: 16px;
+                right: 16px;
+                background: var(--badge-bg);
+                color: var(--badge-text);
+                padding: 6px 16px;
+                border-radius: 20px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                z-index: 2;
+                box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+            }}
+            
+            #qr-preview-wrapper .content {{
+                padding: 28px 24px;
+            }}
+            
+            #qr-preview-wrapper .product-code {{
+                display: inline-block;
+                background: var(--badge-bg);
+                color: var(--badge-text);
+                padding: 6px 14px;
+                border-radius: 8px;
+                font-size: 0.85rem;
+                font-weight: 600;
+                margin-bottom: 12px;
+                font-family: 'Courier New', monospace;
+                letter-spacing: 1px;
+                border: 1px solid rgba(212, 175, 55, 0.3);
+            }}
+            
+            #qr-preview-wrapper .product-name {{
+                font-size: 1.6rem;
+                font-weight: 700;
+                color: #ffffff;
+                margin-bottom: 20px;
+                line-height: 1.4;
+            }}
+            
+            #qr-preview-wrapper .price-section {{
+                background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.05) 100%);
+                border: 1px solid rgba(212, 175, 55, 0.3);
+                border-radius: 16px;
+                padding: 24px;
+                text-align: center;
+                margin-bottom: 24px;
+                position: relative;
+                overflow: hidden;
+            }}
+            
+            #qr-preview-wrapper .price-section::before {{
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            }}
+            
+            #qr-preview-wrapper .price-label {{
+                color: #a0a0a0;
+                font-size: 0.85rem;
+                margin-bottom: 8px;
+                font-weight: 500;
+            }}
+            
+            #qr-preview-wrapper .price {{
+                font-size: 2.8rem;
+                font-weight: 800;
+                color: var(--price-color);
+                display: flex;
+                align-items: baseline;
+                justify-content: center;
+                gap: 8px;
+                margin-bottom: 8px;
+                font-family: 'Courier New', monospace;
+            }}
+            
+            #qr-preview-wrapper .currency {{
+                font-size: 1.2rem;
+                color: #a0a0a0;
+                font-weight: 600;
+            }}
+            
+            #qr-preview-wrapper .unit-badge {{
+                display: inline-block;
+                background: var(--badge-bg);
+                color: var(--badge-text);
+                padding: 6px 14px;
+                border-radius: 12px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                margin-top: 8px;
+            }}
+            
+            #qr-preview-wrapper .footer {{
+                text-align: center;
+                padding: 0 24px 28px;
+                border-top: 1px solid rgba(212, 175, 55, 0.1);
+                padding-top: 24px;
+            }}
+            
+            #qr-preview-wrapper .visit-btn {{
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                background: var(--button-bg);
+                color: var(--button-text);
+                padding: 16px 32px;
+                border-radius: 14px;
+                text-decoration: none;
+                font-weight: 700;
+                font-size: 1rem;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+                position: relative;
+                overflow: hidden;
+            }}
+            
+            #qr-preview-wrapper .visit-btn::before {{
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+                transition: left 0.5s;
+            }}
+            
+            #qr-preview-wrapper .visit-btn:hover::before {{
+                left: 100%;
+            }}
+            
+            #qr-preview-wrapper .visit-btn:hover {{
+                transform: translateY(-2px);
+                box-shadow: 0 6px 30px rgba(212, 175, 55, 0.5);
+            }}
+            
+            #qr-preview-wrapper .updated-at {{
+                color: #666;
+                font-size: 0.75rem;
+                margin-top: 16px;
+                font-weight: 400;
+            }}
+        </style>
+        
+        <div id="qr-preview-wrapper">
+            <div class="container">
+                <!-- Product Card -->
+                <div class="card">
+                    <!-- Product Visual Header -->
+                    <div class="product-visual">
+                        {f'<img src="{obj.logo.url}" alt="logo" class="product-logo">' if obj.logo else '<i class="fas fa-gem" style="font-size: 4rem; color: var(--gold); opacity: 0.8; position: relative; z-index: 1;"></i>'}
+                        <span class="category-badge">قماش</span>
                     </div>
                     
-                    {'<div style="text-align:center;margin-bottom:' + str(obj.element_spacing) + 'px;"><i class="fas fa-box-open" id="product-icon" style="font-size:48px;color:' + obj.color_primary + ';"></i></div>' if obj.show_product_icon else ''}
-                    
-                    {'<div style="text-align:center;margin-bottom:' + str(obj.element_spacing) + 'px;"><h2 id="logo-text" style="font-size:28px;font-weight:' + obj.font_weight_heading + ';background:linear-gradient(135deg,' + obj.color_primary + ',' + obj.color_secondary + ');-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0;">' + obj.logo_text + '</h2></div>' if obj.show_logo else ''}
-                    
-                    <div style="text-align:center;margin-bottom:{obj.element_spacing}px;">
-                        <span id="product-code" style="display:inline-block;background:{obj.color_primary}22;color:{obj.color_primary};padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;font-family:'Courier New',monospace;border:1px solid {obj.color_primary}44;">
-                            <i class="fas fa-barcode"></i> DEMO001
-                        </span>
-                    </div>
-                    
-                    <h1 id="product-name" style="font-size:24px;font-weight:{obj.font_weight_heading};color:{obj.color_text};text-align:center;margin:0 0 {obj.element_spacing}px 0;">
-                        منتج تجريبي للمعاينة
-                    </h1>
-                    
-                    {'<div style="text-align:center;margin-bottom:' + str(obj.element_spacing) + 'px;"><span id="category-badge" style="display:inline-block;background:linear-gradient(135deg,' + obj.color_primary + ',' + obj.color_secondary + ');color:' + obj.color_background + ';padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;">قماش</span></div>' if obj.show_category_badge else ''}
-                    
-                    <div id="price-section" style="
-                        background: {'linear-gradient(135deg,' + obj.color_primary + '22,' + obj.color_primary + '11)' if obj.show_price_badge else 'transparent'};
-                        border: {'1px solid ' + obj.color_primary + '33' if obj.show_price_badge else 'none'};
-                        border-radius: 16px;
-                        padding: {obj.element_spacing}px;
-                        text-align: center;
-                        margin-bottom: {obj.element_spacing}px;
-                    ">
-                        <div id="price-label" style="color:{obj.color_text_secondary};font-size:13px;margin-bottom:8px;">السعر</div>
-                        <div id="price-value" style="
-                            font-size:{obj.price_font_size}px;
-                            font-weight:800;
-                            background:linear-gradient(135deg,{obj.color_primary},{obj.color_secondary});
-                            -webkit-background-clip:text;
-                            -webkit-text-fill-color:transparent;
-                            font-family:'Courier New',monospace;
-                            line-height:1;
-                        ">
-                            1,500 <span id="price-currency" style="font-size:18px;color:{obj.color_text_secondary};">ج.م</span>
+                    <!-- Product Content -->
+                    <div class="content">
+                        <span class="product-code"><i class="fas fa-barcode"></i> DEMO001</span>
+                        <h1 class="product-name">منتج تجريبي للمعاينة</h1>
+                        
+                        <!-- Price Section -->
+                        <div class="price-section">
+                            <div class="price-label">السعر</div>
+                            <div class="price">
+                                <span>1,500</span>
+                                <span class="currency">ج.م</span>
+                            </div>
+                            <span class="unit-badge"><i class="fas fa-ruler"></i> لكل متر</span>
                         </div>
-                        <div id="unit-badge" style="
-                            display:inline-block;
-                            background:linear-gradient(135deg,{obj.color_primary},{obj.color_secondary});
-                            color:{obj.color_background};
-                            padding:6px 14px;
-                            border-radius:12px;
-                            font-size:13px;
-                            font-weight:600;
-                            margin-top:10px;
-                        ">
-                            <i class="fas fa-ruler"></i> لكل متر
-                        </div>
                     </div>
                     
-                    <div style="text-align:center;margin-top:{obj.element_spacing}px;">
-                        <a href="#" id="website-btn" style="
-                            display:inline-flex;
-                            align-items:center;
-                            gap:10px;
-                            background:linear-gradient(135deg,{obj.color_primary},{obj.color_secondary});
-                            color:{obj.color_background};
-                            padding:{button_padding};
-                            border-radius:{button_border_radius};
-                            text-decoration:none;
-                            font-weight:700;
-                            box-shadow:0 4px 20px {obj.color_primary}55;
-                        ">
-                            <i class="fas fa-globe"></i><span>زيارة الموقع</span>
+                    <!-- Footer -->
+                    <div class="footer">
+                        <a href="#" class="visit-btn">
+                            <i class="fas fa-globe"></i>
+                            <span>زيارة الموقع</span>
                         </a>
-                    </div>
-                    
-                    <div id="update-time" style="text-align:center;color:{obj.color_text_secondary};font-size:12px;margin-top:{obj.element_spacing}px;">
-                        <i class="far fa-clock"></i> تحديث تلقائي فوري
+                        <div class="updated-at">
+                            <i class="far fa-clock"></i> معاينة فورية - يتم التحديث تلقائياً
+                        </div>
                     </div>
                 </div>
             </div>
@@ -435,96 +636,43 @@ class QRDesignSettingsAdmin(admin.ModelAdmin):
         
         <script>
         (function() {{
+            let updateTimer;
+            
             function updatePreviewColors() {{
-                const primary = document.getElementById('id_color_primary')?.value || '{obj.color_primary}';
-                const secondary = document.getElementById('id_color_secondary')?.value || '{obj.color_secondary}';
-                const background = document.getElementById('id_color_background')?.value || '{obj.color_background}';
-                const surface = document.getElementById('id_color_surface')?.value || '{obj.color_surface}';
-                const text = document.getElementById('id_color_text')?.value || '{obj.color_text}';
-                const textSecondary = document.getElementById('id_color_text_secondary')?.value || '{obj.color_text_secondary}';
-                
-                const bg = document.getElementById('qr-preview-bg');
-                if (bg) bg.style.background = `linear-gradient(135deg, ${{background}} 0%, #0f1419 100%)`;
-                
-                const card = document.getElementById('qr-preview-card');
-                if (card) {{
-                    card.style.background = surface + '{'cc' if obj.enable_glassmorphism else ''}';
-                    card.style.borderColor = `${{primary}}33`;
-                }}
-                
-                const icon = document.getElementById('product-icon');
-                if (icon) icon.style.color = primary;
-                
-                const logo = document.getElementById('logo-text');
-                if (logo) {{
-                    logo.style.background = `linear-gradient(135deg, ${{primary}}, ${{secondary}})`;
-                    logo.style.webkitBackgroundClip = 'text';
-                    logo.style.webkitTextFillColor = 'transparent';
-                }}
-                
-                const code = document.getElementById('product-code');
-                if (code) {{
-                    code.style.background = `${{primary}}22`;
-                    code.style.color = primary;
-                    code.style.borderColor = `${{primary}}44`;
-                }}
-                
-                const name = document.getElementById('product-name');
-                if (name) name.style.color = text;
-                
-                const badge = document.getElementById('category-badge');
-                if (badge) {{
-                    badge.style.background = `linear-gradient(135deg, ${{primary}}, ${{secondary}})`;
-                    badge.style.color = background;
-                }}
-                
-                const priceSection = document.getElementById('price-section');
-                if (priceSection) {{
-                    priceSection.style.background = `linear-gradient(135deg, ${{primary}}22, ${{primary}}11)`;
-                    priceSection.style.borderColor = `${{primary}}33`;
-                }}
-                
-                const priceLabel = document.getElementById('price-label');
-                if (priceLabel) priceLabel.style.color = textSecondary;
-                
-                const priceCurrency = document.getElementById('price-currency');
-                if (priceCurrency) priceCurrency.style.color = textSecondary;
-                
-                const priceValue = document.getElementById('price-value');
-                if (priceValue) {{
-                    priceValue.style.background = `linear-gradient(135deg, ${{primary}}, ${{secondary}})`;
-                    priceValue.style.webkitBackgroundClip = 'text';
-                    priceValue.style.webkitTextFillColor = 'transparent';
-                }}
-                
-                const unitBadge = document.getElementById('unit-badge');
-                if (unitBadge) {{
-                    unitBadge.style.background = `linear-gradient(135deg, ${{primary}}, ${{secondary}})`;
-                    unitBadge.style.color = background;
-                }}
-                
-                const btn = document.getElementById('website-btn');
-                if (btn) {{
-                    btn.style.background = `linear-gradient(135deg, ${{primary}}, ${{secondary}})`;
-                    btn.style.color = background;
-                    btn.style.boxShadow = `0 4px 20px ${{primary}}55`;
-                }}
-                
-                const time = document.getElementById('update-time');
-                if (time) time.style.color = textSecondary;
+                clearTimeout(updateTimer);
+                updateTimer = setTimeout(() => {{
+                    const wrapper = document.getElementById('qr-preview-wrapper');
+                    if (!wrapper) return;
+                    
+                    const getColor = (id, fallback) => {{
+                        const el = document.getElementById('id_' + id);
+                        return el ? el.value : fallback;
+                    }};
+                    
+                    const primary = getColor('color_primary', '{obj.color_primary}');
+                    const secondary = getColor('color_secondary', '{obj.color_secondary}');
+                    const background = getColor('color_background', '{obj.color_background}');
+                    const surface = getColor('color_surface', '{obj.color_surface}');
+                    const text = getColor('color_text', '{obj.color_text}');
+                    const textSecondary = getColor('color_text_secondary', '{obj.color_text_secondary}');
+                    
+                    wrapper.style.setProperty('--gold', primary);
+                    wrapper.style.setProperty('--gold-light', secondary);
+                    wrapper.style.setProperty('--gold-dark', primary);
+                    wrapper.style.setProperty('--dark', background);
+                    wrapper.style.setProperty('--dark-light', surface);
+                    wrapper.style.setProperty('--dark-surface', surface);
+                }}, 100);
             }}
             
-            setTimeout(function() {{
-                const colorInputs = ['id_color_primary', 'id_color_secondary', 'id_color_background', 'id_color_surface', 'id_color_text', 'id_color_text_secondary'];
-                colorInputs.forEach(function(id) {{
-                    const input = document.getElementById(id);
-                    if (input) {{
-                        input.addEventListener('input', updatePreviewColors);
-                        input.addEventListener('change', updatePreviewColors);
-                    }}
+            setTimeout(() => {{
+                const colorInputs = document.querySelectorAll('input[type="color"]');
+                colorInputs.forEach(input => {{
+                    input.addEventListener('input', updatePreviewColors);
+                    input.addEventListener('change', updatePreviewColors);
                 }});
                 updatePreviewColors();
-            }}, 500);
+            }}, 300);
         }})();
         </script>
         ''')

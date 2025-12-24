@@ -44,395 +44,356 @@ def qr_design_preview(request):
 
 
 def generate_preview_html(settings, product, bank):
-    """توليد HTML للمعاينة"""
+    """توليد HTML للمعاينة - مطابق 100% لقالب Cloudflare Worker"""
     
-    # تحديد الألوان
-    colors = {
-        'primary': settings.color_primary,
-        'secondary': settings.color_secondary,
-        'background': settings.color_background,
-        'surface': settings.color_surface,
-        'text': settings.color_text,
-        'text_secondary': settings.color_text_secondary,
-    }
+    # Format price with English numbers
+    formatted_price = f"{product['price']:,.0f}".replace(',', ',')
     
-    # بناء أزرار التواصل الاجتماعي
-    social_buttons = ''
-    if settings.show_social_media:
-        social_list = []
-        
-        if settings.facebook_url:
-            social_list.append(f'<a href="{settings.facebook_url}" target="_blank" class="social-btn" title="Facebook"><i class="fab fa-facebook-f"></i></a>')
-        
-        if settings.instagram_url:
-            social_list.append(f'<a href="{settings.instagram_url}" target="_blank" class="social-btn" title="Instagram"><i class="fab fa-instagram"></i></a>')
-        
-        if settings.twitter_url:
-            social_list.append(f'<a href="{settings.twitter_url}" target="_blank" class="social-btn" title="Twitter"><i class="fab fa-twitter"></i></a>')
-        
-        if settings.youtube_url:
-            social_list.append(f'<a href="{settings.youtube_url}" target="_blank" class="social-btn" title="YouTube"><i class="fab fa-youtube"></i></a>')
-        
-        if settings.tiktok_url:
-            social_list.append(f'<a href="{settings.tiktok_url}" target="_blank" class="social-btn" title="TikTok"><i class="fab fa-tiktok"></i></a>')
-        
-        if settings.whatsapp_number:
-            whatsapp_link = f'https://wa.me/{settings.whatsapp_number}'
-            social_list.append(f'<a href="{whatsapp_link}" target="_blank" class="social-btn whatsapp" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>')
-        
-        if settings.phone_number:
-            social_list.append(f'<a href="tel:{settings.phone_number}" class="social-btn" title="اتصل بنا"><i class="fas fa-phone"></i></a>')
-        
-        if settings.email:
-            social_list.append(f'<a href="mailto:{settings.email}" class="social-btn" title="البريد الإلكتروني"><i class="fas fa-envelope"></i></a>')
-        
-        if social_list:
-            social_buttons = '<div class="social-media">' + ''.join(social_list) + '</div>'
+    # Background image style
+    bg_image_style = ''
+    if settings.background_image:
+        bg_image_style = f'background-image: url({settings.background_image.url});background-size: cover;background-position: center;background-blend-mode: overlay;'
     
-    # زر الشكوى
-    complaint_button = ''
-    if settings.show_complaint_button:
-        complaint_button = f'''
-            <a href="{settings.complaint_url}" class="btn btn-complaint" target="_blank">
-                <i class="fas fa-exclamation-circle"></i> {settings.complaint_button_text}
-            </a>
-        '''
-    
-    # زر الموقع
-    website_button = ''
-    if settings.show_website_button:
-        website_button = f'''
-            <a href="{settings.website_url}" class="btn btn-primary" target="_blank">
-                <i class="fas fa-globe"></i> زيارة الموقع
-            </a>
-        '''
-    
-    # الشعار
-    logo_html = ''
-    if settings.show_logo:
-        if settings.logo:
-            logo_html = f'<img src="{settings.logo.url}" alt="{settings.logo_text}" class="logo">'
-        else:
-            logo_html = f'<h1 class="logo-text">{settings.logo_text}</h1>'
-    
-    # Footer
-    footer_html = ''
-    if settings.show_footer:
-        footer_html = f'<div class="footer">{settings.footer_text}</div>'
-    
-    # تطبيق الأنيميشن
-    animation_class = 'animated' if settings.enable_animations else ''
-    glassmorphism_class = 'glass' if settings.enable_glassmorphism else ''
-    
-    html = f'''
-<!DOCTYPE html>
+    html = f'''<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>معاينة تصميم QR - {settings.logo_text}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{product['name']} - معاينة محلية</title>
+  <meta name="description" content="{product['name']} - السعر: {formatted_price} ج.م">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {{
+      --gold: {settings.color_primary};
+      --gold-light: {settings.color_secondary};
+      --gold-dark: {settings.color_primary};
+      --dark: {settings.color_background};
+      --dark-light: {settings.color_surface};
+      --dark-surface: {settings.color_surface};
+      --card-bg: {settings.color_card};
+      --button-bg: {settings.color_button};
+      --button-text: {settings.color_button_text};
+      --badge-bg: {settings.color_badge};
+      --badge-text: {settings.color_badge_text};
+      --price-color: {settings.color_price};
+    }}
     
-    <style>
-        :root {{
-            --primary: {colors['primary']};
-            --secondary: {colors['secondary']};
-            --background: {colors['background']};
-            --surface: {colors['surface']};
-            --text: {colors['text']};
-            --text-secondary: {colors['text_secondary']};
-            --border-radius: {settings.card_border_radius}px;
-        }}
-        
-        * {{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }}
-        
-        body {{
-            font-family: 'Cairo', sans-serif;
-            background: var(--background);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            background: linear-gradient(135deg, var(--background) 0%, #0f1419 100%);
-            position: relative;
-            overflow-x: hidden;
-        }}
-        
-        /* Animated background circles */
-        body::before, body::after {{
-            content: '';
-            position: absolute;
-            border-radius: 50%;
-            opacity: 0.1;
-            animation: float 20s infinite ease-in-out;
-        }}
-        
-        body::before {{
-            width: 300px;
-            height: 300px;
-            background: var(--primary);
-            top: -150px;
-            right: -150px;
-        }}
-        
-        body::after {{
-            width: 400px;
-            height: 400px;
-            background: var(--secondary);
-            bottom: -200px;
-            left: -200px;
-            animation-delay: -10s;
-        }}
-        
-        @keyframes float {{
-            0%, 100% {{ transform: translateY(0) rotate(0deg); }}
-            50% {{ transform: translateY(-20px) rotate(180deg); }}
-        }}
-        
-        .container {{
-            max-width: 600px;
-            width: 100%;
-            position: relative;
-            z-index: 1;
-        }}
-        
-        .card {{
-            background: var(--surface);
-            border-radius: var(--border-radius);
-            padding: 30px;
-            text-align: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            position: relative;
-        }}
-        
-        .card.glass {{
-            /* استخدام لون البطاقة من الإعدادات مع شفافية */
-            background: {colors['surface']}cc;
-            backdrop-filter: blur(10px);
-            border: 1px solid {colors['primary']}33;
-        }}
-        
-        .card.animated {{
-            animation: fadeIn 0.8s ease-out;
-        }}
-        
-        @keyframes fadeIn {{
-            from {{ opacity: 0; transform: translateY(20px); }}
-            to {{ opacity: 1; transform: translateY(0); }}
-        }}
-        
-        .logo {{
-            max-width: 150px;
-            margin-bottom: 20px;
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
-        }}
-        
-        .logo-text {{
-            font-size: 2.5em;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 20px;
-        }}
-        
-        .preview-badge {{
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: #dc3545;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }}
-        
-        .section {{
-            margin: 30px 0;
-            padding: 20px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }}
-        
-        .section-title {{
-            color: var(--primary);
-            font-size: 1.3em;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            justify-content: center;
-        }}
-        
-        .info-row {{
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }}
-        
-        .info-row:last-child {{
-            border-bottom: none;
-        }}
-        
-        .info-label {{
-            color: var(--text-secondary);
-            font-size: 0.9em;
-        }}
-        
-        .info-value {{
-            color: var(--text);
-            font-weight: 600;
-        }}
-        
-        .social-media {{
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin: 20px 0;
-        }}
-        
-        .social-btn {{
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            font-size: 18px;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }}
-        
-        .social-btn:hover {{
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px {colors['primary']}66;
-        }}
-        
-        .social-btn.whatsapp {{
-            background: linear-gradient(135deg, #25D366, #128C7E);
-        }}
-        
-        .btn {{
-            display: inline-block;
-            padding: 12px 30px;
-            margin: 10px 5px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s;
-            border: 2px solid transparent;
-        }}
-        
-        .btn-primary {{
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-        }}
-        
-        .btn-primary:hover {{
-            transform: scale(1.05);
-            box-shadow: 0 5px 20px {colors['primary']}66;
-        }}
-        
-        .btn-complaint {{
-            background: transparent;
-            color: var(--primary);
-            border-color: var(--primary);
-        }}
-        
-        .btn-complaint:hover {{
-            background: var(--primary);
-            color: var(--background);
-        }}
-        
-        .footer {{
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            color: var(--text-secondary);
-            font-size: 0.85em;
-        }}
-        
-        {settings.custom_css}
-    </style>
+    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    
+    body {{
+      font-family: 'Cairo', sans-serif;
+      background: linear-gradient(135deg, var(--dark) 0%, var(--dark-light) 50%, var(--dark-surface) 100%);
+      {bg_image_style}
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      position: relative;
+      overflow-x: hidden;
+    }}
+    
+    body::before {{
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }}
+    
+    .container {{
+      max-width: 450px;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }}
+    
+    .preview-badge {{
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: #dc3545;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+      z-index: 1000;
+      animation: pulse 2s infinite;
+    }}
+    
+    @keyframes pulse {{
+      0%, 100% {{ transform: scale(1); }}
+      50% {{ transform: scale(1.05); }}
+    }}
+    
+    /* Product Card */
+    .card {{
+      background: var(--card-bg);
+      opacity: 0.95;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+      animation: fadeInUp 0.6s ease-out;
+    }}
+    
+    @keyframes fadeInDown {{
+      from {{ opacity: 0; transform: translateY(-20px); }}
+      to {{ opacity: 1; transform: translateY(0); }}
+    }}
+    
+    @keyframes fadeInUp {{
+      from {{ opacity: 0; transform: translateY(30px); }}
+      to {{ opacity: 1; transform: translateY(0); }}
+    }}
+    
+    /* Product Visual Header */
+    .product-visual {{
+      height: 180px;
+      background: linear-gradient(135deg, var(--dark-surface) 0%, var(--dark-light) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }}
+    
+    .product-visual::before {{
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: conic-gradient(from 0deg,
+        transparent 0deg 90deg,
+        rgba(212, 175, 55, 0.1) 90deg 180deg,
+        transparent 180deg 270deg,
+        rgba(212, 175, 55, 0.05) 270deg 360deg);
+      animation: rotate 20s linear infinite;
+    }}
+    
+    @keyframes rotate {{
+      from {{ transform: rotate(0deg); }}
+      to {{ transform: rotate(360deg); }}
+    }}
+    
+    .product-logo {{
+      max-width: {settings.logo_size}px;
+      max-height: {int(settings.logo_size * 0.7)}px;
+      object-fit: contain;
+      position: relative;
+      z-index: 1;
+      filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+    }}
+    
+    .category-badge {{
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: var(--badge-bg);
+      color: var(--badge-text);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      z-index: 2;
+      box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+    }}
+    
+    /* Content */
+    .content {{
+      padding: 28px 24px;
+    }}
+    
+    .product-code {{
+      display: inline-block;
+      background: var(--badge-bg);
+      color: var(--badge-text);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 1px;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+    }}
+    
+    .product-name {{
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 20px;
+      line-height: 1.4;
+    }}
+    
+    /* Price Section */
+    .price-section {{
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.05) 100%);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }}
+    
+    .price-section::before {{
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }}
+    
+    .price-label {{
+      color: #a0a0a0;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }}
+    
+    .price {{
+      font-size: 2.8rem;
+      font-weight: 800;
+      color: var(--price-color);
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-family: 'Courier New', monospace;
+    }}
+    
+    .currency {{
+      font-size: 1.2rem;
+      color: #a0a0a0;
+      font-weight: 600;
+    }}
+    
+    .unit-badge {{
+      display: inline-block;
+      background: var(--badge-bg);
+      color: var(--badge-text);
+      padding: 6px 14px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-top: 8px;
+    }}
+    
+    /* Footer */
+    .footer {{
+      text-align: center;
+      padding: 0 24px 28px;
+      border-top: 1px solid rgba(212, 175, 55, 0.1);
+      padding-top: 24px;
+    }}
+    
+    .visit-btn {{
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--button-bg);
+      color: var(--button-text);
+      padding: 16px 32px;
+      border-radius: 14px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+      position: relative;
+      overflow: hidden;
+    }}
+    
+    .visit-btn::before {{
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s;
+    }}
+    
+    .visit-btn:hover::before {{
+      left: 100%;
+    }}
+    
+    .visit-btn:hover {{
+      transform: translateY(-2px);
+      box-shadow: 0 6px 30px rgba(212, 175, 55, 0.5);
+    }}
+    
+    .updated-at {{
+      color: #666;
+      font-size: 0.75rem;
+      margin-top: 16px;
+      font-weight: 400;
+    }}
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="card {glassmorphism_class} {animation_class}">
-            <div class="preview-badge">معاينة محلية</div>
-            
-            {logo_html}
-            
-            <!-- قسم المنتج التجريبي -->
-            <div class="section">
-                <div class="section-title">
-                    <i class="fas fa-box-open"></i>
-                    <span>منتج تجريبي</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">الكود</span>
-                    <span class="info-value">{product['code']}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">الاسم</span>
-                    <span class="info-value">{product['name']}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">السعر</span>
-                    <span class="info-value" style="color: var(--primary);">{product['price']:,.2f} جنيه</span>
-                </div>
-            </div>
-            
-            <!-- قسم البنك التجريبي -->
-            <div class="section">
-                <div class="section-title">
-                    <i class="fas fa-university"></i>
-                    <span>حساب بنكي تجريبي</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">البنك</span>
-                    <span class="info-value">{bank['bank_name']}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">رقم الحساب</span>
-                    <span class="info-value">{bank['account_number']}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">صاحب الحساب</span>
-                    <span class="info-value">{bank['account_holder']}</span>
-                </div>
-            </div>
-            
-            <!-- التواصل الاجتماعي -->
-            {social_buttons}
-            
-            <!-- الأزرار -->
-            <div style="margin-top: 30px;">
-                {website_button}
-                {complaint_button}
-            </div>
-            
-            <!-- التذييل -->
-            {footer_html}
+  <div class="preview-badge">
+    <i class="fas fa-eye"></i> معاينة محلية
+  </div>
+
+  <div class="container">
+    <!-- Product Card -->
+    <div class="card">
+      <!-- Product Visual Header -->
+      <div class="product-visual">
+        {f'<img src="{settings.logo.url}" alt="logo" class="product-logo">' if settings.logo else '<i class="fas fa-gem" style="font-size: 4rem; color: var(--gold); opacity: 0.8; position: relative; z-index: 1;"></i>'}
+        <span class="category-badge">{product['category']}</span>
+      </div>
+      
+      <!-- Product Content -->
+      <div class="content">
+        <span class="product-code"><i class="fas fa-barcode"></i> {product['code']}</span>
+        <h1 class="product-name">{product['name']}</h1>
+        
+        <!-- Price Section -->
+        <div class="price-section">
+          <div class="price-label">السعر</div>
+          <div class="price">
+            <span>{formatted_price}</span>
+            <span class="currency">ج.م</span>
+          </div>
+          <span class="unit-badge"><i class="fas fa-ruler"></i> لكل {product['unit']}</span>
         </div>
+      </div>
+      
+      <!-- Footer -->
+      <div class="footer">
+        <a href="{settings.website_url or 'https://elkhawaga.com'}" class="visit-btn">
+          <i class="fas fa-globe"></i>
+          <span>زيارة الموقع</span>
+        </a>
+        <div class="updated-at">
+          <i class="far fa-clock"></i> معاينة محلية - يتم التحديث مباشرة من قاعدة البيانات
+        </div>
+      </div>
     </div>
-    
-    <script>
-        {settings.custom_js}
-    </script>
+  </div>
 </body>
-</html>
-'''
+</html>'''
     
     return html

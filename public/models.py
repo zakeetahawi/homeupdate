@@ -272,6 +272,12 @@ class QRDesignSettings(models.Model):
         default=True
     )
     
+    logo_size = models.IntegerField(
+        'حجم الشعار',
+        default=200,
+        help_text='الحجم الأقصى للشعار بالبكسل (50-400)'
+    )
+    
     # ====== الألوان / Colors ======
     color_primary = ColorField(
         'اللون الأساسي',
@@ -307,6 +313,51 @@ class QRDesignSettings(models.Model):
         'لون النص الثانوي',
         default='#c0c0c0',
         help_text='لون النص الفرعي'
+    )
+    
+    # ====== ألوان إضافية / Additional Colors ======
+    color_card = ColorField(
+        'لون البطاقة',
+        default='#16213e',
+        help_text='لون خلفية البطاقة الرئيسية'
+    )
+    
+    color_button = ColorField(
+        'لون الأزرار',
+        default='#d4af37',
+        help_text='لون خلفية الأزرار'
+    )
+    
+    color_button_text = ColorField(
+        'لون نص الأزرار',
+        default='#1a1a2e',
+        help_text='لون النص داخل الأزرار'
+    )
+    
+    color_badge = ColorField(
+        'لون البادجات',
+        default='#d4af37',
+        help_text='لون خلفية البادجات (الفئة، الوحدة، الكود)'
+    )
+    
+    color_badge_text = ColorField(
+        'لون نص البادجات',
+        default='#1a1a2e',
+        help_text='لون النص داخل البادجات'
+    )
+    
+    color_price = ColorField(
+        'لون السعر',
+        default='#d4af37',
+        help_text='لون رقم السعر (يدعم تدرج من primary إلى price)'
+    )
+    
+    background_image = models.ImageField(
+        'صورة الخلفية',
+        upload_to='qr_design/backgrounds/',
+        blank=True,
+        null=True,
+        help_text='صورة خلفية للصفحة (اختياري - يظهر خلف اللون)'
     )
     
     # ====== الروابط / Links ======
@@ -635,10 +686,11 @@ class QRDesignSettings(models.Model):
     
     def to_dict(self):
         """تحويل الإعدادات إلى قاموس للمزامنة"""
+        from django.conf import settings
+        
         # الحصول على الرابط الكامل للشعار
         logo_url = ''
         if self.logo:
-            from django.conf import settings
             logo_path = self.logo.url
             # تأكد من أن الرابط كامل
             if not logo_path.startswith('http'):
@@ -654,11 +706,28 @@ class QRDesignSettings(models.Model):
             else:
                 logo_url = logo_path
         
+        # الحصول على الرابط الكامل لصورة الخلفية
+        background_image_url = ''
+        if self.background_image:
+            bg_path = self.background_image.url
+            if not bg_path.startswith('http'):
+                site_url = getattr(settings, 'SITE_URL', 'https://www.elkhawaga.uk')
+                if site_url.endswith('/'):
+                    site_url = site_url[:-1]
+                if bg_path.startswith('/media/'):
+                    background_image_url = f"{site_url}{bg_path}"
+                else:
+                    background_image_url = f"{site_url}/media/{bg_path}" if not bg_path.startswith('/') else f"{site_url}/media{bg_path}"
+            else:
+                background_image_url = bg_path
+        
         return {
             'logo_url': logo_url,
             'logo_text': self.logo_text,
             'logo_text_en': self.logo_text_en,
             'show_logo': self.show_logo,
+            'logo_size': self.logo_size,
+            'background_image_url': background_image_url,
             'colors': {
                 'primary': self.color_primary,
                 'secondary': self.color_secondary,
@@ -666,6 +735,12 @@ class QRDesignSettings(models.Model):
                 'surface': self.color_surface,
                 'text': self.color_text,
                 'text_secondary': self.color_text_secondary,
+                'card': self.color_card,
+                'button': self.color_button,
+                'button_text': self.color_button_text,
+                'badge': self.color_badge,
+                'badge_text': self.color_badge_text,
+                'price': self.color_price,
             },
             'links': {
                 'website': self.website_url,

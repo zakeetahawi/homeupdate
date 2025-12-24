@@ -58,6 +58,12 @@ async function generateProductPage(product, env) {
       --dark: ${design.colors?.background || '#1a1a2e'};
       --dark-light: ${design.colors?.surface || '#16213e'};
       --dark-surface: ${design.colors?.surface || '#0f3460'};
+      --card-bg: ${design.colors?.card || '#16213e'};
+      --button-bg: ${design.colors?.button || '#d4af37'};
+      --button-text: ${design.colors?.button_text || '#1a1a2e'};
+      --badge-bg: ${design.colors?.badge || '#d4af37'};
+      --badge-text: ${design.colors?.badge_text || '#1a1a2e'};
+      --price-color: ${design.colors?.price || '#d4af37'};
     }
     
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -65,6 +71,7 @@ async function generateProductPage(product, env) {
     body {
       font-family: 'Cairo', sans-serif;
       background: linear-gradient(135deg, var(--dark) 0%, var(--dark-light) 50%, var(--dark-surface) 100%);
+      ${design.background_image_url ? `background-image: url(${design.background_image_url});background-size: cover;background-position: center;background-blend-mode: overlay;` : ''}
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -95,47 +102,10 @@ async function generateProductPage(product, env) {
       z-index: 1;
     }
     
-    /* Brand Header with Logo */
-    .brand-header {
-      text-align: center;
-      margin-bottom: 24px;
-      animation: fadeInDown 0.6s ease-out;
-    }
-    
-    .logo-container {
-      margin-bottom: 12px;
-    }
-    
-    .logo-icon {
-      font-size: 3.5rem;
-      background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));
-    }
-    
-    .brand-name {
-      font-size: 2rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      letter-spacing: 2px;
-      margin-top: 8px;
-    }
-    
-    .brand-tagline {
-      color: #a0a0a0;
-      font-size: 0.85rem;
-      margin-top: 4px;
-      font-weight: 400;
-    }
-    
     /* Product Card */
     .card {
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--card-bg);
+      opacity: 0.95;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(212, 175, 55, 0.2);
@@ -186,20 +156,21 @@ async function generateProductPage(product, env) {
       to { transform: rotate(360deg); }
     }
     
-    .product-icon {
-      font-size: 4rem;
-      color: var(--gold);
-      opacity: 0.8;
+    .product-logo {
+      max-width: ${design.logo_size || 200}px;
+      max-height: ${Math.floor((design.logo_size || 200) * 0.7)}px;
+      object-fit: contain;
       position: relative;
       z-index: 1;
+      filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
     }
     
     .category-badge {
       position: absolute;
       top: 16px;
       right: 16px;
-      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-      color: var(--dark);
+      background: var(--badge-bg);
+      color: var(--badge-text);
       padding: 6px 16px;
       border-radius: 20px;
       font-size: 0.8rem;
@@ -215,8 +186,8 @@ async function generateProductPage(product, env) {
     
     .product-code {
       display: inline-block;
-      background: rgba(212, 175, 55, 0.15);
-      color: var(--gold);
+      background: var(--badge-bg);
+      color: var(--badge-text);
       padding: 6px 14px;
       border-radius: 8px;
       font-size: 0.85rem;
@@ -267,10 +238,7 @@ async function generateProductPage(product, env) {
     .price {
       font-size: 2.8rem;
       font-weight: 800;
-      background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: var(--price-color);
       display: flex;
       align-items: baseline;
       justify-content: center;
@@ -287,8 +255,8 @@ async function generateProductPage(product, env) {
     
     .unit-badge {
       display: inline-block;
-      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-      color: var(--dark);
+      background: var(--badge-bg);
+      color: var(--badge-text);
       padding: 6px 14px;
       border-radius: 12px;
       font-size: 0.8rem;
@@ -337,8 +305,8 @@ async function generateProductPage(product, env) {
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
-      color: var(--dark);
+      background: var(--button-bg);
+      color: var(--button-text);
       padding: 16px 32px;
       border-radius: 14px;
       text-decoration: none;
@@ -380,20 +348,11 @@ async function generateProductPage(product, env) {
 </head>
 <body>
   <div class="container">
-    <!-- Brand Header with Logo -->
-    <div class="brand-header">
-      <div class="logo-container">
-        ${design.logo_url ? `<img src="${design.logo_url}" alt="logo" style="max-width: 80px; max-height: 80px; object-fit: contain;">` : '<i class="fas fa-gem logo-icon"></i>'}
-      </div>
-      <div class="brand-name">${design.logo_text || env.SITE_NAME}</div>
-      <div class="brand-tagline">الجودة والتميز في كل تفصيل</div>
-    </div>
-    
     <!-- Product Card -->
     <div class="card">
       <!-- Product Visual Header -->
       <div class="product-visual">
-        <i class="fas fa-box-open product-icon"></i>
+        ${design.logo_url ? `<img src="${design.logo_url}" alt="logo" class="product-logo">` : '<i class="fas fa-gem" style="font-size: 4rem; color: var(--gold); opacity: 0.8; position: relative; z-index: 1;"></i>'}
         ${product.category ? `<span class="category-badge">${product.category}</span>` : ''}
       </div>
       
