@@ -1628,8 +1628,8 @@ def wizard_add_curtain(request):
             width=width,
             height=height,
             installation_type=installation_type,
-            curtain_box_width=Decimal(str(curtain_box_width)) if curtain_box_width else None,
-            curtain_box_depth=Decimal(str(curtain_box_depth)) if curtain_box_depth else None,
+            curtain_box_width=Decimal(str(round(float(curtain_box_width), 3))) if curtain_box_width else None,
+            curtain_box_depth=Decimal(str(round(float(curtain_box_depth), 3))) if curtain_box_depth else None,
             notes=notes
         )
         
@@ -1652,7 +1652,7 @@ def wizard_add_curtain(request):
                     fabric_type=fabric_data.get('type', 'light'),
                     fabric_name=fabric_data.get('name', ''),
                     pieces=int(fabric_data.get('pieces', 1)),
-                    meters=Decimal(str(fabric_data.get('meters', 0))),
+                    meters=Decimal(str(round(float(fabric_data.get('meters', 0)), 3))),  # تقريب لتجنب مشاكل دقة الفاصلة العائمة
                     tailoring_type=fabric_data.get('tailoring', ''),
                     sequence=idx + 1
                 )
@@ -1699,7 +1699,8 @@ def wizard_add_curtain(request):
                 size_val = accessory_data.get('size')
                 if size_val and size_val != '' and size_val != 'null' and size_val != 'None':
                     try:
-                        size = Decimal(str(size_val))
+                        # تقريب القيمة إلى 3 منازل عشرية لتجنب مشاكل دقة الفاصلة العائمة
+                        size = Decimal(str(round(float(size_val), 3)))
                     except:
                         size = Decimal('0')
                 else:
@@ -1709,7 +1710,8 @@ def wizard_add_curtain(request):
                 quantity_val = accessory_data.get('quantity')
                 if quantity_val and quantity_val != '' and quantity_val != 'null' and quantity_val != 'None':
                     try:
-                        quantity = Decimal(str(quantity_val))
+                        # تقريب القيمة إلى 3 منازل عشرية لتجنب مشاكل دقة الفاصلة العائمة
+                        quantity = Decimal(str(round(float(quantity_val), 3)))
                     except:
                         quantity = Decimal(str(count))
                 else:
@@ -1921,8 +1923,8 @@ def wizard_edit_curtain(request, curtain_id):
                 }, status=400)
             
             try:
-                width = Decimal(str(width))
-                height = Decimal(str(height))
+                width = Decimal(str(round(float(width), 3)))  # تقريب لتجنب مشاكل دقة الفاصلة العائمة
+                height = Decimal(str(round(float(height), 3)))  # تقريب لتجنب مشاكل دقة الفاصلة العائمة
                 
                 if width <= 0 or height <= 0:
                     return JsonResponse({
@@ -1947,8 +1949,8 @@ def wizard_edit_curtain(request, curtain_id):
             notes = data.get('notes', '').strip()
             
             curtain.installation_type = installation_type
-            curtain.curtain_box_width = Decimal(str(curtain_box_width)) if curtain_box_width else None
-            curtain.curtain_box_depth = Decimal(str(curtain_box_depth)) if curtain_box_depth else None
+            curtain.curtain_box_width = Decimal(str(round(float(curtain_box_width), 3))) if curtain_box_width else None
+            curtain.curtain_box_depth = Decimal(str(round(float(curtain_box_depth), 3))) if curtain_box_depth else None
             curtain.notes = notes
             
             curtain.save()
@@ -1974,7 +1976,7 @@ def wizard_edit_curtain(request, curtain_id):
                         fabric_type=fabric_data.get('type', 'light'),
                         fabric_name=fabric_data.get('name', ''),
                         pieces=int(fabric_data.get('pieces', 1)),
-                        meters=Decimal(str(fabric_data.get('meters', 0))),
+                        meters=Decimal(str(round(float(fabric_data.get('meters', 0)), 3))),  # تقريب لتجنب مشاكل دقة الفاصلة العائمة
                         tailoring_type=fabric_data.get('tailoring', ''),
                         sequence=idx + 1
                     )
@@ -2022,7 +2024,8 @@ def wizard_edit_curtain(request, curtain_id):
                     # size قد يكون None أو 0 للمنتجات بالقطعة
                     if size_val and size_val != '' and size_val != 'null' and size_val != 'None':
                         try:
-                            size = Decimal(str(size_val))
+                            # تقريب القيمة إلى 3 منازل عشرية لتجنب مشاكل دقة الفاصلة العائمة
+                            size = Decimal(str(round(float(size_val), 3)))
                         except:
                             size = Decimal('0')
                     else:
@@ -2031,7 +2034,8 @@ def wizard_edit_curtain(request, curtain_id):
                     # quantity = count فقط للمنتجات بالقطعة، أو count * size للمتر
                     if quantity_val and quantity_val != '' and quantity_val != 'null' and quantity_val != 'None':
                         try:
-                            quantity = Decimal(str(quantity_val))
+                            # تقريب القيمة إلى 3 منازل عشرية لتجنب مشاكل دقة الفاصلة العائمة
+                            quantity = Decimal(str(round(float(quantity_val), 3)))
                         except:
                             quantity = Decimal(str(count))
                     else:
