@@ -1000,10 +1000,28 @@ class BankAccount(models.Model):
     
     def to_cloudflare_dict(self):
         """تحويل الحساب إلى قاموس للمزامنة مع Cloudflare"""
+        from django.conf import settings
+        
+        # الحصول على رابط الشعار الكامل
+        logo_url = ''
+        if self.bank_logo:
+            logo_path = self.bank_logo.url
+            if not logo_path.startswith('http'):
+                site_url = getattr(settings, 'SITE_URL', 'https://www.elkhawaga.uk')
+                if site_url.endswith('/'):
+                    site_url = site_url[:-1]
+                if logo_path.startswith('/media/'):
+                    logo_url = f"{site_url}{logo_path}"
+                else:
+                    logo_url = f"{site_url}/media/{logo_path}" if not logo_path.startswith('/') else f"{site_url}/media{logo_path}"
+            else:
+                logo_url = logo_path
+        
         return {
             'code': self.unique_code,
             'bank_name': self.bank_name,
             'bank_name_en': self.bank_name_en,
+            'bank_logo': logo_url,
             'account_number': self.account_number,
             'iban': self.iban or '',
             'swift_code': self.swift_code or '',

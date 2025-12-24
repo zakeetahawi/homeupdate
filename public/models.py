@@ -635,8 +635,27 @@ class QRDesignSettings(models.Model):
     
     def to_dict(self):
         """تحويل الإعدادات إلى قاموس للمزامنة"""
+        # الحصول على الرابط الكامل للشعار
+        logo_url = ''
+        if self.logo:
+            from django.conf import settings
+            logo_path = self.logo.url
+            # تأكد من أن الرابط كامل
+            if not logo_path.startswith('http'):
+                # استخدم SITE_URL من الإعدادات أو رابط افتراضي
+                site_url = getattr(settings, 'SITE_URL', 'https://www.elkhawaga.uk')
+                if site_url.endswith('/'):
+                    site_url = site_url[:-1]
+                # تأكد من عدم تكرار /media/
+                if logo_path.startswith('/media/'):
+                    logo_url = f"{site_url}{logo_path}"
+                else:
+                    logo_url = f"{site_url}/media/{logo_path}" if not logo_path.startswith('/') else f"{site_url}/media{logo_path}"
+            else:
+                logo_url = logo_path
+        
         return {
-            'logo_url': self.logo.url if self.logo else '',
+            'logo_url': logo_url,
             'logo_text': self.logo_text,
             'logo_text_en': self.logo_text_en,
             'show_logo': self.show_logo,

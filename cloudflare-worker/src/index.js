@@ -9,7 +9,26 @@ const SYNC_API_KEY_HEADER = 'X-Sync-API-Key';
 /**
  * Generate beautiful product page HTML
  */
-function generateProductPage(product, env) {
+async function generateProductPage(product, env) {
+    // Load design settings from KV if available
+    let design = await env.PRODUCTS_KV.get('__QR_DESIGN_SETTINGS__', 'json');
+    
+    // Fallback to default design if not found
+    if (!design) {
+        design = {
+            colors: {
+                primary: '#d4af37',
+                secondary: '#f4d03f',
+                background: '#1a1a2e',
+                surface: '#0f3460',
+                text: '#ffffff'
+            },
+            logo_url: '',
+            logo_text: 'الخواجة',
+            show_logo: true
+        };
+    }
+
     const currencySymbols = {
         'EGP': 'ج.م',
         'SAR': 'ر.س',
@@ -33,12 +52,12 @@ function generateProductPage(product, env) {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     :root {
-      --gold: #d4af37;
-      --gold-light: #f4d03f;
-      --gold-dark: #b8860b;
-      --dark: #1a1a2e;
-      --dark-light: #16213e;
-      --dark-surface: #0f3460;
+      --gold: ${design.colors?.primary || '#d4af37'};
+      --gold-light: ${design.colors?.secondary || '#f4d03f'};
+      --gold-dark: ${design.colors?.primary || '#b8860b'};
+      --dark: ${design.colors?.background || '#1a1a2e'};
+      --dark-light: ${design.colors?.surface || '#16213e'};
+      --dark-surface: ${design.colors?.surface || '#0f3460'};
     }
     
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -364,9 +383,9 @@ function generateProductPage(product, env) {
     <!-- Brand Header with Logo -->
     <div class="brand-header">
       <div class="logo-container">
-        <i class="fas fa-gem logo-icon"></i>
+        ${design.logo_url ? `<img src="${design.logo_url}" alt="logo" style="max-width: 80px; max-height: 80px; object-fit: contain;">` : '<i class="fas fa-gem logo-icon"></i>'}
       </div>
-      <div class="brand-name">${env.SITE_NAME}</div>
+      <div class="brand-name">${design.logo_text || env.SITE_NAME}</div>
       <div class="brand-tagline">الجودة والتميز في كل تفصيل</div>
     </div>
     
@@ -580,8 +599,11 @@ async function handleAPI(code, env) {
  */
 async function handleBankAccount(code, env) {
     try {
-        // Get bank account data from KV
-        const bankData = await env.PRODUCTS_KV.get(`bank:${code}`, 'json');
+        // Get bank account data from KV (try both key formats for compatibility)
+        let bankData = await env.PRODUCTS_KV.get(`bank_accounts:${code}`, 'json');
+        if (!bankData) {
+            bankData = await env.PRODUCTS_KV.get(`bank:${code}`, 'json');
+        }
 
         if (!bankData) {
             return new Response(generateBankNotFoundPage(code, env), {
@@ -598,7 +620,7 @@ async function handleBankAccount(code, env) {
         }
 
         // Single bank account page
-        return new Response(generateBankAccountPage(bankData, env), {
+        return new Response(await generateBankAccountPage(bankData, env), {
             headers: { 'Content-Type': 'text/html; charset=utf-8' }
         });
 
@@ -613,7 +635,25 @@ async function handleBankAccount(code, env) {
 /**
  * Generate single bank account page
  */
-function generateBankAccountPage(bank, env) {
+async function generateBankAccountPage(bank, env) {
+    // Load design settings from KV if available
+    let design = await env.PRODUCTS_KV.get('__QR_DESIGN_SETTINGS__', 'json');
+    
+    // Fallback to default design if not found
+    if (!design) {
+        design = {
+            colors: {
+                primary: '#d4af37',
+                secondary: '#f4d03f',
+                background: '#1a1a2e',
+                surface: '#0f3460',
+                text: '#ffffff'
+            },
+            logo_url: '',
+            logo_text: 'الخواجة'
+        };
+    }
+
     return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -626,12 +666,12 @@ function generateBankAccountPage(bank, env) {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     :root {
-      --gold: #d4af37;
-      --gold-light: #f4d03f;
-      --gold-dark: #b8860b;
-      --dark: #1a1a2e;
-      --dark-light: #16213e;
-      --dark-surface: #0f3460;
+      --gold: ${design.colors?.primary || '#d4af37'};
+      --gold-light: ${design.colors?.secondary || '#f4d03f'};
+      --gold-dark: ${design.colors?.primary || '#b8860b'};
+      --dark: ${design.colors?.background || '#1a1a2e'};
+      --dark-light: ${design.colors?.surface || '#16213e'};
+      --dark-surface: ${design.colors?.surface || '#0f3460'};
       --success: #28a745;
     }
     
@@ -845,15 +885,15 @@ function generateBankAccountPage(bank, env) {
   <div class="container">
     <div class="brand-header">
       <div class="logo-icon">
-        <i class="fas fa-gem"></i>
+        ${design.logo_url ? `<img src="${design.logo_url}" alt="logo" style="max-width: 80px; max-height: 80px; object-fit: contain;">` : '<i class="fas fa-gem"></i>'}
       </div>
-      <h1 class="brand-name">${env.SITE_NAME}</h1>
+      <h1 class="brand-name">${design.logo_text || env.SITE_NAME}</h1>
     </div>
 
     <div class="card">
       <div class="bank-header">
         <div class="bank-icon">
-          <i class="fas fa-university"></i>
+          ${bank.bank_logo ? `<img src="${bank.bank_logo}" alt="bank logo" style="max-width: 100px; max-height: 100px; object-fit: contain;">` : '<i class="fas fa-university"></i>'}
         </div>
         <h2 class="bank-name">${bank.bank_name}</h2>
         <p class="bank-name-en">${bank.bank_name_en}</p>
@@ -1297,7 +1337,7 @@ export default {
                 });
             }
 
-            return new Response(generateProductPage(product, env), {
+            return new Response(await generateProductPage(product, env), {
                 headers: { 'Content-Type': 'text/html; charset=utf-8' }
             });
         }
