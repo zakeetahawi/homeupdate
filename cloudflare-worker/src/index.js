@@ -381,7 +381,7 @@ async function generateProductPage(product, env) {
       
       <!-- Footer -->
       <div class="footer">
-        <a href="https://elkhawaga.com" class="visit-btn">
+        <a href="${design.links?.website || 'https://elkhawaga.com'}" class="visit-btn">
           <i class="fas fa-globe"></i>
           <span>زيارة الموقع</span>
         </a>
@@ -398,7 +398,14 @@ async function generateProductPage(product, env) {
 /**
  * Generate 404 page
  */
-function generate404Page(code, env) {
+async function generate404Page(code, env, design = null) {
+    // If design not passed, try to load it
+    if (!design) {
+        design = await env.PRODUCTS_KV.get('__QR_DESIGN_SETTINGS__', 'json');
+    }
+    
+    const websiteUrl = design?.links?.website || env.MAIN_SITE_URL || 'https://elkhawaga.com';
+    
     return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -433,7 +440,7 @@ function generate404Page(code, env) {
     <h2>المنتج غير موجود</h2>
     <p>لم نتمكن من العثور على منتج بالكود:</p>
     <div class="code">${code}</div>
-    <p style="margin-top: 30px;"><a href="${env.MAIN_SITE_URL}">العودة للموقع الرئيسي</a></p>
+    <p style="margin-top: 30px;"><a href="${websiteUrl}">العودة للموقع الرئيسي</a></p>
   </div>
 </body>
 </html>`;
@@ -577,7 +584,7 @@ async function handleBankAccount(code, env) {
         }
 
         if (!bankData) {
-            return new Response(generateBankNotFoundPage(code, env), {
+            return new Response(await generateBankNotFoundPage(code, env, design), {
                 status: 404,
                 headers: { 'Content-Type': 'text/html; charset=utf-8' }
             });
@@ -596,7 +603,7 @@ async function handleBankAccount(code, env) {
         });
 
     } catch (e) {
-        return new Response(generateBankErrorPage(e.message, env), {
+        return new Response(await generateBankErrorPage(e.message, env, design), {
             status: 500,
             headers: { 'Content-Type': 'text/html; charset=utf-8' }
         });
@@ -902,7 +909,7 @@ async function generateBankAccountPage(bank, env, design) {
       </div>
       ` : ''}
 
-      <a href="${env.MAIN_SITE_URL}" class="visit-btn">
+      <a href="${design.links?.website || env.MAIN_SITE_URL}" class="visit-btn">
         <i class="fas fa-globe"></i> زيارة الموقع
       </a>
     </div>
@@ -1117,7 +1124,12 @@ function generateAllBankAccountsPage(data, env, design) {
 /**
  * Generate bank not found page
  */
-function generateBankNotFoundPage(code, env) {
+async function generateBankNotFoundPage(code, env, design = null) {
+    if (!design) {
+        design = await env.PRODUCTS_KV.get('__QR_DESIGN_SETTINGS__', 'json');
+    }
+    const websiteUrl = design?.links?.website || env.MAIN_SITE_URL || 'https://elkhawaga.com';
+    
     return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -1156,7 +1168,7 @@ function generateBankNotFoundPage(code, env) {
     <div class="error-icon"><i class="fas fa-exclamation-circle"></i></div>
     <h1>الحساب البنكي غير موجود</h1>
     <p>الكود: ${code}</p>
-    <a href="${env.MAIN_SITE_URL}">
+    <a href="${websiteUrl}">
       <i class="fas fa-home"></i> العودة للموقع
     </a>
   </div>
@@ -1167,7 +1179,12 @@ function generateBankNotFoundPage(code, env) {
 /**
  * Generate bank error page
  */
-function generateBankErrorPage(error, env) {
+async function generateBankErrorPage(error, env, design = null) {
+    if (!design) {
+        design = await env.PRODUCTS_KV.get('__QR_DESIGN_SETTINGS__', 'json');
+    }
+    const websiteUrl = design?.links?.website || env.MAIN_SITE_URL || 'https://elkhawaga.com';
+    
     return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -1268,7 +1285,7 @@ export default {
             const product = await env.PRODUCTS_KV.get(code, 'json');
 
             if (!product) {
-                return new Response(generate404Page(code, env), {
+                return new Response(await generate404Page(code, env), {
                     status: 404,
                     headers: { 'Content-Type': 'text/html; charset=utf-8' }
                 });
