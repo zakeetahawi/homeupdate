@@ -204,3 +204,60 @@ def get_bank_account_from_cloudflare(unique_code):
     except Exception as e:
         print(f'Error fetching from Cloudflare KV: {str(e)}')
         return None
+
+
+def sync_qr_design_to_cloudflare(design_settings):
+    """
+    مزامنة إعدادات تصميم QR مع Cloudflare Workers KV
+    
+    Args:
+        design_settings: كائن QRDesignSettings
+    
+    Returns:
+        dict: نتيجة المزامنة
+    """
+    # في وضع Development
+    is_dev_mode = getattr(settings, 'DEBUG', False)
+    api_key = getattr(settings, 'CLOUDFLARE_SYNC_API_KEY', None)
+    
+    if is_dev_mode or api_key == 'dev-placeholder-token':
+        # محاكاة المزامنة
+        return {
+            'success': True,
+            'message': 'Development Mode: QR Design settings updated locally',
+            'dev_mode': True
+        }
+    
+    try:
+        # تحويل الإعدادات إلى JSON
+        design_data = design_settings.to_dict()
+        
+        # رفع إلى Cloudflare KV
+        namespace_id = getattr(settings, 'CLOUDFLARE_KV_NAMESPACE_ID', None)
+        
+        if not namespace_id:
+            return {
+                'success': False,
+                'error': 'CLOUDFLARE_KV_NAMESPACE_ID not configured'
+            }
+        
+        # حفظ في KV تحت مفتاح qr_design
+        success = upload_to_cloudflare_kv({'design': design_data}, 'qr_design')
+        
+        if success:
+            return {
+                'success': True,
+                'message': 'QR Design settings synced successfully'
+            }
+        else:
+            return {
+                'success': False,
+                'error': 'Failed to upload to Cloudflare KV'
+            }
+    
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
+

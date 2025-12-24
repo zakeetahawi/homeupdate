@@ -1,13 +1,15 @@
 """
-Cloudflare Settings Admin
-Manage Cloudflare Workers sync settings from Django Admin
+Cloudflare Settings & QR Design Admin
+Manage Cloudflare Workers sync settings and QR page design from Django Admin
 """
 from django.contrib import admin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.cache import cache
 from django.contrib import messages
+from colorfield.fields import ColorField
 import uuid
+import json
 
 
 class CloudflareSettings(models.Model):
@@ -225,4 +227,455 @@ class CloudflareSettingsAdmin(admin.ModelAdmin):
         extra_context['show_save_and_continue'] = False
         extra_context['show_save_and_add_another'] = False
         return super().changeform_view(request, object_id, form_url, extra_context)
+
+
+# ============================================
+# QR Design Settings Model
+# ============================================
+
+class QRDesignSettings(models.Model):
+    """
+    إعدادات تصميم صفحات QR Scanner
+    QR Scanner Pages Design Settings
+    """
+    
+    class Meta:
+        verbose_name = 'إعدادات تصميم QR'
+        verbose_name_plural = 'إعدادات تصميم QR'
+        db_table = 'public_qr_design_settings'
+    
+    # ====== الشعار / Logo ======
+    logo = models.ImageField(
+        'الشعار / Logo',
+        upload_to='qr_design/logos/',
+        blank=True,
+        null=True,
+        help_text='شعار الشركة (يظهر في صفحات المنتجات والبنوك)'
+    )
+    
+    logo_text = models.CharField(
+        'نص الشعار',
+        max_length=100,
+        default='الخواجة',
+        help_text='نص بديل عند عدم وجود صورة'
+    )
+    
+    logo_text_en = models.CharField(
+        'نص الشعار (إنجليزي)',
+        max_length=100,
+        default='Elkhawaga',
+        blank=True
+    )
+    
+    show_logo = models.BooleanField(
+        'إظهار الشعار',
+        default=True
+    )
+    
+    # ====== الألوان / Colors ======
+    color_primary = ColorField(
+        'اللون الأساسي',
+        default='#d4af37',
+        help_text='اللون الذهبي الرئيسي'
+    )
+    
+    color_secondary = ColorField(
+        'اللون الثانوي',
+        default='#b8860b',
+        help_text='لون ذهبي داكن'
+    )
+    
+    color_background = ColorField(
+        'لون الخلفية',
+        default='#1a1a2e',
+        help_text='لون خلفية الصفحة'
+    )
+    
+    color_surface = ColorField(
+        'لون السطح',
+        default='#16213e',
+        help_text='لون بطاقة المحتوى'
+    )
+    
+    color_text = ColorField(
+        'لون النص',
+        default='#ffffff',
+        help_text='لون النص الرئيسي'
+    )
+    
+    color_text_secondary = ColorField(
+        'لون النص الثانوي',
+        default='#c0c0c0',
+        help_text='لون النص الفرعي'
+    )
+    
+    # ====== الروابط / Links ======
+    website_url = models.URLField(
+        'رابط الموقع الرئيسي',
+        default='https://elkhawaga.com',
+        help_text='يظهر في زر "زيارة الموقع"'
+    )
+    
+    show_website_button = models.BooleanField(
+        'إظهار زر الموقع',
+        default=True
+    )
+    
+    # ====== التواصل الاجتماعي / Social Media ======
+    facebook_url = models.URLField(
+        'فيسبوك',
+        blank=True,
+        default='',
+        help_text='رابط صفحة فيسبوك'
+    )
+    
+    instagram_url = models.URLField(
+        'إنستجرام',
+        blank=True,
+        default='',
+        help_text='رابط حساب إنستجرام'
+    )
+    
+    whatsapp_number = models.CharField(
+        'واتساب',
+        max_length=20,
+        blank=True,
+        default='',
+        help_text='رقم واتساب (مثال: 201234567890)'
+    )
+    
+    twitter_url = models.URLField(
+        'تويتر / X',
+        blank=True,
+        default='',
+        help_text='رابط حساب تويتر'
+    )
+    
+    youtube_url = models.URLField(
+        'يوتيوب',
+        blank=True,
+        default='',
+        help_text='رابط قناة يوتيوب'
+    )
+    
+    tiktok_url = models.URLField(
+        'تيك توك',
+        blank=True,
+        default='',
+        help_text='رابط حساب تيك توك'
+    )
+    
+    phone_number = models.CharField(
+        'رقم الهاتف',
+        max_length=20,
+        blank=True,
+        default='',
+        help_text='رقم هاتف للاتصال'
+    )
+    
+    email = models.EmailField(
+        'البريد الإلكتروني',
+        blank=True,
+        default='',
+        help_text='بريد إلكتروني للتواصل'
+    )
+    
+    show_social_media = models.BooleanField(
+        'إظهار أزرار التواصل',
+        default=True,
+        help_text='إظهار/إخفاء جميع أزرار التواصل الاجتماعي'
+    )
+    
+    # ====== الشكوى / Complaint ======
+    complaint_url = models.URLField(
+        'رابط الشكوى',
+        blank=True,
+        default='/complaints/create/',
+        help_text='رابط صفحة إنشاء شكوى'
+    )
+    
+    complaint_button_text = models.CharField(
+        'نص زر الشكوى',
+        max_length=50,
+        default='إنشاء شكوى',
+        help_text='النص الذي يظهر على زر الشكوى'
+    )
+    
+    complaint_button_text_en = models.CharField(
+        'نص زر الشكوى (إنجليزي)',
+        max_length=50,
+        default='Create Complaint',
+        blank=True
+    )
+    
+    show_complaint_button = models.BooleanField(
+        'إظهار زر الشكوى',
+        default=True
+    )
+    
+    # ====== التخطيط / Layout ======
+    layout_style = models.CharField(
+        'نمط التخطيط',
+        max_length=20,
+        choices=[
+            ('modern', 'حديث (Modern)'),
+            ('classic', 'كلاسيكي (Classic)'),
+            ('minimal', 'بسيط (Minimal)'),
+            ('elegant', 'أنيق (Elegant)'),
+        ],
+        default='modern'
+    )
+    
+    card_border_radius = models.IntegerField(
+        'انحناء زوايا البطاقة',
+        default=15,
+        help_text='بالبكسل (0-50)'
+    )
+    
+    enable_animations = models.BooleanField(
+        'تفعيل التأثيرات الحركية',
+        default=True
+    )
+    
+    enable_glassmorphism = models.BooleanField(
+        'تفعيل تأثير Glassmorphism',
+        default=True,
+        help_text='تأثير الزجاج الشفاف - يطبق لون البطاقة مع شفافية 80%'
+    )
+    
+    # ====== الطباعة / Typography ======
+    font_family = models.CharField(
+        'نوع الخط',
+        max_length=100,
+        default='Cairo',
+        help_text='مثل: Cairo, Tajawal, Almarai, Rubik'
+    )
+    
+    font_size_base = models.IntegerField(
+        'حجم الخط الأساسي',
+        default=16,
+        help_text='بالبكسل (12-24)'
+    )
+    
+    FONT_WEIGHT_CHOICES = [
+        ('400', 'عادي'),
+        ('500', 'متوسط'),
+        ('600', 'سميك'),
+        ('700', 'سميك جداً'),
+        ('800', 'أكثر سماكة'),
+    ]
+    
+    font_weight_heading = models.CharField(
+        'وزن خط العناوين',
+        max_length=20,
+        default='700',
+        choices=FONT_WEIGHT_CHOICES
+    )
+    
+    # ====== المسافات والأبعاد / Spacing & Sizing ======
+    card_padding = models.IntegerField(
+        'مسافة داخلية للبطاقة',
+        default=30,
+        help_text='بالبكسل (20-50)'
+    )
+    
+    card_max_width = models.IntegerField(
+        'أقصى عرض للبطاقة',
+        default=450,
+        help_text='بالبكسل (400-600)'
+    )
+    
+    element_spacing = models.IntegerField(
+        'المسافة بين العناصر',
+        default=20,
+        help_text='بالبكسل (10-40)'
+    )
+    
+    # ====== الظلال والتأثيرات / Shadows & Effects ======
+    SHADOW_CHOICES = [
+        ('none', 'بدون ظل'),
+        ('light', 'خفيف'),
+        ('medium', 'متوسط'),
+        ('strong', 'قوي'),
+    ]
+    
+    card_shadow_intensity = models.CharField(
+        'قوة ظل البطاقة',
+        max_length=20,
+        default='medium',
+        choices=SHADOW_CHOICES
+    )
+    
+    enable_gradient_bg = models.BooleanField(
+        'تفعيل تدرج الخلفية',
+        default=True,
+        help_text='خلفية بتدرج جميل بدلاً من لون صامت'
+    )
+    
+    enable_hover_effects = models.BooleanField(
+        'تفعيل تأثيرات التمرير',
+        default=True,
+        help_text='حركات عند التمرير على الأزرار'
+    )
+    
+    # ====== شكل الأزرار / Button Styles ======
+    BUTTON_STYLE_CHOICES = [
+        ('square', 'مربع'),
+        ('rounded', 'زوايا منحنية'),
+        ('pill', 'حبة دواء'),
+    ]
+    
+    button_style = models.CharField(
+        'شكل الأزرار',
+        max_length=20,
+        default='rounded',
+        choices=BUTTON_STYLE_CHOICES
+    )
+    
+    BUTTON_SIZE_CHOICES = [
+        ('small', 'صغير'),
+        ('medium', 'متوسط'),
+        ('large', 'كبير'),
+    ]
+    
+    button_size = models.CharField(
+        'حجم الأزرار',
+        max_length=20,
+        default='medium',
+        choices=BUTTON_SIZE_CHOICES
+    )
+    
+    # ====== عرض السعر / Price Display ======
+    price_font_size = models.IntegerField(
+        'حجم خط السعر',
+        default=48,
+        help_text='بالبكسل (32-72)'
+    )
+    
+    show_price_badge = models.BooleanField(
+        'إظهار شارة السعر',
+        default=True,
+        help_text='خلفية مميزة لقسم السعر'
+    )
+    
+    # ====== تحسينات بطاقة المنتج / Product Card ======
+    show_product_icon = models.BooleanField(
+        'إظهار أيقونة المنتج',
+        default=True
+    )
+    
+    show_category_badge = models.BooleanField(
+        'إظهار شارة التصنيف',
+        default=True
+    )
+    
+    # ====== إعدادات متقدمة / Advanced ======
+    custom_css = models.TextField(
+        'CSS مخصص',
+        blank=True,
+        default='',
+        help_text='كود CSS إضافي للتخصيص المتقدم'
+    )
+    
+    custom_js = models.TextField(
+        'JavaScript مخصص',
+        blank=True,
+        default='',
+        help_text='كود JavaScript إضافي'
+    )
+    
+    footer_text = models.CharField(
+        'نص التذييل',
+        max_length=200,
+        default='© 2025 الخواجة - جميع الحقوق محفوظة',
+        blank=True
+    )
+    
+    show_footer = models.BooleanField(
+        'إظهار التذييل',
+        default=True
+    )
+    
+    # ====== المزامنة / Sync ======
+    last_synced_at = models.DateTimeField(
+        'آخر مزامنة',
+        auto_now=True
+    )
+    
+    cloudflare_synced = models.BooleanField(
+        'تمت المزامنة مع Cloudflare',
+        default=False
+    )
+    
+    created_at = models.DateTimeField('تاريخ الإنشاء', auto_now_add=True)
+    updated_at = models.DateTimeField('تاريخ التحديث', auto_now=True)
+    
+    def __str__(self):
+        return f"إعدادات تصميم QR - {self.logo_text}"
+    
+    def save(self, *args, **kwargs):
+        # Singleton pattern - only one instance
+        if not self.pk and QRDesignSettings.objects.exists():
+            raise ValueError('يمكن إنشاء إعدادات واحدة فقط. قم بتعديل الإعدادات الموجودة.')
+        super().save(*args, **kwargs)
+        
+        # Clear cache
+        cache.delete('qr_design_settings')
+    
+    @classmethod
+    def get_settings(cls):
+        """الحصول على الإعدادات (مع Cache)"""
+        settings = cache.get('qr_design_settings')
+        if not settings:
+            settings = cls.objects.first()
+            if not settings:
+                settings = cls.objects.create()
+            cache.set('qr_design_settings', settings, 3600)  # 1 hour
+        return settings
+    
+    def to_dict(self):
+        """تحويل الإعدادات إلى قاموس للمزامنة"""
+        return {
+            'logo_url': self.logo.url if self.logo else '',
+            'logo_text': self.logo_text,
+            'logo_text_en': self.logo_text_en,
+            'show_logo': self.show_logo,
+            'colors': {
+                'primary': self.color_primary,
+                'secondary': self.color_secondary,
+                'background': self.color_background,
+                'surface': self.color_surface,
+                'text': self.color_text,
+                'text_secondary': self.color_text_secondary,
+            },
+            'links': {
+                'website': self.website_url,
+                'facebook': self.facebook_url,
+                'instagram': self.instagram_url,
+                'twitter': self.twitter_url,
+                'youtube': self.youtube_url,
+                'tiktok': self.tiktok_url,
+                'whatsapp': self.whatsapp_number,
+                'phone': self.phone_number,
+                'email': self.email,
+            },
+            'complaint': {
+                'url': self.complaint_url,
+                'text': self.complaint_button_text,
+                'text_en': self.complaint_button_text_en,
+                'show': self.show_complaint_button,
+            },
+            'layout': {
+                'style': self.layout_style,
+                'border_radius': self.card_border_radius,
+                'animations': self.enable_animations,
+                'glassmorphism': self.enable_glassmorphism,
+            },
+            'show_website_button': self.show_website_button,
+            'show_social_media': self.show_social_media,
+            'show_footer': self.show_footer,
+            'footer_text': self.footer_text,
+            'custom_css': self.custom_css,
+            'custom_js': self.custom_js,
+        }
 

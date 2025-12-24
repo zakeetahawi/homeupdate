@@ -1,9 +1,13 @@
 from django.urls import path
 from . import views
+from .views_qr_preview import qr_design_preview
 
 app_name = 'public'
 
 urlpatterns = [
+    # QR Design Preview
+    path('qr-design-preview/', qr_design_preview, name='qr_design_preview'),
+    
     # QR Code export for printing (A4 layout)
     path('qr-export/', views.qr_export_page, name='qr_export'),
     
