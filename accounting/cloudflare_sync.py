@@ -127,41 +127,45 @@ def upload_to_cloudflare_kv(data, key_prefix='bank'):
     """
     try:
         # الحصول على إعدادات Cloudflare
-        account_id = getattr(settings, 'CLOUDFLARE_ACCOUNT_ID', None)
-        namespace_id = getattr(settings, 'CLOUDFLARE_KV_NAMESPACE_ID', None)
-        api_token = getattr(settings, 'CLOUDFLARE_SYNC_API_KEY', None)
+        worker_url = getattr(settings, 'CLOUDFLARE_WORKER_URL', None)
+        api_key = getattr(settings, 'CLOUDFLARE_SYNC_API_KEY', None)
         
-        if not all([account_id, namespace_id, api_token]):
-            print('Missing Cloudflare configuration')
+        if not all([worker_url, api_key]):
+            print('Missing Cloudflare Worker configuration (URL or API Key)')
             return False
         
-        # رابط API
-        url = f'https://api.cloudflare.com/client/v4/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/bulk'
-        
         # تحضير البيانات للرفع
-        bulk_data = []
+        formatted_data = {}
         for key, value in data.items():
             # تحويل القيم إلى JSON-safe format
             safe_value = json.loads(json.dumps(value, default=str))
-            
-            bulk_data.append({
-                'key': f'{key_prefix}:{key}',
-                'value': json.dumps(safe_value, ensure_ascii=False),
-            })
+            formatted_data[f'{key_prefix}:{key}'] = safe_value
+        
+        # إعداد طلب المزامنة
+        payload = {
+            'action': 'sync_all_bank',
+            'bank_accounts': formatted_data
+        }
         
         # Headers
         headers = {
-            'Authorization': f'Bearer {api_token}',
             'Content-Type': 'application/json',
+            'X-Sync-API-Key': api_key,
         }
         
-        # إرسال الطلب
-        response = requests.put(url, headers=headers, json=bulk_data)
+        # إرسال الطلب إلى Worker endpoint
+        response = requests.post(
+            f'{worker_url}/sync',
+            headers=headers,
+            json=payload,
+            timeout=10
+        )
         
         if response.status_code == 200:
+            print(f'Successfully uploaded {len(formatted_data)} bank accounts to Cloudflare')
             return True
         else:
-            print(f'Cloudflare API Error: {response.status_code} - {response.text}')
+            print(f'Cloudflare Worker Error: {response.status_code} - {response.text}')
             return False
     
     except Exception as e:
@@ -232,19 +236,35 @@ def sync_qr_design_to_cloudflare(design_settings):
         # تحويل الإعدادات إلى JSON
         design_data = design_settings.to_dict()
         
-        # رفع إلى Cloudflare KV
-        namespace_id = getattr(settings, 'CLOUDFLARE_KV_NAMESPACE_ID', None)
+        # رفع إلى Cloudflare KV عبر Worker
+        worker_url = getattr(settings, 'CLOUDFLARE_WORKER_URL', None)
+        api_token = getattr(settings, 'CLOUDFLARE_SYNC_API_KEY', None)
         
-        if not namespace_id:
+        if not all([worker_url, api_token]):
             return {
                 'success': False,
-                'error': 'CLOUDFLARE_KV_NAMESPACE_ID not configured'
+                'error': 'Cloudflare Worker configuration missing'
             }
         
-        # حفظ في KV تحت مفتاح qr_design
-        success = upload_to_cloudflare_kv({'design': design_data}, 'qr_design')
+        # إرسال إلى Worker
+        payload = {
+            'action': 'sync_qr_design',
+            'design': design_data
+        }
         
-        if success:
+        headers = {
+            'Content-Type': 'application/json',
+            'X-Sync-API-Key': api_token,
+        }
+        
+        response = requests.post(
+            f'{worker_url}/sync',
+            headers=headers,
+            json=payload,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
             return {
                 'success': True,
                 'message': 'QR Design settings synced successfully'
@@ -252,7 +272,7 @@ def sync_qr_design_to_cloudflare(design_settings):
         else:
             return {
                 'success': False,
-                'error': 'Failed to upload to Cloudflare KV'
+                'error': f'Failed to upload to Cloudflare KV: {response.text}'
             }
     
     except Exception as e:

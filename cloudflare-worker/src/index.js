@@ -511,6 +511,33 @@ async function handleSync(request, env) {
             });
         }
 
+        if (data.action === 'sync_all_bank') {
+            // Sync all bank accounts
+            const bankAccounts = data.bank_accounts || {};
+            const promises = [];
+            for (const [key, value] of Object.entries(bankAccounts)) {
+                promises.push(env.PRODUCTS_KV.put(key, JSON.stringify(value)));
+            }
+            await Promise.all(promises);
+            return new Response(JSON.stringify({ success: true, count: Object.keys(bankAccounts).length }), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        if (data.action === 'sync_qr_design') {
+            // Sync QR design settings
+            if (data.design) {
+                await env.PRODUCTS_KV.put('__QR_DESIGN_SETTINGS__', JSON.stringify(data.design));
+                return new Response(JSON.stringify({ success: true, message: 'QR design settings synced' }), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            return new Response(JSON.stringify({ error: 'No design data provided' }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         return new Response(JSON.stringify({ error: 'Unknown action' }), {
             status: 400,
             headers: { 'Content-Type': 'application/json' }
