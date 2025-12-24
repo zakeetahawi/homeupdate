@@ -10,23 +10,18 @@ const SYNC_API_KEY_HEADER = 'X-Sync-API-Key';
  * Generate beautiful product page HTML
  */
 async function generateProductPage(product, env) {
-    // Load design settings from KV if available
+    // Load design settings from KV (REQUIRED - no fallback)
     let design = await env.PRODUCTS_KV.get('__QR_DESIGN_SETTINGS__', 'json');
     
-    // Fallback to default design if not found
+    // If design not found, return error (admin must sync design first)
     if (!design) {
-        design = {
-            colors: {
-                primary: '#d4af37',
-                secondary: '#f4d03f',
-                background: '#1a1a2e',
-                surface: '#0f3460',
-                text: '#ffffff'
-            },
-            logo_url: '',
-            logo_text: 'الخواجة',
-            show_logo: true
-        };
+        return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Configuration Required</title></head>
+<body style="font-family:Arial;padding:40px;text-align:center;">
+<h1>⚠️ التصميم غير متزامن</h1>
+<p>يرجى مزامنة إعدادات التصميم من لوحة التحكم أولاً</p>
+<p style="color:#666;font-size:14px;">Design settings not synced. Please sync from admin panel.</p>
+</body></html>`;
     }
 
     const currencySymbols = {
@@ -52,18 +47,18 @@ async function generateProductPage(product, env) {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     :root {
-      --gold: ${design.colors?.primary || '#d4af37'};
-      --gold-light: ${design.colors?.secondary || '#f4d03f'};
-      --gold-dark: ${design.colors?.primary || '#b8860b'};
-      --dark: ${design.colors?.background || '#1a1a2e'};
-      --dark-light: ${design.colors?.surface || '#16213e'};
-      --dark-surface: ${design.colors?.surface || '#0f3460'};
-      --card-bg: ${design.colors?.card || '#16213e'};
-      --button-bg: ${design.colors?.button || '#d4af37'};
-      --button-text: ${design.colors?.button_text || '#1a1a2e'};
-      --badge-bg: ${design.colors?.badge || '#d4af37'};
-      --badge-text: ${design.colors?.badge_text || '#1a1a2e'};
-      --price-color: ${design.colors?.price || '#d4af37'};
+      --gold: ${design.colors?.primary};
+      --gold-light: ${design.colors?.secondary};
+      --gold-dark: ${design.colors?.primary};
+      --dark: ${design.colors?.background};
+      --dark-light: ${design.colors?.surface};
+      --dark-surface: ${design.colors?.surface};
+      --card-bg: ${design.colors?.card};
+      --button-bg: ${design.colors?.button};
+      --button-text: ${design.colors?.button_text};
+      --badge-bg: ${design.colors?.badge};
+      --badge-text: ${design.colors?.badge_text};
+      --price-color: ${design.colors?.price};
     }
     
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -71,7 +66,7 @@ async function generateProductPage(product, env) {
     body {
       font-family: 'Cairo', sans-serif;
       background: linear-gradient(135deg, var(--dark) 0%, var(--dark-light) 50%, var(--dark-surface) 100%);
-      ${design.background_image_url ? `background-image: url(${design.background_image_url});background-size: cover;background-position: center;background-blend-mode: overlay;` : ''}
+      ${design.background_image_url ? `background-image: url("${design.background_image_url}");background-size: cover;background-position: center;background-blend-mode: overlay;` : ''}
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -201,7 +196,7 @@ async function generateProductPage(product, env) {
     .product-name {
       font-size: 1.6rem;
       font-weight: 700;
-      color: #ffffff;
+      color: #1a1a1a;
       margin-bottom: 20px;
       line-height: 1.4;
     }
@@ -249,7 +244,7 @@ async function generateProductPage(product, env) {
     
     .currency {
       font-size: 1.2rem;
-      color: #a0a0a0;
+      color: #542804;
       font-weight: 600;
     }
     
@@ -288,7 +283,7 @@ async function generateProductPage(product, env) {
     }
     
     .info-value {
-      color: #ffffff;
+      color: #1a1a1a;
       font-weight: 700;
       font-size: 0.95rem;
     }
@@ -558,6 +553,23 @@ async function handleAPI(code, env) {
  */
 async function handleBankAccount(code, env) {
     try {
+        // Load design settings for use in bank pages
+        let design = await env.PRODUCTS_KV.get('__QR_DESIGN_SETTINGS__', 'json');
+        if (!design) {
+            design = {
+                colors: {
+                    primary: '#d4af37',
+                    secondary: '#f4d03f',
+                    background: '#1a1a2e',
+                    surface: '#0f3460',
+                    text: '#ffffff'
+                },
+                logo_url: '',
+                logo_text: 'الخواجة',
+                show_logo: true
+            };
+        }
+        
         // Get bank account data from KV (try both key formats for compatibility)
         let bankData = await env.PRODUCTS_KV.get(`bank_accounts:${code}`, 'json');
         if (!bankData) {
@@ -573,13 +585,13 @@ async function handleBankAccount(code, env) {
 
         // Check if it's "all" accounts page
         if (code === 'all' && bankData.type === 'all_accounts') {
-            return new Response(generateAllBankAccountsPage(bankData, env), {
+            return new Response(generateAllBankAccountsPage(bankData, env, design), {
                 headers: { 'Content-Type': 'text/html; charset=utf-8' }
             });
         }
 
         // Single bank account page
-        return new Response(await generateBankAccountPage(bankData, env), {
+        return new Response(await generateBankAccountPage(bankData, env, design), {
             headers: { 'Content-Type': 'text/html; charset=utf-8' }
         });
 
@@ -594,24 +606,9 @@ async function handleBankAccount(code, env) {
 /**
  * Generate single bank account page
  */
-async function generateBankAccountPage(bank, env) {
-    // Load design settings from KV if available
-    let design = await env.PRODUCTS_KV.get('__QR_DESIGN_SETTINGS__', 'json');
-    
-    // Fallback to default design if not found
-    if (!design) {
-        design = {
-            colors: {
-                primary: '#d4af37',
-                secondary: '#f4d03f',
-                background: '#1a1a2e',
-                surface: '#0f3460',
-                text: '#ffffff'
-            },
-            logo_url: '',
-            logo_text: 'الخواجة'
-        };
-    }
+async function generateBankAccountPage(bank, env, design) {
+    // Design is now passed as parameter (already loaded)
+    // No need to fetch again or set fallback
 
     return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -625,12 +622,15 @@ async function generateBankAccountPage(bank, env) {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     :root {
-      --gold: ${design.colors?.primary || '#d4af37'};
-      --gold-light: ${design.colors?.secondary || '#f4d03f'};
-      --gold-dark: ${design.colors?.primary || '#b8860b'};
-      --dark: ${design.colors?.background || '#1a1a2e'};
-      --dark-light: ${design.colors?.surface || '#16213e'};
-      --dark-surface: ${design.colors?.surface || '#0f3460'};
+      --gold: ${design.colors?.primary};
+      --gold-light: ${design.colors?.secondary};
+      --gold-dark: ${design.colors?.primary};
+      --dark: ${design.colors?.background};
+      --dark-light: ${design.colors?.surface};
+      --dark-surface: ${design.colors?.surface};
+      --card-bg: ${design.colors?.card};
+      --button-bg: ${design.colors?.button};
+      --button-text: ${design.colors?.button_text};
       --success: #28a745;
     }
     
@@ -639,6 +639,7 @@ async function generateBankAccountPage(bank, env) {
     body {
       font-family: 'Cairo', sans-serif;
       background: linear-gradient(135deg, var(--dark) 0%, var(--dark-light) 50%, var(--dark-surface) 100%);
+      ${design.background_image_url ? `background-image: url("${design.background_image_url}");background-size: cover;background-position: center;background-blend-mode: overlay;` : ''}
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -666,36 +667,16 @@ async function generateBankAccountPage(bank, env) {
       z-index: 1;
     }
     
-    .brand-header {
-      text-align: center;
-      margin-bottom: 24px;
-      animation: fadeInDown 0.6s ease-out;
-    }
-    
-    .logo-icon {
-      font-size: 3.5rem;
-      background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));
-    }
-    
-    .brand-name {
-      font-size: 2rem;
-      font-weight: 800;
-      color: white;
-      margin-top: 8px;
-      text-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
-    }
-    
     .card {
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--card-bg);
+      opacity: 0.95;
       backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-radius: 24px;
       padding: 32px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1) inset;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      animation: fadeInUp 0.6s ease-out 0.1s both;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      animation: fadeInUp 0.6s ease-out;
     }
     
     .bank-header {
@@ -705,24 +686,27 @@ async function generateBankAccountPage(bank, env) {
       border-bottom: 2px solid rgba(212, 175, 55, 0.3);
     }
     
+    .company-logo {
+      max-width: 350px;
+      max-height: 245px;
+      object-fit: contain;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+    }
+    
+    .bank-logo {
+      max-width: 120px;
+      max-height: 120px;
+      object-fit: contain;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 4px 8px rgba(212, 175, 55, 0.3));
+    }
+    
     .bank-icon {
       font-size: 3rem;
       color: var(--gold);
       margin-bottom: 12px;
       filter: drop-shadow(0 4px 8px rgba(212, 175, 55, 0.3));
-    }
-    
-    .bank-name {
-      font-size: 1.8rem;
-      font-weight: 700;
-      color: white;
-      margin-bottom: 4px;
-    }
-    
-    .bank-name-en {
-      font-size: 1.1rem;
-      color: rgba(255, 255, 255, 0.7);
-      font-weight: 400;
     }
     
     .info-group {
@@ -744,7 +728,7 @@ async function generateBankAccountPage(bank, env) {
       border: 1px solid rgba(212, 175, 55, 0.2);
       border-radius: 12px;
       padding: 14px 16px;
-      color: white;
+      color: #1a1a1a;
       font-size: 1.1rem;
       font-weight: 600;
       font-family: 'Cairo', monospace;
@@ -793,8 +777,8 @@ async function generateBankAccountPage(bank, env) {
       display: block;
       width: 100%;
       padding: 16px;
-      background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-      color: var(--dark);
+      background: var(--button-bg);
+      color: var(--button-text);
       text-decoration: none;
       border-radius: 16px;
       font-weight: 700;
@@ -842,20 +826,10 @@ async function generateBankAccountPage(bank, env) {
 </head>
 <body>
   <div class="container">
-    <div class="brand-header">
-      <div class="logo-icon">
-        ${design.logo_url ? `<img src="${design.logo_url}" alt="logo" style="max-width: 80px; max-height: 80px; object-fit: contain;">` : '<i class="fas fa-gem"></i>'}
-      </div>
-      <h1 class="brand-name">${design.logo_text || env.SITE_NAME}</h1>
-    </div>
-
     <div class="card">
       <div class="bank-header">
-        <div class="bank-icon">
-          ${bank.bank_logo ? `<img src="${bank.bank_logo}" alt="bank logo" style="max-width: 100px; max-height: 100px; object-fit: contain;">` : '<i class="fas fa-university"></i>'}
-        </div>
-        <h2 class="bank-name">${bank.bank_name}</h2>
-        <p class="bank-name-en">${bank.bank_name_en}</p>
+        ${design.logo_url ? `<img src="${design.logo_url}" alt="logo" class="company-logo">` : ''}
+        ${bank.bank_logo ? `<img src="${bank.bank_logo}" alt="bank logo" class="bank-logo">` : '<div class="bank-icon"><i class="fas fa-university"></i></div>'}
       </div>
 
       ${bank.account_holder ? `
@@ -961,7 +935,7 @@ async function generateBankAccountPage(bank, env) {
 /**
  * Generate all bank accounts page
  */
-function generateAllBankAccountsPage(data, env) {
+function generateAllBankAccountsPage(data, env, design) {
     const accountsHTML = data.accounts.map(bank => `
         <div class="bank-card">
           <div class="bank-card-header">
@@ -1000,10 +974,10 @@ function generateAllBankAccountsPage(data, env) {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     :root {
-      --gold: #d4af37;
-      --gold-light: #f4d03f;
-      --gold-dark: #b8860b;
-      --dark: #1a1a2e;
+      --gold: ${design?.colors?.primary || '#d4af37'};
+      --gold-light: ${design?.colors?.secondary || '#f4d03f'};
+      --gold-dark: ${design?.colors?.primary || '#b8860b'};
+      --dark: ${design?.colors?.background || '#1a1a2e'};
     }
     
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1011,6 +985,7 @@ function generateAllBankAccountsPage(data, env) {
     body {
       font-family: 'Cairo', sans-serif;
       background: linear-gradient(135deg, var(--dark) 0%, #16213e 50%, #0f3460 100%);
+      ${design?.background_image_url ? `background-image: url("${design.background_image_url}");background-size: cover;background-position: center;background-blend-mode: overlay;` : ''}
       min-height: 100vh;
       padding: 20px;
     }
@@ -1111,7 +1086,10 @@ function generateAllBankAccountsPage(data, env) {
 <body>
   <div class="container">
     <div class="header">
-      <h1><i class="fas fa-gem"></i> ${env.SITE_NAME}</h1>
+      <h1>
+        ${design?.logo_url ? `<img src="${design.logo_url}" alt="logo" style="max-height:60px; vertical-align:middle; margin-left:10px;">` : '<i class="fas fa-gem"></i>'}
+        ${design?.logo_text || env.SITE_NAME}
+      </h1>
       <p>الحسابات البنكية</p>
     </div>
     

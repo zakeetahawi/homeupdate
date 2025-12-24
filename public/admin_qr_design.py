@@ -19,6 +19,13 @@ from .models import QRDesignSettings
 class QRDesignSettingsAdmin(admin.ModelAdmin):
     """
     لوحة تحكم إعدادات تصميم QR
+    
+    📌 ملاحظات التصميم الحالي:
+    - اسم المنتج: #1a1a1a (أسود ثابت)
+    - العملة: #542804 (بني ثابت)
+    - قيم المعلومات: #1a1a1a (أسود ثابت)
+    - صفحة البنك: لا تظهر أسماء - فقط شعارات
+    - حجم لوغو البنك: 350px ثابت
     """
     
     fieldsets = [
@@ -29,6 +36,16 @@ class QRDesignSettingsAdmin(admin.ModelAdmin):
                 ('logo_text', 'logo_text_en'),
                 ('show_logo', 'logo_size'),
             ],
+            'description': '''
+                <div style="background:#d1ecf1; border:1px solid #bee5eb; padding:12px; border-radius:6px; margin:10px 0;">
+                    <strong>ℹ️ معلومات مهمة:</strong>
+                    <ul style="margin:5px 0; line-height:1.8;">
+                        <li><strong>صفحة المنتج:</strong> حجم اللوغو حسب إعداد "logo_size" أدناه</li>
+                        <li><strong>صفحة البنك:</strong> حجم اللوغو ثابت 350px (لا يتأثر بـ logo_size)</li>
+                        <li><strong>الأسماء:</strong> لا تظهر أسماء الشركة أو البنك في صفحة البنك - فقط الشعارات</li>
+                    </ul>
+                </div>
+            ''',
             'classes': ['collapse'],
         }),
         
@@ -43,7 +60,21 @@ class QRDesignSettingsAdmin(admin.ModelAdmin):
                 ('color_badge', 'color_badge_text'),
                 'live_preview',
             ],
-            'description': '💡 نصيحة: بعد تعديل الألوان، احفظ الإعدادات ثم أعد تحميل الصفحة (F5) لرؤية المعاينة المحدثة',
+            'description': '''
+                <div style="background:#fff3cd; border:1px solid #ffc107; padding:15px; border-radius:8px; margin:10px 0;">
+                    <h4 style="margin:0 0 10px 0; color:#856404;">⚠️ ملاحظات مهمة:</h4>
+                    <ul style="margin:5px 0; color:#856404; line-height:1.8;">
+                        <li><strong>الألوان الثابتة (غير قابلة للتغيير):</strong>
+                            <br>• اسم المنتج: <code>#1a1a1a</code> (أسود داكن)
+                            <br>• العملة: <code>#542804</code> (بني داكن - نفس لون الأزرار)
+                            <br>• قيم المعلومات (العملة/الوحدة): <code>#1a1a1a</code> (أسود)
+                        </li>
+                        <li><strong>صفحة البنك:</strong> لا تظهر أسماء (الشركة أو البنك) - فقط شعارات</li>
+                        <li><strong>حجم اللوغو في صفحة البنك:</strong> 350px</li>
+                    </ul>
+                </div>
+                💡 نصيحة: بعد تعديل الألوان، احفظ الإعدات ثم أعد تحميل الصفحة (F5) لرؤية المعاينة المحدثة
+            ''',
         }),
         
         ('✍️ الطباعة / Typography', {
@@ -175,6 +206,35 @@ class QRDesignSettingsAdmin(admin.ModelAdmin):
         from django.core.cache import cache
         cache.delete('qr_design_settings')
         messages.success(request, '✅ تم حفظ الإعدادات بنجاح وتحديث المعاينة')
+        messages.info(request, '💡 لا تنسى مزامنة التصميم مع Cloudflare لتطبيق التغييرات', extra_tags='safe')
+    
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        """إضافة معلومات إضافية في أعلى النموذج"""
+        extra_context = extra_context or {}
+        extra_context['design_info'] = mark_safe('''
+            <div style="background:#e7f3ff; border:2px solid #2196f3; padding:15px; border-radius:8px; margin:15px 0;">
+                <h3 style="margin:0 0 10px 0; color:#0d47a1;">📋 معلومات التصميم الحالي</h3>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                    <div>
+                        <h4 style="color:#1976d2; margin:10px 0 5px 0;">🎨 الألوان الثابتة (غير قابلة للتغيير):</h4>
+                        <ul style="margin:5px 0; line-height:1.8;">
+                            <li><strong>اسم المنتج:</strong> <code style="background:#1a1a1a; color:#fff; padding:2px 8px; border-radius:3px;">#1a1a1a</code> (أسود داكن)</li>
+                            <li><strong>رمز العملة:</strong> <code style="background:#542804; color:#fff; padding:2px 8px; border-radius:3px;">#542804</code> (بني داكن)</li>
+                            <li><strong>قيم المعلومات:</strong> <code style="background:#1a1a1a; color:#fff; padding:2px 8px; border-radius:3px;">#1a1a1a</code> (أسود)</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="color:#1976d2; margin:10px 0 5px 0;">🏦 صفحة البنك:</h4>
+                        <ul style="margin:5px 0; line-height:1.8;">
+                            <li><strong>حجم اللوغو:</strong> 350px (ثابت - لا يتأثر بإعداد logo_size)</li>
+                            <li><strong>العرض:</strong> لا تظهر أسماء الشركة أو البنك</li>
+                            <li><strong>الشعارات فقط:</strong> لوغو الشركة + شعار البنك</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        ''')
+        return super().changeform_view(request, object_id, form_url, extra_context)
     
     # ====== Display Methods ======
     
@@ -480,7 +540,7 @@ class QRDesignSettingsAdmin(admin.ModelAdmin):
             #qr-preview-wrapper .product-name {{
                 font-size: 1.6rem;
                 font-weight: 700;
-                color: #ffffff;
+                color: #1a1a1a;
                 margin-bottom: 20px;
                 line-height: 1.4;
             }}
@@ -527,7 +587,7 @@ class QRDesignSettingsAdmin(admin.ModelAdmin):
             
             #qr-preview-wrapper .currency {{
                 font-size: 1.2rem;
-                color: #a0a0a0;
+                color: #542804;
                 font-weight: 600;
             }}
             

@@ -999,23 +999,36 @@ class BankAccount(models.Model):
         return f"{cloudflare_url}/bank/{self.unique_code}"
     
     def to_cloudflare_dict(self):
-        """تحويل الحساب إلى قاموس للمزامنة مع Cloudflare"""
+        """تحويل الحساب إلى قاموس للمزامنة مع Cloudflare - مع تحويل شعار البنك إلى Base64"""
+        import base64
+        import os
         from django.conf import settings
         
-        # الحصول على رابط الشعار الكامل
-        logo_url = ''
-        if self.bank_logo:
-            logo_path = self.bank_logo.url
-            if not logo_path.startswith('http'):
-                site_url = getattr(settings, 'SITE_URL', 'https://www.elkhawaga.uk')
-                if site_url.endswith('/'):
-                    site_url = site_url[:-1]
-                if logo_path.startswith('/media/'):
-                    logo_url = f"{site_url}{logo_path}"
-                else:
-                    logo_url = f"{site_url}/media/{logo_path}" if not logo_path.startswith('/') else f"{site_url}/media{logo_path}"
-            else:
-                logo_url = logo_path
+        def image_to_base64(image_field):
+            """تحويل ImageField إلى Base64 data URL"""
+            if not image_field:
+                return ''
+            try:
+                with image_field.open('rb') as img_file:
+                    img_data = img_file.read()
+                    img_base64 = base64.b64encode(img_data).decode('utf-8')
+                    ext = os.path.splitext(image_field.name)[1].lower()
+                    mime_types = {
+                        '.jpg': 'image/jpeg',
+                        '.jpeg': 'image/jpeg',
+                        '.png': 'image/png',
+                        '.gif': 'image/gif',
+                        '.webp': 'image/webp',
+                        '.svg': 'image/svg+xml'
+                    }
+                    mime_type = mime_types.get(ext, 'image/png')
+                    return f'data:{mime_type};base64,{img_base64}'
+            except Exception as e:
+                print(f'خطأ في تحويل شعار البنك إلى Base64: {e}')
+                return ''
+        
+        # تحويل شعار البنك إلى Base64
+        logo_url = image_to_base64(self.bank_logo)
         
         return {
             'code': self.unique_code,

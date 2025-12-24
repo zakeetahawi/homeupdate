@@ -213,6 +213,7 @@ def get_bank_account_from_cloudflare(unique_code):
 def sync_qr_design_to_cloudflare(design_settings):
     """
     مزامنة إعدادات تصميم QR مع Cloudflare Workers KV
+    يتم تحويل الصور إلى Base64 لرفعها مباشرة
     
     Args:
         design_settings: كائن QRDesignSettings
@@ -220,30 +221,41 @@ def sync_qr_design_to_cloudflare(design_settings):
     Returns:
         dict: نتيجة المزامنة
     """
-    # في وضع Development
+    # في وضع Development - محاكاة المزامنة مع عرض البيانات
     is_dev_mode = getattr(settings, 'DEBUG', False)
     api_key = getattr(settings, 'CLOUDFLARE_SYNC_API_KEY', None)
     
-    if is_dev_mode or api_key == 'dev-placeholder-token':
-        # محاكاة المزامنة
-        return {
-            'success': True,
-            'message': 'Development Mode: QR Design settings updated locally',
-            'dev_mode': True
-        }
-    
     try:
-        # تحويل الإعدادات إلى JSON
+        # تحويل الإعدادات إلى JSON (الصور تُحوّل إلى Base64)
         design_data = design_settings.to_dict()
         
-        # رفع إلى Cloudflare KV عبر Worker
+        # عرض حجم البيانات للتحقق
+        import json as json_module
+        data_size = len(json_module.dumps(design_data))
+        print(f'📊 حجم بيانات التصميم: {data_size:,} بايت')
+        
+        if is_dev_mode or api_key == 'dev-placeholder-token':
+            # محاكاة المزامنة في وضع التطوير
+            has_logo = bool(design_data.get('logo_url'))
+            has_bg = bool(design_data.get('background_image_url'))
+            print(f'✅ وضع التطوير: تم تحويل الصور')
+            print(f'   - اللوغو: {"✓" if has_logo else "✗"}')
+            print(f'   - الخلفية: {"✓" if has_bg else "✗"}')
+            return {
+                'success': True,
+                'message': f'Development Mode: QR Design synced (Logo: {has_logo}, BG: {has_bg})',
+                'dev_mode': True,
+                'data_size': data_size
+            }
+        
+        # رفع إلى Cloudflare KV عبر Worker (وضع الإنتاج)
         worker_url = getattr(settings, 'CLOUDFLARE_WORKER_URL', None)
         api_token = getattr(settings, 'CLOUDFLARE_SYNC_API_KEY', None)
         
         if not all([worker_url, api_token]):
             return {
                 'success': False,
-                'error': 'Cloudflare Worker configuration missing'
+                'error': 'Cloudflare Worker configuration missing (CLOUDFLARE_WORKER_URL or CLOUDFLARE_SYNC_API_KEY)'
             }
         
         # إرسال إلى Worker
@@ -257,27 +269,36 @@ def sync_qr_design_to_cloudflare(design_settings):
             'X-Sync-API-Key': api_token,
         }
         
+        print(f'🔄 إرسال البيانات إلى Cloudflare Worker: {worker_url}/sync')
         response = requests.post(
             f'{worker_url}/sync',
             headers=headers,
             json=payload,
-            timeout=10
+            timeout=30  # زيادة timeout لأن الصور قد تكون كبيرة
         )
         
         if response.status_code == 200:
+            print(f'✅ تمت المزامنة بنجاح مع Cloudflare')
             return {
                 'success': True,
-                'message': 'QR Design settings synced successfully'
+                'message': 'QR Design settings synced successfully to Cloudflare',
+                'data_size': data_size
             }
         else:
+            error_msg = f'HTTP {response.status_code}: {response.text}'
+            print(f'❌ فشلت المزامنة: {error_msg}')
             return {
                 'success': False,
-                'error': f'Failed to upload to Cloudflare KV: {response.text}'
+                'error': error_msg
             }
     
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f'❌ خطأ في المزامنة: {error_details}')
         return {
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'details': error_details
         }
 

@@ -685,41 +685,46 @@ class QRDesignSettings(models.Model):
         return settings
     
     def to_dict(self):
-        """تحويل الإعدادات إلى قاموس للمزامنة"""
+        """تحويل الإعدادات إلى قاموس للمزامنة - مع تحويل الصور إلى Base64"""
+        import base64
+        import os
         from django.conf import settings
         
-        # الحصول على الرابط الكامل للشعار
-        logo_url = ''
-        if self.logo:
-            logo_path = self.logo.url
-            # تأكد من أن الرابط كامل
-            if not logo_path.startswith('http'):
-                # استخدم SITE_URL من الإعدادات أو رابط افتراضي
-                site_url = getattr(settings, 'SITE_URL', 'https://www.elkhawaga.uk')
-                if site_url.endswith('/'):
-                    site_url = site_url[:-1]
-                # تأكد من عدم تكرار /media/
-                if logo_path.startswith('/media/'):
-                    logo_url = f"{site_url}{logo_path}"
-                else:
-                    logo_url = f"{site_url}/media/{logo_path}" if not logo_path.startswith('/') else f"{site_url}/media{logo_path}"
-            else:
-                logo_url = logo_path
+        def image_to_base64(image_field):
+            """
+            تحويل ImageField إلى Base64 data URL
+            يُستخدم لرفع الصور مباشرة إلى Cloudflare بدون الحاجة للسيرفر الأصلي
+            """
+            if not image_field:
+                return ''
+            try:
+                # فتح الملف وقراءته
+                with image_field.open('rb') as img_file:
+                    img_data = img_file.read()
+                    # تحويل إلى base64
+                    img_base64 = base64.b64encode(img_data).decode('utf-8')
+                    # تحديد نوع الملف
+                    ext = os.path.splitext(image_field.name)[1].lower()
+                    mime_types = {
+                        '.jpg': 'image/jpeg',
+                        '.jpeg': 'image/jpeg',
+                        '.png': 'image/png',
+                        '.gif': 'image/gif',
+                        '.webp': 'image/webp',
+                        '.svg': 'image/svg+xml'
+                    }
+                    mime_type = mime_types.get(ext, 'image/png')
+                    # إرجاع data URL
+                    return f'data:{mime_type};base64,{img_base64}'
+            except Exception as e:
+                print(f'خطأ في تحويل الصورة إلى Base64: {e}')
+                return ''
         
-        # الحصول على الرابط الكامل لصورة الخلفية
-        background_image_url = ''
-        if self.background_image:
-            bg_path = self.background_image.url
-            if not bg_path.startswith('http'):
-                site_url = getattr(settings, 'SITE_URL', 'https://www.elkhawaga.uk')
-                if site_url.endswith('/'):
-                    site_url = site_url[:-1]
-                if bg_path.startswith('/media/'):
-                    background_image_url = f"{site_url}{bg_path}"
-                else:
-                    background_image_url = f"{site_url}/media/{bg_path}" if not bg_path.startswith('/') else f"{site_url}/media{bg_path}"
-            else:
-                background_image_url = bg_path
+        # تحويل اللوغو إلى Base64
+        logo_url = image_to_base64(self.logo)
+        
+        # تحويل صورة الخلفية إلى Base64
+        background_image_url = image_to_base64(self.background_image)
         
         return {
             'logo_url': logo_url,
