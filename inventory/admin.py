@@ -491,11 +491,30 @@ class BaseProductAdmin(admin.ModelAdmin):
 
     @admin.action(description=_('📄 تحميل ملف QR PDF'))
     def download_pdf(self, request, queryset):
-        from django.http import HttpResponse, HttpResponseRedirect
-        # توجيه المستخدم للأمر الإداري أو رابط تحميل الملف العام
-        # هنا سنقوم بتوليد ملف سريع للمنتجات المحددة فقط أو توجيه للعام
-        # للأمان، نوجه لصفحة التوليد أو نعرض رسالة
-        self.message_user(request, 'يرجى استخدام أمر "generate_qr_pdf" لتوليد ملف شامل، أو سيتم توفير رابط مباشر قريباً.', level='WARNING')
+        from django.core.management import call_command
+        from django.conf import settings
+        import os
+        from django.http import HttpResponseRedirect
+        
+        try:
+            filename = 'products_qr_catalog.pdf'
+            relative_path = os.path.join('qr_codes', filename)
+            full_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+            
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+            
+            # Call the management command directly
+            call_command('generate_qr_pdf', output=full_path)
+            
+            # Construct URL
+            file_url = os.path.join(settings.MEDIA_URL, relative_path)
+            
+            self.message_user(request, 'تم توليد ملف PDF بنجاح. بدء التحميل...', level='SUCCESS')
+            return HttpResponseRedirect(file_url)
+            
+        except Exception as e:
+            self.message_user(request, f'حدث خطأ أثناء توليد الملف: {str(e)}', level='ERROR')
     
     def save_model(self, request, obj, form, change):
         if not change:
