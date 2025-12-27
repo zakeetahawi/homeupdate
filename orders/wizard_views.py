@@ -1264,7 +1264,7 @@ def wizard_finalize(request):
                 order.salesperson = draft.salesperson
                 order.branch = draft.branch
                 order.status = draft.status
-                order.notes = draft.notes
+                order.notes = draft.notes or ''
                 order.selected_types = [draft.selected_type] if draft.selected_type else []
                 order.related_inspection = draft.related_inspection
                 order.related_inspection_type = draft.related_inspection_type
@@ -1274,6 +1274,7 @@ def wizard_finalize(request):
                 order.contract_number = draft.contract_number
                 order.contract_number_2 = draft.contract_number_2
                 order.contract_number_3 = draft.contract_number_3
+
                 order.total_amount = draft.subtotal
                 order.final_price = draft.final_total
                 order.paid_amount = draft.paid_amount
@@ -1289,21 +1290,229 @@ def wizard_finalize(request):
                 # حفظ بدون update_fields لإطلاق signals
                 order.save()
                 
-                # ⚡ حذف مجمّع
-                from .models import OrderInvoiceImage
-                OrderInvoiceImage.objects.filter(order=order).delete()
-                order.items.all().delete()
+                # تحديث ManufacturingOrder بعد اكتمال transaction
+                # استخدام on_commit لضمان عدم rollback
+                try:
+                    from django.db import transaction
+                    from manufacturing.models import ManufacturingOrder
+                    
+                    # حفظ القيم للاستخدام في on_commit
+                    order_id = order.id
+                    new_invoice_number = order.invoice_number
+                    order_number = order.order_number
+                    
+                    def update_manufacturing_orders():
+                        try:
+                            manufacturing_orders = ManufacturingOrder.objects.filter(order_id=order_id)
+                            for mfg in manufacturing_orders:
+                                mfg.invoice_number = new_invoice_number
+                                mfg.save(update_fields=['invoice_number'])
+                                print(f"✅ [on_commit] تم تحديث ManufacturingOrder #{mfg.id} invoice_number: {mfg.invoice_number}")
+                                logger.info(f"✅ [on_commit] تم تحديث رقم الفاتورة إلى '{new_invoice_number}' في ManufacturingOrder #{mfg.id} للطلب {order_number}")
+                        except Exception as e:
+                            print(f"❌ [on_commit] خطأ: {e}")
+                            logger.error(f"❌ خطأ في on_commit تحديث ManufacturingOrder: {e}")
+                    
+                    transaction.on_commit(update_manufacturing_orders)
+                except Exception as e:
+                    print(f"❌ [wizard] خطأ: {e}")
+                    logger.error(f"❌ خطأ في تحديث رقم الفاتورة في أوامر التصنيع: {e}")
+                
+                # ⚡ استراتيجية التحديث الذكي (Smart Update)
+                # بدلاً من حذف جميع العناصر، نقوم بتحديث الموجود وحذف المحذوف فقط
+                # للحفاظ على روابط أوامر التقطيع والتصنيع
+                
+                # 1. جلب العناصر الحالية للطلب
+                current_order_items = {item.id: item for item in order.items.all()}
+                
+                # قائمة العناصر الجديدة التي سيتم إنشاؤها
+                new_draft_items = []
+                
+                # قائمة العناصر التي تم تحديثها (للمزامنة مع التصنيع)
+                updated_order_items = []
+                
+                # خريطة لربط الـ ID القديم بالمنتج الجديد (للستائر)
+                item_mapping = {}  # {old_order_item_id: new_order_item}
+                
+                # 2. معالجة عناصر المسودة
+                for draft_item in draft_items_list:
+                    if draft_item.original_item_id and draft_item.original_item_id in current_order_items:
+                        # تحديث عنصر موجود
+                        original_item = current_order_items[draft_item.original_item_id]
+                        
+                        # تحديث البيانات
+                        original_item.quantity = draft_item.quantity
+                        original_item.unit_price = draft_item.unit_price
+                        original_item.discount_percentage = draft_item.discount_percentage
+                        original_item.discount_amount = draft_item.discount_amount
+                        original_item.notes = draft_item.notes or ''
+                        original_item.save()
+                        
+                        updated_order_items.append(original_item)
+                        item_mapping[original_item.id] = original_item
+                        
+                        # إزالة من قائمة الحذف
+                        del current_order_items[draft_item.original_item_id]
+                        
+                    else:
+                        # عنصر جديد
+                        new_draft_items.append(draft_item)
+
+                # 3. حذف العناصر التي لم تعد موجودة
+                if current_order_items:
+                    # حذف العناصر المتبقية في القائمة (التي تم حذفها من المسودة)
+                    # هذا سيحذف تلقائياً عناصر التقطيع/التصنيع المرتبطة بها بسبب CASCADE
+                    OrderItem.objects.filter(id__in=current_order_items.keys()).delete()
+                
+                # 4. إنشاء العناصر الجديدة باستخدام bulk_create
+                order_items_to_create = []
+                for draft_item in new_draft_items:
+                    new_item = OrderItem(
+                        order=order,
+                        product=draft_item.product,
+                        quantity=draft_item.quantity,
+                        unit_price=draft_item.unit_price,
+                        discount_percentage=draft_item.discount_percentage,
+                        discount_amount=draft_item.discount_amount,
+                        item_type=draft_item.item_type,
+                        notes=draft_item.notes or '',  # Fix for nullable constraints
+                    )
+                    order_items_to_create.append(new_item)
+                
+                if order_items_to_create:
+                    OrderItem.objects.bulk_create(order_items_to_create, batch_size=200)
+                    
+                    # ⚡ تحديث Order triggering signals - هام لإنشاء أوامر التقطيع
+                    # bulk_create لا يطلق signals، لذلك نحتاج لحفظ الطلب يدوياً
+                    # لإطلاق signal create_cutting_orders_on_order_save
+                    order.save()
+
+                
+                # 5. مزامنة أوامر التصنيع والتقطيع للعناصر المحدثة
+                if updated_order_items:
+                    try:
+                        from manufacturing.models import ManufacturingOrderItem
+                        from cutting.models import CuttingOrderItem
+                        
+                        for updated_item in updated_order_items:
+                            # تحديث كميات التصنيع
+                            ManufacturingOrderItem.objects.filter(order_item=updated_item).update(
+                                quantity=updated_item.quantity
+                            )
+                            # تحديث كميات التقطيع (الإضافية تبقى كما هي، فقط الأصلية تتحدث عبر العلاقة)
+                            # ولكن قد نحتاج لإعادة حساب الإجمالي
+                            # تحديث عناصر التقطيع
+                            cutting_items = CuttingOrderItem.objects.filter(order_item=updated_item)
+                            if cutting_items.exists():
+                                # إعادة تعيين الحالة إلى 'pending' لضمان مراجعة التغييرات
+                                # وتحديث الملاحظات
+                                cutting_items.update(
+                                    status='pending',
+                                    notes=updated_item.notes or '',
+                                    updated_at=timezone.now()
+                                )
+                                logger.info(f"🔄 Reset cutting items for updated order item {updated_item.id}") 
+                    except Exception as e:
+                        print(f"Error syncing manufacturing items: {e}")
+
+                # 6. تحديث الستائر (Contract Curtains)
+                # نحذف الستائر القديمة ونعيد إنشاؤها لأنها معقدة وتعتمد على Draft
                 order.contract_curtains.all().delete()
+                
+                # نقل الستائر من المسودة إلى الطلب
+                curtains = draft.contract_curtains.all()
+                if curtains.exists():
+                    for curtain in curtains:
+                        # إنشاء الستارة
+                        new_curtain = ContractCurtain.objects.create(
+                            order=order,
+                            room_name=curtain.room_name,
+                            curtain_image=curtain.curtain_image,
+                            width=curtain.width,
+                            height=curtain.height,
+                            installation_type=curtain.installation_type,
+                            curtain_box_width=curtain.curtain_box_width,
+                            curtain_box_depth=curtain.curtain_box_depth,
+                            notes=curtain.notes,
+                            # ربط الأقمشة الرئيسية إذا وجدت
+                            # light_fabric=..., heavy_fabric=... (يحتاج منطق ربط مع العناصر)
+                        )
+                        
+                        # نسخ الأقمشة والإكسسوارات
+                        for fabric in curtain.fabrics.all():
+                            # محاولة ربط القماش بعنصر الطلب الجديد/المحدث
+                            linked_order_item = None
+                            if fabric.draft_order_item:
+                                # محاولة البحث عن العنصر المقابل
+                                if fabric.draft_order_item.original_item_id and fabric.draft_order_item.original_item_id in item_mapping:
+                                    linked_order_item = item_mapping[fabric.draft_order_item.original_item_id]
+                                else:
+                                    # بحث عن طريق المنتج (للعناصر الجديدة)
+                                    linked_order_item = OrderItem.objects.filter(
+                                        order=order, 
+                                        product=fabric.draft_order_item.product,
+                                        quantity=fabric.draft_order_item.quantity
+                                    ).first()
+
+                            CurtainFabric.objects.create(
+                                curtain=new_curtain,
+                                draft_order_item=fabric.draft_order_item,  # نحتفظ بالرابط القديم كمرجع
+                                order_item=linked_order_item,  # ربط بعنصر الطلب النهائي
+                                fabric_type=fabric.fabric_type,
+                                fabric_name=fabric.fabric_name,
+                                pieces=fabric.pieces,
+                                meters=fabric.meters,
+                                tailoring_type=fabric.tailoring_type,
+                                notes=fabric.notes,
+                                sequence=fabric.sequence
+                            )
+                            
+                        for accessory in curtain.accessories.all():
+                            # محاولة ربط الإكسسوار بعنصر الطلب الجديد/المحدث
+                            linked_acc_order_item = None
+                            if accessory.draft_order_item:
+                                if accessory.draft_order_item.original_item_id and accessory.draft_order_item.original_item_id in item_mapping:
+                                    linked_acc_order_item = item_mapping[accessory.draft_order_item.original_item_id]
+                                else:
+                                    linked_acc_order_item = OrderItem.objects.filter(
+                                        order=order,
+                                        product=accessory.draft_order_item.product,
+                                        quantity=accessory.draft_order_item.quantity
+                                    ).first()
+                            
+                            CurtainAccessory.objects.create(
+                                curtain=new_curtain,
+                                draft_order_item=accessory.draft_order_item,
+                                order_item=linked_acc_order_item,
+                                accessory_name=accessory.accessory_name,
+                                accessory_type=accessory.accessory_type,
+                                quantity=accessory.quantity,
+                                count=accessory.count,
+                                size=accessory.size,
+                                color=accessory.color
+                            )
+
+                # حذف الدفعات القديمة وإعادة إنشائها (يمكن تحسينه أيضاً لكن الدفعات أبسط)
                 order.payments.all().delete()
                 
                 # نقل الصور الجديدة
                 if draft.invoice_images_new.exists():
+                    OrderInvoiceImage.objects.filter(order=order).delete() # حذف القديم فقط إذا فيه جديد
                     new_images = [
                         OrderInvoiceImage(order=order, image=img.image)
                         for img in draft.invoice_images_new.all()
                     ]
                     OrderInvoiceImage.objects.bulk_create(new_images, batch_size=50)
                 
+                # ⚡ تجديد عقد PDF تلقائياً
+                try:
+                    from orders.tasks import generate_contract_pdf_async
+                    # تجديد العقد بشكل غير متزامن
+                    if draft.contract_type == 'electronic':
+                        generate_contract_pdf_async.delay(order.id, request.user.id)
+                except Exception as e:
+                    print(f"Error regenerating contract: {e}")
+
             except Order.DoesNotExist:
                 editing_order_id = None  # إنشاء طلب جديد
         
@@ -1324,6 +1533,7 @@ def wizard_finalize(request):
                 contract_number=draft.contract_number,
                 contract_number_2=draft.contract_number_2,
                 contract_number_3=draft.contract_number_3,
+
                 total_amount=draft.subtotal,
                 final_price=draft.final_total,
                 paid_amount=draft.paid_amount,
@@ -1345,31 +1555,36 @@ def wizard_finalize(request):
                 ]
                 OrderInvoiceImage.objects.bulk_create(new_images, batch_size=50)
         
-        # ⚡ نقل الستائر - bulk_update محسّن
-        curtains = list(ContractCurtain.objects.filter(draft_order=draft))
-        if curtains:
-            for c in curtains:
-                c.order = order
-                c.draft_order = None
-            ContractCurtain.objects.bulk_update(curtains, ['order', 'draft_order'], batch_size=200)
+            # ⚡ نقل الستائر - bulk_update محسّن
+            curtains = list(ContractCurtain.objects.filter(draft_order=draft))
+            if curtains:
+                for c in curtains:
+                    c.order = order
+                    c.draft_order = None
+                ContractCurtain.objects.bulk_update(curtains, ['order', 'draft_order'], batch_size=200)
+            
+            # ⚡ نقل العناصر - bulk_create محسّن (استخدام القائمة المحملة مسبقاً)
+            order_items_to_create = [
+                OrderItem(
+                    order=order,
+                    product=item.product,
+                    quantity=item.quantity,
+                    unit_price=item.unit_price,
+                    discount_percentage=item.discount_percentage,
+                    discount_amount=item.discount_amount if item.discount_amount else Decimal('0.00'),
+                    item_type=item.item_type,
+                    notes=item.notes or '',
+                )
+                for item in draft_items_list
+            ]
+            OrderItem.objects.bulk_create(order_items_to_create, batch_size=200)
+            
+            # ⚡ تحديث Order triggering signals - هام لإنشاء أوامر التقطيع
+            # bulk_create لا يطلق signals، لذلك نحتاج لحفظ الطلب يدوياً
+            # لإطلاق signal create_cutting_orders_on_order_save
+            order.save()
         
-        # ⚡ نقل العناصر - bulk_create محسّن (استخدام القائمة المحملة مسبقاً)
-        order_items_to_create = [
-            OrderItem(
-                order=order,
-                product=item.product,
-                quantity=item.quantity,
-                unit_price=item.unit_price,
-                discount_percentage=item.discount_percentage,
-                discount_amount=item.discount_amount if item.discount_amount else Decimal('0.00'),
-                item_type=item.item_type,
-                notes=item.notes,
-            )
-            for item in draft_items_list
-        ]
-        OrderItem.objects.bulk_create(order_items_to_create, batch_size=200)
-        
-        # ⚡ إنشاء الدفعة
+        # ⚡ إنشاء الدفعة (مشترك - لأن التعديل قد يحذف الدفعات القديمة)
         if draft.paid_amount > 0:
             Payment.objects.create(
                 order=order,
@@ -1404,9 +1619,10 @@ def wizard_finalize(request):
                 try:
                     from .tasks import generate_contract_pdf_async
                     task = generate_contract_pdf_async.delay(order_pk, user_pk)
-                    logger.info(f"⚡ Contract generation started (task: {task.id}) after commit")
+                    # logger.info(f"⚡ Contract generation started (task: {task.id}) after commit")
                 except Exception as e:
-                    logger.warning(f"⚠️ Contract task failed: {e}")
+                    # logger.warning(f"⚠️ Contract task failed: {e}")
+                    pass
             
             transaction.on_commit(trigger_contract_generation)
         
@@ -2369,7 +2585,8 @@ def _create_draft_from_order(order, user):
             unit_price=item.unit_price,
             discount_percentage=item.discount_percentage,
             item_type=item.item_type,
-            notes=item.notes
+            notes=item.notes,
+            original_item_id=item.id
         )
         item_mapping[item.id] = new_item
     
@@ -2443,10 +2660,10 @@ def wizard_edit_options(request, order_pk):
             messages.error(request, 'ليس لديك صلاحية لتعديل هذا الطلب')
             return redirect('orders:order_detail_by_number', order_number=order.order_number)
     
-    # التحقق من أن الطلب منشأ عبر الويزارد
-    if order.creation_method != 'wizard':
-        messages.warning(request, 'هذا الطلب لم ينشأ عبر الويزارد. سيتم توجيهك للتعديل التقليدي.')
-        return redirect('orders:order_update', pk=order.pk)
+    # التحقق من أن الطلب منشأ عبر الويزارد - تم تعطيله للسماح بتعديل جميع الطلبات
+    # if order.creation_method != 'wizard':
+    #     messages.warning(request, 'هذا الطلب لم ينشأ عبر الويزارد. سيتم توجيهك للتعديل التقليدي.')
+    #     return redirect('orders:order_update', pk=order.pk)
     
     # التحقق من وجود عقد
     has_contract = order.selected_types and any(

@@ -721,7 +721,18 @@ class CurtainFabric(models.Model):
             return f"{self.get_fabric_type_display()} - {self.order_item.product.name} ({self.meters}م)"
         elif self.draft_order_item:
             return f"{self.get_fabric_type_display()} - {self.draft_order_item.product.name} ({self.meters}م)"
-        return f"{self.get_fabric_type_display()} - {self.fabric_name} ({self.meters}م)"
+        return f"{self.get_fabric_type_display()} - {self.display_name} ({self.meters}م)"
+    
+    @property
+    def display_name(self):
+        """اسم القماش للعرض - يأخذ الاسم اليدوي أو اسم المنتج"""
+        if self.fabric_name:
+            return self.fabric_name
+        if self.order_item:
+            return self.order_item.product.name
+        if self.draft_order_item:
+            return self.draft_order_item.product.name
+        return "غير محدد"
     
     def get_tailoring_type_display(self):
         """الحصول على اسم طريقة التفصيل المعروض"""
@@ -883,9 +894,20 @@ class CurtainAccessory(models.Model):
     class Meta:
         verbose_name = 'إكسسوار الستارة'
         verbose_name_plural = 'إكسسوارات الستائر'
+
+    @property
+    def display_name(self):
+        """اسم الإكسسوار للعرض - يأخذ الاسم اليدوي أو اسم المنتج"""
+        if self.accessory_name:
+            return self.accessory_name
+        if self.order_item:
+            return self.order_item.product.name
+        if self.draft_order_item:
+            return self.draft_order_item.product.name
+        return "غير محدد"
     
     def __str__(self):
-        parts = [self.accessory_name]
+        parts = [self.display_name]
         if self.count and self.size:
             parts.append(f"({self.count} × {self.size} = {self.quantity})")
         elif self.quantity:

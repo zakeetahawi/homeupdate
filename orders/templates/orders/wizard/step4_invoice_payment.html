@@ -8,13 +8,13 @@
 
 <form method="post" id="step4-form" enctype="multipart/form-data" novalidate>
     {% csrf_token %}
-    
+
     <div class="row">
         <div class="col-md-6">
             <h5 class="mb-3">
                 <i class="fas fa-file-invoice me-2"></i>تفاصيل المرجع
             </h5>
-            
+
             <!-- Invoice Numbers -->
             <div class="mb-3">
                 <label for="{{ form.invoice_number.id_for_label }}" class="form-label fw-bold">
@@ -24,24 +24,24 @@
                 {{ form.invoice_number }}
                 <div id="invoice-number-warning" class="mt-2" style="display: none;"></div>
                 {% if form.invoice_number.errors %}
-                    <div class="text-danger mt-1">{{ form.invoice_number.errors }}</div>
+                <div class="text-danger mt-1">{{ form.invoice_number.errors }}</div>
                 {% endif %}
             </div>
-            
+
             <div class="mb-3">
                 <label for="{{ form.invoice_number_2.id_for_label }}" class="form-label">
                     رقم مرجع إضافي 1
                 </label>
                 {{ form.invoice_number_2 }}
             </div>
-            
+
             <div class="mb-3">
                 <label for="{{ form.invoice_number_3.id_for_label }}" class="form-label">
                     رقم مرجع إضافي 2
                 </label>
                 {{ form.invoice_number_3 }}
             </div>
-            
+
             <!-- Invoice Images - صور الفاتورة المتعددة -->
             <div class="mb-3">
                 <label class="form-label fw-bold">
@@ -50,49 +50,55 @@
                     <span class="text-danger">*</span>
                     {% endif %}
                 </label>
-                
+
                 <!-- عرض الصور الحالية -->
                 <div id="current-images" class="mb-3">
                     {% if draft.invoice_image %}
-                        <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between bg-light" id="main-invoice-image">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-image me-2 text-success"></i>
-                                <span class="fw-bold">صورة الفاتورة الرئيسية</span>
-                            </div>
-                            <div>
-                                <a href="{{ draft.invoice_image.url }}" target="_blank" class="btn btn-sm btn-outline-success me-1" title="عرض الصورة">
-                                    <i class="fas fa-eye me-1"></i>عرض
-                                </a>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteMainInvoiceImage()" title="حذف الصورة">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
+                    <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between bg-light"
+                        id="main-invoice-image">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-image me-2 text-success"></i>
+                            <span class="fw-bold">صورة الفاتورة الرئيسية</span>
                         </div>
+                        <div>
+                            <a href="{{ draft.invoice_image.url }}" target="_blank"
+                                class="btn btn-sm btn-outline-success me-1" title="عرض الصورة">
+                                <i class="fas fa-eye me-1"></i>عرض
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                onclick="deleteMainInvoiceImage()" title="حذف الصورة">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
                     {% endif %}
                     {% for img in draft.invoice_images_new.all %}
-                        <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between bg-light" id="invoice-image-{{ img.id }}">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-image me-2 text-success"></i>
-                                <span>صورة فاتورة {{ forloop.counter }}</span>
-                            </div>
-                            <div>
-                                <a href="{{ img.image.url }}" target="_blank" class="btn btn-sm btn-outline-success me-1" title="عرض الصورة">
-                                    <i class="fas fa-eye me-1"></i>عرض
-                                </a>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteInvoiceImage({{ img.id }})" title="حذف الصورة">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
+                    <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between bg-light"
+                        id="invoice-image-{{ img.id }}">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-image me-2 text-success"></i>
+                            <span>صورة فاتورة {{ forloop.counter }}</span>
                         </div>
+                        <div>
+                            <a href="{{ img.image.url }}" target="_blank" class="btn btn-sm btn-outline-success me-1"
+                                title="عرض الصورة">
+                                <i class="fas fa-eye me-1"></i>عرض
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                onclick="deleteInvoiceImage({{ img.id }})" title="حذف الصورة">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
                     {% endfor %}
                     {% if not draft.invoice_image and not draft.invoice_images_new.exists %}
-                        <div class="alert alert-info py-2 mb-2">
-                            <i class="fas fa-info-circle me-2"></i>
-                            لا توجد صور محفوظة. يرجى رفع صورة الفاتورة.
-                        </div>
+                    <div class="alert alert-info py-2 mb-2">
+                        <i class="fas fa-info-circle me-2"></i>
+                        لا توجد صور محفوظة. يرجى رفع صورة الفاتورة.
+                    </div>
                     {% endif %}
                 </div>
-                
+
                 <!-- حقول رفع الصور -->
                 <div id="invoice-images-container">
                     {% if not draft.invoice_image and not draft.invoice_images_new.exists %}
@@ -103,21 +109,24 @@
                     {% else %}
                     <!-- إذا كانت هناك صور محفوظة، الحقل الأول اختياري مع زر حذف -->
                     <div class="invoice-image-input mb-2 d-flex gap-2">
-                        <input type="file" name="invoice_image" class="form-control" accept="image/*" id="invoice_image_field">
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">
+                        <input type="file" name="invoice_image" class="form-control" accept="image/*"
+                            id="invoice_image_field">
+                        <button type="button" class="btn btn-sm btn-outline-danger"
+                            onclick="this.parentElement.remove()">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                     {% endif %}
                 </div>
-                
+
                 <!-- زر إضافة صورة جديدة -->
-                <button type="button" class="btn btn-sm btn-outline-primary" id="add-invoice-image" onclick="addInvoiceImageField()">
+                <button type="button" class="btn btn-sm btn-outline-primary" id="add-invoice-image"
+                    onclick="addInvoiceImageField()">
                     <i class="fas fa-plus me-1"></i>إضافة صورة إضافية
                 </button>
-                
+
                 {% if form.invoice_image.errors %}
-                    <div class="text-danger mt-2">{{ form.invoice_image.errors }}</div>
+                <div class="text-danger mt-2">{{ form.invoice_image.errors }}</div>
                 {% endif %}
                 <div class="form-text mt-2">
                     <i class="fas fa-info-circle me-1"></i>
@@ -125,12 +134,12 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-6">
             <h5 class="mb-3">
                 <i class="fas fa-money-bill-wave me-2"></i>معلومات الدفع
             </h5>
-            
+
             <!-- Payment Summary -->
             <div class="alert alert-info mb-4">
                 <h6 class="alert-heading">ملخص المبالغ</h6>
@@ -148,7 +157,7 @@
                     <strong class="h6 text-success">{{ totals.final_total|format_currency }}</strong>
                 </div>
             </div>
-            
+
             <!-- Payment Method -->
             <div class="mb-3">
                 <label for="{{ form.payment_method.id_for_label }}" class="form-label fw-bold">
@@ -156,7 +165,7 @@
                 </label>
                 {{ form.payment_method }}
             </div>
-            
+
             <!-- Paid Amount -->
             <div class="mb-3">
                 <label for="{{ form.paid_amount.id_for_label }}" class="form-label fw-bold">
@@ -165,10 +174,10 @@
                 </label>
                 {{ form.paid_amount }}
                 {% if form.paid_amount.errors %}
-                    <div class="alert alert-danger mt-2 py-2">
-                        <i class="fas fa-exclamation-circle me-1"></i>
-                        {{ form.paid_amount.errors }}
-                    </div>
+                <div class="alert alert-danger mt-2 py-2">
+                    <i class="fas fa-exclamation-circle me-1"></i>
+                    {{ form.paid_amount.errors }}
+                </div>
                 {% endif %}
                 <div class="alert alert-warning mt-2 py-2">
                     <i class="fas fa-lightbulb me-1"></i>
@@ -181,7 +190,7 @@
                     المتبقي: <span id="remaining-amount">{{ totals.remaining|clean_decimal }}</span> {{ currency_symbol }}
                 </div>
             </div>
-            
+
             <!-- Payment Notes -->
             <div class="mb-3">
                 <label for="{{ form.payment_notes.id_for_label }}" class="form-label">
@@ -191,7 +200,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Actions -->
     <div class="wizard-actions">
         <div>
@@ -219,286 +228,302 @@
 
 <!-- JavaScript Functions - دوال عامة -->
 <script>
-// إضافة حقل صورة جديد - دالة عامة يمكن الوصول إليها من onclick
-let imageFieldCounter = 1;
-window.addInvoiceImageField = function() {
-    const container = document.getElementById('invoice-images-container');
-    if (!container) {
-        console.error('Container not found');
-        return;
-    }
-    
-    const newField = document.createElement('div');
-    newField.className = 'invoice-image-input mb-2 d-flex gap-2';
-    newField.innerHTML = `
+    // إضافة حقل صورة جديد - دالة عامة يمكن الوصول إليها من onclick
+    let imageFieldCounter = 1;
+    window.addInvoiceImageField = function () {
+        const container = document.getElementById('invoice-images-container');
+        if (!container) {
+            console.error('Container not found');
+            return;
+        }
+
+        const newField = document.createElement('div');
+        newField.className = 'invoice-image-input mb-2 d-flex gap-2';
+        newField.innerHTML = `
         <input type="file" name="additional_invoice_image_${imageFieldCounter}" 
                class="form-control" accept="image/*">
         <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">
             <i class="fas fa-times"></i>
         </button>
     `;
-    container.appendChild(newField);
-    imageFieldCounter++;
-    console.log('Added new image field');
-}
+        container.appendChild(newField);
+        imageFieldCounter++;
+        console.log('Added new image field');
+    }
 
-// حذف صورة فاتورة - دالة عامة
-window.deleteInvoiceImage = function(imageId) {
-    Swal.fire({
-        title: 'هل أنت متأكد؟',
-        text: 'سيتم حذف هذه الصورة نهائياً',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'نعم، احذف',
-        cancelButtonText: 'إلغاء'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            fetch(`/orders/wizard/delete-invoice-image/${imageId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // إزالة العنصر من DOM بدلاً من إعادة التحميل
-                    const element = document.getElementById(`invoice-image-${imageId}`);
-                    if (element) {
-                        element.remove();
+    // حذف صورة فاتورة - دالة عامة
+    window.deleteInvoiceImage = function (imageId) {
+        Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: 'سيتم حذف هذه الصورة نهائياً',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'نعم، احذف',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/orders/wizard/delete-invoice-image/${imageId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
                     }
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'تم الحذف!',
-                        text: 'تم حذف الصورة بنجاح',
-                        timer: 1500,
-                        showConfirmButton: false
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // إزالة العنصر من DOM بدلاً من إعادة التحميل
+                            const element = document.getElementById(`invoice-image-${imageId}`);
+                            if (element) {
+                                element.remove();
+                            }
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'تم الحذف!',
+                                text: 'تم حذف الصورة بنجاح',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire('خطأ!', data.error || 'حدث خطأ أثناء الحذف', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire('خطأ!', 'حدث خطأ في الاتصال بالخادم', 'error');
                     });
-                } else {
-                    Swal.fire('خطأ!', data.error || 'حدث خطأ أثناء الحذف', 'error');
-                }
-            })
-            .catch(error => {
-                Swal.fire('خطأ!', 'حدث خطأ في الاتصال بالخادم', 'error');
-            });
-        }
-    });
-}
+            }
+        });
+    }
 
-// حذف الصورة الرئيسية للفاتورة
-window.deleteMainInvoiceImage = function() {
-    Swal.fire({
-        title: 'هل أنت متأكد؟',
-        text: 'سيتم حذف صورة الفاتورة الرئيسية نهائياً',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'نعم، احذف',
-        cancelButtonText: 'إلغاء'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            fetch(`/orders/wizard/delete-main-invoice-image/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // إزالة العنصر من DOM
-                    const element = document.getElementById('main-invoice-image');
-                    if (element) {
-                        element.remove();
+    // حذف الصورة الرئيسية للفاتورة
+    window.deleteMainInvoiceImage = function () {
+        Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: 'سيتم حذف صورة الفاتورة الرئيسية نهائياً',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'نعم، احذف',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/orders/wizard/delete-main-invoice-image/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
                     }
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'تم الحذف!',
-                        text: 'تم حذف صورة الفاتورة الرئيسية بنجاح',
-                        timer: 1500,
-                        showConfirmButton: false
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // إزالة العنصر من DOM
+                            const element = document.getElementById('main-invoice-image');
+                            if (element) {
+                                element.remove();
+                            }
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'تم الحذف!',
+                                text: 'تم حذف صورة الفاتورة الرئيسية بنجاح',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire('خطأ!', data.error || 'حدث خطأ أثناء الحذف', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire('خطأ!', 'حدث خطأ في الاتصال بالخادم', 'error');
                     });
-                } else {
-                    Swal.fire('خطأ!', data.error || 'حدث خطأ أثناء الحذف', 'error');
-                }
-            })
-            .catch(error => {
-                Swal.fire('خطأ!', 'حدث خطأ في الاتصال بالخادم', 'error');
-            });
-        }
-    });
-}
+            }
+        });
+    }
 </script>
 
 <script>
-// بيانات المسودة
-const customerId = {{ draft.customer.id|default:"null" }};
-const orderType = "{{ draft.selected_type|default:'' }}";
-const checkInvoiceUrl = "{% url 'orders:check_invoice_number_api' %}";
+    // بيانات المسودة
+    const customerId = {% if draft.customer %}{ { draft.customer.id } } {% else %} null{% endif %};
+    const orderType = "{{ draft.selected_type|default:'' }}";
+    const checkInvoiceUrl = "{% url 'orders:check_invoice_number_api' %}";
 
-// حساب المبلغ المتبقي تلقائياً
-const totalAmount = {{ totals.final_total }};
-const minimumPayment = {{ totals.minimum_payment }};
-const paidAmountInput = document.getElementById('{{ form.paid_amount.id_for_label }}');
-const invoiceNumberInput = document.getElementById('{{ form.invoice_number.id_for_label }}') || 
-                           document.getElementById('id_invoice_number') ||
-                           document.querySelector('[name="invoice_number"]');
+    // حساب المبلغ المتبقي تلقائياً
+    const totalAmount = {{ totals.final_total }};
+    const minimumPayment = {{ totals.minimum_payment }};
+    const paidAmountInput = document.getElementById('{{ form.paid_amount.id_for_label }}');
+    const invoiceNumberInput = document.getElementById('{{ form.invoice_number.id_for_label }}') ||
+        document.getElementById('id_invoice_number') ||
+        document.querySelector('[name="invoice_number"]');
 
-// متغير لتتبع حالة التحقق
-let invoiceNumberValid = true;
-let checkTimeout = null;
+    // متغير لتتبع حالة التحقق
+    let invoiceNumberValid = true;
+    let checkTimeout = null;
 
-// التحقق من رقم المرجع عند الكتابة
-if (invoiceNumberInput) {
-    invoiceNumberInput.addEventListener('input', function() {
-        // إلغاء أي تحقق سابق
-        if (checkTimeout) {
-            clearTimeout(checkTimeout);
-        }
-        
-        // تأخير التحقق لتجنب الاستعلامات المتكررة
-        checkTimeout = setTimeout(function() {
+    // التحقق من رقم المرجع عند الكتابة
+    if (invoiceNumberInput) {
+        invoiceNumberInput.addEventListener('input', function () {
+            // إلغاء أي تحقق سابق
+            if (checkTimeout) {
+                clearTimeout(checkTimeout);
+            }
+
+            // تأخير التحقق لتجنب الاستعلامات المتكررة
+            checkTimeout = setTimeout(function () {
+                checkInvoiceNumber(invoiceNumberInput.value);
+            }, 500);
+        });
+
+        // التحقق عند مغادرة الحقل
+        invoiceNumberInput.addEventListener('blur', function () {
+            if (checkTimeout) {
+                clearTimeout(checkTimeout);
+            }
             checkInvoiceNumber(invoiceNumberInput.value);
-        }, 500);
-    });
-    
-    // التحقق عند مغادرة الحقل
-    invoiceNumberInput.addEventListener('blur', function() {
-        if (checkTimeout) {
-            clearTimeout(checkTimeout);
-        }
-        checkInvoiceNumber(invoiceNumberInput.value);
-    });
-}
-
-function checkInvoiceNumber(invoiceNumber) {
-    const warningDiv = document.getElementById('invoice-number-warning');
-    
-    if (!invoiceNumber || !customerId) {
-        warningDiv.style.display = 'none';
-        invoiceNumberValid = true;
-        return;
+        });
     }
-    
-    fetch(`${checkInvoiceUrl}?invoice_number=${encodeURIComponent(invoiceNumber)}&customer_id=${customerId}&order_type=${orderType}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.exists) {
-                if (data.same_type) {
-                    // نفس النوع - لا يمكن المتابعة
-                    invoiceNumberValid = false;
-                    warningDiv.innerHTML = `
-                        <div class="alert alert-danger py-2">
-                            <i class="fas fa-times-circle me-2"></i>
-                            <strong>خطأ:</strong> ${data.message}
-                        </div>
-                    `;
-                    warningDiv.style.display = 'block';
-                    
-                    // عرض SweetAlert
-                    Swal.fire({
-                        icon: 'error',
-                        title: data.title,
-                        html: data.message,
-                        confirmButtonText: 'حسناً',
-                        confirmButtonColor: '#dc3545'
-                    });
+
+    async function checkInvoiceNumber(invoiceNumber) {
+        const warningDiv = document.getElementById('invoice-number-warning');
+
+        if (!invoiceNumber || !customerId) {
+            warningDiv.style.display = 'none';
+            invoiceNumberValid = true;
+            return;
+        }
+
+        // الحصول على CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // معرف الطلب الحالي في حالة التعديل
+        const currentOrderId = '{{ request.session.editing_order_id|default:"" }}';
+
+        // التحقق من صحة رقم المرجع
+        const data = {
+            invoice_number: invoiceNumber,
+            customer_id: customerId,
+            order_type: '{{ draft.selected_type }}',
+            current_order_id: currentOrderId // ⚡ إضافة المعرف لاستثنائه
+        };
+
+        fetch('{% url "orders:check_invoice_number_api" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.exists) {
+                    // الرقم مستخدم مسبقاً
+                    // إذا كان المستخدم نفس العميل ولنفس النوع فهذا خطأ حاسم إلا إذا كان نفس الطلب
+                    if (data.is_blocking) {
+                        invoiceNumberValid = false;
+                        warningDiv.innerHTML = `
+                    <div class="alert alert-danger py-2">
+                        <i class="fas fa-times-circle me-2"></i>
+                        <strong>خطأ:</strong> ${data.message}
+                    </div>
+                `;
+                        warningDiv.style.display = 'block';
+
+                        // عرض SweetAlert
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'رقم مرجع مكرر',
+                            text: data.message,
+                            confirmButtonText: 'حسناً',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    } else {
+                        // تحذير فقط
+                        invoiceNumberValid = true;
+                        warningDiv.innerHTML = `
+                    <div class="alert alert-warning py-2">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>تنبيه:</strong> ${data.message}
+                    </div>
+                `;
+                        warningDiv.style.display = 'block';
+                    }
                 } else {
-                    // نوع مختلف - تحذير فقط
+                    // الرقم متاح
                     invoiceNumberValid = true;
-                    warningDiv.innerHTML = `
-                        <div class="alert alert-warning py-2">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>تنبيه:</strong> ${data.message}
-                        </div>
-                    `;
-                    warningDiv.style.display = 'block';
-                    
-                    // عرض SweetAlert تحذيري
-                    Swal.fire({
-                        icon: 'warning',
-                        title: data.title,
-                        html: data.message,
-                        confirmButtonText: 'حسناً، متابعة',
-                        confirmButtonColor: '#ffc107'
-                    });
+                    warningDiv.style.display = 'none';
                 }
-            } else {
+            })
+            .catch(error => {
+                console.error('Error checking invoice number:', error);
+                // في حالة الخطأ، نفترض صحة الرقم للسماح بالمتابعة
                 invoiceNumberValid = true;
                 warningDiv.style.display = 'none';
-            }
-        })
-        .catch(error => {
-            console.error('Error checking invoice number:', error);
-            invoiceNumberValid = true;
-        });
-}
-
-paidAmountInput.addEventListener('input', function() {
-    const paidAmount = parseFloat(this.value) || 0;
-    const remaining = totalAmount - paidAmount;
-    
-    // تنسيق الرقم بدون أصفار زائدة
-    const formattedRemaining = remaining.toFixed(2).replace(/\.?0+$/, '');
-    document.getElementById('remaining-amount').textContent = formattedRemaining;
-    
-    // إزالة الحدود السابقة
-    this.classList.remove('is-invalid', 'is-valid', 'field-required-error');
-    
-    // السماح بتجاوز المبلغ الإجمالي
-    if (paidAmount >= minimumPayment) {
-        this.classList.add('is-valid');
-    } else if (paidAmount > 0) {
-        this.classList.add('is-invalid');
+            });
     }
-});
 
-// إزالة الدوال المكررة التي كانت هنا - تم نقلها إلى window object أعلاه
+    paidAmountInput.addEventListener('input', function () {
+        const paidAmount = parseFloat(this.value) || 0;
+        const remaining = totalAmount - paidAmount;
 
-// معالجة إرسال النموذج
-document.getElementById('step4-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // إزالة جميع الأخطاء السابقة
-    clearAllFieldErrors(this);
-    
-    const missingFields = [];
-    let hasErrors = false;
-    
-    // التحقق من رقم المرجع
-    const invoiceNumberField = document.getElementById('{{ form.invoice_number.id_for_label }}');
-    if (!invoiceNumberField || !invoiceNumberField.value.trim()) {
-        hasErrors = true;
-        missingFields.push('رقم المرجع الرئيسي');
-        markFieldAsError(invoiceNumberField, 'يرجى إدخال رقم المرجع');
-    }
-    
-    // التحقق من صحة رقم المرجع (غير مكرر)
-    if (!invoiceNumberValid) {
-        hasErrors = true;
-        missingFields.push('رقم المرجع مستخدم مسبقاً');
-        markFieldAsError(invoiceNumberField, 'رقم المرجع مستخدم مسبقاً لهذا العميل');
-        
-        Swal.fire({
-            icon: 'error',
-            title: 'لا يمكن المتابعة',
-            text: 'رقم المرجع مستخدم مسبقاً لهذا العميل في طلب من نفس النوع. يرجى استخدام رقم مرجع مختلف.',
-            confirmButtonText: 'حسناً',
-            confirmButtonColor: '#dc3545'
-        });
-        return false;
-    }
-    
-    // التحقق من صورة الفاتورة (إلزامية لغير المعاينة)
-    const draftType = '{{ draft.selected_type }}';
-    const hasExistingImages = {{ draft.invoice_image|yesno:"true,false" }} || {{ draft.invoice_images_new.exists|yesno:"true,false" }};
+        // تنسيق الرقم بدون أصفار زائدة
+        const formattedRemaining = remaining.toFixed(2).replace(/\.?0+$/, '');
+        document.getElementById('remaining-amount').textContent = formattedRemaining;
+
+        // إزالة الحدود السابقة
+        this.classList.remove('is-invalid', 'is-valid', 'field-required-error');
+
+        // السماح بتجاوز المبلغ الإجمالي
+        if (paidAmount >= minimumPayment) {
+            this.classList.add('is-valid');
+        } else if (paidAmount > 0) {
+            this.classList.add('is-invalid');
+        }
+    });
+
+    // إزالة الدوال المكررة التي كانت هنا - تم نقلها إلى window object أعلاه
+
+    // معالجة إرسال النموذج
+    document.getElementById('step4-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        // إزالة جميع الأخطاء السابقة
+        clearAllFieldErrors(this);
+
+        const missingFields = [];
+        let hasErrors = false;
+
+        // التحقق من رقم المرجع
+        const invoiceNumberField = document.getElementById('{{ form.invoice_number.id_for_label }}');
+        if (!invoiceNumberField || !invoiceNumberField.value.trim()) {
+            hasErrors = true;
+            missingFields.push('رقم المرجع الرئيسي');
+            markFieldAsError(invoiceNumberField, 'يرجى إدخال رقم المرجع');
+        }
+
+        // التحقق من صحة رقم المرجع (غير مكرر)
+        if (!invoiceNumberValid) {
+            hasErrors = true;
+            missingFields.push('رقم المرجع مستخدم مسبقاً');
+            markFieldAsError(invoiceNumberField, 'رقم المرجع مستخدم مسبقاً لهذا العميل');
+
+            Swal.fire({
+                icon: 'error',
+                title: 'لا يمكن المتابعة',
+                text: 'رقم المرجع مستخدم مسبقاً لهذا العميل في طلب من نفس النوع. يرجى استخدام رقم مرجع مختلف.',
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#dc3545'
+            });
+            return false;
+        }
+
+        // التحقق من صورة الفاتورة (إلزامية لغير المعاينة)
+        const draftType = '{{ draft.selected_type }}';
+        const hasExistingImages = {{ draft.invoice_image|yesno:"true,false" }} || {{ draft.invoice_images_new.exists|yesno:"true,false" }};
     const invoiceImageField = document.getElementById('{{ form.invoice_image.id_for_label }}') || document.querySelector('input[name="invoice_image"]');
-    
+
     if (draftType !== 'inspection' && !hasExistingImages) {
         if (!invoiceImageField || !invoiceImageField.files || invoiceImageField.files.length === 0) {
             hasErrors = true;
@@ -506,26 +531,26 @@ document.getElementById('step4-form').addEventListener('submit', function(e) {
             markFieldAsError(invoiceImageField, 'يرجى رفع صورة الفاتورة');
         }
     }
-    
+
     const paidAmount = parseFloat(paidAmountInput.value) || 0;
-    
+
     // التحقق من المبلغ المدفوع
     if (paidAmount <= 0) {
         hasErrors = true;
         missingFields.push('المبلغ المدفوع');
         markFieldAsError(paidAmountInput, 'يرجى إدخال المبلغ المدفوع');
     }
-    
+
     // إذا كانت هناك أخطاء أولية، عرضها
     if (hasErrors) {
         showValidationAlert(missingFields);
         return false;
     }
-    
+
     // التحقق من الحد الأدنى
     if (paidAmount < minimumPayment) {
         markFieldAsError(paidAmountInput, `الحد الأدنى المطلوب: ${minimumPayment.toFixed(2)} جنيه`);
-        
+
         Swal.fire({
             icon: 'warning',
             title: 'المبلغ المدفوع غير كافٍ',
@@ -538,7 +563,7 @@ document.getElementById('step4-form').addEventListener('submit', function(e) {
         paidAmountInput.focus();
         return false;
     }
-    
+
     // تنبيه إذا تجاوز المبلغ الإجمالي (بدون منع الإرسال)
     if (paidAmount > totalAmount) {
         const overpayment = paidAmount - totalAmount;
@@ -563,7 +588,7 @@ document.getElementById('step4-form').addEventListener('submit', function(e) {
         });
         return false;
     }
-    
+
     submitWizardStep(this);
 });
 </script>

@@ -432,6 +432,13 @@ class DraftOrderItem(models.Model):
     notes = models.TextField(blank=True, null=True, verbose_name='ملاحظات')
     
     # تتبع التعديلات
+    original_item_id = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name='معرف العنصر الأصلي',
+        help_text='يستخدم عند تعديل الطلب لربط عنصر المسودة بالعنصر الأصلي'
+    )
+    
     added_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

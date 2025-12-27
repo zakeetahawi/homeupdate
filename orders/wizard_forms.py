@@ -390,11 +390,25 @@ class Step4InvoicePaymentForm(forms.ModelForm):
         
         # جعل صورة الفاتورة إجبارية فقط إذا لم توجد صور محفوظة
         if self.draft_order and self.draft_order.selected_type != 'inspection':
-            # التحقق من وجود صور محفوظة
+            # التحقق من وجود صور محفوظة (في المسودة أو الطلب الأصلي)
             has_saved_images = (
                 (self.draft_order.invoice_image) or 
                 (self.draft_order.invoice_images_new.exists())
             )
+            
+            # في حالة التعديل، نتحقق من الطلب الأصلي أيضاً
+            editing_order_id = None
+            if hasattr(self, 'request') and self.request:
+                editing_order_id = self.request.session.get('editing_order_id')
+                
+            if not has_saved_images and editing_order_id:
+                from orders.models import Order
+                try:
+                    original_order = Order.objects.get(pk=editing_order_id)
+                    if original_order.invoice_image:
+                        has_saved_images = True
+                except Order.DoesNotExist:
+                    pass
             
             # إذا لم توجد صور محفوظة، الحقل إجباري
             if not has_saved_images:
@@ -463,6 +477,20 @@ class Step4InvoicePaymentForm(forms.ModelForm):
                 (self.draft_order.invoice_image) or 
                 (self.draft_order.invoice_images_new.exists())
             )
+            
+            # في حالة التعديل، نتحقق من الطلب الأصلي أيضاً
+            editing_order_id = None
+            if hasattr(self, 'request') and self.request:
+                editing_order_id = self.request.session.get('editing_order_id')
+                
+            if not has_saved_images and editing_order_id:
+                from orders.models import Order
+                try:
+                    original_order = Order.objects.get(pk=editing_order_id)
+                    if original_order.invoice_image:
+                        has_saved_images = True
+                except Order.DoesNotExist:
+                    pass
             
             # إذا لم توجد صور محفوظة ولم يتم رفع صورة جديدة
             if not invoice_image and not has_saved_images:

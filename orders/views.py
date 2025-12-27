@@ -1314,10 +1314,16 @@ def order_success_redirect(request, pk):
 
 @login_required
 def order_update_redirect(request, pk):
-    """إعادة توجيه من ID إلى صفحة تعديل الويزارد"""
+    """إعادة توجيه من ID إلى صفحة تعديل الويزارد أو التعديل التقليدي حسب نوع الطلب"""
     order = get_object_or_404(Order, pk=pk)
-    # التوجيه إلى صفحة خيارات التعديل في الويزارد
-    return redirect('orders:wizard_edit_options', order_pk=order.pk)
+    
+    # إذا كان الطلب منشأ عبر الويزارد، نوجه لصفحة خيارات الويزارد
+    if order.creation_method == 'wizard':
+        return redirect('orders:wizard_edit_options', order_pk=order.pk)
+    
+    # غير ذلك، نرسله لصفحة التعديل التقليدية
+    # ملاحظة: نقوم باستدعاء الـ View مباشرة لأن URL 'order_update' يشير لهذه الدالة نفسها
+    return order_update(request, pk)
 
 @login_required
 def order_delete_redirect(request, pk):

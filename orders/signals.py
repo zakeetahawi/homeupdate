@@ -797,6 +797,39 @@ def order_post_save(sender, instance, created, **kwargs):
                     is_manual_modification=True,
                     modified_fields=modified_fields_data
                 )
+            
+            # تحديث ManufacturingOrder عند تغيير invoice_number
+            if instance.tracker.has_changed('invoice_number'):
+                try:
+                    from django.db import transaction
+                    from manufacturing.models import ManufacturingOrder
+                    
+                    # حفظ القيمة الجديدة
+                    new_invoice_number = instance.invoice_number
+                    old_invoice = instance.tracker.previous('invoice_number')
+                    order_number = instance.order_number
+                    order_pk = instance.pk
+                    
+                    print(f"🔍 [order_post_save] تغيير رقم الفاتورة من '{old_invoice}' إلى '{new_invoice_number}' للطلب {order_number}")
+                    
+                    # استخدام on_commit لضمان التحديث بعد اكتمال الحفظ
+                    def update_manufacturing_orders():
+                        try:
+                            manufacturing_orders = ManufacturingOrder.objects.filter(order_id=order_pk)
+                            if manufacturing_orders.exists():
+                                updated_count = manufacturing_orders.update(invoice_number=new_invoice_number)
+                                logger.info(f"✅ [on_commit] تم تحديث رقم الفاتورة من '{old_invoice}' إلى '{new_invoice_number}' في {updated_count} أمر تصنيع للطلب {order_number}")
+                                print(f"✅ [on_commit] تم تحديث {updated_count} أمر تصنيع بالرقم {new_invoice_number}")
+                            else:
+                                print(f"⚠️ لا توجد أوامر تصنيع للطلب {order_number}")
+                        except Exception as e:
+                            logger.error(f"❌ خطأ في تحديث رقم الفاتورة: {e}")
+                            print(f"❌ خطأ: {e}")
+                    
+                    transaction.on_commit(update_manufacturing_orders)
+                except Exception as e:
+                    logger.error(f"❌ خطأ في تحديث رقم الفاتورة في أوامر التصنيع: {e}")
+                    print(f"❌ خطأ في تحديث ManufacturingOrder: {e}")
 
 
 @receiver(post_save, sender=Order)
@@ -846,6 +879,11 @@ def deduct_inventory_on_order_creation(sender, instance, created, **kwargs):
         
         from django.db import transaction
         transaction.on_commit(process_inventory_deduction)
+
+
+
+
+
 
 
 @receiver(post_save, sender=OrderItem)

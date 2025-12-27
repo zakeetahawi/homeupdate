@@ -59,6 +59,7 @@ class ContractGenerationService:
             'customer': self.order.customer,
             'curtains': curtains,
             'template': self.template,
+            'settings': self.template,  # إضافة settings للوصول إلى بيانات الشركة
             'working_days': working_days,  # إضافة عدد أيام التشغيل
             'total_meters': total_meters,  # إجمالي الأمتار
             'MEDIA_URL': settings.MEDIA_URL,  # إضافة MEDIA_URL

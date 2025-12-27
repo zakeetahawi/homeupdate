@@ -1563,11 +1563,6 @@ class FabricReceipt(models.Model):
         return self.order.contract_number if self.order else ''
 
     @property
-    def invoice_number(self):
-        """رقم الفاتورة"""
-        return self.order.invoice_number if self.order else ''
-
-    @property
     def order_number(self):
         """رقم الطلب"""
         return self.order.order_number if self.order else ''

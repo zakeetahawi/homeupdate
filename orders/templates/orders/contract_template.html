@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 {% load static %}
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,36 +14,39 @@
             font-weight: 400;
             src: url('file:///home/zakee/homeupdate/static/vendor/fonts/noto-naskh/NotoNaskhArabic-Regular.ttf') format('truetype');
         }
+
         @font-face {
             font-family: 'Noto Naskh Arabic';
             font-style: normal;
             font-weight: 500;
             src: url('file:///home/zakee/homeupdate/static/vendor/fonts/noto-naskh/NotoNaskhArabic-Medium.ttf') format('truetype');
         }
+
         @font-face {
             font-family: 'Noto Naskh Arabic';
             font-style: normal;
             font-weight: 600;
             src: url('file:///home/zakee/homeupdate/static/vendor/fonts/noto-naskh/NotoNaskhArabic-SemiBold.ttf') format('truetype');
         }
+
         @font-face {
             font-family: 'Noto Naskh Arabic';
             font-style: normal;
             font-weight: 700;
             src: url('file:///home/zakee/homeupdate/static/vendor/fonts/noto-naskh/NotoNaskhArabic-Bold.ttf') format('truetype');
         }
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         @page {
             size: A4 portrait;
             margin: 0.5cm;
         }
-        
+
         @page {
             @bottom-center {
                 content: "صفحة " counter(page) " من " counter(pages);
@@ -50,7 +54,7 @@
                 color: #666;
             }
         }
-        
+
         body {
             font-family: 'Noto Naskh Arabic', 'Arial', sans-serif;
             font-size: 11px;
@@ -60,7 +64,7 @@
             direction: rtl;
             position: relative;
         }
-        
+
         /* العلامة المائية */
         .watermark {
             position: fixed;
@@ -73,13 +77,13 @@
             z-index: 999;
             pointer-events: none;
         }
-        
+
         .watermark img {
             width: 100%;
             height: auto;
             object-fit: contain;
         }
-        
+
         .contract-page {
             max-width: 100%;
             margin: 0 auto;
@@ -88,7 +92,7 @@
             position: relative;
             z-index: 1;
         }
-        
+
         /* === HEADER === */
         .header-section {
             display: flex;
@@ -99,24 +103,24 @@
             margin-bottom: 2px;
             position: relative;
         }
-        
+
         .header-right {
             flex: 1;
             display: flex;
             gap: 6px;
             align-items: center;
         }
-        
+
         .header-center {
             flex: 1;
             text-align: center;
         }
-        
+
         .header-left {
             flex: 1;
             text-align: left;
         }
-        
+
         .contract-number-main {
             font-size: 14px;
             font-weight: 700;
@@ -125,7 +129,7 @@
             letter-spacing: 1px;
             display: inline-block;
         }
-        
+
         .service-badge {
             display: inline-block;
             padding: 3px 10px;
@@ -135,20 +139,37 @@
             color: white;
             margin-left: 4px;
         }
-        
-        .badge-tailoring { background: #16a085; }
-        .badge-installation { background: #2980b9; }
-        .badge-accessory { background: #d35400; }
-        .badge-delivery { background: #8e44ad; }
-        .badge-products { background: #27ae60; }
-        .badge-inspection { background: #e74c3c; }
-        
+
+        .badge-tailoring {
+            background: #16a085;
+        }
+
+        .badge-installation {
+            background: #2980b9;
+        }
+
+        .badge-accessory {
+            background: #d35400;
+        }
+
+        .badge-delivery {
+            background: #8e44ad;
+        }
+
+        .badge-products {
+            background: #27ae60;
+        }
+
+        .badge-inspection {
+            background: #e74c3c;
+        }
+
         .order-status-text {
             font-size: 14px;
             font-weight: 700;
             color: #666;
         }
-        
+
         .vip-badge {
             display: inline-flex;
             align-items: center;
@@ -161,11 +182,11 @@
             background: linear-gradient(135deg, #d4af37 0%, #f4e5a1 50%, #d4af37 100%);
             border: 2px solid #f4e5a1;
         }
-        
+
         .vip-crown {
             font-size: 16px;
         }
-        
+
         .logo-box {
             position: absolute;
             left: 0;
@@ -180,13 +201,13 @@
             align-items: center;
             justify-content: center;
         }
-        
+
         .logo-box img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
         }
-        
+
         .cards-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -194,7 +215,7 @@
             margin-bottom: 2px;
             width: 100%;
         }
-        
+
         .info-card {
             background: #f8f5f0;
             border: 1.5px solid #a67c52;
@@ -203,7 +224,7 @@
             width: 100%;
             box-sizing: border-box;
         }
-        
+
         .card-title {
             font-size: 13px;
             font-weight: 700;
@@ -212,18 +233,18 @@
             border-bottom: 1px solid #d4a574;
             padding-bottom: 0;
         }
-        
+
         .card-row {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 0;
         }
-        
+
         .card-row:last-child {
             margin-bottom: 0;
         }
-        
+
         .card-label {
             font-size: 13px;
             color: #888;
@@ -231,7 +252,7 @@
             display: block;
             margin-bottom: 0px;
         }
-        
+
         .card-value {
             font-size: 13px;
             color: #000;
@@ -240,7 +261,7 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        
+
         .curtain-count-badge {
             background: #a67c52;
             color: white;
@@ -250,7 +271,7 @@
             font-weight: 700;
             display: inline-block;
         }
-        
+
         .salesperson-phone {
             font-size: 11px;
             color: #666;
@@ -258,8 +279,8 @@
             display: block;
             margin-top: 0px;
         }
-        
-        
+
+
         /* === CURTAINS SECTION === */
         .section-title {
             font-size: 13px;
@@ -269,7 +290,7 @@
             padding-right: 5px;
             border-right: 3px solid #a67c52;
         }
-        
+
         .curtain-row {
             background: white;
             border: 2px solid #a67c52;
@@ -280,7 +301,7 @@
             width: 100%;
             box-sizing: border-box;
         }
-        
+
         /* Curtain Header */
         .curtain-header {
             background: white;
@@ -295,7 +316,7 @@
             width: 100%;
             box-sizing: border-box;
         }
-        
+
         .curtain-name-box {
             display: flex;
             align-items: center;
@@ -305,7 +326,7 @@
             flex: 0 0 auto;
             min-width: 0;
         }
-        
+
         .curtain-number {
             font-size: 13px;
             font-weight: 700;
@@ -314,7 +335,7 @@
             display: inline;
             margin-left: 10px;
         }
-        
+
         .curtain-name {
             font-size: 13px;
             font-weight: 700;
@@ -325,7 +346,7 @@
             text-overflow: ellipsis;
             max-width: 130px;
         }
-        
+
         .curtain-dimensions {
             display: flex;
             gap: 20px;
@@ -335,14 +356,14 @@
             flex: 1;
             min-width: 0;
         }
-        
+
         .dim-item {
             display: flex;
             align-items: center;
             gap: 10px;
             direction: rtl;
         }
-        
+
         .dim-label {
             font-size: 13px;
             color: #000;
@@ -351,7 +372,7 @@
             flex-shrink: 0;
             margin-left: 10px;
         }
-        
+
         .dim-badge {
             color: #8b6f47;
             font-size: 14px;
@@ -362,11 +383,11 @@
             display: inline-block;
             margin-left: 40px;
         }
-        
+
         .dim-badge.height-badge {
             color: #8b6f47;
         }
-        
+
         .curtain-extra-info {
             display: flex;
             align-items: center;
@@ -375,7 +396,7 @@
             flex: 0 0 auto;
             min-width: 0;
         }
-        
+
         .curtain-type {
             font-size: 11px;
             color: #666;
@@ -384,7 +405,7 @@
             border-radius: 4px;
             white-space: nowrap;
         }
-        
+
         .box-dimensions {
             background: transparent;
             border: 1px solid #d4a574;
@@ -394,7 +415,7 @@
             color: #8b6f47;
             white-space: nowrap;
         }
-        
+
         /* Curtain Content Grid */
         .curtain-content {
             display: grid;
@@ -403,7 +424,7 @@
             width: 100%;
             box-sizing: border-box;
         }
-        
+
         /* Fabric Section */
         .fabric-section {
             background: #fafafa;
@@ -413,7 +434,7 @@
             width: 100%;
             box-sizing: border-box;
         }
-        
+
         .section-header {
             font-size: 11px;
             font-weight: 700;
@@ -425,11 +446,11 @@
             align-items: center;
             gap: 2px;
         }
-        
+
         .section-icon {
             font-size: 12px;
         }
-        
+
         .fabric-block {
             background: white;
             padding: 1px 2px;
@@ -437,7 +458,7 @@
             margin-bottom: 1px;
             border: 1px solid #d4a574;
         }
-        
+
         .fabric-name-line {
             display: flex;
             align-items: center;
@@ -446,7 +467,7 @@
             flex-wrap: nowrap;
             width: 100%;
         }
-        
+
         .fabric-name-bold {
             font-size: 12px;
             font-weight: 700;
@@ -458,7 +479,7 @@
             min-width: 0;
             margin-left: 6px;
         }
-        
+
         .fabric-type-badge {
             display: inline-block;
             padding: 3px 8px;
@@ -470,25 +491,25 @@
             flex: 0 0 auto;
             margin-left: 18px;
         }
-        
+
         .fabric-type-badge.light {
             background: linear-gradient(135deg, #f1c40f 0%, #f9e79f 100%);
             color: #333;
         }
-        
+
         .fabric-type-badge.heavy {
             background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
         }
-        
+
         .fabric-type-badge.blackout {
             background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
         }
-        
+
         .fabric-type-badge.extra {
             background: linear-gradient(135deg, #95a5a6 0%, #bdc3c7 100%);
             color: #333;
         }
-        
+
         .fabric-meters {
             font-size: 12px;
             font-weight: 700;
@@ -496,14 +517,14 @@
             white-space: nowrap;
             flex: 0 0 auto;
         }
-        
+
         .fabric-specs {
             display: flex;
             gap: 2px;
             flex-wrap: wrap;
             align-items: center;
         }
-        
+
         .fabric-spec-item {
             background: #f8f5f0;
             padding: 2px 5px;
@@ -511,18 +532,18 @@
             font-size: 11px;
             border: 1px solid #d4a574;
         }
-        
+
         .fabric-spec-item.large {
             font-size: 12px;
             font-weight: 700;
             padding: 3px 6px;
         }
-        
+
         .spec-label-text {
             font-weight: 700;
             color: #a67c52;
         }
-        
+
         .fabric-notes {
             margin-top: 1px;
             font-size: 11px;
@@ -532,7 +553,7 @@
             border-radius: 3px;
             border-right: 2px solid #f39c12;
         }
-        
+
         /* Accessories Section */
         .accessories-section {
             background: #fafafa;
@@ -542,7 +563,7 @@
             width: 100%;
             box-sizing: border-box;
         }
-        
+
         .acc-title-text {
             font-size: 11px;
             font-weight: 700;
@@ -554,17 +575,17 @@
             align-items: center;
             gap: 2px;
         }
-        
+
         .acc-icon-emoji {
             font-size: 12px;
         }
-        
+
         .accessories-items {
             display: flex;
             flex-direction: column;
             gap: 1px;
         }
-        
+
         .accessory-row {
             background: white;
             padding: 2px 3px;
@@ -574,7 +595,7 @@
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .acc-name-text {
             font-weight: 700;
             font-size: 11px;
@@ -583,13 +604,13 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        
+
         .acc-info-right {
             display: flex;
             gap: 4px;
             align-items: center;
         }
-        
+
         .acc-qty-pill {
             background: #d35400;
             color: white;
@@ -598,7 +619,7 @@
             font-size: 11px;
             font-weight: 700;
         }
-        
+
         .acc-size-pill {
             background: #16a085;
             color: white;
@@ -608,7 +629,7 @@
             font-weight: 700;
             margin-left: 3px;
         }
-        
+
         .acc-color-pill {
             color: #666;
             font-size: 11px;
@@ -616,7 +637,7 @@
             padding: 2px 4px;
             border-radius: 3px;
         }
-        
+
         /* Curtain Notes Section - Full Width */
         .curtain-notes-section {
             background: #fffbf0;
@@ -630,7 +651,7 @@
             align-items: center;
             gap: 3px;
         }
-        
+
         .notes-header {
             font-size: 13px;
             font-weight: 700;
@@ -640,11 +661,11 @@
             gap: 2px;
             white-space: nowrap;
         }
-        
+
         .notes-icon {
             font-size: 14px;
         }
-        
+
         .notes-content {
             font-size: 13px;
             color: #333;
@@ -654,7 +675,7 @@
             white-space: nowrap;
             flex: 1;
         }
-        
+
         /* === FOOTER === */
         .footer-section {
             margin-top: 3px;
@@ -667,7 +688,7 @@
             align-items: center;
             page-break-inside: avoid;
         }
-        
+
         .page-number {
             text-align: center;
             font-size: 10px;
@@ -675,30 +696,30 @@
             margin-top: 2px;
             page-break-inside: avoid;
         }
-        
+
         .signature-box {
             text-align: center;
         }
-        
+
         .sig-line {
             width: 70px;
             border-top: 2px solid #a67c52;
             margin: 0 auto 1px;
             padding-top: 1px;
         }
-        
+
         .sig-label {
             font-size: 12px;
             font-weight: 700;
             color: #a67c52;
         }
-        
+
         .sig-name {
             font-size: 11px;
             color: #666;
             margin-top: 0;
         }
-        
+
         .print-btn {
             position: fixed;
             top: 15px;
@@ -714,25 +735,31 @@
             z-index: 1000;
             font-family: 'Noto Naskh Arabic', 'Arial', sans-serif;
         }
-        
+
         .print-btn:hover {
             background: #8b6f47;
         }
-        
+
         @media print {
-            .print-btn { display: none; }
-            .contract-page { padding: 0; }
+            .print-btn {
+                display: none;
+            }
+
+            .contract-page {
+                padding: 0;
+            }
         }
     </style>
 </head>
+
 <body>
     <button class="print-btn" onclick="window.print()">🖨️ طباعة</button>
-    
+
     <!-- العلامة المائية -->
     <div class="watermark">
         <img src="{{ MEDIA_ROOT }}/company_logos/Logo_1080.png" alt="علامة مائية">
     </div>
-    
+
     <div class="contract-page">
         <!-- HEADER -->
         <div class="header-section">
@@ -741,35 +768,35 @@
                 <img src="{{ settings.company_logo.url }}" alt="الشعار">
             </div>
             {% endif %}
-            
+
             <!-- Service Types (Right) -->
             <div class="header-right">
                 {% if order.service_types and order.service_types|length > 0 %}
-                    {% for service in order.service_types %}
-                    <span class="service-badge badge-{{ service }}">
-                        {% if service == 'tailoring' %}تسليم
-                        {% elif service == 'installation' %}تركيب
-                        {% elif service == 'accessory' %}إكسسوار
-                        {% elif service == 'products' %}منتجات
-                        {% elif service == 'inspection' %}معاينة
-                        {% else %}{{ service }}{% endif %}
-                    </span>
-                    {% endfor %}
-                    {% if total_meters %}
-                    <div style="font-size: 11px; color: #666; margin-top: 3px; margin-right: 5px;">
-                        ({{ total_meters|floatformat:2 }} متر)
-                    </div>
-                    {% endif %}
+                {% for service in order.service_types %}
+                <span class="service-badge badge-{{ service }}">
+                    {% if service == 'tailoring' %}تسليم
+                    {% elif service == 'installation' %}تركيب
+                    {% elif service == 'accessory' %}إكسسوار
+                    {% elif service == 'products' %}منتجات
+                    {% elif service == 'inspection' %}معاينة
+                    {% else %}{{ service }}{% endif %}
+                </span>
+                {% endfor %}
+                {% if total_meters %}
+                <div style="font-size: 11px; color: #666; margin-top: 3px; margin-right: 5px;">
+                    ({{ total_meters|floatformat:2 }} متر)
+                </div>
+                {% endif %}
                 {% endif %}
             </div>
-            
+
             <!-- Contract Number (Center) -->
             <div class="header-center">
                 <span class="contract-number-main" dir="ltr">
                     {{ order.order_number }}-{{ order.contract_number|default:"c1" }}
                 </span>
             </div>
-            
+
             <!-- Order Type/Status (Left) -->
             <div class="header-left">
                 {% if order.status == 'vip' %}
@@ -781,7 +808,7 @@
                 {% endif %}
             </div>
         </div>
-        
+
         <!-- INFO CARDS -->
         <div class="cards-row">
             <!-- Order Info Card -->
@@ -806,9 +833,9 @@
                         <span class="card-label">التسليم المتوقع</span>
                         <span class="card-value">
                             {% if order.expected_delivery_date %}
-                                {{ order.expected_delivery_date|date:"Y/m/d" }}
+                            {{ order.expected_delivery_date|date:"Y/m/d" }}
                             {% else %}
-                                غير محدد
+                            غير محدد
                             {% endif %}
                         </span>
                     </div>
@@ -822,7 +849,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Customer Card -->
             <div class="info-card">
                 <div class="card-title">بيانات العميل</div>
@@ -839,7 +866,15 @@
                 <div class="card-row">
                     <div>
                         <span class="card-label">البائع</span>
-                        <span class="card-value">{{ order.salesperson.name|default:order.created_by.get_full_name|default:order.created_by.username }}</span>
+                        <span class="card-value">
+                            {% if order.salesperson %}
+                            {{ order.salesperson.name }}
+                            {% elif order.created_by.get_full_name %}
+                            {{ order.created_by.get_full_name }}
+                            {% else %}
+                            {{ order.created_by.username }}
+                            {% endif %}
+                        </span>
                         {% if order.salesperson.phone %}
                         <span class="salesperson-phone">{{ order.salesperson.phone }}</span>
                         {% endif %}
@@ -857,10 +892,10 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- CURTAINS -->
         <div class="section-title">تفاصيل الستائر</div>
-        
+
         {% for curtain in curtains %}
         <div class="curtain-row">
             <!-- Curtain Header -->
@@ -870,12 +905,13 @@
                     <span class="curtain-number">ستارة {{ forloop.counter }}:</span>
                     <span class="curtain-name">{{ curtain.room_name }}</span>
                 </div>
-                
+
                 <!-- Contract Number Badge -->
-                <div style="background: #f8f5f0; border: 1.5px solid #a67c52; border-radius: 4px; padding: 2px 8px; margin: 0 10px;">
+                <div
+                    style="background: #f8f5f0; border: 1.5px solid #a67c52; border-radius: 4px; padding: 2px 8px; margin: 0 10px;">
                     <span style="font-size: 10px; font-weight: 700; color: #a67c52; letter-spacing: 0.5px; direction: ltr; display: inline-block;">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</span>
                 </div>
-                
+
                 <!-- Center: Dimensions -->
                 <div class="curtain-dimensions">
                     <div class="dim-item">
@@ -887,7 +923,7 @@
                         <span class="dim-badge height-badge">{{ curtain.height }}م</span>
                     </div>
                 </div>
-                
+
                 <!-- Left: Type + Box Info -->
                 <div class="curtain-extra-info">
                     {% if curtain.installation_type %}
@@ -902,7 +938,7 @@
                     {% endif %}
                 </div>
             </div>
-            
+
             <!-- Curtain Content -->
             <div class="curtain-content">
                 <!-- Accessories -->
@@ -915,9 +951,11 @@
                         {% for accessory in curtain.accessories.all %}
                         <div class="accessory-row">
                             <div style="flex: 1;">
-                                <span class="acc-name-text">{{ accessory.accessory_name }}</span>
+                                <span class="acc-name-text">{{ accessory.display_name }}</span>
                                 {% if accessory.accessory_type %}
-                                <span style="background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%); color: #333; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-right: 5px;">{{ accessory.accessory_type }}</span>
+                                <span
+                                    style="background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%); color: #333; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-right: 5px;">{{
+                                    accessory.accessory_type }}</span>
                                 {% endif %}
                                 {% if accessory.color %}
                                 <div style="font-size: 11px; color: #666; margin-top: 2px;">
@@ -951,7 +989,7 @@
                     </div>
                     {% endif %}
                 </div>
-                
+
                 <!-- Fabrics -->
                 <div class="fabric-section">
                     <div class="section-header">
@@ -974,20 +1012,18 @@
                             {% elif fabric.fabric_type %}
                             <span class="fabric-type-badge light">{{ fabric.get_fabric_type_display }}</span>
                             {% endif %}
-                            <span class="fabric-name-bold">{{ fabric.fabric_name|default:"قماش" }}</span>
-                            {% if 'حزام' in fabric.fabric_name or fabric.meters == 0 %}
+                            <span class="fabric-name-bold">{{ fabric.display_name }}</span>
+                            {% if 'حزام' in fabric.display_name or fabric.meters == 0 %}
                             <span class="fabric-meters">{{ fabric.pieces }} قطعة</span>
                             {% else %}
                             <span class="fabric-meters">{{ fabric.meters }}م × {{ fabric.pieces }} قطعة</span>
                             {% endif %}
                         </div>
-                        {% if fabric.tailoring_type %}
                         <div class="fabric-specs">
                             <div class="fabric-spec-item large">
                                 <span class="spec-label-text">نوع التفصيل:</span> {{ fabric.get_tailoring_type_display }}
                             </div>
                         </div>
-                        {% endif %}
                         {% if fabric.notes %}
                         <div class="fabric-notes">
                             <strong>ملاحظات:</strong> {{ fabric.notes }}
@@ -1002,7 +1038,7 @@
                     {% endif %}
                 </div>
             </div>
-            
+
             <!-- Curtain Notes Section - Full Width Row -->
             {% if curtain.notes %}
             <div class="curtain-notes-section">
@@ -1018,22 +1054,30 @@
             لم يتم إضافة ستائر لهذا العقد
         </div>
         {% endfor %}
-        
+
         <!-- FOOTER -->
         <div class="footer-section">
             <div class="signature-box">
                 <div class="sig-line"></div>
                 <div class="sig-label">توقيع البائع</div>
-                <div class="sig-name">{{ order.salesperson.name|default:order.created_by.get_full_name|default:order.created_by.username }}</div>
+                <div class="sig-name">
+                    {% if order.salesperson %}
+                    {{ order.salesperson.name }}
+                    {% elif order.created_by.get_full_name %}
+                    {{ order.created_by.get_full_name }}
+                    {% else %}
+                    {{ order.created_by.username }}
+                    {% endif %}
+                </div>
             </div>
-            
+
             <div class="signature-box">
                 <div class="sig-line"></div>
                 <div class="sig-label">تاريخ الطباعة</div>
                 <div class="sig-name">{% now "Y/m/d H:i" %}</div>
             </div>
         </div>
-        
+
         <div class="page-number">
             <script>
                 document.write('صفحة ' + '<span class="page"></span>' + ' من ' + '<span class="pages"></span>');
@@ -1041,4 +1085,5 @@
         </div>
     </div>
 </body>
+
 </html>
