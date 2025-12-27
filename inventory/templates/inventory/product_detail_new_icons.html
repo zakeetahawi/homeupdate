@@ -141,9 +141,6 @@
 <a href="{% url 'inventory:transaction_create' product.id %}" class="btn btn-success btn-sm">
     <i class="fas fa-exchange-alt"></i> إضافة حركة
 </a>
-<a href="{% url 'public:qr_export' %}" class="btn btn-warning btn-sm" target="_blank">
-    <i class="fas fa-qrcode"></i> تصدير QR
-</a>
 <a href="{% url 'inventory:product_delete' product.id %}" class="btn btn-danger btn-sm">
     <i class="fas fa-trash"></i> حذف
 </a>
@@ -178,43 +175,6 @@
                         <p>{{ product.description|default:"لا يوجد وصف" }}</p>
                     </div>
 
-                    <!-- QR Code Section -->
-                    {% if product.code %}
-                    <hr>
-                    <div class="qr-code-section text-center" id="qrSection">
-                        <h6><i class="fas fa-qrcode text-warning"></i> رمز QR</h6>
-
-                        <!-- QR Status Message -->
-                        {% if product.qr_code_base64 %}
-                        <div class="alert alert-success py-1 px-2 mb-2" style="font-size: 0.8rem;">
-                            <i class="fas fa-check-circle"></i> QR موجود ومخزن
-                        </div>
-                        {% else %}
-                        <div class="alert alert-warning py-1 px-2 mb-2" style="font-size: 0.8rem;">
-                            <i class="fas fa-exclamation-triangle"></i> لا يوجد QR مخزن (سيتم توليده عند الطلب)
-                        </div>
-                        {% endif %}
-
-                        <div class="bg-white p-3 rounded border d-inline-block my-2">
-                            <img src="{% url 'public:product_qr_image' product.code %}" alt="QR Code"
-                                style="width: 120px; height: 120px;" id="qrImage">
-                        </div>
-                        <div class="btn-group-vertical d-block mt-2">
-                            <a href="{% url 'public:product_qr_page' product.code %}"
-                                class="btn btn-warning btn-sm mb-1" target="_blank">
-                                <i class="fas fa-external-link-alt"></i> الصفحة العامة
-                            </a>
-                            <a href="{% url 'public:product_qr_image' product.code %}"
-                                class="btn btn-outline-secondary btn-sm mb-1" download="qr_{{ product.code }}.png">
-                                <i class="fas fa-download"></i> تحميل QR
-                            </a>
-                            <button type="button" class="btn btn-outline-warning btn-sm" id="regenerateQr"
-                                data-product-id="{{ product.id }}">
-                                <i class="fas fa-sync-alt"></i> إعادة توليد QR
-                            </button>
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -544,47 +504,5 @@
     });
     });
 
-    // Regenerate QR button handler
-    document.getElementById('regenerateQr')?.addEventListener('click', async function () {
-        const btn = this;
-        const productId = btn.dataset.productId;
-        const originalHtml = btn.innerHTML;
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري...';
-
-        try {
-            const response = await fetch(`/inventory/api/product/${productId}/generate-qr/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                // Refresh the QR image
-                const qrImg = document.getElementById('qrImage');
-                if (qrImg) {
-                    qrImg.src = qrImg.src + '?t=' + Date.now();
-                }
-                btn.innerHTML = '<i class="fas fa-check"></i> تم التوليد';
-                setTimeout(() => {
-                    btn.innerHTML = originalHtml;
-                    btn.disabled = false;
-                }, 2000);
-            } else {
-                alert('خطأ: ' + data.error);
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
-            }
-        } catch (err) {
-            alert('حدث خطأ: ' + err.message);
-            btn.innerHTML = originalHtml;
-            btn.disabled = false;
-        }
-    });
 </script>
 {% endblock %}

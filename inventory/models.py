@@ -1268,7 +1268,64 @@ class BaseProduct(models.Model):
         default=0
     )
     
+    # QR Code Field
+    qr_code_base64 = models.TextField(_('رمز QR (مخزن)'), blank=True, null=True)
+    
     is_active = models.BooleanField(_('نشط'), default=True)
+
+    def generate_qr(self, force=False):
+        """
+        توليد رمز QR للمنتج الأساسي
+        """
+        if not self.code:
+            return False
+        
+        if self.qr_code_base64 and not force:
+            return False
+
+        try:
+            import qrcode
+            from io import BytesIO
+            import base64
+            from django.conf import settings
+            
+            # الرابط يوجه لصفحة المنتج الأساسي التي تعرض كل المتغيرات
+            base_url = getattr(settings, 'CLOUDFLARE_WORKER_URL', 'https://qr.elkhawaga.uk')
+            qr_url = f"{base_url}/{self.code}"
+            
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=2,
+            )
+            qr.add_data(qr_url)
+            qr.make(fit=True)
+            
+            qr_img = qr.make_image(fill_color="black", back_color="white")
+            buffer = BytesIO()
+            qr_img.save(buffer, format='PNG')
+            self.qr_code_base64 = base64.b64encode(buffer.getvalue()).decode()
+            return True
+        except Exception:
+            return False
+
+    def get_qr_url(self):
+        """الحصول على رابط QR"""
+        from django.conf import settings
+        base_url = getattr(settings, 'CLOUDFLARE_WORKER_URL', 'https://qr.elkhawaga.uk')
+        return f"{base_url}/{self.code}"
+
+    def save(self, *args, **kwargs):
+        # توليد QR عند الحفظ إذا لم يكن موجوداً
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        if not self.qr_code_base64 and self.code:
+            if self.generate_qr():
+                # حفظ الحقل فقط لتجنب التكرار اللانهائي
+                BaseProduct.objects.filter(pk=self.pk).update(qr_code_base64=self.qr_code_base64)
+
     created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
     updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
     created_by = models.ForeignKey(

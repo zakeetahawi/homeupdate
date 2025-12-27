@@ -34,10 +34,6 @@ class ProductAdmin(admin.ModelAdmin):
         (_('التفاصيل'), {
             'fields': ('unit', 'price', 'minimum_stock')
         }),
-        (_('رمز QR'), {
-            'fields': ('qr_preview',),
-            'classes': ('collapse',)
-        }),
         (_('معلومات المخزون'), {
             'fields': ('get_current_stock', 'created_at', 'updated_at'),
             'classes': ('collapse',)
@@ -410,11 +406,12 @@ class ProductVariantInline(admin.TabularInline):
 @admin.register(BaseProduct)
 class BaseProductAdmin(admin.ModelAdmin):
     list_per_page = 25
-    list_display = ('code', 'name', 'category', 'base_price', 'variants_count', 'is_active')
+    list_display = ('code', 'name', 'category', 'base_price', 'variants_count', 'is_active', 'has_qr')
     list_filter = ('category', 'is_active', 'created_at')
     search_fields = ('name', 'code', 'description')
-    readonly_fields = ('created_at', 'updated_at', 'created_by')
+    readonly_fields = ('created_at', 'updated_at', 'created_by', 'qr_preview')
     inlines = [ProductVariantInline]
+    actions = ['regenerate_qrs', 'sync_to_cloudflare', 'download_pdf']
     
     fieldsets = (
         (_('معلومات المنتج الأساسي'), {
@@ -422,6 +419,10 @@ class BaseProductAdmin(admin.ModelAdmin):
         }),
         (_('التسعير'), {
             'fields': ('base_price', 'currency', 'unit')
+        }),
+        (_('QR Code'), {
+            'fields': ('qr_preview',),
+            'description': _('رمز QR الذي يوجه لصفحة المنتج بكافة متغيراته')
         }),
         (_('المخزون'), {
             'fields': ('minimum_stock', 'is_active')
@@ -432,9 +433,69 @@ class BaseProductAdmin(admin.ModelAdmin):
         }),
     )
     
+    def has_qr(self, obj):
+        return bool(obj.qr_code_base64)
+    has_qr.boolean = True
+    has_qr.short_description = _('QR')
+    
     def variants_count(self, obj):
         return obj.variants.count()
     variants_count.short_description = _('عدد المتغيرات')
+    
+    def qr_preview(self, obj):
+        if obj.qr_code_base64:
+            from django.utils.html import format_html
+            return format_html(
+                '''
+                <div style="text-align:center">
+                    <img src="data:image/png;base64,{}" style="width:150px; height:150px; border:1px solid #ddd; padding:5px; border-radius:8px;" />
+                    <br/>
+                    <a href="{}" target="_blank" style="display:inline-block; margin-top:10px; padding:5px 15px; background:#007bff; color:white; text-decoration:none; border-radius:4px;">
+                        🔗 فتح الرابط
+                    </a>
+                </div>
+                ''',
+                obj.qr_code_base64,
+                obj.get_qr_url()
+            )
+        return _('لا يوجد QR - سيتم توليده عند الحفظ')
+    qr_preview.short_description = _('معاينة QR')
+    
+    @admin.action(description=_('⚡ توليد رموز QR للمنتجات المحددة'))
+    def regenerate_qrs(self, request, queryset):
+        count = 0
+        for obj in queryset:
+            if obj.code:
+                obj.generate_qr(force=True)
+                obj.save(update_fields=['qr_code_base64'])
+                count += 1
+        self.message_user(request, f'تم توليد {count} رمز QR بنجاح')
+
+    @admin.action(description=_('☁️ مزامنة مع Cloudflare'))
+    def sync_to_cloudflare(self, request, queryset):
+        from public.cloudflare_sync import sync_product_to_cloudflare
+        success_count = 0
+        fail_count = 0
+        
+        for obj in queryset:
+            if sync_product_to_cloudflare(obj):
+                obj.save(update_fields=['updated_at']) # Update timestamp
+                success_count += 1
+            else:
+                fail_count += 1
+        
+        if success_count > 0:
+            self.message_user(request, f'✅ تم مزامنة {success_count} منتج مع Cloudflare بنجاح.', level='SUCCESS')
+        if fail_count > 0:
+            self.message_user(request, f'❌ فشلت مزامنة {fail_count} منتج.', level='ERROR')
+
+    @admin.action(description=_('📄 تحميل ملف QR PDF'))
+    def download_pdf(self, request, queryset):
+        from django.http import HttpResponse, HttpResponseRedirect
+        # توجيه المستخدم للأمر الإداري أو رابط تحميل الملف العام
+        # هنا سنقوم بتوليد ملف سريع للمنتجات المحددة فقط أو توجيه للعام
+        # للأمان، نوجه لصفحة التوليد أو نعرض رسالة
+        self.message_user(request, 'يرجى استخدام أمر "generate_qr_pdf" لتوليد ملف شامل، أو سيتم توفير رابط مباشر قريباً.', level='WARNING')
     
     def save_model(self, request, obj, form, change):
         if not change:
