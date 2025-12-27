@@ -110,10 +110,12 @@ class InvoiceTemplateAdmin(admin.ModelAdmin):
         """عرض حالة القالب الافتراضي"""
         if obj.is_default:
             return format_html(
-                '<span style="color: green; font-weight: bold;">✓ افتراضي</span>'
+                '<span style="color: green; font-weight: bold;">{}</span>',
+                '✓ افتراضي'
             )
         return format_html(
-            '<span style="color: #999;">-</span>'
+            '<span style="color: #999;">{}</span>',
+            '-'
         )
     is_default_display.short_description = 'افتراضي'
     

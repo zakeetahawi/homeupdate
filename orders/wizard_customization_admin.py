@@ -114,11 +114,13 @@ class WizardStepConfigurationAdmin(admin.ModelAdmin):
         """عرض حالة الإجبارية"""
         if obj.is_required:
             return format_html(
-                '<span class="badge badge-danger" style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px;">إجبارية</span>'
+                '<span class="badge badge-danger" style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+                'إجبارية'
             )
         else:
             return format_html(
-                '<span class="badge badge-secondary" style="background: #6c757d; color: white; padding: 3px 8px; border-radius: 3px;">اختيارية</span>'
+                '<span class="badge badge-secondary" style="background: #6c757d; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+                'اختيارية'
             )
     is_required_display.short_description = 'النوع'
     
@@ -126,11 +128,13 @@ class WizardStepConfigurationAdmin(admin.ModelAdmin):
         """عرض حالة النشاط"""
         if obj.is_active:
             return format_html(
-                '<span class="badge badge-success" style="background: #28a745; color: white; padding: 3px 8px; border-radius: 3px;">✓ نشطة</span>'
+                '<span class="badge badge-success" style="background: #28a745; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+                '✓ نشطة'
             )
         else:
             return format_html(
-                '<span class="badge badge-warning" style="background: #ffc107; color: #212529; padding: 3px 8px; border-radius: 3px;">معطلة</span>'
+                '<span class="badge badge-warning" style="background: #ffc107; color: #212529; padding: 3px 8px; border-radius: 3px;">{}</span>',
+                'معطلة'
             )
     is_active_display.short_description = 'الحالة'
     

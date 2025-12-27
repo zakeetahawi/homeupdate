@@ -220,5 +220,6 @@ urlpatterns = [
     # QR Code Generation APIs
     path('api/product/<int:pk>/generate-qr/', views.generate_single_qr_api, name='generate_single_qr_api'),
     path('api/generate-all-qr/', views.generate_all_qr_api, name='generate_all_qr_api'),
+    path('api/generate-qr-pdf/', views.generate_qr_pdf_api, name='generate_qr_pdf_api'),
 ]
 

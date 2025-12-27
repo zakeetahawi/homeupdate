@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from accounts.models import SystemSettings, User
-from .models import Product, StockTransaction, StockAlert
+from .models import Product, StockTransaction, StockAlert, BaseProduct, ProductVariant
 from notifications.models import Notification
 
 @receiver(post_save, sender=SystemSettings)
@@ -368,3 +368,58 @@ def create_bulk_stock_alerts():
     except Exception as e:
         logger.error(f"Error in create_bulk_stock_alerts: {e}")
         return 0
+
+
+# ========== Cloudflare Auto-Sync Signals ==========
+
+@receiver(post_save, sender=BaseProduct)
+def sync_base_product_to_cloudflare(sender, instance, **kwargs):
+    """
+    مزامنة المنتج الأساسي تلقائياً مع Cloudflare عند التعديل
+    Sync BaseProduct explicitly on save (triggers on price change, name change, etc.)
+    """
+    # تجنب المزامنة إذا لم يكن هناك كود
+    if not instance.code:
+        return
+
+    def do_sync():
+        try:
+            # Import inside function to avoid circular imports
+            from public.cloudflare_sync import sync_product_to_cloudflare, get_cloudflare_sync
+            
+            # Check if sync is enabled globally
+            if not get_cloudflare_sync().is_configured():
+                return
+
+            sync_product_to_cloudflare(instance)
+            logger.info(f"✅ Auto-synced BaseProduct {instance.code} to Cloudflare")
+        except Exception as e:
+            logger.error(f"❌ Failed to auto-sync BaseProduct {instance.code}: {e}")
+
+    # Use on_commit to ensure DB transaction is finished
+    transaction.on_commit(do_sync)
+
+
+@receiver(post_save, sender=ProductVariant)
+def sync_variant_parent_to_cloudflare(sender, instance, **kwargs):
+    """
+    عند تعديل متغير (سعر، مخزون، الخ)، يتم تحديث المنتج الأساسي في Cloudflare
+    Sync parent BaseProduct when variant is updated
+    """
+    if not instance.base_product or not instance.base_product.code:
+        return
+
+    def do_sync():
+        try:
+            from public.cloudflare_sync import sync_product_to_cloudflare, get_cloudflare_sync
+            
+            if not get_cloudflare_sync().is_configured():
+                return
+
+            # Sync the PARENT BaseProduct because KV structure is based on BaseProduct
+            sync_product_to_cloudflare(instance.base_product)
+            logger.info(f"✅ Auto-synced BaseProduct {instance.base_product.code} (triggered by Variant {instance.variant_code})")
+        except Exception as e:
+            logger.error(f"❌ Failed to auto-sync BaseProduct from Variant update: {e}")
+
+    transaction.on_commit(do_sync)

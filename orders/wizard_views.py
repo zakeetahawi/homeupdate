@@ -1293,7 +1293,7 @@ def wizard_finalize(request):
                 # تحديث ManufacturingOrder بعد اكتمال transaction
                 # استخدام on_commit لضمان عدم rollback
                 try:
-                    from django.db import transaction
+
                     from manufacturing.models import ManufacturingOrder
                     
                     # حفظ القيم للاستخدام في on_commit

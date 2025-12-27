@@ -419,10 +419,10 @@ class OrderAdmin(admin.ModelAdmin):
 
     def payment_status(self, obj):
         if obj.is_fully_paid:
-            return format_html('<span style="color: green;">مدفوع بالكامل</span>')
+            return format_html('<span style="color: green;">{}</span>', 'مدفوع بالكامل')
         elif obj.paid_amount > 0:
-            return format_html('<span style="color: orange;">مدفوع جزئياً</span>')
-        return format_html('<span style="color: red;">غير مدفوع</span>')
+            return format_html('<span style="color: orange;">{}</span>', 'مدفوع جزئياً')
+        return format_html('<span style="color: red;">{}</span>', 'غير مدفوع')
     payment_status.short_description = 'حالة الدفع'
     payment_status.admin_order_field = 'payment_verified'
 

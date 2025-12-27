@@ -14,7 +14,16 @@
             </h2>
             <p class="text-muted mb-0">إدارة المنتجات الأساسية ومتغيراتها</p>
         </div>
+
         <div class="d-flex gap-2">
+            <button onclick="generateAllQR()" class="btn btn-info text-white">
+                <i class="fas fa-qrcode me-1"></i>
+                توليد QR للكل
+            </button>
+            <button onclick="downloadQRPDF()" class="btn btn-secondary">
+                <i class="fas fa-file-pdf me-1"></i>
+                PDF
+            </button>
             <a href="{% url 'inventory:migrate_products' %}" class="btn btn-warning">
                 <i class="fas fa-sync-alt me-1"></i>
                 ترحيل المنتجات
@@ -144,7 +153,7 @@
                     <select name="category" class="form-select">
                         <option value="">جميع الفئات</option>
                         {% for cat in categories %}
-                            <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                        <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -372,4 +381,73 @@
         </div>
     </div>
 </div>
+
+<script>
+    function generateAllQR() {
+        if (!confirm('هل أنت متأكد من رغبتك في توليد QR لجميع المنتجات؟ قد تستغرق العملية بعض الوقت.')) return;
+
+        // Show Loading
+        Swal.fire({
+            title: 'جاري التوليد...',
+            text: 'يرجى الانتظار بينما يتم توليد رموز QR',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        fetch("{% url 'inventory:generate_all_qr_api' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('تم بنجاح!', data.message, 'success').then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire('خطأ!', data.error || 'حدث خطأ ما', 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'فشل الاتصال بالخادم', 'error');
+            });
+    }
+
+    function downloadQRPDF() {
+        // Show Loading
+        Swal.fire({
+            title: 'جاري التحضير...',
+            text: 'يتم تجهيز ملف PDF، يرجى الانتظار...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        fetch("{% url 'inventory:generate_qr_pdf_api' %}")
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.close();
+                    // Create a temporary link to download
+                    const link = document.createElement('a');
+                    link.href = data.file_url;
+                    link.download = 'products_qr_catalog.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } else {
+                    Swal.fire('خطأ!', data.error || 'حدث خطأ في توليد الملف', 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'فشل الاتصال بالخادم', 'error');
+            });
+    }
+</script>
 {% endblock %}

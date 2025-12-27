@@ -903,18 +903,28 @@ def generate_single_qr_api(request, pk):
 @login_required
 def generate_all_qr_api(request):
     """
-    API لتوليد QR لجميع المنتجات التي ليس لديها QR
+    API لتوليد QR لجميع المنتجات الأساسية والمنتجات القديمة
     POST /inventory/api/generate-all-qr/
     """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
     
-    # الحصول على المنتجات بدون QR
-    products_without_qr = Product.objects.filter(
+    from .models import BaseProduct, Product
+    
+    # 1. Base Products without QR
+    base_products_no_qr = BaseProduct.objects.filter(
         qr_code_base64__isnull=True
     ).exclude(code__isnull=True).exclude(code='')
     
-    total = products_without_qr.count()
+    # 2. Legacy Products without QR (active only)
+    products_no_qr = Product.objects.filter(
+        qr_code_base64__isnull=True,
+        is_active=True
+    ).exclude(code__isnull=True).exclude(code='')
+    
+    total_base = base_products_no_qr.count()
+    total_products = products_no_qr.count()
+    total = total_base + total_products
     
     if total == 0:
         return JsonResponse({
@@ -924,18 +934,32 @@ def generate_all_qr_api(request):
             'total': 0
         })
     
-    # توليد بشكل متزامن (للأعداد الكبيرة يفضل استخدام Celery)
     generated = 0
     errors = 0
     
-    for product in products_without_qr[:500]:  # تحديد بـ 500 لتجنب timeout
+    # Limit processing to avoid timeout
+    LIMIT = 500
+    
+    # Process Base Products first
+    for bp in base_products_no_qr[:LIMIT]:
         try:
-            if product.generate_qr():
-                product.save(update_fields=['qr_code_base64'])
+            if bp.generate_qr():
+                bp.save(update_fields=['qr_code_base64'])
                 generated += 1
         except Exception:
             errors += 1
-    
+            
+    # Process remaining limit on Products
+    remaining_limit = LIMIT - generated
+    if remaining_limit > 0:
+        for p in products_no_qr[:remaining_limit]:
+            try:
+                if p.generate_qr():
+                    p.save(update_fields=['qr_code_base64'])
+                    generated += 1
+            except Exception:
+                errors += 1
+
     remaining = total - generated - errors
     
     return JsonResponse({
@@ -946,3 +970,37 @@ def generate_all_qr_api(request):
         'remaining': remaining,
         'total': total
     })
+
+
+@login_required
+def generate_qr_pdf_api(request):
+    """
+    API لتوليد وتحميل ملف PDF للـ QR Codes
+    GET /inventory/api/generate-qr-pdf/
+    """
+    from django.core.management import call_command
+    from django.conf import settings
+    import os
+    
+    try:
+        # Define output relative to MEDIA_ROOT
+        filename = 'products_qr_catalog.pdf'
+        relative_path = os.path.join('qr_codes', filename)
+        full_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+        
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        
+        # Run command
+        call_command('generate_qr_pdf', output=full_path)
+        
+        # Construct URL
+        file_url = os.path.join(settings.MEDIA_URL, relative_path)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'تم توليد ملف PDF بنجاح',
+            'file_url': file_url
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
