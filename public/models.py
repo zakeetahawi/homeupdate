@@ -352,6 +352,18 @@ class QRDesignSettings(models.Model):
         help_text='لون رقم السعر (يدعم تدرج من primary إلى price)'
     )
     
+    color_product_name = ColorField(
+        'لون اسم المنتج',
+        default='#d4af37',
+        help_text='لون اسم المنتج الرئيسي'
+    )
+    
+    color_label = ColorField(
+        'لون العناوين',
+        default='#888888',
+        help_text='لون العناوين والتسميات (النوع، الوحدة، سعر المنتج الأساسي)'
+    )
+    
     background_image = models.ImageField(
         'صورة الخلفية',
         upload_to='qr_design/backgrounds/',
@@ -746,6 +758,8 @@ class QRDesignSettings(models.Model):
                 'badge': self.color_badge,
                 'badge_text': self.color_badge_text,
                 'price': self.color_price,
+                'product_name': self.color_product_name,
+                'label': self.color_label,
             },
             'links': {
                 'website': self.website_url,

@@ -34,36 +34,8 @@ async function generateProductPage(product, env) {
   // Format price in English numbers
   const formattedPrice = new Intl.NumberFormat('en-US').format(product.price);
 
-  // Variants Section Logic
+  // Variants Section - Disabled
   let variantsHtml = '';
-  if (product.type === 'base_product' && product.variants && product.variants.length > 0) {
-    const variantsList = product.variants.map(v => {
-      const vPrice = new Intl.NumberFormat('en-US').format(v.price);
-      const isAvailable = v.is_available;
-      const statusClass = isAvailable ? 'available' : 'unavailable';
-      const statusText = isAvailable ? 'متوفر' : 'غير متوفر';
-
-      return `
-            <div class="variant-item ${statusClass}">
-                <div class="variant-color-indicator" style="background-color: ${v.color_hex};"></div>
-                <div class="variant-details">
-                    <div class="variant-name">${v.color_name}</div>
-                    <div class="variant-code">${v.code}</div>
-                </div>
-                <div class="variant-price">
-                    ${vPrice} <small>${currencySymbol}</small>
-                </div>
-            </div>`;
-    }).join('');
-
-    variantsHtml = `
-        <div class="variants-section">
-            <h3 class="section-title"><i class="fas fa-layer-group"></i> الألوان المتوفرة</h3>
-            <div class="variants-list">
-                ${variantsList}
-            </div>
-        </div>`;
-  }
 
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -77,18 +49,20 @@ async function generateProductPage(product, env) {
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     :root {
-      --gold: ${design.colors?.primary || '#d4af37'};
-      --gold-light: ${design.colors?.secondary || '#f4d03f'};
-      --gold-dark: ${design.colors?.primary || '#d4af37'};
-      --dark: ${design.colors?.background || '#1a1a2e'};
-      --dark-light: ${design.colors?.surface || '#0f3460'};
-      --dark-surface: ${design.colors?.surface || '#0f3460'};
-      --card-bg: ${design.colors?.card || 'rgba(15, 52, 96, 0.95)'};
-      --button-bg: ${design.colors?.button || 'linear-gradient(45deg, #d4af37, #f4d03f)'};
-      --button-text: ${design.colors?.button_text || '#1a1a2e'};
-      --badge-bg: ${design.colors?.badge || 'rgba(212, 175, 55, 0.15)'};
-      --badge-text: ${design.colors?.badge_text || '#d4af37'};
-      --price-color: ${design.colors?.price || '#f4d03f'};
+      --gold: ${design.colors?.primary};
+      --gold-light: ${design.colors?.secondary};
+      --gold-dark: ${design.colors?.primary};
+      --dark: ${design.colors?.background};
+      --dark-light: ${design.colors?.surface};
+      --dark-surface: ${design.colors?.surface};
+      --card-bg: ${design.colors?.card};
+      --button-bg: ${design.colors?.button};
+      --button-text: ${design.colors?.button_text};
+      --badge-bg: ${design.colors?.badge};
+      --badge-text: ${design.colors?.badge_text};
+      --price-color: ${design.colors?.price};
+      --product-name-color: ${design.colors?.product_name || '#d4af37'};
+      --label-color: ${design.colors?.label || '#888'};
     }
     
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -119,7 +93,7 @@ async function generateProductPage(product, env) {
     }
     
     .container {
-      max-width: 500px;
+      max-width: 450px;
       width: 100%;
       position: relative;
       z-index: 1;
@@ -168,8 +142,8 @@ async function generateProductPage(product, env) {
     }
     
     .product-logo {
-      max-width: ${design.logo_size || 180}px;
-      max-height: ${Math.floor((design.logo_size || 180) * 0.7)}px;
+      max-width: ${design.logo_size || 200}px;
+      max-height: ${Math.floor((design.logo_size || 200) * 0.7)}px;
       object-fit: contain;
       position: relative;
       z-index: 1;
@@ -197,7 +171,7 @@ async function generateProductPage(product, env) {
     .product-name {
       font-size: 1.5rem;
       font-weight: 700;
-      color: #ffffff;
+      color: var(--product-name-color);
       margin-bottom: 20px;
       line-height: 1.4;
     }
@@ -227,74 +201,7 @@ async function generateProductPage(product, env) {
       color: var(--gold);
       font-weight: 600;
     }
-    
-    /* Variants Section */
-    .variants-section {
-        margin-top: 20px;
-        margin-bottom: 20px;
-    }
-    
-    .section-title {
-        font-size: 1.1rem;
-        color: var(--gold);
-        margin-bottom: 15px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .variants-list {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    .variant-item {
-        display: flex;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 12px;
-        transition: all 0.3s ease;
-    }
-    
-    .variant-item:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: var(--gold);
-    }
-    
-    .variant-color-indicator {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        margin-left: 15px;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-    
-    .variant-details {
-        flex: 1;
-    }
-    
-    .variant-name {
-        font-weight: 700;
-        font-size: 1rem;
-        color: white;
-    }
-    
-    .variant-code {
-        font-size: 0.8rem;
-        color: #aaa;
-        font-family: monospace;
-        margin-top: 2px;
-    }
-    
-    .variant-price {
-        font-weight: 700;
-        color: var(--price-color);
-        font-size: 1.1rem;
-    }
+
 
     /* Footer */
     .footer {
@@ -346,7 +253,7 @@ async function generateProductPage(product, env) {
         
         <!-- Base Price -->
         <div class="price-section">
-          <div style="font-size:0.8rem;color:#aaa;margin-bottom:5px;">سعر المنتج الأساسي</div>
+          <div style="font-size:0.8rem;color:var(--label-color);margin-bottom:5px;">سعر المنتج الأساسي</div>
           <div class="price">
             <span>${formattedPrice}</span>
             <span class="currency">${currencySymbol}</span>
@@ -356,17 +263,15 @@ async function generateProductPage(product, env) {
         <!-- Info Grid -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
            <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;text-align:center;">
-             <div style="color:#aaa;font-size:0.8rem;">النوع</div>
-             <div style="font-weight:bold;">${product.category || 'عام'}</div>
+             <div style="color:var(--label-color);font-size:0.8rem;">النوع</div>
+             <div style="font-weight:bold;color:var(--label-color);">${product.category || 'عام'}</div>
            </div>
            <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;text-align:center;">
-             <div style="color:#aaa;font-size:0.8rem;">الوحدة</div>
-             <div style="font-weight:bold;">${product.unit || 'قطعة'}</div>
+             <div style="color:var(--label-color);font-size:0.8rem;">الوحدة</div>
+             <div style="font-weight:bold;color:var(--label-color);">${product.unit || 'قطعة'}</div>
            </div>
         </div>
 
-        <!-- Variants Section -->
-        ${variantsHtml}
       </div>
       
       <!-- Footer -->
@@ -389,26 +294,49 @@ async function generateProductPage(product, env) {
  * Generate 404 page
  */
 async function generate404Page(code, env, design = null) {
+  // If design not passed, try to load it
   if (!design) {
     design = await env.PRODUCTS_KV.get('__QR_DESIGN_SETTINGS__', 'json');
   }
+
   const websiteUrl = design?.links?.website || env.MAIN_SITE_URL || 'https://elkhawaga.com';
 
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المنتج غير موجود - 404</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
-    body { font-family: sans-serif; background: #1a1a2e; color: white; display:flex; align-items:center; justify-content:center; height:100vh; text-align:center; direction: rtl; }
-    .code { font-family: monospace; background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 5px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      direction: rtl;
+    }
+    .container { max-width: 400px; }
+    h1 { font-size: 120px; opacity: 0.3; }
+    h2 { font-size: 24px; margin: 20px 0; }
+    p { opacity: 0.7; margin-bottom: 30px; }
+    .code { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 8px; font-family: monospace; }
+    a { color: #e94560; text-decoration: none; }
   </style>
 </head>
 <body>
-  <div>
+  <div class="container">
     <h1>404</h1>
     <h2>المنتج غير موجود</h2>
-    <p>لم يتم العثور على المنتج بالكود: <span class="code">${code}</span></p>
-    <br>
-    <a href="${websiteUrl}" style="color:#d4af37;">العودة للموقع</a>
+    <p>لم نتمكن من العثور على منتج بالكود:</p>
+    <div class="code">${code}</div>
+    <p style="margin-top: 30px;"><a href="${websiteUrl}">العودة للموقع الرئيسي</a></p>
   </div>
 </body>
 </html>`;
@@ -474,7 +402,7 @@ export default {
     }
 
     // Get Product Code (e.g. /CODE)
-    const code = path.substring(1);
+    const code = decodeURIComponent(path.substring(1));
 
     if (!code) {
       return new Response("QR Worker Active", { status: 200 });

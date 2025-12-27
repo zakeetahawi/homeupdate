@@ -58,6 +58,7 @@ class QRDesignSettingsAdmin(admin.ModelAdmin):
                 ('color_card', 'color_price'),
                 ('color_button', 'color_button_text'),
                 ('color_badge', 'color_badge_text'),
+                ('color_product_name', 'color_label'),
                 'live_preview',
             ],
             'description': '''
