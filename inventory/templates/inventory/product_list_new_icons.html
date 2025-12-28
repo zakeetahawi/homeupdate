@@ -42,17 +42,14 @@
                         <label for="filter" class="form-label">فلتر</label>
                         <select class="form-select" id="filter" name="filter">
                             <option value="">بدون فلتر</option>
-                            <option value="low_stock" {% if selected_filter == 'low_stock' %}selected{% endif %}>مخزون
-                                منخفض</option>
-                            <option value="out_of_stock" {% if selected_filter == 'out_of_stock' %}selected{% endif %}>نفذ
-                                من المخزون</option>
+                            <option value="low_stock" {% if selected_filter == 'low_stock' %}selected{% endif %}>مخزون منخفض</option>
+                            <option value="out_of_stock" {% if selected_filter == 'out_of_stock' %}selected{% endif %}>نفذ من المخزون</option>
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label for="sort" class="form-label">ترتيب</label>
                         <select class="form-select" id="sort" name="sort">
-                            <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>الأحدث
-                            </option>
+                            <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>الأحدث</option>
                             <option value="name" {% if sort_by == 'name' %}selected{% endif %}>الاسم (أ-ي)</option>
                             <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>الاسم (ي-أ)</option>
                             <option value="price" {% if sort_by == 'price' %}selected{% endif %}>السعر (تصاعدي)</option>
@@ -92,7 +89,8 @@
                     <i class="fas fa-download"></i> تصدير
                 </button>
                 <ul class="dropdown-menu" aria-labelledby="exportDropdown">
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-file-excel"></i> Excel</a></li>
+                    <li><a class="dropdown-item" href="{% url 'inventory:export_products_excel' %}"><i
+                                class="fas fa-file-excel"></i> Excel</a></li>
                     <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf"></i> PDF</a></li>
                     <li><a class="dropdown-item" href="#"><i class="fas fa-print"></i> طباعة</a></li>
                 </ul>

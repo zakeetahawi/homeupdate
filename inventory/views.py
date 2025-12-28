@@ -1004,3 +1004,110 @@ def generate_qr_pdf_api(request):
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ==================== Excel Export API ====================
+
+@login_required
+def export_products_excel(request):
+    """
+    تصدير جميع المنتجات إلى ملف Excel
+    يحتوي على: الكود، اسم المنتج، الفئة، السعر، المخزون الحالي
+    """
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from openpyxl.utils import get_column_letter
+    from django.db.models import OuterRef, Subquery, IntegerField
+    from django.db.models.functions import Coalesce
+    
+    # إنشاء ملف Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "قائمة المنتجات"
+    
+    # تنسيق العناوين
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    
+    # إضافة العناوين
+    headers = ["الكود", "اسم المنتج", "الفئة", "السعر", "المخزون الحالي", "الحد الأدنى", "الحالة"]
+    ws.append(headers)
+    
+    # تنسيق صف العناوين
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+    
+    # الحصول على المنتجات مع المخزون الحالي
+    latest_balance = StockTransaction.objects.filter(
+        product=OuterRef('pk')
+    ).order_by('-transaction_date', '-id').values('running_balance')[:1]
+    
+    products = Product.objects.select_related('category').annotate(
+        current_stock_calc=Coalesce(
+            Subquery(latest_balance, output_field=IntegerField()),
+            0
+        )
+    ).order_by('code')
+    
+    # إضافة البيانات
+    for product in products:
+        # تحديد الحالة
+        if product.current_stock_calc == 0:
+            status = "نفذ من المخزون"
+        elif product.current_stock_calc <= product.minimum_stock:
+            status = "مخزون منخفض"
+        else:
+            status = "متوفر"
+        
+        row = [
+            product.code or "غير محدد",
+            product.name,
+            product.category.name if product.category else "غير مصنف",
+            float(product.price),
+            product.current_stock_calc,
+            product.minimum_stock,
+            status
+        ]
+        ws.append(row)
+    
+    # تنسيق الأعمدة
+    for col_num in range(1, len(headers) + 1):
+        column_letter = get_column_letter(col_num)
+        
+        # تعيين عرض العمود
+        if col_num == 1:  # الكود
+            ws.column_dimensions[column_letter].width = 15
+        elif col_num == 2:  # اسم المنتج
+            ws.column_dimensions[column_letter].width = 40
+        elif col_num == 3:  # الفئة
+            ws.column_dimensions[column_letter].width = 20
+        else:
+            ws.column_dimensions[column_letter].width = 15
+        
+        # محاذاة النص
+        for row in range(2, ws.max_row + 1):
+            cell = ws.cell(row=row, column=col_num)
+            if col_num in [4, 5, 6]:  # الأعمدة الرقمية
+                cell.alignment = Alignment(horizontal="center")
+            else:
+                cell.alignment = Alignment(horizontal="right")
+    
+    # إعداد الاستجابة
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+    # تسمية الملف بالتاريخ الحالي
+    from datetime import datetime
+    filename = f"products_list_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    # حفظ الملف
+    wb.save(response)
+    
+    return response
