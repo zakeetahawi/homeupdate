@@ -1423,15 +1423,34 @@ def wizard_finalize(request):
 
                 # 6. تحديث الستائر (Contract Curtains)
                 # نحذف الستائر القديمة ونعيد إنشاؤها لأنها معقدة وتعتمد على Draft
-                # استخدام حذف مباشر مع flush لضمان اكتمال الحذف قبل الإنشاء
-                from django.db import transaction, connection
+                # استخدام SQL مباشر لضمان الحذف الفوري
+                from django.db import connection
                 
-                # حذف جميع الستائر القديمة بشكل فوري
-                deleted_count = order.contract_curtains.all().delete()[0]
-                if deleted_count > 0:
-                    # فرض flush للتأكد من اكتمال الحذف
-                    connection.cursor().execute("SELECT 1")  # dummy query to flush
-                    logger.info(f"🗑️ تم حذف {deleted_count} ستارة قديمة للطلب {order.order_number}")
+                # حذف جميع الستائر القديمة باستخدام SQL مباشر
+                with connection.cursor() as cursor:
+                    # حذف الأقمشة والإكسسوارات أولاً (foreign keys)
+                    cursor.execute("""
+                        DELETE FROM orders_curtainfabric 
+                        WHERE curtain_id IN (
+                            SELECT id FROM orders_contractcurtain WHERE order_id = %s
+                        )
+                    """, [order.id])
+                    
+                    cursor.execute("""
+                        DELETE FROM orders_curtainaccessory 
+                        WHERE curtain_id IN (
+                            SELECT id FROM orders_contractcurtain WHERE order_id = %s
+                        )
+                    """, [order.id])
+                    
+                    # ثم حذف الستائر
+                    cursor.execute("""
+                        DELETE FROM orders_contractcurtain WHERE order_id = %s
+                    """, [order.id])
+                    
+                    deleted_count = cursor.rowcount
+                    if deleted_count > 0:
+                        logger.info(f"🗑️ تم حذف {deleted_count} ستارة قديمة للطلب {order.order_number}")
                 
                 # نقل الستائر من المسودة إلى الطلب
                 curtains = draft.contract_curtains.all()
