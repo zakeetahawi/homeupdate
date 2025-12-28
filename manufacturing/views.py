@@ -943,10 +943,10 @@ class ChangeProductionLineView(LoginRequiredMixin, PermissionRequiredMixin, View
             from django.contrib.admin.models import LogEntry, CHANGE
             from django.contrib.contenttypes.models import ContentType
 
-            LogEntry.objects.log_action(
+            LogEntry.objects.create(
                 user_id=request.user.id,
                 content_type_id=ContentType.objects.get_for_model(ManufacturingOrder).pk,
-                object_id=manufacturing_order.pk,
+                object_id=str(manufacturing_order.pk),
                 object_repr=str(manufacturing_order),
                 action_flag=CHANGE,
                 change_message=f'تم تبديل خط الإنتاج من "{old_line_name}" إلى "{new_production_line.name}"'
