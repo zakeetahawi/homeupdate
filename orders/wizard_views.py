@@ -1367,13 +1367,19 @@ def wizard_finalize(request):
                 # 4. إنشاء العناصر الجديدة باستخدام bulk_create
                 order_items_to_create = []
                 for draft_item in new_draft_items:
+                    # حساب discount_amount إذا لم يكن محسوباً
+                    discount_amt = draft_item.discount_amount
+                    if not discount_amt and draft_item.discount_percentage:
+                        total_price = draft_item.quantity * draft_item.unit_price
+                        discount_amt = total_price * (draft_item.discount_percentage / Decimal('100.0'))
+                    
                     new_item = OrderItem(
                         order=order,
                         product=draft_item.product,
                         quantity=draft_item.quantity,
                         unit_price=draft_item.unit_price,
                         discount_percentage=draft_item.discount_percentage,
-                        discount_amount=draft_item.discount_amount,
+                        discount_amount=discount_amt if discount_amt else Decimal('0.00'),
                         item_type=draft_item.item_type,
                         notes=draft_item.notes or '',  # Fix for nullable constraints
                     )
