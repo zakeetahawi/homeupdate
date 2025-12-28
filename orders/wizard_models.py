@@ -304,10 +304,7 @@ class DraftOrder(models.Model):
                 Decimal('0.00')
             ),
             total_discount_amount=Coalesce(
-                Sum(
-                    F('quantity') * F('unit_price') * F('discount_percentage') / 100,
-                    output_field=DecimalField(max_digits=12, decimal_places=2)
-                ),
+                Sum('discount_amount', output_field=DecimalField(max_digits=12, decimal_places=2)),
                 Decimal('0.00')
             )
         )
