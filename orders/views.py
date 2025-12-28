@@ -325,9 +325,11 @@ def order_detail(request, pk):
         subtotal = Decimal('0')
         total_discount = Decimal('0')
         for it in order_items:
-            # use model properties which return Decimal
-            subtotal += Decimal(str(it.total_price))
-            total_discount += Decimal(str(it.discount_amount))
+            # حساب المجموع قبل الخصم (quantity * unit_price)
+            item_subtotal = Decimal(str(it.quantity)) * Decimal(str(it.unit_price))
+            subtotal += item_subtotal
+            # حساب الخصم
+            total_discount += Decimal(str(it.discount_amount if it.discount_amount else 0))
 
         final_after = subtotal - total_discount
 
