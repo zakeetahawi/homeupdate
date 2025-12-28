@@ -1421,109 +1421,114 @@ def wizard_finalize(request):
                     except Exception as e:
                         print(f"Error syncing manufacturing items: {e}")
 
-                # 6. تحديث الستائر (Contract Curtains)
-                # نحذف الستائر القديمة ونعيد إنشاؤها لأنها معقدة وتعتمد على Draft
-                # استخدام SQL مباشر لضمان الحذف الفوري
-                from django.db import connection
+                # 6. تحديث الستائر (Contract Curtains) - استراتيجية Smart Update
+                # بدلاً من حذف الكل، نقوم بـ: تحديث الموجود + إضافة الجديد + حذف المحذوف
                 
-                # حذف جميع الستائر القديمة باستخدام SQL مباشر
-                with connection.cursor() as cursor:
-                    # حذف الأقمشة والإكسسوارات أولاً (foreign keys)
-                    cursor.execute("""
-                        DELETE FROM orders_curtainfabric 
-                        WHERE curtain_id IN (
-                            SELECT id FROM orders_contractcurtain WHERE order_id = %s
-                        )
-                    """, [order.id])
-                    
-                    cursor.execute("""
-                        DELETE FROM orders_curtainaccessory 
-                        WHERE curtain_id IN (
-                            SELECT id FROM orders_contractcurtain WHERE order_id = %s
-                        )
-                    """, [order.id])
-                    
-                    # ثم حذف الستائر
-                    cursor.execute("""
-                        DELETE FROM orders_contractcurtain WHERE order_id = %s
-                    """, [order.id])
-                    
-                    deleted_count = cursor.rowcount
-                    if deleted_count > 0:
-                        logger.info(f"🗑️ تم حذف {deleted_count} ستارة قديمة للطلب {order.order_number}")
+                # الحصول على الستائر الحالية والجديدة
+                current_curtains = {c.sequence: c for c in order.contract_curtains.all()}
+                draft_curtains = list(draft.contract_curtains.all().order_by('sequence'))
                 
-                # نقل الستائر من المسودة إلى الطلب
-                curtains = draft.contract_curtains.all()
-                if curtains.exists():
-                    for curtain in curtains:
-                        # إنشاء الستارة
-                        new_curtain = ContractCurtain.objects.create(
-                            order=order,
-                            room_name=curtain.room_name,
-                            curtain_image=curtain.curtain_image,
-                            width=curtain.width,
-                            height=curtain.height,
-                            installation_type=curtain.installation_type,
-                            curtain_box_width=curtain.curtain_box_width,
-                            curtain_box_depth=curtain.curtain_box_depth,
-                            notes=curtain.notes,
-                            # ربط الأقمشة الرئيسية إذا وجدت
-                            # light_fabric=..., heavy_fabric=... (يحتاج منطق ربط مع العناصر)
-                        )
+                # تتبع الستائر المعالجة
+                processed_sequences = set()
+                
+                for draft_curtain in draft_curtains:
+                    seq = draft_curtain.sequence
+                    processed_sequences.add(seq)
+                    
+                    if seq in current_curtains:
+                        # تحديث الستارة الموجودة
+                        existing_curtain = current_curtains[seq]
+                        existing_curtain.room_name = draft_curtain.room_name
+                        existing_curtain.curtain_image = draft_curtain.curtain_image
+                        existing_curtain.width = draft_curtain.width
+                        existing_curtain.height = draft_curtain.height
+                        existing_curtain.installation_type = draft_curtain.installation_type
+                        existing_curtain.curtain_box_width = draft_curtain.curtain_box_width
+                        existing_curtain.curtain_box_depth = draft_curtain.curtain_box_depth
+                        existing_curtain.notes = draft_curtain.notes
+                        existing_curtain.save()
                         
-                        # نسخ الأقمشة والإكسسوارات
-                        for fabric in curtain.fabrics.all():
-                            # محاولة ربط القماش بعنصر الطلب الجديد/المحدث
-                            linked_order_item = None
-                            if fabric.draft_order_item:
-                                # محاولة البحث عن العنصر المقابل
-                                if fabric.draft_order_item.original_item_id and fabric.draft_order_item.original_item_id in item_mapping:
-                                    linked_order_item = item_mapping[fabric.draft_order_item.original_item_id]
-                                else:
-                                    # بحث عن طريق المنتج (للعناصر الجديدة)
-                                    linked_order_item = OrderItem.objects.filter(
-                                        order=order, 
-                                        product=fabric.draft_order_item.product,
-                                        quantity=fabric.draft_order_item.quantity
-                                    ).first()
+                        # حذف الأقمشة والإكسسوارات القديمة وإعادة إنشائها
+                        existing_curtain.fabrics.all().delete()
+                        existing_curtain.accessories.all().delete()
+                        
+                        curtain_to_use = existing_curtain
+                        logger.info(f"🔄 تم تحديث الستارة {seq} للطلب {order.order_number}")
+                    else:
+                        # إنشاء ستارة جديدة
+                        curtain_to_use = ContractCurtain.objects.create(
+                            order=order,
+                            sequence=seq,
+                            room_name=draft_curtain.room_name,
+                            curtain_image=draft_curtain.curtain_image,
+                            width=draft_curtain.width,
+                            height=draft_curtain.height,
+                            installation_type=draft_curtain.installation_type,
+                            curtain_box_width=draft_curtain.curtain_box_width,
+                            curtain_box_depth=draft_curtain.curtain_box_depth,
+                            notes=draft_curtain.notes,
+                        )
+                        logger.info(f"➕ تم إنشاء ستارة جديدة {seq} للطلب {order.order_number}")
+                    
+                    # نسخ الأقمشة
+                    for fabric in draft_curtain.fabrics.all():
+                        linked_order_item = None
+                        if fabric.draft_order_item:
+                            if fabric.draft_order_item.original_item_id and fabric.draft_order_item.original_item_id in item_mapping:
+                                linked_order_item = item_mapping[fabric.draft_order_item.original_item_id]
+                            else:
+                                linked_order_item = OrderItem.objects.filter(
+                                    order=order, 
+                                    product=fabric.draft_order_item.product,
+                                    quantity=fabric.draft_order_item.quantity
+                                ).first()
 
-                            CurtainFabric.objects.create(
-                                curtain=new_curtain,
-                                draft_order_item=fabric.draft_order_item,  # نحتفظ بالرابط القديم كمرجع
-                                order_item=linked_order_item,  # ربط بعنصر الطلب النهائي
-                                fabric_type=fabric.fabric_type,
-                                fabric_name=fabric.fabric_name,
-                                pieces=fabric.pieces,
-                                meters=fabric.meters,
-                                tailoring_type=fabric.tailoring_type,
-                                notes=fabric.notes,
-                                sequence=fabric.sequence
-                            )
-                            
-                        for accessory in curtain.accessories.all():
-                            # محاولة ربط الإكسسوار بعنصر الطلب الجديد/المحدث
-                            linked_acc_order_item = None
-                            if accessory.draft_order_item:
-                                if accessory.draft_order_item.original_item_id and accessory.draft_order_item.original_item_id in item_mapping:
-                                    linked_acc_order_item = item_mapping[accessory.draft_order_item.original_item_id]
-                                else:
-                                    linked_acc_order_item = OrderItem.objects.filter(
-                                        order=order,
-                                        product=accessory.draft_order_item.product,
-                                        quantity=accessory.draft_order_item.quantity
-                                    ).first()
-                            
-                            CurtainAccessory.objects.create(
-                                curtain=new_curtain,
-                                draft_order_item=accessory.draft_order_item,
-                                order_item=linked_acc_order_item,
-                                accessory_name=accessory.accessory_name,
-                                accessory_type=accessory.accessory_type,
-                                quantity=accessory.quantity,
-                                count=accessory.count,
-                                size=accessory.size,
-                                color=accessory.color
-                            )
+                        CurtainFabric.objects.create(
+                            curtain=curtain_to_use,
+                            draft_order_item=fabric.draft_order_item,
+                            order_item=linked_order_item,
+                            fabric_type=fabric.fabric_type,
+                            fabric_name=fabric.fabric_name,
+                            pieces=fabric.pieces,
+                            meters=fabric.meters,
+                            tailoring_type=fabric.tailoring_type,
+                            notes=fabric.notes,
+                            sequence=fabric.sequence
+                        )
+                    
+                    # نسخ الإكسسوارات
+                    for accessory in draft_curtain.accessories.all():
+                        linked_acc_order_item = None
+                        if accessory.draft_order_item:
+                            if accessory.draft_order_item.original_item_id and accessory.draft_order_item.original_item_id in item_mapping:
+                                linked_acc_order_item = item_mapping[accessory.draft_order_item.original_item_id]
+                            else:
+                                linked_acc_order_item = OrderItem.objects.filter(
+                                    order=order,
+                                    product=accessory.draft_order_item.product,
+                                    quantity=accessory.draft_order_item.quantity
+                                ).first()
+                        
+                        CurtainAccessory.objects.create(
+                            curtain=curtain_to_use,
+                            draft_order_item=accessory.draft_order_item,
+                            order_item=linked_acc_order_item,
+                            accessory_name=accessory.accessory_name,
+                            accessory_type=accessory.accessory_type,
+                            quantity=accessory.quantity,
+                            count=accessory.count,
+                            size=accessory.size,
+                            color=accessory.color
+                        )
+                
+                # حذف الستائر التي لم تعد موجودة في المسودة
+                curtains_to_delete = [seq for seq in current_curtains.keys() if seq not in processed_sequences]
+                if curtains_to_delete:
+                    deleted_count = ContractCurtain.objects.filter(
+                        order=order,
+                        sequence__in=curtains_to_delete
+                    ).delete()[0]
+                    logger.info(f"🗑️ تم حذف {deleted_count} ستارة قديمة للطلب {order.order_number}")
 
                 # حذف الدفعات القديمة وإعادة إنشائها (يمكن تحسينه أيضاً لكن الدفعات أبسط)
                 order.payments.all().delete()
