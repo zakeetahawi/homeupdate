@@ -1014,6 +1014,11 @@ def export_products_excel(request):
     تصدير جميع المنتجات إلى ملف Excel
     يحتوي على: الكود، اسم المنتج، الفئة، السعر، المخزون الحالي
     """
+    # فحص الصلاحية - فقط المستخدمون الذين لديهم can_export=True
+    if not request.user.can_export:
+        messages.error(request, 'ليس لديك صلاحية تصدير البيانات')
+        return redirect('inventory:product_list')
+    
     from django.http import HttpResponse
     from openpyxl import Workbook
     from openpyxl.styles import Font, Alignment, PatternFill

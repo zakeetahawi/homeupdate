@@ -135,7 +135,7 @@ class CustomUserAdmin(UserAdmin):
     list_display = (
         'username', 'email', 'branch', 'first_name', 'last_name', 'is_staff',
         'get_user_role_display', 'get_roles', 'has_manufacturing_approval',
-        'is_warehouse_staff', 'assigned_warehouse'
+        'is_warehouse_staff', 'assigned_warehouse', 'can_export'
     )
 
     def get_queryset(self, request):
@@ -150,7 +150,7 @@ class CustomUserAdmin(UserAdmin):
         'is_inspection_technician', 'is_salesperson', 'is_branch_manager',
         'is_region_manager', 'is_sales_manager', 'is_factory_manager',
         'is_factory_accountant', 'is_factory_receiver', 'is_inspection_manager', 'is_installation_manager',
-        'is_warehouse_staff', 'user_roles__role'
+        'is_warehouse_staff', 'user_roles__role', 'can_export'
     )
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone')
     inlines = [UserRoleInline]
@@ -173,7 +173,7 @@ class CustomUserAdmin(UserAdmin):
                 'is_inspection_technician', 'is_salesperson', 'is_branch_manager',
                 'is_region_manager', 'is_sales_manager', 'is_factory_manager',
                 'is_factory_accountant', 'is_factory_receiver', 'is_inspection_manager', 'is_installation_manager',
-                'managed_branches', 'groups', 'user_permissions'
+                'managed_branches', 'can_export', 'groups', 'user_permissions'
             ),
             'classes': ('collapse',),
             'description': _(

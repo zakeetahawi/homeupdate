@@ -83,6 +83,8 @@
             <!-- QR Actions -->
 
 
+
+            {% if user.can_export %}
             <div class="dropdown">
                 <button class="btn btn-secondary dropdown-toggle" type="button" id="exportDropdown"
                     data-bs-toggle="dropdown" aria-expanded="false">
@@ -95,6 +97,7 @@
                     <li><a class="dropdown-item" href="#"><i class="fas fa-print"></i> طباعة</a></li>
                 </ul>
             </div>
+            {% endif %}
             <a href="{% url 'inventory:product_create' %}" class="btn btn-success">
                 <i class="fas fa-plus"></i> إضافة منتج
             </a>

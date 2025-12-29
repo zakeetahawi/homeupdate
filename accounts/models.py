@@ -114,6 +114,11 @@ class User(AbstractUser):
     managed_branches = models.ManyToManyField("Branch", blank=True, related_name="region_managers", verbose_name=_("الفروع المُدارة"))
     default_theme = models.CharField(max_length=50, default='default', verbose_name=_('الثيم الافتراضي'))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_('تاريخ التحديث'))
+    can_export = models.BooleanField(
+        default=False,
+        verbose_name=_("إمكانية التصدير"),
+        help_text=_("السماح للمستخدم بتصدير البيانات إلى Excel")
+    )
     class Meta:
         verbose_name = _('مستخدم')
         verbose_name_plural = _('المستخدمين')
