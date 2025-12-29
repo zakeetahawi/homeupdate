@@ -491,9 +491,10 @@ class BaseProductAdmin(admin.ModelAdmin):
     
     def cf_sync_status(self, obj):
         """عرض حالة مزامنة Cloudflare"""
+        from django.utils.safestring import mark_safe
         if obj.cloudflare_synced:
-            return format_html('<span style="color:green;">✓ مزامن</span>')
-        return format_html('<span style="color:red;">✗ غير مزامن</span>')
+            return mark_safe('<span style="color:green;">&#10003; مزامن</span>')
+        return mark_safe('<span style="color:red;">&#10007; غير مزامن</span>')
     cf_sync_status.short_description = _('Cloudflare')
     
     def last_sync(self, obj):
@@ -507,13 +508,13 @@ class BaseProductAdmin(admin.ModelAdmin):
             
             if diff < timedelta(hours=1):
                 minutes = int(diff.total_seconds() / 60)
-                return format_html('<span style="color:green;">منذ {} دقيقة</span>', minutes)
+                return format_html('<span style="color:green;">منذ {0} دقيقة</span>', minutes)
             elif diff < timedelta(days=1):
                 hours = int(diff.total_seconds() / 3600)
-                return format_html('<span style="color:orange;">منذ {} ساعة</span>', hours)
+                return format_html('<span style="color:orange;">منذ {0} ساعة</span>', hours)
             else:
                 days = diff.days
-                return format_html('<span style="color:red;">منذ {} يوم</span>', days)
+                return format_html('<span style="color:red;">منذ {0} يوم</span>', days)
         return '-'
     last_sync.short_description = _('آخر مزامنة')
     
