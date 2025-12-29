@@ -160,8 +160,9 @@ class VariantService:
             }
         )
         
-        # تعيين علامة لتخطي المزامنة التلقائية
+        # تعيين علامات لتخطي التوليد التلقائي (QR + Cloudflare)
         base_product._skip_cloudflare_sync = True
+        base_product._skip_qr_generation = True
         
         # إنشاء أو الحصول على المتغير
         if not variant_code:

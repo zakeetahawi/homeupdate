@@ -1321,6 +1321,10 @@ class BaseProduct(models.Model):
         is_new = self.pk is None
         super().save(*args, **kwargs)
         
+        # تخطي توليد QR أثناء عمليات الترحيل (سيتم في المرحلة 2)
+        if getattr(self, '_skip_qr_generation', False):
+            return
+        
         if not self.qr_code_base64 and self.code:
             if self.generate_qr():
                 # حفظ الحقل فقط لتجنب التكرار اللانهائي
