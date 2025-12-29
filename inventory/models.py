@@ -1271,6 +1271,19 @@ class BaseProduct(models.Model):
     # QR Code Field
     qr_code_base64 = models.TextField(_('رمز QR (مخزن)'), blank=True, null=True)
     
+    # Cloudflare Sync Tracking
+    cloudflare_synced = models.BooleanField(
+        _('تم المزامنة مع Cloudflare'),
+        default=False,
+        help_text=_('هل تم مزامنة هذا المنتج مع Cloudflare KV؟')
+    )
+    last_synced_at = models.DateTimeField(
+        _('تاريخ آخر مزامنة'),
+        null=True,
+        blank=True,
+        help_text=_('آخر مرة تم فيها مزامنة المنتج مع Cloudflare')
+    )
+    
     is_active = models.BooleanField(_('نشط'), default=True)
 
     def generate_qr(self, force=False):
