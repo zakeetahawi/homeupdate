@@ -148,21 +148,30 @@ class VariantService:
             variant_code = 'DEFAULT'
         
         # إنشاء أو الحصول على المنتج الأساسي
-        base_product, bp_created = BaseProduct.objects.get_or_create(
-            code=base_name,  # استخدام الاسم الأساسي ككود
-            defaults={
-                'name': base_name,  # الاسم الأساسي
-                'base_price': product.price,
-                'currency': product.currency,
-                'unit': product.unit,
-                'category': product.category,
-                'minimum_stock': product.minimum_stock,
-            }
-        )
+        # نستخدم filter().first() بدلاً من get_or_create لنتحكم في الـ flags قبل save()
+        base_product = BaseProduct.objects.filter(code=base_name).first()
+        bp_created = False
         
-        # تعيين علامات لتخطي التوليد التلقائي (QR + Cloudflare)
-        base_product._skip_cloudflare_sync = True
-        base_product._skip_qr_generation = True
+        if not base_product:
+            # إنشاء يدوي مع تعيين الـ flags قبل save()
+            base_product = BaseProduct(
+                code=base_name,
+                name=base_name,
+                base_price=product.price,
+                currency=product.currency,
+                unit=product.unit,
+                category=product.category,
+                minimum_stock=product.minimum_stock,
+            )
+            # تعيين الـ flags قبل save()
+            base_product._skip_cloudflare_sync = True
+            base_product._skip_qr_generation = True
+            base_product.save()
+            bp_created = True
+        else:
+            # تعيين الـ flags على المنتج الموجود
+            base_product._skip_cloudflare_sync = True
+            base_product._skip_qr_generation = True
         
         # إنشاء أو الحصول على المتغير
         if not variant_code:
@@ -180,18 +189,34 @@ class VariantService:
                 # إنشاء variant_code فريد بإضافة الـ ID
                 variant_code = f"{variant_code}_{product.id}"
         
-        variant, v_created = ProductVariant.objects.update_or_create(
+        # إنشاء أو تحديث المتغير - يدوياً للتحكم في الـ flags
+        variant = ProductVariant.objects.filter(
             base_product=base_product,
-            variant_code=variant_code,
-            defaults={
-                'legacy_product': product,
-                'color_code': cls.extract_color_code(variant_code.split('_')[0]),  # استخدام الكود الأصلي للون
-                'barcode': product.code,  # حفظ الكود الأصلي كباركود
-            }
-        )
+            variant_code=variant_code
+        ).first()
         
-        # تعيين علامة لتخطي المزامنة التلقائية
-        variant._skip_cloudflare_sync = True
+        v_created = False
+        if not variant:
+            # إنشاء جديد
+            variant = ProductVariant(
+                base_product=base_product,
+                variant_code=variant_code,
+                legacy_product=product,
+                color_code=cls.extract_color_code(variant_code.split('_')[0]),
+                barcode=product.code,
+            )
+            # تعيين الـ flag قبل save()
+            variant._skip_cloudflare_sync = True
+            variant.save()
+            v_created = True
+        else:
+            # تحديث موجود
+            variant.legacy_product = product
+            variant.color_code = cls.extract_color_code(variant_code.split('_')[0])
+            variant.barcode = product.code
+            # تعيين الـ flag قبل save()
+            variant._skip_cloudflare_sync = True
+            variant.save()
         
         return base_product, variant, (bp_created or v_created)
     

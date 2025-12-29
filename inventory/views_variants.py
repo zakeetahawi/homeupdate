@@ -771,9 +771,8 @@ def migrate_phase1(request):
     if request.method == 'POST':
         stats = VariantService.phase1_migrate_products()
         
-        # حفظ IDs في session للمراحل التالية
-        request.session['migration_base_product_ids'] = stats['base_product_ids']
-        request.session['migration_phase1_stats'] = {
+        # حفظ الإحصائيات في session للعرض
+        request.session['migration_completed_stats'] = {
             'total': stats['total'],
             'migrated': stats['migrated'],
             'skipped': stats['skipped'],
@@ -782,10 +781,11 @@ def migrate_phase1(request):
         
         messages.success(
             request,
-            f"✅ المرحلة 1 اكتملت: تم ترحيل {stats['migrated']} منتج"
+            f"✅ اكتمل الترحيل بنجاح: تم ترحيل {stats['migrated']} منتج"
         )
         
-        return redirect('inventory:migrate_phase2_confirm')
+        # إعادة التوجيه لنفس الصفحة لعرض النتائج
+        return redirect('inventory:migrate_phase1')
     
     # GET request - show confirmation
     total_products = Product.objects.count()
@@ -794,9 +794,15 @@ def migrate_phase1(request):
     ).count()
     pending = total_products - linked_products
     
+    # الحصول على نتائج الترحيل المكتمل إن وجدت
+    completed_stats = request.session.pop('migration_completed_stats', None)
+    
     context = {
         'pending_count': pending,
-        'title': _('المرحلة 1: ترحيل المنتجات'),
+        'migrated_count': linked_products,
+        'total_count': total_products,
+        'completed_stats': completed_stats,
+        'title': _('ترحيل المنتجات'),
         'active_menu': 'variants',
     }
     
