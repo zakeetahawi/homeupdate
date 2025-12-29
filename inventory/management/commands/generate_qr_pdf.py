@@ -1,10 +1,10 @@
 """
-Management command to generate a comprehensive PDF with all QR codes
-Uses Arabic font support and matches 3x3cm layout request
+Management command to generate PDF with BaseProduct QR codes only
+Optimized for smaller file size with compression
 """
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from inventory.models import Product, BaseProduct, ProductVariant
+from inventory.models import BaseProduct
 from io import BytesIO
 import os
 import base64
@@ -25,7 +25,7 @@ from bidi.algorithm import get_display
 
 
 class Command(BaseCommand):
-    help = 'Generate comprehensive PDF with all product QR codes (BaseProduct + Orphans)'
+    help = 'Generate PDF with BaseProduct QR codes (optimized for smaller file size)'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -36,55 +36,56 @@ class Command(BaseCommand):
         parser.add_argument(
             '--output',
             type=str,
-            default='media/qr_codes/all_products_qr.pdf',
+            default='media/qr_codes/base_products_qr.pdf',
             help='Output file path',
+        )
+        parser.add_argument(
+            '--compress',
+            action='store_true',
+            default=True,
+            help='Enable PDF compression (default: True)',
         )
 
     def handle(self, *args, **options):
         category_id = options.get('category')
         output_path = options.get('output')
+        compress = options.get('compress', True)
         
         # Ensure output directory exists
         output_dir = os.path.dirname(output_path)
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)
         
-        self.stdout.write(self.style.NOTICE('Starting PDF generation (3x3cm Layout)...'))
+        self.stdout.write(self.style.NOTICE('🔄 Starting BaseProduct QR PDF generation...'))
+        self.stdout.write(f'   Compression: {"✅ Enabled" if compress else "❌ Disabled"}')
         
         # Register Arabic font
         self.register_fonts()
         
-        # 1. Fetch BaseProducts (Active)
-        base_products = BaseProduct.objects.filter(is_active=True).order_by('name')
-        
-        # 2. Fetch Orphan Products (Active, have code, NOT linked to any variant)
-        # We need to find products that are NOT in ProductVariant.legacy_product
-        linked_ids = ProductVariant.objects.filter(legacy_product__isnull=False).values_list('legacy_product_id', flat=True)
-        orphan_products = Product.objects.filter(code__isnull=False).exclude(code='').exclude(id__in=linked_ids).order_by('name')
+        # ✅ Fetch ONLY BaseProducts (Active)
+        base_products = BaseProduct.objects.filter(is_active=True).select_related('category').order_by('code')
         
         if category_id:
             base_products = base_products.filter(category_id=category_id)
-            orphan_products = orphan_products.filter(category_id=category_id)
-            self.stdout.write(f'Filtering by category ID: {category_id}')
+            self.stdout.write(f'   Filtering by category ID: {category_id}')
         
-        # Combine lists
-        all_items = list(base_products) + list(orphan_products)
-        total_count = len(all_items)
+        total_count = base_products.count()
         
-        self.stdout.write(f'Found {total_count} items (Base: {base_products.count()}, Orphans: {orphan_products.count()})')
+        self.stdout.write(f'   Found {total_count} BaseProducts')
         
         if total_count == 0:
-            self.stdout.write(self.style.WARNING('No products found!'))
+            self.stdout.write(self.style.WARNING('⚠️  No products found!'))
             return
         
         # Generate PDF
-        self.generate_pdf(all_items, output_path, total_count)
+        self.generate_pdf(base_products, output_path, total_count, compress)
         
-        self.stdout.write(self.style.SUCCESS(f'PDF generated successfully: {output_path}'))
+        self.stdout.write(self.style.SUCCESS(f'✅ PDF generated successfully: {output_path}'))
         
         # Get file size
         file_size = os.path.getsize(output_path)
-        self.stdout.write(f'File size: {file_size / 1024 / 1024:.2f} MB')
+        self.stdout.write(f'   File size: {file_size / 1024 / 1024:.2f} MB')
+        self.stdout.write(f'   Average: {file_size / total_count / 1024:.2f} KB per product')
 
     def register_fonts(self):
         try:
@@ -126,16 +127,18 @@ class Command(BaseCommand):
         except:
             return str(text)
 
-    def generate_pdf(self, items, output_path, total_count):
-        """Generate the PDF with QR codes in 3x3cm grid"""
+    def generate_pdf(self, items, output_path, total_count, compress=True):
+        """Generate the PDF with QR codes in 3x3cm grid with compression"""
         
         doc = SimpleDocTemplate(
             output_path,
             pagesize=A4,
-            rightMargin=0.5*cm, # Minimized margins for max space
+            rightMargin=0.5*cm,
             leftMargin=0.5*cm,
             topMargin=1.0*cm,
-            bottomMargin=1.0*cm
+            bottomMargin=1.0*cm,
+            # ✅ Enable compression
+            compress=compress
         )
         
         elements = []
@@ -160,14 +163,13 @@ class Command(BaseCommand):
                 alignment=TA_CENTER,
                 leading=12
             )
-            # Compact Product Name Style
             product_name_style = ParagraphStyle(
                 'ProductName',
                 parent=styles['Normal'],
                 fontName='Arabic',
-                fontSize=9, # Smaller font
+                fontSize=8,  # Smaller for compactness
                 alignment=TA_CENTER,
-                leading=10,
+                leading=9,
                 spaceBefore=1
             )
         except:
@@ -176,25 +178,21 @@ class Command(BaseCommand):
             product_name_style = styles['Normal']
         
         # Header
-        title_text = self.reshape_arabic('رموز QR للمنتجات - الخواجة')
+        title_text = self.reshape_arabic('رموز QR للمنتجات الأساسية - الخواجة')
         elements.append(Paragraph(title_text, title_style))
         
         count_text = self.reshape_arabic(f'إجمالي المنتجات: {total_count}')
         elements.append(Paragraph(count_text, arabic_normal))
-        elements.append(Spacer(1, 15))
+        elements.append(Spacer(1, 10))
         
-        # Grid Setup
-        # 3cm QR + Text space ~= 3.5cm width per item? 
-        # User asked for 3cm x 3cm QR.
-        # A4 Width = 21cm. -1cm margin = 20cm usable.
-        # If column width is ~3.8cm, we fit 5 columns (19cm).
-        
+        # Grid Setup - 5 items per row
         ITEMS_PER_ROW = 5
         COL_WIDTH = 3.8 * cm
         
         table_data = []
         current_row = []
         processed = 0
+        skipped = 0
         
         for item in items:
             processed += 1
@@ -203,10 +201,8 @@ class Command(BaseCommand):
             if not item.qr_code_base64:
                 item.generate_qr()
                 try:
-                    # Save silently to avoid overhead if possible, or just generate in memory
-                    # But we need to save it to model eventually
-                   if hasattr(item, 'save'):
-                       item.save(update_fields=['qr_code_base64'])
+                    if hasattr(item, 'save'):
+                        item.save(update_fields=['qr_code_base64'])
                 except:
                     pass
             
@@ -216,18 +212,23 @@ class Command(BaseCommand):
                 try:
                     qr_data = base64.b64decode(qr_base64)
                     qr_buffer = BytesIO(qr_data)
-                    # REQUEST: 3cm x 3cm QR
-                    qr_img = Image(qr_buffer, width=3*cm, height=3*cm)
+                    
+                    # ✅ 3cm x 3cm QR with lazy loading
+                    qr_img = Image(qr_buffer, width=3*cm, height=3*cm, lazy=2)
                     
                     # Name Truncation
                     raw_name = item.name
-                    if len(raw_name) > 25:
-                        raw_name = raw_name[:25] + '..'
+                    if len(raw_name) > 20:  # Shorter truncation
+                        raw_name = raw_name[:20] + '..'
                     name_text = self.reshape_arabic(raw_name)
                     
-                    # Inner Cell Content: QR Image + Name Text
+                    # Code display
+                    code_text = f"<font size='7'>{item.code}</font>"
+                    
+                    # Inner Cell Content: QR Image + Code + Name
                     cell_content = [
                         [qr_img],
+                        [Paragraph(code_text, product_name_style)],
                         [Paragraph(f"<b>{name_text}</b>", product_name_style)]
                     ]
                     
@@ -245,10 +246,12 @@ class Command(BaseCommand):
                     current_row.append(inner_table)
                     
                 except Exception as e:
-                    self.stdout.write(f"Error processing item {item.code}: {e}")
-                    current_row.append('') # Empty placeholder on error
+                    self.stdout.write(f"⚠️  Error processing {item.code}: {e}")
+                    skipped += 1
+                    current_row.append('')
             else:
-                 current_row.append('')
+                skipped += 1
+                current_row.append('')
             
             # Row Management
             if len(current_row) == ITEMS_PER_ROW:
@@ -256,7 +259,7 @@ class Command(BaseCommand):
                 current_row = []
             
             if processed % 100 == 0:
-                self.stdout.write(f'Processed {processed}/{total_count}...')
+                self.stdout.write(f'   Processed {processed}/{total_count}...')
 
         # Fill last row
         if current_row:
@@ -272,12 +275,15 @@ class Command(BaseCommand):
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ('LEFTPADDING', (0, 0), (-1, -1), 2),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 2),
-                ('TOPPADDING', (0, 0), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-                # Optional: Dotted lines for cutting?
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
             ]))
             elements.append(main_table)
+        
+        if skipped > 0:
+            self.stdout.write(f'   ⚠️  Skipped {skipped} items without QR codes')
             
-        self.stdout.write('Building PDF document...')
+        self.stdout.write('   Building PDF document...')
         doc.build(elements)
+
