@@ -378,6 +378,10 @@ def sync_base_product_to_cloudflare(sender, instance, **kwargs):
     مزامنة المنتج الأساسي تلقائياً مع Cloudflare عند التعديل
     Sync BaseProduct explicitly on save (triggers on price change, name change, etc.)
     """
+    # تخطي المزامنة أثناء عمليات الترحيل الجماعي
+    if getattr(instance, '_skip_cloudflare_sync', False):
+        return
+    
     # تجنب المزامنة إذا لم يكن هناك كود
     if not instance.code:
         return
@@ -406,6 +410,10 @@ def sync_variant_parent_to_cloudflare(sender, instance, **kwargs):
     عند تعديل متغير (سعر، مخزون، الخ)، يتم تحديث المنتج الأساسي في Cloudflare
     Sync parent BaseProduct when variant is updated
     """
+    # تخطي المزامنة أثناء عمليات الترحيل الجماعي
+    if getattr(instance, '_skip_cloudflare_sync', False):
+        return
+    
     if not instance.base_product or not instance.base_product.code:
         return
 

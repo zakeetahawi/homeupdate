@@ -160,6 +160,9 @@ class VariantService:
             }
         )
         
+        # تعيين علامة لتخطي المزامنة التلقائية
+        base_product._skip_cloudflare_sync = True
+        
         # إنشاء أو الحصول على المتغير
         if not variant_code:
             variant_code = 'DEFAULT'
@@ -185,6 +188,9 @@ class VariantService:
                 'barcode': product.code,  # حفظ الكود الأصلي كباركود
             }
         )
+        
+        # تعيين علامة لتخطي المزامنة التلقائية
+        variant._skip_cloudflare_sync = True
         
         return base_product, variant, (bp_created or v_created)
     
@@ -224,6 +230,10 @@ class VariantService:
             logger.info(f"[DRY RUN] سيتم ترحيل {stats['total']} منتج")
             return stats
         
+        logger.info(f"🚀 بدء ترحيل {stats['total']} منتج (بدون QR أو مزامنة)")
+        
+        migrated_base_products = []
+        
         for product in unlinked_products.iterator(chunk_size=batch_size):
             try:
                 base, variant, created = cls.link_existing_product(product)
@@ -231,6 +241,7 @@ class VariantService:
                     stats['migrated'] += 1
                     if base:
                         stats['base_products_created'] += 1
+                        migrated_base_products.append(base.id)
                     stats['variants_created'] += 1
                 else:
                     stats['skipped'] += 1
@@ -241,6 +252,50 @@ class VariantService:
                     'error': str(e)
                 })
                 logger.error(f"خطأ في ترحيل المنتج {product.id}: {e}")
+        
+        logger.info(f"✅ اكتمل الترحيل: {stats['migrated']} منتج")
+        
+        # المرحلة 2: توليد QR للمنتجات الأساسية
+        if migrated_base_products:
+            from .models import BaseProduct
+            logger.info(f"📊 بدء توليد QR لـ {len(migrated_base_products)} منتج أساسي...")
+            qr_generated = 0
+            for base_id in migrated_base_products:
+                try:
+                    base = BaseProduct.objects.get(id=base_id)
+                    if base.generate_qr(force=True):
+                        qr_generated += 1
+                except Exception as e:
+                    logger.error(f"خطأ في توليد QR للمنتج {base_id}: {e}")
+            
+            logger.info(f"✅ تم توليد {qr_generated} QR")
+            stats['qr_generated'] = qr_generated
+        
+        # المرحلة 3: مزامنة Cloudflare
+        if migrated_base_products:
+            from .models import BaseProduct
+            logger.info(f"☁️ بدء مزامنة Cloudflare لـ {len(migrated_base_products)} منتج...")
+            try:
+                from public.cloudflare_sync import sync_product_to_cloudflare, get_cloudflare_sync
+                
+                if get_cloudflare_sync().is_configured():
+                    synced = 0
+                    for base_id in migrated_base_products:
+                        try:
+                            base = BaseProduct.objects.get(id=base_id)
+                            sync_product_to_cloudflare(base)
+                            synced += 1
+                        except Exception as e:
+                            logger.error(f"خطأ في مزامنة المنتج {base_id}: {e}")
+                    
+                    logger.info(f"✅ تم مزامنة {synced} منتج مع Cloudflare")
+                    stats['cloudflare_synced'] = synced
+                else:
+                    logger.warning("⚠️ Cloudflare غير مُعد - تم تخطي المزامنة")
+                    stats['cloudflare_synced'] = 0
+            except Exception as e:
+                logger.error(f"خطأ في مزامنة Cloudflare: {e}")
+                stats['cloudflare_synced'] = 0
         
         return stats
     
