@@ -183,6 +183,11 @@ urlpatterns = [
     
     # Migration
     path('migrate-products/', views_variants.migrate_products, name='migrate_products'),
+    path('migrate-products/phase1/', views_variants.migrate_phase1, name='migrate_phase1'),
+    path('migrate-products/phase2/confirm/', views_variants.migrate_phase2_confirm, name='migrate_phase2_confirm'),
+    path('migrate-products/phase2/', views_variants.migrate_phase2, name='migrate_phase2'),
+    path('migrate-products/phase3/confirm/', views_variants.migrate_phase3_confirm, name='migrate_phase3_confirm'),
+    path('migrate-products/phase3/', views_variants.migrate_phase3, name='migrate_phase3'),
     
     # Variants API
     path('api/base-product/<int:pk>/variants/', views_variants.api_base_product_variants, name='api_base_product_variants'),
