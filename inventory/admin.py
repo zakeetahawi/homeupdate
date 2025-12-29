@@ -403,11 +403,58 @@ class ProductVariantInline(admin.TabularInline):
     show_change_link = True
 
 
+# Custom Filters for BaseProduct Admin
+class HasQRFilter(admin.SimpleListFilter):
+    title = _('حالة QR')
+    parameter_name = 'has_qr'
+    
+    def lookups(self, request, model_admin):
+        return (
+            ('yes', _('يوجد QR')),
+            ('no', _('لا يوجد QR')),
+        )
+    
+    def queryset(self, request, queryset):
+        if self.value() == 'yes':
+            return queryset.exclude(qr_code_base64='').exclude(qr_code_base64__isnull=True)
+        if self.value() == 'no':
+            return queryset.filter(qr_code_base64='') | queryset.filter(qr_code_base64__isnull=True)
+        return queryset
+
+
+class CloudflareSyncFilter(admin.SimpleListFilter):
+    title = _('حالة مزامنة Cloudflare')
+    parameter_name = 'cf_synced'
+    
+    def lookups(self, request, model_admin):
+        return (
+            ('synced', _('تم المزامنة')),
+            ('not_synced', _('لم يتم المزامنة')),
+            ('recent', _('مزامنة حديثة (آخر 24 ساعة)')),
+        )
+    
+    def queryset(self, request, queryset):
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        if self.value() == 'synced':
+            return queryset.filter(cloudflare_synced=True)
+        if self.value() == 'not_synced':
+            return queryset.filter(cloudflare_synced=False)
+        if self.value() == 'recent':
+            yesterday = timezone.now() - timedelta(days=1)
+            return queryset.filter(
+                cloudflare_synced=True,
+                last_synced_at__gte=yesterday
+            )
+        return queryset
+
+
 @admin.register(BaseProduct)
 class BaseProductAdmin(admin.ModelAdmin):
     list_per_page = 25
-    list_display = ('code', 'name', 'category', 'base_price', 'variants_count', 'is_active', 'has_qr')
-    list_filter = ('category', 'is_active', 'created_at')
+    list_display = ('code', 'name', 'category', 'base_price', 'variants_count', 'is_active', 'has_qr', 'cf_sync_status', 'last_sync')
+    list_filter = ('category', 'is_active', HasQRFilter, CloudflareSyncFilter, 'created_at', 'last_synced_at')
     search_fields = ('name', 'code', 'description')
     readonly_fields = ('created_at', 'updated_at', 'created_by', 'qr_preview')
     inlines = [ProductVariantInline]
@@ -441,6 +488,34 @@ class BaseProductAdmin(admin.ModelAdmin):
     def variants_count(self, obj):
         return obj.variants.count()
     variants_count.short_description = _('عدد المتغيرات')
+    
+    def cf_sync_status(self, obj):
+        """عرض حالة مزامنة Cloudflare"""
+        if obj.cloudflare_synced:
+            return format_html('<span style="color:green;">✓ مزامن</span>')
+        return format_html('<span style="color:red;">✗ غير مزامن</span>')
+    cf_sync_status.short_description = _('Cloudflare')
+    
+    def last_sync(self, obj):
+        """عرض تاريخ آخر مزامنة"""
+        if obj.last_synced_at:
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            now = timezone.now()
+            diff = now - obj.last_synced_at
+            
+            if diff < timedelta(hours=1):
+                minutes = int(diff.total_seconds() / 60)
+                return format_html('<span style="color:green;">منذ {} دقيقة</span>', minutes)
+            elif diff < timedelta(days=1):
+                hours = int(diff.total_seconds() / 3600)
+                return format_html('<span style="color:orange;">منذ {} ساعة</span>', hours)
+            else:
+                days = diff.days
+                return format_html('<span style="color:red;">منذ {} يوم</span>', days)
+        return '-'
+    last_sync.short_description = _('آخر مزامنة')
     
     def qr_preview(self, obj):
         if obj.qr_code_base64:
