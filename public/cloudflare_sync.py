@@ -125,6 +125,7 @@ class CloudflareSync:
     def sync_product(self, product_or_base):
         """Sync a single product (Base or Standard) to Cloudflare KV"""
         from inventory.models import BaseProduct
+        from django.utils import timezone
         
         # Handle BaseProduct
         if isinstance(product_or_base, BaseProduct):
@@ -134,7 +135,17 @@ class CloudflareSync:
                 'action': 'sync_product',
                 'product': self.format_base_product(product_or_base)
             }
-            return self._send_request(data)
+            result = self._send_request(data)
+            
+            # ✅ Update database fields after successful sync
+            if result:
+                BaseProduct.objects.filter(pk=product_or_base.pk).update(
+                    cloudflare_synced=True,
+                    last_synced_at=timezone.now()
+                )
+                logger.info(f"✅ Updated DB: {product_or_base.code} marked as synced")
+            
+            return result
             
         # Handle Standard Product
         else:
@@ -150,8 +161,10 @@ class CloudflareSync:
     def sync_all_products(self, batch_size=50):
         """Sync all products (Base + Standalone) to Cloudflare KV"""
         from inventory.models import Product, BaseProduct, ProductVariant
+        from django.utils import timezone
         
         synced = 0
+        now = timezone.now()
         
         # 1. Sync Base Products
         base_products = BaseProduct.objects.filter(is_active=True)
@@ -167,6 +180,13 @@ class CloudflareSync:
             }
             if self._send_request(data):
                 synced += len(formatted)
+                # ✅ Update database for this batch
+                batch_ids = [p.id for p in batch]
+                BaseProduct.objects.filter(id__in=batch_ids).update(
+                    cloudflare_synced=True,
+                    last_synced_at=now
+                )
+                logger.info(f"✅ Batch {i//batch_size + 1}: Synced {len(formatted)} products")
         
         # 2. Sync Standalone Products (Orphans)
         linked_ids = ProductVariant.objects.filter(legacy_product__isnull=False).values_list('legacy_product_id', flat=True)
@@ -184,7 +204,7 @@ class CloudflareSync:
             if self._send_request(data):
                 synced += len(formatted)
                 
-        logger.info(f"Synced {synced} items (Base+Orphans) to Cloudflare")
+        logger.info(f"✅ Synced {synced} items (Base+Orphans) to Cloudflare")
         return synced
     
     def delete_product(self, code):

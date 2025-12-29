@@ -555,7 +555,6 @@ class BaseProductAdmin(admin.ModelAdmin):
         
         for obj in queryset:
             if sync_product_to_cloudflare(obj):
-                obj.save(update_fields=['updated_at']) # Update timestamp
                 success_count += 1
             else:
                 fail_count += 1
