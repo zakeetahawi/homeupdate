@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}المرحلة 1: ترحيل المنتجات{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-sync-alt text-primary me-2"></i>
+                المرحلة 1: ترحيل المنتجات
+            </h2>
+            <p class="text-muted mb-0">الخطوة الأولى: ترحيل المنتجات إلى نظام المتغيرات</p>
+        </div>
+        <a href="{% url 'inventory:migrate_products' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-right me-1"></i>
+            رجوع
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Info Card -->
+    <div class="row mb-4">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        معلومات المرحلة 1
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <h6><i class="fas fa-lightbulb me-2"></i>ماذا سيحدث في هذه المرحلة؟</h6>
+                        <ul class="mb-0">
+                            <li>سيتم ترحيل <strong>{{ pending_count }}</strong> منتج إلى نظام المتغيرات</li>
+                            <li><strong>لن يتم</strong> توليد QR في هذه المرحلة</li>
+                            <li><strong>لن يتم</strong> المزامنة مع Cloudflare في هذه المرحلة</li>
+                            <li>العملية سريعة وآمنة</li>
+                        </ul>
+                    </div>
+
+                    <div class="text-center mb-4">
+                        <div class="display-1 text-primary mb-3">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <h3 class="text-primary">{{ pending_count }}</h3>
+                        <p class="text-muted">منتج في انتظار الترحيل</p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-rocket me-2"></i>
+                                بدء المرحلة 1: ترحيل المنتجات
+                            </button>
+                            <a href="{% url 'inventory:migrate_products' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>
+                                إلغاء
+                            </a>
+                        </div>
+                    </form>
+
+                    <div class="alert alert-warning mt-4 mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>ملاحظة:</strong> بعد اكتمال هذه المرحلة، ستحتاج إلى الموافقة للمتابعة إلى المرحلة 2 (توليد QR).
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Process Steps -->
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-list-ol me-2"></i>
+                        خطوات العملية الكاملة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item active">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="text-primary">المرحلة 1: الترحيل</h6>
+                                <p class="text-muted mb-0">ترحيل المنتجات إلى نظام المتغيرات</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-secondary"></div>
+                            <div class="timeline-content">
+                                <h6 class="text-muted">المرحلة 2: توليد QR</h6>
+                                <p class="text-muted mb-0">توليد أكواد QR للمنتجات</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-secondary"></div>
+                            <div class="timeline-content">
+                                <h6 class="text-muted">المرحلة 3: مزامنة Cloudflare</h6>
+                                <p class="text-muted mb-0">مزامنة المنتجات مع Cloudflare</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+.timeline-item {
+    position: relative;
+    padding-left: 40px;
+    padding-bottom: 30px;
+}
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 30px;
+    bottom: -10px;
+    width: 2px;
+    background: #dee2e6;
+}
+.timeline-item:last-child::before {
+    display: none;
+}
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #dee2e6;
+}
+.timeline-item.active .timeline-marker {
+    box-shadow: 0 0 0 2px #0d6efd;
+}
+</style>
+{% endblock %}

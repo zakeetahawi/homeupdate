@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}اكتمل الترحيل{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="text-center mb-5">
+        <div class="display-1 text-success mb-3">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <h1 class="text-success mb-2">🎉 اكتملت عملية الترحيل بنجاح!</h1>
+        <p class="text-muted">تم إنجاز جميع المراحل الثلاث</p>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card shadow-lg h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-database me-2"></i>
+                                المرحلة 1: الترحيل
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center mb-3">
+                                <div class="display-4 text-primary">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                            </div>
+                            <div class="row text-center">
+                                <div class="col-6 mb-2">
+                                    <h4 class="text-success mb-0">{{ all_stats.phase1.migrated }}</h4>
+                                    <small class="text-muted">تم ترحيلها</small>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <h4 class="text-warning mb-0">{{ all_stats.phase1.skipped }}</h4>
+                                    <small class="text-muted">تم تخطيها</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card shadow-lg h-100">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-qrcode me-2"></i>
+                                المرحلة 2: QR
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center mb-3">
+                                <div class="display-4 text-success">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                            </div>
+                            <div class="row text-center">
+                                <div class="col-6 mb-2">
+                                    <h4 class="text-success mb-0">{{ all_stats.phase2.generated }}</h4>
+                                    <small class="text-muted">تم توليدها</small>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <h4 class="text-danger mb-0">{{ all_stats.phase2.failed }}</h4>
+                                    <small class="text-muted">فشل</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card shadow-lg h-100">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-cloud me-2"></i>
+                                المرحلة 3: Cloudflare
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center mb-3">
+                                <div class="display-4 text-info">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                            </div>
+                            <div class="row text-center">
+                                <div class="col-6 mb-2">
+                                    <h4 class="text-success mb-0">{{ all_stats.phase3.synced }}</h4>
+                                    <small class="text-muted">تم مزامنتها</small>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <h4 class="text-warning mb-0">{{ all_stats.phase3.skipped }}</h4>
+                                    <small class="text-muted">تم تخطيها</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success Message -->
+            <div class="card shadow-lg mb-4">
+                <div class="card-body text-center p-5">
+                    <div class="display-1 text-success mb-4">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h2 class="text-success mb-3">عملية ناجحة!</h2>
+                    <p class="lead text-muted mb-4">
+                        تم ترحيل <strong class="text-primary">{{ all_stats.phase1.migrated }}</strong> منتج بنجاح
+                        <br>
+                        وتوليد <strong class="text-success">{{ all_stats.phase2.generated }}</strong> QR
+                        <br>
+                        ومزامنة <strong class="text-info">{{ all_stats.phase3.synced }}</strong> منتج مع Cloudflare
+                    </p>
+
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{% url 'inventory:base_product_list' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-list me-2"></i>
+                            عرض المنتجات المرحلة
+                        </a>
+                        <a href="{% url 'inventory:migrate_products' %}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-sync-alt me-2"></i>
+                            ترحيل منتجات أخرى
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="card shadow">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        ملخص العملية
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline-complete">
+                        <div class="timeline-item completed">
+                            <div class="timeline-marker bg-success">
+                                <i class="fas fa-check text-white"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6 class="text-success">المرحلة 1: الترحيل ✓</h6>
+                                <p class="text-muted mb-0">تم ترحيل {{ all_stats.phase1.migrated }} منتج بنجاح</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item completed">
+                            <div class="timeline-marker bg-success">
+                                <i class="fas fa-check text-white"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6 class="text-success">المرحلة 2: توليد QR ✓</h6>
+                                <p class="text-muted mb-0">تم توليد {{ all_stats.phase2.generated }} QR</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item completed">
+                            <div class="timeline-marker bg-success">
+                                <i class="fas fa-check text-white"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6 class="text-success">المرحلة 3: مزامنة Cloudflare ✓</h6>
+                                <p class="text-muted mb-0">تم مزامنة {{ all_stats.phase3.synced }} منتج</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .timeline-complete {
+        position: relative;
+        padding: 20px 0;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-left: 50px;
+        padding-bottom: 30px;
+    }
+
+    .timeline-item:last-child {
+        padding-bottom: 0;
+    }
+
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 14px;
+        top: 35px;
+        bottom: -10px;
+        width: 3px;
+        background: #28a745;
+    }
+
+    .timeline-item:last-child::before {
+        display: none;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: 0;
+        top: 5px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 0 4px #fff, 0 0 0 6px #28a745;
+    }
+</style>
+{% endblock %}
