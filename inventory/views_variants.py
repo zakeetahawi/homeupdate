@@ -658,7 +658,11 @@ def color_delete(request, pk):
 
 @login_required
 def migrate_products(request):
-    """ترحيل المنتجات القديمة"""
+    """ترحيل المنتجات القديمة - يتم التوجيه للنظام التفاعلي الجديد"""
+    # توجيه تلقائي للنظام التفاعلي الجديد (3 مراحل)
+    return redirect('inventory:migrate_phase1')
+    
+    # الكود القديم محفوظ للرجوع إليه إذا لزم الأمر
     preview_results = None
     migration_results = None
     
