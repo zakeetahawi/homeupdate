@@ -38,10 +38,26 @@ def smart_update_product(product_data, warehouse, user, upload_mode):
     code = product_data.get('code')
     name = product_data['name']
     
-    # البحث عن المنتج
+    # البحث عن المنتج - مع دعم الأكواد التي فقدت الأصفار البادئة
+    product = None
     if code:
+        # محاولة 1: البحث بالكود كما هو
         try:
             product = Product.objects.get(code=code)
+        except Product.DoesNotExist:
+            # محاولة 2: إضافة أصفار بادئة (001, 0001, إلخ)
+            # Excel يحول 001 إلى 1، لذلك نحاول العكس
+            if code.isdigit():
+                for padding in [3, 4, 5, 6]:  # تجربة أطوال مختلفة
+                    padded_code = code.zfill(padding)
+                    try:
+                        product = Product.objects.get(code=padded_code)
+                        logger.info(f"✅ تم العثور على المنتج بالكود المُبطن: {code} -> {padded_code}")
+                        break
+                    except Product.DoesNotExist:
+                        continue
+        
+        if product:
             result['product'] = product
             
             # وضع: إضافة فقط - تجاهل الموجود
@@ -52,44 +68,61 @@ def smart_update_product(product_data, warehouse, user, upload_mode):
             
             # التحديث الذكي أو الدمج
             if upload_mode in ['smart_update', 'merge_warehouses']:
-                # تحديث بيانات المنتج بجميع الحقول
-                product.name = name
-                product.price = product_data.get('price', product.price)
-                product.category = product_data.get('category', product.category)
+                # تحديث ذكي - فقط الحقول الممتلئة
                 
-                # تحديث الحقول الإضافية
-                if 'description' in product_data and product_data['description']:
+                # تحديث الاسم فقط إذا كان ممتلئاً (غير فارغ)
+                if name and name.strip():
+                    product.name = name
+                
+                # تحديث السعر فقط إذا كان > 0
+                if product_data.get('price', 0) > 0:
+                    product.price = product_data['price']
+                
+                # تحديث الفئة فقط إذا كانت موجودة
+                if product_data.get('category'):
+                    product.category = product_data['category']
+                
+                # تحديث الوصف فقط إذا كان ممتلئاً
+                if 'description' in product_data and product_data['description'] and product_data['description'].strip():
                     product.description = product_data['description']
-                if 'minimum_stock' in product_data:
+                
+                # تحديث الحد الأدنى فقط إذا كان > 0
+                if 'minimum_stock' in product_data and product_data.get('minimum_stock', 0) > 0:
                     product.minimum_stock = product_data['minimum_stock']
-                if 'currency' in product_data:
+                
+                # تحديث العملة فقط إذا كانت ممتلئة وصحيحة
+                if 'currency' in product_data and product_data['currency'] and product_data['currency'].strip():
                     product.currency = product_data['currency']
-                if 'unit' in product_data:
+                
+                # تحديث الوحدة فقط إذا كانت ممتلئة
+                if 'unit' in product_data and product_data['unit'] and product_data['unit'].strip():
                     product.unit = product_data['unit']
                 
                 product.save()
                 
-                # نقل المخزون للمستودع الصحيح إذا لزم الأمر
-                moved = move_product_to_correct_warehouse(
-                    product, 
-                    warehouse, 
-                    product_data.get('quantity', 0),
-                    user,
-                    upload_mode == 'merge_warehouses'
-                )
-                
-                if moved['moved']:
-                    result['action'] = 'moved'
-                    result['old_warehouse'] = moved['from_warehouse']
-                    result['message'] = f"نُقل من {moved['from_warehouse']} إلى {warehouse}"
+                # نقل المخزون للمستودع الصحيح إذا لزم الأمر (فقط إذا تم تحديد مستودع)
+                if warehouse:
+                    moved = move_product_to_correct_warehouse(
+                        product, 
+                        warehouse, 
+                        product_data.get('quantity', 0),
+                        user,
+                        upload_mode == 'merge_warehouses'
+                    )
+                    
+                    if moved['moved']:
+                        result['action'] = 'moved'
+                        result['old_warehouse'] = moved['from_warehouse']
+                        result['message'] = f"نُقل من {moved['from_warehouse']} إلى {warehouse}"
+                    else:
+                        result['action'] = 'updated'
+                        result['message'] = 'تم التحديث'
                 else:
+                    # لا يوجد مستودع محدد - فقط تحديث البيانات
                     result['action'] = 'updated'
                     result['message'] = 'تم التحديث'
                 
                 return result
-                
-        except Product.DoesNotExist:
-            pass  # سيتم إنشاؤه أدناه
     
     # إنشاء منتج جديد بجميع البيانات
     product = Product.objects.create(

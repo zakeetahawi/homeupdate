@@ -62,8 +62,8 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
             upload_log.summary = f"مسح كامل: {reset_stats['deleted_products']} منتج، {reset_stats['deleted_transactions']} معاملة"
             upload_log.save(update_fields=['summary'])
         
-        # تنظيف البيانات
-        df = df.dropna(subset=['اسم المنتج', 'السعر']).fillna('')
+        # تنظيف البيانات - فقط الاسم مطلوب (السعر اختياري للمنتجات الموجودة)
+        df = df.dropna(subset=['اسم المنتج']).fillna('')
         
         # تحميل البيانات المسبقة
         categories_cache = {c.name: c for c in Category.objects.all()}
@@ -85,18 +85,47 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
         errors_batch = []
         last_progress_update = 0  # لتحديث التقدم كل 5%
         
+        logger.info(f"🔄 بدء معالجة {len(df)} صف في دفعات بحجم {batch_size}")
+        
         for batch_start in range(0, len(df), batch_size):
             batch_end = min(batch_start + batch_size, len(df))
             batch = df.iloc[batch_start:batch_end]
             
+            logger.info(f"📦 معالجة الدفعة {batch_start}-{batch_end} ({len(batch)} صف)")
+            
             # معالجة الصفوف بسرعة - بدون atomic لكل صف
             for idx, row in batch.iterrows():
                 try:
+                    logger.info(f"🔍 معالجة الصف {idx + 2}")
+                    
                     # استخراج البيانات من جميع الأعمدة
                     name = str(row['اسم المنتج']).strip()
                     code = str(row.get('الكود', '')).strip() or None
-                    price = float(row['السعر']) if row['السعر'] else 0
-                    quantity = float(row.get('الكمية', 0)) if pd.notna(row.get('الكمية')) else 0
+                    
+                    # تنظيف الكود: إزالة الأصفار البادئة لأن Excel يحذفها تلقائياً
+                    # مثال: 010100100730 في النظام → 10100100730 في Excel
+                    if code and code.isdigit():
+                        code = code.lstrip('0') or '0'  # إزالة الأصفار البادئة، لكن احتفظ بـ '0' إذا كان الكود كله أصفار
+                    
+                    # معالجة السعر بشكل آمن
+                    try:
+                        price_value = row.get('السعر', '')
+                        if pd.notna(price_value) and str(price_value).strip() not in ['', 'nan', 'none']:
+                            price = float(price_value)
+                        else:
+                            price = 0
+                    except (ValueError, TypeError):
+                        price = 0
+                    
+                    # معالجة الكمية بشكل آمن
+                    try:
+                        quantity_value = row.get('الكمية', '')
+                        if pd.notna(quantity_value) and str(quantity_value).strip() not in ['', 'nan', 'none']:
+                            quantity = float(quantity_value)
+                        else:
+                            quantity = 0
+                    except (ValueError, TypeError):
+                        quantity = 0
                     
                     # الوصف
                     description = str(row.get('الوصف', '')).strip() if pd.notna(row.get('الوصف')) else ''
@@ -114,14 +143,51 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
                         currency = 'EGP'
                     unit = str(row.get('الوحدة', 'piece')).strip() or 'piece'
                     
-                    if not name or price <= 0:
+                    # التحقق من البيانات الأساسية
+                    # للمنتجات الموجودة: يمكن ترك الاسم فارغاً (لتحديث حقول أخرى فقط)
+                    # للمنتجات الجديدة: الاسم مطلوب
+                    is_existing_product = False
+                    actual_code = code  # الكود الفعلي الذي سيُستخدم
+                    
+                    if code:
+                        # محاولة البحث بالكود كما هو
+                        is_existing_product = Product.objects.filter(code=code).exists()
+                        
+                        # إذا لم يُعثر عليه، جرب مع الأصفار البادئة
+                        if not is_existing_product and code.isdigit():
+                            # تجربة أطوال مختلفة (من طول الكود+1 حتى 15)
+                            max_length = max(len(code) + 5, 15)
+                            for padding in range(len(code) + 1, max_length + 1):
+                                padded_code = code.zfill(padding)
+                                if Product.objects.filter(code=padded_code).exists():
+                                    is_existing_product = True
+                                    actual_code = padded_code  # استخدم الكود المبطن
+                                    logger.info(f"✅ تم العثور على المنتج: {code} -> {padded_code}")
+                                    break
+                    
+                    # إذا كان منتج جديد بدون اسم، رفض
+                    if not is_existing_product and not name:
                         stats['errors'] += 1
                         errors_batch.append(BulkUploadError(
                             upload_log=upload_log,
                             row_number=idx + 2,
                             error_type='missing_data',
                             result_status='failed',
-                            error_message='اسم المنتج أو السعر مفقود أو غير صالح',
+                            error_message='منتج جديد يتطلب اسم',
+                            row_data=row.to_dict()
+                        ))
+                        continue
+                    
+                    # التحقق من السعر - فقط للمنتجات الجديدة
+                    # إذا كان منتج جديد بدون سعر، رفض
+                    if not is_existing_product and price <= 0:
+                        stats['errors'] += 1
+                        errors_batch.append(BulkUploadError(
+                            upload_log=upload_log,
+                            row_number=idx + 2,
+                            error_type='missing_data',
+                            result_status='failed',
+                            error_message='منتج جديد يتطلب سعر صحيح (> 0)',
                             row_data=row.to_dict()
                         ))
                         continue
@@ -136,15 +202,16 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
                             category = Category.objects.create(name=cat_name)
                             categories_cache[cat_name] = category
                     
-                    # المستودع المستهدف - استخدام get_or_create_warehouse
+                    # المستودع المستهدف
                     wh_name = str(row.get('المستودع', '')).strip()
-                    target_wh = warehouse
+                    target_wh = warehouse  # من صفحة الرفع
                     
+                    # إذا تم تحديد مستودع في الملف، استخدمه
                     if wh_name:
                         if wh_name in warehouses_cache:
                             target_wh = warehouses_cache[wh_name]
                         else:
-                            # استخدام get_or_create_warehouse بدلاً من create مباشرة
+                            # إنشاء/الحصول على المستودع
                             from .views_bulk import get_or_create_warehouse
                             target_wh = get_or_create_warehouse(wh_name, user)
                             if target_wh:
@@ -155,7 +222,7 @@ def bulk_upload_products_fast(self, upload_log_id, file_content, warehouse_id, u
                     # استخدام المنطق الذكي مع جميع البيانات
                     product_data = {
                         'name': name,
-                        'code': code,
+                        'code': actual_code,  # استخدام الكود الفعلي (المبطن إذا لزم الأمر)
                         'price': price,
                         'category': category,
                         'quantity': quantity,
