@@ -989,7 +989,7 @@ class FabricReceiptItemInline(admin.TabularInline):
                     mfg_item.production_line.name
                 )
         
-        return format_html('<span style="color: gray;">-</span>')
+        return mark_safe('<span style="color: gray;">-</span>')
     
     production_line_display.short_description = 'خط الإنتاج'
 
