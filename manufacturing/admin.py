@@ -953,28 +953,38 @@ class FabricReceiptItemInline(admin.TabularInline):
     
     def get_queryset(self, request):
         """تحسين الاستعلام مع تحميل العلاقات"""
+        from django.db.models import Prefetch
+        from .models import ManufacturingOrderItem
+        
+        # تحميل ManufacturingOrderItem مع production_line مسبقاً
+        mfg_items_prefetch = Prefetch(
+            'order_item__manufacturing_items',
+            queryset=ManufacturingOrderItem.objects.filter(
+                fabric_received=True
+            ).select_related('production_line')
+        )
+        
         return super().get_queryset(request).select_related(
             'order_item',
             'order_item__product',
             'cutting_item',
             'cutting_item__cutting_order'
-        ).prefetch_related(
-            'order_item__manufacturing_items__production_line'
-        )
+        ).prefetch_related(mfg_items_prefetch)
     
     def production_line_display(self, obj):
         """عرض خط الإنتاج الذي تم تسليم القماش له"""
         if not obj.order_item:
-            return '-'
+            return mark_safe('<span style="color: gray;">-</span>')
         
-        # البحث عن ManufacturingOrderItem المرتبط
-        from .models import ManufacturingOrderItem
-        mfg_item = ManufacturingOrderItem.objects.filter(
-            order_item=obj.order_item,
-            fabric_received=True
-        ).select_related('production_line').first()
+        # استخدام البيانات المحملة مسبقاً (لا استعلام جديد)
+        mfg_items = [item for item in obj.order_item.manufacturing_items.all() if item.fabric_received]
         
-        if mfg_item and mfg_item.production_line:
+        if not mfg_items:
+            return mark_safe('<span style="color: gray;">-</span>')
+        
+        mfg_item = mfg_items[0]
+        
+        if mfg_item.production_line:
             # إضافة معلومات التسليم إذا كانت موجودة
             if mfg_item.delivered_to_production:
                 delivery_date = mfg_item.production_delivery_date.strftime('%Y-%m-%d') if mfg_item.production_delivery_date else ''
