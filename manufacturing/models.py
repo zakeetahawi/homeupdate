@@ -942,16 +942,58 @@ class ManufacturingOrderItem(models.Model):
         return str_value
 
     def mark_fabric_received(self, bag_number, user, notes=''):
-        """تعيين الأقمشة كمستلمة"""
+        """تعيين الأقمشة كمستلمة وإنشاء سجل FabricReceipt تلقائياً"""
         from django.utils import timezone
+        from django.db import transaction
 
-        self.fabric_received = True
-        self.bag_number = bag_number
-        self.fabric_received_date = timezone.now()
-        self.fabric_received_by = user
-        if notes:
-            self.fabric_notes = notes
-        self.save()
+        with transaction.atomic():
+            # 1. تحديث ManufacturingOrderItem (النظام القديم)
+            self.fabric_received = True
+            self.bag_number = bag_number
+            self.fabric_received_date = timezone.now()
+            self.fabric_received_by = user
+            if notes:
+                self.fabric_notes = notes
+            self.save()
+
+            # 2. إنشاء أو تحديث FabricReceipt (النظام الجديد)
+            # البحث عن سجل استلام موجود لنفس الطلب ورقم الشنطة
+            from .models import FabricReceipt, FabricReceiptItem
+            
+            fabric_receipt = FabricReceipt.objects.filter(
+                manufacturing_order=self.manufacturing_order,
+                bag_number=bag_number
+            ).first()
+
+            # إذا لم يوجد، إنشاء سجل جديد
+            if not fabric_receipt:
+                fabric_receipt = FabricReceipt.objects.create(
+                    receipt_type='manufacturing_order',
+                    order=self.manufacturing_order.order if self.manufacturing_order else None,
+                    cutting_order=self.cutting_item.cutting_order if self.cutting_item else None,
+                    manufacturing_order=self.manufacturing_order,
+                    bag_number=bag_number,
+                    permit_number=self.permit_number or '',
+                    received_by_name=self.receiver_name or '',
+                    received_by=user,
+                    receipt_date=timezone.now(),
+                    notes=notes
+                )
+
+            # 3. إنشاء FabricReceiptItem
+            # التحقق من عدم وجود عنصر مكرر
+            if not FabricReceiptItem.objects.filter(
+                fabric_receipt=fabric_receipt,
+                order_item=self.order_item
+            ).exists():
+                FabricReceiptItem.objects.create(
+                    fabric_receipt=fabric_receipt,
+                    order_item=self.order_item,
+                    cutting_item=self.cutting_item,
+                    product_name=self.product_name,
+                    quantity_received=self.quantity,
+                    item_notes=notes
+                )
 
     @staticmethod
     def get_next_bag_number():

@@ -977,13 +977,31 @@ class FabricReceiptAdmin(admin.ModelAdmin):
         }),
     )
 
+    def get_queryset(self, request):
+        """تحسين الاستعلام مع تحميل العلاقات"""
+        return super().get_queryset(request).select_related(
+            'order',
+            'order__customer',
+            'cutting_order',
+            'manufacturing_order',
+            'received_by'
+        )
+
     def customer_name(self, obj):
-        return obj.customer_name
+        """عرض اسم العميل"""
+        if obj.order and obj.order.customer:
+            return obj.order.customer.name
+        return '-'
     customer_name.short_description = 'العميل'
+    customer_name.admin_order_field = 'order__customer__name'
 
     def order_number(self, obj):
-        return obj.order_number
+        """عرض رقم الطلب"""
+        if obj.order:
+            return obj.order.order_number
+        return '-'
     order_number.short_description = 'رقم الطلب'
+    order_number.admin_order_field = 'order__order_number'
 
 
 @admin.register(FabricReceiptItem)
@@ -993,6 +1011,17 @@ class FabricReceiptItemAdmin(admin.ModelAdmin):
     list_filter = ['fabric_receipt__receipt_type', 'fabric_receipt__receipt_date']
     search_fields = ['product_name', 'fabric_receipt__receipt_code', 'fabric_receipt__bag_number']
     readonly_fields = ['created_at', 'updated_at']
+
+    def get_queryset(self, request):
+        """تحسين الاستعلام مع تحميل العلاقات"""
+        return super().get_queryset(request).select_related(
+            'fabric_receipt',
+            'fabric_receipt__order',
+            'fabric_receipt__order__customer',
+            'order_item',
+            'order_item__product',
+            'cutting_item'
+        )
 
 
 @admin.register(ManufacturingSettings)
