@@ -948,8 +948,8 @@ class FabricReceiptItemInline(admin.TabularInline):
     """عناصر استلام الأقمشة"""
     model = FabricReceiptItem
     extra = 0  # تم تقليله من 0 لتحسين الأداء
-    readonly_fields = ['created_at', 'updated_at']
-    fields = ['product_name', 'quantity_received', 'order_item', 'cutting_item', 'item_notes']
+    readonly_fields = ['created_at', 'updated_at', 'production_line_display']
+    fields = ['product_name', 'quantity_received', 'production_line_display', 'order_item', 'cutting_item', 'item_notes']
     
     def get_queryset(self, request):
         """تحسين الاستعلام مع تحميل العلاقات"""
@@ -958,7 +958,40 @@ class FabricReceiptItemInline(admin.TabularInline):
             'order_item__product',
             'cutting_item',
             'cutting_item__cutting_order'
+        ).prefetch_related(
+            'order_item__manufacturing_items__production_line'
         )
+    
+    def production_line_display(self, obj):
+        """عرض خط الإنتاج الذي تم تسليم القماش له"""
+        if not obj.order_item:
+            return '-'
+        
+        # البحث عن ManufacturingOrderItem المرتبط
+        from .models import ManufacturingOrderItem
+        mfg_item = ManufacturingOrderItem.objects.filter(
+            order_item=obj.order_item,
+            fabric_received=True
+        ).select_related('production_line').first()
+        
+        if mfg_item and mfg_item.production_line:
+            # إضافة معلومات التسليم إذا كانت موجودة
+            if mfg_item.delivered_to_production:
+                delivery_date = mfg_item.production_delivery_date.strftime('%Y-%m-%d') if mfg_item.production_delivery_date else ''
+                return format_html(
+                    '<span style="color: green;">✓ {}</span><br/><small style="color: gray;">تم التسليم: {}</small>',
+                    mfg_item.production_line.name,
+                    delivery_date
+                )
+            else:
+                return format_html(
+                    '<span style="color: orange;">⏳ {}</span><br/><small style="color: gray;">لم يتم التسليم بعد</small>',
+                    mfg_item.production_line.name
+                )
+        
+        return format_html('<span style="color: gray;">-</span>')
+    
+    production_line_display.short_description = 'خط الإنتاج'
 
 
 @admin.register(FabricReceipt)
