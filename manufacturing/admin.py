@@ -1051,7 +1051,11 @@ class FabricReceiptAdmin(admin.ModelAdmin):
         if not items.exists():
             return mark_safe('<p style="color: gray;">لا توجد عناصر مستلمة</p>')
         
-        html = '<table style="width: 100%; border-collapse: collapse;">'
+        # إضافة زر تغيير خطوط الإنتاج
+        change_url = reverse('admin:manufacturing_fabricreceipt_change_production_lines', args=[obj.pk])
+        html = f'<div style="margin-bottom: 10px;"><a href="{change_url}" class="button" style="background: #417690; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px;">🔄 تغيير خطوط الإنتاج</a></div>'
+        
+        html += '<table style="width: 100%; border-collapse: collapse;">'
         html += '<thead><tr style="background: #f5f5f5;">'
         html += '<th style="padding: 8px; text-align: right; border: 1px solid #ddd;">المنتج</th>'
         html += '<th style="padding: 8px; text-align: center; border: 1px solid #ddd;">الكمية</th>'
@@ -1084,6 +1088,81 @@ class FabricReceiptAdmin(admin.ModelAdmin):
     
     items_summary.short_description = 'العناصر المستلمة'
 
+    def get_urls(self):
+        """إضافة URL مخصص لتغيير خطوط الإنتاج"""
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<path:object_id>/change-production-lines/',
+                self.admin_site.admin_view(self.change_production_lines_view),
+                name='manufacturing_fabricreceipt_change_production_lines',
+            ),
+        ]
+        return custom_urls + urls
+    
+    def change_production_lines_view(self, request, object_id):
+        """صفحة مخصصة لتغيير خطوط الإنتاج للعناصر المستلمة"""
+        from django.contrib import messages
+        from .models import ManufacturingOrderItem
+        
+        fabric_receipt = self.get_object(request, object_id)
+        
+        if request.method == 'POST':
+            # معالجة التغييرات
+            updated_count = 0
+            for key, value in request.POST.items():
+                if key.startswith('production_line_'):
+                    item_id = key.replace('production_line_', '')
+                    try:
+                        receipt_item = fabric_receipt.items.get(pk=item_id)
+                        if receipt_item.order_item:
+                            # تحديث ManufacturingOrderItem
+                            mfg_items = ManufacturingOrderItem.objects.filter(
+                                order_item=receipt_item.order_item,
+                                fabric_received=True
+                            )
+                            
+                            if value:  # إذا تم اختيار خط إنتاج
+                                production_line = ProductionLine.objects.get(pk=value)
+                                mfg_items.update(production_line=production_line)
+                                updated_count += 1
+                            else:  # إزالة خط الإنتاج
+                                mfg_items.update(production_line=None)
+                                updated_count += 1
+                    except Exception as e:
+                        messages.error(request, f'خطأ في تحديث العنصر {item_id}: {str(e)}')
+            
+            if updated_count > 0:
+                messages.success(request, f'تم تحديث {updated_count} عنصر بنجاح')
+            
+            return HttpResponseRedirect(reverse('admin:manufacturing_fabricreceipt_change', args=[object_id]))
+        
+        # جمع البيانات للعرض
+        items_data = []
+        for item in fabric_receipt.items.select_related('order_item').prefetch_related('order_item__manufacturing_items__production_line'):
+            current_line = None
+            if item.order_item:
+                mfg_items = [mi for mi in item.order_item.manufacturing_items.all() if mi.fabric_received]
+                if mfg_items:
+                    current_line = mfg_items[0].production_line
+            
+            items_data.append({
+                'receipt_item': item,
+                'current_production_line': current_line,
+            })
+        
+        context = {
+            'fabric_receipt': fabric_receipt,
+            'items_data': items_data,
+            'production_lines': ProductionLine.objects.filter(is_active=True).order_by('name'),
+            'opts': self.model._meta,
+            'has_view_permission': self.has_view_permission(request, fabric_receipt),
+            'original': fabric_receipt,
+            'title': f'تغيير خطوط الإنتاج - {fabric_receipt.receipt_code}',
+        }
+        
+        return render(request, 'admin/manufacturing/change_production_lines.html', context)
+    
     def get_queryset(self, request):
         """تحسين الاستعلام مع تحميل العلاقات"""
         return super().get_queryset(request).select_related(
