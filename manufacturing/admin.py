@@ -1010,11 +1010,12 @@ class FabricReceiptAdmin(admin.ModelAdmin):
     list_display = ['receipt_code', 'customer_name', 'order_number', 'bag_number', 'receipt_type', 'receipt_date', 'received_by']
     list_filter = ['receipt_type', 'receipt_date', 'received_by']
     search_fields = ['receipt_code', 'bag_number', 'order__customer__name', 'order__order_number']
-    readonly_fields = ['receipt_code', 'created_at', 'updated_at']
-    autocomplete_fields = ['order', 'cutting_order', 'manufacturing_order']  # تحسين الأداء
-    inlines = [FabricReceiptItemInline]
-    list_per_page = 25  # تقليل عدد السجلات لكل صفحة
+    readonly_fields = ['receipt_code', 'created_at', 'updated_at', 'items_summary']
+    autocomplete_fields = ['order', 'cutting_order', 'manufacturing_order']
+    # تم إزالة inlines لتحسين الأداء - استخدم items_summary بدلاً منه
+    list_per_page = 25
 
+    
     fieldsets = (
         ('معلومات أساسية', {
             'fields': ('receipt_code', 'receipt_type', 'bag_number')
@@ -1025,11 +1026,63 @@ class FabricReceiptAdmin(admin.ModelAdmin):
         ('معلومات الاستلام', {
             'fields': ('receipt_date', 'received_by', 'notes')
         }),
+        ('العناصر المستلمة', {
+            'fields': ('items_summary',),
+            'description': 'قائمة العناصر المستلمة مع خطوط الإنتاج المرتبطة'
+        }),
         ('معلومات النظام', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
+    
+    def items_summary(self, obj):
+        """عرض ملخص العناصر المستلمة مع خطوط الإنتاج"""
+        if not obj.pk:
+            return '-'
+        
+        items = obj.items.select_related(
+            'order_item',
+            'order_item__product'
+        ).prefetch_related(
+            'order_item__manufacturing_items__production_line'
+        )
+        
+        if not items.exists():
+            return mark_safe('<p style="color: gray;">لا توجد عناصر مستلمة</p>')
+        
+        html = '<table style="width: 100%; border-collapse: collapse;">'
+        html += '<thead><tr style="background: #f5f5f5;">'
+        html += '<th style="padding: 8px; text-align: right; border: 1px solid #ddd;">المنتج</th>'
+        html += '<th style="padding: 8px; text-align: center; border: 1px solid #ddd;">الكمية</th>'
+        html += '<th style="padding: 8px; text-align: right; border: 1px solid #ddd;">خط الإنتاج</th>'
+        html += '<th style="padding: 8px; text-align: right; border: 1px solid #ddd;">ملاحظات</th>'
+        html += '</tr></thead><tbody>'
+        
+        for item in items:
+            # البحث عن خط الإنتاج
+            production_line_info = '-'
+            if item.order_item:
+                mfg_items = [mi for mi in item.order_item.manufacturing_items.all() if mi.fabric_received]
+                if mfg_items and mfg_items[0].production_line:
+                    mfg_item = mfg_items[0]
+                    if mfg_item.delivered_to_production:
+                        delivery_date = mfg_item.production_delivery_date.strftime('%Y-%m-%d') if mfg_item.production_delivery_date else ''
+                        production_line_info = f'<span style="color: green;">✓ {mfg_item.production_line.name}</span><br/><small>تم التسليم: {delivery_date}</small>'
+                    else:
+                        production_line_info = f'<span style="color: orange;">⏳ {mfg_item.production_line.name}</span><br/><small>لم يتم التسليم</small>'
+            
+            html += '<tr>'
+            html += f'<td style="padding: 8px; border: 1px solid #ddd;">{item.product_name}</td>'
+            html += f'<td style="padding: 8px; text-align: center; border: 1px solid #ddd;">{item.quantity_received}</td>'
+            html += f'<td style="padding: 8px; border: 1px solid #ddd;">{production_line_info}</td>'
+            html += f'<td style="padding: 8px; border: 1px solid #ddd; color: gray;"><small>{item.item_notes or "-"}</small></td>'
+            html += '</tr>'
+        
+        html += '</tbody></table>'
+        return mark_safe(html)
+    
+    items_summary.short_description = 'العناصر المستلمة'
 
     def get_queryset(self, request):
         """تحسين الاستعلام مع تحميل العلاقات"""
