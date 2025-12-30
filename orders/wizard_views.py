@@ -25,7 +25,7 @@ from .wizard_forms import (
     Step1BasicInfoForm, Step2OrderTypeForm, Step3OrderItemForm,
     Step4InvoicePaymentForm
 )
-from .models import Order, OrderItem, Payment
+from .models import Order, OrderItem, Payment, OrderInvoiceImage
 from .contract_models import ContractCurtain, CurtainFabric, CurtainAccessory
 from inventory.models import Product
 from customers.models import Customer
@@ -1585,7 +1585,6 @@ def wizard_finalize(request):
             )
             
             # ⚡ نقل الصور مجمّعاً
-            from .models import OrderInvoiceImage
             if draft.invoice_images_new.exists():
                 new_images = [
                     OrderInvoiceImage(order=order, image=img.image)
