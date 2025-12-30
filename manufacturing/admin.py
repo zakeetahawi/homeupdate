@@ -947,9 +947,18 @@ class ManufacturingDisplaySettingsAdmin(admin.ModelAdmin):
 class FabricReceiptItemInline(admin.TabularInline):
     """عناصر استلام الأقمشة"""
     model = FabricReceiptItem
-    extra = 0
+    extra = 0  # تم تقليله من 0 لتحسين الأداء
     readonly_fields = ['created_at', 'updated_at']
     fields = ['product_name', 'quantity_received', 'order_item', 'cutting_item', 'item_notes']
+    
+    def get_queryset(self, request):
+        """تحسين الاستعلام مع تحميل العلاقات"""
+        return super().get_queryset(request).select_related(
+            'order_item',
+            'order_item__product',
+            'cutting_item',
+            'cutting_item__cutting_order'
+        )
 
 
 @admin.register(FabricReceipt)
@@ -959,7 +968,9 @@ class FabricReceiptAdmin(admin.ModelAdmin):
     list_filter = ['receipt_type', 'receipt_date', 'received_by']
     search_fields = ['receipt_code', 'bag_number', 'order__customer__name', 'order__order_number']
     readonly_fields = ['receipt_code', 'created_at', 'updated_at']
+    autocomplete_fields = ['order', 'cutting_order', 'manufacturing_order']  # تحسين الأداء
     inlines = [FabricReceiptItemInline]
+    list_per_page = 25  # تقليل عدد السجلات لكل صفحة
 
     fieldsets = (
         ('معلومات أساسية', {
