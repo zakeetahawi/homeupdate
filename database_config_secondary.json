@@ -1,7 +1,0 @@
-{
-  "host": "192.168.1.100",
-  "port": "5432",
-  "database": "crm_system",
-  "user": "postgres",
-  "password": "your_secondary_server_password"
-}
