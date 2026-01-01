@@ -53,6 +53,8 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
         """صفحة إرسال رسالة اختبار"""
         from .forms import TestMessageForm
         from .services import WhatsAppService
+        from .models import WhatsAppMessage
+        from customers.models import Customer
         from django.http import HttpResponseRedirect
         from django.contrib import messages as django_messages
         
@@ -88,7 +90,25 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
                     
                     if result and result.get('messages'):
                         msg_id = result['messages'][0].get('id')
-                        django_messages.success(request, f'✅ تم إرسال الرسالة بنجاح! Message ID: {msg_id}')
+                        
+                        # حفظ في قاعدة البيانات
+                        customer, _ = Customer.objects.get_or_create(
+                            phone=phone,
+                            defaults={'name': f'Test {phone[-4:]}'}
+                        )
+                        
+                        WhatsAppMessage.objects.create(
+                            customer=customer,
+                            message_text='Test Message',
+                            message_type='TEST',
+                            status='SENT',
+                            external_id=msg_id
+                        )
+                        
+                        django_messages.success(
+                            request, 
+                            f'✅ تم إرسال الرسالة بنجاح!\nMessage ID: {msg_id}\nتحقق من /admin/whatsapp/whatsappmessage/'
+                        )
                     else:
                         django_messages.error(request, '❌ فشل إرسال الرسالة')
                         
