@@ -20,6 +20,8 @@ from .models import (
 class WhatsAppSettingsAdmin(admin.ModelAdmin):
     """إدارة إعدادات WhatsApp"""
     
+    change_list_template = 'admin/whatsapp/whatsappsettings_changelist.html'
+
     list_display = [
         'api_provider',
         'phone_number',
