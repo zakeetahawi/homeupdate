@@ -36,6 +36,73 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
         }),
     )
     
+    def get_urls(self):
+        """إضافة URL لصفحة الاختبار"""
+        urls = super().get_urls()
+        custom_urls = [
+            path('test-message/', self.admin_site.admin_view(self.test_message_view), name='whatsapp_test_message'),
+        ]
+        return custom_urls + urls
+    
+    def test_message_view(self, request):
+        """صفحة إرسال رسالة اختبار"""
+        from .forms import TestMessageForm
+        from .services import WhatsAppService
+        
+        if request.method == 'POST':
+            form = TestMessageForm(request.POST)
+            if form.is_valid():
+                phone = form.cleaned_data['phone_number']
+                template = form.cleaned_data['template_name']
+                
+                try:
+                    service = WhatsAppService()
+                    
+                    if template == 'hello_world':
+                        result = service.send_template_message(
+                            to=phone,
+                            template_name='hello_world',
+                            language='en_US'
+                        )
+                    else:
+                        # order_confirmation مع بيانات تجريبية
+                        result = service.send_template_message(
+                            to=phone,
+                            template_name='order_confirmation',
+                            language='ar',
+                            components=[
+                                'عميل تجريبي',  # customer_name
+                                'TEST-001',       # order_number
+                                '2026-01-01',     # order_date
+                                '1000',           # total_amount
+                                '500',            # paid_amount
+                                '500'             # remaining_amount
+                            ]
+                        )
+                    
+                    if result and result.get('messages'):
+                        msg_id = result['messages'][0].get('id')
+                        messages.success(request, f'✅ تم إرسال الرسالة بنجاح! Message ID: {msg_id}')
+                    else:
+                        messages.error(request, '❌ فشل إرسال الرسالة')
+                        
+                except Exception as e:
+                    messages.error(request, f'❌ خطأ: {str(e)}')
+                
+                return HttpResponseRedirect(request.path)
+        else:
+            form = TestMessageForm()
+        
+        context = {
+            'form': form,
+            'title': 'اختبار إرسال رسالة WhatsApp',
+            'site_title': 'إدارة الموقع',
+            'site_header': 'إدارة الموقع',
+            'has_permission': True,
+        }
+        
+        return render(request, 'admin/whatsapp/test_message.html', context)
+    
     def is_active_badge(self, obj):
         if obj.is_active:
             return mark_safe('<span style="color: green;">✓ مفعل</span>')
