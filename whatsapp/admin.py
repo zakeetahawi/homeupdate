@@ -53,8 +53,6 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
         """صفحة إرسال رسالة اختبار"""
         from .forms import TestMessageForm
         from .services import WhatsAppService
-        from .models import WhatsAppMessage
-        from customers.models import Customer
         from django.http import HttpResponseRedirect
         from django.contrib import messages as django_messages
         
@@ -67,52 +65,30 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
                 try:
                     service = WhatsAppService()
                     
-                    # البحث عن عميل بهذا الرقم أو إنشاء عميل مؤقت
-                    customer = Customer.objects.filter(phone=phone).first()
-                    if not customer:
-                        customer = Customer.objects.create(
-                            name=f'Test Customer {phone}',
-                            phone=phone,
-                            customer_number='TEST-' + phone[-4:]
-                        )
-                    
                     if template == 'hello_world':
                         result = service.send_template_message(
                             to=phone,
                             template_name='hello_world',
                             language='en_US'
                         )
-                        message_text = 'Hello World (Test Message)'
                     else:
-                        # order_confirmation مع بيانات تجريبية
                         result = service.send_template_message(
                             to=phone,
                             template_name='order_confirmation',
                             language='ar',
                             components=[
-                                'عميل تجريبي',  # customer_name
-                                'TEST-001',       # order_number
-                                '2026-01-01',     # order_date
-                                '1000',           # total_amount
-                                '500',            # paid_amount
-                                '500'             # remaining_amount
+                                'عميل تجريبي',
+                                'TEST-001',
+                                '2026-01-01',
+                                '1000',
+                                '500',
+                                '500'
                             ]
                         )
-                        message_text = 'Order Confirmation Test: TEST-001 (Total: 1000 EGP)'
                     
                     if result and result.get('messages'):
                         msg_id = result['messages'][0].get('id')
-                        
-                        # حفظ الرسالة في قاعدة البيانات
-                        WhatsAppMessage.objects.create(
-                            customer=customer,
-                            message_text=message_text,
-                            message_type='TEST',
-                            status='SENT',
-                            external_id=msg_id
-                        )
-                        
-                        django_messages.success(request, f'✅ تم إرسال الرسالة بنجاح! Message ID: {msg_id}\nتم الحفظ - Webhook سيحدث الحالة')
+                        django_messages.success(request, f'✅ تم إرسال الرسالة بنجاح! Message ID: {msg_id}')
                     else:
                         django_messages.error(request, '❌ فشل إرسال الرسالة')
                         
