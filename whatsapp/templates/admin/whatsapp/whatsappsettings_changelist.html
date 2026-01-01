@@ -1,0 +1,11 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+<li>
+    <a href="{% url 'admin:whatsapp_test_message' %}" class="addlink"
+        style="background-color: #417690; color: white; padding: 10px 15px; border-radius: 4px; text-decoration: none;">
+        📤 اختبار إرسال رسالة
+    </a>
+</li>
+{{ block.super }}
+{% endblock %}
