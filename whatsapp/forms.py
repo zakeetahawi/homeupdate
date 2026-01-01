@@ -19,10 +19,10 @@ class TestMessageForm(forms.Form):
     template_name = forms.ChoiceField(
         label='القالب',
         choices=[
-            ('hello_world', 'Hello World'),
-            ('order_confirmation', 'Order Confirmation (يحتاج بيانات)')
+            ('hello_world', 'Hello World (معتمد ✅)'),
         ],
-        initial='hello_world'
+        initial='hello_world',
+        help_text='قالب order_confirmation قيد المراجعة من Meta'
     )
     
     def clean_phone_number(self):
