@@ -550,7 +550,11 @@ class ContractCurtain(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.room_name} - {self.order.order_number}'
+        if self.order:
+            return f'{self.room_name} - {self.order.order_number}'
+        elif self.draft_order:
+            return f'{self.room_name} - مسودة #{self.draft_order.id}'
+        return f'{self.room_name}'
     
     def get_installation_type_display(self):
         """الحصول على اسم نوع التركيب المعروض"""

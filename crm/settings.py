@@ -363,6 +363,7 @@ INSTALLED_APPS = [
     'odoo_db_manager.apps.OdooDbManagerConfig',
     'backup_system.apps.BackupSystemConfig',  # نظام النسخ الاحتياطي والاستعادة الجديد
     'public',  # صفحات عامة للمنتجات (QR Code)
+    'whatsapp',  # نظام تكامل WhatsApp
 
 
     'corsheaders',
@@ -1673,3 +1674,7 @@ BACKUP_RETENTION_DAYS = 30
 # Two-Factor Authentication
 TWO_FACTOR_AUTH_ENABLED = False  # فعّل عند الحاجة
 TWO_FACTOR_AUTH_REQUIRED_FOR_ADMIN = True
+# ======================================
+# WhatsApp Settings
+# ======================================
+WHATSAPP_VERIFY_TOKEN = os.getenv('WHATSAPP_VERIFY_TOKEN', 'elkhawaga-whatsapp-webhook-2026')

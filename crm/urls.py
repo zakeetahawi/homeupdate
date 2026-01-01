@@ -100,6 +100,9 @@ urlpatterns = [
     
     # النظام المحاسبي المتكامل
     path("accounting/", include("accounting.urls", namespace="accounting")),
+    
+    # نظام WhatsApp - Webhooks
+    path("whatsapp/", include("whatsapp.urls", namespace="whatsapp")),
 
 
     # لوحة مراقبة النظام

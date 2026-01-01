@@ -313,13 +313,13 @@ def register_customer_signals():
                 try:
                     # البحث عن نوع حساب المدينين
                     receivables_type = AccountType.objects.filter(
-                        code='1200'
+                        code_prefix='1200'
                     ).first()
                     
                     if receivables_type:
                         # البحث عن الحساب الأب (المدينين)
                         parent_account = Account.objects.filter(
-                            code='1210'  # ذمم العملاء
+                            code_prefix='1210'  # ذمم العملاء
                         ).first()
                         
                         # إنشاء حساب للعميل
