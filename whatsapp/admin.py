@@ -1,9 +1,12 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from django.urls import reverse
+from django.urls import reverse, path
 from django.utils.safestring import mark_safe
 from django.db.models import Count, Q
 from django.utils import timezone
+from django.shortcuts import render
+from django.http import HttpResponseRedirect
+from django.contrib import messages
 from datetime import timedelta
 from .models import (
     WhatsAppSettings,
@@ -48,6 +51,10 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
         """صفحة إرسال رسالة اختبار"""
         from .forms import TestMessageForm
         from .services import WhatsAppService
+        from .models import WhatsAppMessage
+        from customers.models import Customer
+        from django.http import HttpResponseRedirect
+        from django.contrib import messages as django_messages
         
         if request.method == 'POST':
             form = TestMessageForm(request.POST)
@@ -58,12 +65,22 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
                 try:
                     service = WhatsAppService()
                     
+                    # البحث عن عميل بهذا الرقم أو إنشاء عميل مؤقت
+                    customer = Customer.objects.filter(phone=phone).first()
+                    if not customer:
+                        customer = Customer.objects.create(
+                            name=f'Test Customer {phone}',
+                            phone=phone,
+                            customer_number='TEST-' + phone[-4:]
+                        )
+                    
                     if template == 'hello_world':
                         result = service.send_template_message(
                             to=phone,
                             template_name='hello_world',
                             language='en_US'
                         )
+                        message_text = 'Hello World (Test Message)'
                     else:
                         # order_confirmation مع بيانات تجريبية
                         result = service.send_template_message(
@@ -79,15 +96,26 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
                                 '500'             # remaining_amount
                             ]
                         )
+                        message_text = 'Order Confirmation Test: TEST-001 (Total: 1000 EGP)'
                     
                     if result and result.get('messages'):
                         msg_id = result['messages'][0].get('id')
-                        messages.success(request, f'✅ تم إرسال الرسالة بنجاح! Message ID: {msg_id}')
+                        
+                        # حفظ الرسالة في قاعدة البيانات
+                        WhatsAppMessage.objects.create(
+                            customer=customer,
+                            message_text=message_text,
+                            message_type='TEST',
+                            status='SENT',
+                            external_id=msg_id
+                        )
+                        
+                        django_messages.success(request, f'✅ تم إرسال الرسالة بنجاح! Message ID: {msg_id}\nتم الحفظ - Webhook سيحدث الحالة')
                     else:
-                        messages.error(request, '❌ فشل إرسال الرسالة')
+                        django_messages.error(request, '❌ فشل إرسال الرسالة')
                         
                 except Exception as e:
-                    messages.error(request, f'❌ خطأ: {str(e)}')
+                    django_messages.error(request, f'❌ خطأ: {str(e)}')
                 
                 return HttpResponseRedirect(request.path)
         else:
