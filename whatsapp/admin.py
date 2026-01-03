@@ -217,15 +217,16 @@ class WhatsAppMessageTemplateAdmin(admin.ModelAdmin):
         'language'
     ]
     
-    search_fields = ['name', 'template_text']
+    search_fields = ['name', 'meta_template_name']
     
     fieldsets = (
         ('إعدادات القالب', {
-            'fields': ('name', 'message_type', 'meta_template_name', 'language', 'is_active')
+            'fields': ('name', 'message_type', 'meta_template_name', 'language', 'is_active'),
+            'description': 'اسم القالب في Meta هو الأهم - باقي المحتوى يُدار من Meta Template Manager'
         }),
-        ('محتوى القالب', {
-            'fields': ('header', 'template_text', 'footer'),
-            'description': 'استخدم {{customer_name}}, {{order_number}}, {{order_date}} للمتغيرات (أقواس مزدوجة)'
+        ('إعدادات العنوان (Header)', {
+            'fields': ('header_type', 'header_text', 'header_media_url'),
+            'description': 'حدد نوع العنوان في Meta. إذا كان صورة/فيديو، ضع الرابط المباشر.'
         }),
         ('المرفقات', {
             'fields': ('send_contract', 'send_invoice')

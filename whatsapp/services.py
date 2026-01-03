@@ -112,11 +112,39 @@ class WhatsAppService:
             }
         }
         
-        # إضافة المتغيرات إذا وجدت
+        # تجهيز قائمة مكونات القالب
+        api_components = []
+        
+        # 1. محاولة إضافة مكون العنوان (Header) من إعدادات القالب
+        try:
+            from .models import WhatsAppMessageTemplate
+            # البحث عن القالب في قاعدة البيانات باستخدام اسم Meta
+            template_obj = WhatsAppMessageTemplate.objects.filter(
+                meta_template_name=template_name
+            ).first()
+            
+            if template_obj and template_obj.header_type in ['IMAGE', 'VIDEO', 'DOCUMENT'] and template_obj.header_media_url:
+                header_component = {
+                    "type": "header",
+                    "parameters": [
+                        {
+                            "type": template_obj.header_type.lower(),
+                            template_obj.header_type.lower(): {
+                                "link": template_obj.header_media_url
+                            }
+                        }
+                    ]
+                }
+                api_components.append(header_component)
+                
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to load header config for template {template_name}: {e}")
+
+        # 2. معالجة متغيرات الجسم (Body)
+        params = []
         if components:
-            # تحويل القائمة إلى تنسيق Meta API الصحيح مع parameter_name
-            # components يجب أن تكون قائمة من tuples: [(name, value), ...]
-            # أو dict: {name: value, ...}
             if isinstance(components, dict):
                 params = [
                     {
@@ -128,7 +156,6 @@ class WhatsAppService:
                 ]
             elif isinstance(components, list) and len(components) > 0:
                 if isinstance(components[0], tuple):
-                    # List of tuples [(name, value), ...]
                     params = [
                         {
                             "type": "text",
@@ -138,7 +165,6 @@ class WhatsAppService:
                         for name, value in components
                     ]
                 else:
-                    # List of values - use default names for order_confirm
                     default_names = ['customer_name', 'order_number', 'order_date', 
                                      'total_amount', 'paid_amount', 'remaining_amount']
                     params = [
@@ -149,16 +175,17 @@ class WhatsAppService:
                         }
                         for i, value in enumerate(components)
                     ]
-            else:
-                params = []
             
             if params:
-                template_payload["components"] = [
-                    {
-                        "type": "body",
-                        "parameters": params
-                    }
-                ]
+                body_component = {
+                    "type": "body",
+                    "parameters": params
+                }
+                api_components.append(body_component)
+
+        # إضافة المكونات إلى الـ payload إذا وجدت
+        if api_components:
+            template_payload["components"] = api_components
         
         payload = {
             "messaging_product": "whatsapp",

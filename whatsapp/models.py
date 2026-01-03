@@ -165,15 +165,36 @@ class WhatsAppMessageTemplate(models.Model):
         verbose_name="نوع الرسالة"
     )
     template_text = models.TextField(
-        verbose_name="نص القالب",
-        help_text="استخدم {{customer_name}}, {{order_number}}, إلخ للمتغيرات (أقواس مزدوجة)"
+        blank=True,
+        verbose_name="نص القالب (للمرجع فقط)",
+        help_text="اختياري - المحتوى الفعلي يُدار من Meta Template Manager"
     )
-    header = models.CharField(
+    HEADER_TYPES = [
+        ('NONE', 'لا يوجد'),
+        ('TEXT', 'نص'),
+        ('IMAGE', 'صورة'),
+        ('VIDEO', 'فيديو'),
+        ('DOCUMENT', 'ملف'),
+    ]
+
+    header_type = models.CharField(
+        max_length=10,
+        choices=HEADER_TYPES,
+        default='NONE',
+        verbose_name="نوع العنوان"
+    )
+    header_text = models.CharField(
         max_length=60,
         blank=True,
         null=True,
-        verbose_name="العنوان (Header)",
-        help_text="نص العنوان (اختياري، حد أقصى 60 حرف)"
+        verbose_name="نص العنوان",
+        help_text="يستخدم فقط إذا كان نوع العنوان 'نص'"
+    )
+    header_media_url = models.URLField(
+        blank=True,
+        null=True,
+        verbose_name="رابط الوسائط",
+        help_text="رابط الصورة أو الفيديو أو الملف (يجب أن يكون رابط مباشر)"
     )
     footer = models.CharField(
         max_length=60,
