@@ -224,6 +224,8 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
         'message_type',
         'status_badge',
         'sent_at',
+        'delivered_badge',
+        'read_badge',
         'retry_count'
     ]
     
@@ -305,6 +307,30 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
             obj.get_status_display()
         )
     status_badge.short_description = 'الحالة'
+    
+    def delivered_badge(self, obj):
+        """عرض حالة التسليم"""
+        if obj.delivered_at:
+            return format_html(
+                '<span style="color: green;" title="{}">✓ تم التسليم</span>',
+                obj.delivered_at.strftime('%Y-%m-%d %H:%M')
+            )
+        elif obj.status == 'DELIVERED':
+            return format_html('<span style="color: green;">✓ تم التسليم</span>')
+        return format_html('<span style="color: gray;">-</span>')
+    delivered_badge.short_description = 'التسليم'
+    
+    def read_badge(self, obj):
+        """عرض حالة القراءة"""
+        if obj.read_at:
+            return format_html(
+                '<span style="color: darkgreen;" title="{}">✓✓ تمت القراءة</span>',
+                obj.read_at.strftime('%Y-%m-%d %H:%M')
+            )
+        elif obj.status == 'READ':
+            return format_html('<span style="color: darkgreen;">✓✓ تمت القراءة</span>')
+        return format_html('<span style="color: gray;">-</span>')
+    read_badge.short_description = 'القراءة'
     
     def retry_failed_messages(self, request, queryset):
         """إعادة محاولة إرسال الرسائل الفاشلة"""
