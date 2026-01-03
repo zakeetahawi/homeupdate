@@ -165,10 +165,6 @@ def product_list(request):
         'id', 'name', 'code', 'price', 'category', 'created_at', 'minimum_stock'
     )
 
-    # تطبيق فلتر السنة
-    from accounts.utils import apply_default_year_filter
-    products = apply_default_year_filter(products, request, 'created_at', 'inventory')
-
     # تطبيق البحث
     if search_query:
         products = products.filter(
@@ -176,6 +172,8 @@ def product_list(request):
             Q(code__icontains=search_query) |
             Q(description__icontains=search_query)
         )
+    
+    # ملاحظة: لا نطبق فلتر السنة على المنتجات لأنها دائمة وليست مرتبطة بسنة معينة
 
     # تطبيق فلتر الفئة
     if category_id:

@@ -294,15 +294,20 @@ class ProductForm(forms.ModelForm):
     # حقل السعر للعرض فقط (للإضافة الجديدة)
     price = forms.DecimalField(
         label=_('السعر'),
-        required=False,
+        required=True,
         min_value=0,
         decimal_places=2,
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'step': '0.01',
-            'placeholder': '0.00'
+            'placeholder': '0.00',
+            'required': True
         }),
-        help_text=_('السعر الافتراضي للمنتج')
+        help_text=_('السعر الافتراضي للمنتج (مطلوب)'),
+        error_messages={
+            'required': 'يجب إدخال سعر المنتج',
+            'invalid': 'الرجاء إدخال سعر صحيح'
+        }
     )
 
     class Meta:
@@ -344,9 +349,12 @@ class ProductForm(forms.ModelForm):
     
     def save(self, commit=True):
         instance = super().save(commit=False)
-        # إذا كان منتج جديد وتم إدخال سعر
-        if not instance.pk and 'price' in self.cleaned_data and self.cleaned_data['price']:
-            instance.price = self.cleaned_data['price']
+        # إذا كان منتج جديد، يجب إدخال السعر
+        if not instance.pk:
+            price = self.cleaned_data.get('price')
+            if price is None:
+                raise forms.ValidationError('يجب إدخال سعر المنتج')
+            instance.price = price
         if commit:
             instance.save()
         return instance
