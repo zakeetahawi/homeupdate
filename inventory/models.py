@@ -210,11 +210,7 @@ class Product(models.Model):
             return False
 
     def save(self, *args, **kwargs):
-        # إنشاء كود للمنتج إذا لم يكن موجوداً
-        if not self.code:
-            self.code = f"P-{uuid.uuid4().hex[:8].upper()}"
-        
-        # توليد QR تلقائياً إذا لم يكن موجوداً
+        # توليد QR تلقائياً إذا كان هناك كود ولم يكن موجوداً
         if self.code and not self.qr_code_base64:
             self.generate_qr()
         

@@ -199,19 +199,13 @@ def product_list(request):
         page_size = 50
     
     paginator = Paginator(products, page_size)
-    page_number = request.GET.get('page')
+    page_number = request.GET.get('page', '1')
     
-    # إصلاح مشكلة pagination
-    if page_number and isinstance(page_number, (list, tuple)):
-        page_number = page_number[0] if page_number else '1'
-    elif page_number and str(page_number).startswith('[') and str(page_number).endswith(']'):
-        try:
-            import re
-            match = re.search(r'\[(\d+)\]', str(page_number))
-            if match:
-                page_number = match.group(1)
-        except:
-            page_number = '1'
+    # إصلاح مشكلة pagination - تبسيط المنطق
+    try:
+        page_number = int(page_number) if page_number else 1
+    except (ValueError, TypeError):
+        page_number = 1
     
     page_obj = paginator.get_page(page_number)
 

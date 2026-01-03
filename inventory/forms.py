@@ -310,7 +310,10 @@ class ProductForm(forms.ModelForm):
         fields = ['name', 'code', 'category', 'description', 'unit', 'minimum_stock']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'code': forms.TextInput(attrs={'class': 'form-control'}),
+            'code': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'أدخل كود المنتج'
+            }),
             'category': forms.Select(attrs={'class': 'form-select'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'unit': forms.Select(attrs={'class': 'form-select'}),
