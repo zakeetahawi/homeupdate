@@ -6,21 +6,11 @@ import os
 
 
 def load_fixtures(apps, schema_editor):
-    """Load default WhatsApp templates, rules, and event types from fixtures"""
+    """Load default WhatsApp templates and rules from fixtures"""
     fixtures_dir = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
         'fixtures'
     )
-    
-    # Load event types first (they may be referenced by rules)
-    WhatsAppEventType = apps.get_model('whatsapp', 'WhatsAppEventType')
-    if WhatsAppEventType.objects.count() == 0:
-        event_types_path = os.path.join(fixtures_dir, 'whatsapp_event_types.json')
-        if os.path.exists(event_types_path):
-            call_command('loaddata', event_types_path, verbosity=0)
-            print("✅ Loaded default WhatsApp event types")
-    else:
-        print("ℹ️ Event types already exist, skipping")
     
     # Load templates
     WhatsAppMessageTemplate = apps.get_model('whatsapp', 'WhatsAppMessageTemplate')

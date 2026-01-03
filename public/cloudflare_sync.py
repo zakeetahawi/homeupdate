@@ -40,7 +40,7 @@ class CloudflareSync:
                     'Content-Type': 'application/json',
                     'X-Sync-API-Key': self.api_key
                 },
-                timeout=15
+                timeout=60  # Increased for large batches with paid plan
             )
             
             if response.status_code == 200:

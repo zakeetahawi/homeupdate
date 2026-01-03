@@ -14,8 +14,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--batch-size',
             type=int,
-            default=100,
-            help='Number of products to sync per batch (default: 100)'
+            default=500,
+            help='Number of products to sync per batch (default: 500 for paid plan)'
         )
         parser.add_argument(
             '--dry-run',
@@ -24,7 +24,7 @@ class Command(BaseCommand):
         )
     
     def handle(self, *args, **options):
-        from inventory.models import Product
+        from inventory.models import Product, BaseProduct, ProductVariant
         from public.models import CloudflareSettings
         
         batch_size = options['batch_size']
@@ -41,22 +41,35 @@ class Command(BaseCommand):
                 self.style.WARNING('⚠️  المزامنة معطلة في الإعدادات. استخدم --force لتجاوز ذلك.')
             )
         
-        # Get products
-        products = Product.objects.exclude(code__isnull=True).exclude(code='').select_related('category')
-        total = products.count()
+        # Get accurate counts
+        base_products = BaseProduct.objects.filter(is_active=True)
+        total_base = base_products.count()
         
-        self.stdout.write(f"\n📦 إجمالي المنتجات: {total}")
+        # Get standalone products (orphans)
+        linked_ids = ProductVariant.objects.filter(legacy_product__isnull=False).values_list('legacy_product_id', flat=True)
+        orphans = Product.objects.filter(code__isnull=False).exclude(code='').exclude(id__in=linked_ids)
+        total_orphans = orphans.count()
+        
+        total = total_base + total_orphans
+        
+        self.stdout.write(f"\n📦 المنتجات الأساسية: {total_base}")
+        self.stdout.write(f"📦 المنتجات المستقلة: {total_orphans}")
+        self.stdout.write(f"📦 الإجمالي: {total}")
         
         if dry_run:
             self.stdout.write(self.style.WARNING('\n🔍 وضع المعاينة - لن يتم إرسال أي بيانات\n'))
             
             sync = get_cloudflare_sync()
-            for product in products[:5]:
-                formatted = sync.format_product(product)
-                self.stdout.write(f"  - {formatted['code']}: {formatted['name']} - {formatted['price']} {formatted['currency']}")
+            for base_product in base_products[:5]:
+                formatted = sync.format_base_product(base_product)
+                variants_count = len(formatted.get('variants', []))
+                self.stdout.write(
+                    f"  - {formatted['code']}: {formatted['name']} "
+                    f"({variants_count} متغير) - {formatted['price']} {formatted['currency']}"
+                )
             
-            if total > 5:
-                self.stdout.write(f"  ... و {total - 5} منتج آخر")
+            if total_base > 5:
+                self.stdout.write(f"  ... و {total_base - 5} منتج أساسي آخر")
             
             return
         
@@ -76,7 +89,62 @@ class Command(BaseCommand):
             return
         
         try:
-            synced = sync.sync_all_products(batch_size=batch_size)
+            synced = 0
+            now = timezone.now()
+            
+            # 1. Sync Base Products with progress
+            self.stdout.write(f'\n📦 مزامنة المنتجات الأساسية ({total_base} منتج)...')
+            for i in range(0, total_base, batch_size):
+                batch = base_products[i:i+batch_size]
+                formatted = [sync.format_base_product(p) for p in batch]
+                
+                data = {
+                    'action': 'sync_all',
+                    'products': formatted
+                }
+                if sync._send_request(data):
+                    synced += len(formatted)
+                    # Update database for this batch
+                    batch_ids = [p.id for p in batch]
+                    BaseProduct.objects.filter(id__in=batch_ids).update(
+                        cloudflare_synced=True,
+                        last_synced_at=now
+                    )
+                    # Show progress
+                    progress = min(i + batch_size, total_base)
+                    self.stdout.write(
+                        self.style.SUCCESS(f'  ✅ تمت مزامنة {progress}/{total_base} منتج أساسي'),
+                        ending='\n'
+                    )
+                    self.stdout.flush()
+                else:
+                    self.stdout.write(
+                        self.style.ERROR(f'  ❌ فشلت مزامنة الدفعة {i//batch_size + 1}')
+                    )
+            
+            # 2. Sync Standalone Products (Orphans) with progress
+            if total_orphans > 0:
+                self.stdout.write(f'\n📦 مزامنة المنتجات المستقلة ({total_orphans} منتج)...')
+                for i in range(0, total_orphans, batch_size):
+                    batch = orphans[i:i+batch_size]
+                    formatted = [sync.format_product(p) for p in batch]
+                    
+                    data = {
+                        'action': 'sync_all',
+                        'products': formatted
+                    }
+                    if sync._send_request(data):
+                        synced += len(formatted)
+                        progress = min(i + batch_size, total_orphans)
+                        self.stdout.write(
+                            self.style.SUCCESS(f'  ✅ تمت مزامنة {progress}/{total_orphans} منتج مستقل'),
+                            ending='\n'
+                        )
+                        self.stdout.flush()
+                    else:
+                        self.stdout.write(
+                            self.style.ERROR(f'  ❌ فشلت مزامنة الدفعة {i//batch_size + 1}')
+                        )
             
             # Update settings
             if settings:
