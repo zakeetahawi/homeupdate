@@ -128,7 +128,21 @@ class WhatsAppMessageTemplate(models.Model):
     )
     template_text = models.TextField(
         verbose_name="نص القالب",
-        help_text="استخدم {customer_name}, {order_number}, إلخ للمتغيرات"
+        help_text="استخدم {{customer_name}}, {{order_number}}, إلخ للمتغيرات (أقواس مزدوجة)"
+    )
+    header = models.CharField(
+        max_length=60,
+        blank=True,
+        null=True,
+        verbose_name="العنوان (Header)",
+        help_text="نص العنوان (اختياري، حد أقصى 60 حرف)"
+    )
+    footer = models.CharField(
+        max_length=60,
+        blank=True,
+        null=True,
+        verbose_name="التذييل (Footer)",
+        help_text="نص التذييل (اختياري، حد أقصى 60 حرف)"
     )
     is_active = models.BooleanField(
         default=True,

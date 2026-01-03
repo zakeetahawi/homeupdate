@@ -4,7 +4,7 @@ from django.shortcuts import render
 from django.urls import path
 from django.http import HttpResponseRedirect
 from django.contrib import messages
-from .models import WhatsAppSettings
+from .models import WhatsAppSettings, WhatsAppMessageTemplate
 from .services import WhatsAppService
 
 
@@ -18,13 +18,26 @@ class TestMessageForm(forms.Form):
     )
     template_name = forms.ChoiceField(
         label='القالب',
-        choices=[
-            ('hello_world', 'Hello World (معتمد ✅)'),
-            ('order_confirmation', 'Order Confirmation (معتمد ✅)'),
-        ],
-        initial='hello_world',
-        help_text='كلا القالبين معتمدين من Meta'
+        choices=[],  # Will be populated dynamically
+        help_text='القوالب المعتمدة من Meta تظهر بعلامة ✅'
     )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Load templates dynamically from database
+        choices = [('hello_world', 'Hello World (معتمد ✅)')]  # Default Meta template
+        
+        templates = WhatsAppMessageTemplate.objects.filter(is_active=True)
+        for template in templates:
+            if template.meta_template_name:
+                # Has Meta template name - approved
+                label = f'{template.name} ({template.meta_template_name}) ✅'
+            else:
+                # No Meta template name - not approved
+                label = f'{template.name} ❌ غير معتمد'
+            choices.append((template.meta_template_name or f'db_{template.id}', label))
+        
+        self.fields['template_name'].choices = choices
     
     def clean_phone_number(self):
         phone = self.cleaned_data['phone_number']

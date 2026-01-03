@@ -68,25 +68,56 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
                     service = WhatsAppService()
                     
                     if template == 'hello_world':
+                        # Default Meta template - no variables
                         result = service.send_template_message(
                             to=phone,
                             template_name='hello_world',
                             language='en_US'
                         )
+                    elif template.startswith('db_'):
+                        # Template from database without meta_template_name
+                        django_messages.error(request, '❌ هذا القالب غير معتمد من Meta بعد. أضف اسم القالب في Meta أولاً.')
+                        return HttpResponseRedirect(request.path)
                     else:
-                        result = service.send_template_message(
-                            to=phone,
-                            template_name='order_confirmation',
-                            language='ar',
-                            components=[
-                                'عميل تجريبي',
-                                'TEST-001',
-                                '2026-01-01',
-                                '1000',
-                                '500',
-                                '500'
-                            ]
-                        )
+                        # Template with meta_template_name - get from database
+                        from .models import WhatsAppMessageTemplate
+                        db_template = WhatsAppMessageTemplate.objects.filter(
+                            meta_template_name=template
+                        ).first()
+                        
+                        if db_template:
+                            # Build components based on template type
+                            if template == 'order_confirm':
+                                components = {
+                                    'customer_name': 'عميل تجريبي',
+                                    'order_number': 'TEST-001',
+                                    'order_date': '2026-01-03'
+                                }
+                            elif template == 'order_confirmation':
+                                components = {
+                                    'customer_name': 'عميل تجريبي',
+                                    'order_number': 'TEST-001', 
+                                    'order_date': '2026-01-03',
+                                    'total_amount': '15000',
+                                    'paid_amount': '5000',
+                                    'remaining_amount': '10000'
+                                }
+                            else:
+                                components = {}
+                            
+                            result = service.send_template_message(
+                                to=phone,
+                                template_name=template,
+                                language='ar',
+                                components=components if components else None
+                            )
+                        else:
+                            # Use template name directly
+                            result = service.send_template_message(
+                                to=phone,
+                                template_name=template,
+                                language='ar'
+                            )
                     
                     if result and result.get('messages'):
                         msg_id = result['messages'][0].get('id')
@@ -178,9 +209,9 @@ class WhatsAppMessageTemplateAdmin(admin.ModelAdmin):
         ('إعدادات القالب', {
             'fields': ('name', 'message_type', 'meta_template_name', 'language', 'is_active')
         }),
-        ('نص الرسالة', {
+        ('محتوى القالب', {
             'fields': ('template_text',),
-            'description': 'استخدم المتغيرات التالية: {customer_name}, {order_number}, {order_date}, {total_amount}, {paid_amount}, {remaining_amount}, {installation_date}, {technician_name}, {technician_phone}, {inspector_name}, {inspector_phone}'
+            'description': 'استخدم {{customer_name}}, {{order_number}}, {{order_date}} للمتغيرات (أقواس مزدوجة)'
         }),
         ('المرفقات', {
             'fields': ('send_contract', 'send_invoice')

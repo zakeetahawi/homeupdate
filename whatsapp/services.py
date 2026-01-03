@@ -114,19 +114,51 @@ class WhatsAppService:
         
         # إضافة المتغيرات إذا وجدت
         if components:
-            # تحويل القائمة إلى تنسيق Meta API الصحيح
-            template_payload["components"] = [
-                {
-                    "type": "body",
-                    "parameters": [
+            # تحويل القائمة إلى تنسيق Meta API الصحيح مع parameter_name
+            # components يجب أن تكون قائمة من tuples: [(name, value), ...]
+            # أو dict: {name: value, ...}
+            if isinstance(components, dict):
+                params = [
+                    {
+                        "type": "text",
+                        "parameter_name": name,
+                        "text": str(value)
+                    }
+                    for name, value in components.items()
+                ]
+            elif isinstance(components, list) and len(components) > 0:
+                if isinstance(components[0], tuple):
+                    # List of tuples [(name, value), ...]
+                    params = [
                         {
                             "type": "text",
+                            "parameter_name": name,
                             "text": str(value)
                         }
-                        for value in components
+                        for name, value in components
                     ]
-                }
-            ]
+                else:
+                    # List of values - use default names for order_confirm
+                    default_names = ['customer_name', 'order_number', 'order_date', 
+                                     'total_amount', 'paid_amount', 'remaining_amount']
+                    params = [
+                        {
+                            "type": "text",
+                            "parameter_name": default_names[i] if i < len(default_names) else f'param_{i}',
+                            "text": str(value)
+                        }
+                        for i, value in enumerate(components)
+                    ]
+            else:
+                params = []
+            
+            if params:
+                template_payload["components"] = [
+                    {
+                        "type": "body",
+                        "parameters": params
+                    }
+                ]
         
         payload = {
             "messaging_product": "whatsapp",
