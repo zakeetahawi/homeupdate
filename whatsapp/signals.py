@@ -19,6 +19,18 @@ def order_created_handler(sender, instance, created, **kwargs):
         return
     
     try:
+        # التحقق من إعدادات التفعيل أولاً
+        from .models import WhatsAppSettings
+        settings = WhatsAppSettings.objects.first()
+        
+        if not settings or not settings.is_active:
+            logger.info("WhatsApp is not active")
+            return
+        
+        if not settings.enable_order_created:
+            logger.info("Order created template is disabled in settings")
+            return
+        
         # التحقق من تفعيل القاعدة
         rule = WhatsAppNotificationRule.objects.filter(
             event_type='ORDER_CREATED',
@@ -119,6 +131,17 @@ def installation_scheduled_handler(sender, instance, created, **kwargs):
         return
     
     try:
+        # التحقق من إعدادات التفعيل
+        from .models import WhatsAppSettings
+        settings = WhatsAppSettings.objects.first()
+        
+        if not settings or not settings.is_active:
+            return
+        
+        if not settings.enable_installation_scheduled:
+            logger.info("Installation scheduled template is disabled in settings")
+            return
+        
         rule = WhatsAppNotificationRule.objects.filter(
             event_type='INSTALLATION_SCHEDULED',
             is_enabled=True
@@ -161,6 +184,17 @@ def inspection_created_handler(sender, instance, created, **kwargs):
         return
     
     try:
+        # التحقق من إعدادات التفعيل
+        from .models import WhatsAppSettings
+        settings = WhatsAppSettings.objects.first()
+        
+        if not settings or not settings.is_active:
+            return
+        
+        if not settings.enable_inspection_scheduled:
+            logger.info("Inspection template is disabled in settings")
+            return
+        
         rule = WhatsAppNotificationRule.objects.filter(
             event_type='INSPECTION_CREATED',
             is_enabled=True
