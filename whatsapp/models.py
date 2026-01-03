@@ -342,6 +342,39 @@ class WhatsAppMessage(models.Model):
     def __str__(self):
         return f"{self.customer.name} - {self.message_type} ({self.status})"
 
+class WhatsAppEventType(models.Model):
+    """أنواع الأحداث القابلة للتعديل"""
+    
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name="كود الحدث",
+        help_text="الكود الداخلي (مثل: ORDER_CREATED)"
+    )
+    name = models.CharField(
+        max_length=100,
+        verbose_name="اسم الحدث",
+        help_text="الاسم الذي يظهر في لوحة التحكم"
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name="وصف الحدث"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="مفعل"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "نوع حدث"
+        verbose_name_plural = "أنواع الأحداث"
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+
 
 class WhatsAppNotificationRule(models.Model):
     """قواعد الإشعارات التلقائية"""
@@ -354,6 +387,7 @@ class WhatsAppNotificationRule(models.Model):
         ('INSPECTION_CREATED', 'إنشاء معاينة'),
         ('INSPECTION_SCHEDULED', 'جدولة معاينة'),
         ('PAYMENT_REMINDER', 'تذكير بالدفع'),
+        ('CUSTOMER_WELCOME', 'ترحيب بالعميل'),
     ]
     
     event_type = models.CharField(

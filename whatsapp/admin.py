@@ -12,7 +12,8 @@ from .models import (
     WhatsAppSettings,
     WhatsAppMessageTemplate,
     WhatsAppMessage,
-    WhatsAppNotificationRule
+    WhatsAppNotificationRule,
+    WhatsAppEventType
 )
 
 
@@ -437,6 +438,30 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
         }
         
         return super().changelist_view(request, extra_context=extra_context)
+
+
+@admin.register(WhatsAppEventType)
+class WhatsAppEventTypeAdmin(admin.ModelAdmin):
+    """إدارة أنواع الأحداث"""
+    
+    list_display = ['code', 'name', 'is_active', 'updated_at']
+    list_editable = ['name', 'is_active']
+    search_fields = ['code', 'name']
+    list_filter = ['is_active']
+    
+    fieldsets = (
+        ('معلومات الحدث', {
+            'fields': ('code', 'name', 'description', 'is_active')
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        # منع إضافة أحداث جديدة (يجب أن تكون في الكود)
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # منع الحذف
+        return False
 
 
 @admin.register(WhatsAppNotificationRule)

@@ -1,4 +1,4 @@
-# Generated data migration for loading default templates
+# Generated data migration for loading default templates, rules, and event types
 
 from django.db import migrations
 from django.core.management import call_command
@@ -6,25 +6,41 @@ import os
 
 
 def load_fixtures(apps, schema_editor):
-    """Load default WhatsApp templates from fixtures"""
-    # Check if templates already exist
-    WhatsAppMessageTemplate = apps.get_model('whatsapp', 'WhatsAppMessageTemplate')
+    """Load default WhatsApp templates, rules, and event types from fixtures"""
+    fixtures_dir = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        'fixtures'
+    )
     
-    if WhatsAppMessageTemplate.objects.count() == 0:
-        # Only load fixtures if no templates exist
-        fixture_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
-            'fixtures',
-            'whatsapp_templates.json'
-        )
-        
-        if os.path.exists(fixture_path):
-            call_command('loaddata', fixture_path, verbosity=0)
-            print("✅ Loaded default WhatsApp templates from fixtures")
-        else:
-            print("⚠️ Fixture file not found, skipping template loading")
+    # Load event types first (they may be referenced by rules)
+    WhatsAppEventType = apps.get_model('whatsapp', 'WhatsAppEventType')
+    if WhatsAppEventType.objects.count() == 0:
+        event_types_path = os.path.join(fixtures_dir, 'whatsapp_event_types.json')
+        if os.path.exists(event_types_path):
+            call_command('loaddata', event_types_path, verbosity=0)
+            print("✅ Loaded default WhatsApp event types")
     else:
-        print("ℹ️ Templates already exist, skipping fixture loading")
+        print("ℹ️ Event types already exist, skipping")
+    
+    # Load templates
+    WhatsAppMessageTemplate = apps.get_model('whatsapp', 'WhatsAppMessageTemplate')
+    if WhatsAppMessageTemplate.objects.count() == 0:
+        templates_path = os.path.join(fixtures_dir, 'whatsapp_templates.json')
+        if os.path.exists(templates_path):
+            call_command('loaddata', templates_path, verbosity=0)
+            print("✅ Loaded default WhatsApp templates")
+    else:
+        print("ℹ️ Templates already exist, skipping")
+    
+    # Load rules
+    WhatsAppNotificationRule = apps.get_model('whatsapp', 'WhatsAppNotificationRule')
+    if WhatsAppNotificationRule.objects.count() == 0:
+        rules_path = os.path.join(fixtures_dir, 'whatsapp_rules.json')
+        if os.path.exists(rules_path):
+            call_command('loaddata', rules_path, verbosity=0)
+            print("✅ Loaded default WhatsApp notification rules")
+    else:
+        print("ℹ️ Rules already exist, skipping")
 
 
 def unload_fixtures(apps, schema_editor):

@@ -1,0 +1,29 @@
+[
+  {
+    "model": "whatsapp.whatsappsettings",
+    "pk": 1,
+    "fields": {
+      "api_provider": "meta",
+      "phone_number": "",
+      "business_account_id": "",
+      "phone_number_id": "",
+      "access_token": "",
+      "account_sid": "",
+      "auth_token": "",
+      "is_active": false,
+      "test_mode": true,
+      "retry_failed_messages": true,
+      "max_retry_attempts": 3,
+      "default_language": "ar",
+      "use_template": true,
+      "enable_welcome_messages": false,
+      "enable_order_created": false,
+      "enable_inspection_scheduled": false,
+      "enable_inspection_completed": false,
+      "enable_installation_scheduled": false,
+      "enable_installation_completed": false,
+      "enable_invoice": false,
+      "enable_contract": false
+    }
+  }
+]
