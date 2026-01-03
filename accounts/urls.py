@@ -10,6 +10,7 @@ from .messages_views import (
     mark_as_read, mark_all_as_read, get_unread_count, 
     get_online_users_with_messages, reply_to_message
 )
+from .admin_device_reports import device_dashboard_view, device_detail_report
 
 app_name = 'accounts'
 
@@ -23,6 +24,10 @@ urlpatterns = [
     path('device-diagnostic/', views.device_diagnostic_view, name='device_diagnostic'),
     path('qr-master/<int:qr_id>/print/', views.print_qr_master, name='print_qr_master'),
     path('validate-qr-master/', views.validate_qr_master_ajax, name='validate_qr_master'),
+    
+    # Device Reports (Admin) - يجب أن تكون قبل check-device API
+    path('admin/device-reports/dashboard/', device_dashboard_view, name='device_dashboard'),
+    path('admin/device-reports/<int:device_id>/report/', device_detail_report, name='device_report'),
     
     # Device API
     path('api/check-device/', api_views.check_device_api, name='check_device_api'),

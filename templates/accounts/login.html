@@ -129,18 +129,50 @@ const DeviceDB = {
 
 // جمع بصمة الجهاز عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', async function() {
-    // 1. محاولة قراءة Token من IndexedDB
+    // 1. محاولة قراءة Token من IndexedDB أولاً
     let deviceToken = null;
     try {
         deviceToken = await DeviceDB.getToken();
         if (deviceToken) {
             document.getElementById('deviceToken').value = deviceToken;
             console.log('✅ Device Token loaded from IndexedDB');
-        } else {
-            console.log('⚠️ No device token found in IndexedDB - device not registered');
+            
+            // 🔄 MIGRATION: نقل التوكن إلى localStorage أيضاً (للأجهزة المسجلة سابقاً)
+            try {
+                const existingLocalToken = localStorage.getItem('elkhawaga_device_token');
+                if (!existingLocalToken) {
+                    localStorage.setItem('elkhawaga_device_token', deviceToken);
+                    console.log('🔄 Token migrated to localStorage (one-time migration)');
+                }
+            } catch(localErr) {
+                console.warn('Could not save to localStorage:', localErr);
+            }
         }
     } catch(err) {
-        console.error('Failed to read device token:', err);
+        console.error('Failed to read device token from IndexedDB:', err);
+    }
+    
+    // 2. Fallback: محاولة localStorage إذا فشل IndexedDB
+    if (!deviceToken) {
+        try {
+            deviceToken = localStorage.getItem('elkhawaga_device_token');
+            if (deviceToken) {
+                document.getElementById('deviceToken').value = deviceToken;
+                console.log('✅ Device Token loaded from localStorage (fallback)');
+                
+                // محاولة حفظه في IndexedDB أيضاً للمرات القادمة
+                try {
+                    await DeviceDB.saveToken(deviceToken);
+                    console.log('🔄 Token synced back to IndexedDB');
+                } catch(dbErr) {
+                    console.warn('Could not save to IndexedDB:', dbErr);
+                }
+            } else {
+                console.log('⚠️ No device token found (neither IndexedDB nor localStorage)');
+            }
+        } catch(err) {
+            console.error('Failed to read from localStorage:', err);
+        }
     }
     
     // 2. جمع معلومات الجهاز (Stable factors only)

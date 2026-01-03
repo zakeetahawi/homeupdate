@@ -937,12 +937,14 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         'device_name', 
         'manual_identifier',
         'branch',
+        'device_token_short',
         'branch_devices_count',
         'is_active', 
         'last_used_by', 
         'last_used',
         'fingerprint_short',
-        'ip_address'
+        'ip_address',
+        'view_report_link',
     )
     list_filter = ('is_active', 'branch', 'created_at', 'last_used')
     search_fields = (
@@ -955,6 +957,7 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         'notes'
     )
     readonly_fields = (
+        'device_token',
         'device_fingerprint', 
         'hardware_serial',
         'created_at', 
@@ -962,9 +965,11 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         'last_used',
         'last_used_by',
         'fingerprint_display',
+        'device_token_display',
         'users_list_display',
         'blocked_at',
-        'blocked_by'
+        'blocked_by',
+        'detailed_report_link',
     )
     date_hierarchy = 'created_at'
     
@@ -979,8 +984,8 @@ class BranchDeviceAdmin(admin.ModelAdmin):
             'description': 'إذا تم تفعيل الحظر، لن يتمكن أي شخص من استخدام هذا الجهاز'
         }),
         ('البصمة والتعريف', {
-            'fields': ('hardware_serial', 'fingerprint_display', 'device_fingerprint'),
-            'description': 'المعرف الثابت والبصمة يتم توليدهما تلقائياً ولا يمكن تعديلهما'
+            'fields': ('detailed_report_link', 'device_token_display', 'device_token', 'hardware_serial', 'fingerprint_display', 'device_fingerprint'),
+            'description': '🔑 التوكن (device_token) هو المعرّف الأساسي الثابت - يُنصح بنسخه وحفظه. البصمة والرقم التسلسلي احتياطيين فقط.'
         }),
         ('معلومات الاتصال', {
             'fields': ('ip_address', 'user_agent')
@@ -1070,6 +1075,30 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         return mark_safe(users_html + count_html)
     users_list_display.short_description = 'المستخدمون الذين سجلوا الدخول'
     
+    def device_token_short(self, obj):
+        """عرض أول 8 أحرف من التوكن"""
+        if obj.device_token:
+            return f"{str(obj.device_token)[:8]}..."
+        return "-"
+    device_token_short.short_description = '🔑 التوكن (مختصر)'
+    
+    def device_token_display(self, obj):
+        """عرض التوكن الكامل مع زر نسخ"""
+        if obj.device_token:
+            token = str(obj.device_token)
+            return mark_safe(f'''
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <code id="token_{obj.id}" style="font-size: 12px; background: #f5f5f5; padding: 8px 12px; border-radius: 4px; border: 1px solid #ddd;">{token}</code>
+                    <button type="button" onclick="navigator.clipboard.writeText('{token}'); this.textContent='✓ تم النسخ'; setTimeout(() => this.textContent='📋 نسخ', 2000);" 
+                            style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">📋 نسخ</button>
+                </div>
+                <small style="color: #666; display: block; margin-top: 8px;">
+                    ⚠️ هذا التوكن ثابت ولا يتغير، استخدمه للمصادقة المستقرة
+                </small>
+            ''')
+        return "-"
+    device_token_display.short_description = '🔑 التوكن الكامل'
+    
     def fingerprint_short(self, obj):
         """عرض أول 12 حرف من البصمة"""
         if obj.device_fingerprint:
@@ -1080,9 +1109,34 @@ class BranchDeviceAdmin(admin.ModelAdmin):
     def fingerprint_display(self, obj):
         """عرض البصمة الكاملة بشكل منسق"""
         if obj.device_fingerprint:
-            return mark_safe(f'<code style="font-size: 11px;">{obj.device_fingerprint}</code>')
+            return mark_safe(f'''
+                <code style="font-size: 11px; background: #fff3cd; padding: 4px 8px; border-radius: 3px;">{obj.device_fingerprint}</code>
+                <small style="color: #856404; display: block; margin-top: 4px;">
+                    ⚠️ البصمة قد تتغير مع تحديثات المتصفح أو إعدادات الدومين
+                </small>
+            ''')
         return "-"
     fingerprint_display.short_description = 'البصمة الكاملة'
+    
+    def view_report_link(self, obj):
+        """رابط سريع للتقرير في القائمة"""
+        url = reverse('accounts:device_report', args=[obj.id])
+        return mark_safe(f'<a href="{url}" style="color: #007bff; text-decoration: none;">📊 تقرير</a>')
+    view_report_link.short_description = 'التقارير'
+    
+    def detailed_report_link(self, obj):
+        """رابط مفصل للتقرير في صفحة التفاصيل"""
+        url = reverse('accounts:device_report', args=[obj.id])
+        return mark_safe(f'''
+            <a href="{url}" target="_blank" style="display: inline-block; background: #28a745; color: white; padding: 10px 20px; 
+               border-radius: 4px; text-decoration: none; font-weight: bold;">
+                📊 عرض التقرير التفصيلي الكامل
+            </a>
+            <p style="color: #666; margin-top: 10px; font-size: 12px;">
+                يفتح في نافذة جديدة ويعرض: الإحصائيات، المحاولات الفاشلة، المستخدمين، وجميع التفاصيل
+            </p>
+        ''')
+    detailed_report_link.short_description = '📋 التقرير الشامل'
     
     def activate_devices(self, request, queryset):
         """تفعيل الأجهزة المحددة"""

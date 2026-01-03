@@ -336,9 +336,13 @@ def check_device_api(request):
         fingerprint_similarity = None
         
         # 1. البحث بالـ device_token أولاً (الطريقة المفضلة)
+        token_error = None
         if device_token:
             try:
                 import uuid
+                import logging
+                logger = logging.getLogger(__name__)
+                
                 device_token_uuid = uuid.UUID(device_token)
                 device = BranchDevice.objects.get(
                     device_token=device_token_uuid,
@@ -350,19 +354,33 @@ def check_device_api(request):
                 if device_fingerprint and device.device_fingerprint:
                     fingerprint_similarity = device.calculate_fingerprint_similarity(device_fingerprint)
                 
-            except (ValueError, BranchDevice.DoesNotExist):
-                pass
+            except ValueError as e:
+                token_error = f'device_token غير صالح: {str(e)}'
+                logger.warning(f'❌ Device Token غير صالح: {device_token[:8]}... - {e}')
+            except BranchDevice.DoesNotExist:
+                token_error = 'device_token غير موجود في قاعدة البيانات'
+                logger.warning(f'❌ Device Token غير موجود: {device_token[:8]}...')
+            except Exception as e:
+                token_error = f'خطأ في البحث بـ device_token: {str(e)}'
+                logger.error(f'❌ خطأ في device_token: {e}')
         
         # 2. Fallback: البحث بالـ fingerprint (للأجهزة القديمة)
+        fingerprint_error = None
         if not device and device_fingerprint:
             try:
+                import logging
+                logger = logging.getLogger(__name__)
+                
                 device = BranchDevice.objects.get(
                     device_fingerprint=device_fingerprint,
                     is_active=True
                 )
                 found_by = 'fingerprint'
+                logger.info(f'⚠️ تم العثور على الجهاز بالبصمة فقط (التوكن فشل: {token_error})')
+                
             except BranchDevice.DoesNotExist:
-                pass
+                fingerprint_error = 'fingerprint غير موجود'
+                logger.warning(f'❌ Fingerprint غير موجود: {device_fingerprint[:16]}...')
         
         if device:
             response_data = {
@@ -388,11 +406,22 @@ def check_device_api(request):
             
             return JsonResponse(response_data)
         else:
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            debug_info = {
+                'searched_token': device_token if device_token else None,
+                'searched_fingerprint': device_fingerprint[:16] + '...' if device_fingerprint else None,
+                'token_error': token_error,
+                'fingerprint_error': fingerprint_error,
+            }
+            
+            logger.warning(f'❌ جهاز غير مسجل - التفاصيل: {debug_info}')
+            
             return JsonResponse({
                 'registered': False,
                 'message': 'الجهاز غير مسجل في النظام - يجب التسجيل عبر QR Master',
-                'searched_token': device_token if device_token else None,
-                'searched_fingerprint': device_fingerprint[:16] + '...' if device_fingerprint else None,
+                **debug_info
             })
             
     except json.JSONDecodeError:

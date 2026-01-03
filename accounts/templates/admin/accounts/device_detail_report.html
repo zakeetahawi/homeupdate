@@ -1,0 +1,198 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">الرئيسية</a>
+    &rsaquo; <a href="{% url 'admin:accounts_branchdevice_changelist' %}">الأجهزة</a>
+    &rsaquo; تقرير الجهاز
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    
+    <h1>{{ device.device_name }}</h1>
+    
+    <div class="module">
+        <h2>معلومات الجهاز</h2>
+        <table>
+            <tr>
+                <th>الحالة:</th>
+                <td>
+                    {% if device.is_active and not device.is_blocked %}
+                    <span style="color: green;">✓ نشط</span>
+                    {% elif device.is_blocked %}
+                    <span style="color: red;">✗ محظور</span>
+                    {% else %}
+                    <span style="color: orange;">معطل</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>الفرع:</th>
+                <td>{{ device.branch.name }}</td>
+            </tr>
+            <tr>
+                <th>آخر استخدام:</th>
+                <td>{{ device.last_used|date:"Y-m-d H:i"|default:"لم يُستخدم" }}</td>
+            </tr>
+            <tr>
+                <th>آخر مستخدم:</th>
+                <td>{{ device.last_used_by.get_full_name|default:"—" }}</td>
+            </tr>
+            {% if days_inactive is not None %}
+            <tr>
+                <th>مدة عدم الاستخدام:</th>
+                <td>{{ days_inactive }} يوم</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+
+    <div class="module">
+        <h2>🔑 معرفات الجهاز</h2>
+        
+        {% if device.device_token %}
+        <fieldset class="module aligned">
+            <div class="form-row">
+                <div>
+                    <label>Device Token (الأساسي):</label>
+                    <div style="background: #f8f9fa; padding: 10px; margin: 10px 0; font-family: monospace; word-break: break-all;">
+                        {{ device.device_token }}
+                    </div>
+                    <p class="help">✓ هذا المعرّف ثابت ولا يتغير (الطريقة الموصى بها)</p>
+                </div>
+            </div>
+        </fieldset>
+        {% else %}
+        <p class="errornote">⚠️ هذا الجهاز لا يملك device_token! يُنصح بإعادة التسجيل.</p>
+        {% endif %}
+        
+        {% if device.device_fingerprint %}
+        <fieldset class="module aligned">
+            <div class="form-row">
+                <div>
+                    <label>Device Fingerprint:</label>
+                    <div style="background: #fff3cd; padding: 10px; margin: 10px 0; font-family: monospace; word-break: break-all;">
+                        {{ device.device_fingerprint }}
+                    </div>
+                    <p class="help">⚠️ البصمة قد تتغير مع تحديثات المتصفح</p>
+                </div>
+            </div>
+        </fieldset>
+        {% endif %}
+        
+        {% if device.hardware_serial %}
+        <fieldset class="module aligned">
+            <div class="form-row">
+                <div>
+                    <label>Hardware Serial:</label>
+                    <p>{{ device.hardware_serial }}</p>
+                </div>
+            </div>
+        </fieldset>
+        {% endif %}
+    </div>
+
+    <div class="module">
+        <h2>📊 إحصائيات</h2>
+        <table>
+            <tr>
+                <th>محاولات غير مصرح بها (كل الأوقات):</th>
+                <td><strong style="color: {% if total_unauthorized > 0 %}red{% else %}green{% endif %};">{{ total_unauthorized }}</strong></td>
+            </tr>
+            <tr>
+                <th>محاولات غير مصرح بها (آخر 30 يوم):</th>
+                <td><strong style="color: {% if unauthorized_last_month > 5 %}orange{% else %}green{% endif %};">{{ unauthorized_last_month }}</strong></td>
+            </tr>
+            <tr>
+                <th>عدد المستخدمين المسجلين:</th>
+                <td>{{ users_logged.count }}</td>
+            </tr>
+        </table>
+    </div>
+
+    {% if users_logged %}
+    <div class="module">
+        <h2>👥 المستخدمون المسجلون</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>الاسم</th>
+                    <th>اسم المستخدم</th>
+                    <th>الفرع</th>
+                    <th>الصلاحيات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users_logged %}
+                <tr>
+                    <td>{{ user.get_full_name }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.branch.name|default:"—" }}</td>
+                    <td>
+                        {% if user.is_superuser %}مدير عام{% elif user.is_sales_manager %}مدير مبيعات{% else %}مستخدم{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if unauthorized %}
+    <div class="module">
+        <h2>🚨 محاولات الوصول غير المصرح بها (آخر 50)</h2>
+        {% if total_unauthorized > 0 %}
+        <p class="errornote">تحذير: تم رصد {{ total_unauthorized }} محاولة فاشلة!</p>
+        {% endif %}
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>التاريخ والوقت</th>
+                    <th>المستخدم</th>
+                    <th>السبب</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for attempt in unauthorized %}
+                <tr>
+                    <td>{{ attempt.attempted_at|date:"Y-m-d H:i:s" }}</td>
+                    <td>{{ attempt.user.get_full_name|default:"—" }}</td>
+                    <td><small>{{ attempt.failure_reason }}</small></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="module">
+        <p style="color: green;">✓ لا توجد محاولات وصول فاشلة لهذا الجهاز</p>
+    </div>
+    {% endif %}
+
+    <div class="module">
+        <h2>ℹ️ تفاصيل إضافية</h2>
+        <table>
+            <tr>
+                <th>تاريخ التسجيل:</th>
+                <td>{{ device.registered_at|date:"Y-m-d H:i:s" }}</td>
+            </tr>
+            <tr>
+                <th>إصدار QR:</th>
+                <td>{{ device.registered_with_qr_version|default:"غير محدد" }}</td>
+            </tr>
+            {% if device.is_blocked %}
+            <tr>
+                <th>سبب الحظر:</th>
+                <td style="color: red;"><strong>{{ device.blocked_reason }}</strong></td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+
+</div>
+{% endblock %}

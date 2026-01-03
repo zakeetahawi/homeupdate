@@ -434,10 +434,24 @@ window.addEventListener('load', async function() {
     const deviceToken = urlParams.get('device_token');
     if (deviceToken) {
         try {
+            // Save to IndexedDB
             await DeviceDB.saveToken(deviceToken);
             console.log('✅ Device Token saved to IndexedDB');
+            
+            // ALSO save to localStorage as backup (for domain GPO environments)
+            localStorage.setItem('elkhawaga_device_token', deviceToken);
+            console.log('✅ Device Token ALSO saved to localStorage (backup)');
+            
         } catch(err) {
-            console.error('Failed to save token:', err);
+            console.error('Failed to save token to IndexedDB:', err);
+            // Fallback: save to localStorage only
+            try {
+                localStorage.setItem('elkhawaga_device_token', deviceToken);
+                console.log('⚠️ IndexedDB failed, saved to localStorage instead');
+            } catch(localErr) {
+                console.error('❌ Both IndexedDB and localStorage failed!', localErr);
+                alert('تحذير: فشل حفظ معرّف الجهاز. قد تحتاج لإعادة التسجيل.');
+            }
         }
     }
 });
