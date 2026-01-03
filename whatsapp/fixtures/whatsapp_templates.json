@@ -5,11 +5,11 @@ Accounting signals registered for customers app
   "model": "whatsapp.whatsappmessagetemplate",
   "pk": 1,
   "fields": {
-    "name": "انشاء طلب  عادي",
+    "name": "انشاء طلب",
     "message_type": "ORDER_CREATED",
-    "template_text": "مرحباً {{customer_name}} 👋\r\n\r\nتم إنشاء طلبك بنجاح!\r\n\r\n📋 رقم الطلب: {{order_number}}\r\n📅 التاريخ: {{order_date}}\r\n💰 المبلغ الإجمالي: {{total_amount}} جنيه\r\n✅ المبلغ المدفوع: {{paid_amount}} جنيه\r\n⏳ المبلغ المتبقي: {{remaining_amount}} جنيه\r\n\r\nشكراً لثقتك بنا 🙏",
-    "header": null,
-    "footer": null,
+    "template_text": "مرحباً {{customer_name}} 👋\r\n\r\n\r\n📋 رقم الطلب: {{order_number}}\r\n📅 التاريخ: {{order_date}}\r\n\r\n\r\nشكراً لثقتك بنا 🙏",
+    "header": "تم إنشاء طلبك بنجاح!",
+    "footer": "للاستفسارات  التواصل  على الرقم:  19148",
     "is_active": true,
     "send_contract": false,
     "send_invoice": false,
@@ -18,53 +18,7 @@ Accounting signals registered for customers app
     "language": "ar",
     "delay_minutes": 0,
     "created_at": "2025-12-31T10:55:27.669Z",
-    "updated_at": "2026-01-03T09:45:59.833Z"
-  }
-},
-{
-  "model": "whatsapp.whatsappmessagetemplate",
-  "pk": 2,
-  "fields": {
-    "name": "إنشاء طلب تركيب",
-    "message_type": "ORDER_CREATED",
-    "template_text": "مرحباً {{customer_name}} 👋\r\n\r\n📋 رقم الطلب: {{order_number}}\r\n📅 التاريخ: {{order_date}}\r\n\r\n*شكراً لثقتكم 🙏*",
-    "header": "تم انشاء الطلب بنجاح",
-    "footer": "للاستفسارات  التواصل  على الرقم:  19148",
-    "is_active": true,
-    "send_contract": false,
-    "send_invoice": false,
-    "order_types": [
-      "installation"
-    ],
-    "meta_template_name": "order_confirm",
-    "language": "ar",
-    "delay_minutes": 0,
-    "created_at": "2025-12-31T10:55:27.678Z",
-    "updated_at": "2026-01-03T09:32:55.428Z"
-  }
-},
-{
-  "model": "whatsapp.whatsappmessagetemplate",
-  "pk": 3,
-  "fields": {
-    "name": "طلب مع عقد",
-    "message_type": "ORDER_WITH_CONTRACT",
-    "template_text": "مرحباً {{customer_name}} 👋\n\nتم إنشاء طلبك بنجاح!\n\n📋 رقم الطلب: {{order_number}}\n📄 نوع الطلب: {{order_type}}\n\n📎 نسخة من العقد الإلكتروني مرفقة\n\nللاستفسار: {{company_phone}}",
-    "header": null,
-    "footer": null,
-    "is_active": true,
-    "send_contract": true,
-    "send_invoice": false,
-    "order_types": [
-      "installation",
-      "delivery",
-      "accessory"
-    ],
-    "meta_template_name": "",
-    "language": "ar",
-    "delay_minutes": 0,
-    "created_at": "2025-12-31T10:55:27.680Z",
-    "updated_at": "2026-01-03T09:45:59.834Z"
+    "updated_at": "2026-01-03T10:47:23.058Z"
   }
 },
 {
@@ -73,9 +27,9 @@ Accounting signals registered for customers app
   "fields": {
     "name": "جدولة تركيب",
     "message_type": "INSTALLATION_SCHEDULED",
-    "template_text": "مرحباً {{customer_name}} 👋\n\nتم جدولة موعد التركيب! ✅\n\n📋 رقم الطلب: {{order_number}}\n📅 التاريخ: {{installation_date}}\n\n👨‍🔧 الفني: {{technician_name}}\n📞 هاتف الفني: {{technician_phone}}\n\n⏰ سيتم تنسيق وقت الوصول من قبل الفني في نفس اليوم لتحديد ساعة الوصول\n\nيرجى التأكد من تواجدكم",
-    "header": null,
-    "footer": null,
+    "template_text": "مرحباً {{customer_name}} 👋\r\n\r\n\r\n📋 رقم الطلب: {{order_number}}\r\n📅 التاريخ: {{installation_date}}\r\n\r\n\r\n⏰ سيتم تنسيق وقت الوصول من قبل الفني في نفس اليوم لتحديد ساعة الوصول\r\n\r\nيرجى التأكد من تواجدكم",
+    "header": "تم جدولة موعد التركيب! ✅",
+    "footer": "للاستفسارات  التواصل  على الرقم:  19148",
     "is_active": true,
     "send_contract": false,
     "send_invoice": false,
@@ -84,7 +38,7 @@ Accounting signals registered for customers app
     "language": "ar",
     "delay_minutes": 0,
     "created_at": "2025-12-31T10:55:27.683Z",
-    "updated_at": "2026-01-03T09:45:59.832Z"
+    "updated_at": "2026-01-03T10:47:04.583Z"
   }
 },
 {
@@ -109,35 +63,13 @@ Accounting signals registered for customers app
 },
 {
   "model": "whatsapp.whatsappmessagetemplate",
-  "pk": 6,
-  "fields": {
-    "name": "إنشاء معاينة",
-    "message_type": "INSPECTION_CREATED",
-    "template_text": "مرحباً {{customer_name}} 👋\n\nتم إنشاء طلب المعاينة بنجاح! ✅\n\n📋 رقم الطلب: {{order_number}}\n📅 تاريخ الإنشاء: {{created_date}}\n\nسيتم التواصل معكم قريباً لتحديد موعد المعاينة",
-    "header": null,
-    "footer": null,
-    "is_active": true,
-    "send_contract": false,
-    "send_invoice": false,
-    "order_types": [
-      "inspection"
-    ],
-    "meta_template_name": "",
-    "language": "ar",
-    "delay_minutes": 0,
-    "created_at": "2025-12-31T10:55:27.686Z",
-    "updated_at": "2026-01-03T09:45:59.829Z"
-  }
-},
-{
-  "model": "whatsapp.whatsappmessagetemplate",
   "pk": 7,
   "fields": {
     "name": "جدولة معاينة",
     "message_type": "INSPECTION_SCHEDULED",
-    "template_text": "مرحباً {{customer_name}} 👋\n\nتم جدولة موعد المعاينة! ✅\n\n📋 رقم الطلب: {{order_number}}\n📅 التاريخ: {{inspection_date}}\n\n👨‍🔧 المعاين: {{inspector_name}}\n📞 هاتف المعاين: {{inspector_phone}}\n\n⏰ سيتم تنسيق وقت الوصول من قبل المعاين في نفس اليوم لتحديد ساعة الوصول\n\nيرجى التأكد من تواجدكم",
-    "header": null,
-    "footer": null,
+    "template_text": "مرحباً {{customer_name}} 👋\r\n\r\n\r\n📋 رقم الطلب: {{order_number}}\r\n📅 التاريخ: {{inspection_date}}\r\n\r\n\r\n⏰ سيتم تنسيق وقت الوصول من قبل المعاين في نفس اليوم لتحديد ساعة الوصول\r\n\r\nيرجى التأكد من تواجدكم",
+    "header": "تم تحديد موعد المعاينة! ✅",
+    "footer": "للاستفسارات  التواصل  على الرقم:  19148",
     "is_active": true,
     "send_contract": false,
     "send_invoice": false,
@@ -146,27 +78,7 @@ Accounting signals registered for customers app
     "language": "ar",
     "delay_minutes": 0,
     "created_at": "2025-12-31T10:55:27.688Z",
-    "updated_at": "2026-01-03T09:45:59.830Z"
-  }
-},
-{
-  "model": "whatsapp.whatsappmessagetemplate",
-  "pk": 8,
-  "fields": {
-    "name": "فاتورة",
-    "message_type": "ORDER_WITH_INVOICE",
-    "template_text": "مرحباً {{customer_name}} 👋\n\n📋 رقم الطلب: {{order_number}}\n💰 المبلغ الإجمالي: {{total_amount}} جنيه\n✅ المبلغ المدفوع: {{paid_amount}} جنيه\n⏳ المبلغ المتبقي: {{remaining_amount}} جنيه\n\n📎 نسخة من الفاتورة مرفقة\n\nشكراً لتعاملكم معنا 🙏",
-    "header": null,
-    "footer": null,
-    "is_active": true,
-    "send_contract": false,
-    "send_invoice": true,
-    "order_types": [],
-    "meta_template_name": "",
-    "language": "ar",
-    "delay_minutes": 0,
-    "created_at": "2025-12-31T10:55:27.690Z",
-    "updated_at": "2026-01-03T09:45:59.835Z"
+    "updated_at": "2026-01-03T10:46:33.527Z"
   }
 },
 {
@@ -175,9 +87,9 @@ Accounting signals registered for customers app
   "fields": {
     "name": "customer_welcome",
     "message_type": "CUSTOM",
-    "template_text": "مرحباً {{customer_name}}! 👋\r\n\r\nنشكرك على انضمامك إلى الخواجة للمفروشات والستائر 🎉\r\n\r\nنحن سعداء بخدمتك وتلبية احتياجاتك من:\r\n🛋️ الأثاث الفاخر\r\n🪟 الستائر العصرية\r\n🏠 المفروشات الراقية\r\n\r\nللاستفسار أو الطلب:\r\n📞 اتصل بنا: 01282026384\r\n📱 واتساب: {{phone}}\r\n\r\nشكراً لثقتكم 🙏",
-    "header": null,
-    "footer": null,
+    "template_text": "مرحباً {{customer_name}}! 👋\r\n\r\nأهلاً بك في شركة الخواجة للأقمشة والستائر! ✨\r\n يسعدنا انضمامك إلينا.\r\n نحن نوفر لك تشكيلة واسعة من أحدث صيحات الموضة العالمية في عالم المفروشات والستائر بجودة استثنائية.\r\n\r\n\r\nشكراً لثقتكم 🙏",
+    "header": "شكر ومحبة  🎉",
+    "footer": "للاستفسارات  التواصل  على الرقم:  19148",
     "is_active": true,
     "send_contract": false,
     "send_invoice": false,
@@ -186,7 +98,7 @@ Accounting signals registered for customers app
     "language": "ar",
     "delay_minutes": 0,
     "created_at": "2026-01-01T15:46:24.375Z",
-    "updated_at": "2026-01-03T09:45:59.821Z"
+    "updated_at": "2026-01-03T10:47:30.475Z"
   }
 }
 ]

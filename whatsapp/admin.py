@@ -224,7 +224,7 @@ class WhatsAppMessageTemplateAdmin(admin.ModelAdmin):
             'fields': ('name', 'message_type', 'meta_template_name', 'language', 'is_active')
         }),
         ('محتوى القالب', {
-            'fields': ('template_text',),
+            'fields': ('header', 'template_text', 'footer'),
             'description': 'استخدم {{customer_name}}, {{order_number}}, {{order_date}} للمتغيرات (أقواس مزدوجة)'
         }),
         ('المرفقات', {
