@@ -316,8 +316,8 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
                 obj.delivered_at.strftime('%Y-%m-%d %H:%M')
             )
         elif obj.status == 'DELIVERED':
-            return format_html('<span style="color: green;">✓ تم التسليم</span>')
-        return format_html('<span style="color: gray;">-</span>')
+            return mark_safe('<span style="color: green;">✓ تم التسليم</span>')
+        return mark_safe('<span style="color: gray;">-</span>')
     delivered_badge.short_description = 'التسليم'
     
     def read_badge(self, obj):
@@ -328,8 +328,8 @@ class WhatsAppMessageAdmin(admin.ModelAdmin):
                 obj.read_at.strftime('%Y-%m-%d %H:%M')
             )
         elif obj.status == 'READ':
-            return format_html('<span style="color: darkgreen;">✓✓ تمت القراءة</span>')
-        return format_html('<span style="color: gray;">-</span>')
+            return mark_safe('<span style="color: darkgreen;">✓✓ تمت القراءة</span>')
+        return mark_safe('<span style="color: gray;">-</span>')
     read_badge.short_description = 'القراءة'
     
     def retry_failed_messages(self, request, queryset):
