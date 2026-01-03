@@ -250,6 +250,7 @@ def login_view(request):
                                         similarity = device_obj.calculate_fingerprint_similarity(device_fingerprint)
                                         logger.info(f"📊 Fingerprint similarity: {similarity:.2%}")
                                         
+                                        # 🔑 التوكن هو الأساسي - السماح بالدخول حتى مع تغيير البصمة
                                         if similarity >= 0.80:
                                             # البصمة متطابقة بدرجة كافية
                                             logger.info(f"✅ Fingerprint similarity OK ({similarity:.2%} >= 80%)")
@@ -260,12 +261,18 @@ def login_view(request):
                                                 device_obj.update_fingerprint(device_fingerprint)
                                                 logger.info(f"🔄 Auto-updated fingerprint: {old_fingerprint}... → {device_fingerprint[:16]}...")
                                         else:
-                                            # البصمة مختلفة جداً - مشكوك فيه!
-                                            denial_reason = f'⚠️ تغيير كبير في بصمة الجهاز (تشابه: {similarity:.1%})'
-                                            denial_reason_key = 'fingerprint_mismatch'
-                                            logger.warning(f"❌ Fingerprint similarity too low: {similarity:.2%} < 80%")
-                                            logger.warning(f"⚠️ Possible token theft or major hardware change!")
-                                            device_obj = None
+                                            # البصمة مختلفة جداً - لكن التوكن صحيح، السماح بالدخول مع تحذير
+                                            logger.warning(f"⚠️ MAJOR FINGERPRINT CHANGE detected: {similarity:.2%} < 80%")
+                                            logger.warning(f"⚠️ Possible hardware change, OS reinstall, or browser update")
+                                            logger.warning(f"✅ BUT token is valid - ALLOWING login and updating fingerprint")
+                                            
+                                            # تحديث البصمة للبصمة الجديدة
+                                            old_fingerprint = device_obj.device_fingerprint[:16] if device_obj.device_fingerprint else 'None'
+                                            device_obj.update_fingerprint(device_fingerprint)
+                                            logger.info(f"🔄 Force-updated fingerprint due to major change: {old_fingerprint}... → {device_fingerprint[:16]}...")
+                                            
+                                            # إضافة تنبيه للمستخدم (اختياري - يمكن تفعيله لاحقاً)
+                                            # messages.warning(request, '⚠️ تم اكتشاف تغيير كبير في الجهاز. تم تحديث بصمة الجهاز تلقائياً.')
                                             
                                     except ValueError:
                                         logger.warning(f"⚠️ Invalid device_token format: {device_token_str}")

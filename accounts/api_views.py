@@ -353,6 +353,14 @@ def check_device_api(request):
                 # حساب تشابه البصمة إذا توفرت
                 if device_fingerprint and device.device_fingerprint:
                     fingerprint_similarity = device.calculate_fingerprint_similarity(device_fingerprint)
+                    
+                    # تحديث البصمة إذا تغيرت (التوكن هو الأساسي)
+                    if fingerprint_similarity < 0.80:
+                        logger.warning(f"⚠️ Major fingerprint change detected ({fingerprint_similarity:.2%}) - updating device fingerprint")
+                        device.update_fingerprint(device_fingerprint)
+                    elif device.device_fingerprint != device_fingerprint:
+                        logger.info(f"🔄 Minor fingerprint change detected - updating")
+                        device.update_fingerprint(device_fingerprint)
                 
             except ValueError as e:
                 token_error = f'device_token غير صالح: {str(e)}'
