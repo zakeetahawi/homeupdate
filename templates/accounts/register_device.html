@@ -158,6 +158,29 @@
 // ====================
 // IndexedDB Helper
 // ====================
+// ====================
+// Cookie Helper (Primary - Works with Cloudflare Tunnel)
+// ====================
+const CookieHelper = {
+    setCookie(name, value, days = 365) {
+        const expires = new Date();
+        expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+        document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+        console.log(`✅ Cookie '${name}' set successfully`);
+    },
+    
+    getCookie(name) {
+        const nameEQ = name + "=";
+        const ca = document.cookie.split(';');
+        for(let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+};
+
 const DeviceDB = {
     dbName: 'ElkhawagaDeviceDB',
     storeName: 'deviceToken',
@@ -433,25 +456,52 @@ window.addEventListener('load', async function() {
     const urlParams = new URLSearchParams(window.location.search);
     const deviceToken = urlParams.get('device_token');
     if (deviceToken) {
+        console.log('📥 Received device token from server');
+        let savedSuccessfully = false;
+        
+        // 1. حفظ في Cookie أولاً (الأساسي - يعمل مع Cloudflare)
         try {
-            // Save to IndexedDB
-            await DeviceDB.saveToken(deviceToken);
-            console.log('✅ Device Token saved to IndexedDB');
-            
-            // ALSO save to localStorage as backup (for domain GPO environments)
-            localStorage.setItem('elkhawaga_device_token', deviceToken);
-            console.log('✅ Device Token ALSO saved to localStorage (backup)');
-            
+            CookieHelper.setCookie('elkhawaga_device_token', deviceToken, 365);
+            console.log('✅ Device Token saved to Cookie (Primary)');
+            savedSuccessfully = true;
         } catch(err) {
-            console.error('Failed to save token to IndexedDB:', err);
-            // Fallback: save to localStorage only
-            try {
-                localStorage.setItem('elkhawaga_device_token', deviceToken);
-                console.log('⚠️ IndexedDB failed, saved to localStorage instead');
-            } catch(localErr) {
-                console.error('❌ Both IndexedDB and localStorage failed!', localErr);
-                alert('تحذير: فشل حفظ معرّف الجهاز. قد تحتاج لإعادة التسجيل.');
-            }
+            console.error('❌ Failed to save token to Cookie:', err);
+        }
+        
+        // 2. حفظ في localStorage كنسخة احتياطية
+        try {
+            localStorage.setItem('elkhawaga_device_token', deviceToken);
+            console.log('✅ Device Token saved to localStorage (Backup 1)');
+            savedSuccessfully = true;
+        } catch(err) {
+            console.warn('⚠️ Failed to save to localStorage:', err);
+        }
+        
+        // 3. حفظ في IndexedDB كنسخة احتياطية ثانية
+        try {
+            await DeviceDB.saveToken(deviceToken);
+            console.log('✅ Device Token saved to IndexedDB (Backup 2)');
+            savedSuccessfully = true;
+        } catch(err) {
+            console.warn('⚠️ Failed to save to IndexedDB:', err);
+        }
+        
+        if (!savedSuccessfully) {
+            console.error('❌ CRITICAL: Failed to save token to ANY storage!');
+            alert('⚠️ تحذير: فشل حفظ معرّف الجهاز في جميع الأماكن. قد تحتاج لإعادة التسجيل.');
+        } else {
+            console.log('✅ Token saved successfully in at least one location');
+            
+            // عرض رسالة نجاح
+            const successDiv = document.createElement('div');
+            successDiv.className = 'alert alert-success mt-3';
+            successDiv.innerHTML = '<i class="fas fa-check-circle"></i> تم حفظ معرّف الجهاز بنجاح! يمكنك الآن تسجيل الدخول.';
+            document.querySelector('.container').prepend(successDiv);
+            
+            // إعادة التوجيه لصفحة Login بعد 2 ثانية
+            setTimeout(() => {
+                window.location.href = '/accounts/login/';
+            }, 2000);
         }
     }
 });

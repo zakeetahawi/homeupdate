@@ -97,6 +97,34 @@
 // ====================
 // IndexedDB Helper
 // ====================
+// ====================
+// Cookie Helper (Primary - Works with Cloudflare Tunnel)
+// ====================
+const CookieHelper = {
+    setCookie(name, value, days = 365) {
+        const expires = new Date();
+        expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+        document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+        console.log(`✅ Cookie '${name}' set successfully`);
+    },
+    
+    getCookie(name) {
+        const nameEQ = name + "=";
+        const ca = document.cookie.split(';');
+        for(let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0) {
+                const value = c.substring(nameEQ.length, c.length);
+                console.log(`✅ Cookie '${name}' retrieved: ${value.substring(0, 8)}...`);
+                return value;
+            }
+        }
+        console.log(`⚠️ Cookie '${name}' not found`);
+        return null;
+    }
+};
+
 const DeviceDB = {
     dbName: 'ElkhawagaDeviceDB',
     storeName: 'deviceToken',
@@ -140,50 +168,69 @@ const DeviceDB = {
 
 // جمع بصمة الجهاز عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', async function() {
-    // 1. محاولة قراءة Token من IndexedDB أولاً
+    console.log('🔍 Starting device token detection...');
+    
     let deviceToken = null;
+    let tokenSource = null;
+    
+    // 1. محاولة Cookie أولاً (الأفضل لـ Cloudflare Tunnel)
     try {
-        deviceToken = await DeviceDB.getToken();
+        deviceToken = CookieHelper.getCookie('elkhawaga_device_token');
         if (deviceToken) {
-            document.getElementById('deviceToken').value = deviceToken;
-            console.log('✅ Device Token loaded from IndexedDB');
-            
-            // 🔄 MIGRATION: نقل التوكن إلى localStorage أيضاً (للأجهزة المسجلة سابقاً)
-            try {
-                const existingLocalToken = localStorage.getItem('elkhawaga_device_token');
-                if (!existingLocalToken) {
-                    localStorage.setItem('elkhawaga_device_token', deviceToken);
-                    console.log('🔄 Token migrated to localStorage (one-time migration)');
-                }
-            } catch(localErr) {
-                console.warn('Could not save to localStorage:', localErr);
-            }
+            tokenSource = 'Cookie';
+            console.log('✅ Device Token loaded from Cookie (Primary method)');
         }
     } catch(err) {
-        console.error('Failed to read device token from IndexedDB:', err);
+        console.warn('⚠️ Failed to read cookie:', err);
     }
     
-    // 2. Fallback: محاولة localStorage إذا فشل IndexedDB
+    // 2. Fallback: محاولة localStorage
     if (!deviceToken) {
         try {
             deviceToken = localStorage.getItem('elkhawaga_device_token');
             if (deviceToken) {
-                document.getElementById('deviceToken').value = deviceToken;
-                console.log('✅ Device Token loaded from localStorage (fallback)');
-                
-                // محاولة حفظه في IndexedDB أيضاً للمرات القادمة
+                tokenSource = 'localStorage';
+                console.log('✅ Device Token loaded from localStorage (Fallback 1)');
+                // حفظه في Cookie للمرات القادمة
                 try {
-                    await DeviceDB.saveToken(deviceToken);
-                    console.log('🔄 Token synced back to IndexedDB');
-                } catch(dbErr) {
-                    console.warn('Could not save to IndexedDB:', dbErr);
+                    CookieHelper.setCookie('elkhawaga_device_token', deviceToken);
+                    console.log('🔄 Token migrated to Cookie');
+                } catch(e) {
+                    console.warn('Could not migrate to Cookie:', e);
                 }
-            } else {
-                console.log('⚠️ No device token found (neither IndexedDB nor localStorage)');
             }
         } catch(err) {
-            console.error('Failed to read from localStorage:', err);
+            console.warn('⚠️ Failed to read localStorage:', err);
         }
+    }
+    
+    // 3. Fallback: محاولة IndexedDB
+    if (!deviceToken) {
+        try {
+            deviceToken = await DeviceDB.getToken();
+            if (deviceToken) {
+                tokenSource = 'IndexedDB';
+                console.log('✅ Device Token loaded from IndexedDB (Fallback 2)');
+                // حفظه في Cookie للمرات القادمة
+                try {
+                    CookieHelper.setCookie('elkhawaga_device_token', deviceToken);
+                    console.log('🔄 Token migrated to Cookie');
+                } catch(e) {
+                    console.warn('Could not migrate to Cookie:', e);
+                }
+            }
+        } catch(err) {
+            console.warn('⚠️ Failed to read IndexedDB:', err);
+        }
+    }
+    
+    // تعيين التوكن في النموذج
+    if (deviceToken) {
+        document.getElementById('deviceToken').value = deviceToken;
+        console.log(`📦 Token set from: ${tokenSource}`);
+    } else {
+        console.warn('❌ No device token found in any storage!');
+        console.log('🔔 This device needs to be registered first');
     }
     
     // 2. جمع معلومات الجهاز (Stable factors only)

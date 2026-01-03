@@ -82,6 +82,22 @@
 // ====================
 // IndexedDB Helper
 // ====================
+// ====================
+// Cookie Helper
+// ====================
+const CookieHelper = {
+    getCookie(name) {
+        const nameEQ = name + "=";
+        const ca = document.cookie.split(';');
+        for(let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+};
+
 const DeviceDB = {
     dbName: 'ElkhawagaDeviceDB',
     storeName: 'deviceToken',
@@ -116,22 +132,60 @@ let currentFingerprint = '';
 let currentDeviceToken = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
-    // 1. محاولة قراءة Token من IndexedDB
+    // 1. Try Cookie first (works best with Cloudflare Tunnel)
+    let tokenSource = '';
     try {
-        currentDeviceToken = await DeviceDB.getToken();
+        currentDeviceToken = CookieHelper.getCookie('elkhawaga_device_token');
         if (currentDeviceToken) {
-            document.getElementById('deviceTokenDisplay').innerHTML = 
-                `<span class="text-success">${currentDeviceToken}</span><br>` +
-                `<small class="text-success">✅ تم العثور على Token محلياً - الجهاز مسجل</small>`;
-        } else {
-            document.getElementById('deviceTokenDisplay').innerHTML = 
-                `<span class="text-warning">لا يوجد Token</span><br>` +
-                `<small class="text-warning">⚠️ الجهاز غير مسجل - يجب التسجيل أولاً</small>`;
+            tokenSource = 'Cookie ✅ (Primary)';
         }
     } catch(err) {
+        console.error('Cookie error:', err);
+    }
+    
+    // 2. Try localStorage
+    if (!currentDeviceToken) {
+        try {
+            currentDeviceToken = localStorage.getItem('elkhawaga_device_token');
+            if (currentDeviceToken) {
+                tokenSource = 'localStorage ✅ (Backup 1)';
+            }
+        } catch(err) {
+            console.error('localStorage error:', err);
+        }
+    } else {
+        try {
+            const localToken = localStorage.getItem('elkhawaga_device_token');
+            if (localToken) tokenSource += ' + localStorage ✅';
+        } catch(e) {}
+    }
+    
+    // 3. Try IndexedDB
+    if (!currentDeviceToken) {
+        try {
+            currentDeviceToken = await DeviceDB.getToken();
+            if (currentDeviceToken) {
+                tokenSource = 'IndexedDB ✅ (Backup 2)';
+            }
+        } catch(err) {
+            console.error('IndexedDB error:', err);
+        }
+    } else {
+        try {
+            const dbToken = await DeviceDB.getToken();
+            if (dbToken) tokenSource += ' + IndexedDB ✅';
+        } catch(e) {}
+    }
+    
+    // Display result
+    if (currentDeviceToken) {
         document.getElementById('deviceTokenDisplay').innerHTML = 
-            `<span class="text-danger">خطأ في IndexedDB</span><br>` +
-            `<small class="text-danger">❌ ${err.message}</small>`;
+            `<span class="text-success">${currentDeviceToken}</span><br>` +
+            `<small class="text-success">✅ مصدر: ${tokenSource}</small>`;
+    } else {
+        document.getElementById('deviceTokenDisplay').innerHTML = 
+            `<span class="text-warning">لا يوجد Token</span><br>` +
+            `<small class="text-warning">⚠️ الجهاز غير مسجل - يجب التسجيل أولاً</small>`;
     }
     
     // 2. جمع معلومات الجهاز (Stable factors)
