@@ -20,9 +20,10 @@ class TestMessageForm(forms.Form):
         label='القالب',
         choices=[
             ('hello_world', 'Hello World (معتمد ✅)'),
+            ('order_confirmation', 'Order Confirmation (معتمد ✅)'),
         ],
         initial='hello_world',
-        help_text='قالب order_confirmation قيد المراجعة من Meta'
+        help_text='كلا القالبين معتمدين من Meta'
     )
     
     def clean_phone_number(self):
