@@ -35,9 +35,22 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
             'fields': ('api_provider', 'phone_number', 'business_account_id', 
                       'phone_number_id', 'access_token')
         }),
-        ('خيارات', {
-            'fields': ('is_active', 'test_mode', 'use_template', 'enable_welcome_messages',
+        ('إعدادات عامة', {
+            'fields': ('is_active', 'test_mode', 'use_template',
                       'retry_failed_messages', 'max_retry_attempts', 'default_language')
+        }),
+        ('تفعيل القوالب', {
+            'fields': (
+                'enable_welcome_messages',
+                'enable_order_created',
+                'enable_inspection_scheduled',
+                'enable_inspection_completed',
+                'enable_installation_scheduled',
+                'enable_installation_completed',
+                'enable_invoice',
+                'enable_contract',
+            ),
+            'description': '⚠️ تأكد من وجود القالب في Meta وأن له meta_template_name قبل التفعيل'
         }),
     )
     

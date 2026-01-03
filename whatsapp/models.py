@@ -85,6 +85,44 @@ class WhatsAppSettings(models.Model):
         verbose_name="تفعيل الرسائل الترحيبية",
         help_text="إرسال رسالة ترحيبية تلقائياً عند إنشاء عميل جديد"
     )
+    
+    # تفعيل القوالب حسب نوع الحدث
+    enable_order_created = models.BooleanField(
+        default=False,
+        verbose_name="تفعيل قالب إنشاء الطلب",
+        help_text="إرسال رسالة عند إنشاء طلب جديد"
+    )
+    enable_inspection_scheduled = models.BooleanField(
+        default=False,
+        verbose_name="تفعيل قالب جدولة المعاينة",
+        help_text="إرسال رسالة عند جدولة معاينة"
+    )
+    enable_inspection_completed = models.BooleanField(
+        default=False,
+        verbose_name="تفعيل قالب اكتمال المعاينة",
+        help_text="إرسال رسالة عند اكتمال المعاينة"
+    )
+    enable_installation_scheduled = models.BooleanField(
+        default=False,
+        verbose_name="تفعيل قالب جدولة التركيب",
+        help_text="إرسال رسالة عند جدولة التركيب"
+    )
+    enable_installation_completed = models.BooleanField(
+        default=False,
+        verbose_name="تفعيل قالب اكتمال التركيب",
+        help_text="إرسال رسالة عند اكتمال التركيب"
+    )
+    enable_invoice = models.BooleanField(
+        default=False,
+        verbose_name="تفعيل قالب الفاتورة",
+        help_text="إرسال الفاتورة عبر WhatsApp"
+    )
+    enable_contract = models.BooleanField(
+        default=False,
+        verbose_name="تفعيل قالب العقد",
+        help_text="إرسال العقد عبر WhatsApp"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
