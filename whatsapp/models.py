@@ -8,28 +8,8 @@ from inspections.models import Inspection
 
 
 class WhatsAppSettings(models.Model):
-    """إعدادات WhatsApp API"""
+    """إعدادات WhatsApp Meta Cloud API"""
     
-    API_PROVIDERS = [
-        ('meta', 'Meta Cloud API'),
-    ]
-    
-    api_provider = models.CharField(
-        max_length=20,
-        choices=API_PROVIDERS,
-        default='meta',
-        verbose_name="مزود API"
-    )
-    account_sid = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name="Account SID"
-    )
-    auth_token = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name="Auth Token"
-    )
     phone_number = models.CharField(
         max_length=20,
         validators=[RegexValidator(r'^\+?1?\d{9,15}$')],
@@ -80,47 +60,28 @@ class WhatsAppSettings(models.Model):
         verbose_name="استخدام قالب hello_world",
         help_text="إرسال قالب hello_world بدلاً من رسائل نصية (للتأكد من الوصول)"
     )
-    enable_welcome_messages = models.BooleanField(
-        default=False,
-        verbose_name="تفعيل الرسائل الترحيبية",
-        help_text="إرسال رسالة ترحيبية تلقائياً عند إنشاء عميل جديد"
+    
+    # صورة Header للقوالب
+    header_image = models.ImageField(
+        upload_to='whatsapp/header/',
+        blank=True,
+        null=True,
+        verbose_name="صورة الهيدر",
+        help_text="صورة اللوغو التي تظهر في رأس الرسائل (PNG أو JPG)"
+    )
+    header_media_id = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Media ID للصورة",
+        help_text="معرف الصورة المرفوعة على WhatsApp (يُملأ تلقائياً بعد الرفع)"
     )
     
-    # تفعيل القوالب حسب نوع الحدث
-    enable_order_created = models.BooleanField(
-        default=False,
-        verbose_name="تفعيل قالب إنشاء الطلب",
-        help_text="إرسال رسالة عند إنشاء طلب جديد"
-    )
-    enable_inspection_scheduled = models.BooleanField(
-        default=False,
-        verbose_name="تفعيل قالب جدولة المعاينة",
-        help_text="إرسال رسالة عند جدولة معاينة"
-    )
-    enable_inspection_completed = models.BooleanField(
-        default=False,
-        verbose_name="تفعيل قالب اكتمال المعاينة",
-        help_text="إرسال رسالة عند اكتمال المعاينة"
-    )
-    enable_installation_scheduled = models.BooleanField(
-        default=False,
-        verbose_name="تفعيل قالب جدولة التركيب",
-        help_text="إرسال رسالة عند جدولة التركيب"
-    )
-    enable_installation_completed = models.BooleanField(
-        default=False,
-        verbose_name="تفعيل قالب اكتمال التركيب",
-        help_text="إرسال رسالة عند اكتمال التركيب"
-    )
-    enable_invoice = models.BooleanField(
-        default=False,
-        verbose_name="تفعيل قالب الفاتورة",
-        help_text="إرسال الفاتورة عبر WhatsApp"
-    )
-    enable_contract = models.BooleanField(
-        default=False,
-        verbose_name="تفعيل قالب العقد",
-        help_text="إرسال العقد عبر WhatsApp"
+    # القوالب المفعلة - ديناميكية
+    enabled_templates = models.ManyToManyField(
+        'WhatsAppMessageTemplate',
+        blank=True,
+        verbose_name="القوالب المفعلة",
+        help_text="اختر القوالب التي تريد تفعيلها للإرسال التلقائي"
     )
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -131,110 +92,67 @@ class WhatsAppSettings(models.Model):
         verbose_name_plural = "إعدادات WhatsApp"
     
     def __str__(self):
-        return f"WhatsApp Settings ({self.api_provider})"
+        return f"WhatsApp Settings ({self.phone_number})"
+    
+    def is_template_enabled(self, message_type):
+        """التحقق من تفعيل قالب حسب نوع الرسالة"""
+        return self.enabled_templates.filter(message_type=message_type, is_active=True).exists()
+    
+    def get_template_for_type(self, message_type):
+        """الحصول على القالب المفعل لنوع رسالة معين"""
+        return self.enabled_templates.filter(message_type=message_type, is_active=True).first()
 
 
 class WhatsAppMessageTemplate(models.Model):
-    """قوالب رسائل WhatsApp"""
+    """قوالب رسائل WhatsApp - مبسط"""
     
     MESSAGE_TYPES = [
-        ('ORDER_CREATED', 'إنشاء طلب'),
-        ('ORDER_WITH_CONTRACT', 'طلب مع عقد'),
-        ('ORDER_WITH_INVOICE', 'طلب مع فاتورة'),
-        ('INSTALLATION_SCHEDULED', 'جدولة تركيب'),
+        ('WELCOME', 'ترحيب بعميل جديد'),
+        ('ORDER_CREATED', 'تأكيد طلب'),
+        ('INSPECTION_SCHEDULED', 'موعد معاينة'),
+        ('INSPECTION_COMPLETED', 'اكتمال معاينة'),
+        ('INSTALLATION_SCHEDULED', 'موعد تركيب'),
         ('INSTALLATION_COMPLETED', 'اكتمال تركيب'),
-        ('INSPECTION_CREATED', 'إنشاء معاينة'),
-        ('INSPECTION_SCHEDULED', 'جدولة معاينة'),
-        ('CUSTOM', 'رسالة مخصصة'),
-    ]
-    
-    ORDER_TYPES = [
-        ('installation', 'تركيب'),
-        ('delivery', 'تسليم'),
-        ('accessory', 'إكسسوار'),
-        ('inspection', 'معاينة'),
+        ('INVOICE', 'فاتورة'),
+        ('CONTRACT', 'عقد'),
+        ('CUSTOM', 'مخصص'),
     ]
     
     name = models.CharField(
         max_length=200,
-        verbose_name="اسم القالب"
+        verbose_name="اسم القالب (للعرض)"
     )
     message_type = models.CharField(
         max_length=50,
         choices=MESSAGE_TYPES,
-        verbose_name="نوع الرسالة"
+        unique=True,
+        verbose_name="نوع الرسالة",
+        help_text="كل نوع يمكن أن يكون له قالب واحد فقط"
     )
-    template_text = models.TextField(
-        blank=True,
-        verbose_name="نص القالب (للمرجع فقط)",
-        help_text="اختياري - المحتوى الفعلي يُدار من Meta Template Manager"
+    meta_template_name = models.CharField(
+        max_length=100,
+        verbose_name="اسم القالب في Meta",
+        help_text="اسم القالب المعتمد في Meta (مثل: customer_welcome, inspection_date)"
     )
-    HEADER_TYPES = [
-        ('NONE', 'لا يوجد'),
-        ('TEXT', 'نص'),
-        ('IMAGE', 'صورة'),
-        ('VIDEO', 'فيديو'),
-        ('DOCUMENT', 'ملف'),
-    ]
-
-    header_type = models.CharField(
+    language = models.CharField(
         max_length=10,
-        choices=HEADER_TYPES,
-        default='NONE',
-        verbose_name="نوع العنوان"
+        default='ar',
+        verbose_name="اللغة"
     )
-    header_text = models.CharField(
-        max_length=60,
+    test_variables = models.JSONField(
+        default=dict,
         blank=True,
-        null=True,
-        verbose_name="نص العنوان",
-        help_text="يستخدم فقط إذا كان نوع العنوان 'نص'"
-    )
-    header_media_url = models.URLField(
-        blank=True,
-        null=True,
-        verbose_name="رابط الوسائط",
-        help_text="رابط الصورة أو الفيديو أو الملف (يجب أن يكون رابط مباشر)"
-    )
-    footer = models.CharField(
-        max_length=60,
-        blank=True,
-        null=True,
-        verbose_name="التذييل (Footer)",
-        help_text="نص التذييل (اختياري، حد أقصى 60 حرف)"
+        verbose_name="متغيرات الاختبار",
+        help_text='مثال: {"customer_name": "عميل تجريبي", "order_number": "TEST-001"}'
     )
     is_active = models.BooleanField(
         default=True,
         verbose_name="مفعل"
     )
-    send_contract = models.BooleanField(
-        default=False,
-        verbose_name="إرسال العقد"
-    )
-    send_invoice = models.BooleanField(
-        default=False,
-        verbose_name="إرسال الفاتورة"
-    )
-    order_types = models.JSONField(
-        default=list,
+    description = models.TextField(
         blank=True,
-        verbose_name="أنواع الطلبات",
-        help_text="أنواع الطلبات التي يطبق عليها هذا القالب"
-    )
-    meta_template_name = models.CharField(
-        max_length=100,
-        blank=True,
-        verbose_name="اسم القالب في Meta",
-        help_text="اسم القالب المعتمد في Meta (مثل: order_confirmation, hello_world)"
-    )
-    language = models.CharField(
-        max_length=5,
-        default='ar',
-        verbose_name="اللغة"
-    )
-    delay_minutes = models.IntegerField(
-        default=0,
-        verbose_name="تأخير الإرسال (دقائق)"
+        verbose_name="وصف/ملاحظات",
+        help_text="وصف اختياري للقالب"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -242,7 +160,7 @@ class WhatsAppMessageTemplate(models.Model):
     class Meta:
         verbose_name = "قالب رسالة"
         verbose_name_plural = "قوالب الرسائل"
-        ordering = ['message_type', 'name']
+        ordering = ['message_type']
     
     def __str__(self):
         return f"{self.name} ({self.get_message_type_display()})"

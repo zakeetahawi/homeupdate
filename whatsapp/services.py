@@ -1,5 +1,6 @@
 """
-Meta WhatsApp Service - Meta Cloud API
+Meta WhatsApp Service - Simplified Version
+إرسال مباشر لميتا بدون مطابقة قوالب محلية
 """
 import requests
 import logging
@@ -9,9 +10,14 @@ logger = logging.getLogger(__name__)
 
 
 class WhatsAppService:
-    """خدمة WhatsApp عبر Meta Cloud API"""
+    """خدمة WhatsApp عبر Meta Cloud API - مبسطة"""
     
     BASE_URL = "https://graph.facebook.com/v18.0"
+    
+    # كاش للقوالب (لتجنب طلبات متكررة)
+    _templates_cache = {}
+    _cache_time = None
+    CACHE_DURATION = 300  # 5 دقائق
     
     def __init__(self):
         from .models import WhatsAppSettings
@@ -20,14 +26,12 @@ class WhatsAppService:
         if not self.settings:
             raise ValueError("WhatsApp settings not configured")
         
-        if self.settings.api_provider != 'meta':
-            raise ValueError("API provider is not set to Meta Cloud API")
-        
         self.phone_id = self.settings.phone_number_id
+        self.waba_id = self.settings.business_account_id
         self.token = self.settings.access_token
         
         if not self.phone_id or not self.token:
-            raise ValueError("Phone Number ID and Access Token are required for Meta Cloud API")
+            raise ValueError("Phone Number ID and Access Token are required")
     
     def _get_headers(self):
         """الحصول على headers للطلبات"""
@@ -41,11 +45,9 @@ class WhatsAppService:
         if not phone:
             return None
         
-        # إزالة المسافات والرموز
         phone = ''.join(filter(str.isdigit, phone))
         
-        # إضافة رمز الدولة إذا لم يكن موجوداً
-        if not phone.startswith('20'):  # مصر
+        if not phone.startswith('20'):
             if phone.startswith('0'):
                 phone = '20' + phone[1:]
             else:
@@ -53,20 +55,93 @@ class WhatsAppService:
         
         return phone
     
-    def send_text_message(self, to, message):
+    def _get_template_info_from_meta(self, template_name):
         """
-        إرسال رسالة نصية
-        
-        Args:
-            to: رقم الهاتف
-            message: نص الرسالة
+        جلب معلومات القالب من ميتا مباشرة
         
         Returns:
-            dict: استجابة API
+            dict: {
+                'has_header_image': bool,
+                'header_handle': str or None,
+                'variable_names': list,
+                'language': str
+            }
         """
-        url = f"{self.BASE_URL}/{self.phone_id}/messages"
+        # فحص الكاش
+        now = timezone.now()
+        if (self._cache_time and 
+            (now - self._cache_time).seconds < self.CACHE_DURATION and
+            template_name in self._templates_cache):
+            return self._templates_cache[template_name]
         
-        # تنسيق الرقم
+        try:
+            url = f"{self.BASE_URL}/{self.waba_id}/message_templates"
+            params = {
+                'name': template_name,
+                'fields': 'name,language,components,parameter_format'
+            }
+            
+            response = requests.get(url, headers=self._get_headers(), params=params)
+            data = response.json()
+            
+            templates = data.get('data', [])
+            if not templates:
+                logger.warning(f"Template '{template_name}' not found in Meta")
+                return None
+            
+            template = templates[0]
+            result = {
+                'has_header_image': False,
+                'header_handle': None,
+                'variable_names': [],
+                'language': template.get('language', 'ar'),
+                'parameter_format': template.get('parameter_format', 'POSITIONAL')
+            }
+            
+            for comp in template.get('components', []):
+                comp_type = comp.get('type')
+                
+                # استخراج header_handle للصور
+                if comp_type == 'HEADER' and comp.get('format') == 'IMAGE':
+                    result['has_header_image'] = True
+                    example = comp.get('example', {})
+                    handles = example.get('header_handle', [])
+                    if handles:
+                        result['header_handle'] = handles[0]
+                
+                # استخراج أسماء المتغيرات من الـ BODY
+                if comp_type == 'BODY':
+                    example = comp.get('example', {})
+                    body_text = example.get('body_text', [[]])
+                    if body_text and body_text[0]:
+                        # عدد المتغيرات = عدد القيم في المثال
+                        result['variable_names'] = [f'var{i+1}' for i in range(len(body_text[0]))]
+                    
+                    # أو من text مباشرة
+                    text = comp.get('text', '')
+                    import re
+                    matches = re.findall(r'\{\{(\w+)\}\}', text)
+                    if matches:
+                        result['variable_names'] = matches
+            
+            # حفظ في الكاش
+            self._templates_cache[template_name] = result
+            self._cache_time = now
+            
+            logger.info(f"Fetched template info from Meta: {template_name}")
+            logger.info(f"  Header Image: {result['has_header_image']}")
+            logger.info(f"  Variables: {result['variable_names']}")
+            logger.info(f"  Format: {result['parameter_format']}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error fetching template from Meta: {e}")
+            return None
+    
+    def send_text_message(self, to, message):
+        """إرسال رسالة نصية"""
+        url = f"{self.BASE_URL}/{self.phone_id}/messages"
         to = self._format_phone_number(to)
         
         payload = {
@@ -81,126 +156,189 @@ class WhatsAppService:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error sending WhatsApp message via Meta Cloud API: {e}")
-            if hasattr(e, 'response') and e.response is not None:
+            logger.error(f"Error sending WhatsApp message: {e}")
+            raise
+    
+    def _get_or_upload_header_media(self):
+        """
+        الحصول على Media ID للصورة أو رفعها إذا لم تكن مرفوعة
+        
+        Returns:
+            str: Media ID أو None
+        """
+        # إذا كان Media ID موجود، استخدمه
+        if self.settings.header_media_id:
+            return self.settings.header_media_id
+        
+        # إذا لم تكن هناك صورة، ارجع None
+        if not self.settings.header_image:
+            logger.warning("No header image configured in settings")
+            return None
+        
+        # رفع الصورة لـ WhatsApp
+        try:
+            media_id = self._upload_media(self.settings.header_image.path)
+            if media_id:
+                # حفظ Media ID في الإعدادات
+                self.settings.header_media_id = media_id
+                self.settings.save(update_fields=['header_media_id'])
+                logger.info(f"Uploaded header image, Media ID: {media_id}")
+            return media_id
+        except Exception as e:
+            logger.error(f"Error uploading header image: {e}")
+            return None
+    
+    def _upload_media(self, file_path):
+        """
+        رفع ملف وسائط إلى WhatsApp
+        
+        Args:
+            file_path: مسار الملف المحلي
+            
+        Returns:
+            str: Media ID
+        """
+        import os
+        import mimetypes
+        
+        url = f"{self.BASE_URL}/{self.phone_id}/media"
+        
+        # تحديد نوع الملف
+        mime_type, _ = mimetypes.guess_type(file_path)
+        if not mime_type:
+            mime_type = 'image/png'
+        
+        try:
+            with open(file_path, 'rb') as f:
+                files = {
+                    'file': (os.path.basename(file_path), f, mime_type)
+                }
+                data = {
+                    'messaging_product': 'whatsapp',
+                    'type': mime_type
+                }
+                
+                response = requests.post(
+                    url,
+                    headers={'Authorization': f'Bearer {self.token}'},
+                    files=files,
+                    data=data
+                )
+                
+                response.raise_for_status()
+                result = response.json()
+                return result.get('id')
+                
+        except Exception as e:
+            logger.error(f"Error uploading media: {e}")
+            if hasattr(e, 'response') and e.response:
                 logger.error(f"Response: {e.response.text}")
             raise
     
-    def send_template_message(self, to, template_name, language='ar', components=None):
+    def send_template_message(self, to, template_name, variables=None, language='ar'):
         """
-        إرسال رسالة قالب معتمد
+        إرسال رسالة قالب - مبسط
         
         Args:
             to: رقم الهاتف
-            template_name: اسم القالب
-            language: كود اللغة (ar, en_US, etc.)
-            components: قائمة بقيم المتغيرات (strings)
+            template_name: اسم القالب في ميتا
+            variables: dict أو list بالمتغيرات
+            language: كود اللغة
         
         Returns:
             dict: استجابة API
         """
         url = f"{self.BASE_URL}/{self.phone_id}/messages"
-        
-        # تنسيق رقم الهاتف
         formatted_phone = self._format_phone_number(to)
         
-        # بناء payload القالب
-        template_payload = {
-            "name": template_name,
-            "language": {
-                "code": language
-            }
-        }
+        # جلب معلومات القالب من ميتا
+        template_info = self._get_template_info_from_meta(template_name)
         
-        # تجهيز قائمة مكونات القالب
-        api_components = []
+        # بناء المكونات
+        components = []
         
-        # 1. محاولة إضافة مكون العنوان (Header) من إعدادات القالب
-        try:
-            from .models import WhatsAppMessageTemplate
-            # البحث عن القالب في قاعدة البيانات باستخدام اسم Meta
-            template_obj = WhatsAppMessageTemplate.objects.filter(
-                meta_template_name=template_name
-            ).first()
+        # 1. إضافة Header إذا كان القالب يحتوي صورة
+        if template_info and template_info.get('has_header_image'):
+            # استخدام Media ID المحفوظ أو رفع الصورة
+            media_id = self._get_or_upload_header_media()
             
-            if template_obj and template_obj.header_type in ['IMAGE', 'VIDEO', 'DOCUMENT'] and template_obj.header_media_url:
-                header_component = {
+            if media_id:
+                components.append({
                     "type": "header",
-                    "parameters": [
-                        {
-                            "type": template_obj.header_type.lower(),
-                            template_obj.header_type.lower(): {
-                                "link": template_obj.header_media_url
-                            }
-                        }
-                    ]
-                }
-                api_components.append(header_component)
-                
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to load header config for template {template_name}: {e}")
-
-        # 2. معالجة متغيرات الجسم (Body)
-        params = []
-        if components:
-            if isinstance(components, dict):
-                params = [
-                    {
-                        "type": "text",
-                        "parameter_name": name,
-                        "text": str(value)
-                    }
-                    for name, value in components.items()
-                ]
-            elif isinstance(components, list) and len(components) > 0:
-                if isinstance(components[0], tuple):
-                    params = [
-                        {
-                            "type": "text",
-                            "parameter_name": name,
-                            "text": str(value)
-                        }
-                        for name, value in components
-                    ]
-                else:
-                    default_names = ['customer_name', 'order_number', 'order_date', 
-                                     'total_amount', 'paid_amount', 'remaining_amount']
-                    params = [
-                        {
-                            "type": "text",
-                            "parameter_name": default_names[i] if i < len(default_names) else f'param_{i}',
-                            "text": str(value)
-                        }
-                        for i, value in enumerate(components)
-                    ]
+                    "parameters": [{
+                        "type": "image",
+                        "image": {"id": media_id}
+                    }]
+                })
+                logger.info(f"Using Media ID for header: {media_id[:20]}...")
+            else:
+                # fallback: استخدام header_handle من ميتا
+                header_handle = template_info.get('header_handle')
+                if header_handle:
+                    components.append({
+                        "type": "header",
+                        "parameters": [{
+                            "type": "image",
+                            "image": {"link": header_handle}
+                        }]
+                    })
+                    logger.warning(f"Using header_handle (may expire)")
+        
+        # 2. إضافة متغيرات الـ Body
+        if variables:
+            params = []
+            is_named = template_info and template_info.get('parameter_format') == 'NAMED'
+            var_names = template_info.get('variable_names', []) if template_info else []
+            
+            if isinstance(variables, dict):
+                # Dict - استخدام المفاتيح كأسماء
+                for name, value in variables.items():
+                    param = {"type": "text", "text": str(value)}
+                    if is_named:
+                        param["parameter_name"] = name
+                    params.append(param)
+                    
+            elif isinstance(variables, list):
+                for i, value in enumerate(variables):
+                    param = {"type": "text", "text": str(value)}
+                    if is_named and i < len(var_names):
+                        param["parameter_name"] = var_names[i]
+                    params.append(param)
             
             if params:
-                body_component = {
+                components.append({
                     "type": "body",
                     "parameters": params
-                }
-                api_components.append(body_component)
-
-        # إضافة المكونات إلى الـ payload إذا وجدت
-        if api_components:
-            template_payload["components"] = api_components
+                })
         
+        # بناء الـ Payload
         payload = {
             "messaging_product": "whatsapp",
             "to": formatted_phone,
             "type": "template",
-            "template": template_payload
+            "template": {
+                "name": template_name,
+                "language": {"code": language}
+            }
         }
+        
+        if components:
+            payload["template"]["components"] = components
+        
+        logger.info(f"Sending template '{template_name}' to {formatted_phone}")
+        logger.debug(f"Payload: {payload}")
         
         try:
             response = requests.post(url, headers=self._get_headers(), json=payload)
+            
+            logger.debug(f"Response: {response.status_code} - {response.text}")
+            
             response.raise_for_status()
             return response.json()
+            
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error sending template message via Meta Cloud API: {e}")
-            if hasattr(e, 'response') and e.response is not None:
+            logger.error(f"Error sending template: {e}")
+            if hasattr(e, 'response') and e.response:
                 logger.error(f"Response: {e.response.text}")
             raise
     
@@ -208,22 +346,9 @@ class WhatsAppService:
                     installation=None, inspection=None, template=None):
         """
         إرسال رسالة WhatsApp (واجهة موحدة)
-        
-        Args:
-            customer: كائن العميل
-            message_text: نص الرسالة
-            message_type: نوع الرسالة
-            order: الطلب (اختياري)
-            installation: التركيب (اختياري)
-            inspection: المعاينة (اختياري)
-            template: القالب المستخدم (اختياري)
-        
-        Returns:
-            WhatsAppMessage: سجل الرسالة
         """
         from .models import WhatsAppMessage
         
-        # إنشاء سجل الرسالة
         whatsapp_message = WhatsAppMessage.objects.create(
             customer=customer,
             order=order,
@@ -237,7 +362,6 @@ class WhatsAppService:
         )
         
         try:
-            # وضع الاختبار
             if self.settings.test_mode:
                 logger.info(f"TEST MODE: Would send message to {customer.phone}")
                 whatsapp_message.status = 'SENT'
@@ -246,10 +370,8 @@ class WhatsAppService:
                 whatsapp_message.save()
                 return whatsapp_message
             
-            # الإرسال الفعلي
             result = self.send_text_message(customer.phone, message_text)
             
-            # تحديث السجل
             if result.get('messages'):
                 message_id = result['messages'][0].get('id')
                 whatsapp_message.external_id = message_id
@@ -270,15 +392,7 @@ class WhatsAppService:
             return whatsapp_message
     
     def retry_failed_message(self, message_id):
-        """
-        إعادة محاولة إرسال رسالة فاشلة
-        
-        Args:
-            message_id: معرف الرسالة
-            
-        Returns:
-            bool: True إذا نجحت، False إذا فشلت
-        """
+        """إعادة محاولة إرسال رسالة فاشلة"""
         from .models import WhatsAppMessage
         
         try:
@@ -287,12 +401,10 @@ class WhatsAppService:
             if message.status != 'FAILED':
                 return False
             
-            # إعادة تعيين الحالة
             message.status = 'PENDING'
             message.error_message = ''
             message.save()
             
-            # إعادة الإرسال
             result = self.send_text_message(
                 to=message.customer.phone,
                 message=message.message_text

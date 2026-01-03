@@ -17,23 +17,21 @@ class WhatsAppSettingsTestCase(TestCase):
     
     def setUp(self):
         self.settings = WhatsAppSettings.objects.create(
-            api_provider='twilio',
-            account_sid='TEST_SID',
-            auth_token='TEST_TOKEN',
-            phone_number='+14155238886',
+            phone_number='+201234567890',
+            phone_number_id='123456789',
+            access_token='TEST_TOKEN',
             is_active=True,
             test_mode=True
         )
     
     def test_settings_creation(self):
         """اختبار إنشاء الإعدادات"""
-        self.assertEqual(self.settings.api_provider, 'twilio')
         self.assertTrue(self.settings.is_active)
         self.assertTrue(self.settings.test_mode)
     
     def test_settings_str(self):
         """اختبار __str__"""
-        expected = "WhatsApp Settings (twilio)"
+        expected = "WhatsApp Settings (+201234567890)"
         self.assertEqual(str(self.settings), expected)
 
 
@@ -44,7 +42,7 @@ class WhatsAppMessageTemplateTestCase(TestCase):
         self.template = WhatsAppMessageTemplate.objects.create(
             name='Test Template',
             message_type='ORDER_CREATED',
-            template_text='Hello {customer_name}, order {order_number}',
+            meta_template_name='confirm_order',
             is_active=True
         )
     
@@ -63,12 +61,11 @@ class WhatsAppServiceTestCase(TestCase):
     """اختبارات خدمة WhatsApp"""
     
     def setUp(self):
-        # إنشاء إعدادات
+        # إنشاء إعدادات Meta Cloud API
         self.settings = WhatsAppSettings.objects.create(
-            api_provider='twilio',
-            account_sid='TEST_SID',
-            auth_token='TEST_TOKEN',
-            phone_number='+14155238886',
+            phone_number='+201234567890',
+            phone_number_id='123456789',
+            access_token='TEST_TOKEN',
             is_active=True,
             test_mode=True
         )
@@ -84,7 +81,7 @@ class WhatsAppServiceTestCase(TestCase):
         self.template = WhatsAppMessageTemplate.objects.create(
             name='Test Template',
             message_type='ORDER_CREATED',
-            template_text='Hello {customer_name}',
+            meta_template_name='confirm_order',
             is_active=True
         )
         
@@ -93,27 +90,16 @@ class WhatsAppServiceTestCase(TestCase):
     def test_service_initialization(self):
         """اختبار تهيئة الخدمة"""
         self.assertIsNotNone(self.service.settings)
-        self.assertEqual(self.service.settings.api_provider, 'twilio')
     
     def test_format_phone_number(self):
         """اختبار تنسيق رقم الهاتف"""
         # رقم مصري بدون رمز الدولة
         phone = self.service._format_phone_number('01234567890')
-        self.assertEqual(phone, '+201234567890')
+        self.assertEqual(phone, '201234567890')
         
         # رقم مصري مع رمز الدولة
         phone = self.service._format_phone_number('201234567890')
-        self.assertEqual(phone, '+201234567890')
-        
-        # رقم مع +
-        phone = self.service._format_phone_number('+201234567890')
-        self.assertEqual(phone, '+201234567890')
-    
-    def test_render_template(self):
-        """اختبار تعبئة القالب"""
-        context = {'customer_name': 'أحمد'}
-        result = self.service.render_template(self.template, context)
-        self.assertEqual(result, 'Hello أحمد')
+        self.assertEqual(phone, '201234567890')
     
     def test_send_message_test_mode(self):
         """اختبار إرسال رسالة في وضع الاختبار"""

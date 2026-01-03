@@ -24,34 +24,30 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
     change_list_template = 'admin/whatsapp/whatsappsettings_changelist.html'
 
     list_display = [
-        'api_provider',
         'phone_number',
         'is_active_badge',
         'test_mode_badge',
         'updated_at'
     ]
     
+    filter_horizontal = ('enabled_templates',)
+    
     fieldsets = (
-        ('إعدادات API', {
-            'fields': ('api_provider', 'phone_number', 'business_account_id', 
+        ('إعدادات Meta Cloud API', {
+            'fields': ('phone_number', 'business_account_id', 
                       'phone_number_id', 'access_token')
+        }),
+        ('صورة الهيدر', {
+            'fields': ('header_image', 'header_media_id'),
+            'description': '📷 ارفع صورة اللوغو هنا. سيتم رفعها تلقائياً لـ WhatsApp عند أول إرسال.'
         }),
         ('إعدادات عامة', {
             'fields': ('is_active', 'test_mode', 'use_template',
                       'retry_failed_messages', 'max_retry_attempts', 'default_language')
         }),
-        ('تفعيل القوالب', {
-            'fields': (
-                'enable_welcome_messages',
-                'enable_order_created',
-                'enable_inspection_scheduled',
-                'enable_inspection_completed',
-                'enable_installation_scheduled',
-                'enable_installation_completed',
-                'enable_invoice',
-                'enable_contract',
-            ),
-            'description': '⚠️ تأكد من وجود القالب في Meta وأن له meta_template_name قبل التفعيل'
+        ('القوالب المفعلة', {
+            'fields': ('enabled_templates',),
+            'description': '✅ اختر القوالب التي تريد تفعيلها. عند إضافة قالب جديد سيظهر هنا تلقائياً.'
         }),
     )
     
@@ -99,39 +95,17 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
                             meta_template_name=template
                         ).first()
                         
-                        if db_template:
-                            # Build components based on template type
-                            if template == 'order_confirm':
-                                components = {
-                                    'customer_name': 'عميل تجريبي',
-                                    'order_number': 'TEST-001',
-                                    'order_date': '2026-01-03'
-                                }
-                            elif template == 'order_confirmation':
-                                components = {
-                                    'customer_name': 'عميل تجريبي',
-                                    'order_number': 'TEST-001', 
-                                    'order_date': '2026-01-03',
-                                    'total_amount': '15000',
-                                    'paid_amount': '5000',
-                                    'remaining_amount': '10000'
-                                }
-                            else:
-                                components = {}
-                            
-                            result = service.send_template_message(
-                                to=phone,
-                                template_name=template,
-                                language='ar',
-                                components=components if components else None
-                            )
-                        else:
-                            # Use template name directly
-                            result = service.send_template_message(
-                                to=phone,
-                                template_name=template,
-                                language='ar'
-                            )
+                        # استخدام المتغيرات من القالب
+                        variables = None
+                        if db_template and db_template.test_variables:
+                            variables = db_template.test_variables
+                        
+                        result = service.send_template_message(
+                            to=phone,
+                            template_name=template,
+                            variables=variables,
+                            language=db_template.language if db_template else 'ar'
+                        )
                     
                     if result and result.get('messages'):
                         msg_id = result['messages'][0].get('id')
@@ -197,23 +171,20 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(WhatsAppMessageTemplate)
 class WhatsAppMessageTemplateAdmin(admin.ModelAdmin):
-    """إدارة قوالب الرسائل"""
+    """إدارة قوالب الرسائل - مبسط"""
     
     list_display = [
         'name',
         'message_type',
+        'meta_template_name',
+        'language',
         'is_active_badge',
-        'send_contract_badge',
-        'send_invoice_badge',
-        'order_types_display',
         'updated_at'
     ]
     
     list_filter = [
         'message_type',
         'is_active',
-        'send_contract',
-        'send_invoice',
         'language'
     ]
     
@@ -222,44 +193,23 @@ class WhatsAppMessageTemplateAdmin(admin.ModelAdmin):
     fieldsets = (
         ('إعدادات القالب', {
             'fields': ('name', 'message_type', 'meta_template_name', 'language', 'is_active'),
-            'description': 'اسم القالب في Meta هو الأهم - باقي المحتوى يُدار من Meta Template Manager'
+            'description': '📌 اسم القالب في Meta هو الأهم - باقي المحتوى (المتغيرات، الصورة) يُجلب تلقائياً من Meta'
         }),
-        ('إعدادات العنوان (Header)', {
-            'fields': ('header_type', 'header_text', 'header_media_url'),
-            'description': 'حدد نوع العنوان في Meta. إذا كان صورة/فيديو، ضع الرابط المباشر.'
+        ('متغيرات الاختبار', {
+            'fields': ('test_variables',),
+            'description': '🧪 متغيرات تُستخدم عند الاختبار من صفحة الاختبار. مثال: {"customer_name": "عميل تجريبي", "order_number": "TEST-001"}'
         }),
-        ('المرفقات', {
-            'fields': ('send_contract', 'send_invoice')
-        }),
-        ('إعدادات إضافية', {
-            'fields': ('order_types', 'delay_minutes'),
-            'description': 'اترك order_types فارغاً لتطبيق القالب على جميع أنواع الطلبات'
+        ('ملاحظات', {
+            'fields': ('description',),
+            'classes': ('collapse',)
         }),
     )
     
     def is_active_badge(self, obj):
         if obj.is_active:
-            return mark_safe('<span style="color: green;">✓</span>')
-        return mark_safe('<span style="color: red;">✗</span>')
-    is_active_badge.short_description = 'مفعل'
-    
-    def send_contract_badge(self, obj):
-        if obj.send_contract:
-            return mark_safe('<span style="color: green;">✓</span>')
-        return mark_safe('<span style="color: gray;">-</span>')
-    send_contract_badge.short_description = 'عقد'
-    
-    def send_invoice_badge(self, obj):
-        if obj.send_invoice:
-            return mark_safe('<span style="color: green;">✓</span>')
-        return mark_safe('<span style="color: gray;">-</span>')
-    send_invoice_badge.short_description = 'فاتورة'
-    
-    def order_types_display(self, obj):
-        if not obj.order_types:
-            return 'الكل'
-        return ', '.join(obj.order_types)
-    order_types_display.short_description = 'أنواع الطلبات'
+            return mark_safe('<span style="color: green;">✓ مفعل</span>')
+        return mark_safe('<span style="color: red;">✗ معطل</span>')
+    is_active_badge.short_description = 'الحالة'
 
 
 @admin.register(WhatsAppMessage)

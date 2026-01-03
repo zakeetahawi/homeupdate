@@ -1,89 +1,11 @@
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
 from django.utils import timezone
 import json
 import logging
 from .models import WhatsAppMessage
 
 logger = logging.getLogger(__name__)
-
-
-@csrf_exempt
-@require_POST
-def twilio_webhook(request):
-    """
-    Webhook من Twilio لتحديث حالة الرسائل
-    
-    يتم استدعاؤه عند:
-    - إرسال الرسالة (sent)
-    - تسليم الرسالة (delivered)
-    - قراءة الرسالة (read)
-    - فشل الإرسال (failed)
-    """
-    try:
-        # الحصول على البيانات من Twilio
-        message_sid = request.POST.get('MessageSid')
-        message_status = request.POST.get('MessageStatus')
-        
-        if not message_sid:
-            logger.warning("Webhook received without MessageSid")
-            return JsonResponse({'error': 'MessageSid required'}, status=400)
-        
-        # البحث عن الرسالة
-        try:
-            whatsapp_message = WhatsAppMessage.objects.get(external_id=message_sid)
-        except WhatsAppMessage.DoesNotExist:
-            logger.warning(f"Message not found: {message_sid}")
-            return JsonResponse({'error': 'Message not found'}, status=404)
-        
-        # تحديث الحالة
-        status_mapping = {
-            'sent': 'SENT',
-            'delivered': 'DELIVERED',
-            'read': 'READ',
-            'failed': 'FAILED',
-            'undelivered': 'FAILED'
-        }
-        
-        new_status = status_mapping.get(message_status, whatsapp_message.status)
-        
-        # تحديث الحقول
-        whatsapp_message.status = new_status
-        
-        if message_status == 'sent' and not whatsapp_message.sent_at:
-            whatsapp_message.sent_at = timezone.now()
-        elif message_status == 'delivered' and not whatsapp_message.delivered_at:
-            whatsapp_message.delivered_at = timezone.now()
-        elif message_status == 'read' and not whatsapp_message.read_at:
-            whatsapp_message.read_at = timezone.now()
-        elif message_status in ['failed', 'undelivered']:
-            error_message = request.POST.get('ErrorMessage', 'Unknown error')
-            whatsapp_message.error_message = error_message
-        
-        whatsapp_message.save()
-        
-        logger.info(f"Updated message {message_sid} to status {new_status}")
-        
-        return JsonResponse({
-            'status': 'success',
-            'message_id': whatsapp_message.id,
-            'new_status': new_status
-        })
-        
-    except Exception as e:
-        logger.error(f"Error in twilio_webhook: {e}")
-        return JsonResponse({'error': str(e)}, status=500)
-
-
-@csrf_exempt
-@require_POST
-def twilio_status_callback(request):
-    """
-    Callback بديل لتحديث الحالة
-    يستخدم نفس المنطق
-    """
-    return twilio_webhook(request)
 
 
 @csrf_exempt

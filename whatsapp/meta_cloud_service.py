@@ -20,9 +20,6 @@ class MetaCloudService:
         if not self.settings:
             raise ValueError("WhatsApp settings not configured")
         
-        if self.settings.api_provider != 'meta':
-            raise ValueError("API provider is not set to Meta Cloud API")
-        
         self.phone_id = self.settings.phone_number_id
         self.token = self.settings.access_token
         

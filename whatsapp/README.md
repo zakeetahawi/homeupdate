@@ -1,124 +1,96 @@
 # WhatsApp Integration
 
-نظام تكامل WhatsApp الكامل مع Django
+نظام تكامل WhatsApp مع Meta Cloud API
 
 ## الميزات
 
 - ✅ إرسال إشعارات تلقائية عبر WhatsApp
-- ✅ 8 قوالب رسائل جاهزة
+- ✅ تكامل مع Meta WhatsApp Cloud API
+- ✅ رفع تلقائي للصور في رأس القوالب
+- ✅ تفعيل ديناميكي للقوالب
 - ✅ لوحة تحكم كاملة في Django Admin
-- ✅ تكامل مع Twilio API
-- ✅ دعم المرفقات (عقود، فواتير، QR Codes)
 - ✅ نظام إعادة محاولة ذكي
-- ✅ Celery Tasks للأداء
 - ✅ وضع اختبار آمن
 
 ## التثبيت
 
-التطبيق مثبت بالفعل في المشروع.
+التطبيق مثبت بالفعل. عند تشغيل `migrate` لأول مرة، سيتم إنشاء:
+- 5 قوالب رسائل جاهزة
+- إعدادات WhatsApp الأساسية (بدون بيانات الاعتماد)
 
 ## الإعداد السريع
 
-### 1. إنشاء القوالب الافتراضية
+### 1. تشغيل الترحيلات
 
 ```bash
-python manage.py create_whatsapp_templates
+python manage.py migrate whatsapp
 ```
 
-### 2. إنشاء قواعد الإشعارات
-
-```bash
-python manage.py create_notification_rules
-```
-
-### 3. إعداد Twilio
+### 2. إعداد Meta Cloud API
 
 1. الذهاب إلى Django Admin: `/admin/whatsapp/whatsappsettings/`
-2. إضافة إعدادات Twilio:
-   - API Provider: `Twilio`
-   - Account SID: من Twilio Console
-   - Auth Token: من Twilio Console
-   - Phone Number: رقم WhatsApp من Twilio
-   - Is Active: ✓
-   - Test Mode: ✓ (للاختبار)
+2. تعديل الإعدادات وإضافة:
+   - **Phone Number**: رقم WhatsApp Business
+   - **Business Account ID**: من Meta Business Suite
+   - **Phone Number ID**: من Meta WhatsApp Manager
+   - **Access Token**: Token دائم من Meta
+   - **Is Active**: ✓
+   - **صورة الهيدر**: رفع اللوغو (PNG أو JPG)
 
-## الاستخدام
+### 3. تفعيل القوالب
 
-### إرسال رسالة يدوياً
-
-```python
-from whatsapp.services import WhatsAppService
-from customers.models import Customer
-
-service = WhatsAppService()
-customer = Customer.objects.get(id=1)
-
-service.send_message(
-    customer=customer,
-    message_text="مرحباً بك!",
-    message_type='CUSTOM'
-)
-```
-
-### تخصيص قالب
-
-```python
-from whatsapp.models import WhatsAppMessageTemplate
-
-template = WhatsAppMessageTemplate.objects.get(
-    name='إنشاء طلب عادي'
-)
-template.template_text = "نص جديد مع {customer_name}"
-template.save()
-```
+في نفس صفحة الإعدادات، اختر القوالب المراد تفعيلها من قسم "القوالب المفعلة".
 
 ## القوالب المتاحة
 
-1. **إنشاء طلب عادي** - عند إنشاء أي طلب
-2. **إنشاء طلب تركيب** - طلبات التركيب مع تنبيه 72 ساعة
-3. **طلب مع عقد** - إرسال العقد الإلكتروني
-4. **جدولة تركيب** - عند جدولة موعد التركيب
-5. **اكتمال تركيب** - عند إتمام التركيب
-6. **إنشاء معاينة** - عند إنشاء طلب معاينة
-7. **جدولة معاينة** - عند جدولة موعد المعاينة
-8. **فاتورة** - إرسال الفاتورة
+| القالب | اسم Meta | الوصف |
+|--------|----------|-------|
+| ترحيب بالعميل | `customer_welcome` | عند إضافة عميل جديد |
+| تأكيد الطلب | `confirm_order` | عند إنشاء طلب |
+| موعد المعاينة | `inspection_date` | عند جدولة معاينة |
+| موعد التركيب | `installation_date` | عند جدولة تركيب |
+| انتهاء التركيب | `installing_done` | عند اكتمال التركيب |
 
-## المتغيرات المدعومة
+## الاستخدام
 
-- `{customer_name}` - اسم العميل
-- `{order_number}` - رقم الطلب
-- `{order_date}` - تاريخ الطلب
-- `{total_amount}` - المبلغ الإجمالي
-- `{paid_amount}` - المبلغ المدفوع
-- `{remaining_amount}` - المبلغ المتبقي
-- `{installation_date}` - تاريخ التركيب
-- `{technician_name}` - اسم الفني
-- `{technician_phone}` - هاتف الفني
-- `{inspector_name}` - اسم المعاين
-- `{inspector_phone}` - هاتف المعاين
+### إرسال قالب يدوياً
 
-## الإشعارات التلقائية
+```python
+from whatsapp.services import WhatsAppService
 
-يتم إرسال الإشعارات تلقائياً عند:
+service = WhatsAppService()
+result = service.send_template_message(
+    to='01234567890',
+    template_name='customer_welcome',
+    variables={'customer_name': 'أحمد محمد'},
+    language='ar'
+)
+```
 
-- إنشاء طلب جديد
-- جدولة تركيب
-- اكتمال تركيب
-- إنشاء معاينة
-- جدولة معاينة
+### الإرسال التلقائي
 
-يمكن تفعيل/تعطيل كل إشعار من Django Admin.
+الإرسال يتم تلقائياً عبر Django Signals عند:
+- إضافة عميل جديد ← قالب الترحيب
+- إنشاء طلب ← قالب تأكيد الطلب
+- جدولة معاينة ← قالب موعد المعاينة
+- جدولة تركيب ← قالب موعد التركيب
+- اكتمال تركيب ← قالب انتهاء التركيب
+
+## إضافة قالب جديد
+
+1. أنشئ القالب في **Meta Business Suite** واحصل على الموافقة
+2. أضف القالب من Django Admin: `/admin/whatsapp/whatsappmessagetemplate/add/`
+3. فعّله من إعدادات WhatsApp
 
 ## الأمان
 
 - ✅ بيانات API محمية في قاعدة البيانات
+- ✅ لا يتم حفظ بيانات الاعتماد في الكود أو الترحيلات
 - ✅ وضع اختبار لتجنب الإرسال الخاطئ
 - ✅ Validation لأرقام الهواتف
-- ✅ Rate limiting من Twilio
 
 ## الدعم
 
 للمزيد من المعلومات، راجع:
-- [Twilio WhatsApp API Docs](https://www.twilio.com/docs/whatsapp)
+- [Meta WhatsApp Cloud API](https://developers.facebook.com/docs/whatsapp/cloud-api)
 - [Django Signals](https://docs.djangoproject.com/en/stable/topics/signals/)
-- [Celery](https://docs.celeryproject.org/)
