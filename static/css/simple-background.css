@@ -1,0 +1,82 @@
+body {
+    background-image: url('/static/images/backgrounds/dark-pattern-hq.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+.navbar.navbar-dark.bg-primary {
+    background-color: #5D3A1A !important;
+}
+
+footer.footer-area {
+    background-color: #5D3A1A !important;
+}
+
+.welcome-title {
+    color: #5D3A1A !important;
+}
+
+.home-welcome-card {
+    background-color: rgba(255, 248, 240, 0.85) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid #D4A362;
+    box-shadow: 0 8px 32px 0 rgba(93, 58, 26, 0.3);
+    border-radius: 20px;
+    transition: all 0.3s ease;
+}
+
+.home-welcome-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 48px 0 rgba(93, 58, 26, 0.4);
+    border-color: #5D3A1A;
+}
+
+.animated-logo {
+    animation: logoFloat 3s ease-in-out infinite, logoGlow 2s ease-in-out infinite alternate;
+    transition: transform 0.3s ease;
+}
+
+.animated-logo:hover {
+    transform: scale(1.1) rotate(5deg);
+    animation: logoSpin 0.6s ease-in-out;
+}
+
+@keyframes logoFloat {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes logoGlow {
+    0% {
+        filter: drop-shadow(0 0 5px rgba(212, 163, 98, 0.3));
+    }
+    100% {
+        filter: drop-shadow(0 0 20px rgba(212, 163, 98, 0.6));
+    }
+}
+
+@keyframes logoSpin {
+    0% {
+        transform: scale(1) rotate(0deg);
+    }
+    50% {
+        transform: scale(1.15) rotate(5deg);
+    }
+    100% {
+        transform: scale(1.1) rotate(5deg);
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        background-image: url('/static/images/backgrounds/dark-pattern-hq.jpg');
+        background-attachment: scroll;
+    }
+}
