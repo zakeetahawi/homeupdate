@@ -21,23 +21,29 @@
 .navbar .d-flex.align-items-center.ms-auto {
     justify-content: flex-end !important;
     flex-wrap: nowrap !important;
-    gap: 0.15rem !important;
-    margin-inline-start: 1rem !important;
+    gap: 0 !important;
+    margin-inline-start: auto !important;
+    margin-inline-end: 0 !important;
 }
 
 .navbar .navbar-nav {
     justify-content: flex-start !important;
-    gap: 0.25rem !important;
+    gap: 0 !important;
     flex-wrap: nowrap !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 0 1 auto !important;
 }
 
 .navbar .nav-item {
     flex: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 .navbar-dark .d-flex.align-items-center {
     justify-content: flex-end !important;
-    gap: 0.15rem !important;
+    gap: 0 !important;
     margin-top: 0 !important;
     padding-top: 0 !important;
     border-top: none !important;
@@ -49,31 +55,38 @@
 
 .navbar .me-2,
 .navbar .me-3 {
-    margin-inline-end: 0.25rem !important;
+    margin-inline-end: 0 !important;
 }
 
 .navbar .ms-2,
 .navbar .ms-3 {
-    margin-inline-start: 0.25rem !important;
+    margin-inline-start: 0 !important;
 }
 
 .navbar .btn.btn-outline-light,
 .navbar .btn.btn-outline-warning,
-.navbar .dropdown > .btn,
+.navbar .dropdown > .btn:not(#customUserBtn),
 .navbar .btn.position-relative {
-    padding: 0.25rem 0.5rem !important;
-    margin-inline-end: 0.25rem !important;
-    font-size: 0.875rem !important;
+    padding: 0.2rem 0.3rem !important;
+    margin-inline-end: 0 !important;
+    font-size: 0.8rem !important;
+    border-radius: 4px !important;
+}
+
+.navbar #customUserBtn {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 1rem !important;
+    border-radius: 6px !important;
 }
 
 .navbar .dropdown {
-    margin-inline-end: 0.25rem !important;
+    margin-inline-end: 0 !important;
 }
 
 #customUserBtn {
-    padding: 0.25rem 0.6rem !important;
-    margin-inline-start: 0.25rem !important;
-    font-size: 0.875rem !important;
+    padding: 0.4rem 0.6rem !important;
+    margin-inline-start: 0 !important;
+    font-size: 1rem !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -81,14 +94,20 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .navbar {
-    min-height: 40px !important;
-    padding-top: 0.25rem !important;
-    padding-bottom: 0.25rem !important;
+    min-height: 44px !important;
+    padding-top: 0.35rem !important;
+    padding-bottom: 0.35rem !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    z-index: 1030 !important;
 }
 
 .navbar .container-fluid {
-    padding-top: 0.25rem !important;
-    padding-bottom: 0.25rem !important;
+    padding-top: 0.35rem !important;
+    padding-bottom: 0.35rem !important;
 }
 
 .navbar-brand {
@@ -98,26 +117,80 @@
 }
 
 .navbar .logo-img {
-    width: 32px !important;
-    height: 32px !important;
-    margin-right: 0.25rem !important;
+    width: 42px !important;
+    height: 42px !important;
+    margin-right: 0 !important;
 }
 
 .navbar .nav-link {
-    padding-top: 0.25rem !important;
-    padding-bottom: 0.25rem !important;
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
-    font-size: 0.875rem !important;
+    padding: 0 !important;
+    font-size: 0.55rem !important;
+    transition: background-color 0.2s ease !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
 }
 
-.navbar .nav-link i,
+.navbar .nav-link i {
+    font-size: 0.55rem !important;
+    margin-inline-end: 0.01rem !important;
+}
+
+.navbar .nav-link .nav-text {
+    font-size: 0.55rem !important;
+    margin-inline-start: 0.01rem !important;
+}
+
 .navbar .btn i {
-    font-size: 0.875rem !important;
+    font-size: 0.85rem !important;
+}
+
+.navbar #customUserBtn i {
+    font-size: 1.1rem !important;
 }
 
 .navbar-toggler {
     padding: 0.25rem 0.5rem !important;
+}
+
+.navbar .btn:focus,
+.navbar .btn:active,
+.navbar .btn:hover {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.navbar .btn-outline-light:hover,
+.navbar .btn-outline-warning:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.navbar .dropdown-toggle::after {
+    margin-inline-start: 0 !important;
+    font-size: 0.55rem !important;
+}
+
+.navbar .dropdown-menu {
+    font-size: 0.8rem !important;
+    min-width: 200px !important;
+    max-width: 300px !important;
+    padding: 0.3rem 0 !important;
+}
+
+.navbar .dropdown-item {
+    padding: 0.3rem 0.8rem !important;
+    font-size: 0.8rem !important;
+    line-height: 1.3 !important;
+}
+
+.navbar .dropdown-item i {
+    font-size: 0.85rem !important;
+    margin-inline-end: 0.4rem !important;
+}
+
+.navbar .dropdown-divider {
+    margin: 0.2rem 0 !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -155,7 +228,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 body {
-    padding-top: 45px !important;
+    padding-top: 55px !important;
 }
 
 main,
@@ -170,26 +243,28 @@ main,
 
 @media (max-width: 768px) {
     .navbar {
-        min-height: 50px !important;
+        min-height: 52px !important;
+        padding-top: 0.4rem !important;
+        padding-bottom: 0.4rem !important;
     }
     
     .navbar .d-flex.align-items-center.ms-auto {
-        gap: 0.2rem !important;
-        margin-inline-start: 0.5rem !important;
+        gap: 0 !important;
+        margin-inline-start: 0.3rem !important;
         justify-content: center !important;
         flex-wrap: wrap !important;
     }
     
     .navbar .btn.btn-outline-light,
     .navbar .dropdown > .btn {
-        padding: 0.3rem 0.5rem !important;
-        margin-inline-end: 0.15rem !important;
-        font-size: 0.85rem !important;
+        padding: 0.25rem 0.4rem !important;
+        margin-inline-end: 0 !important;
+        font-size: 0.75rem !important;
     }
     
     .navbar .logo-img {
-        width: 28px !important;
-        height: 28px !important;
+        width: 36px !important;
+        height: 36px !important;
     }
     
     .navbar .btn .d-none.d-lg-inline {
@@ -206,11 +281,11 @@ main,
     }
     
     body {
-        padding-top: 55px !important;
+        padding-top: 60px !important;
     }
     
     .navbar-dark .d-flex.align-items-center {
-        gap: 0.5rem !important;
+        gap: 0.2rem !important;
         margin-top: 0.5rem !important;
         padding-top: 0.5rem !important;
         border-top: 1px solid rgba(255,255,255,0.1) !important;
@@ -219,30 +294,30 @@ main,
 
 @media (min-width: 769px) and (max-width: 1199px) {
     .navbar {
-        min-height: 42px !important;
+        min-height: 46px !important;
     }
     
     .navbar .d-flex.align-items-center.ms-auto {
-        gap: 0.2rem !important;
+        gap: 0 !important;
     }
     
     .navbar .logo-img {
-        width: 30px !important;
-        height: 30px !important;
+        width: 40px !important;
+        height: 40px !important;
     }
 }
 
 @media (min-width: 1200px) {
     .navbar {
-        min-height: 40px !important;
+        min-height: 44px !important;
     }
     
     .navbar .d-flex.align-items-center.ms-auto {
-        gap: 0.25rem !important;
+        gap: 0 !important;
     }
     
     body {
-        padding-top: 45px !important;
+        padding-top: 55px !important;
     }
 }
 
@@ -256,4 +331,48 @@ main,
         padding: 0.3rem 0.6rem !important;
         font-size: 0.85rem !important;
     }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EXTRA COMPACT - Remove all spacing and borders
+   ═══════════════════════════════════════════════════════════════════ */
+
+.navbar .nav-link {
+    margin: 0 !important;
+    border-width: 1px !important;
+}
+
+.navbar .btn {
+    margin: 0 !important;
+    border-width: 1px !important;
+}
+
+.navbar .btn + .btn,
+.navbar .dropdown + .dropdown,
+.navbar .btn + .dropdown,
+.navbar .dropdown + .btn {
+    margin-inline-start: 0.5rem !important;
+}
+
+.navbar .nav-item + .nav-item {
+    margin-inline-start: -0.3rem !important;
+}
+
+.navbar .d-flex.align-items-center > * {
+    margin-inline-end: 0.5rem !important;
+}
+
+.navbar .d-flex.align-items-center > *:last-child {
+    margin-inline-end: 0 !important;
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link:focus {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border-radius: 0px !important;
+    transform: none !important;
+}
+
+.navbar-brand {
+    margin-inline-end: 0 !important;
 }
