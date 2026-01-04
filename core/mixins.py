@@ -2,6 +2,31 @@
 Mixins مساعدة للتطبيق
 """
 
+
+class FilteredListViewMixin:
+    filterset_class = None
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        self.filterset = self.get_filterset(queryset)
+        return self.filterset.qs if self.filterset else queryset
+    
+    def get_filterset(self, queryset):
+        if self.filterset_class:
+            return self.filterset_class(
+                self.request.GET,
+                queryset=queryset,
+                request=self.request
+            )
+        return None
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if hasattr(self, 'filterset'):
+            context['filter'] = self.filterset
+        return context
+
+
 class PaginationFixMixin:
     """
     Mixin لإصلاح مشكلة pagination عندما يكون GET parameters arrays

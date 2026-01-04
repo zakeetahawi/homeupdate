@@ -21,8 +21,582 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'manufacturing/css/manufacturing.css' %}">
 <link rel="stylesheet" href="{% static 'manufacturing/css/dropdown-fix.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta name="csrf-token" content="{{ csrf_token }}">
 <style>
+    /* ═══════════════════════════════════════════════════════════════════
+       HORIZONTAL DROPDOWN FILTER BAR - Manufacturing Orders
+       Compact, modern, inline dropdown filters
+    ═══════════════════════════════════════════════════════════════════ */
+    
+    :root {
+        --hf-primary: #1a365d;
+        --hf-primary-light: #2b6cb0;
+        --hf-primary-dark: #0f2744;
+        --hf-accent: #ed8936;
+        --hf-accent-hover: #dd6b20;
+        --hf-surface: #ffffff;
+        --hf-surface-alt: #f7fafc;
+        --hf-border: #e2e8f0;
+        --hf-border-dark: #cbd5e0;
+        --hf-text: #1a202c;
+        --hf-text-muted: #718096;
+        --hf-success: #48bb78;
+        --hf-danger: #f56565;
+        --hf-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+        --hf-shadow: 0 4px 12px rgba(26, 54, 93, 0.12);
+        --hf-shadow-lg: 0 8px 24px rgba(26, 54, 93, 0.18);
+        --hf-radius: 8px;
+        --hf-radius-lg: 12px;
+        --hf-transition: all 0.2s ease;
+    }
+
+    /* ─── Main Filter Container ─── */
+    .hf-filter-container {
+        background: var(--hf-surface);
+        border-radius: var(--hf-radius-lg);
+        box-shadow: var(--hf-shadow);
+        margin-bottom: 1rem;
+        border: 1px solid var(--hf-border);
+        overflow: visible;
+        font-family: 'Tajawal', sans-serif;
+    }
+
+    /* ─── Filter Buttons Row ─── */
+    .hf-buttons-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        flex-wrap: wrap;
+        border-bottom: 1px solid transparent;
+        transition: var(--hf-transition);
+    }
+
+    .hf-buttons-row.has-open-dropdown {
+        border-bottom-color: var(--hf-border);
+    }
+
+    /* ─── Filter Button ─── */
+    .hf-filter-btn {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.85rem;
+        background: var(--hf-surface-alt);
+        border: 1.5px solid var(--hf-border);
+        border-radius: 50px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        font-family: 'Tajawal', sans-serif;
+        color: var(--hf-text);
+        cursor: pointer;
+        transition: var(--hf-transition);
+        white-space: nowrap;
+    }
+
+    .hf-filter-btn:hover {
+        background: var(--hf-surface);
+        border-color: var(--hf-primary-light);
+        box-shadow: var(--hf-shadow-sm);
+    }
+
+    .hf-filter-btn.active {
+        background: linear-gradient(135deg, var(--hf-primary) 0%, var(--hf-primary-light) 100%);
+        border-color: var(--hf-primary);
+        color: white;
+    }
+
+    .hf-filter-btn.has-selection {
+        background: linear-gradient(135deg, #ebf8ff 0%, #e6fffa 100%);
+        border-color: var(--hf-primary-light);
+        color: var(--hf-primary);
+    }
+
+    .hf-filter-btn i {
+        font-size: 0.85rem;
+        opacity: 0.85;
+    }
+
+    .hf-filter-btn .hf-chevron {
+        font-size: 0.65rem;
+        margin-right: -0.2rem;
+        transition: transform 0.2s ease;
+    }
+
+    .hf-filter-btn.active .hf-chevron {
+        transform: rotate(180deg);
+    }
+
+    /* ─── Badge Counter ─── */
+    .hf-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        background: var(--hf-accent);
+        color: white;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        margin-right: -0.1rem;
+    }
+
+    .hf-filter-btn.active .hf-badge {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* ─── Action Buttons ─── */
+    .hf-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-right: auto;
+        padding-right: 0.75rem;
+        border-right: 1px solid var(--hf-border);
+    }
+
+    .hf-apply-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, var(--hf-accent) 0%, var(--hf-accent-hover) 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        font-family: 'Tajawal', sans-serif;
+        cursor: pointer;
+        transition: var(--hf-transition);
+        box-shadow: 0 2px 8px rgba(237, 137, 54, 0.35);
+    }
+
+    .hf-apply-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(237, 137, 54, 0.45);
+    }
+
+    .hf-clear-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.45rem 0.75rem;
+        background: transparent;
+        color: var(--hf-text-muted);
+        border: 1.5px solid var(--hf-border);
+        border-radius: 50px;
+        font-size: 0.78rem;
+        font-weight: 500;
+        font-family: 'Tajawal', sans-serif;
+        cursor: pointer;
+        transition: var(--hf-transition);
+    }
+
+    .hf-clear-btn:hover {
+        background: #fff5f5;
+        border-color: #feb2b2;
+        color: var(--hf-danger);
+    }
+
+    /* ─── Page Size ─── */
+    .hf-page-size {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding-right: 0.75rem;
+        border-right: 1px solid var(--hf-border);
+    }
+
+    .hf-page-size-label {
+        font-size: 0.78rem;
+        color: var(--hf-text-muted);
+    }
+
+    .hf-page-size-select {
+        padding: 0.35rem 1.5rem 0.35rem 0.5rem;
+        border: 1.5px solid var(--hf-border);
+        border-radius: 6px;
+        font-size: 0.78rem;
+        font-family: 'Tajawal', sans-serif;
+        background: var(--hf-surface);
+        color: var(--hf-text);
+        cursor: pointer;
+    }
+
+    /* ─── Dropdown Panel ─── */
+    .hf-dropdown-panel {
+        display: none;
+        padding: 1rem 1.25rem;
+        background: var(--hf-surface-alt);
+        border-top: 1px solid var(--hf-border);
+        animation: hfSlideDown 0.2s ease-out;
+    }
+
+    .hf-dropdown-panel.show {
+        display: block;
+    }
+
+    @keyframes hfSlideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .hf-dropdown-content {
+        max-width: 600px;
+    }
+
+    .hf-dropdown-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px dashed var(--hf-border);
+    }
+
+    .hf-dropdown-title {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--hf-primary);
+    }
+
+    .hf-dropdown-title i {
+        font-size: 0.85rem;
+    }
+
+    .hf-dropdown-close {
+        background: none;
+        border: none;
+        color: var(--hf-text-muted);
+        cursor: pointer;
+        padding: 0.25rem;
+        font-size: 0.9rem;
+        transition: var(--hf-transition);
+    }
+
+    .hf-dropdown-close:hover {
+        color: var(--hf-danger);
+    }
+
+    /* ─── Grid Layouts for Dropdowns ─── */
+    .hf-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .hf-grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+    }
+
+    @media (max-width: 768px) {
+        .hf-grid-4 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    /* ─── Form Controls in Dropdown ─── */
+    .hf-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .hf-form-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--hf-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .hf-form-control {
+        padding: 0.55rem 0.75rem;
+        border: 1.5px solid var(--hf-border);
+        border-radius: var(--hf-radius);
+        font-size: 0.85rem;
+        font-family: 'Tajawal', sans-serif;
+        background: var(--hf-surface);
+        color: var(--hf-text);
+        transition: var(--hf-transition);
+    }
+
+    .hf-form-control:focus {
+        outline: none;
+        border-color: var(--hf-primary-light);
+        box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.1);
+    }
+
+    /* ─── Checkbox Group ─── */
+    .hf-checkbox-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.4rem;
+        max-height: 220px;
+        overflow-y: auto;
+        padding: 0.5rem;
+        background: var(--hf-surface);
+        border-radius: var(--hf-radius);
+        border: 1px solid var(--hf-border);
+    }
+
+    .hf-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 0.6rem;
+        background: var(--hf-surface);
+        border: 1px solid transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: var(--hf-transition);
+        font-size: 0.82rem;
+        color: var(--hf-text);
+    }
+
+    .hf-checkbox-item:hover {
+        background: #ebf8ff;
+        border-color: #bee3f8;
+    }
+
+    .hf-checkbox-item.selected {
+        background: linear-gradient(135deg, #ebf8ff 0%, #e6fffa 100%);
+        border-color: var(--hf-primary-light);
+        color: var(--hf-primary);
+        font-weight: 600;
+    }
+
+    .hf-checkbox-item input[type="checkbox"] {
+        width: 14px;
+        height: 14px;
+        accent-color: var(--hf-primary);
+        cursor: pointer;
+    }
+
+    /* ─── Scrollbar ─── */
+    .hf-checkbox-grid::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .hf-checkbox-grid::-webkit-scrollbar-track {
+        background: var(--hf-surface-alt);
+        border-radius: 10px;
+    }
+
+    .hf-checkbox-grid::-webkit-scrollbar-thumb {
+        background: var(--hf-border-dark);
+        border-radius: 10px;
+    }
+
+    /* ─── Overdue Toggle ─── */
+    .hf-toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.6rem 0.8rem;
+        background: linear-gradient(135deg, #fff5f5 0%, #fffaf0 100%);
+        border-radius: var(--hf-radius);
+        border: 1px solid #fed7d7;
+    }
+
+    .hf-toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #c53030;
+    }
+
+    .hf-toggle-switch {
+        position: relative;
+        width: 40px;
+        height: 22px;
+    }
+
+    .hf-toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .hf-toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background: #e2e8f0;
+        border-radius: 50px;
+        transition: var(--hf-transition);
+    }
+
+    .hf-toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        right: 3px;
+        bottom: 3px;
+        background: white;
+        border-radius: 50%;
+        transition: var(--hf-transition);
+        box-shadow: var(--hf-shadow-sm);
+    }
+
+    .hf-toggle-switch input:checked + .hf-toggle-slider {
+        background: #c53030;
+    }
+
+    .hf-toggle-switch input:checked + .hf-toggle-slider:before {
+        transform: translateX(-18px);
+    }
+
+    /* ─── Active Filter Chips ─── */
+    .hf-chips-container {
+        margin-bottom: 0.75rem;
+    }
+
+    .hf-chips-wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.6rem 0.85rem;
+        background: linear-gradient(135deg, #ebf8ff 0%, #e6fffa 100%);
+        border-radius: var(--hf-radius);
+        border: 1px solid #bee3f8;
+    }
+
+    .hf-chips-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--hf-primary);
+        margin-left: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .hf-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.3rem 0.6rem;
+        background: var(--hf-surface);
+        border: 1px solid var(--hf-border);
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--hf-text);
+        transition: var(--hf-transition);
+        animation: hfChipIn 0.2s ease-out;
+    }
+
+    @keyframes hfChipIn {
+        from {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .hf-chip:hover {
+        border-color: #feb2b2;
+        background: #fff5f5;
+    }
+
+    .hf-chip-cat {
+        color: var(--hf-text-muted);
+        font-weight: 400;
+    }
+
+    .hf-chip-remove {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        background: #f7fafc;
+        border: none;
+        border-radius: 50%;
+        color: var(--hf-text-muted);
+        font-size: 0.65rem;
+        cursor: pointer;
+        transition: var(--hf-transition);
+        padding: 0;
+        margin-right: -0.2rem;
+    }
+
+    .hf-chip-remove:hover {
+        background: var(--hf-danger);
+        color: white;
+    }
+
+    .hf-chips-clear {
+        margin-right: auto;
+        padding: 0.25rem 0.6rem;
+        background: transparent;
+        border: 1px dashed var(--hf-primary-light);
+        border-radius: 50px;
+        color: var(--hf-primary);
+        font-size: 0.72rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--hf-transition);
+    }
+
+    .hf-chips-clear:hover {
+        background: var(--hf-primary);
+        color: white;
+        border-style: solid;
+    }
+
+    /* ─── Search Box Inside Dropdown ─── */
+    .hf-search-row {
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-end;
+    }
+
+    .hf-search-input-wrapper {
+        flex: 1;
+        position: relative;
+    }
+
+    .hf-search-input-wrapper .search-icon {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--hf-text-muted);
+        font-size: 0.85rem;
+        pointer-events: none;
+    }
+
+    .hf-search-input {
+        width: 100%;
+        padding: 0.55rem 2.25rem 0.55rem 0.75rem;
+    }
+
+    /* ─── Table Styles ─── */
     .manufacturing-table th {
         position: sticky;
         top: 0;
@@ -50,10 +624,56 @@
     .delivery-indicator.completed { background-color: #20c997; color: white; }
     .delivery-indicator.unknown { background-color: #6c757d; color: white; }
     
-    .filter-select-enhanced { width: 100%; }
-    .filter-multiple { min-height: 120px; }
-    
     .table-responsive { max-height: 70vh; overflow-y: auto; }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 992px) {
+        .hf-buttons-row {
+            gap: 0.4rem;
+        }
+        
+        .hf-filter-btn {
+            padding: 0.4rem 0.65rem;
+            font-size: 0.78rem;
+        }
+        
+        .hf-actions {
+            flex-wrap: wrap;
+            border-right: none;
+            padding-right: 0;
+            margin-top: 0.5rem;
+            width: 100%;
+            justify-content: flex-end;
+        }
+        
+        .hf-page-size {
+            border-right: none;
+            padding-right: 0;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .hf-buttons-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .hf-filter-btn {
+            justify-content: center;
+        }
+        
+        .hf-grid-2 {
+            grid-template-columns: 1fr;
+        }
+        
+        .hf-checkbox-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .hf-search-row {
+            flex-direction: column;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -71,38 +691,143 @@
         </div>
     </div>
 
-    <!-- ملاحظة توضيحية -->
+    <!-- ═══════════════════════════════════════════════════════════════════
+         HORIZONTAL DROPDOWN FILTER BAR - Manufacturing Orders
+         Compact inline filters with dropdown panels
+    ═══════════════════════════════════════════════════════════════════ -->
+    
+    <form id="filterForm" method="get">
+        <div class="hf-filter-container">
+            <!-- Filter Buttons Row -->
+            <div class="hf-buttons-row" id="filterButtonsRow">
+                <!-- 1. Period Filter Button -->
+                <button type="button" class="hf-filter-btn {% if selected_year or selected_month or date_from or date_to %}has-selection{% endif %}" data-filter="period" id="periodBtn">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>الفترة</span>
+                    {% with period_count=0 %}
+                    {% if selected_year %}{% with period_count=period_count|add:1 %}{% endwith %}{% endif %}
+                    {% if selected_month %}{% with period_count=period_count|add:1 %}{% endwith %}{% endif %}
+                    {% if date_from %}{% with period_count=period_count|add:1 %}{% endwith %}{% endif %}
+                    {% if date_to %}{% with period_count=period_count|add:1 %}{% endwith %}{% endif %}
+                    {% endwith %}
+                    {% if selected_year or selected_month or date_from or date_to %}
+                    <span class="hf-badge">{% if selected_year and selected_month and date_from and date_to %}4{% elif selected_year and selected_month and date_from or selected_year and selected_month and date_to or selected_year and date_from and date_to or selected_month and date_from and date_to %}3{% elif selected_year and selected_month or selected_year and date_from or selected_year and date_to or selected_month and date_from or selected_month and date_to or date_from and date_to %}2{% else %}1{% endif %}</span>
+                    {% endif %}
+                    <i class="fas fa-chevron-down hf-chevron"></i>
+                </button>
 
+                <!-- 2. Status Filter Button -->
+                <button type="button" class="hf-filter-btn {% if status_filters %}has-selection{% endif %}" data-filter="status" id="statusBtn">
+                    <i class="fas fa-tasks"></i>
+                    <span>الحالة</span>
+                    {% if status_filters %}
+                    <span class="hf-badge">{{ status_filters|length }}</span>
+                    {% endif %}
+                    <i class="fas fa-chevron-down hf-chevron"></i>
+                </button>
 
-    <!-- قسم البحث والتصفية -->
-    <div class="card filter-card" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 15px;">
-        <div class="card-body">
-            <form id="filterForm" method="get">
-                <!-- الصف الأول - فلاتر السنة والشهر والبحث الأساسي -->
-                <div class="row g-3 mb-4">
-                    <div class="col-lg-2 col-md-3 col-sm-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-calendar-alt me-1 text-primary"></i>
-                                السنة
-                            </label>
-                            <select name="year" class="form-select filter-select-enhanced" id="year-select">
+                <!-- 3. Branch Filter Button -->
+                <button type="button" class="hf-filter-btn {% if branch_filters %}has-selection{% endif %}" data-filter="branch" id="branchBtn">
+                    <i class="fas fa-building"></i>
+                    <span>الفرع</span>
+                    {% if branch_filters %}
+                    <span class="hf-badge">{{ branch_filters|length }}</span>
+                    {% endif %}
+                    <i class="fas fa-chevron-down hf-chevron"></i>
+                </button>
+
+                <!-- 4. Order Type Filter Button -->
+                <button type="button" class="hf-filter-btn {% if order_type_filters %}has-selection{% endif %}" data-filter="ordertype" id="ordertypeBtn">
+                    <i class="fas fa-tags"></i>
+                    <span>النوع</span>
+                    {% if order_type_filters %}
+                    <span class="hf-badge">{{ order_type_filters|length }}</span>
+                    {% endif %}
+                    <i class="fas fa-chevron-down hf-chevron"></i>
+                </button>
+
+                <!-- 5. Production Line Filter Button -->
+                <button type="button" class="hf-filter-btn {% if production_line_filters %}has-selection{% endif %}" data-filter="prodline" id="prodlineBtn">
+                    <i class="fas fa-industry"></i>
+                    <span>خط الإنتاج</span>
+                    {% if production_line_filters %}
+                    <span class="hf-badge">{{ production_line_filters|length }}</span>
+                    {% endif %}
+                    <i class="fas fa-chevron-down hf-chevron"></i>
+                </button>
+
+                <!-- 6. Search Filter Button -->
+                <button type="button" class="hf-filter-btn {% if search_query %}has-selection{% endif %}" data-filter="search" id="searchBtn">
+                    <i class="fas fa-search"></i>
+                    <span>البحث</span>
+                    {% if search_query %}
+                    <span class="hf-badge">1</span>
+                    {% endif %}
+                    <i class="fas fa-chevron-down hf-chevron"></i>
+                </button>
+
+                <!-- Overdue Toggle (inline) -->
+                <label class="hf-filter-btn {% if overdue_filter == 'true' %}has-selection{% endif %}" style="cursor: pointer; {% if overdue_filter == 'true' %}background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%); border-color: #fc8181; color: #c53030;{% endif %}">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>متأخرة</span>
+                    <input type="checkbox" name="overdue" value="true" id="overdueToggle" {% if overdue_filter == 'true' %}checked{% endif %} style="display: none;">
+                </label>
+
+                <!-- Column Settings Button -->
+                <button type="button" class="hf-filter-btn" data-filter="columns" id="columnsBtn">
+                    <i class="fas fa-columns"></i>
+                    <span>الأعمدة</span>
+                    <i class="fas fa-chevron-down hf-chevron"></i>
+                </button>
+
+                <!-- Page Size -->
+                <div class="hf-page-size">
+                    <span class="hf-page-size-label">عرض:</span>
+                    <select name="page_size" id="page_size" class="hf-page-size-select" onchange="this.form.submit()">
+                        <option value="10" {% if page_size == 10 %}selected{% endif %}>10</option>
+                        <option value="25" {% if page_size == 25 or not page_size %}selected{% endif %}>25</option>
+                        <option value="50" {% if page_size == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if page_size == 100 %}selected{% endif %}>100</option>
+                    </select>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="hf-actions">
+                    <button type="submit" class="hf-apply-btn">
+                        <i class="fas fa-check"></i>
+                        تطبيق
+                    </button>
+                    {% if status_filters or search_query or date_from or date_to or branch_filters or order_type_filters or production_line_filters or overdue_filter == 'true' or selected_year or selected_month %}
+                    <button type="button" class="hf-clear-btn" id="clearFiltersBtn">
+                        <i class="fas fa-times"></i>
+                        مسح
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ═══ DROPDOWN PANELS ═══ -->
+
+            <!-- Period Dropdown -->
+            <div class="hf-dropdown-panel" id="periodDropdown">
+                <div class="hf-dropdown-content">
+                    <div class="hf-dropdown-header">
+                        <span class="hf-dropdown-title"><i class="fas fa-calendar-alt"></i> الفترة الزمنية</span>
+                        <button type="button" class="hf-dropdown-close" data-close-dropdown><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="hf-grid-4">
+                        <div class="hf-form-group">
+                            <label class="hf-form-label">السنة</label>
+                            <select name="year" class="hf-form-control" id="year-select">
                                 <option value="">كل السنوات</option>
                                 {% for year in available_years %}
-                                    <option value="{{ year }}" {% if selected_year == year|stringformat:'s' %}selected{% endif %}>
-                                        {{ year }}
-                                    </option>
+                                <option value="{{ year }}" {% if selected_year == year|stringformat:'s' %}selected{% endif %}>{{ year }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                    </div>
-                    <div class="col-lg-2 col-md-3 col-sm-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-calendar me-1 text-success"></i>
-                                الشهر
-                            </label>
-                            <select name="month" class="form-select filter-select-enhanced" id="month-select">
+                        <div class="hf-form-group">
+                            <label class="hf-form-label">الشهر</label>
+                            <select name="month" class="hf-form-control" id="month-select">
                                 <option value="">كل الشهور</option>
                                 <option value="1" {% if selected_month == '1' %}selected{% endif %}>يناير</option>
                                 <option value="2" {% if selected_month == '2' %}selected{% endif %}>فبراير</option>
@@ -118,184 +843,384 @@
                                 <option value="12" {% if selected_month == '12' %}selected{% endif %}>ديسمبر</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="col-lg-4 col-md-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-search me-1 text-info"></i>
-                                البحث في أوامر التصنيع
-                            </label>
-                            <div class="input-group search-group-enhanced">
-                                <span class="input-group-text search-icon-enhanced">
-                                    <i class="fas fa-search"></i>
-                                </span>
-                                <input type="text" name="search" id="search" class="form-control search-input-enhanced" placeholder="ابحث..." value="{{ search_query }}">
-                                <button class="btn search-btn-enhanced" type="submit">
-                                    <i class="fas fa-search me-1"></i>
-                                    بحث
-                                </button>
-                            </div>
+                        <div class="hf-form-group">
+                            <label class="hf-form-label">من تاريخ</label>
+                            <input type="date" name="date_from" id="date_from" class="hf-form-control" value="{{ date_from }}">
                         </div>
-                    </div>
-                    <div class="col-lg-2 col-md-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-list-ol me-1 text-warning"></i>
-                                عدد الصفوف
-                            </label>
-                            <select name="page_size" id="page_size" class="form-select filter-select-enhanced">
-                                <option value="10" {% if page_size == 10 %}selected{% endif %}>10 صفوف</option>
-                                <option value="25" {% if page_size == 25 or not page_size %}selected{% endif %}>25 صف</option>
-                                <option value="50" {% if page_size == 50 %}selected{% endif %}>50 صف</option>
-                                <option value="100" {% if page_size == 100 %}selected{% endif %}>100 صف</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-lg-2 col-md-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-exclamation-triangle me-1 text-danger"></i>
-                                الطلبات المتأخرة
-                            </label>
-                            <div class="switch-container-enhanced">
-                                <div class="form-check form-switch switch-enhanced">
-                                    <input class="form-check-input switch-input-enhanced" type="checkbox" name="overdue" value="true"
-                                           id="overdueSwitch" {% if overdue_filter == 'true' %}checked{% endif %}>
-                                    <label class="form-check-label switch-label-enhanced" for="overdueSwitch">
-                                        عرض المتأخرة فقط
-                                    </label>
-                                </div>
-                            </div>
+                        <div class="hf-form-group">
+                            <label class="hf-form-label">إلى تاريخ</label>
+                            <input type="date" name="date_to" id="date_to" class="hf-form-control" value="{{ date_to }}">
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- الصف الثاني - الفلاتر المتقدمة -->
-                <div class="row g-3 mb-4">
-                    <div class="col-lg-2 col-md-4 col-sm-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-tasks me-1 text-primary"></i>
-                                حالة الطلب
-                            </label>
-                            <select class="form-select filter-select-enhanced filter-multiple" name="status" multiple size="4" id="status-select">
-                                <option value="pending_approval" {% if 'pending_approval' in status_filters %}selected{% endif %}>قيد الموافقة</option>
-                                <option value="pending" {% if 'pending' in status_filters %}selected{% endif %}>قيد الانتظار</option>
-                                <option value="in_progress" {% if 'in_progress' in status_filters %}selected{% endif %}>قيد التنفيذ</option>
-                                <option value="ready_install" {% if 'ready_install' in status_filters %}selected{% endif %}>جاهز للتركيب</option>
-                                <option value="completed" {% if 'completed' in status_filters %}selected{% endif %}>مكتمل</option>
-                                <option value="delivered" {% if 'delivered' in status_filters %}selected{% endif %}>تم التسليم</option>
-                                <option value="cancelled" {% if 'cancelled' in status_filters %}selected{% endif %}>ملغي</option>
-                                <option value="rejected" {% if 'rejected' in status_filters %}selected{% endif %}>مرفوض</option>
-                            </select>
-                            <small class="filter-help-text">Ctrl + Click للاختيار المتعدد</small>
+            <!-- Status Dropdown -->
+            <div class="hf-dropdown-panel" id="statusDropdown">
+                <div class="hf-dropdown-content">
+                    <div class="hf-dropdown-header">
+                        <span class="hf-dropdown-title"><i class="fas fa-tasks"></i> حالة الطلب</span>
+                        <button type="button" class="hf-dropdown-close" data-close-dropdown><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="hf-checkbox-grid">
+                        <label class="hf-checkbox-item {% if 'pending_approval' in status_filters %}selected{% endif %}">
+                            <input type="checkbox" name="status" value="pending_approval" {% if 'pending_approval' in status_filters %}checked{% endif %}>
+                            قيد الموافقة
+                        </label>
+                        <label class="hf-checkbox-item {% if 'pending' in status_filters %}selected{% endif %}">
+                            <input type="checkbox" name="status" value="pending" {% if 'pending' in status_filters %}checked{% endif %}>
+                            قيد الانتظار
+                        </label>
+                        <label class="hf-checkbox-item {% if 'in_progress' in status_filters %}selected{% endif %}">
+                            <input type="checkbox" name="status" value="in_progress" {% if 'in_progress' in status_filters %}checked{% endif %}>
+                            قيد التنفيذ
+                        </label>
+                        <label class="hf-checkbox-item {% if 'ready_install' in status_filters %}selected{% endif %}">
+                            <input type="checkbox" name="status" value="ready_install" {% if 'ready_install' in status_filters %}checked{% endif %}>
+                            جاهز للتركيب
+                        </label>
+                        <label class="hf-checkbox-item {% if 'completed' in status_filters %}selected{% endif %}">
+                            <input type="checkbox" name="status" value="completed" {% if 'completed' in status_filters %}checked{% endif %}>
+                            مكتمل
+                        </label>
+                        <label class="hf-checkbox-item {% if 'delivered' in status_filters %}selected{% endif %}">
+                            <input type="checkbox" name="status" value="delivered" {% if 'delivered' in status_filters %}checked{% endif %}>
+                            تم التسليم
+                        </label>
+                        <label class="hf-checkbox-item {% if 'cancelled' in status_filters %}selected{% endif %}">
+                            <input type="checkbox" name="status" value="cancelled" {% if 'cancelled' in status_filters %}checked{% endif %}>
+                            ملغي
+                        </label>
+                        <label class="hf-checkbox-item {% if 'rejected' in status_filters %}selected{% endif %}">
+                            <input type="checkbox" name="status" value="rejected" {% if 'rejected' in status_filters %}checked{% endif %}>
+                            مرفوض
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branch Dropdown -->
+            <div class="hf-dropdown-panel" id="branchDropdown">
+                <div class="hf-dropdown-content">
+                    <div class="hf-dropdown-header">
+                        <span class="hf-dropdown-title"><i class="fas fa-building"></i> الفرع</span>
+                        <button type="button" class="hf-dropdown-close" data-close-dropdown><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="hf-checkbox-grid">
+                        {% for branch in branches %}
+                        <label class="hf-checkbox-item {% if branch.id|stringformat:'s' in branch_filters %}selected{% endif %}">
+                            <input type="checkbox" name="branch" value="{{ branch.id }}" {% if branch.id|stringformat:"s" in branch_filters %}checked{% endif %}>
+                            {{ branch.name }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Type Dropdown -->
+            <div class="hf-dropdown-panel" id="ordertypeDropdown">
+                <div class="hf-dropdown-content">
+                    <div class="hf-dropdown-header">
+                        <span class="hf-dropdown-title"><i class="fas fa-tags"></i> نوع الطلب</span>
+                        <button type="button" class="hf-dropdown-close" data-close-dropdown><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="hf-checkbox-grid">
+                        {% for type_code, type_name in order_types %}
+                        <label class="hf-checkbox-item {% if type_code in order_type_filters %}selected{% endif %}">
+                            <input type="checkbox" name="order_type" value="{{ type_code }}" {% if type_code in order_type_filters %}checked{% endif %}>
+                            {{ type_name }}
+                        </label>
+                        {% endfor %}
+                        <label class="hf-checkbox-item {% if 'modification' in order_type_filters %}selected{% endif %}">
+                            <input type="checkbox" name="order_type" value="modification" {% if 'modification' in order_type_filters %}checked{% endif %}>
+                            تعديل
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Production Line Dropdown -->
+            <div class="hf-dropdown-panel" id="prodlineDropdown">
+                <div class="hf-dropdown-content">
+                    <div class="hf-dropdown-header">
+                        <span class="hf-dropdown-title"><i class="fas fa-industry"></i> خط الإنتاج</span>
+                        <button type="button" class="hf-dropdown-close" data-close-dropdown><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="hf-checkbox-grid">
+                        <label class="hf-checkbox-item {% if '' in production_line_filters %}selected{% endif %}">
+                            <input type="checkbox" name="production_line" value="" {% if '' in production_line_filters %}checked{% endif %}>
+                            غير محدد
+                        </label>
+                        {% for line in production_lines %}
+                        <label class="hf-checkbox-item {% if line.id|stringformat:'s' in production_line_filters %}selected{% endif %}">
+                            <input type="checkbox" name="production_line" value="{{ line.id }}" {% if line.id|stringformat:"s" in production_line_filters %}checked{% endif %}>
+                            {{ line.name }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Dropdown -->
+            <div class="hf-dropdown-panel" id="searchDropdown">
+                <div class="hf-dropdown-content">
+                    <div class="hf-dropdown-header">
+                        <span class="hf-dropdown-title"><i class="fas fa-search"></i> البحث</span>
+                        <button type="button" class="hf-dropdown-close" data-close-dropdown><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="hf-search-row">
+                        <div class="hf-form-group hf-search-input-wrapper" style="flex: 2;">
+                            <label class="hf-form-label">كلمة البحث</label>
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" 
+                                   name="search" 
+                                   id="search" 
+                                   class="hf-form-control hf-search-input" 
+                                   placeholder="ابحث عن رقم طلب، عميل، عقد..." 
+                                   value="{{ search_query }}">
                         </div>
                     </div>
-                    <div class="col-lg-2 col-md-4 col-sm-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-building me-1 text-success"></i>
+                    <div style="margin-top: 0.75rem;">
+                        <label class="hf-form-label">أعمدة البحث</label>
+                        <div class="hf-checkbox-grid" style="max-height: 120px;">
+                            <label class="hf-checkbox-item {% if 'all' in search_columns or not search_columns %}selected{% endif %}">
+                                <input type="checkbox" name="search_columns" value="all" {% if 'all' in search_columns or not search_columns %}checked{% endif %}>
+                                الكل
+                            </label>
+                            <label class="hf-checkbox-item {% if 'order_number' in search_columns %}selected{% endif %}">
+                                <input type="checkbox" name="search_columns" value="order_number" {% if 'order_number' in search_columns %}checked{% endif %}>
+                                رقم الطلب
+                            </label>
+                            <label class="hf-checkbox-item {% if 'customer_name' in search_columns %}selected{% endif %}">
+                                <input type="checkbox" name="search_columns" value="customer_name" {% if 'customer_name' in search_columns %}checked{% endif %}>
+                                اسم العميل
+                            </label>
+                            <label class="hf-checkbox-item {% if 'contract_number' in search_columns %}selected{% endif %}">
+                                <input type="checkbox" name="search_columns" value="contract_number" {% if 'contract_number' in search_columns %}checked{% endif %}>
+                                رقم العقد
+                            </label>
+                            <label class="hf-checkbox-item {% if 'invoice_number' in search_columns %}selected{% endif %}">
+                                <input type="checkbox" name="search_columns" value="invoice_number" {% if 'invoice_number' in search_columns %}checked{% endif %}>
+                                رقم الفاتورة
+                            </label>
+                            <label class="hf-checkbox-item {% if 'branch' in search_columns %}selected{% endif %}">
+                                <input type="checkbox" name="search_columns" value="branch" {% if 'branch' in search_columns %}checked{% endif %}>
                                 الفرع
                             </label>
-                            <select class="form-select filter-select-enhanced filter-multiple" name="branch" multiple size="4" id="branch-select">
-                                {% for branch in branches %}
-                                <option value="{{ branch.id }}" {% if branch.id|stringformat:"s" in branch_filters %}selected{% endif %}>{{ branch.name }}</option>
-                                {% endfor %}
-                            </select>
-                            <small class="filter-help-text">Ctrl + Click للاختيار المتعدد</small>
-                        </div>
-                    </div>
-                    <div class="col-lg-2 col-md-4 col-sm-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-tags me-1 text-info"></i>
-                                نوع الطلب
-                            </label>
-                            <select class="form-select filter-select-enhanced filter-multiple" name="order_type" multiple size="4" id="order-type-select">
-                                {% for type_code, type_name in order_types %}
-                                <option value="{{ type_code }}" {% if type_code in order_type_filters %}selected{% endif %}>{{ type_name }}</option>
-                                {% endfor %}
-                                <option value="modification" {% if 'modification' in order_type_filters %}selected{% endif %}>تعديل</option>
-                            </select>
-                            <small class="filter-help-text">Ctrl + Click للاختيار المتعدد</small>
-                        </div>
-                    </div>
-                    <div class="col-lg-2 col-md-4 col-sm-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-cogs me-1 text-warning"></i>
-                                خط الإنتاج
-                            </label>
-                            <select class="form-select filter-select-enhanced filter-multiple" name="production_line" multiple size="4" id="production-line-select">
-                                <option value="" {% if '' in production_line_filters %}selected{% endif %}>غير محدد</option>
-                                {% for line in production_lines %}
-                                <option value="{{ line.id }}" {% if line.id|stringformat:"s" in production_line_filters %}selected{% endif %}>{{ line.name }}</option>
-                                {% endfor %}
-                            </select>
-                            <small class="filter-help-text">Ctrl + Click للاختيار المتعدد</small>
-                        </div>
-                    </div>
-                    <div class="col-lg-2 col-md-4 col-sm-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-columns me-1 text-danger"></i>
-                                أعمدة البحث
-                            </label>
-                            <select name="search_columns" class="form-select filter-select-enhanced filter-multiple" multiple size="4" id="search-columns-select">
-                                <option value="all" {% if 'all' in search_columns or not search_columns %}selected{% endif %}>الكل</option>
-                                <option value="order_number" {% if 'order_number' in search_columns %}selected{% endif %}>رقم الطلب</option>
-                                <option value="customer_name" {% if 'customer_name' in search_columns %}selected{% endif %}>اسم العميل</option>
-                                <option value="contract_number" {% if 'contract_number' in search_columns %}selected{% endif %}>رقم العقد</option>
-                                <option value="invoice_number" {% if 'invoice_number' in search_columns %}selected{% endif %}>رقم الفاتورة</option>
-                                <option value="branch" {% if 'branch' in search_columns %}selected{% endif %}>الفرع</option>
-                            </select>
-                            <small class="filter-help-text">Ctrl + Click للاختيار المتعدد</small>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- الصف الثالث - التواريخ والأزرار -->
-                <div class="row g-3">
-                    <div class="col-lg-3 col-md-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-calendar-alt me-1 text-success"></i>
-                                من تاريخ
-                            </label>
-                            <input type="date" name="date_from" id="date_from" class="form-control filter-input-enhanced" value="{{ date_from }}">
-                        </div>
+            <!-- Column Settings Dropdown -->
+            <div class="hf-dropdown-panel" id="columnsDropdown">
+                <div class="hf-dropdown-content">
+                    <div class="hf-dropdown-header">
+                        <span class="hf-dropdown-title"><i class="fas fa-columns"></i> إعدادات الأعمدة</span>
+                        <button type="button" class="hf-dropdown-close" data-close-dropdown><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="col-lg-3 col-md-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-calendar-alt me-1 text-info"></i>
-                                إلى تاريخ
-                            </label>
-                            <input type="date" name="date_to" id="date_to" class="form-control filter-input-enhanced" value="{{ date_to }}">
-                        </div>
+                    <div class="mb-3 text-center">
+                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i>اختر الأعمدة التي تريد عرضها في الجدول</small>
                     </div>
-                    <div class="col-lg-6">
-                        <div class="filter-group-enhanced">
-                            <label class="filter-label-top">
-                                <i class="fas fa-cog me-1 text-secondary"></i>
-                                إجراءات الفلترة
-                            </label>
-                            <div class="d-flex gap-3 justify-content-center action-buttons-enhanced">
-                                <button type="submit" class="btn btn-apply-enhanced">
-                                    <i class="fas fa-filter me-2"></i>
-                                    تطبيق الفلاتر
-                                </button>
-                                <button type="button" class="btn btn-clear-enhanced" id="clearFiltersBtn" title="مسح جميع الفلاتر">
-                                    <i class="fas fa-times me-2"></i>
-                                    مسح الفلاتر
-                                </button>
-                            </div>
-                        </div>
+                    <div class="hf-checkbox-grid" style="grid-template-columns: repeat(2, 1fr);">
+                        <label class="hf-checkbox-item column-toggle-item" data-column="id">
+                            <input type="checkbox" class="column-toggle" data-column="id" checked>
+                            #
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="order_number">
+                            <input type="checkbox" class="column-toggle" data-column="order_number" checked>
+                            رقم الطلب
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="order_type">
+                            <input type="checkbox" class="column-toggle" data-column="order_type" checked>
+                            النوع
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="contract_number">
+                            <input type="checkbox" class="column-toggle" data-column="contract_number" checked>
+                            رقم العقد
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="production_line">
+                            <input type="checkbox" class="column-toggle" data-column="production_line" checked>
+                            خط الإنتاج
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="invoice_number">
+                            <input type="checkbox" class="column-toggle" data-column="invoice_number" checked>
+                            رقم الفاتورة
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="customer">
+                            <input type="checkbox" class="column-toggle" data-column="customer" checked>
+                            العميل
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="salesperson">
+                            <input type="checkbox" class="column-toggle" data-column="salesperson" checked>
+                            البائع
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="branch">
+                            <input type="checkbox" class="column-toggle" data-column="branch" checked>
+                            الفرع
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="order_date">
+                            <input type="checkbox" class="column-toggle" data-column="order_date" checked>
+                            تاريخ الطلب
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="expected_delivery_date">
+                            <input type="checkbox" class="column-toggle" data-column="expected_delivery_date" checked>
+                            تاريخ التسليم
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="delivery_indicator">
+                            <input type="checkbox" class="column-toggle" data-column="delivery_indicator" checked>
+                            مؤشر التسليم
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="status">
+                            <input type="checkbox" class="column-toggle" data-column="status" checked>
+                            الحالة
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="items">
+                            <input type="checkbox" class="column-toggle" data-column="items" checked>
+                            العناصر
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="delivery_info">
+                            <input type="checkbox" class="column-toggle" data-column="delivery_info" checked>
+                            معلومات التسليم
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="contract_approval">
+                            <input type="checkbox" class="column-toggle" data-column="contract_approval" checked>
+                            موافقة العقد
+                        </label>
+                        <label class="hf-checkbox-item column-toggle-item" data-column="actions">
+                            <input type="checkbox" class="column-toggle" data-column="actions" checked>
+                            الإجراءات
+                        </label>
+                    </div>
+                    <div class="d-flex gap-2 mt-3 justify-content-center">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="selectAllColumns()">
+                            <i class="fas fa-check-double me-1"></i>تحديد الكل
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="resetColumnSettings()">
+                            <i class="fas fa-undo me-1"></i>إعادة تعيين
+                        </button>
                     </div>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
+
+        <!-- Active Filter Chips -->
+        {% if status_filters or search_query or date_from or date_to or branch_filters or order_type_filters or production_line_filters or overdue_filter == 'true' or selected_year or selected_month %}
+        <div class="hf-chips-container">
+            <div class="hf-chips-wrapper">
+                <span class="hf-chips-label">
+                    <i class="fas fa-filter"></i>
+                    الفلاتر:
+                </span>
+                
+                {% if selected_year %}
+                <span class="hf-chip">
+                    <span class="hf-chip-cat">السنة:</span>
+                    {{ selected_year }}
+                    <button type="button" class="hf-chip-remove" onclick="removeFilter('year')" aria-label="إزالة">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+                {% endif %}
+                
+                {% if selected_month %}
+                <span class="hf-chip">
+                    <span class="hf-chip-cat">الشهر:</span>
+                    {% if selected_month == '1' %}يناير{% elif selected_month == '2' %}فبراير{% elif selected_month == '3' %}مارس{% elif selected_month == '4' %}أبريل{% elif selected_month == '5' %}مايو{% elif selected_month == '6' %}يونيو{% elif selected_month == '7' %}يوليو{% elif selected_month == '8' %}أغسطس{% elif selected_month == '9' %}سبتمبر{% elif selected_month == '10' %}أكتوبر{% elif selected_month == '11' %}نوفمبر{% elif selected_month == '12' %}ديسمبر{% endif %}
+                    <button type="button" class="hf-chip-remove" onclick="removeFilter('month')" aria-label="إزالة">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+                {% endif %}
+                
+                {% if search_query %}
+                <span class="hf-chip">
+                    <span class="hf-chip-cat">بحث:</span>
+                    "{{ search_query|truncatechars:15 }}"
+                    <button type="button" class="hf-chip-remove" onclick="removeFilter('search')" aria-label="إزالة">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+                {% endif %}
+                
+                {% for status in status_filters_display %}
+                <span class="hf-chip">
+                    <span class="hf-chip-cat">حالة:</span>
+                    {{ status }}
+                    <button type="button" class="hf-chip-remove" onclick="removeFilterValue('status', '{{ status }}')" aria-label="إزالة">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+                {% endfor %}
+                
+                {% for branch in branch_filters_display %}
+                <span class="hf-chip">
+                    <span class="hf-chip-cat">فرع:</span>
+                    {{ branch }}
+                    <button type="button" class="hf-chip-remove" onclick="removeFilterValue('branch', '{{ branch }}')" aria-label="إزالة">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+                {% endfor %}
+                
+                {% for type in order_type_filters_display %}
+                <span class="hf-chip">
+                    <span class="hf-chip-cat">نوع:</span>
+                    {{ type }}
+                    <button type="button" class="hf-chip-remove" onclick="removeFilterValue('order_type', '{{ type }}')" aria-label="إزالة">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+                {% endfor %}
+                
+                {% for line in production_line_filters_display %}
+                <span class="hf-chip">
+                    <span class="hf-chip-cat">خط:</span>
+                    {{ line }}
+                    <button type="button" class="hf-chip-remove" onclick="removeFilterValue('production_line', '{{ line }}')" aria-label="إزالة">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+                {% endfor %}
+                
+                {% if date_from %}
+                <span class="hf-chip">
+                    <span class="hf-chip-cat">من:</span>
+                    {{ date_from }}
+                    <button type="button" class="hf-chip-remove" onclick="removeFilter('date_from')" aria-label="إزالة">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+                {% endif %}
+                
+                {% if date_to %}
+                <span class="hf-chip">
+                    <span class="hf-chip-cat">إلى:</span>
+                    {{ date_to }}
+                    <button type="button" class="hf-chip-remove" onclick="removeFilter('date_to')" aria-label="إزالة">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+                {% endif %}
+                
+                {% if overdue_filter == 'true' %}
+                <span class="hf-chip" style="background: #fff5f5; border-color: #feb2b2; color: #c53030;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 0.65rem;"></i>
+                    متأخرة
+                    <button type="button" class="hf-chip-remove" onclick="removeFilter('overdue')" aria-label="إزالة">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+                {% endif %}
+                
+                <button type="button" class="hf-chips-clear" onclick="clearAllFilters()">
+                    <i class="fas fa-trash-alt me-1"></i>
+                    مسح الكل
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </form>
 
     <!-- رسالة الفلتر التلقائي -->
     {% if display_settings_applied and active_display_settings %}
@@ -370,122 +1295,67 @@
             </div>
         </div>
         <div class="card-body">
-            <!-- معلومات الفلاتر المطبقة -->
-            {% if status_filters or search_query or date_from or date_to or branch_filters or order_type_filters or search_columns or production_line_filters or overdue_filter %}
-            <div class="alert alert-info mb-3" role="alert">
-                <div class="d-flex flex-wrap align-items-center">
-                    <div class="me-3 mb-2">
-                        <i class="fas fa-filter me-2"></i>
-                        <strong>الفلاتر المطبقة:</strong>
-                    </div>
-                    <div class="d-flex flex-wrap gap-1">
-                        {% if status_filters %}
-                            {% for status in status_filters_display %}
-                                <span class="badge bg-primary me-1 mb-1">حالة: {{ status }}</span>
-                            {% endfor %}
-                        {% endif %}
-                        {% if search_query %}
-                            <span class="badge bg-success me-1 mb-1">البحث: "{{ search_query }}"</span>
-                        {% endif %}
-                        {% if branch_filters %}
-                            {% for branch in branch_filters_display %}
-                                <span class="badge bg-warning text-dark me-1 mb-1">فرع: {{ branch }}</span>
-                            {% endfor %}
-                        {% endif %}
-                        {% if order_type_filters %}
-                            {% for type in order_type_filters_display %}
-                                <span class="badge bg-purple me-1 mb-1">نوع: {{ type }}</span>
-                            {% endfor %}
-                        {% endif %}
-                        {% if production_line_filters %}
-                            {% for line in production_line_filters_display %}
-                                <span class="badge bg-secondary me-1 mb-1">خط إنتاج: {{ line }}</span>
-                            {% endfor %}
-                        {% endif %}
-                        {% if search_columns %}
-                            {% for column in search_columns_display %}
-                                <span class="badge bg-info me-1 mb-1">عمود بحث: {{ column }}</span>
-                            {% endfor %}
-                        {% endif %}
-                        {% if date_from %}
-                            <span class="badge bg-info me-1 mb-1">من تاريخ: {{ date_from }}</span>
-                        {% endif %}
-                        {% if date_to %}
-                            <span class="badge bg-info me-1 mb-1">إلى تاريخ: {{ date_to }}</span>
-                        {% endif %}
-                        {% if overdue_filter == 'true' %}
-                            <span class="badge bg-danger me-1 mb-1">الطلبات المتأخرة فقط</span>
-                        {% endif %}
-                    </div>
-                    <div class="ms-auto">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clearAllFiltersBtn">
-                            <i class="fas fa-times me-1"></i>إزالة جميع الفلاتر
-                        </button>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
 
             {% if manufacturing_orders %}
             <div class="table-responsive">
                 <table class="table table-striped table-hover manufacturing-table">
                     <thead>
                         <tr>
-                            <th class="text-center sortable-header" data-sort="id" style="padding: 0.3rem 0.4rem; min-width: 40px;">
+                            <th class="text-center sortable-header column-id" data-sort="id" data-column="id" style="padding: 0.3rem 0.4rem; min-width: 40px;">
                                 <span class="sort-icon none"></span>#
                             </th>
-                            <th class="text-center sortable-header" data-sort="order_number" style="padding: 0.3rem 0.4rem; min-width: 90px;">
+                            <th class="text-center sortable-header column-order_number" data-sort="order_number" data-column="order_number" style="padding: 0.3rem 0.4rem; min-width: 90px;">
                                 <span class="sort-icon none"></span>رقم الطلب
                             </th>
-                            <th class="text-center sortable-header" data-sort="order_type" style="padding: 0.3rem 0.4rem; min-width: 90px;">
+                            <th class="text-center sortable-header column-order_type" data-sort="order_type" data-column="order_type" style="padding: 0.3rem 0.4rem; min-width: 90px;">
                                 <span class="sort-icon none"></span>النوع
                             </th>
-                            <th class="text-center sortable-header" data-sort="contract_number" style="padding: 0.3rem 0.4rem; min-width: 80px;">
+                            <th class="text-center sortable-header column-contract_number" data-sort="contract_number" data-column="contract_number" style="padding: 0.3rem 0.4rem; min-width: 80px;">
                                 <span class="sort-icon none"></span>رقم العقد
                             </th>
-                            <th class="text-center sortable-header" data-sort="production_line" style="padding: 0.3rem 0.4rem; min-width: 100px;">
+                            <th class="text-center sortable-header column-production_line" data-sort="production_line" data-column="production_line" style="padding: 0.3rem 0.4rem; min-width: 100px;">
                                 <span class="sort-icon none"></span>خط الإنتاج
                             </th>
-                            <th class="text-center sortable-header" data-sort="invoice_number" style="padding: 0.3rem 0.4rem; min-width: 80px;">
+                            <th class="text-center sortable-header column-invoice_number" data-sort="invoice_number" data-column="invoice_number" style="padding: 0.3rem 0.4rem; min-width: 80px;">
                                 <span class="sort-icon none"></span>رقم الفاتورة
                             </th>
-                            <th class="text-center sortable-header" data-sort="customer" style="padding: 0.3rem 0.4rem; min-width: 90px;">
+                            <th class="text-center sortable-header column-customer" data-sort="customer" data-column="customer" style="padding: 0.3rem 0.4rem; min-width: 90px;">
                                 <span class="sort-icon none"></span>العميل
                             </th>
-                            <th class="text-center sortable-header" data-sort="salesperson" style="padding: 0.3rem 0.4rem; min-width: 80px;">
+                            <th class="text-center sortable-header column-salesperson" data-sort="salesperson" data-column="salesperson" style="padding: 0.3rem 0.4rem; min-width: 80px;">
                                 <span class="sort-icon none"></span>البائع
                             </th>
-                            <th class="text-center sortable-header" data-sort="branch" style="padding: 0.3rem 0.4rem; min-width: 80px;">
+                            <th class="text-center sortable-header column-branch" data-sort="branch" data-column="branch" style="padding: 0.3rem 0.4rem; min-width: 80px;">
                                 <span class="sort-icon none"></span>الفرع
                             </th>
-                            <th class="text-center sortable-header" data-sort="order_date" style="padding: 0.3rem 0.4rem; min-width: 100px;">
+                            <th class="text-center sortable-header column-order_date" data-sort="order_date" data-column="order_date" style="padding: 0.3rem 0.4rem; min-width: 100px;">
                                 <span class="sort-icon none"></span>تاريخ الطلب
                             </th>
-                            <th class="text-center sortable-header" data-sort="expected_delivery_date" style="padding: 0.3rem 0.4rem; min-width: 100px;">
+                            <th class="text-center sortable-header column-expected_delivery_date" data-sort="expected_delivery_date" data-column="expected_delivery_date" style="padding: 0.3rem 0.4rem; min-width: 100px;">
                                 <span class="sort-icon none"></span>تاريخ التسليم
                             </th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 60px;">مؤشر التسليم</th>
-                            <th class="text-center sortable-header" data-sort="status" style="padding: 0.3rem 0.4rem; min-width: 90px;">
+                            <th class="text-center column-delivery_indicator" data-column="delivery_indicator" style="padding: 0.3rem 0.4rem; min-width: 60px;">مؤشر التسليم</th>
+                            <th class="text-center sortable-header column-status" data-sort="status" data-column="status" style="padding: 0.3rem 0.4rem; min-width: 90px;">
                                 <span class="sort-icon none"></span>الحالة
                             </th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 120px; word-break: break-word; white-space: normal;">
+                            <th class="text-center column-items" data-column="items" style="padding: 0.3rem 0.4rem; min-width: 120px; word-break: break-word; white-space: normal;">
                                 <i class="fas fa-boxes me-1"></i>العناصر
                             </th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 100px; word-break: break-word; white-space: normal;">معلومات التسليم</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">موافقة العقد</th>
-                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 70px; word-break: break-word; white-space: normal;">الإجراءات</th>
+                            <th class="text-center column-delivery_info" data-column="delivery_info" style="padding: 0.3rem 0.4rem; min-width: 100px; word-break: break-word; white-space: normal;">معلومات التسليم</th>
+                            <th class="text-center column-contract_approval" data-column="contract_approval" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">موافقة العقد</th>
+                            <th class="text-center column-actions" data-column="actions" style="padding: 0.3rem 0.4rem; min-width: 70px; word-break: break-word; white-space: normal;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for order in manufacturing_orders %}
                         <tr data-order-id="{{ order.id }}" data-order-type="{% if 'installation' in order.order.get_selected_types_list %}installation{% elif 'tailoring' in order.order.get_selected_types_list %}tailoring{% elif 'accessory' in order.order.get_selected_types_list %}accessory{% else %}manufacturing{% endif %}">
-                            <td>{{ forloop.counter }}</td>
-                            <td>
+                            <td class="column-id" data-column="id">{{ forloop.counter }}</td>
+                            <td class="column-order_number" data-column="order_number">
                                 <a href="{% url 'orders:order_detail' order.order.id %}" style="color: var(--primary); text-decoration: none;" title="تفاصيل الطلب الأساسي">
                                     {{ order.order.order_number|default:order.order.id }}
                                 </a>
                             </td>
-                            <td>
+                            <td class="column-order_type" data-column="order_type">
                                 {% if order.order_type == 'modification' or order.modification_request %}
                                     <span class="badge bg-warning text-dark">
                                         <i class="fas fa-edit me-1"></i> تعديل
@@ -521,12 +1391,12 @@
                                     {% endwith %}
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="column-contract_number" data-column="contract_number">
                                 {{ order.contract_number|default:'-' }}
                                 {% if order.order.contract_number_2 %}<br><small class="text-muted">{{ order.order.contract_number_2 }}</small>{% endif %}
                                 {% if order.order.contract_number_3 %}<br><small class="text-muted">{{ order.order.contract_number_3 }}</small>{% endif %}
                             </td>
-                            <td>
+                            <td class="column-production_line" data-column="production_line">
                                 {% if order.production_line %}
                                     <span class="badge bg-info text-white">
                                         <i class="fas fa-industry me-1"></i>{{ order.production_line.name }}
@@ -535,12 +1405,12 @@
                                     <span class="text-muted">غير محدد</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="column-invoice_number" data-column="invoice_number">
                                 {{ order.invoice_number|default:'-' }}
                                 {% if order.order.invoice_number_2 %}<br><small class="text-muted">{{ order.order.invoice_number_2 }}</small>{% endif %}
                                 {% if order.order.invoice_number_3 %}<br><small class="text-muted">{{ order.order.invoice_number_3 }}</small>{% endif %}
                             </td>
-                            <td>
+                            <td class="column-customer" data-column="customer">
                                 {% if order.order.customer %}
                                     <a href="{% url 'customers:customer_detail' order.order.customer.id %}" style="color: var(--primary); text-decoration: none; font-weight: bold;">
                                         <a href="{% url 'customers:customer_detail' order.order.customer.id %}" class="font-weight-bold text-info" title="بطاقة العميل">
@@ -551,21 +1421,21 @@
                                     -
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="column-salesperson" data-column="salesperson">
                                 {% if order.order.salesperson %}
                                     {{ order.order.salesperson.name }}
                                 {% else %}
                                     -
                                 {% endif %}
                             </td>
-                            <td data-branch-id="{{ order.order.branch.id }}">
+                            <td class="column-branch" data-column="branch" data-branch-id="{{ order.order.branch.id }}">
                                 {% if order.order.branch %}
                                     {{ order.order.branch.name|default:'-' }}
                                 {% else %}
                                     -
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="column-order_date" data-column="order_date">
                                 {% if order.order_date %}
                                     {{ order.order_date|date:'Y-m-d' }}
                                 {% elif order.order.order_date %}
@@ -574,12 +1444,12 @@
                                     <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="column-expected_delivery_date" data-column="expected_delivery_date">
                                 <span class="{% if order.is_delivery_delayed %}text-danger{% endif %}">
                                     {{ order.expected_delivery_date|date:'Y-m-d'|default:'-' }}
                                 </span>
                             </td>
-                            <td>
+                            <td class="column-delivery_indicator" data-column="delivery_indicator">
                                 {% with indicator=order.delivery_status_indicator %}
                                     <div class="{{ indicator.class }}" title="{{ indicator.text }}">
                                         {% if indicator.type == 'overdue' %}
@@ -594,7 +1464,7 @@
                                     </div>
                                 {% endwith %}
                             </td>
-                            <td>
+                            <td class="column-status" data-column="status">
                                 {% if order.status == 'pending_approval' %}
                                     {% get_status_badge order.status "manufacturing" %}
                                 {% else %}
@@ -610,7 +1480,7 @@
                                     {% endif %}
                                 {% endif %}
                             </td>
-                            <td class="text-center">
+                            <td class="text-center column-items" data-column="items">
                                 <div style="font-size: 0.85em;">
                                     <!-- إجمالي العناصر -->
                                     <div class="mb-1">
@@ -644,7 +1514,7 @@
                                     {% endif %}
                                 </div>
                             </td>
-                            <td>
+                            <td class="column-delivery_info" data-column="delivery_info">
                                 {% if order.status == 'delivered' %}
                                     {% if order.delivery_permit_number or order.delivery_recipient_name %}
                                         <div style="font-size: 0.85em;">
@@ -668,7 +1538,7 @@
                                     <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
-                            <td class="approval-column">
+                            <td class="approval-column column-contract_approval" data-column="contract_approval">
                                 {% if order.status == 'pending_approval' %}
                                     <div class="action-buttons">
                                         <button class="btn btn-sm btn-success approve-btn" data-order-id="{{ order.id }}" title="موافقة">
@@ -710,7 +1580,7 @@
                                     <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="column-actions" data-column="actions">
                                 <div class="btn-group btn-group-sm action-buttons">
                                     {% if order.order_type == 'modification' or order.modification_request %}
                                         {% if order.modification_request and order.modification_request.id %}
@@ -2181,6 +3051,113 @@ async function changeProductionLine() {
         confirmBtn.disabled = false;
     }
 }
+
+const COLUMN_SETTINGS_KEY = 'manufacturing_orders_column_settings';
+
+function loadColumnSettings() {
+    const saved = localStorage.getItem(COLUMN_SETTINGS_KEY);
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch (e) {
+            console.error('Failed to parse column settings:', e);
+        }
+    }
+    return null;
+}
+
+function saveColumnSettings(settings) {
+    localStorage.setItem(COLUMN_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function applyColumnVisibility() {
+    const settings = loadColumnSettings();
+    if (!settings) return;
+    
+    Object.entries(settings).forEach(([column, visible]) => {
+        const checkbox = document.querySelector(`.column-toggle[data-column="${column}"]`);
+        if (checkbox) {
+            checkbox.checked = visible;
+            const label = checkbox.closest('.column-toggle-item');
+            if (label) {
+                if (visible) {
+                    label.classList.add('selected');
+                } else {
+                    label.classList.remove('selected');
+                }
+            }
+        }
+        
+        const elements = document.querySelectorAll(`[data-column="${column}"]`);
+        elements.forEach(el => {
+            if (visible) {
+                el.style.display = '';
+            } else {
+                el.style.display = 'none';
+            }
+        });
+    });
+}
+
+function initializeColumnToggles() {
+    const checkboxes = document.querySelectorAll('.column-toggle');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const column = this.dataset.column;
+            const visible = this.checked;
+            
+            const label = this.closest('.column-toggle-item');
+            if (label) {
+                if (visible) {
+                    label.classList.add('selected');
+                } else {
+                    label.classList.remove('selected');
+                }
+            }
+            
+            const elements = document.querySelectorAll(`[data-column="${column}"]`);
+            elements.forEach(el => {
+                if (visible) {
+                    el.style.display = '';
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+            
+            const settings = loadColumnSettings() || {};
+            settings[column] = visible;
+            saveColumnSettings(settings);
+        });
+    });
+}
+
+function selectAllColumns() {
+    const checkboxes = document.querySelectorAll('.column-toggle');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change'));
+    });
+}
+
+function resetColumnSettings() {
+    localStorage.removeItem(COLUMN_SETTINGS_KEY);
+    const checkboxes = document.querySelectorAll('.column-toggle');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change'));
+    });
+    
+    const filterBtn = document.getElementById('columnsBtn');
+    if (filterBtn) {
+        filterBtn.click();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeColumnToggles();
+    applyColumnVisibility();
+});
 </script>
 
 <!-- نافذة تبديل خط الإنتاج -->
@@ -2247,79 +3224,170 @@ async function changeProductionLine() {
 
 
 <script>
-// JavaScript بسيط للفلاتر
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('تحميل الفلاتر البسيطة');
+    initializeHorizontalFilters();
+});
 
-    // تسجيل إرسال النموذج
-    const filterForm = document.getElementById('filterForm');
-    if (filterForm) {
-        filterForm.addEventListener('submit', function(e) {
-            console.log('تم إرسال نموذج الفلاتر');
-
-            // طباعة البيانات المرسلة
-            const formData = new FormData(filterForm);
-            console.log('البيانات المرسلة:');
-            for (let [key, value] of formData.entries()) {
-                console.log(`${key}: ${value}`);
+function initializeHorizontalFilters() {
+    const filterButtons = document.querySelectorAll('.hf-filter-btn[data-filter]');
+    const dropdownPanels = document.querySelectorAll('.hf-dropdown-panel');
+    const buttonsRow = document.getElementById('filterButtonsRow');
+    
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const filterType = this.dataset.filter;
+            const targetDropdown = document.getElementById(filterType + 'Dropdown');
+            const isCurrentlyOpen = targetDropdown && targetDropdown.classList.contains('show');
+            
+            dropdownPanels.forEach(panel => panel.classList.remove('show'));
+            filterButtons.forEach(b => b.classList.remove('active'));
+            
+            if (!isCurrentlyOpen && targetDropdown) {
+                targetDropdown.classList.add('show');
+                this.classList.add('active');
+                buttonsRow.classList.add('has-open-dropdown');
+                
+                const firstInput = targetDropdown.querySelector('input, select');
+                if (firstInput) setTimeout(() => firstInput.focus(), 100);
+            } else {
+                buttonsRow.classList.remove('has-open-dropdown');
+            }
+        });
+    });
+    
+    document.querySelectorAll('[data-close-dropdown]').forEach(closeBtn => {
+        closeBtn.addEventListener('click', function() {
+            dropdownPanels.forEach(panel => panel.classList.remove('show'));
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            buttonsRow.classList.remove('has-open-dropdown');
+        });
+    });
+    
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.hf-filter-container')) {
+            dropdownPanels.forEach(panel => panel.classList.remove('show'));
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            buttonsRow.classList.remove('has-open-dropdown');
+        }
+    });
+    
+    const checkboxGroups = document.querySelectorAll('.hf-checkbox-grid');
+    checkboxGroups.forEach(group => {
+        const checkboxes = group.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const item = this.closest('.hf-checkbox-item');
+                if (this.checked) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+                updateFilterBadges();
+            });
+        });
+    });
+    
+    const overdueToggle = document.getElementById('overdueToggle');
+    if (overdueToggle) {
+        overdueToggle.addEventListener('change', function() {
+            const label = this.closest('label');
+            if (this.checked) {
+                label.style.background = 'linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%)';
+                label.style.borderColor = '#fc8181';
+                label.style.color = '#c53030';
+                label.classList.add('has-selection');
+            } else {
+                label.style.background = '';
+                label.style.borderColor = '';
+                label.style.color = '';
+                label.classList.remove('has-selection');
             }
         });
     }
-
-    // تحسين تجربة المستخدم مع select متعدد الاختيار
-    const multiSelects = document.querySelectorAll('select[multiple]');
-    multiSelects.forEach(select => {
-        select.addEventListener('change', function() {
-            const selectedCount = this.selectedOptions.length;
-            const label = this.previousElementSibling;
-            if (label && label.tagName === 'LABEL') {
-                const originalText = label.textContent.split(' (')[0];
-                if (selectedCount > 0) {
-                    label.textContent = `${originalText} (${selectedCount} مختار)`;
-                } else {
-                    label.textContent = originalText;
-                }
-            }
-        });
-
-        // تحديث العداد عند التحميل
-        const event = new Event('change');
-        select.dispatchEvent(event);
-    });
-});
-</script>
-
-<!-- JavaScript لمسح الفلاتر -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // زر مسح الفلاتر
+    
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
     if (clearFiltersBtn) {
         clearFiltersBtn.addEventListener('click', function() {
-            const form = document.getElementById('filterForm');
-            const inputs = form.querySelectorAll('input, select');
+            clearAllFilters();
+        });
+    }
+}
 
-            inputs.forEach(input => {
-                if (input.name !== 'page_size') {
-                    if (input.type === 'checkbox') {
-                        input.checked = false;
-                    } else if (input.tagName === 'SELECT') {
-                        // للقوائم المتعددة، إلغاء تحديد جميع الخيارات
-                        if (input.multiple) {
-                            Array.from(input.options).forEach(option => {
-                                option.selected = false;
-                            });
-                        } else {
-                            input.selectedIndex = 0;
-                        }
-                    } else {
-                        input.value = '';
-                    }
-                }
-            });
+function updateFilterBadges() {
+    const filterTypes = ['status', 'branch', 'ordertype', 'prodline'];
+    
+    filterTypes.forEach(type => {
+        const btn = document.getElementById(type + 'Btn');
+        if (!btn) return;
+        
+        let dropdown;
+        if (type === 'ordertype') dropdown = document.getElementById('ordertypeDropdown');
+        else if (type === 'prodline') dropdown = document.getElementById('prodlineDropdown');
+        else dropdown = document.getElementById(type + 'Dropdown');
+        
+        if (!dropdown) return;
+        
+        const checkedCount = dropdown.querySelectorAll('input[type="checkbox"]:checked').length;
+        let badge = btn.querySelector('.hf-badge');
+        
+        if (checkedCount > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'hf-badge';
+                btn.insertBefore(badge, btn.querySelector('.hf-chevron'));
+            }
+            badge.textContent = checkedCount;
+            btn.classList.add('has-selection');
+        } else {
+            if (badge) badge.remove();
+            btn.classList.remove('has-selection');
+        }
+    });
+}
 
-            // إرسال النموذج بعد مسح الفلاتر
-            form.submit();
+function removeFilter(filterName) {
+    const params = new URLSearchParams(window.location.search);
+    params.delete(filterName);
+    window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
+}
+
+function removeFilterValue(filterName, filterValue) {
+    const params = new URLSearchParams(window.location.search);
+    const values = params.getAll(filterName);
+    params.delete(filterName);
+    
+    values.forEach(v => {
+        if (v !== filterValue) {
+            params.append(filterName, v);
+        }
+    });
+    
+    window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
+}
+
+function clearAllFilters() {
+    const params = new URLSearchParams(window.location.search);
+    const pageSize = params.get('page_size');
+    
+    let newUrl = window.location.pathname;
+    if (pageSize) {
+        newUrl += '?page_size=' + pageSize;
+    }
+    
+    localStorage.removeItem('manufacturing_filters');
+    window.location.href = newUrl;
+}
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+        filterForm.addEventListener('submit', function(e) {
+            console.log('Filter form submitted');
         });
     }
 });

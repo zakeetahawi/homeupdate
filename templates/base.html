@@ -117,9 +117,6 @@
                 if (userDefaultTheme && userDefaultTheme !== 'default') {
                     document.documentElement.setAttribute('data-theme', userDefaultTheme);
                     localStorage.setItem('selectedTheme', userDefaultTheme);
-                    if (document.getElementById('themeSelector')) {
-                        document.getElementById('themeSelector').value = userDefaultTheme;
-                    }
                 } else {
                     var savedTheme = localStorage.getItem('selectedTheme');
                     // Only use localStorage theme if no default theme is set
@@ -968,7 +965,9 @@
     <div id="customUserDropdown" class="custom-dropdown-menu" role="menu" aria-labelledby="customUserBtn" aria-label="القائمة الشخصية للمستخدم" style="display:none; position:fixed; top:70px; left:90px; z-index:2147483647; min-width:260px; max-width:95vw; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18); border:1px solid #eee;">
         <div class="dropdown-header fw-bold py-2 px-3 border-bottom" role="presentation" id="userDropdownHeader">القائمة الشخصية</div>
         <a class="dropdown-item" href="{% url 'accounts:profile' %}" role="menuitem"><i class="fas fa-id-card" aria-hidden="true"></i> الملف الشخصي</a>
+        
         {% if user.is_staff %}
+        <hr class="my-1">
         <a class="dropdown-item" href="{% url 'admin:index' %}" role="menuitem"><i class="fas fa-cog" aria-hidden="true"></i> لوحة الإدارة</a>
         <a class="dropdown-item" href="{% url 'accounts:device_diagnostic' %}" role="menuitem"><i class="fas fa-stethoscope" aria-hidden="true"></i> تشخيص الجهاز</a>
         <a class="dropdown-item" href="{% url 'accounts:register_device' %}" role="menuitem"><i class="fas fa-desktop" aria-hidden="true"></i> تسجيل جهاز جديد</a>
