@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from django.utils.functional import cached_property
 from accounts.models import User, Branch
 import uuid
 from datetime import datetime
@@ -112,22 +113,26 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
-    @property
+    @cached_property
     def current_stock(self):
         """الحصول على مستوى المخزون الحالي (مجموع جميع المستودعات)"""
-        from django.db.models import Sum
+        from django.db.models import OuterRef, Subquery
 
-        # الحصول على آخر رصيد من كل مستودع
-        total_stock = 0
         warehouses = Warehouse.objects.filter(is_active=True)
+        
+        total_stock = 0
+        latest_transactions = StockTransaction.objects.filter(
+            product=self,
+            warehouse=OuterRef('pk')
+        ).order_by('-transaction_date', '-id')
 
-        for warehouse in warehouses:
-            last_trans = self.transactions.filter(
-                warehouse=warehouse
-            ).order_by('-transaction_date', '-id').first()
-
-            if last_trans:
-                total_stock += last_trans.running_balance
+        for warehouse in warehouses.annotate(
+            latest_balance=Subquery(
+                latest_transactions.values('running_balance')[:1]
+            )
+        ):
+            if warehouse.latest_balance is not None:
+                total_stock += warehouse.latest_balance
 
         return total_stock
 

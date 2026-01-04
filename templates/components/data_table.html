@@ -1,0 +1,37 @@
+{% load static %}
+
+<div class="table-container {% if class %}{{ class }}{% endif %}" {% if id %}id="{{ id }}"{% endif %}>
+    <div class="table-responsive">
+        <table class="table {% if striped %}table-striped{% endif %} {% if hover %}table-hover{% endif %} {% if bordered %}table-bordered{% endif %} {{ table_class }}">
+            {% if caption %}
+            <caption>{{ caption }}</caption>
+            {% endif %}
+            
+            <thead>
+                <tr>
+                    {% for header in headers %}
+                    <th>{{ header }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            
+            <tbody>
+                {% if rows %}
+                    {% for row in rows %}
+                    <tr>
+                        {% for cell in row %}
+                        <td>{{ cell|safe }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="{{ headers|length }}" class="text-center text-muted">
+                            لا توجد بيانات
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>

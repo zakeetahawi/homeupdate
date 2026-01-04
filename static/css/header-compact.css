@@ -1,0 +1,259 @@
+/**
+ * =========================================
+ * Header Compact Spacing - تقليل المسافات
+ * =========================================
+ * TARGETS:
+ * - Reduce header height by 50% (70px → 35-40px)
+ * - Reduce icon spacing by 50% (16px → 8px)
+ * - Position notification badges ABOVE buttons
+ * - Fix justify-content and flex layout issues
+ * 
+ * Version: 2.0
+ * Created: 2026-01-04
+ * Updated: 2026-01-04 (comprehensive redesign)
+ * =========================================
+ */
+
+/* ═══════════════════════════════════════════════════════════════════
+   TASK 1: FIX FLEX LAYOUT ISSUES (justify-content, flex)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.navbar .d-flex.align-items-center.ms-auto {
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: 0.15rem !important;
+    margin-inline-start: 1rem !important;
+}
+
+.navbar .navbar-nav {
+    justify-content: flex-start !important;
+    gap: 0.25rem !important;
+    flex-wrap: nowrap !important;
+}
+
+.navbar .nav-item {
+    flex: none !important;
+}
+
+.navbar-dark .d-flex.align-items-center {
+    justify-content: flex-end !important;
+    gap: 0.15rem !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    border-top: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TASK 2: REDUCE ICON SPACING BY 50% (16px → 8px)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.navbar .me-2,
+.navbar .me-3 {
+    margin-inline-end: 0.25rem !important;
+}
+
+.navbar .ms-2,
+.navbar .ms-3 {
+    margin-inline-start: 0.25rem !important;
+}
+
+.navbar .btn.btn-outline-light,
+.navbar .btn.btn-outline-warning,
+.navbar .dropdown > .btn,
+.navbar .btn.position-relative {
+    padding: 0.25rem 0.5rem !important;
+    margin-inline-end: 0.25rem !important;
+    font-size: 0.875rem !important;
+}
+
+.navbar .dropdown {
+    margin-inline-end: 0.25rem !important;
+}
+
+#customUserBtn {
+    padding: 0.25rem 0.6rem !important;
+    margin-inline-start: 0.25rem !important;
+    font-size: 0.875rem !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TASK 3: REDUCE HEADER HEIGHT BY 50% (70px → 35-40px)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.navbar {
+    min-height: 40px !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+}
+
+.navbar .container-fluid {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+}
+
+.navbar-brand {
+    padding-top: 0.15rem !important;
+    padding-bottom: 0.15rem !important;
+    margin-right: 0.5rem !important;
+}
+
+.navbar .logo-img {
+    width: 32px !important;
+    height: 32px !important;
+    margin-right: 0.25rem !important;
+}
+
+.navbar .nav-link {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    font-size: 0.875rem !important;
+}
+
+.navbar .nav-link i,
+.navbar .btn i {
+    font-size: 0.875rem !important;
+}
+
+.navbar-toggler {
+    padding: 0.25rem 0.5rem !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TASK 4: NOTIFICATION BADGES - SMALLER & POSITIONED ABOVE
+   ═══════════════════════════════════════════════════════════════════ */
+
+.navbar .btn.position-relative .badge {
+    position: absolute !important;
+    top: -8px !important;
+    inset-inline-end: -8px !important;
+    padding: 0.2rem 0.35rem !important;
+    font-size: 0.65rem !important;
+    min-width: 16px !important;
+    height: 16px !important;
+    line-height: 1 !important;
+    border: 2px solid var(--bs-primary, #0d6efd) !important;
+    border-radius: 10px !important;
+    z-index: 10 !important;
+}
+
+.navbar .btn-outline-warning .badge {
+    border-color: #ffc107 !important;
+}
+
+.navbar .btn-outline-light .badge {
+    border-color: #f8f9fa !important;
+}
+
+.navbar .position-relative {
+    overflow: visible !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MAIN CONTENT ADJUSTMENT - Match new header height
+   ═══════════════════════════════════════════════════════════════════ */
+
+body {
+    padding-top: 45px !important;
+}
+
+main,
+.container-fluid.mt-4,
+.main-content {
+    margin-top: 0.5rem !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE ADJUSTMENTS
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+    .navbar {
+        min-height: 50px !important;
+    }
+    
+    .navbar .d-flex.align-items-center.ms-auto {
+        gap: 0.2rem !important;
+        margin-inline-start: 0.5rem !important;
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .navbar .btn.btn-outline-light,
+    .navbar .dropdown > .btn {
+        padding: 0.3rem 0.5rem !important;
+        margin-inline-end: 0.15rem !important;
+        font-size: 0.85rem !important;
+    }
+    
+    .navbar .logo-img {
+        width: 28px !important;
+        height: 28px !important;
+    }
+    
+    .navbar .btn .d-none.d-lg-inline {
+        display: none !important;
+    }
+    
+    .navbar .btn.position-relative .badge {
+        top: -6px !important;
+        inset-inline-end: -6px !important;
+        font-size: 0.6rem !important;
+        padding: 0.15rem 0.3rem !important;
+        min-width: 14px !important;
+        height: 14px !important;
+    }
+    
+    body {
+        padding-top: 55px !important;
+    }
+    
+    .navbar-dark .d-flex.align-items-center {
+        gap: 0.5rem !important;
+        margin-top: 0.5rem !important;
+        padding-top: 0.5rem !important;
+        border-top: 1px solid rgba(255,255,255,0.1) !important;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1199px) {
+    .navbar {
+        min-height: 42px !important;
+    }
+    
+    .navbar .d-flex.align-items-center.ms-auto {
+        gap: 0.2rem !important;
+    }
+    
+    .navbar .logo-img {
+        width: 30px !important;
+        height: 30px !important;
+    }
+}
+
+@media (min-width: 1200px) {
+    .navbar {
+        min-height: 40px !important;
+    }
+    
+    .navbar .d-flex.align-items-center.ms-auto {
+        gap: 0.25rem !important;
+    }
+    
+    body {
+        padding-top: 45px !important;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   OVERRIDE style.css MOBILE RULES
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 991.98px) {
+    .navbar .btn-outline-light,
+    .navbar .btn-outline-warning {
+        padding: 0.3rem 0.6rem !important;
+        font-size: 0.85rem !important;
+    }
+}

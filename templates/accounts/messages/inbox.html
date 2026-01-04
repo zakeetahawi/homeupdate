@@ -85,15 +85,15 @@
 {% endblock %}
 
 {% block messages_content %}
-<div class="page-header">
-    <h4><i class="fas fa-inbox me-2"></i>{{ page_title }}</h4>
-    {% if unread_count > 0 %}
+{% include 'components/page_header.html' with title=page_title icon='fas fa-inbox' %}
+{% if unread_count > 0 %}
+<div class="mb-3 text-end">
     <button class="btn btn-outline-primary btn-sm" onclick="markAllAsRead()">
         <i class="fas fa-check-double"></i>
         تحديد الكل كمقروء
     </button>
-    {% endif %}
 </div>
+{% endif %}
 
 <!-- Search and Filters -->
 <div class="row mb-3">

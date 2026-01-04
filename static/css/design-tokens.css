@@ -1,0 +1,157 @@
+:root {
+    --primary-gradient: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    --success-gradient: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    --info-gradient: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    --warning-gradient: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    --danger-gradient: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    --accessory-gradient: linear-gradient(135deg, #A0522D 0%, #D2691E 100%);
+    --purple-gradient: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+    
+    --border-radius-sm: 8px;
+    --border-radius-md: 10px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 15px;
+    
+    --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 4px 15px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 8px 30px rgba(0, 0, 0, 0.12);
+    
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 1.5rem;
+    --spacing-lg: 2rem;
+    --spacing-xl: 3rem;
+    
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.2s ease;
+    --transition-slow: 0.3s ease;
+    
+    --card-hover-transform: translateY(-2px);
+    --card-active-transform: translateY(0);
+    
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    
+    --icon-size-sm: 1rem;
+    --icon-size-md: 1.5rem;
+    --icon-size-lg: 2rem;
+    --icon-size-xl: 3rem;
+}
+
+[data-theme="modern-black"] {
+    --primary-gradient: linear-gradient(135deg, #4dabf7 0%, #339af0 100%);
+    --success-gradient: linear-gradient(135deg, #51cf66 0%, #37b24d 100%);
+    --info-gradient: linear-gradient(135deg, #22b8cf 0%, #15aabf 100%);
+    --warning-gradient: linear-gradient(135deg, #ffd43b 0%, #fab005 100%);
+    --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #fa5252 100%);
+    
+    --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 4px 15px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+.page-header {
+    background: var(--primary-gradient);
+    color: white;
+    padding: var(--spacing-lg) 0;
+    margin-bottom: var(--spacing-lg);
+    border-radius: var(--border-radius-xl);
+}
+
+.stats-card {
+    border: none;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition-normal);
+}
+
+.stats-card:hover {
+    transform: var(--card-hover-transform);
+    box-shadow: var(--shadow-lg);
+}
+
+.table-container {
+    background: white;
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+}
+
+.card {
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn {
+    border-radius: var(--border-radius-sm);
+    transition: all var(--transition-normal);
+    font-weight: var(--font-weight-medium);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn:active {
+    transform: var(--card-active-transform);
+}
+
+.modal-content {
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-xl);
+}
+
+.badge {
+    border-radius: var(--border-radius-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+.alert {
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.form-control,
+.form-select {
+    border-radius: var(--border-radius-sm);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-control:focus,
+.form-select:focus {
+    box-shadow: var(--shadow-sm);
+}
+
+.icon-sm {
+    font-size: var(--icon-size-sm);
+}
+
+.icon-md {
+    font-size: var(--icon-size-md);
+}
+
+.icon-lg {
+    font-size: var(--icon-size-lg);
+}
+
+.icon-xl {
+    font-size: var(--icon-size-xl);
+}
+
+[data-theme="modern-black"] .page-header {
+    background: var(--primary-gradient);
+}
+
+[data-theme="modern-black"] .table-container,
+[data-theme="modern-black"] .card {
+    background: #1a1d20;
+}
+
+[data-theme="modern-black"] .stats-card {
+    background: #2d3238;
+}

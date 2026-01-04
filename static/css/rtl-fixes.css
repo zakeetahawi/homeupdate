@@ -1,0 +1,297 @@
+/* ===================================
+   RTL (Right-to-Left) Fixes
+   Converts directional properties to logical properties
+   =================================== */
+
+/* Icon Direction Fixes for RTL */
+[dir="rtl"] .fa-arrow-left::before {
+    content: "\f061";
+}
+
+[dir="rtl"] .fa-arrow-right::before {
+    content: "\f060";
+}
+
+[dir="rtl"] .fa-chevron-left::before {
+    content: "\f054";
+}
+
+[dir="rtl"] .fa-chevron-right::before {
+    content: "\f053";
+}
+
+[dir="rtl"] .fa-angle-left::before {
+    content: "\f105";
+}
+
+[dir="rtl"] .fa-angle-right::before {
+    content: "\f104";
+}
+
+[dir="rtl"] .fa-caret-left::before {
+    content: "\f0da";
+}
+
+[dir="rtl"] .fa-caret-right::before {
+    content: "\f0d9";
+}
+
+/* Spacing Fixes - Convert to Logical Properties */
+[dir="rtl"] .navbar-brand {
+    margin-inline-start: 0;
+    margin-inline-end: 1rem;
+}
+
+[dir="rtl"] .nav-item {
+    margin-inline-start: 0.5rem;
+}
+
+[dir="rtl"] .dropdown-menu {
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+}
+
+[dir="rtl"] .btn i,
+[dir="rtl"] .btn .fas,
+[dir="rtl"] .btn .far {
+    margin-inline-end: 0.5rem;
+    margin-inline-start: 0;
+}
+
+[dir="rtl"] .breadcrumb-item + .breadcrumb-item::before {
+    content: "\\";
+    transform: scaleX(-1);
+}
+
+[dir="rtl"] .form-check {
+    padding-inline-start: 0;
+    padding-inline-end: 1.5em;
+}
+
+[dir="rtl"] .form-check-input {
+    float: right;
+    margin-inline-start: 0.5em;
+    margin-inline-end: -1.5em;
+}
+
+[dir="rtl"] .list-group-item {
+    padding-inline-start: 1rem;
+    padding-inline-end: 1rem;
+}
+
+[dir="rtl"] .badge {
+    margin-inline-start: 0.25rem;
+}
+
+/* Table RTL Fixes */
+[dir="rtl"] .table th:first-child,
+[dir="rtl"] .table td:first-child {
+    text-align: right;
+}
+
+[dir="rtl"] .table th:last-child,
+[dir="rtl"] .table td:last-child {
+    text-align: left;
+}
+
+/* Modal RTL Fixes */
+[dir="rtl"] .modal-header .btn-close {
+    margin-inline-start: auto;
+    margin-inline-end: -0.5rem;
+}
+
+/* Alert RTL Fixes */
+[dir="rtl"] .alert-dismissible .btn-close {
+    inset-inline-end: auto;
+    inset-inline-start: 0;
+}
+
+/* Pagination RTL Fixes */
+[dir="rtl"] .page-link {
+    margin-inline-start: -1px;
+    margin-inline-end: 0;
+}
+
+[dir="rtl"] .page-item:first-child .page-link {
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+    border-start-end-radius: 0.375rem;
+    border-end-end-radius: 0.375rem;
+}
+
+[dir="rtl"] .page-item:last-child .page-link {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+    border-start-start-radius: 0.375rem;
+    border-end-start-radius: 0.375rem;
+}
+
+/* Input Group RTL Fixes */
+[dir="rtl"] .input-group > :not(:first-child) {
+    margin-inline-start: -1px;
+    margin-inline-end: 0;
+}
+
+/* Toast RTL Fixes */
+[dir="rtl"] .toast-header .btn-close {
+    margin-inline-start: auto;
+    margin-inline-end: -0.375rem;
+}
+
+/* Offcanvas RTL Fixes */
+[dir="rtl"] .offcanvas-start {
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+    border-inline-start: 1px solid rgba(0, 0, 0, 0.2);
+    border-inline-end: none;
+    transform: translateX(100%);
+}
+
+[dir="rtl"] .offcanvas-end {
+    inset-inline-end: auto;
+    inset-inline-start: 0;
+    border-inline-end: 1px solid rgba(0, 0, 0, 0.2);
+    border-inline-start: none;
+    transform: translateX(-100%);
+}
+
+/* Card RTL Fixes */
+[dir="rtl"] .card-img-left {
+    border-start-start-radius: calc(0.375rem - 1px);
+    border-end-start-radius: calc(0.375rem - 1px);
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+}
+
+/* Select2 RTL Fixes */
+[dir="rtl"] .select2-container--default .select2-selection--single .select2-selection__arrow {
+    inset-inline-end: auto;
+    inset-inline-start: 1px;
+}
+
+[dir="rtl"] .select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding-inline-start: 8px;
+    padding-inline-end: 20px;
+    text-align: right;
+}
+
+/* DataTables RTL Fixes */
+[dir="rtl"] .dataTables_wrapper .dataTables_filter {
+    float: left;
+    text-align: left;
+}
+
+[dir="rtl"] .dataTables_wrapper .dataTables_filter input {
+    margin-inline-start: 0;
+    margin-inline-end: 0.5em;
+}
+
+[dir="rtl"] .dataTables_wrapper .dataTables_length {
+    float: right;
+}
+
+[dir="rtl"] .dataTables_wrapper .dataTables_info {
+    float: right;
+}
+
+[dir="rtl"] .dataTables_wrapper .dataTables_paginate {
+    float: left;
+}
+
+/* Status Badge RTL Spacing */
+[dir="rtl"] .status-badge {
+    margin-inline-start: 0.5rem;
+}
+
+/* Icon + Text RTL Spacing */
+[dir="rtl"] .icon-with-text i {
+    margin-inline-end: 0.5rem;
+    margin-inline-start: 0;
+}
+
+/* Notification Bell RTL */
+[dir="rtl"] .notification-bell {
+    margin-inline-start: 1rem;
+    margin-inline-end: 0;
+}
+
+/* Search Box RTL */
+[dir="rtl"] .search-box {
+    padding-inline-start: 2.5rem;
+    padding-inline-end: 1rem;
+}
+
+[dir="rtl"] .search-box-icon {
+    inset-inline-start: auto;
+    inset-inline-end: 0.75rem;
+}
+
+/* Dashboard Card Icon RTL */
+[dir="rtl"] .dashboard-card-icon {
+    margin-inline-end: 1rem;
+    margin-inline-start: 0;
+}
+
+/* Timeline RTL Fixes */
+[dir="rtl"] .timeline::before {
+    inset-inline-start: auto;
+    inset-inline-end: 20px;
+}
+
+[dir="rtl"] .timeline-item {
+    padding-inline-start: 0;
+    padding-inline-end: 40px;
+}
+
+[dir="rtl"] .timeline-item::before {
+    inset-inline-start: auto;
+    inset-inline-end: 14px;
+}
+
+/* Progress Bar Text RTL */
+[dir="rtl"] .progress-bar {
+    text-align: right;
+    padding-inline-start: 0.5rem;
+}
+
+/* Sidebar RTL Fixes */
+[dir="rtl"] .sidebar {
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+    border-inline-start: 1px solid rgba(0, 0, 0, 0.1);
+    border-inline-end: none;
+}
+
+[dir="rtl"] .sidebar-toggle {
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+}
+
+/* Mobile Menu RTL */
+@media (max-width: 768px) {
+    [dir="rtl"] .mobile-menu {
+        transform: translateX(100%);
+    }
+    
+    [dir="rtl"] .mobile-menu.active {
+        transform: translateX(0);
+    }
+}
+
+/* Text Alignment Override for RTL */
+[dir="rtl"] .text-start {
+    text-align: right !important;
+}
+
+[dir="rtl"] .text-end {
+    text-align: left !important;
+}
+
+/* Float Override for RTL */
+[dir="rtl"] .float-start {
+    float: right !important;
+}
+
+[dir="rtl"] .float-end {
+    float: left !important;
+}

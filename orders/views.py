@@ -64,9 +64,17 @@ def order_list(request):
 
     # إذا كان المستخدم من الفرع الرئيسي واختار فرعًا من الفلتر، اعرض فقط طلبات هذا الفرع
     if show_branch_filter and branch_filter:
-        orders = Order.objects.select_related('customer', 'salesperson').filter(branch__id=branch_filter)
+        orders = Order.objects.select_related(
+            'customer', 
+            'salesperson', 
+            'branch'
+        ).prefetch_related('items', 'items__product').filter(branch__id=branch_filter)
     else:
-        orders = get_user_orders_queryset(request.user).select_related('customer', 'salesperson')
+        orders = get_user_orders_queryset(request.user).select_related(
+            'customer', 
+            'salesperson', 
+            'branch'
+        ).prefetch_related('items', 'items__product')
 
     # تطبيق الفلترة الشهرية
     orders, monthly_filter_context = apply_monthly_filter(orders, request, 'order_date')

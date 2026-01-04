@@ -29,23 +29,39 @@
                         <h5 class="mb-3">تابعنا على</h5>
                         <div class="social-links">
                             {% if company_info.facebook %}
-                            <a href="{{ company_info.facebook }}" class="btn btn-outline-primary me-2" target="_blank">
-                                <i class="fab fa-facebook-f"></i>
+                            <a href="{{ company_info.facebook }}" 
+                               class="btn btn-outline-primary me-2" 
+                               target="_blank" 
+                               aria-label="تابعنا على فيسبوك" 
+                               title="فيسبوك">
+                                <i class="fab fa-facebook-f" aria-hidden="true"></i>
                             </a>
                             {% endif %}
                             {% if company_info.twitter %}
-                            <a href="{{ company_info.twitter }}" class="btn btn-outline-primary me-2" target="_blank">
-                                <i class="fab fa-twitter"></i>
+                            <a href="{{ company_info.twitter }}" 
+                               class="btn btn-outline-primary me-2" 
+                               target="_blank" 
+                               aria-label="تابعنا على تويتر" 
+                               title="تويتر">
+                                <i class="fab fa-twitter" aria-hidden="true"></i>
                             </a>
                             {% endif %}
                             {% if company_info.linkedin %}
-                            <a href="{{ company_info.linkedin }}" class="btn btn-outline-primary me-2" target="_blank">
-                                <i class="fab fa-linkedin-in"></i>
+                            <a href="{{ company_info.linkedin }}" 
+                               class="btn btn-outline-primary me-2" 
+                               target="_blank" 
+                               aria-label="تابعنا على لينكد إن" 
+                               title="لينكد إن">
+                                <i class="fab fa-linkedin-in" aria-hidden="true"></i>
                             </a>
                             {% endif %}
                             {% if company_info.instagram %}
-                            <a href="{{ company_info.instagram }}" class="btn btn-outline-primary me-2" target="_blank">
-                                <i class="fab fa-instagram"></i>
+                            <a href="{{ company_info.instagram }}" 
+                               class="btn btn-outline-primary me-2" 
+                               target="_blank" 
+                               aria-label="تابعنا على إنستجرام" 
+                               title="إنستجرام">
+                                <i class="fab fa-instagram" aria-hidden="true"></i>
                             </a>
                             {% endif %}
                         </div>

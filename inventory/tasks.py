@@ -292,8 +292,8 @@ def process_bulk_upload_async(self, upload_log_id, file_data, default_warehouse_
         raise self.retry(exc=e, countdown=60)
 
 
-@shared_task
-def cleanup_old_warehouse_data(days=90):
+@shared_task(bind=True, max_retries=3, default_retry_delay=180, autoretry_for=(Exception,))
+def cleanup_old_warehouse_data(self, days=90):
     """
     تنظيف بيانات المستودعات القديمة غير المستخدمة
     """
@@ -323,8 +323,8 @@ def cleanup_old_warehouse_data(days=90):
     }
 
 
-@shared_task
-def sync_official_fabric_warehouses():
+@shared_task(bind=True, max_retries=2, default_retry_delay=300, autoretry_for=(Exception,))
+def sync_official_fabric_warehouses(self):
     """
     مزامنة المستودعات الرسمية للأقمشة
     """

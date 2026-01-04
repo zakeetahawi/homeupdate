@@ -1,0 +1,294 @@
+═══════════════════════════════════════════════════════════════════════════════
+COMPLETE STATIC FILES INVENTORY
+═══════════════════════════════════════════════════════════════════════════════
+
+Generated: 2026-01-04
+Total Static Size: 31 MB
+Primary Issue: FontAwesome bloat (25 MB = 80% of total)
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 1: CSS FILES (236 KB total)
+═══════════════════════════════════════════════════════════════════════════════
+
+ACTIVE CSS - IN BASE.HTML (KEEP):
+─────────────────────────────────────────────────────────────────────────────
+Name                                      Size      Status       Notes
+─────────────────────────────────────────────────────────────────────────────
+vendor/bootstrap/bootstrap.rtl.min.css    228 KB    REQUIRED     RTL support
+vendor/fontawesome/css/all.min.css        101 KB    REQUIRED     Icon library
+vendor/animate/animate.min.css            71 KB     REQUIRED     Animations
+css/style.css                             29 KB     REQUIRED     Core theme
+css/modern-black-theme.css                22 KB     REQUIRED     Active theme
+css/custom-theme-enhancements.css         15 KB     REQUIRED     Theme fixes
+css/modern-black-fixes.css                13 KB     REQUIRED     Additional fixes
+css/unified-status-system.css             8.2 KB    REQUIRED     Status UI
+css/responsive-footer.css                 6 KB      REQUIRED     Footer
+css/anti-flicker.css                      5.5 KB    REQUIRED     Flash prevention
+css/global-cairo-font.css                 4.7 KB    REQUIRED     Arabic fonts
+css/font-awesome-fix.css                  3.8 KB    REQUIRED     Icon fixes
+css/extra-dark-fixes.css                  3 KB      REQUIRED     Dark mode
+css/unified-status-colors.css             2.5 KB    REQUIRED     Status colors
+vendor/datatables/dataTables.bootstrap5   12 KB     REQUIRED     DataTables
+vendor/datatables/responsive.bootstrap5   4.3 KB    REQUIRED     Responsive DT
+
+SUBTOTAL ACTIVE: 528.9 KB (all minified, good!)
+
+
+UNUSED CSS - CANDIDATES FOR DELETION (REMOVE):
+─────────────────────────────────────────────────────────────────────────────
+Name                                      Size      Reason
+─────────────────────────────────────────────────────────────────────────────
+css/admin-dashboard.css                   7 KB      Not referenced in templates
+css/inventory-dashboard.css               14 KB     Legacy, not used
+css/custom.css                            12 KB     Superseded by modern-black
+css/arabic-fonts.css                      6.5 KB    Functionality in global-cairo
+css/enhanced-forms.css                    7.1 KB    Not referenced
+css/installations.css                     6.2 KB    Should be in app folder
+css/inventory-custom.css                  2.4 KB    Legacy inventory
+css/inventory-stats-unified.css           1.9 KB    Legacy
+css/order-form-enhanced.css               7.3 KB    Legacy order form
+css/mobile.css                            6.7 KB    Overlaps mobile-optimizations
+css/themes.css                            960 B     Minimal/unclear purpose
+
+SUBTOTAL UNUSED: ~82 KB
+
+
+FONTAWESOME CSS DUPLICATES (CLEAN UP):
+─────────────────────────────────────────────────────────────────────────────
+Name                                      Size      Action
+─────────────────────────────────────────────────────────────────────────────
+vendor/fontawesome/css/all.css            138 KB    DELETE (unminified)
+vendor/fontawesome/css/all.min.css        101 KB    KEEP (minified version)
+vendor/fontawesome/css/brands.css         24 KB     DELETE (unminified)
+vendor/fontawesome/css/regular.css        633 B     DELETE (unminified)
+vendor/fontawesome/css/solid.css          625 B     DELETE (unminified)
+vendor/fontawesome/css/fontawesome.css    111 KB    DELETE (unminified)
+vendor/fontawesome/css/svg-with-js.css    22 KB     DELETE (unused)
+vendor/fontawesome/css/v4-font-face.css   1.8 KB    DELETE (legacy v4)
+vendor/fontawesome/css/v4-shims.css       41 KB     DELETE (legacy v4)
+vendor/fontawesome/css/v5-font-face.css   871 B     DELETE (legacy)
+
+SUBTOTAL FONTAWESOME CSS: ~400 KB (ALL but all.min.css can be deleted)
+
+
+CONDITIONAL/APP-SPECIFIC CSS:
+─────────────────────────────────────────────────────────────────────────────
+Name                                      Size      Usage
+─────────────────────────────────────────────────────────────────────────────
+static/admin/css/price_history.css        1.3 KB    Admin specific
+static/css/db_card.css                    (size)    Loaded only if 'database' in path
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 2: JAVASCRIPT FILES (336 KB total)
+═══════════════════════════════════════════════════════════════════════════════
+
+ACTIVE JS - IN BASE.HTML (KEEP):
+─────────────────────────────────────────────────────────────────────────────
+Name                                      Size      Status       Notes
+─────────────────────────────────────────────────────────────────────────────
+vendor/jquery/jquery-3.7.1.min.js         86 KB     REQUIRED     jQuery
+vendor/bootstrap/bootstrap.bundle.min.js  79 KB     REQUIRED     Bootstrap
+vendor/datatables/jquery.dataTables.min   86 KB     REQUIRED     DataTables core
+vendor/sweetalert2/sweetalert2.all.min    77 KB     REQUIRED     Alert dialogs
+vendor/datatables/dataTables.bootstrap5   2.4 KB    REQUIRED     DataTables theme
+vendor/datatables/dataTables.responsive   15 KB     REQUIRED     Responsive
+vendor/datatables/responsive.bootstrap5   1.6 KB    REQUIRED     Responsive theme
+js/main.js                                3.9 KB    REQUIRED     Main init
+js/smooth-navigation.js                   9.6 KB    REQUIRED     Navigation
+js/custom-theme-animations.js             5.4 KB    REQUIRED     Animations
+js/csrf-handler.js                        10 KB     REQUIRED     Security
+js/internal_messages_dropdown.js           6.9 KB    REQUIRED     Notifications
+js/db_connection_test.js                  (size)    CONDITIONAL  Database page only
+
+SUBTOTAL ACTIVE: ~379 KB (all minified except custom files)
+
+
+UNUSED JS - CANDIDATES FOR DELETION (REMOVE):
+─────────────────────────────────────────────────────────────────────────────
+Name                                      Size      Status        Priority
+─────────────────────────────────────────────────────────────────────────────
+static/js/theme-manager.js                0 B       EMPTY         REMOVE NOW
+static/js/admin-dashboard.js              15 KB     Not used      REMOVE
+static/js/inventory-dashboard.js          9.4 KB    Not used      REMOVE
+static/js/apple-dark-icons.js             23 KB     Unclear       REVIEW
+static/js/complaints-quick-actions.js     31 KB     Module spec   REVIEW
+static/js/contract_google_drive_upload    9 KB      Module spec   MOVE TO APP
+static/js/contract_upload_status_checker  8.9 KB    Module spec   MOVE TO APP
+static/js/datatables-arabic.js            741 B     Check usage   REVIEW
+static/js/data-tables-config.js           7 KB      Check usage   REVIEW
+static/js/debt_check.js                   6.8 KB    Module spec   MOVE TO APP
+static/js/device-manager.js               10 KB     Module spec   MOVE TO APP
+static/js/download-helper.js              12 KB     Module spec   MOVE TO APP
+static/js/form-validation.js              7.7 KB    Module spec   MOVE TO APP
+static/js/installations.js                12 KB     Module spec   MOVE TO APP
+static/js/order_form_simplified.js        94 KB     HUGE! REVIEW  CRITICAL
+static/js/order_items.js                  14 KB     Module spec   MOVE TO APP
+static/js/script.js                       2.3 KB    Unclear       REVIEW
+static/js/theme-switcher.js               2.1 KB    May be used   REVIEW
+
+SUBTOTAL UNUSED: ~280+ KB
+
+
+FONTAWESOME JS - ALL UNMINIFIED (DELETE ALL):
+─────────────────────────────────────────────────────────────────────────────
+Name                                      Size      Action
+─────────────────────────────────────────────────────────────────────────────
+vendor/fontawesome/js/all.js              1.6 MB    DELETE (unminified)
+vendor/fontawesome/js/solid.js            823 KB    DELETE (unminified)
+vendor/fontawesome/js/brands.js           492 KB    DELETE (unminified)
+vendor/fontawesome/js/regular.js          119 KB    DELETE (unminified)
+vendor/fontawesome/js/fontawesome.js      115 KB    DELETE (unminified)
+vendor/fontawesome/js/v4-shims.js         34 KB     DELETE (legacy)
+vendor/fontawesome/js/conflict-detection  39 KB     DELETE (unused)
+
+SUBTOTAL FONTAWESOME JS: 3.2 MB (ALL CAN BE DELETED - use CSS-only)
+
+
+APP-SPECIFIC JS (PROPERLY MODULARIZED):
+─────────────────────────────────────────────────────────────────────────────
+Location                                  Files     Status
+─────────────────────────────────────────────────────────────────────────────
+customers/static/customers/js/            1 file    ✓ Organized
+inspections/static/inspections/js/        4 files   ✓ Organized
+inventory/static/inventory/               1 file    ✓ Organized
+manufacturing/static/manufacturing/js/    6 files   ✓ Organized (5 dropdown fixes!)
+odoo_db_manager/static/odoo_db_manager/   3 files   ✓ Organized
+orders/static/                            3 files   ✓ Organized
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 3: IMAGE FILES (284 KB total)
+═══════════════════════════════════════════════════════════════════════════════
+
+LOGO & FAVICON:
+─────────────────────────────────────────────────────────────────────────────
+Name                                      Size      Recommendation
+─────────────────────────────────────────────────────────────────────────────
+img/logo.png                              144 KB    Convert to WebP (-50 KB)
+img/white-logo.png                        119 KB    Convert to WebP (-40 KB)
+img/logo.svg                              321 B     ✓ OPTIMAL - Vector
+img/favicon.svg                           321 B     ✓ OPTIMAL - Vector
+images/favicon.png                        301 B     DELETE - Duplicate
+
+OTHER IMAGES:
+─────────────────────────────────────────────────────────────────────────────
+Name                                      Size      Status
+─────────────────────────────────────────────────────────────────────────────
+img/google-sheets-icon.png                5 KB      ✓ Keep
+img/postgresql.svg                        2.9 KB    ✓ Keep
+
+CONVERSION CANDIDATES:
+                Original Size          → WebP Size         Savings
+                ──────────────────────────────────────────────────
+                logo.png (144 KB)      → ~94 KB            -50 KB
+                white-logo.png (119 KB)→ ~79 KB            -40 KB
+                                        TOTAL SAVINGS:     -90 KB
+
+
+FONTAWESOME ICON FILES (POSSIBLY UNUSED):
+─────────────────────────────────────────────────────────────────────────────
+Location                                  Size      Status
+─────────────────────────────────────────────────────────────────────────────
+vendor/fontawesome/sprites/solid.svg      835 KB    DELETE if not using SVG
+vendor/fontawesome/sprites/brands.svg     494 KB    DELETE if not using SVG
+vendor/fontawesome/sprites/regular.svg    111 KB    DELETE if not using SVG
+vendor/fontawesome/svgs/                  8 MB      DELETE if not using SVG
+                                          ────────
+                                          9 MB total (8% of total static)
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 4: VENDOR BLOAT BREAKDOWN
+═══════════════════════════════════════════════════════════════════════════════
+
+FONTAWESOME (25 MB - 80% OF TOTAL STATIC):
+─────────────────────────────────────────────────────────────────────────────
+Component                                 Size      Status           Action
+─────────────────────────────────────────────────────────────────────────────
+/metadata/                                11 MB     Design tool      DELETE
+/svgs/                                    8 MB      Icon catalog     DELETE if unused
+/js/ (all unminified)                     3.2 MB    Unminified       DELETE
+/webfonts/                                ~2 MB     (estimated)      CHECK
+/sprites/                                 1.5 MB    PNG/SVG          CHECK
+/css/                                     400+ KB   Duplicates       CONSOLIDATE
+─────────────────────────────────────────────────────────────────────────────
+TOTAL FONTAWESOME: 25 MB | DELETABLE: 22+ MB | REQUIRED: 2-3 MB
+
+
+BOOTSTRAP:
+─────────────────────────────────────────────────────────────────────────────
+Component                                 Size      Status           Action
+─────────────────────────────────────────────────────────────────────────────
+bootstrap.rtl.min.css                     228 KB    REQUIRED         KEEP
+bootstrap.bundle.min.js                   79 KB     REQUIRED         KEEP
+Other Bootstrap files                     (unknown) UNUSED           DELETE
+─────────────────────────────────────────────────────────────────────────────
+TOTAL BOOTSTRAP: 1.2 MB | REQUIRED: 307 KB | DELETABLE: 893 KB
+
+
+FONTS (1.7 MB):
+─────────────────────────────────────────────────────────────────────────────
+Component                                 Size      Language  Status
+─────────────────────────────────────────────────────────────────────────────
+/cairo.*                                  (checked) Arabic    REQUIRED
+/roboto.*                                 (checked) English   REQUIRED
+/material-icons.*                         (checked) General   REQUIRED
+/webfonts/                                (unknown) General   CHECK USAGE
+─────────────────────────────────────────────────────────────────────────────
+Status: REQUIRED FOR APPLICATION
+
+
+OTHER VENDORS:
+─────────────────────────────────────────────────────────────────────────────
+Component                                 Size      Status           Action
+─────────────────────────────────────────────────────────────────────────────
+jquery/jquery-3.7.1.min.js                86 KB     REQUIRED         KEEP
+datatables/ (all minified)                132 KB    REQUIRED         KEEP
+sweetalert2/sweetalert2.all.min.js        77 KB     REQUIRED         KEEP
+qrcode/html5-qrcode.min.js                368 KB    REQUIRED         KEEP
+animate/animate.min.css                   71 KB     REQUIRED         KEEP
+─────────────────────────────────────────────────────────────────────────────
+Total: 734 KB | All properly minified ✓
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 5: SUMMARY STATISTICS
+═══════════════════════════════════════════════════════════════════════════════
+
+TOTAL FILES:
+  CSS Files:        23 files
+    Active:         12 files
+    Unused:         11 files
+    
+  JS Files:         23 files
+    Active:         12 files
+    Unused:         11 files
+    
+  Image Files:      7 files
+    OK:             6 files
+    Duplicates:     1 file (favicon.png)
+
+TOTAL SIZE:         31 MB
+  CSS:              236 KB
+  JS:               336 KB
+  Images:           284 KB
+  Vendor:           29 MB
+    FontAwesome:    25 MB (80%)
+    Bootstrap:      1.2 MB
+    Fonts:          1.7 MB
+    Other:          734 KB
+
+MINIFICATION STATUS:
+  CSS:              13 minified / 10 unminified
+  JS:               11 minified / 12 unminified
+  Overall:          Inconsistent ✗
+
+DUPLICATES FOUND:    3 instances
+  1. all.css & all.min.css
+  2. favicon.png (two locations)
+  3. Multiple mobile CSS files
+
+DEBUG STATEMENTS:    113+ console.log calls found
+  Files affected:   10+ custom JS files
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Generated: 2026-01-04
+For updates, see: /home/zakee/homeupdate/docs/STATIC_FILES_AUDIT.md

@@ -81,7 +81,7 @@ class WhatsAppService:
                 'fields': 'name,language,components,parameter_format'
             }
             
-            response = requests.get(url, headers=self._get_headers(), params=params)
+            response = requests.get(url, headers=self._get_headers(), params=params, timeout=10)
             data = response.json()
             
             templates = data.get('data', [])
@@ -152,7 +152,7 @@ class WhatsAppService:
         }
         
         try:
-            response = requests.post(url, headers=self._get_headers(), json=payload)
+            response = requests.post(url, headers=self._get_headers(), json=payload, timeout=10)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -222,7 +222,8 @@ class WhatsAppService:
                     url,
                     headers={'Authorization': f'Bearer {self.token}'},
                     files=files,
-                    data=data
+                    data=data,
+                    timeout=30
                 )
                 
                 response.raise_for_status()
@@ -329,7 +330,7 @@ class WhatsAppService:
         logger.debug(f"Payload: {payload}")
         
         try:
-            response = requests.post(url, headers=self._get_headers(), json=payload)
+            response = requests.post(url, headers=self._get_headers(), json=payload, timeout=10)
             
             logger.debug(f"Response: {response.status_code} - {response.text}")
             

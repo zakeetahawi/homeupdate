@@ -87,9 +87,7 @@
 {% endblock %}
 
 {% block messages_content %}
-<div class="page-header">
-    <h4><i class="fas fa-paper-plane me-2"></i>{{ page_title }}</h4>
-</div>
+{% include 'components/page_header.html' with title=page_title icon='fas fa-paper-plane' %}
 
 <!-- Search -->
 <div class="row mb-3">

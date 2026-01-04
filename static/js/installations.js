@@ -31,10 +31,20 @@ function updateInstallationStatus(installationId, newStatus) {
 
 // إضافة دفعة
 function addPayment(installationId) {
-    const amount = document.getElementById('payment-amount').value;
-    const paymentType = document.getElementById('payment-type').value;
-    const paymentMethod = document.getElementById('payment-method').value;
-    const notes = document.getElementById('payment-notes').value;
+    const amountEl = document.getElementById('payment-amount');
+    const paymentTypeEl = document.getElementById('payment-type');
+    const paymentMethodEl = document.getElementById('payment-method');
+    const notesEl = document.getElementById('payment-notes');
+    
+    if (!amountEl || !paymentTypeEl || !paymentMethodEl) {
+        console.error('Required form elements not found');
+        return;
+    }
+    
+    const amount = amountEl.value;
+    const paymentType = paymentTypeEl.value;
+    const paymentMethod = paymentMethodEl.value;
+    const notes = notesEl ? notesEl.value : '';
 
     if (!amount || amount <= 0) {
         showNotification('يرجى إدخال مبلغ صحيح', 'error');

@@ -4,20 +4,23 @@
 
 {% block title %}قائمة الشكاوى - نظام الخواجه{% endblock %}
 
+{% block meta_tags %}
+    <meta name="description" content="إدارة شكاوى العملاء في نظام الخواجه - تسجيل، متابعة، وحل الشكاوى بكفاءة عالية لضمان رضا العملاء">
+    <meta name="keywords" content="إدارة الشكاوى, شكاوى العملاء, خدمة العملاء, حل المشاكل, دعم العملاء">
+    <meta property="og:title" content="قائمة الشكاوى - نظام الخواجه">
+    <meta property="og:type" content="website">
+{% endblock %}
+
 {% block extra_css %}
 <!-- Select2 CSS for enhanced dropdowns -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
 <style>
+    /* Complaint Row Status Colors - FUNCTIONAL */
     .complaint-row {
-        background: white;
-        border: 1px solid #dee2e6;
-        margin-bottom: 1rem;
-        padding: 1rem;
-        border-left: 4px solid;
+        border-left: 4px solid #dee2e6;
     }
-
     .complaint-row.new { border-left-color: #007bff; }
     .complaint-row.in_progress { border-left-color: #ffc107; }
     .complaint-row.resolved { border-left-color: #28a745; }
@@ -27,6 +30,7 @@
     .complaint-row.overdue { border-left-color: #dc3545; }
     .complaint-row.escalated { border-left-color: #6f42c1; }
 
+    /* Priority Indicators - FUNCTIONAL */
     .priority-indicator {
         width: 12px;
         height: 12px;
@@ -34,508 +38,47 @@
         display: inline-block;
         margin-left: 5px;
     }
-
     .priority-urgent { background-color: #dc3545; }
     .priority-high { background-color: #fd7e14; }
     .priority-medium { background-color: #ffc107; }
     .priority-low { background-color: #20c997; }
 
+    /* Bulk Actions Toggle - FUNCTIONAL */
     .bulk-actions {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        padding: 1rem;
-        margin-bottom: 1rem;
         display: none;
     }
-
     .bulk-actions.show {
         display: block;
-    }
-
-    /* تحسينات الجدول والبطاقات */
-    .main-content {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        min-height: 100vh;
-        padding: 2rem 0;
-    }
-
-    .container-fluid {
-        max-width: 1400px;
-    }
-
-    .page-header {
-        background: white;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        border: 1px solid #dee2e6;
-    }
-
-    .page-header h1 {
-        color: #2c3e50;
-        font-weight: 600;
-        margin: 0;
-        font-size: 1.8rem;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    }
-
-    .page-header .breadcrumb {
-        background: transparent;
-        padding: 0;
-        margin: 0.5rem 0 0 0;
-    }
-
-    .page-header .breadcrumb-item {
-        color: #6c757d;
-        font-weight: 500;
-    }
-
-    .page-header .breadcrumb-item.active {
-        color: #667eea;
-        font-weight: 600;
-    }
-
-    .complaints-table-container {
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        border: 1px solid #dee2e6;
-    }
-
-    .table-responsive {
-        border-radius: 12px;
-        overflow: hidden;
-    }
-
-    .table {
-        margin: 0;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .table thead th {
-        background: linear-gradient(135deg, #343a40 0%, #495057 100%);
-        color: white;
-        border: none;
-        padding: 1rem 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        font-size: 0.85rem;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        border-bottom: 3px solid #007bff;
-    }
-
-    .table tbody tr {
-        transition: all 0.3s ease;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-    }
-
-    .table tbody tr:hover {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-
-    .table tbody td {
-        padding: 1.25rem 1rem;
-        vertical-align: middle;
-        border: none;
-        font-weight: 500;
-    }
-
-    .badge {
-        padding: 0.6rem 1rem;
-        border-radius: 25px;
-        font-weight: 600;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-
-    .badge-success {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        color: white;
-    }
-
-    .badge-warning {
-        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-        color: #212529;
-    }
-
-    .badge-danger {
-        background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
-        color: white;
-    }
-
-    .badge-info {
-        background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);
-        color: white;
-    }
-
-    .badge-secondary {
-        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-        color: white;
-    }
-
-    .badge-primary {
-        background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
-        color: white;
-    }
-
-    .btn-group .btn {
-        border-radius: 8px;
-        margin: 0 2px;
-        padding: 0.5rem 1rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        border: 2px solid transparent;
-    }
-
-    .btn-group .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-
-    .btn-sm {
-        font-size: 0.8rem;
-        padding: 0.4rem 0.8rem;
-    }
-
-    .pagination {
-        justify-content: center;
-        margin: 2rem 0;
-    }
-
-    .pagination .page-link {
-        border: none;
-        border-radius: 10px;
-        margin: 0 3px;
-        padding: 0.75rem 1rem;
-        color: #667eea;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        background: white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .pagination .page-link:hover {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-    }
-
-    .pagination .page-item.active .page-link {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-    }
-
-    /* تحسينات الإجراءات المجمعة */
-    .bulk-actions {
-        background: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        border: 1px solid rgba(255,255,255,0.8);
-        display: none;
-    }
-
-    .bulk-actions.show {
-        display: block;
-        animation: slideDown 0.3s ease;
-    }
-
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .bulk-actions .form-label {
-        font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 0.5rem;
-    }
-
-    .bulk-actions .form-control,
-    .bulk-actions .form-select {
-        border-radius: 10px;
-        border: 2px solid #e9ecef;
-        padding: 0.75rem 1rem;
-        transition: all 0.3s ease;
-    }
-
-    .bulk-actions .form-control:focus,
-    .bulk-actions .form-select:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-    }
-
-    .bulk-actions .btn {
-        border-radius: 10px;
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-
-    .bulk-actions .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-
-    /* تحسينات عامة إضافية */
-    .text-decoration-none:hover {
-        text-decoration: none !important;
-    }
-
-    .fw-semibold {
-        font-weight: 600 !important;
-    }
-
-    .gap-3 {
-        gap: 1rem !important;
-    }
-
-    /* تحسينات الأزرار */
-    .btn-primary {
-        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-        border: none;
-        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
-    }
-
-    .btn-primary:hover {
-        background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
-        box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
-    }
-
-    .btn-secondary {
-        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-        border: none;
-        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
-    }
-
-    .btn-secondary:hover {
-        background: linear-gradient(135deg, #495057 0%, #343a40 100%);
-        box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
-    }
-
-    .btn-info {
-        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-        border: none;
-        box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
-    }
-
-    .btn-info:hover {
-        background: linear-gradient(135deg, #138496 0%, #0f6674 100%);
-        box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4);
-    }
-
-    /* تحسينات الفلاتر المتقدمة */
-    .filter-card {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border: 1px solid #dee2e6;
-        border-radius: 12px;
-        color: #495057;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        overflow: hidden;
-        position: relative;
-    }
-
-    .filter-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%);
-        pointer-events: none;
-    }
-
-    .filter-card .card-header {
-        background: linear-gradient(135deg, #343a40 0%, #495057 100%);
-        border-bottom: 1px solid #dee2e6;
-        color: white;
-        padding: 1rem 1.5rem;
-        backdrop-filter: blur(10px);
-    }
-
-    .filter-card .card-header h5 {
-        margin: 0;
-        font-weight: 600;
-        font-size: 1rem;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-    }
-
-    .filter-card .card-body {
-        padding: 1.5rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .filter-card .form-label {
-        color: #495057 !important;
-        font-weight: 600;
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .filter-card .form-control,
-    .filter-card .form-select {
-        background: white;
-        border: 1px solid #ced4da;
-        color: #495057;
-        border-radius: 8px;
-        padding: 0.5rem 0.75rem;
-        font-weight: 400;
-        transition: all 0.3s ease;
-        font-size: 0.9rem;
-    }
-
-    .filter-card .form-control::placeholder {
-        color: #6c757d;
-        font-weight: 400;
-    }
-
-    .filter-card .form-control:focus,
-    .filter-card .form-select:focus {
-        background: white;
-        border-color: #007bff;
-        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-        color: #495057;
-    }
-
-    .filter-card .btn {
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
-        font-weight: 600;
-        font-size: 0.9rem;
-        transition: all 0.3s ease;
-        border: 1px solid transparent;
-    }
-
-    .filter-card .btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    .filter-card .btn-light {
-        background: #007bff;
-        color: white;
-        border-color: #007bff;
-    }
-
-    .filter-card .btn-light:hover {
-        background: #0056b3;
-        color: white;
-        border-color: #0056b3;
-    }
-
-    .filter-card .btn-outline-light {
-        background: white;
-        color: #6c757d;
-        border-color: #6c757d;
-    }
-
-    .filter-card .btn-outline-light:hover {
-        background: #6c757d;
-        color: white;
-        border-color: #6c757d;
-    }
-
-    .filter-card .btn-info {
-        background: #17a2b8;
-        border-color: #17a2b8;
-        color: white;
-    }
-
-    .filter-card .btn-info:hover {
-        background: #138496;
-        border-color: #138496;
-    }
-
-    .filter-card .btn-warning {
-        background: #ffc107;
-        color: #212529;
-        border-color: #ffc107;
-    }
-
-    .filter-card .btn-warning:hover {
-        background: #e0a800;
-        border-color: #e0a800;
-    }
-
-    .advanced-filter {
-        transition: all 0.3s ease;
-        opacity: 0;
-        transform: translateY(-10px);
-        margin-top: 0.75rem;
-    }
-
-    .advanced-filter[style*="block"] {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    .filter-card.advanced-mode {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="main-content">
 <div class="container-fluid">
     <!-- Page Header -->
-    <div class="page-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h1>
-                    <i class="fas fa-exclamation-triangle me-3"></i>
-                    قائمة الشكاوى
-                </h1>
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="{% url 'complaints:dashboard' %}">لوحة التحكم</a></li>
-                        <li class="breadcrumb-item active" aria-current="page">قائمة الشكاوى</li>
-                    </ol>
-                </nav>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{% url 'complaints:complaint_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus me-1"></i>
-                    شكوى جديدة
-                </a>
-                <button type="button" class="btn btn-secondary" onclick="showBulkActions()">
-                    <i class="fas fa-tasks me-1"></i>
-                    إجراءات مجمعة
-                </button>
-                <a href="{% url 'complaints:analysis' %}" class="btn btn-info">
-                    <i class="fas fa-chart-line me-1"></i>
-                    تحليل الشكاوى
-                </a>
-            </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-exclamation-triangle"></i>
+            قائمة الشكاوى
+        </h2>
+        <div class="btn-group">
+            <a href="{% url 'complaints:complaint_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>
+                شكوى جديدة
+            </a>
+            <button type="button" class="btn btn-secondary" onclick="showBulkActions()">
+                <i class="fas fa-tasks me-1"></i>
+                إجراءات مجمعة
+            </button>
+            <a href="{% url 'complaints:analysis' %}" class="btn btn-info">
+                <i class="fas fa-chart-line me-1"></i>
+                تحليل الشكاوى
+            </a>
         </div>
     </div>
 
     <!-- فلاتر البحث المحسنة -->
-    <div class="filter-card">
+    <div class="card mb-4">
         <div class="card-header">
             <h5 class="mb-0"><i class="fas fa-filter me-2"></i>فلاتر البحث المتقدمة</h5>
         </div>
@@ -706,8 +249,9 @@
     </div>
 
     <!-- قائمة الشكاوى -->
+    <div class="card">
+        <div class="card-body p-0">
     {% if complaints %}
-        <div class="complaints-table-container">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead>
@@ -839,14 +383,12 @@
                     </tbody>
                 </table>
             </div>
-        </div>
 
-        <!-- Pagination -->
-        {% load pagination_tags %}
-        {% render_pagination page_obj %}
+            <!-- Pagination -->
+            {% load pagination_tags %}
+            {% render_pagination page_obj %}
 
     {% else %}
-        <div class="complaints-table-container">
             <div class="text-center py-5">
                 <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
                 <h3 class="text-muted mb-3">لا توجد شكاوى</h3>
@@ -862,9 +404,9 @@
                     </a>
                 </div>
             </div>
-        </div>
     {% endif %}
-</div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 

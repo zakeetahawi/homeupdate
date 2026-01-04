@@ -13,7 +13,7 @@ import gc
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, max_retries=3, default_retry_delay=120, autoretry_for=(Exception,))
 def cleanup_database_connections(self):
     """
     تنظيف اتصالات قاعدة البيانات الخاملة
@@ -56,7 +56,7 @@ def cleanup_database_connections(self):
         }
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, autoretry_for=(Exception,))
 def cleanup_expired_cache(self):
     """
     تنظيف التخزين المؤقت المنتهي الصلاحية
@@ -81,7 +81,7 @@ def cleanup_expired_cache(self):
         }
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, max_retries=3, default_retry_delay=120, autoretry_for=(Exception,))
 def monitor_database_connections(self):
     """
     مراقبة اتصالات قاعدة البيانات
@@ -131,7 +131,7 @@ def monitor_database_connections(self):
         }
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, max_retries=2, default_retry_delay=300, autoretry_for=(Exception,))
 def restart_celery_workers_if_needed(self):
     """
     إعادة تشغيل عمال Celery إذا لزم الأمر
@@ -183,7 +183,7 @@ def restart_celery_workers_if_needed(self):
         }
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, max_retries=2, default_retry_delay=300, autoretry_for=(Exception,))
 def system_health_check(self):
     """
     فحص صحة النظام الشامل

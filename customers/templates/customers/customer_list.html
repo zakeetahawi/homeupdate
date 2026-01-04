@@ -3,16 +3,24 @@
 
 {% block title %}قائمة العملاء - نظام الخواجه{% endblock %}
 
+{% block meta_tags %}
+    <meta name="description" content="قائمة شاملة بجميع عملاء نظام الخواجه - إدارة معلومات العملاء، الاتصال، العناوين، وتاريخ التعاملات">
+    <meta name="keywords" content="قائمة العملاء, إدارة العملاء, بيانات العملاء, عملاء الشركة, سجل العملاء">
+    <meta property="og:title" content="قائمة العملاء - نظام الخواجه">
+    <meta property="og:type" content="website">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2 class="mb-3">قائمة العملاء</h2>
-        </div>
-        <div class="col-md-4 text-end">
-            <a href="{% url 'customers:customer_create' %}" class="btn"
-                style="background-color: var(--primary); color: white;">
-                <i class="fas fa-plus"></i> إضافة عميل جديد
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-users"></i>
+            قائمة العملاء
+        </h2>
+        <div class="btn-group">
+            <a href="{% url 'customers:customer_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>
+                إضافة عميل جديد
             </a>
         </div>
     </div>

@@ -1,0 +1,241 @@
+{% comment %}
+===========================================
+Component Library - Cards
+===========================================
+استخدام design-tokens.css للألوان والتباعد
+دعم كامل لـ RTL
+
+الأنواع المتاحة:
+- info_card: بطاقة معلومات عامة
+- stat_card: بطاقة إحصائية (مع أيقونة وعدد)
+- collapsible_card: بطاقة قابلة للطي
+- gradient_card: بطاقة بخلفية متدرجة
+- image_card: بطاقة بصورة
+
+الاستخدام:
+{% include 'components/cards.html' with type='stat_card' title='الطلبات' count=150 icon='fas fa-shopping-cart' variant='primary' %}
+{% include 'components/cards.html' with type='info_card' title='معلومات العميل' content='...' %}
+===========================================
+{% endcomment %}
+
+{% comment %}=== INFO CARD - بطاقة معلومات ==={% endcomment %}
+{% if type == 'info_card' or type == 'card' %}
+<div class="card {{ class }}" 
+     {% if id %}id="{{ id }}"{% endif %}
+     style="border-radius: var(--border-radius-md); box-shadow: var(--shadow-sm); overflow: hidden;">
+    {% if title %}
+    <div class="card-header {% if header_class %}{{ header_class }}{% endif %}"
+         style="border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" style="font-weight: var(--font-weight-semibold);">
+                {% if icon %}<i class="{{ icon }} me-2"></i>{% endif %}
+                {{ title }}
+            </h5>
+            {% if actions %}
+            <div class="btn-group btn-group-sm">
+                {{ actions|safe }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="card-body {% if body_class %}{{ body_class }}{% endif %}">
+        {{ content|safe }}
+    </div>
+    
+    {% if footer %}
+    <div class="card-footer {% if footer_class %}{{ footer_class }}{% endif %} text-muted">
+        {{ footer|safe }}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% comment %}=== STAT CARD - بطاقة إحصائية ==={% endcomment %}
+{% if type == 'stat_card' %}
+<div class="card stats-card {{ class }}" 
+     {% if id %}id="{{ id }}"{% endif %}
+     style="border: none; border-radius: var(--border-radius-md); box-shadow: var(--shadow-md); transition: transform var(--transition-normal);">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h6 class="text-muted mb-2" style="font-weight: var(--font-weight-medium); font-size: 0.875rem;">
+                    {{ title }}
+                </h6>
+                <h2 class="mb-0" style="font-weight: var(--font-weight-bold);">
+                    {{ count|default:0 }}
+                </h2>
+                {% if subtitle %}
+                <p class="text-muted mb-0 mt-2" style="font-size: 0.875rem;">
+                    {{ subtitle }}
+                </p>
+                {% endif %}
+            </div>
+            {% if icon %}
+            <div class="rounded-circle p-3" 
+                 style="background: var(--{{ variant|default:'primary' }}-gradient); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                <i class="{{ icon }} text-white" style="font-size: var(--icon-size-lg);"></i>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if trend %}
+        <div class="mt-3 d-flex align-items-center">
+            {% if trend == 'up' %}
+            <i class="fas fa-arrow-up text-success me-2"></i>
+            <span class="text-success" style="font-size: 0.875rem; font-weight: var(--font-weight-medium);">{{ trend_value }}%</span>
+            {% elif trend == 'down' %}
+            <i class="fas fa-arrow-down text-danger me-2"></i>
+            <span class="text-danger" style="font-size: 0.875rem; font-weight: var(--font-weight-medium);">{{ trend_value }}%</span>
+            {% else %}
+            <i class="fas fa-minus text-muted me-2"></i>
+            <span class="text-muted" style="font-size: 0.875rem;">{{ trend_label|default:'بدون تغيير' }}</span>
+            {% endif %}
+            {% if trend_label %}
+            <span class="text-muted ms-2" style="font-size: 0.75rem;">{{ trend_label }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% comment %}=== COLLAPSIBLE CARD - بطاقة قابلة للطي ==={% endcomment %}
+{% if type == 'collapsible_card' %}
+<div class="card {{ class }}" 
+     {% if id %}id="{{ id }}"{% endif %}
+     style="border-radius: var(--border-radius-md); box-shadow: var(--shadow-sm);">
+    <div class="card-header" 
+         style="cursor: pointer; border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;"
+         data-bs-toggle="collapse" 
+         data-bs-target="#collapse-{{ collapse_id|default:'card' }}" 
+         aria-expanded="{{ expanded|default:'false' }}"
+         aria-controls="collapse-{{ collapse_id|default:'card' }}">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" style="font-weight: var(--font-weight-semibold);">
+                {% if icon %}<i class="{{ icon }} me-2"></i>{% endif %}
+                {{ title }}
+            </h5>
+            <i class="fas fa-chevron-down transition" style="transition: transform var(--transition-normal);"></i>
+        </div>
+    </div>
+    
+    <div id="collapse-{{ collapse_id|default:'card' }}" 
+         class="collapse {% if expanded %}show{% endif %}"
+         {% if parent_id %}data-bs-parent="#{{ parent_id }}"{% endif %}>
+        <div class="card-body">
+            {{ content|safe }}
+        </div>
+        {% if footer %}
+        <div class="card-footer text-muted">
+            {{ footer|safe }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% comment %}=== GRADIENT CARD - بطاقة بخلفية متدرجة ==={% endcomment %}
+{% if type == 'gradient_card' %}
+<div class="card text-white {{ class }}" 
+     {% if id %}id="{{ id }}"{% endif %}
+     style="background: var(--{{ variant|default:'primary' }}-gradient); border: none; border-radius: var(--border-radius-lg); box-shadow: var(--shadow-lg);">
+    {% if title %}
+    <div class="card-header bg-transparent border-0">
+        <h5 class="mb-0 text-white" style="font-weight: var(--font-weight-bold);">
+            {% if icon %}<i class="{{ icon }} me-2"></i>{% endif %}
+            {{ title }}
+        </h5>
+    </div>
+    {% endif %}
+    
+    <div class="card-body">
+        {{ content|safe }}
+    </div>
+    
+    {% if footer %}
+    <div class="card-footer bg-transparent border-0">
+        {{ footer|safe }}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% comment %}=== IMAGE CARD - بطاقة بصورة ==={% endcomment %}
+{% if type == 'image_card' %}
+<div class="card {{ class }}" 
+     {% if id %}id="{{ id }}"{% endif %}
+     style="border-radius: var(--border-radius-md); box-shadow: var(--shadow-md); overflow: hidden;">
+    {% if image %}
+    <img src="{{ image }}" 
+         class="card-img-top" 
+         alt="{{ image_alt|default:title }}"
+         style="object-fit: cover; max-height: {{ image_height|default:'200px' }};">
+    {% endif %}
+    
+    <div class="card-body">
+        {% if title %}
+        <h5 class="card-title" style="font-weight: var(--font-weight-semibold);">
+            {{ title }}
+        </h5>
+        {% endif %}
+        
+        {% if subtitle %}
+        <h6 class="card-subtitle mb-2 text-muted" style="font-weight: var(--font-weight-medium);">
+            {{ subtitle }}
+        </h6>
+        {% endif %}
+        
+        {{ content|safe }}
+    </div>
+    
+    {% if actions or footer %}
+    <div class="card-footer bg-transparent">
+        {% if actions %}
+        <div class="btn-group">
+            {{ actions|safe }}
+        </div>
+        {% else %}
+        {{ footer|safe }}
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% comment %}=== HORIZONTAL CARD - بطاقة أفقية ==={% endcomment %}
+{% if type == 'horizontal_card' %}
+<div class="card {{ class }}" 
+     {% if id %}id="{{ id }}"{% endif %}
+     style="border-radius: var(--border-radius-md); box-shadow: var(--shadow-sm);">
+    <div class="row g-0">
+        {% if image %}
+        <div class="col-md-4">
+            <img src="{{ image }}" 
+                 class="img-fluid rounded-start" 
+                 alt="{{ image_alt|default:title }}"
+                 style="height: 100%; object-fit: cover;">
+        </div>
+        {% endif %}
+        
+        <div class="{% if image %}col-md-8{% else %}col-md-12{% endif %}">
+            <div class="card-body">
+                {% if title %}
+                <h5 class="card-title" style="font-weight: var(--font-weight-semibold);">
+                    {{ title }}
+                </h5>
+                {% endif %}
+                
+                {{ content|safe }}
+            </div>
+            
+            {% if footer %}
+            <div class="card-footer bg-transparent">
+                {{ footer|safe }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}

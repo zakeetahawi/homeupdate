@@ -92,37 +92,6 @@ class InspectionNotificationForm(forms.ModelForm):
             raise ValidationError(_('لا يمكن تحديد موعد في الماضي'))
         return scheduled_for
 
-class InspectionFilterForm(forms.Form):
-    search = forms.CharField(required=False, widget=forms.TextInput(attrs={
-        'class': 'form-control',
-        'placeholder': _('بحث...')
-    }))
-    status = forms.ChoiceField(
-        choices=[('', _('كل الحالات'))] + Inspection.STATUS_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    date_from = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={
-            'type': 'date',
-            'class': 'form-control'
-        })
-    )
-    date_to = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={
-            'type': 'date',
-            'class': 'form-control'
-        })
-    )
-    branch = forms.ModelChoiceField(
-        queryset=Branch.objects.all(),
-        required=False,
-        empty_label=_('كل الفروع'),
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-
 class InspectionForm(forms.ModelForm):
     responsible_employee = forms.ModelChoiceField(
         queryset=None,

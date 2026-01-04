@@ -580,33 +580,6 @@ class DriverForm(forms.ModelForm):
         }
 
 
-class ModificationReportForm(forms.ModelForm):
-    """نموذج تقرير التعديل"""
-    class Meta:
-        model = ModificationReport
-        fields = ['report_file', 'description']
-        widgets = {
-            'description': forms.Textarea(attrs={
-                'rows': 4,
-                'placeholder': 'وصف التعديل المطلوب...'
-            }),
-        }
-
-    def clean_report_file(self):
-        file = self.cleaned_data.get('report_file')
-        if file:
-            # التحقق من نوع الملف
-            allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
-            if file.content_type not in allowed_types:
-                raise ValidationError(_('يجب أن يكون الملف من نوع PDF أو صورة'))
-            
-            # التحقق من حجم الملف (5MB كحد أقصى)
-            if file.size > 5 * 1024 * 1024:
-                raise ValidationError(_('حجم الملف يجب أن يكون أقل من 5 ميجابايت'))
-
-        return file
-
-
 class ReceiptMemoForm(forms.ModelForm):
     """نموذج مذكرة الاستلام"""
     class Meta:
@@ -822,17 +795,6 @@ class DailyScheduleForm(forms.Form):
     )
 
 
-class ModificationReportForm_new(forms.ModelForm):
-    """نموذج تقرير التعديل الجديد"""
-    class Meta:
-        model = ModificationReport
-        fields = ['report_file', 'description', 'completion_notes']
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
-            'completion_notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
-        }
-
-
 class InstallationAnalyticsForm(forms.ModelForm):
     """نموذج تحليل التركيبات"""
     class Meta:
@@ -990,78 +952,3 @@ class ScheduleEditForm(forms.ModelForm):
                 raise ValidationError(_('لا يمكن جدولة تركيب في وقت ماضي'))
 
         return cleaned_data
-
-
-class DailyScheduleForm(forms.Form):
-    """نموذج فلترة الجدول اليومي للتركيبات"""
-    date = forms.DateField(
-        label='التاريخ',
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date',
-            'id': 'date-filter'
-        }),
-        initial=timezone.now().date()
-    )
-    
-    status = forms.ChoiceField(
-        label='الحالة',
-        choices=[
-            ('', 'جميع الحالات'),
-            ('scheduled', 'مجدول'),
-            ('in_installation', 'قيد التركيب'),
-            ('completed', 'مكتمل'),
-            ('cancelled', 'ملغي'),
-            ('modification_required', 'يحتاج تعديل'),
-            ('modification_in_progress', 'تعديل قيد التنفيذ'),
-            ('modification_completed', 'تعديل مكتمل'),
-        ],
-        widget=forms.Select(attrs={
-            'class': 'form-control',
-            'id': 'status-filter'
-        }),
-        required=False
-    )
-    
-    team = forms.ModelChoiceField(
-        label='الفريق',
-        queryset=InstallationTeam.objects.filter(is_active=True),
-        widget=forms.Select(attrs={
-            'class': 'form-control',
-            'id': 'team-filter'
-        }),
-        required=False,
-        empty_label='جميع الفرق'
-    )
-    
-    salesperson = forms.ModelChoiceField(
-        label='البائع',
-        queryset=Salesperson.objects.filter(is_active=True),
-        widget=forms.Select(attrs={
-            'class': 'form-control',
-            'id': 'salesperson-filter'
-        }),
-        required=False,
-        empty_label='جميع البائعين'
-    )
-    
-    branch = forms.ModelChoiceField(
-        label='الفرع',
-        queryset=Branch.objects.filter(is_active=True),
-        widget=forms.Select(attrs={
-            'class': 'form-control',
-            'id': 'branch-filter'
-        }),
-        required=False,
-        empty_label='جميع الفروع'
-    )
-    
-    search = forms.CharField(
-        label='البحث',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'رقم الطلب، اسم العميل، رقم الهاتف...',
-            'id': 'search-filter'
-        }),
-        required=False
-    )

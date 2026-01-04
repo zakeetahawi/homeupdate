@@ -1,0 +1,13 @@
+{% load static %}
+
+<button type="{{ type|default:'button' }}" 
+        class="btn btn-{{ variant|default:'primary' }} {% if size %}btn-{{ size }}{% endif %} {% if class %}{{ class }}{% endif %}" 
+        {% if id %}id="{{ id }}"{% endif %}
+        {% if onclick %}onclick="{{ onclick }}"{% endif %}
+        {% if disabled %}disabled{% endif %}
+        {% if data_attrs %}{{ data_attrs|safe }}{% endif %}>
+    {% if icon %}
+    <i class="{{ icon }} {% if icon_position == 'right' %}ms-2{% else %}me-2{% endif %}"></i>
+    {% endif %}
+    {{ label }}
+</button>

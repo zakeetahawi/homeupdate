@@ -191,28 +191,16 @@
     <!-- Statistics -->
     <div class="row mb-4">
         <div class="col-lg-3 col-md-6">
-            <div class="stat-card">
-                <div class="stat-value text-primary">{{ user_stats.total_activities }}</div>
-                <div class="stat-label">إجمالي الأنشطة</div>
-            </div>
+            {% include 'components/stat_card.html' with value=user_stats.total_activities label='إجمالي الأنشطة' icon_color='primary' class='stat-card' %}
         </div>
         <div class="col-lg-3 col-md-6">
-            <div class="stat-card">
-                <div class="stat-value text-success">{{ user_stats.login_count }}</div>
-                <div class="stat-label">عدد تسجيلات الدخول</div>
-            </div>
+            {% include 'components/stat_card.html' with value=user_stats.login_count label='عدد تسجيلات الدخول' icon_color='success' class='stat-card' %}
         </div>
         <div class="col-lg-3 col-md-6">
-            <div class="stat-card">
-                <div class="stat-value text-info">{{ activities.paginator.count }}</div>
-                <div class="stat-label">الأنشطة المفلترة</div>
-            </div>
+            {% include 'components/stat_card.html' with value=activities.paginator.count label='الأنشطة المفلترة' icon_color='info' class='stat-card' %}
         </div>
         <div class="col-lg-3 col-md-6">
-            <div class="stat-card">
-                <div class="stat-value text-warning">{{ activities.paginator.num_pages }}</div>
-                <div class="stat-label">عدد الصفحات</div>
-            </div>
+            {% include 'components/stat_card.html' with value=activities.paginator.num_pages label='عدد الصفحات' icon_color='warning' class='stat-card' %}
         </div>
     </div>
 

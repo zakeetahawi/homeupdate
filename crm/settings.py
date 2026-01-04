@@ -309,26 +309,27 @@ if not DEBUG:
 
 # إعداد ALLOWED_HOSTS الآمن
 ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '0.0.0.0',  # للسماح بالوصول من جميع الواجهات
-    '[::1]',  # IPv6 localhost
-    '192.168.1.38',  # IP المحلي
     'elkhawaga.uk',
     'www.elkhawaga.uk',
-    '.elkhawaga.uk',  # جميع النطاقات الفرعية
+    '.elkhawaga.uk',
 ]
+
+# في بيئة التطوير فقط
+if DEBUG:
+    ALLOWED_HOSTS.extend([
+        'localhost',
+        '127.0.0.1',
+        '[::1]',
+        '192.168.1.38',
+    ])
 
 # إضافة نطاقات إضافية من متغيرات البيئة
 if extra_hosts := os.environ.get('EXTRA_ALLOWED_HOSTS'):
     ALLOWED_HOSTS.extend([host.strip() for host in extra_hosts.split(',')])
 
-# في التطوير فقط - السماح لجميع المضيفين المحليين
+# في التطوير فقط - السماح للشبكات المحلية فقط
 if DEBUG and os.environ.get('DEVELOPMENT_MODE'):
     ALLOWED_HOSTS.extend([
-        '192.168.*.*',
-        '10.*.*.*',
-        '*.local',
         '*.ngrok.io',
         '*.trycloudflare.com',
     ])
@@ -387,6 +388,7 @@ AUTHENTICATION_BACKENDS = [
 MIDDLEWARE = [
     # الأساسيات - خفيفة وسريعة
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.gzip.GZipMiddleware',  # ← GZIP Compression for 70-85% size reduction
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -396,7 +398,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     
     # ضروري للنظام
-    'orders.middleware.CurrentUserMiddleware',
     'accounts.middleware.current_user.CurrentUserMiddleware',
     
     # تتبع جلسات المستخدمين
@@ -675,6 +676,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour',
+    },
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
 }
 
@@ -822,7 +831,7 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS  # استخدام نفس القائمة
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_EXPOSE_HEADERS = ['*']
 

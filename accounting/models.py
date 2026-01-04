@@ -9,6 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from django.db.models import Sum, F, Q
+from django.utils.functional import cached_property
 
 
 class AccountType(models.Model):
@@ -134,7 +135,7 @@ class Account(models.Model):
     def __str__(self):
         return f"{self.code} - {self.name}"
     
-    @property
+    @cached_property
     def full_path(self):
         """المسار الكامل للحساب في الشجرة"""
         path = [self.name]

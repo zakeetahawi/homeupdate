@@ -1,0 +1,145 @@
+{% comment %}
+===========================================
+Component Library - Meta Tags
+===========================================
+SEO, Open Graph, Twitter Cards support
+دعم كامل للغة العربية
+
+الاستخدام في base.html:
+<head>
+  {% include 'components/meta_tags.html' %}
+</head>
+
+الاستخدام في صفحة معينة:
+{% block meta %}
+  {% include 'components/meta_tags.html' with 
+    title='عنوان الصفحة'
+    description='وصف الصفحة هنا'
+    keywords='كلمة1، كلمة2، كلمة3'
+    og_type='article'
+    og_image='/static/img/page-image.jpg'
+  %}
+{% endblock %}
+===========================================
+{% endcomment %}
+
+{% load static %}
+
+{% comment %}=== BASIC META TAGS ==={% endcomment %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+{% comment %}=== DESCRIPTION & KEYWORDS ==={% endcomment %}
+<meta name="description" content="{{ description|default:'نظام الخواجه لإدارة علاقات العملاء - إدارة شاملة للطلبات، التصنيع، التركيبات، الشكاوى والمخزون. نظام متكامل لتتبع العملاء والطلبات بكفاءة عالية.' }}">
+
+<meta name="keywords" content="{{ keywords|default:'نظام الخواجه, إدارة علاقات العملاء, CRM, نظام الطلبات, إدارة المخزون, التصنيع, التركيبات, الشكاوى, elkhawaga' }}">
+
+<meta name="author" content="{{ author|default:'نظام الخواجه' }}">
+
+{% if robots %}
+<meta name="robots" content="{{ robots }}">
+{% else %}
+<meta name="robots" content="index, follow">
+{% endif %}
+
+{% comment %}=== LANGUAGE & LOCALE ==={% endcomment %}
+<meta name="language" content="Arabic">
+<meta http-equiv="content-language" content="ar">
+
+{% comment %}=== OPEN GRAPH (Facebook, LinkedIn) ==={% endcomment %}
+<meta property="og:locale" content="ar_SA">
+<meta property="og:type" content="{{ og_type|default:'website' }}">
+<meta property="og:title" content="{{ og_title|default:'نظام الخواجه لإدارة علاقات العملاء' }}">
+<meta property="og:description" content="{{ og_description|default:'نظام الخواجه المتكامل لإدارة العملاء، الطلبات، التصنيع، التركيبات والشكاوى.' }}">
+<meta property="og:url" content="{{ og_url|default:request.build_absolute_uri }}">
+<meta property="og:site_name" content="{{ site_name|default:'نظام الخواجه' }}">
+
+{% if og_image %}
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ og_image }}">
+<meta property="og:image:alt" content="{{ og_image_alt|default:'نظام الخواجه' }}">
+<meta property="og:image:width" content="{{ og_image_width|default:'1200' }}">
+<meta property="og:image:height" content="{{ og_image_height|default:'630' }}">
+{% else %}
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/logo.png' %}">
+<meta property="og:image:alt" content="نظام الخواجه">
+{% endif %}
+
+{% if og_type == 'article' %}
+<meta property="article:published_time" content="{{ article_published|default:'' }}">
+<meta property="article:modified_time" content="{{ article_modified|default:'' }}">
+<meta property="article:author" content="{{ article_author|default:'' }}">
+<meta property="article:section" content="{{ article_section|default:'' }}">
+<meta property="article:tag" content="{{ article_tags|default:'' }}">
+{% endif %}
+
+{% comment %}=== TWITTER CARD ==={% endcomment %}
+<meta name="twitter:card" content="{{ twitter_card|default:'summary_large_image' }}">
+<meta name="twitter:title" content="{{ twitter_title|default:'نظام الخواجه لإدارة العملاء' }}">
+<meta name="twitter:description" content="{{ twitter_description|default:'نظام الخواجه المتكامل لإدارة علاقات العملاء' }}">
+
+{% if twitter_image or og_image %}
+<meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ twitter_image|default:og_image }}">
+<meta name="twitter:image:alt" content="{{ twitter_image_alt|default:'نظام الخواجه' }}">
+{% else %}
+<meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/logo.png' %}">
+{% endif %}
+
+{% if twitter_site %}
+<meta name="twitter:site" content="{{ twitter_site }}">
+{% endif %}
+
+{% if twitter_creator %}
+<meta name="twitter:creator" content="{{ twitter_creator }}">
+{% endif %}
+
+{% comment %}=== MOBILE & PWA ==={% endcomment %}
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="{{ apple_status_bar|default:'default' }}">
+<meta name="apple-mobile-web-app-title" content="{{ app_title|default:'الخواجه' }}">
+<meta name="theme-color" content="{{ theme_color|default:'#007bff' }}">
+<meta name="msapplication-TileColor" content="{{ tile_color|default:'#007bff' }}">
+
+{% comment %}=== SECURITY ==={% endcomment %}
+<meta name="referrer" content="origin-when-cross-origin">
+
+{% if noindex %}
+<meta name="googlebot" content="noindex, nofollow">
+{% endif %}
+
+{% comment %}=== CANONICAL URL ==={% endcomment %}
+{% if canonical_url %}
+<link rel="canonical" href="{{ canonical_url }}">
+{% elif not is_paginated %}
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+{% endif %}
+
+{% comment %}=== ALTERNATE LANGUAGES ==={% endcomment %}
+{% if alternate_en %}
+<link rel="alternate" hreflang="en" href="{{ alternate_en }}">
+{% endif %}
+<link rel="alternate" hreflang="ar" href="{{ request.build_absolute_uri }}">
+<link rel="alternate" hreflang="x-default" href="{{ request.build_absolute_uri }}">
+
+{% comment %}=== PRECONNECT FOR PERFORMANCE ==={% endcomment %}
+{% if preconnect_domains %}
+  {% for domain in preconnect_domains %}
+  <link rel="preconnect" href="{{ domain }}" crossorigin>
+  {% endfor %}
+{% endif %}
+
+{% comment %}=== SCHEMA.ORG JSON-LD (Structured Data) ==={% endcomment %}
+{% if enable_schema %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "{{ schema_type|default:'Organization' }}",
+  "name": "{{ site_name|default:'نظام الخواجه' }}",
+  "url": "{{ request.scheme }}://{{ request.get_host }}",
+  "logo": "{{ request.scheme }}://{{ request.get_host }}{% static 'img/logo.png' %}",
+  "description": "{{ description|default:'نظام الخواجه المتكامل لإدارة علاقات العملاء' }}",
+  "inLanguage": "ar"
+}
+</script>
+{% endif %}

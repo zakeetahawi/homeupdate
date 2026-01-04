@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, name='sync_customer_debts')
+@shared_task(bind=True, name='sync_customer_debts', max_retries=3, default_retry_delay=300, autoretry_for=(Exception,))
 def sync_customer_debts_task(self):
     """
     مهمة مزامنة المديونيات مع الطلبات
@@ -50,7 +50,7 @@ def sync_customer_debts_task(self):
         }
 
 
-@shared_task(bind=True, name='create_debt_records')
+@shared_task(bind=True, name='create_debt_records', max_retries=3, default_retry_delay=180, autoretry_for=(Exception,))
 def create_debt_records_task(self):
     """
     مهمة إنشاء سجلات المديونيات للطلبات الجديدة
@@ -97,7 +97,7 @@ def create_debt_records_task(self):
         }
 
 
-@shared_task(bind=True, name='update_overdue_debts')
+@shared_task(bind=True, name='update_overdue_debts', max_retries=3, default_retry_delay=300, autoretry_for=(Exception,))
 def update_overdue_debts_task(self):
     """
     مهمة تحديث المديونيات المتأخرة
@@ -137,7 +137,7 @@ def update_overdue_debts_task(self):
         }
 
 
-@shared_task(bind=True, name='generate_debt_report')
+@shared_task(bind=True, name='generate_debt_report', max_retries=2, default_retry_delay=600, autoretry_for=(Exception,))
 def generate_debt_report_task(self):
     """
     مهمة إنشاء تقرير المديونيات الأسبوعي

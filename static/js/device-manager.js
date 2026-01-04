@@ -30,13 +30,13 @@ const DeviceManager = {
             const request = indexedDB.open(this.dbName, 1);
             
             request.onerror = () => {
-                console.error('❌ Failed to open IndexedDB:', request.error);
+                // console.error('❌ Failed to open IndexedDB:', request.error);
                 reject(request.error);
             };
             
             request.onsuccess = () => {
                 this.db = request.result;
-                console.log('✅ IndexedDB initialized');
+                // console.log('✅ IndexedDB initialized');
                 resolve(this.db);
             };
             
@@ -44,7 +44,7 @@ const DeviceManager = {
                 const db = e.target.result;
                 if (!db.objectStoreNames.contains(this.storeName)) {
                     db.createObjectStore(this.storeName);
-                    console.log('✅ IndexedDB object store created');
+                    // console.log('✅ IndexedDB object store created');
                 }
             };
         });
@@ -61,12 +61,12 @@ const DeviceManager = {
             const request = store.put(token, 'device_token');
             
             request.onsuccess = () => {
-                console.log('✅ Device Token saved:', token);
+                // console.log('✅ Device Token saved:', token);
                 resolve();
             };
             
             request.onerror = () => {
-                console.error('❌ Failed to save token:', request.error);
+                // console.error('❌ Failed to save token:', request.error);
                 reject(request.error);
             };
         });
@@ -85,15 +85,15 @@ const DeviceManager = {
             request.onsuccess = () => {
                 const token = request.result;
                 if (token) {
-                    console.log('✅ Device Token loaded:', token.substring(0, 8) + '...');
+                    // console.log('✅ Device Token loaded:', token.substring(0, 8) + '...');
                 } else {
-                    console.log('⚠️ No device token found');
+                    // console.log('⚠️ No device token found');
                 }
                 resolve(token);
             };
             
             request.onerror = () => {
-                console.error('❌ Failed to read token:', request.error);
+                // console.error('❌ Failed to read token:', request.error);
                 reject(request.error);
             };
         });
@@ -110,12 +110,12 @@ const DeviceManager = {
             const request = store.delete('device_token');
             
             request.onsuccess = () => {
-                console.log('✅ Device Token deleted');
+                // console.log('✅ Device Token deleted');
                 resolve();
             };
             
             request.onerror = () => {
-                console.error('❌ Failed to delete token:', request.error);
+                // console.error('❌ Failed to delete token:', request.error);
                 reject(request.error);
             };
         });
@@ -157,7 +157,7 @@ const DeviceManager = {
             ctx.fillText('Elkhawaga Device', 4, 17);
             return canvas.toDataURL();
         } catch(e) {
-            console.error('Canvas fingerprint failed:', e);
+            // console.error('Canvas fingerprint failed:', e);
             return '';
         }
     },
@@ -181,7 +181,7 @@ const DeviceManager = {
             }
             return { vendor: '', renderer: '' };
         } catch(e) {
-            console.error('WebGL fingerprint failed:', e);
+            // console.error('WebGL fingerprint failed:', e);
             return { vendor: '', renderer: '' };
         }
     },
@@ -236,7 +236,7 @@ const DeviceManager = {
                 }, 2000);
             });
         } catch(e) {
-            console.error('Audio fingerprint failed:', e);
+            // console.error('Audio fingerprint failed:', e);
             return '';
         }
     },
@@ -246,7 +246,7 @@ const DeviceManager = {
      * تتضمن فقط العوامل المستقرة
      */
     async generateFingerprint() {
-        console.log('🔐 Generating enhanced fingerprint...');
+        // console.log('🔐 Generating enhanced fingerprint...');
         
         // 1. معلومات الجهاز الأساسية
         const deviceInfo = this.collectDeviceInfo();
@@ -266,10 +266,10 @@ const DeviceManager = {
         if (typeof CryptoJS !== 'undefined') {
             const fingerprintString = JSON.stringify(deviceInfo, Object.keys(deviceInfo).sort());
             const fingerprint = CryptoJS.SHA256(fingerprintString).toString();
-            console.log('✅ Fingerprint generated:', fingerprint.substring(0, 16) + '...');
+            // console.log('✅ Fingerprint generated:', fingerprint.substring(0, 16) + '...');
             return { fingerprint, deviceInfo };
         } else {
-            console.error('❌ CryptoJS not loaded!');
+            // console.error('❌ CryptoJS not loaded!');
             return { fingerprint: null, deviceInfo };
         }
     },
@@ -279,12 +279,12 @@ const DeviceManager = {
      */
     async init() {
         await this.initDB();
-        console.log('✅ Device Manager initialized');
+        // console.log('✅ Device Manager initialized');
     }
 };
 
 // Auto-initialize on load
 if (typeof window !== 'undefined') {
     window.DeviceManager = DeviceManager;
-    console.log('📱 Device Manager loaded');
+    // console.log('📱 Device Manager loaded');
 }

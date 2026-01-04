@@ -1,0 +1,3281 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load unified_status_tags %}
+{% load order_extras %}
+{% load manufacturing_pagination %}
+
+{% block title %}قائمة أوامر التصنيع{% endblock %}
+
+{% block meta_tags %}
+    <meta name="description" content="إدارة وتتبع أوامر التصنيع - عرض قائمة كاملة بأوامر الإنتاج، حالة التنفيذ، والإنجاز في نظام الخواجه">
+    <meta name="keywords" content="أوامر التصنيع, إدارة الإنتاج, التصنيع, قائمة الإنتاج, تتبع التصنيع">
+    <meta property="og:title" content="قائمة أوامر التصنيع - نظام الخواجه">
+    <meta property="og:type" content="website">
+{% endblock %}
+
+{% block extra_head %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'manufacturing/css/manufacturing.css' %}">
+<link rel="stylesheet" href="{% static 'manufacturing/css/dropdown-fix.css' %}">
+<meta name="csrf-token" content="{{ csrf_token }}">
+<style>
+/* استخدام متغيرات الألوان من النظام - تطبيق فقط على محتوى الصفحة */
+#manufacturing-content .container {
+    max-width: 100%;
+    padding: 1rem;
+}
+
+/* تصميم الفلاتر المحسن */
+.filter-group-enhanced {
+    margin-bottom: 1rem;
+}
+
+.filter-label-top {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: #495057;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px 8px 0 0;
+    border: 1px solid #dee2e6;
+    border-bottom: none;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.filter-select-enhanced {
+    border-radius: 0 0 8px 8px !important;
+    border: 1px solid #dee2e6 !important;
+    border-top: none !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    transition: all 0.3s ease !important;
+    background: #fff !important;
+}
+
+.filter-select-enhanced:focus {
+    border-color: #667eea !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2) !important;
+    transform: translateY(-1px);
+}
+
+.filter-multiple {
+    min-height: 120px !important;
+}
+
+.filter-input-enhanced {
+    border-radius: 0 0 8px 8px !important;
+    border: 1px solid #dee2e6 !important;
+    border-top: none !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    transition: all 0.3s ease !important;
+    padding: 0.75rem !important;
+}
+
+.filter-input-enhanced:focus {
+    border-color: #667eea !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2) !important;
+    transform: translateY(-1px);
+}
+
+.filter-help-text {
+    color: #6c757d;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    text-align: center;
+    font-style: italic;
+}
+
+/* تصميم البحث المحسن */
+.search-group-enhanced {
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.search-icon-enhanced {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+.search-input-enhanced {
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0.75rem !important;
+    font-size: 1rem;
+}
+
+.search-input-enhanced:focus {
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.search-btn-enhanced {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    color: white !important;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem !important;
+    transition: all 0.3s ease;
+}
+
+.search-btn-enhanced:hover {
+    background: linear-gradient(135deg, #218838 0%, #1e7e34 100%) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+/* تصميم المفتاح المحسن */
+.switch-container-enhanced {
+    background: #fff;
+    border-radius: 0 0 8px 8px;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.switch-enhanced {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.switch-input-enhanced {
+    transform: scale(1.3) !important;
+}
+
+.switch-label-enhanced {
+    font-weight: 500;
+    color: #495057;
+    margin: 0;
+}
+
+/* تصميم الأزرار المحسن */
+.action-buttons-enhanced {
+    background: #fff;
+    border-radius: 0 0 8px 8px;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn-apply-enhanced {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: none !important;
+    border-radius: 25px !important;
+    color: white !important;
+    font-weight: 600;
+    padding: 0.75rem 2rem !important;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-apply-enhanced:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-clear-enhanced {
+    background: transparent !important;
+    border: 2px solid #dc3545 !important;
+    border-radius: 25px !important;
+    color: #dc3545 !important;
+    font-weight: 600;
+    padding: 0.75rem 2rem !important;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-clear-enhanced:hover {
+    background: #dc3545 !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+}
+
+/* القوائم المنسدلة المحسنة - استخدام نفس منطق قائمة المستخدم */
+.custom-manufacturing-dropdown {
+    position: fixed !important;
+    z-index: 2147483647 !important;
+    min-width: 200px;
+    max-width: 95vw;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    border: 1px solid #eee;
+    display: none;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.custom-manufacturing-dropdown.show {
+    display: block !important;
+}
+
+.custom-manufacturing-dropdown .dropdown-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: right;
+    color: #333;
+    display: flex;
+    align-items: center;
+}
+
+.custom-manufacturing-dropdown .dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.custom-manufacturing-dropdown .dropdown-item input[type="checkbox"] {
+    margin-left: 0.5rem;
+    margin-right: 0;
+}
+
+.custom-manufacturing-dropdown .dropdown-header {
+    font-weight: bold;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #eee;
+    background-color: #f8f9fa;
+    border-radius: 12px 12px 0 0;
+}
+
+/* تحسين أزرار الترتيب */
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.sortable-header:hover {
+    background-color: #e9ecef !important;
+}
+
+.sortable-header .sort-icon {
+    margin-right: 5px;
+    opacity: 0.5;
+    transition: opacity 0.15s ease-in-out;
+}
+
+.sortable-header.active .sort-icon {
+    opacity: 1;
+}
+
+.sortable-header .sort-icon.asc::before {
+    content: "▲";
+}
+
+.sortable-header .sort-icon.desc::before {
+    content: "▼";
+}
+
+.sortable-header .sort-icon.none::before {
+    content: "⇅";
+}
+
+/* البطاقات الإحصائية */
+.stats-card {
+    border: 1px solid var(--neutral);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stats-card .card-body {
+    padding: 1.5rem;
+}
+
+.stats-card .icon {
+    font-size: 2rem;
+    opacity: 0.8;
+}
+
+/* تصميم الجدول الرئيسي - نفس تصميم العملاء */
+.main-table-card {
+    border: 1px solid var(--neutral);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.main-table-card .card-header {
+    background-color: var(--primary);
+    color: white;
+    border-bottom: none;
+    padding: 1rem 1.25rem;
+    border-radius: 8px 8px 0 0;
+}
+
+.main-table-card .card-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+/* قسم البحث والتصفية */
+.filter-card {
+    border: 1px solid var(--neutral);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.filter-card .card-body {
+    padding: 0.5rem 0.75rem;
+}
+
+/* تصميم الجدول */
+.table-responsive {
+    border-radius: 0 0 8px 8px;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    background-color: var(--neutral);
+    color: #060606;
+    font-weight: 600;
+    border: none;
+    padding: 1rem 0.75rem;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.table tbody td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    text-align: center;
+    border-bottom: 1px solid var(--neutral);
+}
+
+.table tbody tr:hover {
+    background-color: rgba(139, 115, 90, 0.05);
+}
+
+/* أزرار الإجراءات في صف واحد */
+.action-buttons {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: center;
+    align-items: center;
+}
+
+.action-btn {
+    padding: 0.375rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid;
+    transition: all 0.3s ease;
+    font-size: 0.875rem;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-view {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.btn-view:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    opacity: 0.9;
+}
+
+.btn-edit {
+    background-color: var(--light-accent);
+    border-color: var(--light-accent);
+    color: var(--dark-text);
+}
+
+.btn-edit:hover {
+    background-color: var(--light-accent);
+    border-color: var(--light-accent);
+    color: var(--dark-text);
+    opacity: 0.9;
+}
+
+.btn-delete {
+    background-color: var(--alert);
+    border-color: var(--alert);
+    color: white;
+}
+
+.btn-delete:hover {
+    background-color: var(--alert);
+    border-color: var(--alert);
+    color: white;
+    opacity: 0.9;
+}
+
+/* تصميم زر الحالة */
+.status-btn {
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.status-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ألوان الحالات - أغمق وأوضح للعين */
+.status-pending_approval { 
+    background-color: #0056b3; 
+    color: white; 
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.status-pending { 
+    background-color: #e6a700; 
+    color: #1a1a1a; 
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.3);
+}
+.status-in_progress { 
+    background-color: #138496; 
+    color: white; 
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.status-completed { 
+    background-color: #1e7e34; 
+    color: white; 
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.status-rejected { 
+    background-color: #c82333; 
+    color: white; 
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.status-cancelled { 
+    background-color: #545b62; 
+    color: white; 
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.status-delivered {
+    background-color: #20c997;
+    color: white;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.status-delivered:hover {
+    background-color: #1aa085;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+}
+
+/* تصميم التنقل بين الصفحات */
+.pagination {
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.page-link {
+    color: var(--primary);
+    border-color: var(--neutral);
+    padding: 0.5rem 0.75rem;
+}
+
+.page-link:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+/* إصلاح مشكلة تداخل المودال مع SweetAlert */
+.swal2-container {
+    z-index: 10000 !important;
+}
+
+.modal-backdrop {
+    z-index: 1040;
+}
+
+.modal {
+    z-index: 1050;
+}
+
+/* منع ظهور الشاشة السوداء بعد إغلاق المودال - حل قوي */
+body.modal-open {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
+
+/* إزالة backdrop فوراً */
+.modal-backdrop.fade {
+    opacity: 0 !important;
+    transition: none !important;
+}
+
+.modal-backdrop {
+    display: none !important;
+    opacity: 0 !important;
+}
+
+/* حل إضافي لمنع الشاشة السوداء */
+body:not(.modal-open) .modal-backdrop {
+    display: none !important;
+}
+
+/* التأكد من عدم تعارض SweetAlert مع المودال */
+.swal2-shown {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
+
+.swal2-height-auto {
+    height: auto !important;
+}
+
+/* تحسين مظهر شارة الرد على الرفض */
+.reply-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.reply-badge i {
+    font-size: 0.8em;
+}
+
+.reply-badge.bg-info {
+    background-color: #17a2b8 !important;
+    color: white !important;
+}
+
+.page-item.active .page-link {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+/* ألوان أنواع الطلبات */
+.badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+}
+
+.badge.bg-success {
+    background-color: #198754 !important;
+    color: white !important;
+}
+
+.badge.bg-primary {
+    background-color: #0d6efd !important;
+    color: white !important;
+}
+
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+    color: #212529 !important;
+}
+
+.badge.bg-secondary {
+    background-color: #6c757d !important;
+    color: white !important;
+}
+
+.badge i {
+    font-size: 0.8em;
+}
+
+/* تحسينات المؤشرات البصرية للموافقة */
+.approval-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.approval-indicator i {
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.approval-indicator i:hover {
+    transform: scale(1.1);
+}
+
+.approval-indicator .text-success {
+    color: #28a745 !important;
+}
+
+.approval-indicator .text-danger {
+    color: #dc3545 !important;
+}
+
+/* تحسين مظهر الأيقونات */
+.approval-indicator .fa-check-circle {
+    color: #28a745 !important;
+    font-size: 1.4rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+.approval-indicator .fa-times-circle {
+    color: #dc3545 !important;
+    font-size: 1.4rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+/* تأثيرات hover */
+.approval-indicator .fa-check-circle:hover {
+    color: #198754 !important;
+    transform: scale(1.2);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.approval-indicator .fa-times-circle:hover {
+    color: #bb2d3b !important;
+    transform: scale(1.2);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* تحسين مظهر عمود الموافقة */
+.approval-column {
+    text-align: center;
+    vertical-align: middle;
+    padding: 0.5rem;
+}
+
+/* تحسين مظهر المؤشرات في الجدول */
+.approval-column .approval-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    min-height: 2rem;
+}
+
+/* تحسين مظهر الأزرار في عمود الموافقة */
+.approval-column .action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+/* تحسين مظهر شارة الرد على الرفض */
+.reply-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.re-approve-btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* تحسينات responsive */
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+        gap: 0.125rem;
+    }
+    
+    .action-btn {
+        width: 100%;
+        padding: 0.25rem;
+        font-size: 0.75rem;
+    }
+    
+    .status-btn {
+        min-width: 100px;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+    }
+    
+    .table {
+        font-size: 0.875rem;
+    }
+    
+    .badge {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.375rem;
+    }
+}
+    .filter-card .form-label {
+        font-weight: 600;
+        color: #3c2415;
+        margin-bottom: 0.25rem;
+    }
+    .filter-card .form-select, .filter-card .form-control {
+        font-size: 0.9rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+        min-width: 90px;
+        height: auto;
+    }
+
+    /* تحسين مظهر select متعدد الاختيار - أصغر */
+    .form-select[multiple] {
+        min-height: 56px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        padding: 0.25rem;
+    }
+
+    .form-select[multiple]:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    .filter-card .btn, .filter-card .btn-group .btn {
+        font-size: 1rem;
+        padding: 0.375rem 1rem;
+        border-radius: 0.375rem;
+    }
+.orders-table th, .orders-table td, .manufacturing-table th, .manufacturing-table td {
+    padding: 0.2rem 0.3rem !important;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.manufacturing-table th {
+    white-space: normal !important;
+    word-break: break-word !important;
+    line-height: 1.3;
+    font-size: 0.95em;
+}
+.manufacturing-table {
+    border-spacing: 0 1px;
+}
+/* تحسين مظهر الروابط */
+.table a {
+    transition: all 0.2s ease;
+}
+.table a:hover {
+    text-decoration: underline !important;
+    opacity: 0.8;
+}
+
+/* تحسين شكل المحادثة في مودال الرفض */
+.rejection-conversation {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.rejection-conversation .alert {
+    border: none;
+    border-left: 4px solid;
+    margin-bottom: 1rem;
+}
+
+.rejection-conversation .alert-danger {
+    border-left-color: #dc3545;
+    background-color: #f8d7da;
+}
+
+.rejection-conversation .alert-info {
+    border-left-color: #0dcaf0;
+    background-color: #d1ecf1;
+}
+
+.rejection-conversation .fas {
+    color: inherit;
+    opacity: 0.8;
+}
+
+/* تحسين أزرار المودال */
+#hasReplyButtons .btn {
+    margin: 0 0.25rem;
+}
+
+#hasReplyButtons .btn i {
+    margin-right: 0.5rem;
+}
+
+/* تحسين شكل badge الرد */
+.reply-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+}
+
+.reply-badge i {
+    margin-right: 0.25rem;
+}
+
+/* تحسين زر الموافقة مرة أخرى */
+.re-approve-btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+}
+
+.re-approve-btn i {
+    margin-right: 0.25rem;
+}
+
+/* مؤشرات التسليم - الدوائر الملونة */
+.delivery-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 0.8rem;
+    color: white;
+    margin: 0 auto;
+    text-align: center;
+    line-height: 1;
+}
+
+.delivery-indicator.overdue {
+    background-color: #dc3545;
+    animation: pulse-red 2s infinite;
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+}
+
+.delivery-indicator.countdown.urgent {
+    background-color: #fd7e14;
+    animation: pulse-orange 2s infinite;
+}
+
+.delivery-indicator.countdown.warning {
+    background-color: #ffc107;
+    color: #000;
+    font-weight: 900;
+}
+
+.delivery-indicator.countdown.normal {
+    background-color: #28a745;
+    animation: pulse-green 3s infinite;
+}
+
+.delivery-indicator.completed {
+    background-color: #20c997;
+}
+
+.delivery-indicator.unknown {
+    background-color: #6c757d;
+}
+
+/* تأثيرات النبض للدوائر */
+@keyframes pulse-red {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
+}
+
+@keyframes pulse-orange {
+    0% {
+        box-shadow: 0 0 0 0 rgba(253, 126, 20, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(253, 126, 20, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(253, 126, 20, 0);
+    }
+}
+
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+/* تحسين عرض الأرقام في الدوائر */
+.delivery-indicator.countdown {
+    font-family: 'Arial', sans-serif;
+    font-weight: 900;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* تحسين الأيقونات في الدوائر */
+.delivery-indicator i {
+    font-size: 0.9rem;
+}
+
+/* تحسين responsive للدوائر */
+@media (max-width: 768px) {
+    .delivery-indicator {
+        width: 25px;
+        height: 25px;
+        font-size: 0.7rem;
+    }
+
+    .delivery-indicator i {
+        font-size: 0.8rem;
+    }
+}
+
+/* تحسين dropdown الأنواع */
+.dropdown-menu {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.dropdown-menu label {
+    cursor: pointer;
+    margin-bottom: 0;
+    padding: 0.25rem 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-menu label input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+.dropdown-menu label:hover {
+    background-color: var(--bs-gray-100);
+}
+
+/* badge للأنواع */
+.bg-purple {
+    background-color: #6f42c1 !important;
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div id="manufacturing-content" class="container-fluid">
+    <!-- ملاحظة توضيحية -->
+
+
+    <!-- قسم البحث والتصفية -->
+    <div class="card filter-card" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 15px;">
+        <div class="card-body">
+            <form id="filterForm" method="get">
+                <!-- الصف الأول - فلاتر السنة والشهر والبحث الأساسي -->
+                <div class="row g-3 mb-4">
+                    <div class="col-lg-2 col-md-3 col-sm-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-calendar-alt me-1 text-primary"></i>
+                                السنة
+                            </label>
+                            <select name="year" class="form-select filter-select-enhanced" id="year-select">
+                                <option value="">كل السنوات</option>
+                                {% for year in available_years %}
+                                    <option value="{{ year }}" {% if selected_year == year|stringformat:'s' %}selected{% endif %}>
+                                        {{ year }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-3 col-sm-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-calendar me-1 text-success"></i>
+                                الشهر
+                            </label>
+                            <select name="month" class="form-select filter-select-enhanced" id="month-select">
+                                <option value="">كل الشهور</option>
+                                <option value="1" {% if selected_month == '1' %}selected{% endif %}>يناير</option>
+                                <option value="2" {% if selected_month == '2' %}selected{% endif %}>فبراير</option>
+                                <option value="3" {% if selected_month == '3' %}selected{% endif %}>مارس</option>
+                                <option value="4" {% if selected_month == '4' %}selected{% endif %}>أبريل</option>
+                                <option value="5" {% if selected_month == '5' %}selected{% endif %}>مايو</option>
+                                <option value="6" {% if selected_month == '6' %}selected{% endif %}>يونيو</option>
+                                <option value="7" {% if selected_month == '7' %}selected{% endif %}>يوليو</option>
+                                <option value="8" {% if selected_month == '8' %}selected{% endif %}>أغسطس</option>
+                                <option value="9" {% if selected_month == '9' %}selected{% endif %}>سبتمبر</option>
+                                <option value="10" {% if selected_month == '10' %}selected{% endif %}>أكتوبر</option>
+                                <option value="11" {% if selected_month == '11' %}selected{% endif %}>نوفمبر</option>
+                                <option value="12" {% if selected_month == '12' %}selected{% endif %}>ديسمبر</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-search me-1 text-info"></i>
+                                البحث في أوامر التصنيع
+                            </label>
+                            <div class="input-group search-group-enhanced">
+                                <span class="input-group-text search-icon-enhanced">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" name="search" id="search" class="form-control search-input-enhanced" placeholder="ابحث..." value="{{ search_query }}">
+                                <button class="btn search-btn-enhanced" type="submit">
+                                    <i class="fas fa-search me-1"></i>
+                                    بحث
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-list-ol me-1 text-warning"></i>
+                                عدد الصفوف
+                            </label>
+                            <select name="page_size" id="page_size" class="form-select filter-select-enhanced">
+                                <option value="10" {% if page_size == 10 %}selected{% endif %}>10 صفوف</option>
+                                <option value="25" {% if page_size == 25 or not page_size %}selected{% endif %}>25 صف</option>
+                                <option value="50" {% if page_size == 50 %}selected{% endif %}>50 صف</option>
+                                <option value="100" {% if page_size == 100 %}selected{% endif %}>100 صف</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-exclamation-triangle me-1 text-danger"></i>
+                                الطلبات المتأخرة
+                            </label>
+                            <div class="switch-container-enhanced">
+                                <div class="form-check form-switch switch-enhanced">
+                                    <input class="form-check-input switch-input-enhanced" type="checkbox" name="overdue" value="true"
+                                           id="overdueSwitch" {% if overdue_filter == 'true' %}checked{% endif %}>
+                                    <label class="form-check-label switch-label-enhanced" for="overdueSwitch">
+                                        عرض المتأخرة فقط
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- الصف الثاني - الفلاتر المتقدمة -->
+                <div class="row g-3 mb-4">
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-tasks me-1 text-primary"></i>
+                                حالة الطلب
+                            </label>
+                            <select class="form-select filter-select-enhanced filter-multiple" name="status" multiple size="4" id="status-select">
+                                <option value="pending_approval" {% if 'pending_approval' in status_filters %}selected{% endif %}>قيد الموافقة</option>
+                                <option value="pending" {% if 'pending' in status_filters %}selected{% endif %}>قيد الانتظار</option>
+                                <option value="in_progress" {% if 'in_progress' in status_filters %}selected{% endif %}>قيد التنفيذ</option>
+                                <option value="ready_install" {% if 'ready_install' in status_filters %}selected{% endif %}>جاهز للتركيب</option>
+                                <option value="completed" {% if 'completed' in status_filters %}selected{% endif %}>مكتمل</option>
+                                <option value="delivered" {% if 'delivered' in status_filters %}selected{% endif %}>تم التسليم</option>
+                                <option value="cancelled" {% if 'cancelled' in status_filters %}selected{% endif %}>ملغي</option>
+                                <option value="rejected" {% if 'rejected' in status_filters %}selected{% endif %}>مرفوض</option>
+                            </select>
+                            <small class="filter-help-text">Ctrl + Click للاختيار المتعدد</small>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-building me-1 text-success"></i>
+                                الفرع
+                            </label>
+                            <select class="form-select filter-select-enhanced filter-multiple" name="branch" multiple size="4" id="branch-select">
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}" {% if branch.id|stringformat:"s" in branch_filters %}selected{% endif %}>{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="filter-help-text">Ctrl + Click للاختيار المتعدد</small>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-tags me-1 text-info"></i>
+                                نوع الطلب
+                            </label>
+                            <select class="form-select filter-select-enhanced filter-multiple" name="order_type" multiple size="4" id="order-type-select">
+                                {% for type_code, type_name in order_types %}
+                                <option value="{{ type_code }}" {% if type_code in order_type_filters %}selected{% endif %}>{{ type_name }}</option>
+                                {% endfor %}
+                                <option value="modification" {% if 'modification' in order_type_filters %}selected{% endif %}>تعديل</option>
+                            </select>
+                            <small class="filter-help-text">Ctrl + Click للاختيار المتعدد</small>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-cogs me-1 text-warning"></i>
+                                خط الإنتاج
+                            </label>
+                            <select class="form-select filter-select-enhanced filter-multiple" name="production_line" multiple size="4" id="production-line-select">
+                                <option value="" {% if '' in production_line_filters %}selected{% endif %}>غير محدد</option>
+                                {% for line in production_lines %}
+                                <option value="{{ line.id }}" {% if line.id|stringformat:"s" in production_line_filters %}selected{% endif %}>{{ line.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="filter-help-text">Ctrl + Click للاختيار المتعدد</small>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-columns me-1 text-danger"></i>
+                                أعمدة البحث
+                            </label>
+                            <select name="search_columns" class="form-select filter-select-enhanced filter-multiple" multiple size="4" id="search-columns-select">
+                                <option value="all" {% if 'all' in search_columns or not search_columns %}selected{% endif %}>الكل</option>
+                                <option value="order_number" {% if 'order_number' in search_columns %}selected{% endif %}>رقم الطلب</option>
+                                <option value="customer_name" {% if 'customer_name' in search_columns %}selected{% endif %}>اسم العميل</option>
+                                <option value="contract_number" {% if 'contract_number' in search_columns %}selected{% endif %}>رقم العقد</option>
+                                <option value="invoice_number" {% if 'invoice_number' in search_columns %}selected{% endif %}>رقم الفاتورة</option>
+                                <option value="branch" {% if 'branch' in search_columns %}selected{% endif %}>الفرع</option>
+                            </select>
+                            <small class="filter-help-text">Ctrl + Click للاختيار المتعدد</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- الصف الثالث - التواريخ والأزرار -->
+                <div class="row g-3">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-calendar-alt me-1 text-success"></i>
+                                من تاريخ
+                            </label>
+                            <input type="date" name="date_from" id="date_from" class="form-control filter-input-enhanced" value="{{ date_from }}">
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-calendar-alt me-1 text-info"></i>
+                                إلى تاريخ
+                            </label>
+                            <input type="date" name="date_to" id="date_to" class="form-control filter-input-enhanced" value="{{ date_to }}">
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="filter-group-enhanced">
+                            <label class="filter-label-top">
+                                <i class="fas fa-cog me-1 text-secondary"></i>
+                                إجراءات الفلترة
+                            </label>
+                            <div class="d-flex gap-3 justify-content-center action-buttons-enhanced">
+                                <button type="submit" class="btn btn-apply-enhanced">
+                                    <i class="fas fa-filter me-2"></i>
+                                    تطبيق الفلاتر
+                                </button>
+                                <button type="button" class="btn btn-clear-enhanced" id="clearFiltersBtn" title="مسح جميع الفلاتر">
+                                    <i class="fas fa-times me-2"></i>
+                                    مسح الفلاتر
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- رسالة الفلتر التلقائي -->
+    {% if display_settings_applied and active_display_settings %}
+    <div class="alert alert-info alert-dismissible fade show" style="border-radius: 12px; border-left: 4px solid #17a2b8; background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); margin-bottom: 1rem;">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <i class="fas fa-filter text-info" style="font-size: 1.5rem;"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h6 class="alert-heading mb-1" style="color: #0c5460; font-weight: 600;">
+                    <i class="fas fa-magic me-2"></i>تم تطبيق فلتر عرض تلقائي
+                </h6>
+                <p class="mb-2" style="color: #0c5460; font-size: 0.95rem;">
+                    يتم عرض النتائج حسب إعداد العرض:
+                    <strong>"{{ active_display_settings.name }}"</strong>
+                </p>
+                <div class="filter-details" style="font-size: 0.85rem; color: #0c5460;">
+                    {% if active_display_settings.allowed_statuses %}
+                    <span class="me-3">
+                        <i class="fas fa-check-circle me-1"></i>
+                        <strong>الحالات:</strong> {{ active_display_settings.get_allowed_statuses_display }}
+                    </span>
+                    {% endif %}
+                    {% if active_display_settings.allowed_order_types %}
+                    <span class="me-3">
+                        <i class="fas fa-tags me-1"></i>
+                        <strong>الأنواع:</strong> {{ active_display_settings.get_allowed_order_types_display }}
+                    </span>
+                    {% endif %}
+                </div>
+                <small class="text-muted d-block mt-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    لعرض جميع النتائج، يمكنك استخدام الفلاتر اليدوية أعلاه أو تغيير إعدادات العرض من لوحة الإدارة.
+                </small>
+            </div>
+            <div class="ms-3">
+                <span class="badge bg-info text-white" style="font-size: 0.9rem; padding: 0.5rem 0.8rem;">
+                    <i class="fas fa-eye me-1"></i>{{ page_obj.paginator.count }} نتيجة
+                </span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="إغلاق"></button>
+    </div>
+    {% endif %}
+
+    <!-- الجدول الرئيسي -->
+    <div class="card" style="border-color: var(--neutral);">
+        <div class="card-header" style="background-color: var(--primary); color: white;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-industry"></i> أوامر التصنيع
+                    {% if display_settings_applied and active_display_settings %}
+                    <span class="badge bg-warning text-dark ms-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-filter me-1"></i>مفلتر
+                    </span>
+                    {% endif %}
+                </h5>
+                <div class="text-end">
+                    <span class="badge bg-light text-dark fs-6">
+                        <i class="fas fa-list-ol me-1"></i>
+                        عدد النتائج: {{ page_obj.paginator.count }}
+                        {% if display_settings_applied and active_display_settings %}
+                        <small class="text-muted ms-1">(مفلتر)</small>
+                        {% endif %}
+                    </span>
+                    {% if page_obj.paginator.num_pages > 1 %}
+                    <small class="d-block mt-1 opacity-75">
+                        صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- معلومات الفلاتر المطبقة -->
+            {% if status_filters or search_query or date_from or date_to or branch_filters or order_type_filters or search_columns or production_line_filters or overdue_filter %}
+            <div class="alert alert-info mb-3" role="alert">
+                <div class="d-flex flex-wrap align-items-center">
+                    <div class="me-3 mb-2">
+                        <i class="fas fa-filter me-2"></i>
+                        <strong>الفلاتر المطبقة:</strong>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% if status_filters %}
+                            {% for status in status_filters_display %}
+                                <span class="badge bg-primary me-1 mb-1">حالة: {{ status }}</span>
+                            {% endfor %}
+                        {% endif %}
+                        {% if search_query %}
+                            <span class="badge bg-success me-1 mb-1">البحث: "{{ search_query }}"</span>
+                        {% endif %}
+                        {% if branch_filters %}
+                            {% for branch in branch_filters_display %}
+                                <span class="badge bg-warning text-dark me-1 mb-1">فرع: {{ branch }}</span>
+                            {% endfor %}
+                        {% endif %}
+                        {% if order_type_filters %}
+                            {% for type in order_type_filters_display %}
+                                <span class="badge bg-purple me-1 mb-1">نوع: {{ type }}</span>
+                            {% endfor %}
+                        {% endif %}
+                        {% if production_line_filters %}
+                            {% for line in production_line_filters_display %}
+                                <span class="badge bg-secondary me-1 mb-1">خط إنتاج: {{ line }}</span>
+                            {% endfor %}
+                        {% endif %}
+                        {% if search_columns %}
+                            {% for column in search_columns_display %}
+                                <span class="badge bg-info me-1 mb-1">عمود بحث: {{ column }}</span>
+                            {% endfor %}
+                        {% endif %}
+                        {% if date_from %}
+                            <span class="badge bg-info me-1 mb-1">من تاريخ: {{ date_from }}</span>
+                        {% endif %}
+                        {% if date_to %}
+                            <span class="badge bg-info me-1 mb-1">إلى تاريخ: {{ date_to }}</span>
+                        {% endif %}
+                        {% if overdue_filter == 'true' %}
+                            <span class="badge bg-danger me-1 mb-1">الطلبات المتأخرة فقط</span>
+                        {% endif %}
+                    </div>
+                    <div class="ms-auto">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clearAllFiltersBtn">
+                            <i class="fas fa-times me-1"></i>إزالة جميع الفلاتر
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if manufacturing_orders %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover manufacturing-table">
+                    <thead>
+                        <tr>
+                            <th class="text-center sortable-header" data-sort="id" style="padding: 0.3rem 0.4rem; min-width: 40px;">
+                                <span class="sort-icon none"></span>#
+                            </th>
+                            <th class="text-center sortable-header" data-sort="order_number" style="padding: 0.3rem 0.4rem; min-width: 90px;">
+                                <span class="sort-icon none"></span>رقم الطلب
+                            </th>
+                            <th class="text-center sortable-header" data-sort="order_type" style="padding: 0.3rem 0.4rem; min-width: 90px;">
+                                <span class="sort-icon none"></span>النوع
+                            </th>
+                            <th class="text-center sortable-header" data-sort="contract_number" style="padding: 0.3rem 0.4rem; min-width: 80px;">
+                                <span class="sort-icon none"></span>رقم العقد
+                            </th>
+                            <th class="text-center sortable-header" data-sort="production_line" style="padding: 0.3rem 0.4rem; min-width: 100px;">
+                                <span class="sort-icon none"></span>خط الإنتاج
+                            </th>
+                            <th class="text-center sortable-header" data-sort="invoice_number" style="padding: 0.3rem 0.4rem; min-width: 80px;">
+                                <span class="sort-icon none"></span>رقم الفاتورة
+                            </th>
+                            <th class="text-center sortable-header" data-sort="customer" style="padding: 0.3rem 0.4rem; min-width: 90px;">
+                                <span class="sort-icon none"></span>العميل
+                            </th>
+                            <th class="text-center sortable-header" data-sort="salesperson" style="padding: 0.3rem 0.4rem; min-width: 80px;">
+                                <span class="sort-icon none"></span>البائع
+                            </th>
+                            <th class="text-center sortable-header" data-sort="branch" style="padding: 0.3rem 0.4rem; min-width: 80px;">
+                                <span class="sort-icon none"></span>الفرع
+                            </th>
+                            <th class="text-center sortable-header" data-sort="order_date" style="padding: 0.3rem 0.4rem; min-width: 100px;">
+                                <span class="sort-icon none"></span>تاريخ الطلب
+                            </th>
+                            <th class="text-center sortable-header" data-sort="expected_delivery_date" style="padding: 0.3rem 0.4rem; min-width: 100px;">
+                                <span class="sort-icon none"></span>تاريخ التسليم
+                            </th>
+                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 60px;">مؤشر التسليم</th>
+                            <th class="text-center sortable-header" data-sort="status" style="padding: 0.3rem 0.4rem; min-width: 90px;">
+                                <span class="sort-icon none"></span>الحالة
+                            </th>
+                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 120px; word-break: break-word; white-space: normal;">
+                                <i class="fas fa-boxes me-1"></i>العناصر
+                            </th>
+                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 100px; word-break: break-word; white-space: normal;">معلومات التسليم</th>
+                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 90px; word-break: break-word; white-space: normal;">موافقة العقد</th>
+                            <th class="text-center" style="padding: 0.3rem 0.4rem; min-width: 70px; word-break: break-word; white-space: normal;">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in manufacturing_orders %}
+                        <tr data-order-id="{{ order.id }}" data-order-type="{% if 'installation' in order.order.get_selected_types_list %}installation{% elif 'tailoring' in order.order.get_selected_types_list %}tailoring{% elif 'accessory' in order.order.get_selected_types_list %}accessory{% else %}manufacturing{% endif %}">
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'orders:order_detail' order.order.id %}" style="color: var(--primary); text-decoration: none;" title="تفاصيل الطلب الأساسي">
+                                    {{ order.order.order_number|default:order.order.id }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if order.order_type == 'modification' or order.modification_request %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-edit me-1"></i> تعديل
+                                    </span>
+                                {% else %}
+                                    {% with selected_types=order.order.get_selected_types_list %}
+                                        {% if selected_types %}
+                                            {% for type in selected_types %}
+                                                {% if type == 'installation' %}
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="fas fa-tools me-1"></i> تركيب
+                                                    </span>
+                                                {% elif type == 'tailoring' %}
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-cut me-1"></i> تسليم
+                                                    </span>
+                                                {% elif type == 'accessory' %}
+                                                    <span class="badge bg-primary">
+                                                        <i class="fas fa-gem me-1"></i> إكسسوار
+                                                    </span>
+                                                {% elif type == 'inspection' %}
+                                                    <span class="badge bg-info">
+                                                        <i class="fas fa-search me-1"></i> معاينة
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ type }}</span>
+                                                {% endif %}
+                                                {% if not forloop.last %}<br>{% endif %}
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ order.contract_number|default:'-' }}
+                                {% if order.order.contract_number_2 %}<br><small class="text-muted">{{ order.order.contract_number_2 }}</small>{% endif %}
+                                {% if order.order.contract_number_3 %}<br><small class="text-muted">{{ order.order.contract_number_3 }}</small>{% endif %}
+                            </td>
+                            <td>
+                                {% if order.production_line %}
+                                    <span class="badge bg-info text-white">
+                                        <i class="fas fa-industry me-1"></i>{{ order.production_line.name }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">غير محدد</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ order.invoice_number|default:'-' }}
+                                {% if order.order.invoice_number_2 %}<br><small class="text-muted">{{ order.order.invoice_number_2 }}</small>{% endif %}
+                                {% if order.order.invoice_number_3 %}<br><small class="text-muted">{{ order.order.invoice_number_3 }}</small>{% endif %}
+                            </td>
+                            <td>
+                                {% if order.order.customer %}
+                                    <a href="{% url 'customers:customer_detail' order.order.customer.id %}" style="color: var(--primary); text-decoration: none; font-weight: bold;">
+                                        <a href="{% url 'customers:customer_detail' order.order.customer.id %}" class="font-weight-bold text-info" title="بطاقة العميل">
+                                            {{ order.order.customer.name|default:'-' }}
+                                        </a>
+                                    </a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.order.salesperson %}
+                                    {{ order.order.salesperson.name }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td data-branch-id="{{ order.order.branch.id }}">
+                                {% if order.order.branch %}
+                                    {{ order.order.branch.name|default:'-' }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.order_date %}
+                                    {{ order.order_date|date:'Y-m-d' }}
+                                {% elif order.order.order_date %}
+                                    {{ order.order.order_date|date:'Y-m-d' }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="{% if order.is_delivery_delayed %}text-danger{% endif %}">
+                                    {{ order.expected_delivery_date|date:'Y-m-d'|default:'-' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% with indicator=order.delivery_status_indicator %}
+                                    <div class="{{ indicator.class }}" title="{{ indicator.text }}">
+                                        {% if indicator.type == 'overdue' %}
+                                            <i class="{{ indicator.icon }}"></i>
+                                        {% elif indicator.type == 'countdown' %}
+                                            {{ indicator.text }}
+                                        {% elif indicator.type == 'completed' %}
+                                            <i class="{{ indicator.icon }}"></i>
+                                        {% else %}
+                                            <i class="{{ indicator.icon }}"></i>
+                                        {% endif %}
+                                    </div>
+                                {% endwith %}
+                            </td>
+                            <td>
+                                {% if order.status == 'pending_approval' %}
+                                    {% get_status_badge order.status "manufacturing" %}
+                                {% else %}
+                                    {% if order.status == 'delivered' %}
+                                        {% get_status_badge order.status "manufacturing" %}
+                                    {% else %}
+                                        <button class="status-btn status-{{ order.status }} unified-badge status-{{ order.status }}"
+                                                data-order-id="{{ order.id }}"
+                                                data-current-status="{{ order.status }}"
+                                                onclick="showStatusModal({{ order.id }}, '{{ order.status }}', '{{ order.get_status_display }}', '{% if 'installation' in order.order.get_selected_types_list %}installation{% elif 'tailoring' in order.order.get_selected_types_list %}tailoring{% elif 'accessory' in order.order.get_selected_types_list %}accessory{% else %}manufacturing{% endif %}')">
+                                            {{ order.get_status_display }}
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div style="font-size: 0.85em;">
+                                    <!-- إجمالي العناصر -->
+                                    <div class="mb-1">
+                                        <span class="badge bg-primary" title="إجمالي العناصر">
+                                            <i class="fas fa-list me-1"></i>{{ order.total_items_count }}
+                                        </span>
+                                    </div>
+                                    <!-- العناصر المقطوعة -->
+                                    {% if order.cut_items_count > 0 %}
+                                    <div class="mb-1">
+                                        <span class="badge bg-info" title="عدد العناصر المقطوعة">
+                                            <i class="fas fa-cut me-1"></i>{{ order.cut_items_count }} مقطوع
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                    <!-- العناصر المستلمة -->
+                                    {% if order.received_items_count > 0 %}
+                                    <div>
+                                        <span class="badge bg-success" title="عدد العناصر المستلمة">
+                                            <i class="fas fa-check-circle me-1"></i>{{ order.received_items_count }} مستلم
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                    <!-- العناصر المعلقة -->
+                                    {% if order.pending_items_count > 0 %}
+                                    <div class="mt-1">
+                                        <span class="badge bg-warning text-dark" title="عدد العناصر المعلقة">
+                                            <i class="fas fa-clock me-1"></i>{{ order.pending_items_count }} معلق
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if order.status == 'delivered' %}
+                                    {% if order.delivery_permit_number or order.delivery_recipient_name %}
+                                        <div style="font-size: 0.85em;">
+                                            {% if order.delivery_permit_number %}
+                                                <div class="text-success">
+                                                    <i class="fas fa-file-alt me-1"></i>
+                                                    <strong>إذن:</strong> {{ order.delivery_permit_number }}
+                                                </div>
+                                            {% endif %}
+                                            {% if order.delivery_recipient_name %}
+                                                <div class="text-primary">
+                                                    <i class="fas fa-user me-1"></i>
+                                                    <strong>المستلم:</strong> {{ order.delivery_recipient_name }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="approval-column">
+                                {% if order.status == 'pending_approval' %}
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-success approve-btn" data-order-id="{{ order.id }}" title="موافقة">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger reject-btn" data-order-id="{{ order.id }}" title="رفض">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                {% elif order.status == 'rejected' %}
+                                    <div class="approval-indicator">
+                                        <i class="fas fa-times-circle" title="مرفوض - {{ order.get_status_display }}"></i>
+                                        {% if order.rejection_reason %}
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="showRejectionDetails('{{ order.rejection_reason|escapejs }}', {{ order.id }})"
+                                                    title="عرض تفاصيل الرفض{% if order.has_rejection_reply %} والرد{% endif %}">
+                                                <i class="fas fa-{% if order.has_rejection_reply %}comments{% else %}info-circle{% endif %}"></i>
+                                                {% if order.has_rejection_reply %}محادثة{% else %}تفاصيل{% endif %}
+                                            </button>
+                                        {% endif %}
+                                        {% if order.has_rejection_reply %}
+                                            <span class="badge reply-badge bg-info ms-1" title="تم الرد على الرفض">
+                                                <i class="fas fa-reply"></i> تم الرد
+                                            </span>
+                                            {% if user.is_superuser or perms.manufacturing.can_approve_orders %}
+                                                <button class="btn btn-sm btn-success ms-1 re-approve-btn" 
+                                                        data-order-id="{{ order.id }}" 
+                                                        title="الموافقة بعد المراجعة">
+                                                    <i class="fas fa-check-double"></i> موافقة
+                                                </button>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                {% elif order.status in 'pending,in_progress,ready_install,completed,delivered' %}
+                                    <div class="approval-indicator">
+                                        <i class="fas fa-check-circle" title="تمت الموافقة - {{ order.get_status_display }}"></i>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm action-buttons">
+                                    {% if order.order_type == 'modification' or order.modification_request %}
+                                        {% if order.modification_request and order.modification_request.id %}
+                                            <a href="{% url 'installations:modification_detail' order.modification_request.id %}" class="btn btn-info" title="عرض تفاصيل التعديل" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
+                                                <i class="fas fa-eye" style="font-size: 0.7em;"></i>
+                                            </a>
+                                        {% else %}
+                                            <button class="btn btn-info" disabled title="لا يوجد تفاصيل تعديل" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
+                                                <i class="fas fa-eye" style="font-size: 0.7em;"></i>
+                                            </button>
+                                        {% endif %}
+                                    {% else %}
+                                        <a href="{% url 'manufacturing:order_detail' order.id %}" class="btn btn-info" title="عرض" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
+                                            <i class="fas fa-eye" style="font-size: 0.7em;"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% if perms.manufacturing.change_manufacturingorder %}
+                                        <button type="button" class="btn btn-warning change-production-line-btn"
+                                                title="تبديل خط الإنتاج"
+                                                style="font-size: 0.7em; padding: 0.15rem 0.3rem;"
+                                                data-order-id="{{ order.id }}"
+                                                data-order-code="{{ order.manufacturing_code }}"
+                                                data-current-line="{{ order.production_line.name|default:'غير محدد' }}"
+                                                data-current-line-id="{{ order.production_line.id|default:'' }}">
+                                            <i class="fas fa-exchange-alt" style="font-size: 0.7em;"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Manufacturing Pagination -->
+            {% render_manufacturing_pagination page_obj %}
+            
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-industry fa-4x mb-3" style="color: var(--neutral);"></i>
+                <h4>لا توجد أوامر تصنيع</h4>
+                <p class="text-muted">لم يتم العثور على أي أوامر تصنيع. يمكنك إضافة أمر جديد من خلال الزر أعلاه.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Status Change -->
+<div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusModalLabel">تغيير حالة الطلب</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="statusForm">
+                    <input type="hidden" id="statusOrderId" name="order_id">
+                    <div class="mb-3">
+                        <label for="new_status" class="form-label">الحالة الجديدة:</label>
+                        <select class="form-select" id="new_status" name="new_status" required>
+                            <!-- Will be populated by JavaScript -->
+                        </select>
+                    </div>
+                    <div id="deliveryFields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="delivery_permit_number" class="form-label">رقم إذن التسليم:</label>
+                            <input type="text" class="form-control" id="delivery_permit_number" name="delivery_permit_number">
+                        </div>
+                        <div class="mb-3">
+                            <label for="delivery_recipient_name" class="form-label">اسم المستلم:</label>
+                            <input type="text" class="form-control" id="delivery_recipient_name" name="delivery_recipient_name">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="submitStatusBtn">تحديث الحالة</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Rejection -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rejectModalLabel">سبب الرفض</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="rejectForm">
+                    <input type="hidden" id="rejectOrderId" name="order_id">
+                    <div class="mb-3">
+                        <label for="rejection_reason" class="form-label">سبب الرفض:</label>
+                        <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-danger" id="submitRejectBtn">رفض الطلب</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Rejection Details -->
+<div class="modal fade" id="rejectionDetailsModal" tabindex="-1" aria-labelledby="rejectionDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rejectionDetailsModalLabel">
+                    <span id="modalTitleText">تفاصيل الرفض</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="rejection-conversation">
+                    <!-- سبب الرفض الأصلي -->
+                    <div class="alert alert-danger">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-times-circle me-2 mt-1"></i>
+                            <div>
+                                <strong>سبب الرفض:</strong>
+                                <div id="rejectionReasonText" class="mt-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- الرد على الرفض (إن وجد) -->
+                    <div id="replySection" class="alert alert-info" style="display: none;">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-reply me-2 mt-1"></i>
+                            <div>
+                                <strong>رد العميل:</strong>
+                                <div id="customerReplyText" class="mt-1"></div>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <span id="replyDate"></span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- إرسال رد جديد (للطلبات المرفوضة بدون رد) -->
+                <div id="newReplySection" class="mt-3">
+                    <label for="reply_message" class="form-label">رد على الرفض:</label>
+                    <textarea class="form-control" id="reply_message" name="reply_message" rows="3" placeholder="اكتب ردك هنا..."></textarea>
+                </div>
+                
+                <!-- أزرار الموافقة مرة أخرى (للطلبات التي تم الرد عليها) -->
+                <div id="reApprovalSection" class="mt-3" style="display: none;">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>تم استلام رد العميل. يمكنك الآن الموافقة على الطلب مرة أخرى أو رفضه نهائياً.</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                
+                <!-- أزرار للطلبات بدون رد -->
+                <div id="noReplyButtons">
+                    <button type="button" class="btn btn-primary" id="submitReplyBtn">إرسال الرد</button>
+                </div>
+                
+                <!-- أزرار للطلبات التي تم الرد عليها -->
+                <div id="hasReplyButtons" style="display: none;">
+                    <button type="button" class="btn btn-success" id="reApproveBtn">
+                        <i class="fas fa-check"></i> الموافقة مرة أخرى
+                    </button>
+                    <button type="button" class="btn btn-danger" id="finalRejectBtn">
+                        <i class="fas fa-times"></i> رفض نهائي
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// التأكد من تحميل الجافاسكريبت
+console.log('Manufacturing JavaScript loaded');
+
+// دالة مساعدة لتنظيف المودال والخلفية السوداء
+function forceCleanModal() {
+    // إزالة جميع المودالات والخلفيات
+    $('.modal').modal('hide');
+    $('.modal-backdrop').remove();
+    $('.modal-backdrop.show').remove();
+    $('.modal-backdrop.fade').remove();
+    $('.modal-backdrop.in').remove();
+    
+    // تنظيف الـ body
+    $('body').removeClass('modal-open');
+    $('html').removeClass('modal-open');
+    $('body').css({
+        'overflow': 'auto',
+        'padding-right': '0',
+        'margin-right': '0'
+    });
+}
+
+$(document).ready(function() {
+    // استعادة الفلاتر المحفوظة عند تحميل الصفحة
+    function restoreFilters() {
+        try {
+            const savedFilters = localStorage.getItem('manufacturing_filters');
+            if (savedFilters) {
+                const filters = JSON.parse(savedFilters);
+                
+                // استعادة الفلاتر فقط إذا لم تكن هناك معاملات في URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const hasUrlFilters = Array.from(urlParams.keys()).some(key => 
+                    ['status', 'branch', 'order_type', 'search', 'date_from', 'date_to', 'overdue', 'production_line', 'search_columns'].includes(key)
+                );
+                
+                if (!hasUrlFilters) {
+                    // استعادة القيم المحفوظة
+                    if (filters.status && filters.status.length > 0) {
+                        $('select[name="status"]').val(filters.status);
+                    }
+                    if (filters.branch && filters.branch.length > 0) {
+                        $('select[name="branch"]').val(filters.branch);
+                    }
+                    if (filters.order_type && filters.order_type.length > 0) {
+                        $('select[name="order_type"]').val(filters.order_type);
+                    }
+                    if (filters.search_columns && filters.search_columns.length > 0) {
+                        $('select[name="search_columns"]').val(filters.search_columns);
+                    }
+                    if (filters.production_line && filters.production_line.length > 0) {
+                        $('select[name="production_line"]').val(filters.production_line);
+                    }
+                    if (filters.search) {
+                        $('input[name="search"]').val(filters.search);
+                    }
+                    if (filters.date_from) {
+                        $('input[name="date_from"]').val(filters.date_from);
+                    }
+                    if (filters.date_to) {
+                        $('input[name="date_to"]').val(filters.date_to);
+                    }
+                    if (filters.overdue) {
+                        $('input[name="overdue"]').prop('checked', filters.overdue);
+                    }
+                    if (filters.page_size) {
+                        $('select[name="page_size"]').val(filters.page_size);
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('خطأ في استعادة الفلاتر:', e);
+        }
+    }
+
+    // استدعاء دالة استعادة الفلاتر عند تحميل الصفحة
+    restoreFilters();
+
+    // معالجة الموافقة
+    $('.approve-btn').on('click', function() {
+        const orderId = $(this).data('order-id');
+        handleApproval(orderId, 'approve');
+    });
+
+    // معالجة الموافقة مرة أخرى بعد الرد
+    $('.re-approve-btn').on('click', function() {
+        const orderId = $(this).data('order-id');
+        handleReApproval(orderId);
+    });
+
+    // معالجة الرفض
+    $('.reject-btn').on('click', function() {
+        const orderId = $(this).data('order-id');
+        console.log('Reject button clicked for order:', orderId);
+        
+        // إزالة أي backdrop موجود قبل فتح المودال
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open');
+        
+        $('#rejectOrderId').val(orderId);
+        $('#rejection_reason').val(''); // Clear previous reason
+        $('#rejectModal').modal('show');
+    });
+
+    // إرسال الر��ض
+    $('#submitRejectBtn').on('click', function() {
+        const orderId = $('#rejectOrderId').val();
+        const reason = $('#rejection_reason').val();
+        
+        console.log('Submit reject button clicked for order:', orderId, 'reason:', reason);
+        
+        if (!reason.trim()) {
+            Swal.fire('خطأ', 'سبب الرفض مطلوب.', 'error');
+            return;
+        }
+        
+        // إخفاء المودال فوراً قبل إرسال الطلب
+        forceCleanModal();
+        
+        handleApproval(orderId, 'reject', reason);
+    });
+
+    // تصفية الجدول
+    $('#filterForm').on('submit', function(e) {
+        e.preventDefault();
+
+        // جمع البيانات مع التعامل الصحيح مع multiple selects
+        const formData = new FormData(this);
+        const params = new URLSearchParams();
+
+        // معالجة كل حقل في النموذج
+        for (let [key, value] of formData.entries()) {
+            if (value !== '') { // تجاهل القيم الفارغة
+                params.append(key, value);
+            }
+        }
+
+        // التعامل مع multiple selects بشكل منفصل
+        const multiSelects = ['status', 'branch', 'order_type', 'search_columns', 'production_line'];
+        multiSelects.forEach(fieldName => {
+            const selectedValues = $(this).find(`select[name="${fieldName}"]`).val();
+            if (selectedValues && selectedValues.length > 0) {
+                // إزالة القيم السابقة لهذا الحقل
+                params.delete(fieldName);
+                // إضافة القيم الجديدة
+                selectedValues.forEach(value => {
+                    if (value !== '') {
+                        params.append(fieldName, value);
+                    }
+                });
+            }
+        });
+
+        // حفظ الفلاتر في localStorage للحفاظ عليها عند التنقل
+        const filterState = {
+            status: $(this).find('select[name="status"]').val() || [],
+            branch: $(this).find('select[name="branch"]').val() || [],
+            order_type: $(this).find('select[name="order_type"]').val() || [],
+            search_columns: $(this).find('select[name="search_columns"]').val() || [],
+            production_line: $(this).find('select[name="production_line"]').val() || [],
+            search: $(this).find('input[name="search"]').val() || '',
+            date_from: $(this).find('input[name="date_from"]').val() || '',
+            date_to: $(this).find('input[name="date_to"]').val() || '',
+            overdue: $(this).find('input[name="overdue"]').is(':checked'),
+            page_size: $(this).find('select[name="page_size"]').val() || '25'
+        };
+        localStorage.setItem('manufacturing_filters', JSON.stringify(filterState));
+
+        // الانتقال إلى الصفحة مع المعاملات
+        const queryString = params.toString();
+        window.location.href = queryString ? '?' + queryString : window.location.pathname;
+    });
+
+    // مسح الفلاتر - زر مسح الفلاتر الجديد
+    $('#clearFiltersBtn, #clearAllFiltersBtn').on('click', function(e) {
+        e.preventDefault();
+        
+        // مسح جميع الفلاتر من النموذج
+        $('#filterForm')[0].reset();
+        
+        // مسح الفلاتر المحفوظة
+        localStorage.removeItem('manufacturing_filters');
+        
+        // الانتقال إلى الصفحة بدون فلاتر
+        window.location.href = window.location.pathname;
+    });
+
+    // مسح الفلاتر المحفوظة عند النقر على زر إعادة التعيي�� (الرابط القديم)
+    $('a[href*="order_list"]').on('click', function(e) {
+        if ($(this).find('.fa-redo').length > 0 || $(this).find('.fa-times').length > 0) {
+            localStorage.removeItem('manufacturing_filters');
+        }
+    });
+
+    // إضافة وظيفة الترتيب للجدول
+    $('.sortable-header').on('click', function() {
+        const column = $(this).data('sort');
+        if (!column) return;
+
+        // الحصول على الترتيب الحالي
+        const currentSort = new URLSearchParams(window.location.search).get('sort');
+        const currentDirection = new URLSearchParams(window.location.search).get('direction') || 'asc';
+        
+        let newDirection = 'asc';
+        
+        // تحديد الاتجاه الجديد
+        if (currentSort === column) {
+            if (currentDirection === 'asc') {
+                newDirection = 'desc';
+            } else if (currentDirection === 'desc') {
+                newDirection = 'none'; // إزالة الترتيب
+            } else {
+                newDirection = 'asc';
+            }
+        }
+
+        // تحديث أيقونات الترتيب
+        $('.sortable-header').removeClass('active');
+        $('.sort-icon').removeClass('asc desc').addClass('none');
+        
+        if (newDirection !== 'none') {
+            $(this).addClass('active');
+            $(this).find('.sort-icon').removeClass('none').addClass(newDirection);
+        }
+
+        // بناء URL جديد مع الترتيب
+        const params = new URLSearchParams(window.location.search);
+        
+        if (newDirection === 'none') {
+            params.delete('sort');
+            params.delete('direction');
+        } else {
+            params.set('sort', column);
+            params.set('direction', newDirection);
+        }
+        
+        // إعادة تعيين الصفحة إلى 1 عند تغيير الترتيب
+        params.set('page', '1');
+
+        // الانتقال إلى الصفحة الجديدة
+        window.location.href = '?' + params.toString();
+    });
+
+    // تحديث أيقونات الترتيب عند تحميل الصفحة
+    function updateSortIcons() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentSort = urlParams.get('sort');
+        const currentDirection = urlParams.get('direction') || 'asc';
+
+        if (currentSort) {
+            $('.sortable-header').each(function() {
+                const column = $(this).data('sort');
+                if (column === currentSort) {
+                    $(this).addClass('active');
+                    $(this).find('.sort-icon').removeClass('none asc desc').addClass(currentDirection);
+                }
+            });
+        }
+    }
+
+    // استدعاء تحديث أيقونات الترتيب عند تحميل الصفحة
+    updateSortIcons();
+
+    // إزالة backdrop عند إغلاق المودال - حل قوي
+    $('#rejectModal').on('hidden.bs.modal', function () {
+        // إزالة جميع آثار المودال
+        $('.modal-backdrop').remove();
+        $('.modal-backdrop.show').remove();
+        $('.modal-backdrop.fade').remove();
+        $('body').removeClass('modal-open');
+        $('html').removeClass('modal-open');
+        $('body').css({
+            'overflow': 'auto',
+            'padding-right': '0'
+        });
+        
+        // تنظيف النموذج
+        $('#rejection_reason').val('');
+        $('#rejectOrderId').val('');
+    });
+    
+    // معالجة إضافية عند النقر على الخلفية أو الإغلاق
+    $('#rejectModal').on('hide.bs.modal', function () {
+        setTimeout(() => {
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open');
+            $('body').css('overflow', 'auto');
+        }, 100);
+    });
+    
+    // معالجة النقر على زر X أو خارج المودال
+    $('#rejectModal .btn-close, #rejectModal [data-bs-dismiss="modal"]').on('click', function() {
+        forceCleanModal();
+    });
+    
+    // معالجة النقر على الخلفية (backdrop)
+    $('#rejectModal').on('click', function(e) {
+        if (e.target === this) {
+            forceCleanModal();
+        }
+    });
+    
+    // تنظيف مودال تفاصيل الرفض عند إغلاقه
+    $('#rejectionDetailsModal').on('hidden.bs.modal', function () {
+        forceCleanModal();
+        $('#reply_message').val('');
+    });
+    
+    // معالجة النقر على زر X أو خارج مودال تفاصيل الرفض
+    $('#rejectionDetailsModal .btn-close, #rejectionDetailsModal [data-bs-dismiss="modal"]').on('click', function() {
+        forceCleanModal();
+    });
+    
+    // معالجة النقر على الخلفية (backdrop) لمودال تفاصيل الرفض
+    $('#rejectionDetailsModal').on('click', function(e) {
+        if (e.target === this) {
+            forceCleanModal();
+        }
+    });
+});
+
+// عرض modal لتغيير الحالة
+window.showStatusModal = function(orderId, currentStatus, currentStatusDisplay, orderType) {
+    console.log('showStatusModal called with:', {orderId, currentStatus, currentStatusDisplay, orderType});
+    const statusOptions = {
+        'pending_approval': 'قيد الموافقة',
+        'pending': 'قيد الانتظار',
+        'in_progress': 'قيد التنفيذ',
+        'ready_install': 'جاهز للتركيب',
+        'completed': 'مكتمل',
+        'delivered': 'تم التسليم',
+        'rejected': 'مرفوض',
+        'cancelled': 'ملغي'
+    };
+
+    const statusColors = {
+        'pending_approval': '#007bff',
+        'pending': '#ffc107',
+        'in_progress': '#17a2b8',
+        'ready_install': '#6f42c1',
+        'completed': '#28a745',
+        'delivered': '#20c997',
+        'rejected': '#dc3545',
+        'cancelled': '#6c757d'
+    };
+
+    // Define status hierarchy
+    const statusHierarchy = {
+        'pending_approval': 0,
+        'pending': 1,
+        'in_progress': 2,
+        'ready_install': 3,
+        'completed': 4,
+        'delivered': 5,
+        'rejected': -1,
+        'cancelled': -2
+    };
+
+    const currentLevel = statusHierarchy[currentStatus] || 0;
+    const isAdmin = {{ request.user.is_superuser|yesno:"true,false" }};
+    const hasChangePermission = {{ request.user|yesno:"true,false" }}; // This will be handled server-side
+    
+    let optionsHtml = '';
+    
+    // Define available statuses based on current status and order type
+    let availableStatuses = [];
+    
+    // Use the orderType parameter passed to the function
+    const orderTypeValue = orderType || null;
+    
+    if (currentStatus === 'pending_approval') {
+        // Only admin/approval users can change from pending_approval
+        if (isAdmin) {
+            availableStatuses = ['pending', 'rejected', 'cancelled'];
+        } else {
+            availableStatuses = []; // No status changes allowed for non-admin users
+        }
+    } else if (currentStatus === 'pending') {
+        availableStatuses = ['in_progress', 'cancelled'];
+    } else if (currentStatus === 'in_progress') {
+        // Apply new logic based on order type
+        if (orderTypeValue === 'installation') {
+            // For installation orders: only show 'ready_install' after 'in_progress'
+            availableStatuses = ['ready_install'];
+        } else {
+            // For manufacturing/accessory orders: only show 'completed' after 'in_progress'
+            availableStatuses = ['completed'];
+        }
+    } else if (currentStatus === 'ready_install') {
+        // After 'ready_install', only show 'delivered'
+        availableStatuses = ['delivered'];
+    } else if (currentStatus === 'completed') {
+        // After 'completed', only show 'delivered'
+        availableStatuses = ['delivered'];
+    } else if (currentStatus === 'delivered') {
+        // منع تغيير الحالة بعد الوصول لحالة "تم التسليم"
+        availableStatuses = [];
+    } else if (currentStatus === 'rejected' || currentStatus === 'cancelled') {
+        availableStatuses = isAdmin ? ['pending', 'in_progress', 'completed', 'ready_install', 'delivered'] : [];
+    }
+    
+    // Admin can access all statuses (but still follow the new logic)
+    if (isAdmin && currentStatus !== 'pending_approval') {
+        // Add rejected and cancelled for all statuses (except themselves)
+        // لكن لا نضيفهم بعد "قيد التنفيذ" حسب الشروط الجديدة
+        if (currentStatus !== 'rejected' && currentStatus !== 'in_progress') availableStatuses.push('rejected');
+        if (currentStatus !== 'cancelled' && currentStatus !== 'in_progress') availableStatuses.push('cancelled');
+    }
+    
+    // Generate options HTML
+    for (const [value, label] of Object.entries(statusOptions)) {
+        if (value !== currentStatus && availableStatuses.includes(value)) {
+            // Don't show pending_approval unless admin
+            if (value !== 'pending_approval' || isAdmin) {
+                optionsHtml += `<option value="${value}" style="color: ${statusColors[value]}">${label}</option>`;
+            }
+        }
+    }
+
+    if (optionsHtml === '') {
+        Swal.fire({
+            title: 'تنبيه',
+            text: 'لا توجد حالات متاحة للتغيير',
+            icon: 'info',
+            confirmButtonText: 'موافق'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'تغيير حالة الطلب',
+        html: `
+            <p class="mb-3">الحالة الحالية: <span class="badge" style="background-color: ${statusColors[currentStatus]}; color: white;">${currentStatusDisplay}</span></p>
+            <select id="newStatus" class="form-select">
+                <option value="">اختر الحالة الجديدة</option>
+                ${optionsHtml}
+            </select>
+            ${!isAdmin ? '<p class="text-muted small mt-2">ملاحظة: لا يمكن العودة للحالات السابقة إلا من قبل مدير النظام</p>' : ''}
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'متابعة',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#007bff',
+        cancelButtonColor: '#6c757d',
+        preConfirm: () => {
+            const newStatus = document.getElementById('newStatus').value;
+            if (!newStatus) {
+                Swal.showValidationMessage('يرجى اختيار الحالة الجديدة');
+                return false;
+            }
+            return newStatus;
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const newStatus = result.value;
+            
+            // إذا كانت الحالة الجديدة هي "تم التسليم"، اطلب حقول التسليم
+            if (newStatus === 'delivered') {
+                showDeliveryModal(orderId, newStatus);
+            } else if (newStatus === 'rejected') {
+                // إذا كانت الحالة الجديدة هي "مرفوض"، اطلب سبب الرفض
+                showRejectionModal(orderId, newStatus);
+            } else {
+                updateOrderStatus(orderId, newStatus);
+            }
+        }
+    });
+}
+
+// عرض modal لسبب الرفض
+function showRejectionModal(orderId, newStatus) {
+    Swal.fire({
+        title: 'سبب الرفض',
+        html: `
+            <div class="text-start">
+                <div class="mb-3">
+                    <label for="rejectionReason" class="form-label">سبب الرفض <span class="text-danger">*</span></label>
+                    <textarea id="rejectionReason" class="form-control" rows="4" placeholder="أدخل سبب الرفض..." required></textarea>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'رفض الطلب',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        focusConfirm: false,
+        preConfirm: () => {
+            const rejectionReason = document.getElementById('rejectionReason').value.trim();
+            
+            if (!rejectionReason) {
+                Swal.showValidationMessage('سبب الرفض مطلوب');
+                return false;
+            }
+            
+            return rejectionReason;
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            updateOrderStatusWithRejection(orderId, newStatus, result.value);
+        }
+    });
+}
+
+// عرض modal لحقول التسليم
+function showDeliveryModal(orderId, newStatus) {
+    Swal.fire({
+        title: 'بيانات التسليم',
+        html: `
+            <div class="text-start">
+                <div class="mb-3">
+                    <label for="deliveryPermitNumber" class="form-label">رقم إذن التسليم <span class="text-danger">*</span></label>
+                    <input type="text" id="deliveryPermitNumber" class="form-control" placeholder="أدخل رقم إذن التسليم" required>
+                </div>
+                <div class="mb-3">
+                    <label for="deliveryRecipientName" class="form-label">اسم المستلم <span class="text-danger">*</span></label>
+                    <input type="text" id="deliveryRecipientName" class="form-control" placeholder="أدخل اسم المستلم" required>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'تسليم',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        focusConfirm: false,
+        preConfirm: () => {
+            const deliveryPermitNumber = document.getElementById('deliveryPermitNumber').value.trim();
+            const deliveryRecipientName = document.getElementById('deliveryRecipientName').value.trim();
+            
+            if (!deliveryPermitNumber) {
+                Swal.showValidationMessage('رقم إذن التسليم مطلوب');
+                return false;
+            }
+            
+            if (!deliveryRecipientName) {
+                Swal.showValidationMessage('اسم المستلم مطلوب');
+                return false;
+            }
+            
+            return {
+                deliveryPermitNumber: deliveryPermitNumber,
+                deliveryRecipientName: deliveryRecipientName
+            };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            updateOrderStatusWithDelivery(orderId, newStatus, result.value);
+        }
+    });
+}
+
+// تحديث حالة الطلب
+function updateOrderStatus(orderId, newStatus) {
+    Swal.fire({
+        title: 'جاري التحديث...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    $.ajax({
+        url: `/manufacturing/api/update_status/${orderId}/`,
+        method: 'POST',
+        data: {
+            'status': newStatus,
+            'csrfmiddlewaretoken': $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content')
+        },
+        success: function(response) {
+            if (response.success) {
+                Swal.fire({
+                    title: 'تم بنجاح!',
+                    text: 'تم تحديث حالة الطلب بنجاح',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء تحديث الحالة', 'error');
+            }
+        },
+        error: function(xhr) {
+            let errorMessage = 'حدث خطأ غير متوقع';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            Swal.fire('خطأ!', errorMessage, 'error');
+        }
+    });
+}
+
+// تحديث حالة الطلب مع سبب الرفض
+function updateOrderStatusWithRejection(orderId, newStatus, rejectionReason) {
+    Swal.fire({
+        title: 'جاري الرفض...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // استخدام API الموافقة/الرفض الموجود
+    const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
+    
+    $.ajax({
+        url: `/manufacturing/approval/${orderId}/`,
+        method: 'POST',
+        data: JSON.stringify({
+            'action': 'reject',
+            'reason': rejectionReason
+        }),
+        contentType: 'application/json',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        success: function(response) {
+            if (response.success) {
+                Swal.fire({
+                    title: 'تم الرفض بنجاح!',
+                    text: 'تم رفض الطلب وإرسال إشعار للمستخدم',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء رفض الطلب', 'error');
+            }
+        },
+        error: function(xhr) {
+            let errorMessage = 'حدث خطأ غير متوقع';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            Swal.fire('خطأ!', errorMessage, 'error');
+        }
+    });
+}
+
+// تحديث حالة الطلب مع بيانات التسليم
+function updateOrderStatusWithDelivery(orderId, newStatus, deliveryData) {
+    Swal.fire({
+        title: 'جاري التحديث...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    const formData = new FormData();
+    formData.append('status', newStatus);
+    formData.append('delivery_permit_number', deliveryData.deliveryPermitNumber);
+    formData.append('delivery_recipient_name', deliveryData.deliveryRecipientName);
+    formData.append('csrfmiddlewaretoken', $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content'));
+
+    $.ajax({
+        url: `/manufacturing/api/update_status/${orderId}/`,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                Swal.fire({
+                    title: 'تم التسليم بنجاح!',
+                    text: `تم تسليم الطلب إلى: ${deliveryData.deliveryRecipientName}`,
+                    icon: 'success',
+                    timer: 3000,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء تحديث الحالة', 'error');
+            }
+        },
+        error: function(xhr) {
+            let errorMessage = 'حدث خطأ غير متوقع';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            Swal.fire('خطأ!', errorMessage, 'error');
+        }
+    });
+}
+
+// معالجة الموافقة والرفض
+function handleApproval(orderId, action, reason = '') {
+    // إظهار loading
+    Swal.fire({
+        title: action === 'approve' ? 'جاري الموافقة...' : 'جاري الرفض...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // إخفاء المودال فوراً إذا كان الإجراء رفض
+    if (action === 'reject') {
+        forceCleanModal();
+    }
+
+    // الحصول على CSRF token
+    const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
+    
+    if (!csrfToken) {
+        Swal.fire('خطأ!', 'لم يتم العثور على رمز الأمان. يرجى إعادة تحميل الصفحة.', 'error');
+        return;
+    }
+
+    $.ajax({
+        url: `/manufacturing/approval/${orderId}/`,
+        method: 'POST',
+        data: JSON.stringify({
+            'action': action,
+            'reason': reason
+        }),
+        contentType: 'application/json',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        success: function(response) {
+            if (response.success) {
+                if (action === 'approve') {
+                    Swal.fire({
+                        title: 'تم بنجاح!',
+                        text: response.message || 'تم قبول الطلب بنجاح',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'تم بنجاح!',
+                        text: response.message || 'تم رفض الطلب وإرسال إشعار للمستخدم',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء المعالجة', 'error');
+            }
+        },
+        error: function(xhr) {
+            let errorMessage = 'حدث خطأ غير متوقع';
+            
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            } else if (xhr.status === 403) {
+                errorMessage = 'ليس لديك صلاحية لتنفيذ هذا الإجراء';
+            } else if (xhr.status === 404) {
+                errorMessage = 'لم يتم العثور على الطلب';
+            } else if (xhr.status === 400) {
+                errorMessage = 'بيانات غير صالحة';
+            }
+            
+            // إزالة قوية للمودال والـ backdrop في حالة الخطأ
+            forceCleanModal();
+            
+            Swal.fire('خطأ!', errorMessage, 'error');
+        }
+    });
+}
+
+// عرض تفاصيل الرفض
+function showRejectionDetails(rejectionReason, orderId) {
+    $('#rejectionReasonText').text(rejectionReason);
+    
+    // حفظ معرف الطلب للاستخدام في الرد
+    $('#rejectionDetailsModal').data('order-id', orderId);
+    
+    // جلب معلومات الطلب لعرض الرد إن وجد
+    $.ajax({
+        url: `/manufacturing/order/${orderId}/details/`,
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const order = response.order;
+                
+                // إذا كان هناك رد على الرفض
+                if (order.has_rejection_reply && order.rejection_reply) {
+                    $('#modalTitleText').text('محادثة الرفض والرد');
+                    $('#customerReplyText').text(order.rejection_reply);
+                    
+                    // تنسيق التاريخ
+                    if (order.rejection_reply_date) {
+                        const replyDate = new Date(order.rejection_reply_date);
+                        $('#replyDate').text(replyDate.toLocaleDateString('ar-SA') + ' ' + replyDate.toLocaleTimeString('ar-SA', {hour: '2-digit', minute: '2-digit'}));
+                    }
+                    
+                    $('#replySection').show();
+                    $('#reApprovalSection').show();
+                    $('#newReplySection').hide();
+                    $('#noReplyButtons').hide();
+                    $('#hasReplyButtons').show();
+                } else {
+                    // لا يوجد رد بعد
+                    $('#modalTitleText').text('تفاصيل الرفض');
+                    $('#replySection').hide();
+                    $('#reApprovalSection').hide();
+                    $('#newReplySection').show();
+                    $('#noReplyButtons').show();
+                    $('#hasReplyButtons').hide();
+                }
+            }
+        },
+        error: function() {
+            // في حالة فشل جلب التفاصيل، اعرض النموذج العادي
+            $('#modalTitleText').text('تفاصيل الرفض');
+            $('#replySection').hide();
+            $('#reApprovalSection').hide();
+            $('#newReplySection').show();
+            $('#noReplyButtons').show();
+            $('#hasReplyButtons').hide();
+        }
+    });
+    
+    $('#rejectionDetailsModal').modal('show');
+}
+
+// معالجة الموافقة مرة أخرى بعد الرد على الرفض
+function handleReApproval(orderId) {
+    Swal.fire({
+        title: 'تأكيد الموافقة',
+        text: 'هل أنت متأكد من الموافقة على هذا الطلب بعد مراجعة الرد؟',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، وافق',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // إظهار loading
+            Swal.fire({
+                title: 'جاري الموافقة...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
+            
+            $.ajax({
+                url: `/manufacturing/re_approve/${orderId}/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'تم بنجاح!',
+                            text: response.message || 'تمت الموافقة على الطلب بعد المراجعة',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء الموافقة', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    let errorMessage = 'حدث خطأ غير متوقع';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMessage = xhr.responseJSON.error;
+                    }
+                    Swal.fire('خطأ!', errorMessage, 'error');
+                }
+            });
+        }
+    });
+}
+
+// معالجة الرد على الرفض
+$('#submitReplyBtn').on('click', function() {
+    const orderId = $('#rejectionDetailsModal').data('order-id');
+    const replyMessage = $('#reply_message').val().trim();
+    
+    if (!replyMessage) {
+        Swal.fire('خطأ', 'يرجى كتابة رد قبل الإرسال.', 'error');
+        return;
+    }
+    
+    // إخفاء المودال فوراً قبل إرسال الطلب
+    $('#rejectionDetailsModal').modal('hide');
+    // تنظيف قوي للمودال وإزالة backdrop
+    setTimeout(() => {
+        forceCleanModal();
+    }, 100);
+    
+    // إظهار loading
+    Swal.fire({
+        title: 'جاري إرسال الرد...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
+    
+    $.ajax({
+        url: `/manufacturing/send_reply/${orderId}/`,
+        method: 'POST',
+        data: JSON.stringify({
+            'reply_message': replyMessage
+        }),
+        contentType: 'application/json',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        success: function(response) {
+            if (response.success) {
+                Swal.fire({
+                    title: 'تم بنجاح!',
+                    text: 'تم إرسال ردك للإدارة بنجاح',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                $('#reply_message').val('');
+                // إعادة تحميل الصفحة لإظهار التحديثات
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                Swal.fire('خطأ!', response.error || 'حدث خطأ أثناء إرسال الرد', 'error');
+            }
+        },
+        error: function(xhr) {
+            let errorMessage = 'حدث خطأ غير متوقع';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage = xhr.responseJSON.error;
+            }
+            Swal.fire('خطأ!', errorMessage, 'error');
+        }
+    });
+});
+
+// معالجة الموافقة مرة أخرى من المودال
+$('#reApproveBtn').on('click', function() {
+    const orderId = $('#rejectionDetailsModal').data('order-id');
+    
+    // إخفاء المودال
+    $('#rejectionDetailsModal').modal('hide');
+    setTimeout(() => {
+        forceCleanModal();
+    }, 100);
+    
+    // استدعاء دالة الموافقة مرة أخرى
+    handleReApproval(orderId);
+});
+
+// معالجة الرفض النهائي من المودال
+$('#finalRejectBtn').on('click', function() {
+    const orderId = $('#rejectionDetailsModal').data('order-id');
+    
+    // إخفاء المودال
+    $('#rejectionDetailsModal').modal('hide');
+    setTimeout(() => {
+        forceCleanModal();
+    }, 100);
+    
+    // طلب سبب الرفض النهائي
+    Swal.fire({
+        title: 'رفض نهائي',
+        text: 'يرجى إدخال سبب الرفض النهائي:',
+        input: 'textarea',
+        inputPlaceholder: 'اكتب سبب الرفض النهائي...',
+        showCancelButton: true,
+        confirmButtonText: 'رفض نهائي',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        inputValidator: (value) => {
+            if (!value.trim()) {
+                return 'يرجى إدخال سبب الرفض';
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // إظهار loading
+            Swal.fire({
+                title: 'جاري الرفض...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const csrfToken = $('input[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content');
+            
+            $.ajax({
+                url: `/manufacturing/approval/${orderId}/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    action: 'reject',
+                    reason: result.value
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'تم الرفض',
+                            text: response.message,
+                            confirmButtonText: 'موافق'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('خطأ', response.error, 'error');
+                    }
+                },
+                error: function(xhr) {
+                    let errorMessage = 'حدث خطأ غير متوقع';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMessage = xhr.responseJSON.error;
+                    }
+                    Swal.fire('خطأ', errorMessage, 'error');
+                }
+            });
+        }
+    });
+});
+
+// تأكيد الحذف
+function confirmDelete(orderId) {
+    Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'لن تتمكن من التراجع عن هذا الإجراء!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، احذف!',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = `/manufacturing/orders/${orderId}/delete/`;
+        }
+    });
+}
+
+// تحديث نص الأنواع المختارة
+function updateSelectedTypesText() {
+    const checkboxes = document.querySelectorAll('input[name="order_types"]:checked');
+    const selectedText = document.getElementById('selectedTypesText');
+
+    if (checkboxes.length === 0) {
+        selectedText.textContent = 'جميع الأنواع';
+    } else if (checkboxes.length === 1) {
+        selectedText.textContent = checkboxes[0].parentElement.textContent.trim();
+    } else {
+        selectedText.textContent = checkboxes.length + ' نوع محدد';
+    }
+}
+
+// منع إغلاق القائمة عند النقر على checkbox
+document.addEventListener('DOMContentLoaded', function() {
+    const dropdownItems = document.querySelectorAll('.dropdown-menu label');
+    dropdownItems.forEach(function(item) {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+});
+
+// متغيرات عامة لتبديل خط الإنتاج
+let currentOrderId = null;
+let productionLines = [];
+
+// تحميل خطوط الإنتاج عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    loadProductionLines();
+
+    // إضافة مستمع للأزرار
+    document.querySelectorAll('.change-production-line-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            openChangeProductionLineModal(this);
+        });
+    });
+
+    // مستمع زر التأكيد
+    const confirmBtn = document.getElementById('confirmChangeBtn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function() {
+            changeProductionLine();
+        });
+    }
+});
+
+// تحميل خطوط الإنتاج من الخادم
+async function loadProductionLines() {
+    try {
+        console.log('بدء تحميل خطوط الإنتاج...');
+        const response = await fetch('/manufacturing/api/production-lines/');
+        console.log('استجابة API:', response.status, response.statusText);
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('البيانات المستلمة:', data);
+
+            if (Array.isArray(data)) {
+                productionLines = data;
+                console.log('تم تحميل خطوط الإنتاج بنجاح:', productionLines.length, 'خط');
+            } else if (data.error) {
+                console.error('خطأ من الخادم:', data.error);
+                productionLines = [];
+            } else {
+                console.error('تنسيق البيانات غير متوقع:', data);
+                productionLines = [];
+            }
+        } else {
+            console.error('فشل في تحميل خطوط الإنتاج:', response.status, response.statusText);
+            // استخدام بيانات افتراضية كبديل
+            productionLines = [
+                {id: 1, name: 'هاني رمسيس', description: ''},
+                {id: 2, name: 'ايهاب يوسف', description: ''},
+                {id: 3, name: 'ريمون فوزي', description: ''},
+                {id: 4, name: 'هاني رمسيس تسليم فروع', description: ''}
+            ];
+            console.log('استخدام بيانات افتراضية:', productionLines);
+        }
+    } catch (error) {
+        console.error('خطأ في تحميل خطوط الإنتاج:', error);
+        // استخدام بيانات افتراضية كبديل
+        productionLines = [
+            {id: 1, name: 'هاني رمسيس', description: ''},
+            {id: 2, name: 'ايهاب يوسف', description: ''},
+            {id: 3, name: 'ريمون فوزي', description: ''},
+            {id: 4, name: 'هاني رمسيس تسليم فروع', description: ''}
+        ];
+        console.log('استخدام بيانات افتراضية بسبب خطأ:', productionLines);
+    }
+}
+
+// فتح نافذة تبديل خط الإنتاج
+async function openChangeProductionLineModal(button) {
+    currentOrderId = button.dataset.orderId;
+    const orderCode = button.dataset.orderCode;
+    const currentLine = button.dataset.currentLine;
+    const currentLineId = button.dataset.currentLineId;
+
+    console.log('فتح نافذة تبديل خط الإنتاج:', {currentOrderId, orderCode, currentLine, currentLineId});
+
+    // إذا لم تكن خطوط الإنتاج محملة، نحملها الآن
+    if (!productionLines || productionLines.length === 0) {
+        console.log('إعادة تحميل خطوط الإنتاج...');
+        await loadProductionLines();
+    }
+
+    console.log('خطوط الإنتاج المتاحة:', productionLines);
+
+    // تحديث معلومات الطلب
+    document.getElementById('orderCodeDisplay').textContent = orderCode;
+    document.getElementById('currentLineDisplay').textContent = currentLine;
+
+    // تحديث قائمة خطوط الإنتاج
+    const select = document.getElementById('newProductionLine');
+    select.innerHTML = '<option value="">-- اختر خط الإنتاج --</option>';
+
+    if (productionLines && productionLines.length > 0) {
+        console.log('إضافة خطوط الإنتاج للقائمة... العدد:', productionLines.length);
+        productionLines.forEach((line, index) => {
+            console.log(`معالجة خط الإنتاج ${index + 1}:`, line.name, 'ID:', line.id, 'الحالي:', currentLineId);
+            const option = document.createElement('option');
+            option.value = line.id;
+
+            // إذا كان هذا هو خط الإنتاج الحالي، نضع علامة عليه
+            if (line.id == currentLineId) {
+                option.textContent = line.name + ' (الحالي)';
+                option.style.fontWeight = 'bold';
+                option.style.color = '#007bff';
+            } else {
+                option.textContent = line.name;
+            }
+
+            if (line.description) {
+                option.title = line.description;
+            }
+            select.appendChild(option);
+            console.log('تم إضافة خط الإنتاج:', line.name);
+        });
+    } else {
+        console.warn('لا توجد خطوط إنتاج متاحة، إضافة رسالة...');
+        // إضافة خيار يوضح عدم وجود خطوط إنتاج
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'لا توجد خطوط إنتاج متاحة - يرجى إضافة خطوط إنتاج من لوحة الإدارة';
+        option.disabled = true;
+        select.appendChild(option);
+    }
+
+    console.log('عدد الخيارات النهائي في القائمة:', select.options.length);
+
+    // إعادة تعيين النموذج
+    document.getElementById('changeProductionLineForm').reset();
+
+    // فتح النافذة
+    const modal = new bootstrap.Modal(document.getElementById('changeProductionLineModal'));
+    modal.show();
+}
+
+// تبديل خط الإنتاج
+async function changeProductionLine() {
+    const newLineId = document.getElementById('newProductionLine').value;
+    const reason = document.getElementById('changeReason').value;
+
+    if (!newLineId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'تحذير',
+            text: 'يرجى اختيار خط الإنتاج الجديد',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+
+    // إظهار مؤشر التحميل
+    const confirmBtn = document.getElementById('confirmChangeBtn');
+    const originalText = confirmBtn.innerHTML;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التبديل...';
+    confirmBtn.disabled = true;
+
+    try {
+        const response = await fetch(`/manufacturing/api/change-production-line/${currentOrderId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                production_line_id: newLineId,
+                reason: reason
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // إغلاق النافذة
+            bootstrap.Modal.getInstance(document.getElementById('changeProductionLineModal')).hide();
+
+            // إظهار رسالة نجاح
+            Swal.fire({
+                icon: 'success',
+                title: 'تم بنجاح!',
+                text: result.message,
+                confirmButtonText: 'حسناً'
+            }).then(() => {
+                // إعادة تحميل الصفحة لإظهار التغييرات
+                location.reload();
+            });
+        } else {
+            throw new Error(result.message || 'حدث خطأ غير متوقع');
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'خطأ',
+            text: error.message || 'حدث خطأ أثناء تبديل خط الإنتاج',
+            confirmButtonText: 'حسناً'
+        });
+    } finally {
+        // إعادة تعيين الزر
+        confirmBtn.innerHTML = originalText;
+        confirmBtn.disabled = false;
+    }
+}
+</script>
+
+<!-- نافذة تبديل خط الإنتاج -->
+<div class="modal fade" id="changeProductionLineModal" tabindex="-1" aria-labelledby="changeProductionLineModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; border-radius: 15px 15px 0 0;">
+                <h5 class="modal-title" id="changeProductionLineModalLabel">
+                    <i class="fas fa-exchange-alt me-2"></i>تبديل خط الإنتاج
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body" style="padding: 2rem;">
+                <div class="text-center mb-4">
+                    <div class="order-info-card" style="background: #f8f9fa; border-radius: 10px; padding: 1.5rem; border-left: 4px solid #007bff;">
+                        <h6 class="mb-2" style="color: #007bff; font-weight: bold;">
+                            <i class="fas fa-industry me-2"></i>طلب التصنيع
+                        </h6>
+                        <div id="orderCodeDisplay" class="h5 mb-2" style="color: #333;"></div>
+                        <div class="current-line-info">
+                            <small class="text-muted">خط الإنتاج الحالي:</small>
+                            <div id="currentLineDisplay" class="badge bg-info text-white mt-1" style="font-size: 0.9rem; padding: 0.5rem 1rem;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="changeProductionLineForm">
+                    <div class="mb-4">
+                        <label for="newProductionLine" class="form-label" style="font-weight: 600; color: #333;">
+                            <i class="fas fa-cogs me-2"></i>اختر خط الإنتاج الجديد
+                        </label>
+                        <select class="form-select" id="newProductionLine" name="production_line_id" required
+                                style="border-radius: 10px; border: 2px solid #e9ecef; padding: 0.75rem; font-size: 1rem;">
+                            <option value="">-- اختر خط الإنتاج --</option>
+                        </select>
+                        <div class="form-text mt-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            سيتم تبديل خط الإنتاج فوراً بعد التأكيد
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="changeReason" class="form-label" style="font-weight: 600; color: #333;">
+                            <i class="fas fa-comment me-2"></i>سبب التبديل (اختياري)
+                        </label>
+                        <textarea class="form-control" id="changeReason" name="reason" rows="3"
+                                  placeholder="اكتب سبب تبديل خط الإنتاج..."
+                                  style="border-radius: 10px; border: 2px solid #e9ecef; resize: none;"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e9ecef; padding: 1.5rem;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 0.5rem 1.5rem;">
+                    <i class="fas fa-times me-2"></i>إلغاء
+                </button>
+                <button type="button" class="btn btn-primary" id="confirmChangeBtn" style="border-radius: 8px; padding: 0.5rem 1.5rem; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border: none;">
+                    <i class="fas fa-check me-2"></i>تأكيد التبديل
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+// JavaScript بسيط للفلاتر
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('تحميل الفلاتر البسيطة');
+
+    // تسجيل إرسال النموذج
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+        filterForm.addEventListener('submit', function(e) {
+            console.log('تم إرسال نموذج الفلاتر');
+
+            // طباعة البيانات المرسلة
+            const formData = new FormData(filterForm);
+            console.log('البيانات المرسلة:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
+        });
+    }
+
+    // تحسين تجربة المستخدم مع select متعدد الاختيار
+    const multiSelects = document.querySelectorAll('select[multiple]');
+    multiSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            const selectedCount = this.selectedOptions.length;
+            const label = this.previousElementSibling;
+            if (label && label.tagName === 'LABEL') {
+                const originalText = label.textContent.split(' (')[0];
+                if (selectedCount > 0) {
+                    label.textContent = `${originalText} (${selectedCount} مختار)`;
+                } else {
+                    label.textContent = originalText;
+                }
+            }
+        });
+
+        // تحديث العداد عند التحميل
+        const event = new Event('change');
+        select.dispatchEvent(event);
+    });
+});
+</script>
+
+<!-- JavaScript لمسح الفلاتر -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // زر مسح الفلاتر
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', function() {
+            const form = document.getElementById('filterForm');
+            const inputs = form.querySelectorAll('input, select');
+
+            inputs.forEach(input => {
+                if (input.name !== 'page_size') {
+                    if (input.type === 'checkbox') {
+                        input.checked = false;
+                    } else if (input.tagName === 'SELECT') {
+                        // للقوائم المتعددة، إلغاء تحديد جميع الخيارات
+                        if (input.multiple) {
+                            Array.from(input.options).forEach(option => {
+                                option.selected = false;
+                            });
+                        } else {
+                            input.selectedIndex = 0;
+                        }
+                    } else {
+                        input.value = '';
+                    }
+                }
+            });
+
+            // إرسال النموذج بعد مسح الفلاتر
+            form.submit();
+        });
+    }
+});
+</script>
+
+{% endblock %}

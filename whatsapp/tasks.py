@@ -10,8 +10,9 @@ from inspections.models import Inspection
 logger = logging.getLogger(__name__)
 
 
-@shared_task
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, autoretry_for=(Exception,))
 def send_whatsapp_notification_task(
+    self,
     customer_id,
     template_id,
     context,
@@ -70,8 +71,8 @@ def send_whatsapp_notification_task(
         return {'status': 'error', 'message': str(e)}
 
 
-@shared_task
-def retry_failed_messages_task():
+@shared_task(bind=True, max_retries=3, default_retry_delay=300, autoretry_for=(Exception,))
+def retry_failed_messages_task(self):
     """مهمة دورية لإعادة محاولة إرسال الرسائل الفاشلة"""
     service = WhatsAppService()
     
