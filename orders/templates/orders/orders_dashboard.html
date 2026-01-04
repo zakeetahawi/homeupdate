@@ -48,21 +48,98 @@
 .inspection-card {
     background: #0d6efd;
     color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.inspection-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: glowRotate 3s linear infinite;
+}
+
+@keyframes glowRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.inspection-card:hover {
+    box-shadow: 0 8px 30px rgba(13, 110, 253, 0.5),
+                0 0 40px rgba(13, 110, 253, 0.3);
 }
 
 .installation-card {
     background: #198754;
     color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.installation-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: glowRotate 3s linear infinite;
+}
+
+.installation-card:hover {
+    box-shadow: 0 8px 30px rgba(25, 135, 84, 0.5),
+                0 0 40px rgba(25, 135, 84, 0.3);
 }
 
 .accessory-card {
     background: #ffc107;
     color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.accessory-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+    animation: glowRotate 3s linear infinite;
+}
+
+.accessory-card:hover {
+    box-shadow: 0 8px 30px rgba(255, 193, 7, 0.6),
+                0 0 40px rgba(255, 193, 7, 0.4);
 }
 
 .tailoring-card {
     background: #dc3545;
     color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.tailoring-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: glowRotate 3s linear infinite;
+}
+
+.tailoring-card:hover {
+    box-shadow: 0 8px 30px rgba(220, 53, 69, 0.5),
+                0 0 40px rgba(220, 53, 69, 0.3);
 }
 
 /* بطاقات الإحصائيات العامة */
@@ -86,18 +163,240 @@
 
 .stats-card.total-orders {
     border-left: 4px solid #0d6efd;
+    position: relative;
+}
+
+.stats-card.total-orders::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    bottom: -2px;
+    left: -2px;
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    border-radius: 15px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 0 20px rgba(13, 110, 253, 0.6),
+                0 0 40px rgba(13, 110, 253, 0.4),
+                0 0 60px rgba(13, 110, 253, 0.2);
+}
+
+.stats-card.total-orders:hover::after {
+    opacity: 1;
 }
 
 .stats-card.pending-orders {
     border-left: 4px solid #ffc107;
+    position: relative;
+}
+
+.stats-card.pending-orders::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    bottom: -2px;
+    left: -2px;
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    border-radius: 15px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 0 20px rgba(255, 193, 7, 0.6),
+                0 0 40px rgba(255, 193, 7, 0.4),
+                0 0 60px rgba(255, 193, 7, 0.2);
+}
+
+.stats-card.pending-orders:hover::after {
+    opacity: 1;
 }
 
 .stats-card.completed-orders {
     border-left: 4px solid #198754;
+    position: relative;
+}
+
+.stats-card.completed-orders::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    bottom: -2px;
+    left: -2px;
+    background: linear-gradient(135deg, #198754, #146c43);
+    border-radius: 15px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 0 20px rgba(25, 135, 84, 0.6),
+                0 0 40px rgba(25, 135, 84, 0.4),
+                0 0 60px rgba(25, 135, 84, 0.2);
+}
+
+.stats-card.completed-orders:hover::after {
+    opacity: 1;
 }
 
 .stats-card.total-revenue {
     border-left: 4px solid #dc3545;
+    position: relative;
+}
+
+.stats-card.total-revenue::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    bottom: -2px;
+    left: -2px;
+    background: linear-gradient(135deg, #dc3545, #b02a37);
+    border-radius: 15px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 0 20px rgba(220, 53, 69, 0.6),
+                0 0 40px rgba(220, 53, 69, 0.4),
+                0 0 60px rgba(220, 53, 69, 0.2);
+}
+
+.stats-card.total-revenue:hover::after {
+    opacity: 1;
+}
+
+/* Inspection-related cards with glow effect */
+.stats-card.border-info {
+    border-left: 4px solid #0dcaf0;
+    position: relative;
+}
+
+.stats-card.border-info::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    bottom: -2px;
+    left: -2px;
+    background: linear-gradient(135deg, #0dcaf0, #0aa2c0);
+    border-radius: 15px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 0 20px rgba(13, 202, 240, 0.6),
+                0 0 40px rgba(13, 202, 240, 0.4),
+                0 0 60px rgba(13, 202, 240, 0.2);
+}
+
+.stats-card.border-info:hover::after {
+    opacity: 1;
+}
+
+.stats-card.border-warning {
+    border-left: 4px solid #ffc107;
+    position: relative;
+}
+
+.stats-card.border-warning::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    bottom: -2px;
+    left: -2px;
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    border-radius: 15px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 0 20px rgba(255, 193, 7, 0.6),
+                0 0 40px rgba(255, 193, 7, 0.4),
+                0 0 60px rgba(255, 193, 7, 0.2);
+}
+
+.stats-card.border-warning:hover::after {
+    opacity: 1;
+}
+
+.stats-card.border-secondary {
+    border-left: 4px solid #6c757d;
+    position: relative;
+}
+
+.stats-card.border-secondary::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    bottom: -2px;
+    left: -2px;
+    background: linear-gradient(135deg, #6c757d, #5c636a);
+    border-radius: 15px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 0 20px rgba(108, 117, 125, 0.6),
+                0 0 40px rgba(108, 117, 125, 0.4),
+                0 0 60px rgba(108, 117, 125, 0.2);
+}
+
+.stats-card.border-secondary:hover::after {
+    opacity: 1;
+}
+
+/* Badge styles for stats cards */
+.stats-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.stats-card.total-orders .stats-badge {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    color: white;
+}
+
+.stats-card.pending-orders .stats-badge {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #000;
+}
+
+.stats-card.completed-orders .stats-badge {
+    background: linear-gradient(135deg, #198754, #146c43);
+    color: white;
+}
+
+.stats-card.total-revenue .stats-badge {
+    background: linear-gradient(135deg, #dc3545, #b02a37);
+    color: white;
+}
+
+.stats-card.border-info .stats-badge {
+    background: linear-gradient(135deg, #0dcaf0, #0aa2c0);
+    color: white;
+}
+
+.stats-card.border-warning .stats-badge {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #000;
+}
+
+.stats-card.border-secondary .stats-badge {
+    background: linear-gradient(135deg, #6c757d, #5c636a);
+    color: white;
 }
 
 .stats-section {
@@ -314,6 +613,9 @@
         <div class="row mb-4">
             <div class="col-lg-3 col-md-6 mb-3">
                 <div class="stats-card total-orders">
+                    <span class="stats-badge">
+                        <i class="fas fa-fire me-1"></i>الكل
+                    </span>
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-muted mb-1">إجمالي الطلبات</h6>
@@ -325,6 +627,9 @@
             </div>
             <div class="col-lg-3 col-md-6 mb-3">
                 <div class="stats-card pending-orders">
+                    <span class="stats-badge">
+                        <i class="fas fa-hourglass-half me-1"></i>معلق
+                    </span>
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-muted mb-1">قيد الانتظار والموافقة</h6>
@@ -336,6 +641,9 @@
             </div>
             <div class="col-lg-3 col-md-6 mb-3">
                 <div class="stats-card completed-orders">
+                    <span class="stats-badge">
+                        <i class="fas fa-check-double me-1"></i>منتهي
+                    </span>
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-muted mb-1">طلبات مكتملة</h6>
@@ -348,6 +656,9 @@
             {% if not hide_revenue %}
             <div class="col-lg-3 col-md-6 mb-3">
                 <div class="stats-card total-revenue">
+                    <span class="stats-badge">
+                        <i class="fas fa-dollar-sign me-1"></i>مالي
+                    </span>
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-muted mb-1">إجمالي الإيرادات</h6>
@@ -364,6 +675,9 @@
         <div class="row mt-3">
             <div class="col-lg-4 col-md-6 mb-3">
                 <div class="stats-card border-info">
+                    <span class="stats-badge">
+                        <i class="fas fa-eye me-1"></i>معاينة
+                    </span>
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-muted mb-1">معاينات قيد الانتظار</h6>
@@ -376,6 +690,9 @@
             </div>
             <div class="col-lg-4 col-md-6 mb-3">
                 <div class="stats-card border-warning">
+                    <span class="stats-badge">
+                        <i class="fas fa-clipboard-list me-1"></i>قائمة
+                    </span>
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-muted mb-1">طلبات لها معاينات قيد الانتظار</h6>
@@ -388,6 +705,9 @@
             </div>
             <div class="col-lg-4 col-md-6 mb-3">
                 <div class="stats-card border-secondary">
+                    <span class="stats-badge">
+                        <i class="fas fa-calculator me-1"></i>فرق
+                    </span>
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="card-title text-muted mb-1">الفرق</h6>

@@ -1078,7 +1078,7 @@
         <div class="container-fluid">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                 <!-- معلومات الشركة والتواصل الاجتماعي -->
-                <div class="d-flex align-items-center">
+                <div class="d-flex align-items-center" style="flex: 1;">
                     <h6 class="footer-title mb-0 me-3">
                         <i class="fas fa-building me-2" aria-hidden="true"></i>
                         {{ company_info.name }}
@@ -1109,21 +1109,21 @@
                     {% endif %}
                 </div>
 
-                <!-- الروابط السريعة -->
-                <nav class="d-flex align-items-center" aria-label="روابط سريعة">
-                    <a href="{% url 'home' %}" class="footer-link mx-2" aria-label="الصفحة الرئيسية">
+                <!-- الروابط السريعة - في الوسط تماماً -->
+                <nav class="d-flex align-items-center justify-content-center" aria-label="روابط سريعة" style="flex: 1;">
+                    <a href="{% url 'home' %}" class="footer-link mx-3" aria-label="الصفحة الرئيسية" title="الصفحة الرئيسية">
                         <i class="fas fa-home" aria-hidden="true"></i>
                     </a>
-                    <a href="{% url 'about' %}" class="footer-link mx-2" aria-label="من نحن">
+                    <a href="{% url 'about' %}" class="footer-link mx-3" aria-label="من نحن" title="من نحن">
                         <i class="fas fa-info-circle" aria-hidden="true"></i>
                     </a>
-                    <a href="{% url 'contact' %}" class="footer-link mx-2" aria-label="اتصل بنا">
+                    <a href="{% url 'contact' %}" class="footer-link mx-3" aria-label="اتصل بنا" title="اتصل بنا">
                         <i class="fas fa-envelope" aria-hidden="true"></i>
                     </a>
                 </nav>
 
                 <!-- معلومات الاتصال -->
-                <address class="d-flex align-items-center gap-3 mb-0" style="font-style: normal;">
+                <address class="d-flex align-items-center gap-3 mb-0 justify-content-end" style="font-style: normal; flex: 1;">
                     {% if company_info.phone %}
                     <a href="tel:{{ company_info.phone }}" class="footer-contact-item" aria-label="اتصل بنا على {{ company_info.phone }}" title="رقم الهاتف">
                         <i class="fas fa-phone-alt" aria-hidden="true"></i>
@@ -1152,9 +1152,9 @@
             </div>
             {% endif %}
 
-            <!-- حقوق النشر -->
-            <div class="text-center mt-2">
-                <p class="copyright-text mb-0 small">
+            <!-- حقوق النشر - في الوسط تماماً -->
+            <div class="w-100 d-flex justify-content-center mt-3">
+                <p class="copyright-text mb-0 small text-center">
                     <i class="far fa-copyright me-1" aria-hidden="true"></i>
                     {{ current_year }}
                     {{ company_info.copyright_text|default:"جميع الحقوق محفوظة" }}

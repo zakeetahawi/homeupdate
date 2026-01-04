@@ -8,14 +8,223 @@ body {
 
 .navbar.navbar-dark.bg-primary {
     background-color: #5D3A1A !important;
+    box-shadow: 0 4px 12px rgba(93, 58, 26, 0.3);
+    transition: all 0.3s ease;
+    animation: navbarSlideDown 0.6s ease-out;
+}
+
+@keyframes navbarSlideDown {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.navbar.navbar-dark.bg-primary:hover {
+    box-shadow: 0 6px 20px rgba(93, 58, 26, 0.5);
+}
+
+.navbar .nav-link {
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.navbar .nav-link:hover {
+    transform: translateY(-3px) scale(1.1);
+    filter: drop-shadow(0 4px 8px rgba(212, 163, 98, 0.4));
+}
+
+.navbar .nav-link i {
+    transition: all 0.3s ease;
+}
+
+.navbar .nav-link:hover i {
+    transform: rotate(10deg) scale(1.2);
+    color: #D4A362 !important;
+}
+
+.navbar .btn {
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.navbar .btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 16px rgba(212, 163, 98, 0.4);
+}
+
+.navbar .logo-img {
+    transition: all 0.4s ease;
+    filter: drop-shadow(2px 2px 4px rgba(93, 58, 26, 0.2));
+}
+
+.navbar .logo-img:hover {
+    transform: scale(1.1) rotate(5deg);
+    filter: drop-shadow(4px 4px 12px rgba(212, 163, 98, 0.6));
 }
 
 footer.footer-area {
     background-color: #5D3A1A !important;
+    box-shadow: 0 -4px 12px rgba(93, 58, 26, 0.3);
+    transition: all 0.3s ease;
+    animation: footerSlideUp 0.6s ease-out;
+}
+
+@keyframes footerSlideUp {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+footer.footer-area:hover {
+    box-shadow: 0 -6px 20px rgba(93, 58, 26, 0.5);
+}
+
+footer.footer-area .footer-title,
+footer.footer-area .social-icon,
+footer.footer-area .footer-link,
+footer.footer-area .footer-contact-item,
+footer.footer-area .footer-contact-item a,
+footer.footer-area address,
+footer.footer-area span,
+footer.footer-area p,
+footer.footer-area i {
+    color: #F5EBD4 !important;
+}
+
+footer.footer-area .footer-title {
+    transition: all 0.3s ease;
+}
+
+footer.footer-area .footer-title:hover {
+    color: #D4A362 !important;
+    transform: scale(1.05);
+    text-shadow: 2px 2px 8px rgba(212, 163, 98, 0.4);
+}
+
+footer.footer-area .social-icon {
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    display: inline-block;
+}
+
+footer.footer-area .social-icon:hover {
+    color: #D4A362 !important;
+    transform: scale(1.4) rotate(360deg);
+    filter: drop-shadow(0 0 10px rgba(212, 163, 98, 0.8));
+}
+
+footer.footer-area .footer-link {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    display: inline-block;
+}
+
+footer.footer-area .footer-link:hover {
+    color: #D4A362 !important;
+    transform: translateY(-5px) scale(1.3);
+    filter: drop-shadow(0 6px 12px rgba(212, 163, 98, 0.6));
+}
+
+footer.footer-area .footer-link i {
+    transition: all 0.3s ease;
+}
+
+footer.footer-area .footer-link:hover i {
+    transform: rotate(15deg);
+}
+
+footer.footer-area .footer-link[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(212, 163, 98, 0.95);
+    color: #5D3A1A;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    animation: tooltipFadeIn 0.2s ease;
+}
+
+footer.footer-area .footer-link[title]:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: rgba(212, 163, 98, 0.95);
+    margin-bottom: 2px;
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+footer.footer-area .footer-contact-item {
+    color: #F5EBD4 !important;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+footer.footer-area .footer-contact-item:hover {
+    color: #D4A362 !important;
+    transform: translateY(-2px) scale(1.05);
+    filter: drop-shadow(0 4px 8px rgba(212, 163, 98, 0.4));
+}
+
+footer.footer-area .footer-contact-item i {
+    transition: all 0.3s ease;
+}
+
+footer.footer-area .footer-contact-item:hover i {
+    transform: scale(1.2) rotate(10deg);
+}
+
+footer.footer-area .copyright-text {
+    color: #F5EBD4 !important;
+    transition: all 0.3s ease;
+}
+
+footer.footer-area .copyright-text:hover {
+    color: #D4A362 !important;
+    text-shadow: 2px 2px 6px rgba(212, 163, 98, 0.3);
 }
 
 .welcome-title {
     color: #5D3A1A !important;
+    font-size: 1.5rem !important;
+    line-height: 1.2 !important;
+    transition: all 0.4s ease;
+    text-shadow: 2px 2px 4px rgba(93, 58, 26, 0.1);
+}
+
+.welcome-title:hover {
+    color: #D4A362 !important;
+    transform: scale(1.05);
+    text-shadow: 3px 3px 8px rgba(212, 163, 98, 0.4);
+    letter-spacing: 1px;
 }
 
 .home-welcome-card {
@@ -25,52 +234,102 @@ footer.footer-area {
     border: 2px solid #D4A362;
     box-shadow: 0 8px 32px 0 rgba(93, 58, 26, 0.3);
     border-radius: 20px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    max-height: 500px;
+    overflow: visible;
+    animation: cardEntrance 0.8s ease-out;
+}
+
+@keyframes cardEntrance {
+    0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.home-welcome-card .card-body {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+
+.home-welcome-card .card-text {
+    font-size: 0.95rem !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0.5rem !important;
     transition: all 0.3s ease;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.home-welcome-card .card-text:hover {
+    color: #5D3A1A !important;
+    transform: scale(1.02);
+    text-shadow: 2px 2px 4px rgba(93, 58, 26, 0.15);
 }
 
 .home-welcome-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 16px 48px 0 rgba(93, 58, 26, 0.4);
+    transform: translateY(-12px) scale(1.02);
+    box-shadow: 0 20px 60px 0 rgba(93, 58, 26, 0.5);
     border-color: #5D3A1A;
+    border-width: 3px;
 }
 
 .animated-logo {
     animation: logoFloat 3s ease-in-out infinite, logoGlow 2s ease-in-out infinite alternate;
-    transition: transform 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    margin-top: 0.3rem !important;
+    margin-bottom: 0.3rem !important;
+    max-width: 300px !important;
+    height: auto !important;
+    filter: drop-shadow(4px 4px 8px rgba(93, 58, 26, 0.3));
 }
 
 .animated-logo:hover {
-    transform: scale(1.1) rotate(5deg);
-    animation: logoSpin 0.6s ease-in-out;
+    transform: scale(1.15) rotate(8deg);
+    filter: drop-shadow(8px 8px 16px rgba(212, 163, 98, 0.6)) 
+            drop-shadow(0 0 30px rgba(212, 163, 98, 0.4));
+    animation: logoSpinBounce 0.6s ease-in-out;
 }
 
 @keyframes logoFloat {
     0%, 100% {
-        transform: translateY(0);
+        transform: translateY(0) rotate(0deg);
+    }
+    25% {
+        transform: translateY(-8px) rotate(-2deg);
     }
     50% {
-        transform: translateY(-10px);
+        transform: translateY(-12px) rotate(0deg);
+    }
+    75% {
+        transform: translateY(-8px) rotate(2deg);
     }
 }
 
 @keyframes logoGlow {
     0% {
-        filter: drop-shadow(0 0 5px rgba(212, 163, 98, 0.3));
+        filter: drop-shadow(4px 4px 8px rgba(93, 58, 26, 0.3));
     }
     100% {
-        filter: drop-shadow(0 0 20px rgba(212, 163, 98, 0.6));
+        filter: drop-shadow(6px 6px 20px rgba(212, 163, 98, 0.6));
     }
 }
 
-@keyframes logoSpin {
+@keyframes logoSpinBounce {
     0% {
         transform: scale(1) rotate(0deg);
     }
-    50% {
-        transform: scale(1.15) rotate(5deg);
+    30% {
+        transform: scale(1.2) rotate(10deg);
+    }
+    60% {
+        transform: scale(1.1) rotate(6deg);
     }
     100% {
-        transform: scale(1.1) rotate(5deg);
+        transform: scale(1.15) rotate(8deg);
     }
 }
 
