@@ -5,9 +5,9 @@
 {% block title %}تفاصيل الطلب - نظام الخواجه{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container" style="margin-top: 100px;">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-shopping-cart"></i> تفاصيل الطلب #{{ order.order_number }}</h2>
+        <h2 style="color: white;"><i class="fas fa-shopping-cart"></i> تفاصيل الطلب #<span style="color: #28a745;">{{ order.order_number }}</span></h2>
         <div>
             <a href="{% url 'orders:order_list' %}" class="btn btn-secondary">
                 <i class="fas fa-arrow-right"></i> العودة للقائمة
@@ -797,7 +797,7 @@
 
             <!-- Contract Information -->
             {% with types_list=order.get_selected_types_list %}
-            {% if 'installation' in types_list or 'tailoring' in types_list or order.order_type in 'installation,tailoring' %}
+            {% if 'installation' in types_list or 'tailoring' in types_list or 'accessory' in types_list or order.order_type in 'installation,tailoring,accessory' %}
             <div class="card mb-4">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0"><i class="fas fa-file-contract"></i> معلومات العقد</h5>

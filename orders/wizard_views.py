@@ -1542,14 +1542,23 @@ def wizard_finalize(request):
                     ]
                     OrderInvoiceImage.objects.bulk_create(new_images, batch_size=50)
                 
-                # ⚡ تجديد عقد PDF تلقائياً
-                try:
-                    from orders.tasks import generate_contract_pdf_async
-                    # تجديد العقد بشكل غير متزامن
-                    if draft.contract_type == 'electronic':
-                        generate_contract_pdf_async.delay(order.id, request.user.id)
-                except Exception as e:
-                    print(f"Error regenerating contract: {e}")
+                # ⚡ تجديد عقد PDF تلقائياً في وضع التعديل
+                # توليد العقد دائماً للأنواع التي تحتاج عقد
+                selected_type = draft.selected_type
+                should_regenerate = selected_type not in ['products', 'inspection']
+                
+                if should_regenerate:
+                    logger.info(f"🔄 إعادة توليد العقد في وضع التعديل للطلب {order.order_number}")
+                    
+                    def regenerate_contract():
+                        try:
+                            from orders.tasks import generate_contract_pdf_async
+                            task = generate_contract_pdf_async.delay(order.id, request.user.id)
+                            logger.info(f"⚡ تم بدء إعادة توليد العقد (المهمة: {task.id}) للطلب #{order.id}")
+                        except Exception as e:
+                            logger.error(f"❌ خطأ في إعادة توليد العقد: {e}", exc_info=True)
+                    
+                    transaction.on_commit(regenerate_contract)
 
             except Order.DoesNotExist:
                 editing_order_id = None  # إنشاء طلب جديد
@@ -1647,7 +1656,9 @@ def wizard_finalize(request):
         selected_type = draft.selected_type
         should_generate_contract = selected_type not in ['products', 'inspection']
         
-        if should_generate_contract and not draft.contract_file:
+        logger.info(f"🔍 فحص توليد العقد - نوع الطلب: {selected_type}, يحتاج عقد: {should_generate_contract}, رقم الطلب: {order.order_number}")
+        
+        if should_generate_contract:
             # استخدام on_commit لضمان اكتمال حفظ الطلب قبل توليد العقد
             order_pk = order.pk
             user_pk = request.user.pk
@@ -1655,13 +1666,31 @@ def wizard_finalize(request):
             def trigger_contract_generation():
                 try:
                     from .tasks import generate_contract_pdf_async
-                    task = generate_contract_pdf_async.delay(order_pk, user_pk)
-                    # logger.info(f"⚡ Contract generation started (task: {task.id}) after commit")
+                    from django.conf import settings
+                    
+                    # التحقق من وجود Celery
+                    if hasattr(settings, 'CELERY_BROKER_URL') and settings.CELERY_BROKER_URL:
+                        # توليد غير متزامن عبر Celery
+                        task = generate_contract_pdf_async.delay(order_pk, user_pk)
+                        logger.info(f"⚡ تم بدء توليد العقد (المهمة: {task.id}) للطلب #{order_pk}")
+                    else:
+                        # توليد مباشر إذا لم يكن Celery متاحاً
+                        logger.info(f"⚡ توليد العقد مباشرةً (Celery غير متاح) للطلب #{order_pk}")
+                        from .services.contract_generation_service import ContractGenerationService
+                        from .models import Order
+                        order_obj = Order.objects.get(pk=order_pk)
+                        service = ContractGenerationService(order_obj)
+                        result = service.save_contract_to_order()
+                        if result:
+                            logger.info(f"✅ تم توليد العقد مباشرةً للطلب {order_obj.order_number}")
+                        else:
+                            logger.error(f"❌ فشل توليد العقد مباشرةً للطلب {order_obj.order_number}")
                 except Exception as e:
-                    # logger.warning(f"⚠️ Contract task failed: {e}")
-                    pass
+                    logger.error(f"❌ خطأ في توليد العقد: {e}", exc_info=True)
             
             transaction.on_commit(trigger_contract_generation)
+        else:
+            logger.info(f"⏭️ تخطي توليد العقد للطلب {order.order_number} - نوع الطلب: {selected_type}")
         
         return JsonResponse({
             'success': True,

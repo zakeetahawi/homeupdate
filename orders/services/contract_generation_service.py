@@ -149,8 +149,44 @@ class ContractGenerationService:
             # توليد PDF
             pdf_file = self.generate_pdf()
             
-            # اسم الملف
-            filename = f'contract_{self.order.order_number}_{self.order.contract_number}.pdf'
+            # تجهيز اسم العميل للملف (إزالة المسافات والأحرف الخاصة)
+            customer_name = ''
+            if self.order.customer:
+                # تنظيف اسم العميل: إزالة المسافات والأحرف الخاصة
+                customer_name = self.order.customer.name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+                # الحد من طول اسم العميل
+                if len(customer_name) > 30:
+                    customer_name = customer_name[:30]
+            
+            # اسم الملف مع اسم العميل
+            if customer_name:
+                filename = f'contract_{self.order.order_number}_{customer_name}.pdf'
+            else:
+                # في حالة عدم وجود عميل، استخدم رقم الطلب فقط
+                filename = f'contract_{self.order.order_number}.pdf'
+            
+            # المسار الكامل للملف
+            full_path = os.path.join(settings.MEDIA_ROOT, 'contracts', filename)
+            
+            # حذف الملف القديم إذا كان موجوداً
+            if os.path.exists(full_path):
+                try:
+                    os.remove(full_path)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"تحذير: فشل حذف الملف القديم: {e}")
+            
+            # حذف جميع الملفات القديمة بنفس البادئة (لتنظيف الملفات ذات اللواحق العشوائية)
+            contract_dir = os.path.join(settings.MEDIA_ROOT, 'contracts')
+            if os.path.exists(contract_dir):
+                prefix = f'contract_{self.order.order_number}_{customer_name}_' if customer_name else f'contract_{self.order.order_number}_'
+                for old_file in os.listdir(contract_dir):
+                    if old_file.startswith(prefix) or old_file == filename:
+                        try:
+                            os.remove(os.path.join(contract_dir, old_file))
+                        except:
+                            pass
 
             # حفظ الملف في الطلب
             self.order.contract_file.save(
@@ -189,8 +225,13 @@ class ContractGenerationService:
         Returns:
             bool: True إذا تم التوليد بنجاح
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"📝 بدء توليد العقد للطلب #{order_id}")
+        
         try:
             order = Order.objects.get(id=order_id)
+            logger.info(f"✅ تم العثور على الطلب {order.order_number}")
             template = None
 
             if template_id:
@@ -200,12 +241,12 @@ class ContractGenerationService:
             return service.save_contract_to_order(user)
 
         except Order.DoesNotExist:
-            print(f'الطلب {order_id} غير موجود')
+            logger.error(f'❌ الطلب {order_id} غير موجود')
             return False
         except ContractTemplate.DoesNotExist:
-            print(f'القالب {template_id} غير موجود')
+            logger.error(f'❌ القالب {template_id} غير موجود')
             return False
         except Exception as e:
-            print(f'خطأ في توليد العقد: {str(e)}')
+            logger.error(f'❌ خطأ في توليد العقد للطلب {order_id}: {str(e)}', exc_info=True)
             return False
 
