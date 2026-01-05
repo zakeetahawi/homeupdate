@@ -3291,7 +3291,7 @@ def upcoming_installations_schedule(request):
     return render(request, 'installations/upcoming_installations_schedule.html', context)
 
 
-@login_required
+@csrf_exempt
 def api_upcoming_installations(request):
     """API endpoint لجلب التركيبات القادمة مع المديونيات"""
     from django.http import JsonResponse
@@ -3315,6 +3315,12 @@ def api_upcoming_installations(request):
     ).select_related(
         'order', 'order__customer', 'order__salesperson', 'order__branch', 'team'
     ).order_by('scheduled_time')
+
+    # فلترة حسب المستخدم الحالي إذا كان مسجل دخول وليس superuser
+    if request.user.is_authenticated and not request.user.is_superuser:
+        # التحقق من وجود salesperson للمستخدم
+        if hasattr(request.user, 'salesperson') and request.user.salesperson:
+            installations = installations.filter(order__salesperson=request.user.salesperson)
 
     # تطبيق فلتر الفرع
     if branch_id:

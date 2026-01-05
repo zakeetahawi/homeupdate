@@ -53,11 +53,16 @@
     margin-bottom: 1.5rem;
     overflow: hidden;
     transition: all 0.3s;
+    background: #f5f5dc; /* لون بيج */
 }
 
 .installation-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.installation-card .card-body {
+    background: #f5f5dc; /* لون بيج للمحتوى */
 }
 
 .installation-header {
@@ -429,7 +434,7 @@ function createInstallationCard(inst) {
 
 // تنسيق العملة
 function formatCurrency(amount) {
-    return parseFloat(amount).toLocaleString('ar-EG', {
+    return parseFloat(amount).toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     }) + ' ' + currencySymbol;
