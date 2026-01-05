@@ -1052,22 +1052,6 @@ class BranchDevice(models.Model):
         editable=False,
         help_text=_('معرف فريد دائم للجهاز - يُستخدم للمصادقة')
     )
-    device_fingerprint = models.CharField(
-        _('بصمة الجهاز'),
-        max_length=64,
-        null=True,
-        blank=True,
-        db_index=True,
-        help_text=_('بصمة المتصفح - قد تتغير مع التحديثات')
-    )
-    hardware_serial = models.CharField(
-        _('الرقم التسلسلي للجهاز'),
-        max_length=200,
-        null=True,
-        blank=True,
-        db_index=True,
-        help_text=_('الرقم التسلسلي للجهاز (Hardware UUID/Serial) - احتياطي')
-    )
     manual_identifier = models.CharField(
         _('معرّف الجهاز اليدوي'),
         max_length=100,
@@ -1159,7 +1143,6 @@ class BranchDevice(models.Model):
         verbose_name_plural = _('أجهزة الفروع')
         ordering = ['branch', 'device_name']
         indexes = [
-            models.Index(fields=['device_fingerprint']),
             models.Index(fields=['branch', 'is_active']),
         ]
     
@@ -1181,15 +1164,6 @@ class BranchDevice(models.Model):
             self.ip_address = ip_address
         self.save(update_fields=['first_used', 'last_used', 'last_used_by', 'ip_address'])
     
-    def update_fingerprint(self, new_fingerprint):
-        """تحديث البصمة عند تغييرها (تحديث متصفح، نظام، إلخ)"""
-        import logging
-        logger = logging.getLogger('django')
-        old_fingerprint = self.device_fingerprint
-        self.device_fingerprint = new_fingerprint
-        self.save(update_fields=['device_fingerprint'])
-        logger.info(f"🔄 Fingerprint updated for device {self.device_name}: {old_fingerprint[:16]}... → {new_fingerprint[:16]}...")
-    
     def is_authorized_for_user(self, user):
         """التحقق من صلاحية الجهاز للمستخدم - يسمح لأي موظف في نفس الفرع"""
         if not self.is_active:
@@ -1201,27 +1175,6 @@ class BranchDevice(models.Model):
         
         # التحقق من أن المستخدم ينتمي لنفس فرع الجهاز
         return user.branch == self.branch
-    
-    def calculate_fingerprint_similarity(self, new_fingerprint):
-        """
-        حساب نسبة التشابه بين البصمة الحالية والجديدة
-        Returns: float (0.0 to 1.0)
-        """
-        if not self.device_fingerprint or not new_fingerprint:
-            return 0.0
-        
-        # مقارنة بسيطة بناءً على التشابه بين النصوص
-        old = set(self.device_fingerprint)
-        new = set(new_fingerprint)
-        
-        if not old or not new:
-            return 0.0
-        
-        intersection = len(old.intersection(new))
-        union = len(old.union(new))
-        
-        similarity = intersection / union if union > 0 else 0.0
-        return similarity
 
 
 class UnauthorizedDeviceAttempt(models.Model):
@@ -1256,18 +1209,6 @@ class UnauthorizedDeviceAttempt(models.Model):
         _('وقت المحاولة'),
         auto_now_add=True,
         db_index=True
-    )
-    device_fingerprint = models.CharField(
-        _('بصمة الجهاز'),
-        max_length=64,
-        null=True,
-        blank=True
-    )
-    hardware_serial = models.CharField(
-        _('الرقم التسلسلي للجهاز'),
-        max_length=200,
-        null=True,
-        blank=True
     )
     device = models.ForeignKey(
         'BranchDevice',

@@ -143,11 +143,9 @@ def login_view(request):
                 ip = get_client_ip(request)
                 device_info = request.POST.get('device_info', '')
                 device_data = json.loads(device_info) if device_info else {}
-                hardware_serial = device_data.get('hardware_serial', '')
                 
                 # بيانات للتسجيل
                 device_log_data = {
-                    'hardware_serial': hardware_serial,
                     'user_agent': device_data.get('user_agent', request.META.get('HTTP_USER_AGENT', ''))
                 }
                 
@@ -202,11 +200,7 @@ def login_view(request):
                         device_info = request.POST.get('device_info', '')
                         device_data = json.loads(device_info) if device_info else {}
                         
-                        # الحصول على hardware_serial إذا كان متوفراً
-                        hardware_serial = device_data.get('hardware_serial', '')
-                        
                         logger.info(f"📍 User branch: {user.branch.name if user.branch else 'None'}")
-                        logger.info(f"🔑 Hardware Serial: {hardware_serial if hardware_serial else 'Not provided'}")
                         
                         # التحقق من أن الجهاز مسجل ومرتبط بفرع المستخدم
                         device_authorized = False
@@ -227,15 +221,12 @@ def login_view(request):
                                 # 1. الحصول على device_token من الطلب
                                 device_token_str = request.POST.get('device_token', '').strip()
                                 
-                                # 2. توليد البصمة المحسّنة
-                                device_fingerprint, full_device_data = generate_device_fingerprint(request)
-                                logger.info(f"🔐 Device fingerprint: {device_fingerprint[:16]}...")
                                 if device_token_str:
                                     logger.info(f"🎫 Device token provided: {device_token_str[:8]}...")
                                 else:
                                     logger.warning(f"⚠️ No device token provided")
                                 
-                                # 3. البحث بالـ device_token أولاً (الطريقة المفضلة)
+                                # 2. البحث بالـ device_token (الطريقة الوحيدة المدعومة)
                                 if device_token_str:
                                     try:
                                         import uuid
@@ -246,49 +237,17 @@ def login_view(request):
                                         )
                                         logger.info(f"✅ Device found by TOKEN: {device_obj.device_name} (Branch: {device_obj.branch.name})")
                                         
-                                        # 4. حساب تشابه البصمة (Similarity Check)
-                                        similarity = device_obj.calculate_fingerprint_similarity(device_fingerprint)
-                                        logger.info(f"📊 Fingerprint similarity: {similarity:.2%}")
+                                        # التوكن صحيح - السماح بالدخول
+                                        logger.info(f"✅ Token is valid - allowing login")
                                         
-                                        # 🔑 التوكن هو الأساسي - السماح بالدخول حتى مع تغيير البصمة
-                                        if similarity >= 0.80:
-                                            # البصمة متطابقة بدرجة كافية
-                                            logger.info(f"✅ Fingerprint similarity OK ({similarity:.2%} >= 80%)")
-                                            
-                                            # تحديث البصمة تلقائياً إذا تغيرت
-                                            if device_obj.device_fingerprint != device_fingerprint:
-                                                old_fingerprint = device_obj.device_fingerprint[:16] if device_obj.device_fingerprint else 'None'
-                                                device_obj.update_fingerprint(device_fingerprint)
-                                                logger.info(f"🔄 Auto-updated fingerprint: {old_fingerprint}... → {device_fingerprint[:16]}...")
-                                        else:
-                                            # البصمة مختلفة جداً - لكن التوكن صحيح، السماح بالدخول مع تحذير
-                                            logger.warning(f"⚠️ MAJOR FINGERPRINT CHANGE detected: {similarity:.2%} < 80%")
-                                            logger.warning(f"⚠️ Possible hardware change, OS reinstall, or browser update")
-                                            logger.warning(f"✅ BUT token is valid - ALLOWING login and updating fingerprint")
-                                            
-                                            # تحديث البصمة للبصمة الجديدة
-                                            old_fingerprint = device_obj.device_fingerprint[:16] if device_obj.device_fingerprint else 'None'
-                                            device_obj.update_fingerprint(device_fingerprint)
-                                            logger.info(f"🔄 Force-updated fingerprint due to major change: {old_fingerprint}... → {device_fingerprint[:16]}...")
-                                            
-                                            # إضافة تنبيه للمستخدم (اختياري - يمكن تفعيله لاحقاً)
-                                            # messages.warning(request, '⚠️ تم اكتشاف تغيير كبير في الجهاز. تم تحديث بصمة الجهاز تلقائياً.')
-                                            
+                                        device_authorized = True
+                                        device_check_performed = True
                                     except ValueError:
                                         logger.warning(f"⚠️ Invalid device_token format: {device_token_str}")
+                                        denial_reason = '🚫 جهاز غير مسجل - يجب تسجيل الجهاز عبر QR Master أولاً'
+                                        denial_reason_key = 'device_not_registered'
                                     except BranchDevice.DoesNotExist:
-                                        logger.warning(f"⚠️ Device token not found in database, trying fingerprint fallback...")
-                                
-                                # 5. Fallback: البحث بالبصمة فقط (للأجهزة القديمة قبل Token system)
-                                if not device_obj:
-                                    try:
-                                        device_obj = BranchDevice.objects.get(
-                                            device_fingerprint=device_fingerprint,
-                                            is_active=True
-                                        )
-                                        logger.info(f"✅ Device found by FINGERPRINT (legacy): {device_obj.device_name}")
-                                        logger.warning(f"⚠️ Device using legacy fingerprint-only method. Consider re-registering.")
-                                    except BranchDevice.DoesNotExist:
+                                        logger.warning(f"⚠️ Device token not found in database")
                                         denial_reason = '🚫 جهاز غير مسجل - يجب تسجيل الجهاز عبر QR Master أولاً'
                                         denial_reason_key = 'device_not_registered'
                                         logger.warning(f"❌ Unknown device attempted login for user {username}")
@@ -367,8 +326,6 @@ def login_view(request):
                             
                             # جمع بيانات الجهاز
                             device_log_data_full = {
-                                'fingerprint': device_fingerprint if 'device_fingerprint' in locals() else '',
-                                'hardware_serial': hardware_serial,
                                 'user_agent': device_data.get('user_agent', request.META.get('HTTP_USER_AGENT', ''))
                             }
                             
@@ -515,15 +472,6 @@ def login_view(request):
                         
                         # تسجيل محاولة فاشلة - كلمة مرور خاطئة
                         if user_exists and user_obj:
-                            device_log_data['fingerprint'] = generate_device_fingerprint(request) if device_data else ''
-                            
-                            # محاولة العثور على الجهاز
-                            attempt_device = None
-                            if hardware_serial:
-                                try:
-                                    attempt_device = BranchDevice.objects.get(hardware_serial=hardware_serial)
-                                except BranchDevice.DoesNotExist:
-                                    pass
                             
                             UnauthorizedDeviceAttempt.log_attempt(
                                 username_attempted=username,
@@ -531,8 +479,8 @@ def login_view(request):
                                 device_data=device_log_data,
                                 denial_reason='invalid_password',
                                 user_branch=user_obj.branch if user_obj else None,
-                                device_branch=attempt_device.branch if attempt_device else None,
-                                device=attempt_device,
+                                device_branch=None,
+                                device=None,
                                 ip_address=ip
                             )
                         
@@ -557,12 +505,6 @@ def login_view(request):
                         device_log_data['fingerprint'] = generate_device_fingerprint(request) if device_data else ''
                         
                         # محاولة العثور على الجهاز
-                        attempt_device = None
-                        if hardware_serial:
-                            try:
-                                attempt_device = BranchDevice.objects.get(hardware_serial=hardware_serial)
-                            except BranchDevice.DoesNotExist:
-                                pass
                         
                         UnauthorizedDeviceAttempt.log_attempt(
                             username_attempted=username,
@@ -570,8 +512,8 @@ def login_view(request):
                             device_data=device_log_data,
                             denial_reason='invalid_username',
                             user_branch=None,
-                            device_branch=attempt_device.branch if attempt_device else None,
-                            device=attempt_device,
+                            device_branch=None,
+                            device=None,
                             ip_address=ip
                         )
                         
@@ -711,9 +653,6 @@ def register_device_view(request):
             except:
                 device_info = {}
             
-            # توليد البصمة المحسّنة
-            device_fingerprint, full_device_data = generate_device_fingerprint(request)
-            hardware_serial = device_info.get('hardware_serial', '')
             user_agent = device_info.get('user_agent', request.META.get('HTTP_USER_AGENT', ''))
             
             # التحقق من البيانات المطلوبة
@@ -753,8 +692,6 @@ def register_device_view(request):
                 branch=branch,
                 device_name=device_name,
                 manual_identifier=manual_identifier,
-                device_fingerprint=device_fingerprint,
-                hardware_serial=hardware_serial if hardware_serial else None,
                 ip_address=ip_address,
                 user_agent=user_agent,
                 notes=notes,

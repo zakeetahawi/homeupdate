@@ -69,31 +69,6 @@
         {% else %}
         <p class="errornote">⚠️ هذا الجهاز لا يملك device_token! يُنصح بإعادة التسجيل.</p>
         {% endif %}
-        
-        {% if device.device_fingerprint %}
-        <fieldset class="module aligned">
-            <div class="form-row">
-                <div>
-                    <label>Device Fingerprint:</label>
-                    <div style="background: #fff3cd; padding: 10px; margin: 10px 0; font-family: monospace; word-break: break-all;">
-                        {{ device.device_fingerprint }}
-                    </div>
-                    <p class="help">⚠️ البصمة قد تتغير مع تحديثات المتصفح</p>
-                </div>
-            </div>
-        </fieldset>
-        {% endif %}
-        
-        {% if device.hardware_serial %}
-        <fieldset class="module aligned">
-            <div class="form-row">
-                <div>
-                    <label>Hardware Serial:</label>
-                    <p>{{ device.hardware_serial }}</p>
-                </div>
-            </div>
-        </fieldset>
-        {% endif %}
     </div>
 
     <div class="module">

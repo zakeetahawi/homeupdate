@@ -256,9 +256,7 @@
             <thead>
                 <tr>
                     <th>التاريخ</th>
-                    <th>الفرع المطلوب</th>
-                    <th>البصمة (مختصرة)</th>
-                    <th>السيريال</th>
+                    <th>الفرع</th>
                     <th>المستخدم</th>
                     <th>السبب</th>
                 </tr>
@@ -267,15 +265,13 @@
                 {% for attempt in unauthorized_attempts %}
                 <tr>
                     <td>{{ attempt.attempted_at|date:"Y-m-d H:i:s" }}</td>
-                    <td>{{ attempt.branch.name }}</td>
-                    <td><code style="font-size: 10px;">{{ attempt.device_fingerprint|slice:":16" }}...</code></td>
-                    <td>{{ attempt.hardware_serial|default:"—" }}</td>
+                    <td>{{ attempt.user_branch.name|default:"—" }}</td>
                     <td>{{ attempt.user.get_full_name|default:"—" }}</td>
-                    <td><small>{{ attempt.failure_reason }}</small></td>
+                    <td><small>{{ attempt.get_denial_reason_display }}</small></td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" style="text-align: center; color: #999;">✓ لا توجد محاولات غير مصرح بها</td>
+                    <td colspan="4" style="text-align: center; color: #999;">✓ لا توجد محاولات غير مصرح بها</td>
                 </tr>
                 {% endfor %}
             </tbody>

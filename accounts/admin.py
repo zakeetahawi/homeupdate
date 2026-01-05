@@ -942,7 +942,6 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         'is_active', 
         'last_used_by', 
         'last_used',
-        'fingerprint_short',
         'ip_address',
         'view_report_link',
     )
@@ -950,7 +949,6 @@ class BranchDeviceAdmin(admin.ModelAdmin):
     search_fields = (
         'device_name', 
         'manual_identifier',
-        'device_fingerprint', 
         'ip_address',
         'branch__name',
         'last_used_by__username',
@@ -958,13 +956,10 @@ class BranchDeviceAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         'device_token',
-        'device_fingerprint', 
-        'hardware_serial',
         'created_at', 
         'first_used', 
         'last_used',
         'last_used_by',
-        'fingerprint_display',
         'device_token_display',
         'users_list_display',
         'blocked_at',
@@ -984,8 +979,8 @@ class BranchDeviceAdmin(admin.ModelAdmin):
             'description': 'إذا تم تفعيل الحظر، لن يتمكن أي شخص من استخدام هذا الجهاز'
         }),
         ('البصمة والتعريف', {
-            'fields': ('detailed_report_link', 'device_token_display', 'device_token', 'hardware_serial', 'fingerprint_display', 'device_fingerprint'),
-            'description': '🔑 التوكن (device_token) هو المعرّف الأساسي الثابت - يُنصح بنسخه وحفظه. البصمة والرقم التسلسلي احتياطيين فقط.'
+            'fields': ('detailed_report_link', 'device_token_display', 'device_token'),
+            'description': '🔑 التوكن (device_token) هو المعرّف الأساسي الثابت - يُنصح بنسخه وحفظه للمصادقة.'
         }),
         ('معلومات الاتصال', {
             'fields': ('ip_address', 'user_agent')
@@ -1099,25 +1094,6 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         return "-"
     device_token_display.short_description = '🔑 التوكن الكامل'
     
-    def fingerprint_short(self, obj):
-        """عرض أول 12 حرف من البصمة"""
-        if obj.device_fingerprint:
-            return f"{obj.device_fingerprint[:12]}..."
-        return "-"
-    fingerprint_short.short_description = 'البصمة (مختصرة)'
-    
-    def fingerprint_display(self, obj):
-        """عرض البصمة الكاملة بشكل منسق"""
-        if obj.device_fingerprint:
-            return mark_safe(f'''
-                <code style="font-size: 11px; background: #fff3cd; padding: 4px 8px; border-radius: 3px;">{obj.device_fingerprint}</code>
-                <small style="color: #856404; display: block; margin-top: 4px;">
-                    ⚠️ البصمة قد تتغير مع تحديثات المتصفح أو إعدادات الدومين
-                </small>
-            ''')
-        return "-"
-    fingerprint_display.short_description = 'البصمة الكاملة'
-    
     def view_report_link(self, obj):
         """رابط سريع للتقرير في القائمة"""
         url = reverse('accounts:device_report', args=[obj.id])
@@ -1162,7 +1138,7 @@ class BranchDeviceAdmin(admin.ModelAdmin):
         writer.writerow([
             'اسم الجهاز', 
             'الفرع', 
-            'البصمة', 
+            'التوكن', 
             'IP', 
             'نشط',
             'آخر استخدام',
@@ -1173,7 +1149,7 @@ class BranchDeviceAdmin(admin.ModelAdmin):
             writer.writerow([
                 device.device_name,
                 device.branch.name,
-                device.device_fingerprint,
+                str(device.device_token)[:16] + '...' if device.device_token else '-',
                 device.ip_address or '-',
                 'نعم' if device.is_active else 'لا',
                 device.last_used.strftime('%Y-%m-%d %H:%M') if device.last_used else '-',
@@ -1223,7 +1199,6 @@ class UnauthorizedDeviceAttemptAdmin(admin.ModelAdmin):
         'denial_reason',
         'attempted_at',
         'ip_address',
-        'hardware_serial_short',
         'is_notified'
     )
     list_filter = ('denial_reason', 'is_notified', 'attempted_at', 'user_branch')
@@ -1232,16 +1207,12 @@ class UnauthorizedDeviceAttemptAdmin(admin.ModelAdmin):
         'user__username',
         'user__first_name',
         'user__last_name',
-        'ip_address',
-        'device_fingerprint',
-        'hardware_serial'
+        'ip_address'
     )
     readonly_fields = (
         'username_attempted',
         'user',
         'attempted_at',
-        'device_fingerprint',
-        'hardware_serial',
         'ip_address',
         'user_agent',
         'denial_reason',
@@ -1255,7 +1226,7 @@ class UnauthorizedDeviceAttemptAdmin(admin.ModelAdmin):
             'fields': ('username_attempted', 'user', 'user_branch', 'attempted_at')
         }),
         ('معلومات الجهاز', {
-            'fields': ('hardware_serial', 'device_fingerprint', 'ip_address', 'user_agent')
+            'fields': ('ip_address', 'user_agent')
         }),
         ('سبب الرفض', {
             'fields': ('denial_reason', 'device_branch'),
@@ -1281,13 +1252,6 @@ class UnauthorizedDeviceAttemptAdmin(admin.ModelAdmin):
             return obj.user_branch.name
         return '-'
     user_branch_display.short_description = 'فرع المستخدم'
-    
-    def hardware_serial_short(self, obj):
-        """عرض الرقم التسلسلي مختصراً"""
-        if obj.hardware_serial:
-            return f"{obj.hardware_serial[:12]}..."
-        return '-'
-    hardware_serial_short.short_description = 'المعرف الثابت'
     
     def mark_as_notified(self, request, queryset):
         """تحديد المحاولات كتم إشعار بها"""
