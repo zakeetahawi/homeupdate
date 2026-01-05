@@ -478,7 +478,6 @@ body {
                         {% csrf_token %}
                         <input type="hidden" name="device_info" id="deviceInfo">
                         <input type="hidden" name="device_token" id="deviceToken">
-                        <input type="hidden" name="device_fingerprint" id="deviceFingerprint">
 
                         {% if form.non_field_errors %}
                         <div class="alert alert-danger">
@@ -681,13 +680,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     // تعيين التوكن في النموذج
     if (deviceToken) {
         document.getElementById('deviceToken').value = deviceToken;
-        console.log(`📦 Token set from: ${tokenSource}`);
+        console.log(`✅ Token set from: ${tokenSource}`);
     } else {
-        console.warn('❌ No device token found in any storage!');
-        console.log('🔔 This device needs to be registered first');
+        console.log('ℹ️ لا يوجد device token - سيتم التحقق من قيود الفرع');
+        // السيرفر سيقرر بناءً على ما إذا كان الفرع لديه أجهزة مسجلة أم لا
     }
     
-    // 2. جمع معلومات الجهاز (Stable factors only)
+    // جمع معلومات الجهاز الأساسية فقط (بدون البصمات المعقدة)
     const deviceInfo = {
         screen_resolution: window.screen.width + 'x' + window.screen.height,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -701,96 +700,24 @@ document.addEventListener('DOMContentLoaded', async function() {
         cpu_cores: navigator.hardwareConcurrency || 0,
     };
     
-    // 3. Canvas Fingerprint (Stable)
-    try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        ctx.textBaseline = 'top';
-        ctx.font = '14px Arial';
-        ctx.textBaseline = 'alphabetic';
-        ctx.fillStyle = '#f60';
-        ctx.fillRect(125, 1, 62, 20);
-        ctx.fillStyle = '#069';
-        ctx.fillText('Device Fingerprint', 2, 15);
-        ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-        ctx.fillText('Device Fingerprint', 4, 17);
-        deviceInfo.canvas_fingerprint = canvas.toDataURL();
-    } catch(e) {
-        deviceInfo.canvas_fingerprint = '';
-    }
-    
-    // 4. WebGL Fingerprint (Stable - GPU Info)
-    try {
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        if (gl) {
-            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-            if (debugInfo) {
-                deviceInfo.webgl_vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-                deviceInfo.webgl_renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-            }
-        }
-    } catch(e) {
-        deviceInfo.webgl_vendor = '';
-        deviceInfo.webgl_renderer = '';
-    }
-    
-    // 5. Audio Fingerprint (Stable)
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const analyser = audioContext.createAnalyser();
-        const gainNode = audioContext.createGain();
-        const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-        
-        gainNode.gain.value = 0;
-        oscillator.connect(analyser);
-        analyser.connect(scriptProcessor);
-        scriptProcessor.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.start(0);
-        const audioData = [];
-        scriptProcessor.onaudioprocess = function(event) {
-            const output = event.outputBuffer.getChannelData(0);
-            for (let i = 0; i < output.length && audioData.length < 100; i++) {
-                audioData.push(output[i]);
-            }
-        };
-        
-        deviceInfo.audio_fingerprint = CryptoJS.SHA256(audioData.join(',')).toString().substring(0, 16);
-        oscillator.stop();
-        audioContext.close();
-    } catch(e) {
-        deviceInfo.audio_fingerprint = '';
-    }
-    
-    // 6. Generate Enhanced Fingerprint
-    const fingerprintString = JSON.stringify(deviceInfo, Object.keys(deviceInfo).sort());
-    const fingerprint = CryptoJS.SHA256(fingerprintString).toString();
-    
-    // 7. Save to form
+    // حفظ معلومات الجهاز في النموذج
     document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
-    document.getElementById('deviceFingerprint').value = fingerprint;
     
-    console.log('Device ready for login:', {
+    console.log('✅ Device ready for login:', {
         hasToken: !!deviceToken,
-        fingerprint: fingerprint.substring(0, 16) + '...'
+        deviceInfo: 'collected'
     });
     
-    // 8. Form submission handler
+    // معالج إرسال النموذج
     document.getElementById('loginForm').addEventListener('submit', function(e) {
-        // Ensure data is present
+        // التأكد من وجود معلومات الجهاز
         if (!document.getElementById('deviceInfo').value) {
             document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
         }
-        if (!document.getElementById('deviceFingerprint').value) {
-            document.getElementById('deviceFingerprint').value = fingerprint;
-        }
         
-        // Warning if no token
+        // رسالة معلوماتية فقط
         if (!deviceToken) {
-            console.warn('⚠️ No device token - device may need registration');
+            console.log('ℹ️ Login attempt without device token - branch restrictions will be checked');
         }
     });
 });

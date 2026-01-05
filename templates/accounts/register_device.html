@@ -72,7 +72,6 @@
                     <form method="post" id="registerDeviceForm" style="display: none;">
                         {% csrf_token %}
                         <input type="hidden" name="device_info" id="deviceInfo">
-                        <input type="hidden" name="device_fingerprint" id="deviceFingerprint">
                         <input type="hidden" name="qr_master_code" id="qrMasterCodeHidden">
 
                         <div class="mb-3">
@@ -318,9 +317,10 @@ document.getElementById('validateQRBtn').addEventListener('click', async functio
 });
 
 // ====================
-// Device Fingerprint
+// Device Info Collection (Simplified)
 // ====================
 async function collectDeviceInfo() {
+    // جمع المعلومات الأساسية فقط - بدون البصمات المعقدة
     const deviceInfo = {
         screen_resolution: window.screen.width + 'x' + window.screen.height,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -334,81 +334,12 @@ async function collectDeviceInfo() {
         cpu_cores: navigator.hardwareConcurrency || 0,
     };
     
-    // Canvas Fingerprint (Stable)
-    try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        ctx.textBaseline = 'top';
-        ctx.font = '14px Arial';
-        ctx.textBaseline = 'alphabetic';
-        ctx.fillStyle = '#f60';
-        ctx.fillRect(125, 1, 62, 20);
-        ctx.fillStyle = '#069';
-        ctx.fillText('Device Fingerprint', 2, 15);
-        ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-        ctx.fillText('Device Fingerprint', 4, 17);
-        deviceInfo.canvas_fingerprint = canvas.toDataURL();
-    } catch(e) {
-        deviceInfo.canvas_fingerprint = '';
-    }
-    
-    // WebGL Fingerprint (Stable - GPU Info)
-    try {
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-        if (gl) {
-            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-            if (debugInfo) {
-                deviceInfo.webgl_vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-                deviceInfo.webgl_renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-            }
-        }
-    } catch(e) {
-        deviceInfo.webgl_vendor = '';
-        deviceInfo.webgl_renderer = '';
-    }
-    
-    // Audio Fingerprint (Stable)
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const analyser = audioContext.createAnalyser();
-        const gainNode = audioContext.createGain();
-        const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-        
-        gainNode.gain.value = 0;
-        oscillator.connect(analyser);
-        analyser.connect(scriptProcessor);
-        scriptProcessor.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.start(0);
-        const audioData = [];
-        scriptProcessor.onaudioprocess = function(event) {
-            const output = event.outputBuffer.getChannelData(0);
-            for (let i = 0; i < output.length && audioData.length < 100; i++) {
-                audioData.push(output[i]);
-            }
-        };
-        
-        deviceInfo.audio_fingerprint = CryptoJS.SHA256(audioData.join(',')).toString().substring(0, 16);
-        oscillator.stop();
-        audioContext.close();
-    } catch(e) {
-        deviceInfo.audio_fingerprint = '';
-    }
-    
-    // Generate Enhanced Fingerprint
-    const fingerprintString = JSON.stringify(deviceInfo, Object.keys(deviceInfo).sort());
-    const fingerprint = CryptoJS.SHA256(fingerprintString).toString();
-    
-    // Save to form
+    // حفظ في النموذج
     document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
-    document.getElementById('deviceFingerprint').value = fingerprint;
     
-    // Display info
-    document.getElementById('hardwareSerialDisplay').textContent = 'سيتم توليد Token فريد';
-    document.getElementById('fingerprintDisplay').textContent = fingerprint.substring(0, 16) + '...';
+    // عرض المعلومات
+    document.getElementById('hardwareSerialDisplay').textContent = 'سيتم توليد Device Token فريد تلقائياً';
+    document.getElementById('fingerprintDisplay').textContent = 'تم إلغاء نظام البصمة - الاعتماد على Token فقط';
     document.getElementById('browserDisplay').textContent = getBrowserInfo();
     document.getElementById('osDisplay').textContent = getOSInfo();
     document.getElementById('screenDisplay').textContent = deviceInfo.screen_resolution;

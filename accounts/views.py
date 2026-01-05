@@ -225,6 +225,10 @@ def login_view(request):
                                     logger.info(f"🎫 Device token provided: {device_token_str[:8]}...")
                                 else:
                                     logger.warning(f"⚠️ No device token provided")
+                                    # سياسة مرنة: إذا لم يكن للفرع أجهزة مسجلة، السماح بالدخول
+                                    if not device_restriction_enabled:
+                                        device_authorized = True
+                                        logger.info(f"✅ No token, but branch has no restrictions - allowing login")
                                 
                                 # 2. البحث بالـ device_token (الطريقة الوحيدة المدعومة)
                                 if device_token_str:
@@ -237,10 +241,7 @@ def login_view(request):
                                         )
                                         logger.info(f"✅ Device found by TOKEN: {device_obj.device_name} (Branch: {device_obj.branch.name})")
                                         
-                                        # التوكن صحيح - السماح بالدخول
-                                        logger.info(f"✅ Token is valid - allowing login")
-                                        
-                                        device_authorized = True
+                                        # لا نسمح بالدخول هنا - سيتم التحقق من الفرع لاحقاً
                                         device_check_performed = True
                                     except ValueError:
                                         logger.warning(f"⚠️ Invalid device_token format: {device_token_str}")
@@ -278,7 +279,8 @@ def login_view(request):
                                         logger.warning(f"🔒 Device restriction enabled for user's branch: {device_restriction_enabled}")
                                 else:
                                     # الجهاز غير موجود في النظام
-                                    if not denial_reason_key:
+                                    # لا نضع denial_reason إذا تم السماح مسبقاً (عندما لا يوجد token والفرع بدون قيود)
+                                    if not device_authorized and not denial_reason_key:
                                         denial_reason = '🚫 جهاز غير مسجل'
                                         denial_reason_key = 'device_not_registered'
                             except Exception as device_error:
@@ -287,37 +289,31 @@ def login_view(request):
                                 logger.error(traceback.format_exc())
                             
                             # === منطق القرار النهائي ===
-                            # القاعدة الجديدة: إذا كان الجهاز مسجل لفرع معين، يجب أن يستخدمه فقط موظفي هذا الفرع
+                            # السياسة المرنة: الفرع بدون أجهزة = مفتوح، الفرع بأجهزة = مقفل عليها
                             
                             # السيناريو 1: الجهاز موجود ومسجل في النظام
                             if device_obj:
-                                # الجهاز مسجل لفرع معين - يجب أن يستخدمه فقط موظفي هذا الفرع
                                 if device_authorized:
-                                    # الفرع متطابق - السماح بالدخول
                                     logger.info(f"✅ LOGIN ALLOWED - User and device from same branch: {device_obj.branch.name}")
                                 else:
-                                    # الفرع غير متطابق أو الجهاز محظور - منع الدخول
-                                    logger.error(f"🔒 LOGIN BLOCKED - Device belongs to different branch")
-                                    logger.error(f"❌ Denial reason: {denial_reason_key} - {denial_reason}")
+                                    logger.error(f"🔒 LOGIN BLOCKED - {denial_reason_key}: {denial_reason}")
                             
-                            # السيناريو 2: الجهاز غير موجود في النظام
+                            # السيناريو 2: لا يوجد device_token أو الجهاز غير مسجل
                             else:
                                 # التحقق: هل فرع المستخدم لديه أجهزة مسجلة؟
                                 if device_restriction_enabled:
-                                    # فرع المستخدم لديه أجهزة مسجلة - يجب الدخول من أحدها
+                                    # الفرع لديه أجهزة - يجب الدخول من أحدها
                                     device_authorized = False
                                     if not denial_reason_key:
-                                        denial_reason = '🚫 يجب تسجيل الدخول من أحد الأجهزة المسجلة لفرعك'
+                                        denial_reason = '🚫 يجب الدخول من أحد أجهزة فرعك المسجلة'
                                         denial_reason_key = 'device_not_registered'
-                                    logger.error(f"🔒 LOGIN BLOCKED - User's branch has registered devices, must use one of them")
-                                    logger.error(f"❌ Denial reason: {denial_reason_key}")
+                                    logger.error(f"🔒 LOGIN BLOCKED - Branch has devices, must use one of them")
                                 else:
-                                    # فرع المستخدم بدون أجهزة مسجلة - السماح بالدخول من أي جهاز
+                                    # الفرع بدون أجهزة - السماح بالدخول
                                     device_authorized = True
-                                    logger.info(f"✅ User's branch has no registered devices - allowing login from any device")
+                                    logger.info(f"✅ LOGIN ALLOWED - Branch has no device restrictions")
                             
                         # تسجيل المحاولة غير المصرح بها (للمراقبة والإحصائيات)
-                        # يتم التسجيل دائماً حتى لو كان النظام معطلاً، طالما هناك مشكلة في الجهاز
                         logger.info(f"🔍 Check logging conditions: device_check={device_check_performed}, denial_key={denial_reason_key}, superuser={user.is_superuser}, sales_manager={user.is_sales_manager}")
                         
                         if device_check_performed and denial_reason_key and not (user.is_superuser or user.is_sales_manager):

@@ -314,8 +314,7 @@ document.getElementById('checkDeviceBtn').addEventListener('click', function() {
             'X-CSRFToken': '{{ csrf_token }}'
         },
         body: JSON.stringify({
-            device_token: currentDeviceToken,
-            device_fingerprint: currentFingerprint
+            device_token: currentDeviceToken
         })
     })
     .then(response => response.json())
@@ -326,14 +325,6 @@ document.getElementById('checkDeviceBtn').addEventListener('click', function() {
                 statusBadge = '<span class="badge bg-danger">محظور 🚫</span>';
             }
             
-            // Calculate similarity if provided
-            let similarityBadge = '';
-            if (data.fingerprint_similarity !== undefined) {
-                const similarity = (data.fingerprint_similarity * 100).toFixed(1);
-                const color = similarity >= 80 ? 'success' : similarity >= 60 ? 'warning' : 'danger';
-                similarityBadge = `<span class="badge bg-${color}">تطابق البصمة: ${similarity}%</span>`;
-            }
-            
             resultDiv.innerHTML = `
                 <div class="alert alert-success">
                     <h5><i class="fas fa-check-circle"></i> الجهاز مسجل ✅</h5>
@@ -341,7 +332,7 @@ document.getElementById('checkDeviceBtn').addEventListener('click', function() {
                     <p class="mb-1"><strong>اسم الجهاز:</strong> ${data.device_name}</p>
                     ${data.manual_identifier ? `<p class="mb-1"><strong>المعرّف اليدوي:</strong> <code class="bg-light px-2 py-1 rounded">${data.manual_identifier}</code></p>` : ''}
                     <p class="mb-1"><strong>الفرع:</strong> ${data.branch_name}</p>
-                    <p class="mb-1"><strong>الحالة:</strong> ${statusBadge} ${similarityBadge}</p>
+                    <p class="mb-1"><strong>الحالة:</strong> ${statusBadge}</p>
                     <p class="mb-1"><strong>Device Token:</strong> <code class="text-primary">${data.device_token || 'غير متوفر'}</code></p>
                     <p class="mb-1"><strong>مسجل بـ QR Master v${data.qr_version || 'N/A'}</strong></p>
                     ${data.blocked_reason ? `<p class="mb-1 text-danger"><strong>سبب الحظر:</strong> ${data.blocked_reason}</p>` : ''}
