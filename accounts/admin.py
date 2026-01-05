@@ -153,6 +153,7 @@ class CustomUserAdmin(UserAdmin):
         'is_warehouse_staff', 'user_roles__role', 'can_export'
     )
     search_fields = ('username', 'first_name', 'last_name', 'email', 'phone')
+    filter_horizontal = ('authorized_devices', 'groups', 'user_permissions', 'departments', 'managed_branches')
     inlines = [UserRoleInline]
     actions = [
         add_manufacturing_approval_permission,
@@ -184,6 +185,14 @@ class CustomUserAdmin(UserAdmin):
         (_('أدوار المستودع'), {
             'fields': ('is_warehouse_staff', 'assigned_warehouse'),
             'description': _('تحديد موظفي المستودع والمستودع المخصص لهم')
+        }),
+        (_('الأجهزة المصرح بها'), {
+            'fields': ('authorized_devices',),
+            'description': _(
+                '🔐 الأجهزة التي يمكن للمستخدم الدخول منها (حد أقصى 20 جهاز)\n'
+                '✅ يتم إضافة أجهزة الفرع تلقائياً عند تسجيل جهاز جديد أو تغيير الفرع'
+            ),
+            'classes': ('collapse',),
         }),
         (_('تواريخ مهمة'), {'fields': ('last_login', 'date_joined')}),
     )

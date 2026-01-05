@@ -1,0 +1,14 @@
+{% load static %}
+
+<div class="info-card {% if card_class %}{{ card_class }}{% endif %}">
+  {% if title or icon %}
+  <div class="info-card-header">
+    {% if icon %}
+    <i class="{{ icon }} icon"></i>
+    {% endif %}
+    <h3>{{ title }}</h3>
+  </div>
+  {% endif %}
+  
+  {{ content }}
+</div>

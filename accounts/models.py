@@ -119,6 +119,14 @@ class User(AbstractUser):
         verbose_name=_("إمكانية التصدير"),
         help_text=_("السماح للمستخدم بتصدير البيانات إلى Excel")
     )
+    authorized_devices = models.ManyToManyField(
+        'BranchDevice',
+        blank=True,
+        related_name='authorized_users',
+        verbose_name=_('الأجهزة المصرح بها'),
+        help_text=_('الأجهزة التي يمكن للمستخدم الدخول منها (حد أقصى 20 جهاز)')
+    )
+    
     class Meta:
         verbose_name = _('مستخدم')
         verbose_name_plural = _('المستخدمين')
@@ -1279,7 +1287,7 @@ class UnauthorizedDeviceAttempt(models.Model):
         Args:
             username_attempted: اسم المستخدم الذي تم محاولة الدخول به
             user: كائن المستخدم (None إذا كان اسم المستخدم خاطئ)
-            device_data: بيانات الجهاز (fingerprint, hardware_serial, user_agent)
+            device_data: بيانات الجهاز (user_agent فقط)
             denial_reason: سبب الرفض
             user_branch: فرع المستخدم
             device_branch: فرع الجهاز
@@ -1291,8 +1299,6 @@ class UnauthorizedDeviceAttempt(models.Model):
         attempt = cls.objects.create(
             user=user,
             username_attempted=username_attempted,
-            device_fingerprint=device_data.get('fingerprint'),
-            hardware_serial=device_data.get('hardware_serial'),
             device=device,
             ip_address=ip_address,
             user_agent=device_data.get('user_agent', ''),

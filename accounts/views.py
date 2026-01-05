@@ -132,6 +132,12 @@ def login_view(request):
         logger.error(f"[Form Error] {form_error}")
 
     try:
+        # تعريف context في البداية
+        context = {
+            'form': form,
+            'title': 'تسجيل الدخول',
+        }
+        
         # التحقق مما إذا كان المستخدم مسجل الدخول بالفعل
         if request.user.is_authenticated:
             return redirect('home')
@@ -262,21 +268,20 @@ def login_view(request):
                                         denial_reason = f'🚫 هذا الجهاز محظور'
                                         denial_reason_key = 'device_blocked'
                                         logger.warning(f"❌ Blocked device attempted login: {device_obj.device_name}. Reason: {device_obj.blocked_reason}")
-                                    # التحقق من تطابق الفرع - يجب أن يكون كلاهما موجود ومتطابق
-                                    elif user.branch and device_obj.branch and user.branch.id == device_obj.branch.id:
+                                    # التحقق من authorized_devices بدلاً من الفرع
+                                    elif device_obj in user.authorized_devices.all():
                                         device_authorized = True
                                         # تحديث معلومات آخر استخدام
                                         device_obj.mark_used(user=user, ip_address=ip)
-                                        logger.info(f"✅ User {username} authorized from device: {device_obj.device_name} - Branch: {device_obj.branch.name}")
+                                        logger.info(f"✅ User {username} authorized for device: {device_obj.device_name} - Branch: {device_obj.branch.name}")
                                     else:
-                                        # الفرع غير متطابق أو أحدهما غير موجود
+                                        # الجهاز غير مصرح للمستخدم
                                         device_authorized = False
-                                        user_branch_name = user.branch.name if user.branch else "غير محدد"
-                                        device_branch_name = device_obj.branch.name if device_obj.branch else "غير محدد"
-                                        denial_reason = f'⛔ فرع غير متطابق: الجهاز لفرع "{device_branch_name}" وأنت من فرع "{user_branch_name}"'
+                                        denial_reason = f'⛔ هذا الجهاز غير مصرح لك'
                                         denial_reason_key = 'wrong_branch'
-                                        logger.warning(f"❌ BRANCH MISMATCH: User {username} (Branch: {user_branch_name}) attempted login from device of branch: {device_branch_name}")
-                                        logger.warning(f"🔒 Device restriction enabled for user's branch: {device_restriction_enabled}")
+                                        logger.warning(f"❌ DEVICE NOT AUTHORIZED: User {username} attempted login from device '{device_obj.device_name}' (Branch: {device_obj.branch.name})")
+                                        logger.warning(f"   User's branch: {user.branch.name if user.branch else 'None'}")
+                                        logger.warning(f"   User's authorized devices: {user.authorized_devices.count()}")
                                 else:
                                     # الجهاز غير موجود في النظام
                                     # لا نضع denial_reason إذا تم السماح مسبقاً (عندما لا يوجد token والفرع بدون قيود)
@@ -458,9 +463,18 @@ def login_view(request):
                                         </div>
                                         """
                                 
-                                messages.error(request, mark_safe(error_message))
+                                # إضافة الرسالة للـ context بدلاً من messages للعرض كـ popup فقط
+                                context['device_denial_popup'] = {
+                                    'show': True,
+                                    'html_content': error_message,
+                                    'title': denial_reason
+                                }
                             else:
-                                messages.error(request, '🚫 لا يمكنك تسجيل الدخول من هذا الجهاز. يرجى التواصل مع مدير النظام.')
+                                context['device_denial_popup'] = {
+                                    'show': True,
+                                    'html_content': '🚫 لا يمكنك تسجيل الدخول من هذا الجهاز. يرجى التواصل مع مدير النظام.',
+                                    'title': '⛔ جهاز غير مصرح'
+                                }
                             logger.warning(f"❌ Login denied for {username}: {denial_reason}")
                     else:
                         # فشل المصادقة - كلمة مرور خاطئة
@@ -523,11 +537,7 @@ def login_view(request):
 
         # تم إزالة منطق إعداد النظام الأولي (غير مستخدم بعد الآن)
 
-        # عرض نموذج تسجيل الدخول
-        context = {
-            'form': form,
-            'title': 'تسجيل الدخول',
-        }
+        # عرض نموذج تسجيل الدخول (context تم تعريفه في البداية)
 
         return render(request, 'accounts/login.html', context)
     except Exception as e:

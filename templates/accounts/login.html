@@ -722,4 +722,45 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 });
 </script>
+
+{% if device_denial_popup.show %}
+<script>
+// عرض popup للجهاز غير المصرح
+document.addEventListener('DOMContentLoaded', function() {
+    Swal.fire({
+        icon: 'error',
+        title: '{{ device_denial_popup.title|escapejs }}',
+        html: `{{ device_denial_popup.html_content|safe|escapejs }}`,
+        confirmButtonText: 'حسناً',
+        confirmButtonColor: '#dc3545',
+        width: '700px',
+        customClass: {
+            popup: 'device-denial-popup',
+            htmlContainer: 'text-right'
+        },
+        didOpen: () => {
+            // إضافة CSS مخصص للـ popup
+            const style = document.createElement('style');
+            style.innerHTML = `
+                .device-denial-popup {
+                    text-align: right;
+                    direction: rtl;
+                    font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                }
+                .device-denial-popup table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .device-denial-popup td {
+                    padding: 8px;
+                    border: 1px solid #ddd;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    });
+});
+</script>
+{% endif %}
+
 {% endblock %}

@@ -1,0 +1,36 @@
+{% load static %}
+
+<div class="detail-hero" style="{% if gradient %}background: {{ gradient }};{% endif %}">
+  <div class="detail-hero-content">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div class="d-flex align-items-center gap-3">
+        {% if avatar_url %}
+        <img src="{{ avatar_url }}" alt="{{ title }}" class="detail-avatar">
+        {% elif icon %}
+        <div class="detail-avatar d-flex align-items-center justify-content-center bg-white text-primary">
+          <i class="{{ icon }} fs-3"></i>
+        </div>
+        {% endif %}
+        
+        <div>
+          <h1 class="mb-1">{{ title }}</h1>
+          {% if subtitle %}
+          <p class="subtitle mb-0">{{ subtitle }}</p>
+          {% endif %}
+        </div>
+      </div>
+      
+      {% if status_badge %}
+      <div>
+        {{ status_badge }}
+      </div>
+      {% endif %}
+    </div>
+    
+    {% if actions %}
+    <div class="actions mt-3">
+      {{ actions }}
+    </div>
+    {% endif %}
+  </div>
+</div>
