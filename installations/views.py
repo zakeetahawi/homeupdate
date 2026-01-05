@@ -3316,11 +3316,31 @@ def api_upcoming_installations(request):
         'order', 'order__customer', 'order__salesperson', 'order__branch', 'team'
     ).order_by('scheduled_time')
 
-    # فلترة حسب المستخدم الحالي إذا كان مسجل دخول وليس superuser
+    # نظام الصلاحيات المتدرج
     if request.user.is_authenticated and not request.user.is_superuser:
-        # التحقق من وجود salesperson للمستخدم
-        if hasattr(request.user, 'salesperson') and request.user.salesperson:
+        # مدير المبيعات: يرى جميع الطلبات
+        if request.user.is_sales_manager:
+            pass  # لا حاجة لفلترة
+        
+        # مدير المنطقة: يرى طلبات الفروع المُدارة فقط
+        elif request.user.is_region_manager:
+            managed_branches = request.user.managed_branches.all()
+            if managed_branches.exists():
+                installations = installations.filter(order__branch__in=managed_branches)
+            else:
+                installations = installations.none()
+        
+        # مدير الفرع: يرى طلبات فرعه فقط
+        elif request.user.is_branch_manager and request.user.branch:
+            installations = installations.filter(order__branch=request.user.branch)
+        
+        # البائع: يرى طلباته فقط
+        elif hasattr(request.user, 'salesperson') and request.user.salesperson:
             installations = installations.filter(order__salesperson=request.user.salesperson)
+        
+        # بقية المستخدمين: لا يرون شيء
+        else:
+            installations = installations.none()
 
     # تطبيق فلتر الفرع
     if branch_id:
