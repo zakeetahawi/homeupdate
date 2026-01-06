@@ -1366,72 +1366,82 @@
                         <button type="button" class="hf-dropdown-close" data-close-dropdown><i class="fas fa-times"></i></button>
                     </div>
                     <div class="mb-3 text-center">
-                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i>اختر الأعمدة التي تريد عرضها في الجدول</small>
+                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i>اختر الأعمدة التي تريد إخفاءها</small>
                     </div>
-                    <div class="hf-checkbox-grid" style="grid-template-columns: repeat(2, 1fr);">
-                        <label class="hf-checkbox-item column-toggle-item" data-column="id">
-                            <input type="checkbox" class="column-toggle" data-column="id" checked>
-                            #
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="order_number">
-                            <input type="checkbox" class="column-toggle" data-column="order_number" checked>
-                            رقم الطلب
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="order_type">
-                            <input type="checkbox" class="column-toggle" data-column="order_type" checked>
-                            النوع
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="contract_number">
-                            <input type="checkbox" class="column-toggle" data-column="contract_number" checked>
-                            رقم العقد
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="production_line">
-                            <input type="checkbox" class="column-toggle" data-column="production_line" checked>
-                            خط الإنتاج
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="invoice_number">
-                            <input type="checkbox" class="column-toggle" data-column="invoice_number" checked>
-                            رقم الفاتورة
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="customer">
-                            <input type="checkbox" class="column-toggle" data-column="customer" checked>
-                            العميل
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="salesperson">
-                            <input type="checkbox" class="column-toggle" data-column="salesperson" checked>
-                            البائع
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="branch">
-                            <input type="checkbox" class="column-toggle" data-column="branch" checked>
-                            الفرع
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="order_date">
-                            <input type="checkbox" class="column-toggle" data-column="order_date" checked>
-                            تاريخ الطلب
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="expected_delivery_date">
-                            <input type="checkbox" class="column-toggle" data-column="expected_delivery_date" checked>
-                            تاريخ التسليم
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="delivery_indicator">
-                            <input type="checkbox" class="column-toggle" data-column="delivery_indicator" checked>
-                            مؤشر التسليم
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="status">
-                            <input type="checkbox" class="column-toggle" data-column="status" checked>
-                            الحالة
-                        </label>
-                        <label class="hf-checkbox-item column-toggle-item" data-column="items">
-                            <input type="checkbox" class="column-toggle" data-column="items" checked>
-                            العناصر
-                        </label>
+                    <div id="visibleColumnsSection">
+                        <div class="hf-checkbox-grid" style="grid-template-columns: repeat(2, 1fr);">
+                            <label class="hf-checkbox-item column-toggle-item" data-column="id">
+                                <input type="checkbox" class="column-toggle" data-column="id" checked>
+                                #
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="order_number">
+                                <input type="checkbox" class="column-toggle" data-column="order_number" checked>
+                                رقم الطلب
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="order_type">
+                                <input type="checkbox" class="column-toggle" data-column="order_type" checked>
+                                النوع
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="contract_number">
+                                <input type="checkbox" class="column-toggle" data-column="contract_number" checked>
+                                رقم العقد
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="production_line">
+                                <input type="checkbox" class="column-toggle" data-column="production_line" checked>
+                                خط الإنتاج
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="invoice_number">
+                                <input type="checkbox" class="column-toggle" data-column="invoice_number" checked>
+                                رقم الفاتورة
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="customer">
+                                <input type="checkbox" class="column-toggle" data-column="customer" checked>
+                                العميل
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="salesperson">
+                                <input type="checkbox" class="column-toggle" data-column="salesperson" checked>
+                                البائع
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="branch">
+                                <input type="checkbox" class="column-toggle" data-column="branch" checked>
+                                الفرع
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="order_date">
+                                <input type="checkbox" class="column-toggle" data-column="order_date" checked>
+                                تاريخ الطلب
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="expected_delivery_date">
+                                <input type="checkbox" class="column-toggle" data-column="expected_delivery_date" checked>
+                                تاريخ التسليم
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="delivery_indicator">
+                                <input type="checkbox" class="column-toggle" data-column="delivery_indicator" checked>
+                                مؤشر التسليم
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="status">
+                                <input type="checkbox" class="column-toggle" data-column="status" checked>
+                                الحالة
+                            </label>
+                            <label class="hf-checkbox-item column-toggle-item" data-column="items">
+                                <input type="checkbox" class="column-toggle" data-column="items" checked>
+                                العناصر
+                            </label>
+                        </div>
+                    </div>
+                    <div id="hiddenColumnsSection" style="margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 1rem; display: none;">
+                        <div style="margin-bottom: 0.5rem; font-weight: 600; color: #718096; font-size: 0.85rem;">
+                            <i class="fas fa-eye-slash me-1"></i>الأعمدة المخفية - اضغط لإظهار
+                        </div>
+                        <div class="d-flex flex-wrap gap-2" id="hiddenColumnsList" style="justify-content: center;">
+                            <!-- سيتم إضافة الأعمدة المخفية هنا ديناميكياً -->
+                        </div>
                     </div>
                     <div class="d-flex gap-2 mt-3 justify-content-center">
                         <button type="button" class="btn btn-sm btn-primary" onclick="selectAllColumns()">
-                            <i class="fas fa-check-double me-1"></i>تحديد الكل
+                            <i class="fas fa-check-double me-1"></i>إظهار الكل
                         </button>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="resetColumnSettings()">
-                            <i class="fas fa-undo me-1"></i>إعادة تعيين
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="hideAllColumns()">
+                            <i class="fas fa-eye-slash me-1"></i>إخفاء الكل
                         </button>
                     </div>
                 </div>
@@ -1682,7 +1692,10 @@
                         <tr data-order-id="{{ order.id }}" data-order-type="{% if 'installation' in order.order.get_selected_types_list %}installation{% elif 'tailoring' in order.order.get_selected_types_list %}tailoring{% elif 'accessory' in order.order.get_selected_types_list %}accessory{% else %}manufacturing{% endif %}">
                             <td class="column-id" data-column="id">{{ forloop.counter }}</td>
                             <td class="column-order_number" data-column="order_number">
-                                <a href="{% url 'manufacturing:order_detail' order.id %}" style="color: var(--primary); text-decoration: none;" title="تفاصيل أمر التصنيع">
+                                <a href="{% url 'orders:order_detail' order.order.id %}" style="color: #6c757d; text-decoration: none; margin-left: 0.3rem;" title="تفاصيل الطلب الأساسي">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'manufacturing:order_detail' order.id %}" style="color: var(--primary); text-decoration: none; font-weight: bold;" title="تفاصيل أمر التصنيع">
                                     {{ order.order.order_number|default:order.order.id }}
                                 </a>
                             </td>
@@ -1802,46 +1815,52 @@
                                 {% endif %}
                             </td>
                             <td class="column-expected_delivery_date" data-column="expected_delivery_date">
-                                <span class="{% if order.is_delivery_delayed %}text-danger{% endif %}">
-                                    {{ order.expected_delivery_date|date:'Y-m-d'|default:'-' }}
-                                </span>
+                                {% if order.status == 'delivered' and order.delivery_date %}
+                                    <span class="text-success" title="تاريخ التسليم الفعلي">
+                                        {{ order.delivery_date|date:'Y-m-d' }}
+                                    </span>
+                                {% else %}
+                                    <span class="{% if order.is_delivery_delayed %}text-danger{% endif %}" title="تاريخ التسليم المتوقع">
+                                        {{ order.expected_delivery_date|date:'Y-m-d'|default:'-' }}
+                                    </span>
+                                {% endif %}
                             </td>
                             <td class="column-delivery_indicator" data-column="delivery_indicator">
-                                {% with indicator=order.delivery_status_indicator days=order.days_remaining delivery_date=order.expected_delivery_date|date:'Y-m-d' completion_date=order.completion_date|date:'Y-m-d H:i' %}
+                                {% with indicator=order.delivery_status_indicator days=order.days_remaining delivery_date=order.expected_delivery_date|date:'Y-m-d' completion_date=order.completion_date|date:'Y-m-d H:i' actual_delivery=order.delivery_date|date:'Y-m-d H:i' created_date=order.created_at|date:'Y-m-d H:i' %}
                                     {% if order.status == 'delivered' %}
                                         {# تم التسليم فعلياً - علامة صح مزدوجة #}
-                                        <div class="delivery-indicator completed" title="تم التسليم{% if delivery_date %}&#10;تاريخ التسليم: {{ delivery_date }}{% endif %}" style="background-color: #20c997;">
+                                        <div class="delivery-indicator completed" title="{{ order.get_status_display }}{% if actual_delivery %} - تاريخ: {{ actual_delivery }}{% elif completion_date %} - تاريخ: {{ completion_date }}{% endif %}{% if completion_date and order.status == 'delivered' %}&#10;تاريخ الإكمال: {{ completion_date }}{% endif %}{% if created_date %}&#10;تاريخ الإنشاء: {{ created_date }}{% endif %}" style="background-color: #20c997;">
                                             <i class="fas fa-check-double"></i>
                                         </div>
                                     {% elif order.status == 'completed' %}
                                         {# مكتمل - علامة صح عادية #}
-                                        <div class="delivery-indicator completed" title="مكتمل{% if completion_date %}&#10;تاريخ الإكمال: {{ completion_date }}{% endif %}">
+                                        <div class="delivery-indicator completed" title="{{ order.get_status_display }}{% if completion_date %} - تاريخ: {{ completion_date }}{% endif %}{% if created_date %}&#10;تاريخ الإنشاء: {{ created_date }}{% endif %}">
                                             <i class="fas fa-check"></i>
                                         </div>
                                     {% elif order.status == 'ready_install' %}
                                         {# جاهز للتركيب - علامة صح عادية #}
-                                        <div class="delivery-indicator completed" title="جاهز للتركيب{% if completion_date %}&#10;تاريخ الجاهزية: {{ completion_date }}{% endif %}">
+                                        <div class="delivery-indicator completed" title="{{ order.get_status_display }}{% if completion_date %} - تاريخ: {{ completion_date }}{% endif %}{% if created_date %}&#10;تاريخ الإنشاء: {{ created_date }}{% endif %}">
                                             <i class="fas fa-check"></i>
                                         </div>
                                     {% elif indicator.type == 'overdue' %}
                                         {# متأخر #}
                                         {% if days %}
-                                        <div class="{{ indicator.class }}" title="متأخر {% widthratio days -1 1 %} {% if days == -1 %}يوم{% elif days == -2 %}يومان{% else %}أيام{% endif %}&#10;تاريخ التسليم: {{ delivery_date }}">
+                                        <div class="{{ indicator.class }}" title="متأخر {% widthratio days -1 1 %} {% if days == -1 %}يوم{% elif days == -2 %}يومان{% else %}أيام{% endif %} - تاريخ: {{ delivery_date }}{% if created_date %}&#10;تاريخ الإنشاء: {{ created_date }}{% endif %}">
                                             <i class="{{ indicator.icon }}"></i>
                                         </div>
                                         {% else %}
-                                        <div class="{{ indicator.class }}" title="متأخر{% if delivery_date %}&#10;تاريخ التسليم: {{ delivery_date }}{% endif %}">
+                                        <div class="{{ indicator.class }}" title="متأخر{% if delivery_date %} - تاريخ: {{ delivery_date }}{% endif %}{% if created_date %}&#10;تاريخ الإنشاء: {{ created_date }}{% endif %}">
                                             <i class="{{ indicator.icon }}"></i>
                                         </div>
                                         {% endif %}
                                     {% elif days == 0 %}
                                         {# خروج اليوم - يعرض الرقم 0 #}
-                                        <div class="delivery-indicator countdown normal" title="خروج اليوم - 0 يوم&#10;تاريخ التسليم: {{ delivery_date }}">
+                                        <div class="delivery-indicator countdown normal" title="خروج اليوم - 0 يوم - تاريخ: {{ delivery_date }}{% if created_date %}&#10;تاريخ الإنشاء: {{ created_date }}{% endif %}">
                                             0
                                         </div>
                                     {% elif indicator.type == 'countdown' %}
                                         {# عد تنازلي #}
-                                        <div class="{{ indicator.class }}" title="{% if days == 1 %}باقي يوم واحد{% elif days == 2 %}باقي يومان{% else %}باقي {{ days }} أيام{% endif %}&#10;تاريخ التسليم: {{ delivery_date }}">
+                                        <div class="{{ indicator.class }}" title="{% if days == 1 %}باقي يوم واحد{% elif days == 2 %}باقي يومان{% else %}باقي {{ days }} أيام{% endif %} - تاريخ: {{ delivery_date }}{% if created_date %}&#10;تاريخ الإنشاء: {{ created_date }}{% endif %}">
                                             {{ indicator.text }}
                                         </div>
                                     {% else %}
@@ -1881,7 +1900,7 @@
                                 {% else %}
                                     {% if order.status == 'delivered' %}
                                         <span class="unified-badge status-delivered" 
-                                              title="{% if order.delivery_permit_number %}إذن التسليم: {{ order.delivery_permit_number }}&#10;{% endif %}{% if order.delivery_recipient_name %}المستلم: {{ order.delivery_recipient_name }}&#10;{% endif %}{% if order.expected_delivery_date %}تاريخ التسليم: {{ order.expected_delivery_date|date:'Y-m-d' }}{% endif %}" 
+                                              title="{% if order.delivery_date %}تاريخ التسليم الفعلي: {{ order.delivery_date|date:'Y-m-d H:i' }}{% endif %}{% if order.delivery_permit_number %}&#10;إذن التسليم: {{ order.delivery_permit_number }}{% endif %}{% if order.delivery_recipient_name %}&#10;المستلم: {{ order.delivery_recipient_name }}{% endif %}" 
                                               style="cursor: help;">
                                             {{ order.get_status_display }}
                                         </span>
@@ -3258,6 +3277,9 @@ function initializeColumnToggles() {
             const settings = loadColumnSettings() || {};
             settings[column] = visible;
             saveColumnSettings(settings);
+            
+            // تحديث قسم الأعمدة المخفية
+            updateHiddenColumnsSection();
         });
     });
 }
@@ -3268,6 +3290,16 @@ function selectAllColumns() {
         checkbox.checked = true;
         checkbox.dispatchEvent(new Event('change'));
     });
+    updateHiddenColumnsSection();
+}
+
+function hideAllColumns() {
+    const checkboxes = document.querySelectorAll('.column-toggle');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        checkbox.dispatchEvent(new Event('change'));
+    });
+    updateHiddenColumnsSection();
 }
 
 function resetColumnSettings() {
@@ -3277,16 +3309,73 @@ function resetColumnSettings() {
         checkbox.checked = true;
         checkbox.dispatchEvent(new Event('change'));
     });
+    updateHiddenColumnsSection();
+}
+
+function updateHiddenColumnsSection() {
+    const hiddenSection = document.getElementById('hiddenColumnsSection');
+    const hiddenList = document.getElementById('hiddenColumnsList');
+    const visibleSection = document.getElementById('visibleColumnsSection');
     
-    const filterBtn = document.getElementById('columnsBtn');
-    if (filterBtn) {
-        filterBtn.click();
+    if (!hiddenSection || !hiddenList || !visibleSection) return;
+    
+    // جمع الأعمدة المخفية
+    const hiddenColumns = [];
+    const visibleColumns = [];
+    
+    document.querySelectorAll('.column-toggle-item').forEach(item => {
+        const checkbox = item.querySelector('.column-toggle');
+        const columnName = item.dataset.column;
+        const columnLabel = item.textContent.trim();
+        
+        if (checkbox && !checkbox.checked) {
+            hiddenColumns.push({ name: columnName, label: columnLabel });
+        } else {
+            visibleColumns.push(item);
+        }
+    });
+    
+    // إخفاء العناصر المخفية من القائمة الرئيسية
+    document.querySelectorAll('.column-toggle-item').forEach(item => {
+        const checkbox = item.querySelector('.column-toggle');
+        if (!checkbox.checked) {
+            item.style.display = 'none';
+        } else {
+            item.style.display = '';
+        }
+    });
+    
+    // تحديث قسم الأعمدة المخفية
+    if (hiddenColumns.length > 0) {
+        hiddenSection.style.display = 'block';
+        hiddenList.innerHTML = hiddenColumns.map(col => `
+            <button type="button" 
+                    class="btn btn-sm btn-outline-secondary" 
+                    style="border-radius: 20px; font-size: 0.85rem; padding: 0.35rem 0.75rem;"
+                    onclick="showColumn('${col.name}')"
+                    title="اضغط لإظهار هذا العمود">
+                <i class="fas fa-eye me-1"></i>${col.label}
+            </button>
+        `).join('');
+    } else {
+        hiddenSection.style.display = 'none';
+        hiddenList.innerHTML = '';
+    }
+}
+
+function showColumn(columnName) {
+    const checkbox = document.querySelector(`.column-toggle[data-column="${columnName}"]`);
+    if (checkbox) {
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change'));
+        updateHiddenColumnsSection();
     }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeColumnToggles();
     applyColumnVisibility();
+    updateHiddenColumnsSection();
 });
 </script>
 
