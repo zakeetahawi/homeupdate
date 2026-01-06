@@ -170,6 +170,10 @@ def inspection_scheduled_handler(sender, instance, created, **kwargs):
     if not template:
         return
     
+    # إرسال الرسالة فقط عند جدولة المعاينة (status = 'scheduled')
+    if instance.status != 'scheduled':
+        return
+    
     # تحقق من وجود تاريخ معاينة محدد
     if not instance.scheduled_date:
         return
