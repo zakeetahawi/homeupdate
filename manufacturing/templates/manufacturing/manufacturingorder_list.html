@@ -1807,27 +1807,46 @@
                                 </span>
                             </td>
                             <td class="column-delivery_indicator" data-column="delivery_indicator">
-                                {% with indicator=order.delivery_status_indicator days=order.days_remaining %}
-                                    {% if indicator.type == 'overdue' %}
+                                {% with indicator=order.delivery_status_indicator days=order.days_remaining delivery_date=order.expected_delivery_date|date:'Y-m-d' completion_date=order.completion_date|date:'Y-m-d H:i' %}
+                                    {% if order.status == 'delivered' %}
+                                        {# تم التسليم فعلياً - علامة صح مزدوجة #}
+                                        <div class="delivery-indicator completed" title="تم التسليم{% if delivery_date %}&#10;تاريخ التسليم: {{ delivery_date }}{% endif %}" style="background-color: #20c997;">
+                                            <i class="fas fa-check-double"></i>
+                                        </div>
+                                    {% elif order.status == 'completed' %}
+                                        {# مكتمل - علامة صح عادية #}
+                                        <div class="delivery-indicator completed" title="مكتمل{% if completion_date %}&#10;تاريخ الإكمال: {{ completion_date }}{% endif %}">
+                                            <i class="fas fa-check"></i>
+                                        </div>
+                                    {% elif order.status == 'ready_install' %}
+                                        {# جاهز للتركيب - علامة صح عادية #}
+                                        <div class="delivery-indicator completed" title="جاهز للتركيب{% if completion_date %}&#10;تاريخ الجاهزية: {{ completion_date }}{% endif %}">
+                                            <i class="fas fa-check"></i>
+                                        </div>
+                                    {% elif indicator.type == 'overdue' %}
+                                        {# متأخر #}
                                         {% if days %}
-                                        <div class="{{ indicator.class }}" title="متأخر {% widthratio days -1 1 %} {% if days == -1 %}يوم{% elif days == -2 %}يومان{% else %}أيام{% endif %}">
+                                        <div class="{{ indicator.class }}" title="متأخر {% widthratio days -1 1 %} {% if days == -1 %}يوم{% elif days == -2 %}يومان{% else %}أيام{% endif %}&#10;تاريخ التسليم: {{ delivery_date }}">
                                             <i class="{{ indicator.icon }}"></i>
                                         </div>
                                         {% else %}
-                                        <div class="{{ indicator.class }}" title="متأخر">
+                                        <div class="{{ indicator.class }}" title="متأخر{% if delivery_date %}&#10;تاريخ التسليم: {{ delivery_date }}{% endif %}">
                                             <i class="{{ indicator.icon }}"></i>
                                         </div>
                                         {% endif %}
+                                    {% elif days == 0 %}
+                                        {# خروج اليوم - يعرض الرقم 0 #}
+                                        <div class="delivery-indicator countdown normal" title="خروج اليوم - 0 يوم&#10;تاريخ التسليم: {{ delivery_date }}">
+                                            0
+                                        </div>
                                     {% elif indicator.type == 'countdown' %}
-                                        <div class="{{ indicator.class }}" title="{% if days == 0 %}خروج اليوم - 0 يوم{% elif days == 1 %}باقي يوم واحد{% elif days == 2 %}باقي يومان{% else %}باقي {{ days }} أيام{% endif %}">
+                                        {# عد تنازلي #}
+                                        <div class="{{ indicator.class }}" title="{% if days == 1 %}باقي يوم واحد{% elif days == 2 %}باقي يومان{% else %}باقي {{ days }} أيام{% endif %}&#10;تاريخ التسليم: {{ delivery_date }}">
                                             {{ indicator.text }}
                                         </div>
-                                    {% elif indicator.type == 'completed' %}
-                                        <div class="{{ indicator.class }}" title="مكتمل - 0 يوم">
-                                            <i class="{{ indicator.icon }}"></i>
-                                        </div>
                                     {% else %}
-                                        <div class="{{ indicator.class }}" title="{{ indicator.text }}">
+                                        {# حالات أخرى #}
+                                        <div class="{{ indicator.class }}" title="{{ indicator.text }}{% if delivery_date %}&#10;تاريخ التسليم: {{ delivery_date }}{% endif %}">
                                             <i class="{{ indicator.icon }}"></i>
                                         </div>
                                     {% endif %}
@@ -1862,7 +1881,7 @@
                                 {% else %}
                                     {% if order.status == 'delivered' %}
                                         <span class="unified-badge status-delivered" 
-                                              title="{% if order.delivery_permit_number %}إذن التسليم: {{ order.delivery_permit_number }}&#10;{% endif %}{% if order.delivery_recipient_name %}المستلم: {{ order.delivery_recipient_name }}{% endif %}" 
+                                              title="{% if order.delivery_permit_number %}إذن التسليم: {{ order.delivery_permit_number }}&#10;{% endif %}{% if order.delivery_recipient_name %}المستلم: {{ order.delivery_recipient_name }}&#10;{% endif %}{% if order.expected_delivery_date %}تاريخ التسليم: {{ order.expected_delivery_date|date:'Y-m-d' }}{% endif %}" 
                                               style="cursor: help;">
                                             {{ order.get_status_display }}
                                         </span>
