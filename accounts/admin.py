@@ -1105,12 +1105,20 @@ class BranchDeviceAdmin(admin.ModelAdmin):
     
     def view_report_link(self, obj):
         """رابط سريع للتقرير في القائمة"""
+        if not obj.id:
+            return mark_safe('<span style="color: #999;">احفظ أولاً</span>')
         url = reverse('accounts:device_report', args=[obj.id])
         return mark_safe(f'<a href="{url}" style="color: #007bff; text-decoration: none;">📊 تقرير</a>')
     view_report_link.short_description = 'التقارير'
     
     def detailed_report_link(self, obj):
         """رابط مفصل للتقرير في صفحة التفاصيل"""
+        if not obj.id:
+            return mark_safe('''
+                <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 4px; color: #856404;">
+                    ⚠️ احفظ الجهاز أولاً لعرض التقرير التفصيلي
+                </div>
+            ''')
         url = reverse('accounts:device_report', args=[obj.id])
         return mark_safe(f'''
             <a href="{url}" target="_blank" style="display: inline-block; background: #28a745; color: white; padding: 10px 20px; 
