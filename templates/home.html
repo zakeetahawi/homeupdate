@@ -3,24 +3,17 @@
 
 {% block title %}الصفحة الرئيسية - نظام الخواجه لإدارة العملاء{% endblock %}
 
-{% block meta_tags %}
-    <meta name="description" content="نظام الخواجه المتكامل لإدارة علاقات العملاء (CRM) - إدارة احترافية للطلبات، التصنيع، التركيبات، المخزون والشكاوى بكفاءة عالية">
-    <meta name="keywords" content="نظام إدارة العملاء, CRM, نظام الخواجه, إدارة الطلبات, التصنيع, التركيبات, المخزون, إدارة الشكاوى">
-    <meta property="og:title" content="نظام الخواجه لإدارة علاقات العملاء">
-    <meta property="og:type" content="website">
-{% endblock %}
-
 {% block content %}
 <div class="d-flex align-items-center justify-content-center" style="min-height: calc(100vh - 200px);">
-    <div class="col-md-4">
-        <div class="card text-center shadow-lg home-welcome-card">
-            <div class="card-body py-1 px-4">
+    <div class="col-md-5">
+        <div class="card text-center shadow-lg" style="background: transparent;">
+            <div class="card-body py-3" style="background: transparent;">
                 {% if company_info.logo %}
-                    <img src="{{ company_info.logo.url }}?v={{ company_info.logo.url|length }}" alt="{{ company_info.name|default:'شعار النظام' }}" class="img-fluid mb-1 logo-img home-logo animated-logo" style="width: 350px; height: auto;" id="home-logo">
+                    <img src="{{ company_info.logo.url }}?v={{ company_info.logo.url|length }}" alt="{{ company_info.name|default:'شعار النظام' }}" class="img-fluid mb-3 logo-img home-logo" style="width: 180px; height: auto;" id="home-logo">
                 {% else %}
-                    <img src="{% static 'img/logo.png' %}" alt="شعار النظام" class="img-fluid mb-1 logo-img home-logo animated-logo" style="width: 350px; height: auto;" id="home-logo">
+                    <img src="{% static 'img/logo.png' %}" alt="شعار النظام" class="img-fluid mb-3 logo-img home-logo" style="width: 180px; height: auto;" id="home-logo">
                 {% endif %}
-                <h2 class="card-title mb-1 welcome-title">مرحباً بك في نظام الخواجه لإدارة العملاء</h2>
+                <h2 class="card-title mb-3 welcome-title" style="color: #502d00;">مرحباً بك في نظام الخواجه لإدارة العملاء</h2>
                 <p class="card-text" style="color: #19191a;">نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون</p>
             </div>
         </div>

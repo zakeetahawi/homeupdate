@@ -10,32 +10,26 @@ item_branch: فرع العنصر (customer.branch, order.branch, etc)
 delete_message: رسالة تأكيد الحذف
 {% endcomment %}
 
-<div class="btn-group" role="group" aria-label="إجراءات البند">
+<div class="btn-group">
     {% if view_perm and perms|get_perm:view_perm %}
-    <a href="{{ detail_url }}" class="btn btn-info btn-sm" 
-       title="عرض التفاصيل" 
-       aria-label="عرض تفاصيل البند">
-        <i class="fas fa-eye" aria-hidden="true"></i>
+    <a href="{{ detail_url }}" class="btn btn-info btn-sm" title="عرض التفاصيل">
+        <i class="fas fa-eye"></i>
     </a>
     {% endif %}
 
     {% if change_perm and perms|get_perm:change_perm %}
     {% if request.user.is_superuser or item_branch == request.user.branch %}
-    <a href="{{ update_url }}" class="btn btn-primary btn-sm" 
-       title="تعديل" 
-       aria-label="تعديل البند">
-        <i class="fas fa-edit" aria-hidden="true"></i>
+    <a href="{{ update_url }}" class="btn btn-primary btn-sm" title="تعديل">
+        <i class="fas fa-edit"></i>
     </a>
     {% endif %}
     {% endif %}
 
     {% if delete_perm and perms|get_perm:delete_perm %}
     {% if request.user.is_superuser or item_branch == request.user.branch %}
-    <a href="{{ delete_url }}" class="btn btn-danger btn-sm" 
-       title="حذف" 
-       aria-label="حذف البند"
+    <a href="{{ delete_url }}" class="btn btn-danger btn-sm" title="حذف"
        onclick="return confirm('{{ delete_message|default:'هل أنت متأكد من الحذف؟' }}');">
-        <i class="fas fa-trash" aria-hidden="true"></i>
+        <i class="fas fa-trash"></i>
     </a>
     {% endif %}
     {% endif %}

@@ -20,7 +20,7 @@ class AdvancedDownloadHelper {
      */
     async downloadFile(url, filename = null, onProgress = null) {
         try {
-            // console.log('🚀 بدء تحميل الملف:', url);
+            console.log('🚀 بدء تحميل الملف:', url);
 
             // إظهار مؤشر التحميل
             this.showDownloadIndicator();
@@ -58,7 +58,7 @@ class AdvancedDownloadHelper {
             // قراءة البيانات كـ blob
             const blob = await response.blob();
 
-            // console.log('✅ تم تحميل البيانات:', blob.size, 'bytes');
+            console.log('✅ تم تحميل البيانات:', blob.size, 'bytes');
 
             // تحميل الملف
             this.saveBlob(blob, filename);
@@ -66,11 +66,11 @@ class AdvancedDownloadHelper {
             // إخفاء مؤشر التحميل
             this.hideDownloadIndicator();
 
-            // console.log('🎉 تم تحميل الملف بنجاح:', filename);
+            console.log('🎉 تم تحميل الملف بنجاح:', filename);
             return true;
 
         } catch (error) {
-            // console.error('❌ خطأ في تحميل الملف:', error);
+            console.error('❌ خطأ في تحميل الملف:', error);
             this.hideDownloadIndicator();
             this.showError('فشل في تحميل الملف: ' + error.message);
             return false;
@@ -117,12 +117,12 @@ class AdvancedDownloadHelper {
      * @param {Array} urls - قائمة الروابط
      */
     async downloadMultiple(urls) {
-        // console.log('📦 بدء تحميل متعدد:', urls.length, 'ملف');
+        console.log('📦 بدء تحميل متعدد:', urls.length, 'ملف');
 
         const results = [];
         for (let i = 0; i < urls.length; i++) {
             const url = urls[i];
-            // console.log(`📥 تحميل ${i + 1}/${urls.length}:`, url);
+            console.log(`📥 تحميل ${i + 1}/${urls.length}:`, url);
 
             const result = await this.downloadFile(url);
             results.push(result);
@@ -134,7 +134,7 @@ class AdvancedDownloadHelper {
         }
 
         const successful = results.filter(r => r).length;
-        // console.log(`✅ اكتمل التحميل: ${successful}/${urls.length} ملف`);
+        console.log(`✅ اكتمل التحميل: ${successful}/${urls.length} ملف`);
 
         return results;
     }
@@ -239,7 +239,7 @@ class AdvancedDownloadHelper {
      * تحسين أزرار التحميل في الصفحة
      */
     enhanceDownloadButtons() {
-        // console.log('🔧 تحسين أزرار التحميل...');
+        console.log('🔧 تحسين أزرار التحميل...');
 
         // البحث عن جميع روابط التحميل
         const downloadLinks = document.querySelectorAll('a[href*="backup_download"], a[href*="download"]');
@@ -264,17 +264,17 @@ class AdvancedDownloadHelper {
                 return false;
             });
 
-            // console.log('✅ تم تحسين رابط التحميل:', link.href);
+            console.log('✅ تم تحسين رابط التحميل:', link.href);
         });
 
-        // console.log(`🎯 تم تحسين ${downloadLinks.length} رابط تحميل`);
+        console.log(`🎯 تم تحسين ${downloadLinks.length} رابط تحميل`);
     }
 
     /**
      * اختبار وظيفة التحميل
      */
     testDownload() {
-        // console.log('🧪 اختبار وظيفة التحميل...');
+        console.log('🧪 اختبار وظيفة التحميل...');
 
         // إنشاء ملف اختبار صغير
         const testData = JSON.stringify({
@@ -286,7 +286,7 @@ class AdvancedDownloadHelper {
         const blob = new Blob([testData], { type: 'application/json' });
         this.saveBlob(blob, 'test_download.json');
 
-        // console.log('✅ تم إنشاء ملف اختبار');
+        console.log('✅ تم إنشاء ملف اختبار');
     }
 
     /**
@@ -300,11 +300,11 @@ class AdvancedDownloadHelper {
             download: document.createElement('a').download !== undefined
         };
 
-        // console.log('🔍 دعم المتصفح للتحميل:', support);
+        console.log('🔍 دعم المتصفح للتحميل:', support);
 
         const allSupported = Object.values(support).every(Boolean);
         if (!allSupported) {
-            // console.warn('⚠️ المتصفح لا يدعم جميع ميزات التحميل المطلوبة');
+            console.warn('⚠️ المتصفح لا يدعم جميع ميزات التحميل المطلوبة');
         }
 
         return allSupported;
@@ -316,15 +316,15 @@ window.downloadHelper = new AdvancedDownloadHelper();
 
 // تشغيل التحسينات عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
-    // console.log('🚀 تحميل مساعد التحميل المتقدم...');
+    console.log('🚀 تحميل مساعد التحميل المتقدم...');
 
     // فحص دعم المتصفح
     if (window.downloadHelper.checkBrowserSupport()) {
         // تحسين أزرار التحميل
         window.downloadHelper.enhanceDownloadButtons();
-        // console.log('✅ تم تفعيل مساعد التحميل المتقدم');
+        console.log('✅ تم تفعيل مساعد التحميل المتقدم');
     } else {
-        // console.error('❌ المتصفح لا يدعم ميزات التحميل المطلوبة');
+        console.error('❌ المتصفح لا يدعم ميزات التحميل المطلوبة');
     }
 });
 
@@ -340,8 +340,8 @@ window.testDownload = function() {
 // معالج الأخطاء العام
 window.addEventListener('error', function(e) {
     if (e.message && e.message.includes('download')) {
-        // console.error('❌ خطأ في التحميل:', e.message);
+        console.error('❌ خطأ في التحميل:', e.message);
     }
 });
 
-// console.log('📥 تم تحميل مساعد التحميل المتقدم - الإصدار 1.0');
+console.log('📥 تم تحميل مساعد التحميل المتقدم - الإصدار 1.0');

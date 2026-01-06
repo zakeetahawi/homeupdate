@@ -1,461 +1,16 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}تسجيل الدخول - نظام الخواجه{% endblock %}
 
-{% block extra_css %}
-<style>
-/* Hide navbar and footer on login page for perfect centering */
-body {
-    overflow: hidden;
-}
-
-.navbar, footer {
-    display: none !important;
-}
-
-/* Login page specific styles */
-.login-container {
-    min-height: 100vh;
-    max-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    overflow: hidden;
-    position: relative;
-}
-
-.login-card {
-    background-color: rgba(255, 248, 240, 0.95);
-    backdrop-filter: blur(15px);
-    border: 3px solid #D4A362;
-    border-radius: 25px;
-    box-shadow: 0 15px 50px rgba(93, 58, 26, 0.4),
-                0 0 80px rgba(212, 163, 98, 0.2);
-    max-width: 900px;
-    width: 100%;
-    max-height: 85vh;
-    overflow: hidden;
-    animation: cardEntrance 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-    position: relative;
-    margin: auto;
-    display: flex;
-    flex-direction: row;
-    transform: translateY(-16vh);
-}
-
-@keyframes cardEntrance {
-    0% {
-        opacity: 0;
-        transform: translateY(50px) scale(0.9);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-.login-card::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    bottom: -2px;
-    left: -2px;
-    background: linear-gradient(135deg, #D4A362, #5D3A1A, #D4A362);
-    border-radius: 25px;
-    z-index: -1;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-    animation: borderGlow 3s linear infinite;
-}
-
-@keyframes borderGlow {
-    0%, 100% {
-        filter: brightness(1);
-    }
-    50% {
-        filter: brightness(1.3);
-    }
-}
-
-.login-card:hover::before {
-    opacity: 1;
-}
-
-.login-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 70px rgba(93, 58, 26, 0.6),
-                0 0 100px rgba(212, 163, 98, 0.4);
-}
-
-.login-header {
-    background: linear-gradient(135deg, #5D3A1A 0%, #8B5A2B 100%);
-    padding: 2rem 1.5rem;
-    text-align: center;
-    border-left: 3px solid #D4A362;
-    position: relative;
-    overflow: hidden;
-    flex: 0 0 35%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.login-header::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(212, 163, 98, 0.1) 0%, transparent 70%);
-    animation: headerGlow 4s linear infinite;
-}
-
-@keyframes headerGlow {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-.login-logo {
-    width: 250px;
-    max-width: 100%;
-    animation: logoFloat 3s ease-in-out infinite;
-    filter: drop-shadow(4px 4px 12px rgba(212, 163, 98, 0.4));
-    transition: all 0.4s ease;
-    position: relative;
-    z-index: 1;
-}
-
-@keyframes logoFloat {
-    0%, 100% {
-        transform: translateY(0) rotate(0deg);
-    }
-    25% {
-        transform: translateY(-8px) rotate(-2deg);
-    }
-    50% {
-        transform: translateY(-12px) rotate(0deg);
-    }
-    75% {
-        transform: translateY(-8px) rotate(2deg);
-    }
-}
-
-.login-logo:hover {
-    transform: scale(1.15) rotate(5deg);
-    filter: drop-shadow(8px 8px 20px rgba(212, 163, 98, 0.8));
-}
-
-.login-title {
-    display: none;
-}
-
-.login-body {
-    padding: 1.5rem 2rem 1rem 2rem;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    overflow: hidden;
-    max-height: 85vh;
-}
-
-.form-label {
-    color: #5D3A1A;
-    font-weight: 600;
-    font-size: 0.85rem;
-    margin-bottom: 0.3rem;
-    transition: all 0.3s ease;
-}
-
-.form-control {
-    border: 2px solid #D4A362;
-    border-radius: 12px;
-    padding: 0.5rem 0.9rem;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-    background-color: rgba(255, 255, 255, 0.9);
-}
-
-.form-control:focus {
-    border-color: #5D3A1A;
-    box-shadow: 0 0 0 0.2rem rgba(93, 58, 26, 0.25),
-                0 0 20px rgba(212, 163, 98, 0.4);
-    background-color: #fff;
-    transform: translateY(-2px);
-}
-
-.form-control:hover {
-    border-color: #8B5A2B;
-    transform: translateY(-1px);
-}
-
-.btn-login {
-    background: linear-gradient(135deg, #5D3A1A 0%, #8B5A2B 100%);
-    border: 2px solid #D4A362;
-    color: #F5EBD4;
-    padding: 0.65rem 2rem;
-    font-size: 0.95rem;
-    font-weight: bold;
-    border-radius: 15px;
-    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 4px 15px rgba(93, 58, 26, 0.3);
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-login::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(212, 163, 98, 0.3);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-}
-
-.btn-login:hover::before {
-    width: 300px;
-    height: 300px;
-}
-
-.btn-login:hover {
-    background: linear-gradient(135deg, #8B5A2B 0%, #5D3A1A 100%);
-    border-color: #F5EBD4;
-    color: #D4A362;
-    transform: translateY(-4px) scale(1.05);
-    box-shadow: 0 8px 30px rgba(93, 58, 26, 0.5),
-                0 0 40px rgba(212, 163, 98, 0.4);
-}
-
-.btn-login:active {
-    transform: translateY(-2px) scale(1.02);
-}
-
-.btn-login i {
-    transition: all 0.3s ease;
-    position: relative;
-    z-index: 1;
-}
-
-.btn-login:hover i {
-    transform: rotate(10deg) scale(1.2);
-}
-
-.login-footer {
-    background: linear-gradient(135deg, #F5EBD4 0%, #E8D5BD 100%);
-    padding: 0.6rem 0.8rem;
-    text-align: center;
-    border-top: 2px solid #D4A362;
-    margin-top: 1rem;
-}
-
-.login-footer small {
-    color: #5D3A1A;
-    font-size: 0.7rem;
-    line-height: 1.3;
-}
-
-.alert {
-    border-radius: 10px;
-    border: 2px solid;
-    animation: alertSlideIn 0.4s ease-out;
-    margin-bottom: 0.75rem;
-    padding: 0.6rem 0.9rem;
-    font-size: 0.85rem;
-}
-
-@keyframes alertSlideIn {
-    0% {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.alert-danger {
-    background-color: rgba(220, 53, 69, 0.1);
-    border-color: #dc3545;
-    color: #721c24;
-}
-
-.alert-success {
-    background-color: rgba(25, 135, 84, 0.1);
-    border-color: #198754;
-    color: #0f5132;
-}
-
-.alert-info {
-    background-color: rgba(13, 202, 240, 0.1);
-    border-color: #0dcaf0;
-    color: #055160;
-}
-
-.text-danger {
-    color: #dc3545 !important;
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
-    animation: errorShake 0.4s ease;
-}
-
-@keyframes errorShake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
-}
-
-/* Input icons animation */
-.form-label i {
-    transition: all 0.3s ease;
-    display: inline-block;
-}
-
-.form-label:hover i {
-    transform: scale(1.2) rotate(10deg);
-    color: #D4A362;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .login-card {
-        flex-direction: column;
-        max-width: 90%;
-        max-height: 90vh;
-        transform: translateY(-10vh);
-    }
-    
-    .login-header {
-        border-left: none;
-        border-bottom: 3px solid #D4A362;
-        flex: 0 0 auto;
-        padding: 1.2rem 1rem;
-    }
-    
-    .login-logo {
-        width: 120px;
-    }
-    
-    .login-body {
-        padding: 1.2rem 1.5rem 0.8rem 1.5rem;
-        flex: 1;
-        overflow: hidden;
-    }
-    
-    .login-footer {
-        margin-top: 0.8rem;
-        padding: 0.5rem 0.6rem;
-    }
-    
-    .login-footer small {
-        font-size: 0.65rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .login-card {
-        margin: 0.5rem;
-        border-radius: 20px;
-        max-width: 95%;
-        max-height: 92vh;
-        transform: translateY(-8vh);
-    }
-    
-    .login-header {
-        padding: 1rem 0.8rem;
-    }
-    
-    .login-logo {
-        width: 100px;
-    }
-    
-    .login-body {
-        padding: 1rem 1.2rem 0.6rem 1.2rem;
-    }
-    
-    .form-label {
-        font-size: 0.8rem;
-        margin-bottom: 0.25rem;
-    }
-    
-    .form-control {
-        padding: 0.45rem 0.7rem;
-        font-size: 0.85rem;
-    }
-    
-    .btn-login {
-        padding: 0.55rem 1.5rem;
-        font-size: 0.9rem;
-    }
-    
-    .login-footer {
-        margin-top: 0.6rem;
-        padding: 0.4rem 0.5rem;
-    }
-    
-    .login-footer small {
-        font-size: 0.6rem;
-    }
-}
-
-@media (max-height: 700px) {
-    .login-card {
-        max-height: 95vh;
-        transform: translateY(-6vh);
-    }
-    
-    .login-logo {
-        width: 180px;
-    }
-    
-    .login-body {
-        padding: 1rem 1.5rem 0.5rem 1.5rem;
-    }
-    
-    .login-footer {
-        margin-top: 0.5rem;
-        padding: 0.4rem 0.6rem;
-    }
-}
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="login-container">
-    <div class="container-fluid">
-        <div class="row justify-content-center">
-            <div class="col-12" style="max-width: 900px;">
-                <div class="login-card">
-                    <!-- Left side: Logo & Title -->
-                    <div class="login-header">
-                        {% if company_info.header_logo %}
-                            <img src="{{ company_info.header_logo.url }}?v={{ company_info.header_logo.url|length }}" alt="{{ company_info.name|default:'شعار الخواجه' }}" class="login-logo">
-                        {% elif company_info.logo %}
-                            <img src="{{ company_info.logo.url }}?v={{ company_info.logo.url|length }}" alt="{{ company_info.name|default:'شعار الخواجه' }}" class="login-logo">
-                        {% else %}
-                            <img src="{% static 'img/logo.png' %}" alt="شعار الخواجه" class="login-logo">
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Right side: Login Form -->
-                    <div class="login-body">
-                    <h2 style="color: #5D3A1A; font-size: 1.3rem; font-weight: bold; margin-bottom: 1rem; text-align: center;">
-                        <i class="fas fa-sign-in-alt me-2"></i>تسجيل الدخول
-                    </h2>
-                    
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card" style="border-color: var(--neutral);">
+                <div class="card-header" style="background-color: var(--primary); color: white;">
+                    <h5 class="mb-0"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h5>
+                </div>
+                <div class="card-body">
                     {% if messages %}
                     <div class="messages">
                         {% for message in messages %}
@@ -478,6 +33,7 @@ body {
                         {% csrf_token %}
                         <input type="hidden" name="device_info" id="deviceInfo">
                         <input type="hidden" name="device_token" id="deviceToken">
+                        <input type="hidden" name="device_fingerprint" id="deviceFingerprint">
 
                         {% if form.non_field_errors %}
                         <div class="alert alert-danger">
@@ -488,17 +44,14 @@ body {
                         {% endif %}
 
                         <div class="mb-3">
-                            <label for="{{ form.username.id_for_label }}" class="form-label">
-                                <i class="fas fa-user me-2"></i>اسم المستخدم
-                            </label>
+                            <label for="{{ form.username.id_for_label }}" class="form-label">اسم المستخدم</label>
                             {% if form.username %}
                                 {{ form.username }}
                             {% else %}
-                                <input type="text" name="username" class="form-control" placeholder="أدخل اسم المستخدم" required>
+                                <input type="text" name="username" class="form-control" placeholder="اسم المستخدم" required>
                             {% endif %}
                             {% if form.username.errors %}
                             <div class="text-danger">
-                                <i class="fas fa-exclamation-circle me-1"></i>
                                 {% for error in form.username.errors %}
                                 {{ error }}
                                 {% endfor %}
@@ -507,17 +60,14 @@ body {
                         </div>
 
                         <div class="mb-3">
-                            <label for="{{ form.password.id_for_label }}" class="form-label">
-                                <i class="fas fa-lock me-2"></i>كلمة المرور
-                            </label>
+                            <label for="{{ form.password.id_for_label }}" class="form-label">كلمة المرور</label>
                             {% if form.password %}
                                 {{ form.password }}
                             {% else %}
-                                <input type="password" name="password" class="form-control" placeholder="أدخل كلمة المرور" required>
+                                <input type="password" name="password" class="form-control" placeholder="كلمة المرور" required>
                             {% endif %}
                             {% if form.password.errors %}
                             <div class="text-danger">
-                                <i class="fas fa-exclamation-circle me-1"></i>
                                 {% for error in form.password.errors %}
                                 {{ error }}
                                 {% endfor %}
@@ -526,19 +76,16 @@ body {
                         </div>
 
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-login">
-                                <i class="fas fa-sign-in-alt me-2"></i>
-                                تسجيل الدخول
+                            <button type="submit" class="btn" style="background-color: var(--primary); color: white;">
+                                <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
                             </button>
                         </div>
                     </form>
-                    
-                    <div class="login-footer">
-                        <small>
-                            <i class="fas fa-info-circle me-2"></i>
-                            إذا واجهت مشكلة في تسجيل الدخول، يرجى التواصل مع مسؤول النظام
-                        </small>
-                    </div>
+                </div>
+                <div class="card-footer text-center">
+                    <small class="text-muted">
+                        إذا واجهت مشكلة في تسجيل الدخول، يرجى التواصل مع مسؤول النظام.
+                    </small>
                 </div>
             </div>
         </div>
@@ -550,34 +97,6 @@ body {
 // ====================
 // IndexedDB Helper
 // ====================
-// ====================
-// Cookie Helper (Primary - Works with Cloudflare Tunnel)
-// ====================
-const CookieHelper = {
-    setCookie(name, value, days = 365) {
-        const expires = new Date();
-        expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-        document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
-        console.log(`✅ Cookie '${name}' set successfully`);
-    },
-    
-    getCookie(name) {
-        const nameEQ = name + "=";
-        const ca = document.cookie.split(';');
-        for(let i = 0; i < ca.length; i++) {
-            let c = ca[i];
-            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) === 0) {
-                const value = c.substring(nameEQ.length, c.length);
-                console.log(`✅ Cookie '${name}' retrieved: ${value.substring(0, 8)}...`);
-                return value;
-            }
-        }
-        console.log(`⚠️ Cookie '${name}' not found`);
-        return null;
-    }
-};
-
 const DeviceDB = {
     dbName: 'ElkhawagaDeviceDB',
     storeName: 'deviceToken',
@@ -605,88 +124,26 @@ const DeviceDB = {
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
         });
-    },
-    
-    async saveToken(token) {
-        const db = await this.init();
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction([this.storeName], 'readwrite');
-            const store = tx.objectStore(this.storeName);
-            const request = store.put(token, 'device_token');
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
-        });
     }
 };
 
 // جمع بصمة الجهاز عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🔍 Starting device token detection...');
-    
+    // 1. محاولة قراءة Token من IndexedDB
     let deviceToken = null;
-    let tokenSource = null;
-    
-    // 1. محاولة Cookie أولاً (الأفضل لـ Cloudflare Tunnel)
     try {
-        deviceToken = CookieHelper.getCookie('elkhawaga_device_token');
+        deviceToken = await DeviceDB.getToken();
         if (deviceToken) {
-            tokenSource = 'Cookie';
-            console.log('✅ Device Token loaded from Cookie (Primary method)');
+            document.getElementById('deviceToken').value = deviceToken;
+            console.log('✅ Device Token loaded from IndexedDB');
+        } else {
+            console.log('⚠️ No device token found in IndexedDB - device not registered');
         }
     } catch(err) {
-        console.warn('⚠️ Failed to read cookie:', err);
+        console.error('Failed to read device token:', err);
     }
     
-    // 2. Fallback: محاولة localStorage
-    if (!deviceToken) {
-        try {
-            deviceToken = localStorage.getItem('elkhawaga_device_token');
-            if (deviceToken) {
-                tokenSource = 'localStorage';
-                console.log('✅ Device Token loaded from localStorage (Fallback 1)');
-                // حفظه في Cookie للمرات القادمة
-                try {
-                    CookieHelper.setCookie('elkhawaga_device_token', deviceToken);
-                    console.log('🔄 Token migrated to Cookie');
-                } catch(e) {
-                    console.warn('Could not migrate to Cookie:', e);
-                }
-            }
-        } catch(err) {
-            console.warn('⚠️ Failed to read localStorage:', err);
-        }
-    }
-    
-    // 3. Fallback: محاولة IndexedDB
-    if (!deviceToken) {
-        try {
-            deviceToken = await DeviceDB.getToken();
-            if (deviceToken) {
-                tokenSource = 'IndexedDB';
-                console.log('✅ Device Token loaded from IndexedDB (Fallback 2)');
-                // حفظه في Cookie للمرات القادمة
-                try {
-                    CookieHelper.setCookie('elkhawaga_device_token', deviceToken);
-                    console.log('🔄 Token migrated to Cookie');
-                } catch(e) {
-                    console.warn('Could not migrate to Cookie:', e);
-                }
-            }
-        } catch(err) {
-            console.warn('⚠️ Failed to read IndexedDB:', err);
-        }
-    }
-    
-    // تعيين التوكن في النموذج
-    if (deviceToken) {
-        document.getElementById('deviceToken').value = deviceToken;
-        console.log(`✅ Token set from: ${tokenSource}`);
-    } else {
-        console.log('ℹ️ لا يوجد device token - سيتم التحقق من قيود الفرع');
-        // السيرفر سيقرر بناءً على ما إذا كان الفرع لديه أجهزة مسجلة أم لا
-    }
-    
-    // جمع معلومات الجهاز الأساسية فقط (بدون البصمات المعقدة)
+    // 2. جمع معلومات الجهاز (Stable factors only)
     const deviceInfo = {
         screen_resolution: window.screen.width + 'x' + window.screen.height,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -700,67 +157,98 @@ document.addEventListener('DOMContentLoaded', async function() {
         cpu_cores: navigator.hardwareConcurrency || 0,
     };
     
-    // حفظ معلومات الجهاز في النموذج
-    document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
+    // 3. Canvas Fingerprint (Stable)
+    try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#f60';
+        ctx.fillRect(125, 1, 62, 20);
+        ctx.fillStyle = '#069';
+        ctx.fillText('Device Fingerprint', 2, 15);
+        ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+        ctx.fillText('Device Fingerprint', 4, 17);
+        deviceInfo.canvas_fingerprint = canvas.toDataURL();
+    } catch(e) {
+        deviceInfo.canvas_fingerprint = '';
+    }
     
-    console.log('✅ Device ready for login:', {
+    // 4. WebGL Fingerprint (Stable - GPU Info)
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) {
+                deviceInfo.webgl_vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                deviceInfo.webgl_renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            }
+        }
+    } catch(e) {
+        deviceInfo.webgl_vendor = '';
+        deviceInfo.webgl_renderer = '';
+    }
+    
+    // 5. Audio Fingerprint (Stable)
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const analyser = audioContext.createAnalyser();
+        const gainNode = audioContext.createGain();
+        const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+        
+        gainNode.gain.value = 0;
+        oscillator.connect(analyser);
+        analyser.connect(scriptProcessor);
+        scriptProcessor.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.start(0);
+        const audioData = [];
+        scriptProcessor.onaudioprocess = function(event) {
+            const output = event.outputBuffer.getChannelData(0);
+            for (let i = 0; i < output.length && audioData.length < 100; i++) {
+                audioData.push(output[i]);
+            }
+        };
+        
+        deviceInfo.audio_fingerprint = CryptoJS.SHA256(audioData.join(',')).toString().substring(0, 16);
+        oscillator.stop();
+        audioContext.close();
+    } catch(e) {
+        deviceInfo.audio_fingerprint = '';
+    }
+    
+    // 6. Generate Enhanced Fingerprint
+    const fingerprintString = JSON.stringify(deviceInfo, Object.keys(deviceInfo).sort());
+    const fingerprint = CryptoJS.SHA256(fingerprintString).toString();
+    
+    // 7. Save to form
+    document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
+    document.getElementById('deviceFingerprint').value = fingerprint;
+    
+    console.log('Device ready for login:', {
         hasToken: !!deviceToken,
-        deviceInfo: 'collected'
+        fingerprint: fingerprint.substring(0, 16) + '...'
     });
     
-    // معالج إرسال النموذج
+    // 8. Form submission handler
     document.getElementById('loginForm').addEventListener('submit', function(e) {
-        // التأكد من وجود معلومات الجهاز
+        // Ensure data is present
         if (!document.getElementById('deviceInfo').value) {
             document.getElementById('deviceInfo').value = JSON.stringify(deviceInfo);
         }
+        if (!document.getElementById('deviceFingerprint').value) {
+            document.getElementById('deviceFingerprint').value = fingerprint;
+        }
         
-        // رسالة معلوماتية فقط
+        // Warning if no token
         if (!deviceToken) {
-            console.log('ℹ️ Login attempt without device token - branch restrictions will be checked');
+            console.warn('⚠️ No device token - device may need registration');
         }
     });
 });
 </script>
-
-{% if device_denial_popup.show %}
-<script>
-// عرض popup للجهاز غير المصرح
-document.addEventListener('DOMContentLoaded', function() {
-    Swal.fire({
-        icon: 'error',
-        title: '{{ device_denial_popup.title|escapejs }}',
-        html: `{{ device_denial_popup.html_content|safe|escapejs }}`,
-        confirmButtonText: 'حسناً',
-        confirmButtonColor: '#dc3545',
-        width: '700px',
-        customClass: {
-            popup: 'device-denial-popup',
-            htmlContainer: 'text-right'
-        },
-        didOpen: () => {
-            // إضافة CSS مخصص للـ popup
-            const style = document.createElement('style');
-            style.innerHTML = `
-                .device-denial-popup {
-                    text-align: right;
-                    direction: rtl;
-                    font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                }
-                .device-denial-popup table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-                .device-denial-popup td {
-                    padding: 8px;
-                    border: 1px solid #ddd;
-                }
-            `;
-            document.head.appendChild(style);
-        }
-    });
-});
-</script>
-{% endif %}
-
 {% endblock %}

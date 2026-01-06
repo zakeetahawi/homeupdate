@@ -1,12 +1,12 @@
 {% load static %}
 
-<!-- Modal Bootstrap للباركود في الويزارد -->
-<div class="modal fade" id="wizardBarcodeScannerModal" tabindex="-1" aria-labelledby="wizardBarcodeScannerLabel" aria-hidden="true">
+<!-- Modal Bootstrap شفاف للباركود في صفحة الطلبات -->
+<div class="modal fade" id="orderBarcodeScannerModal" tabindex="-1" aria-labelledby="orderBarcodeScannerLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg" style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(10px); border-radius: 20px;">
             <!-- رأس الModal -->
             <div class="modal-header border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px 20px 0 0;">
-                <h5 class="modal-title text-white fw-bold" id="wizardBarcodeScannerLabel">
+                <h5 class="modal-title text-white fw-bold" id="orderBarcodeScannerLabel">
                     <i class="fas fa-barcode me-2"></i>
                     فحص باركود وإضافة للطلب
                 </h5>
@@ -17,19 +17,19 @@
             <div class="modal-body p-4">
                 
                 <!-- طلب الأذونات -->
-                <div class="alert alert-info border-0 shadow-sm d-none" id="wizardPermissionRequest" style="border-radius: 15px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
+                <div class="alert alert-info border-0 shadow-sm d-none" id="orderPermissionRequest" style="border-radius: 15px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
                     <div class="text-center">
                         <i class="fas fa-camera fa-3x mb-3" style="color: #1976d2;"></i>
                         <h5 class="fw-bold" style="color: #0d47a1;">نحتاج إلى إذن الكاميرا</h5>
                         <p class="mb-3" style="color: #1565c0;">للفحص التلقائي، يرجى السماح بالوصول إلى الكاميرا</p>
-                        <button class="btn btn-primary btn-lg shadow" id="wizardRequestPermissionBtn" style="border-radius: 10px;">
+                        <button class="btn btn-primary btn-lg shadow" id="orderRequestPermissionBtn" style="border-radius: 10px;">
                             <i class="fas fa-check-circle me-2"></i> منح الإذن
                         </button>
                     </div>
                 </div>
                 
                 <!-- تنبيه HTTPS -->
-                <div class="alert alert-warning border-0 shadow-sm d-none" id="wizardHttpsWarning" style="border-radius: 15px;">
+                <div class="alert alert-warning border-0 shadow-sm d-none" id="orderHttpsWarning" style="border-radius: 15px;">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-exclamation-triangle fa-2x me-3" style="color: #f57c00;"></i>
                         <div>
@@ -42,7 +42,7 @@
                 </div>
                 
                 <!-- خطأ الكاميرا -->
-                <div class="alert alert-danger border-0 shadow-sm d-none" id="wizardCameraError" style="border-radius: 15px;">
+                <div class="alert alert-danger border-0 shadow-sm d-none" id="orderCameraError" style="border-radius: 15px;">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-times-circle fa-2x me-3" style="color: #d32f2f;"></i>
                         <div>
@@ -54,16 +54,16 @@
                 
                 <!-- أزرار التحكم -->
                 <div class="d-flex gap-2 justify-content-center mb-3">
-                    <button class="btn btn-success btn-lg shadow" id="wizardStartCameraBtn" style="border-radius: 12px; min-width: 150px;">
+                    <button class="btn btn-success btn-lg shadow" id="orderStartCameraBtn" style="border-radius: 12px; min-width: 150px;">
                         <i class="fas fa-camera me-2"></i> تشغيل الكاميرا
                     </button>
-                    <button class="btn btn-danger btn-lg shadow d-none" id="wizardStopCameraBtn" style="border-radius: 12px; min-width: 150px;">
+                    <button class="btn btn-danger btn-lg shadow d-none" id="orderStopCameraBtn" style="border-radius: 12px; min-width: 150px;">
                         <i class="fas fa-stop me-2"></i> إيقاف الكاميرا
                     </button>
                 </div>
                 
                 <!-- عنصر القارئ -->
-                <div id="wizardBarcodeReader" class="d-none mb-3" style="border-radius: 15px; overflow: hidden; border: 3px solid #667eea; box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);"></div>
+                <div id="orderBarcodeReader" class="d-none mb-3" style="border-radius: 15px; overflow: hidden; border: 3px solid #667eea; box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);"></div>
                 
                 <!-- خيار رفع صورة -->
                 <div class="card border-0 shadow-sm mb-3" style="border-radius: 15px; background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);">
@@ -72,8 +72,8 @@
                             <i class="fas fa-image fa-2x mb-2 d-block"></i>
                             أو ارفع صورة الباركود
                         </p>
-                        <input type="file" id="wizardImageInput" accept="image/*" capture="environment" style="display: none;">
-                        <label for="wizardImageInput" class="btn btn-primary btn-lg shadow" style="border-radius: 10px; cursor: pointer;">
+                        <input type="file" id="orderImageInput" accept="image/*" capture="environment" style="display: none;">
+                        <label for="orderImageInput" class="btn btn-primary btn-lg shadow" style="border-radius: 10px; cursor: pointer;">
                             <i class="fas fa-upload me-2"></i> اختر صورة
                         </label>
                     </div>
@@ -88,12 +88,12 @@
                         </label>
                         <div class="input-group input-group-lg">
                             <input type="text" 
-                                   id="wizardManualBarcodeInput" 
+                                   id="orderManualBarcodeInput" 
                                    class="form-control shadow-sm" 
                                    placeholder="أدخل الكود هنا..."
                                    autocomplete="off"
                                    style="border-radius: 10px 0 0 10px; border: 2px solid #ce93d8;">
-                            <button class="btn btn-primary shadow" id="wizardManualScanBtn" style="border-radius: 0 10px 10px 0; min-width: 100px;">
+                            <button class="btn btn-primary shadow" id="orderManualScanBtn" style="border-radius: 0 10px 10px 0; min-width: 100px;">
                                 <i class="fas fa-search me-2"></i> بحث
                             </button>
                         </div>
@@ -101,7 +101,7 @@
                 </div>
                 
                 <!-- حالة الفحص -->
-                <div id="wizardScanStatus" class="mt-3"></div>
+                <div id="orderScanStatus" class="mt-3"></div>
                 
             </div>
             
@@ -128,30 +128,30 @@
         return;
     }
     
-    console.log('✅ تهيئة نظام الباركود للويزارد...');
+    console.log('✅ تهيئة نظام الباركود للطلبات...');
     
 document.addEventListener('DOMContentLoaded', function() {
-    let wizardHtml5QrCode = null;
-    let wizardIsScanning = false;
-    let wizardIsCameraRunning = false;
+    let orderHtml5QrCode = null;
+    let orderIsScanning = false;
+    let orderIsCameraRunning = false;
     
-    const modal = document.getElementById('wizardBarcodeScannerModal');
-    const startCameraBtn = document.getElementById('wizardStartCameraBtn');
-    const stopCameraBtn = document.getElementById('wizardStopCameraBtn');
-    const readerElement = document.getElementById('wizardBarcodeReader');
-    const manualBarcodeInput = document.getElementById('wizardManualBarcodeInput');
-    const manualScanBtn = document.getElementById('wizardManualScanBtn');
-    const scanStatus = document.getElementById('wizardScanStatus');
-    const permissionRequest = document.getElementById('wizardPermissionRequest');
-    const requestPermissionBtn = document.getElementById('wizardRequestPermissionBtn');
-    const imageInput = document.getElementById('wizardImageInput');
+    const modal = document.getElementById('orderBarcodeScannerModal');
+    const startCameraBtn = document.getElementById('orderStartCameraBtn');
+    const stopCameraBtn = document.getElementById('orderStopCameraBtn');
+    const readerElement = document.getElementById('orderBarcodeReader');
+    const manualBarcodeInput = document.getElementById('orderManualBarcodeInput');
+    const manualScanBtn = document.getElementById('orderManualScanBtn');
+    const scanStatus = document.getElementById('orderScanStatus');
+    const permissionRequest = document.getElementById('orderPermissionRequest');
+    const requestPermissionBtn = document.getElementById('orderRequestPermissionBtn');
+    const imageInput = document.getElementById('orderImageInput');
     
     // عند إغلاق Modal
     modal.addEventListener('hidden.bs.modal', function () {
-        stopWizardCamera();
+        stopOrderCamera();
         scanStatus.innerHTML = '';
-        document.getElementById('wizardHttpsWarning').classList.add('d-none');
-        document.getElementById('wizardCameraError').classList.add('d-none');
+        document.getElementById('orderHttpsWarning').classList.add('d-none');
+        document.getElementById('orderCameraError').classList.add('d-none');
         permissionRequest.classList.add('d-none');
         manualBarcodeInput.value = '';
         imageInput.value = '';
@@ -160,17 +160,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // طلب الأذونات
     requestPermissionBtn.addEventListener('click', function() {
         permissionRequest.classList.add('d-none');
-        startWizardCamera();
+        startOrderCamera();
     });
     
     // تشغيل الكاميرا
     startCameraBtn.addEventListener('click', function() {
-        startWizardCamera();
+        startOrderCamera();
     });
     
     // إيقاف الكاميرا
     stopCameraBtn.addEventListener('click', function() {
-        stopWizardCamera();
+        stopOrderCamera();
     });
     
     // رفع صورة
@@ -184,12 +184,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
             
-            const tempScanner = new Html5Qrcode("wizardBarcodeReader");
+            const tempScanner = new Html5Qrcode("orderBarcodeReader");
             
             tempScanner.scanFile(file, true)
                 .then(decodedText => {
                     console.log('✅ تم قراءة الباركود من الصورة:', decodedText);
-                    searchWizardProduct(decodedText);
+                    searchOrderProduct(decodedText);
                 })
                 .catch(err => {
                     console.error('❌ خطأ في قراءة الصورة:', err);
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
     manualScanBtn.addEventListener('click', function() {
         const barcode = manualBarcodeInput.value.trim();
         if (barcode) {
-            searchWizardProduct(barcode);
+            searchOrderProduct(barcode);
         }
     });
     
@@ -217,32 +217,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Enter') {
             const barcode = manualBarcodeInput.value.trim();
             if (barcode) {
-                searchWizardProduct(barcode);
+                searchOrderProduct(barcode);
             }
         }
     });
     
-    function startWizardCamera() {
+    function startOrderCamera() {
         const isSecure = window.location.protocol === 'https:' || 
                         window.location.hostname === 'localhost' || 
                         window.location.hostname === '127.0.0.1';
         
         if (!isSecure) {
-            document.getElementById('wizardHttpsWarning').classList.remove('d-none');
+            document.getElementById('orderHttpsWarning').classList.remove('d-none');
             return;
         }
         
-        if (wizardIsCameraRunning) {
+        if (orderIsCameraRunning) {
             return;
         }
         
         readerElement.classList.remove('d-none');
         startCameraBtn.classList.add('d-none');
         stopCameraBtn.classList.remove('d-none');
-        document.getElementById('wizardHttpsWarning').classList.add('d-none');
-        document.getElementById('wizardCameraError').classList.add('d-none');
+        document.getElementById('orderHttpsWarning').classList.add('d-none');
+        document.getElementById('orderCameraError').classList.add('d-none');
         
-        wizardHtml5QrCode = new Html5Qrcode("wizardBarcodeReader");
+        orderHtml5QrCode = new Html5Qrcode("orderBarcodeReader");
         
         const config = {
             fps: 30,
@@ -254,24 +254,24 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
         
-        wizardHtml5QrCode.start(
+        orderHtml5QrCode.start(
             { facingMode: "environment" },
             config,
             (decodedText, decodedResult) => {
-                if (!wizardIsScanning) {
-                    wizardIsScanning = true;
-                    wizardIsCameraRunning = true;
+                if (!orderIsScanning) {
+                    orderIsScanning = true;
+                    orderIsCameraRunning = true;
                     
                     console.log('✅ تم اكتشاف الباركود:', decodedText);
                     
                     // إيقاف الكاميرا للعرض النظيف
-                    stopWizardCamera();
+                    stopOrderCamera();
                     
                     // البحث عن المنتج وإضافته تلقائياً
-                    searchWizardProduct(decodedText);
+                    searchOrderProduct(decodedText);
                     
                     setTimeout(() => { 
-                        wizardIsScanning = false;
+                        orderIsScanning = false;
                     }, 1000);
                 }
             },
@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // لا نفعل شيء للأخطاء العادية
             }
         ).then(() => {
-            wizardIsCameraRunning = true;
+            orderIsCameraRunning = true;
             console.log('✅ تم تشغيل الكاميرا بنجاح');
         }).catch((err) => {
             console.error('❌ خطأ في تشغيل الكاميرا:', err);
@@ -287,37 +287,37 @@ document.addEventListener('DOMContentLoaded', function() {
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
                 permissionRequest.classList.remove('d-none');
             } else {
-                document.getElementById('wizardCameraError').classList.remove('d-none');
+                document.getElementById('orderCameraError').classList.remove('d-none');
             }
             
             readerElement.classList.add('d-none');
             startCameraBtn.classList.remove('d-none');
             stopCameraBtn.classList.add('d-none');
-            wizardIsCameraRunning = false;
+            orderIsCameraRunning = false;
         });
     }
     
-    function stopWizardCamera() {
-        if (wizardHtml5QrCode && wizardIsCameraRunning) {
-            wizardHtml5QrCode.stop().then(() => {
+    function stopOrderCamera() {
+        if (orderHtml5QrCode && orderIsCameraRunning) {
+            orderHtml5QrCode.stop().then(() => {
                 console.log('✅ تم إيقاف الكاميرا');
                 readerElement.classList.add('d-none');
                 startCameraBtn.classList.remove('d-none');
                 stopCameraBtn.classList.add('d-none');
-                wizardIsCameraRunning = false;
+                orderIsCameraRunning = false;
             }).catch((err) => {
                 console.error('❌ خطأ في إيقاف الكاميرا:', err);
-                wizardIsCameraRunning = false;
+                orderIsCameraRunning = false;
             });
         } else {
             readerElement.classList.add('d-none');
             startCameraBtn.classList.remove('d-none');
             stopCameraBtn.classList.add('d-none');
-            wizardIsCameraRunning = false;
+            orderIsCameraRunning = false;
         }
     }
     
-    function searchWizardProduct(barcode) {
+    function searchOrderProduct(barcode) {
         // تنظيف الباركود وإزالة الأصفار من البداية
         barcode = barcode.trim();
         const originalBarcode = barcode;
@@ -338,7 +338,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    displayWizardProduct(data.product);
+                    displayOrderProduct(data.product);
                 } else {
                     scanStatus.innerHTML = `
                         <div class="alert alert-danger border-0 shadow-sm text-center" style="border-radius: 15px;">
@@ -361,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
-    function displayWizardProduct(product) {
+    function displayOrderProduct(product) {
         // عرض معلومات المنتج وطلب الكمية
         scanStatus.innerHTML = `
             <div class="card border-0 shadow-lg" style="border-radius: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
@@ -405,34 +405,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                style="border-radius: 10px; border: 2px solid white;">
                     </div>
                     
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">الخصم (%):</label>
-                        <select id="scannedProductDiscount" class="form-select form-select-lg shadow-sm" 
-                                style="border-radius: 10px; border: 2px solid white;">
-                            <option value="0">0%</option>
-                            <option value="1">1%</option>
-                            <option value="2">2%</option>
-                            <option value="3">3%</option>
-                            <option value="4">4%</option>
-                            <option value="5">5%</option>
-                            <option value="6">6%</option>
-                            <option value="7">7%</option>
-                            <option value="8">8%</option>
-                            <option value="9">9%</option>
-                            <option value="10">10%</option>
-                            <option value="11">11%</option>
-                            <option value="12">12%</option>
-                            <option value="13">13%</option>
-                            <option value="14">14%</option>
-                            <option value="15">15%</option>
-                        </select>
-                    </div>
-                    
                     <div class="d-flex gap-2">
-                        <button class="btn btn-light btn-lg flex-grow-1 shadow" onclick="addScannedProductToWizard(${product.id}, '${product.name.replace(/'/g, "\\'")}', '${product.code || ''}', ${product.price})" style="border-radius: 10px;">
+                        <button class="btn btn-light btn-lg flex-grow-1 shadow" onclick="addScannedProductToOrder(${product.id}, '${product.name.replace(/'/g, "\\'")}', '${product.code || ''}', ${product.price})" style="border-radius: 10px;">
                             <i class="fas fa-plus-circle me-2"></i> إضافة للطلب
                         </button>
-                        <button class="btn btn-outline-light btn-lg shadow" onclick="document.getElementById('wizardScanStatus').innerHTML = ''; document.getElementById('wizardManualBarcodeInput').value = ''; document.getElementById('wizardManualBarcodeInput').focus();" style="border-radius: 10px;">
+                        <button class="btn btn-outline-light btn-lg shadow" onclick="document.getElementById('orderScanStatus').innerHTML = ''; document.getElementById('orderManualBarcodeInput').value = ''; document.getElementById('orderManualBarcodeInput').focus();" style="border-radius: 10px;">
                             <i class="fas fa-redo me-2"></i> فحص آخر
                         </button>
                     </div>
@@ -450,6 +427,110 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 100);
     }
 });
+
+// دالة عامة لإضافة المنتج المفحوص للطلب
+window.addScannedProductToOrder = function(productId, productName, productCode, productPrice) {
+    const quantityInput = document.getElementById('scannedProductQuantity');
+    
+    if (!quantityInput) {
+        console.error('❌ حقل الكمية غير موجود');
+        return;
+    }
+    
+    let quantity;
+    try {
+        const quantityStr = quantityInput.value.trim();
+        if (!quantityStr) {
+            alert('يرجى إدخال الكمية');
+            quantityInput.focus();
+            return;
+        }
+        
+        quantity = Number(quantityStr);
+        
+        if (isNaN(quantity) || !isFinite(quantity)) {
+            alert('يرجى إدخال كمية صحيحة');
+            quantityInput.focus();
+            return;
+        }
+        
+        if (quantity <= 0) {
+            alert('يجب أن تكون الكمية أكبر من صفر');
+            quantityInput.focus();
+            return;
+        }
+    } catch (error) {
+        console.error('❌ خطأ في معالجة الكمية:', error);
+        alert('خطأ في معالجة الكمية');
+        return;
+    }
+    
+    // إنشاء كائن العنصر
+    const total = quantity * productPrice;
+    const newItem = {
+        product_id: productId,
+        name: productName,
+        code: productCode,
+        quantity: quantity,
+        unit_price: productPrice,
+        discount_percentage: 0,
+        total: total,
+        item_type: 'product',
+        notes: 'تم إضافته بالباركود'
+    };
+    
+    // إضافة للمصفوفة
+    if (!document.orderItems) {
+        document.orderItems = [];
+    }
+    
+    // التحقق من وجود المنتج مسبقاً
+    const existingItemIndex = document.orderItems.findIndex(item => item.product_id === productId);
+    
+    if (existingItemIndex >= 0) {
+        // تحديث الكمية إذا كان موجوداً
+        const confirm = window.confirm(`المنتج موجود بالفعل في الطلب.\nهل تريد زيادة الكمية بمقدار ${quantity}؟`);
+        if (confirm) {
+            document.orderItems[existingItemIndex].quantity += quantity;
+            document.orderItems[existingItemIndex].total = document.orderItems[existingItemIndex].quantity * document.orderItems[existingItemIndex].unit_price;
+        }
+    } else {
+        // إضافة عنصر جديد
+        document.orderItems.push(newItem);
+    }
+    
+    // تحديث الجدول
+    if (typeof updateLiveOrderItemsTable === 'function') {
+        updateLiveOrderItemsTable();
+    }
+    
+    // مزامنة مع الحقول المخفية
+    if (typeof syncOrderItemsToFormFields === 'function') {
+        syncOrderItemsToFormFields();
+    }
+    
+    // تحديث التحقق
+    if (typeof validateFormRealTime === 'function') {
+        validateFormRealTime();
+    }
+    
+    // إظهار رسالة نجاح
+    const scanStatus = document.getElementById('orderScanStatus');
+    if (scanStatus) {
+        scanStatus.innerHTML = `
+            <div class="alert alert-success border-0 shadow-sm text-center" style="border-radius: 15px;">
+                <i class="fas fa-check-circle fa-3x mb-3" style="color: #28a745;"></i>
+                <h5 class="fw-bold">تمت الإضافة بنجاح!</h5>
+                <p class="mb-3">تم إضافة <strong>${productName}</strong> بكمية <strong>${quantity}</strong></p>
+                <button class="btn btn-success btn-lg shadow" onclick="document.getElementById('orderScanStatus').innerHTML = ''; document.getElementById('orderManualBarcodeInput').value = ''; document.getElementById('orderManualBarcodeInput').focus();" style="border-radius: 10px;">
+                    <i class="fas fa-plus me-2"></i> إضافة منتج آخر
+                </button>
+            </div>
+        `;
+    }
+    
+    console.log('✅ تم إضافة المنتج للطلب:', newItem);
+};
 
 })(); // نهاية IIFE
 </script>
