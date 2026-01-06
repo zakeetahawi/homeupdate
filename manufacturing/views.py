@@ -452,6 +452,12 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
         context['branch_filters_display'] = [branch_map.get(bid, bid) for bid in context.get('branch_filters', [])]
         context['order_type_filters_display'] = [order_types_map.get(code, code) for code in context.get('order_type_filters', [])]
         context['search_columns_display'] = [column_labels.get(col, col) for col in context.get('search_columns', [])]
+        
+        # إضافة القواميس للـ template
+        context['status_choices_map'] = status_choices_map
+        context['branch_map'] = branch_map
+        context['order_types_map'] = order_types_map
+        context['production_line_map'] = {str(line.id): line.name for line in context.get('production_lines', [])}
 
         # إضافة السنوات المتاحة والسياق الشهري (بناءً على تاريخ الطلب)
         context['available_years'] = get_available_years(ManufacturingOrder, 'order_date')

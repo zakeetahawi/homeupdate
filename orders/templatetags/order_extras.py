@@ -378,3 +378,14 @@ def batch(iterable, n):
     items = list(iterable)
     for i in range(0, len(items), n):
         yield items[i:i + n]
+
+
+@register.filter
+def get_item(dictionary, key):
+    """
+    الحصول على قيمة من قاموس باستخدام مفتاح
+    مثال: {{ my_dict|get_item:my_key }}
+    """
+    if not dictionary:
+        return None
+    return dictionary.get(str(key))
