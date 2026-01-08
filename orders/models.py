@@ -1980,15 +1980,7 @@ class OrderItem(models.Model):
         discount = self.discount_amount if self.discount_amount is not None else 0
         return self.total_price - discount
     
-    def save(self, *args, **kwargs):
-        """حساب مبلغ الخصم تلقائياً"""
-        if self.discount_percentage and self.discount_percentage > 0:
-            total = self.quantity * self.unit_price
-            self.discount_amount = total * (self.discount_percentage / Decimal('100'))
-        else:
-            self.discount_amount = Decimal('0.00')
-        super().save(*args, **kwargs)
-    
+
     def get_clean_discount_display(self):
         """إرجاع نسبة الخصم بدون أصفار زائدة"""
         if self.discount_percentage is None or self.discount_percentage == 0:
@@ -2081,6 +2073,13 @@ class OrderItem(models.Model):
                         pass
                 except OrderItem.DoesNotExist:
                     pass
+
+            # حساب مبلغ الخصم تلقائياً
+            if self.discount_percentage and self.discount_percentage > 0:
+                total = self.quantity * self.unit_price
+                self.discount_amount = total * (self.discount_percentage / Decimal('100'))
+            else:
+                self.discount_amount = Decimal('0.00')
 
             super().save(*args, **kwargs)
 
