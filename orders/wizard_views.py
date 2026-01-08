@@ -1344,7 +1344,12 @@ def wizard_finalize(request):
                         original_item.quantity = draft_item.quantity
                         original_item.unit_price = draft_item.unit_price
                         original_item.discount_percentage = draft_item.discount_percentage
-                        original_item.discount_amount = draft_item.discount_amount
+                        # ⚡ FIX: حساب discount_amount دائماً من discount_percentage
+                        if draft_item.discount_percentage and draft_item.discount_percentage > 0:
+                            total_price = draft_item.quantity * draft_item.unit_price
+                            original_item.discount_amount = total_price * (draft_item.discount_percentage / Decimal('100.0'))
+                        else:
+                            original_item.discount_amount = Decimal('0.00')
                         original_item.notes = draft_item.notes or ''
                         original_item.save()
                         
@@ -1367,11 +1372,13 @@ def wizard_finalize(request):
                 # 4. إنشاء العناصر الجديدة باستخدام bulk_create
                 order_items_to_create = []
                 for draft_item in new_draft_items:
-                    # حساب discount_amount إذا لم يكن محسوباً
-                    discount_amt = draft_item.discount_amount
-                    if not discount_amt and draft_item.discount_percentage:
+                    # ⚡ FIX: حساب discount_amount دائماً من discount_percentage
+                    # المشكلة السابقة: if not discount_amt كان يعتبر 0.00 = False
+                    if draft_item.discount_percentage and draft_item.discount_percentage > 0:
                         total_price = draft_item.quantity * draft_item.unit_price
                         discount_amt = total_price * (draft_item.discount_percentage / Decimal('100.0'))
+                    else:
+                        discount_amt = Decimal('0.00')
                     
                     new_item = OrderItem(
                         order=order,
@@ -1379,7 +1386,7 @@ def wizard_finalize(request):
                         quantity=draft_item.quantity,
                         unit_price=draft_item.unit_price,
                         discount_percentage=draft_item.discount_percentage,
-                        discount_amount=discount_amt if discount_amt else Decimal('0.00'),
+                        discount_amount=discount_amt,
                         item_type=draft_item.item_type,
                         notes=draft_item.notes or '',  # Fix for nullable constraints
                     )
@@ -1617,7 +1624,12 @@ def wizard_finalize(request):
                     quantity=item.quantity,
                     unit_price=item.unit_price,
                     discount_percentage=item.discount_percentage,
-                    discount_amount=item.discount_amount if item.discount_amount else Decimal('0.00'),
+                    # ⚡ FIX: حساب discount_amount من discount_percentage بدلاً من الاعتماد على item.discount_amount
+                    discount_amount=(
+                        (item.quantity * item.unit_price * item.discount_percentage / Decimal('100.0'))
+                        if item.discount_percentage and item.discount_percentage > 0
+                        else Decimal('0.00')
+                    ),
                     item_type=item.item_type,
                     notes=item.notes or '',
                 )

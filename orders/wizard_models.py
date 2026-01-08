@@ -490,8 +490,11 @@ class DraftOrderItem(models.Model):
     
     def save(self, *args, **kwargs):
         """حساب مبلغ الخصم تلقائياً قبل الحفظ"""
-        if self.quantity and self.unit_price:
-            total = self.quantity * self.unit_price
-            self.discount_amount = total * (self.discount_percentage / Decimal('100.0'))
+        if self.discount_percentage and self.discount_percentage > 0:
+            if self.quantity and self.unit_price:
+                total = self.quantity * self.unit_price
+                self.discount_amount = total * (self.discount_percentage / Decimal('100.0'))
+        else:
+            self.discount_amount = Decimal('0.00')
         super().save(*args, **kwargs)
 

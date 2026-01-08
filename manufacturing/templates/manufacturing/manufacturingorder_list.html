@@ -157,6 +157,28 @@
         margin-right: auto;
     }
 
+    .hf-apply-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.85rem;
+        background: linear-gradient(135deg, var(--hf-primary) 0%, var(--hf-primary-light) 100%);
+        border: 1.5px solid var(--hf-primary);
+        border-radius: 50px;
+        color: white;
+        font-size: 0.82rem;
+        font-weight: 600;
+        font-family: 'Tajawal', sans-serif;
+        cursor: pointer;
+        transition: var(--hf-transition);
+    }
+    
+    .hf-apply-btn:hover {
+        background: linear-gradient(135deg, var(--hf-primary-light) 0%, var(--hf-primary) 100%);
+        box-shadow: var(--hf-shadow-sm);
+        transform: translateY(-1px);
+    }
+
     .hf-clear-btn {
         display: inline-flex;
         align-items: center;
@@ -1190,6 +1212,10 @@
 
                 <!-- Action Buttons -->
                 <div class="hf-actions">
+                    <button type="submit" class="hf-apply-btn" id="applyFiltersBtn">
+                        <i class="fas fa-check"></i>
+                        تطبيق
+                    </button>
                     {% if status_filters or search_query or date_from or date_to or branch_filters or order_type_filters or production_line_filters or overdue_filter == 'true' or selected_year or selected_month %}
                     <button type="button" class="hf-clear-btn" id="clearFiltersBtn">
                         <i class="fas fa-times"></i>
@@ -3407,7 +3433,7 @@ function initializeHorizontalFilters() {
     autoSubmitFilters.forEach(element => {
         if (element.type === 'checkbox') {
             element.addEventListener('change', function() {
-                // Update visual state
+                // Update visual state only
                 const item = this.closest('.hf-checkbox-item');
                 if (item) {
                     if (this.checked) {
@@ -3417,43 +3443,19 @@ function initializeHorizontalFilters() {
                     }
                 }
                 updateFilterBadges();
-                
-                // Auto-submit immediately for checkboxes
-                clearTimeout(submitTimeout);
-                submitTimeout = setTimeout(() => {
-                    showLoading();
-                    filterForm.submit();
-                }, 300);
+                // No auto-submit - user must click Apply button
             });
         } else if (element.type === 'text' || element.type === 'search') {
-            // For search input, wait for user to stop typing
-            element.addEventListener('input', function() {
-                clearTimeout(submitTimeout);
-                submitTimeout = setTimeout(() => {
-                    showLoading();
-                    filterForm.submit();
-                }, 800);
-            });
-            
-            // Also submit on Enter key
+            // Submit only on Enter key
             element.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    clearTimeout(submitTimeout);
                     showLoading();
                     filterForm.submit();
                 }
             });
-        } else {
-            // For select and date inputs, submit immediately
-            element.addEventListener('change', function() {
-                clearTimeout(submitTimeout);
-                submitTimeout = setTimeout(() => {
-                    showLoading();
-                    filterForm.submit();
-                }, 300);
-            });
         }
+        // No auto-submit for select and date inputs
     });
     
     filterButtons.forEach(btn => {
@@ -3520,6 +3522,13 @@ function initializeHorizontalFilters() {
         clearFiltersBtn.addEventListener('click', function() {
             showLoading();
             clearAllFilters();
+        });
+    }
+    
+    const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', function() {
+            showLoading();
         });
     }
 }
