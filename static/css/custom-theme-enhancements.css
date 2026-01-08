@@ -9,6 +9,13 @@
     transition: all 0.2s ease;
 }
 
+/* التحكم في ارتفاع الـ navbar */
+[data-theme="custom-theme"] .navbar {
+    min-height: auto !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
 [data-theme="custom-theme"] .navbar .fa,
 [data-theme="custom-theme"] .navbar .fas,
 [data-theme="custom-theme"] .navbar .far,
@@ -21,10 +28,6 @@
 }
 
 /* ألوان مخصصة ومتنوعة للأيقونات */
-[data-theme="custom-theme"] .navbar .nav-item {
-    display: flex !important;
-    align-items: center !important;
-}
 
 [data-theme="custom-theme"] .navbar .fa-user,
 [data-theme="custom-theme"] .navbar .fa-user-circle {
@@ -132,6 +135,12 @@
 [data-theme="custom-theme"] .dropdown-item:hover i {
     transform: translateX(-2px) !important;
     text-shadow: 0 0 5px currentColor !important;
+}
+
+/* إصلاح القوائم المنسدلة */
+[data-theme="custom-theme"] .dropdown-menu {
+    position: absolute !important;
+    z-index: 1050 !important;
 }
 
 /* تقليص المسافات في شريط التنقل */
