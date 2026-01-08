@@ -3,12 +3,10 @@
 
 /* تأثيرات الأيقونات الملونة والمشعة في الهيدر */
 [data-theme="custom-theme"] .navbar .nav-link {
-
-    display: flex !important;
-    flex-direction: column !important;
+    display: inline-flex !important;
     align-items: center !important;
-    text-align: center !important;
     padding: 0.5rem 0.7rem !important;
+    transition: all 0.2s ease;
 }
 
 [data-theme="custom-theme"] .navbar .fa,
@@ -16,13 +14,10 @@
 [data-theme="custom-theme"] .navbar .far,
 [data-theme="custom-theme"] .navbar .fab,
 [data-theme="custom-theme"] .navbar .fal {
-    font-size: 1.5rem !important;
-    margin: 0 0 0.15rem 0 !important;
-    transition: all 0.3s ease;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-    background-clip: text;
-    -webkit-background-clip: text;
-    position: relative;
+    font-size: 1.1rem !important;
+    margin-left: 0.3rem !important;
+    transition: all 0.2s ease;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
 }
 
 /* ألوان مخصصة ومتنوعة للأيقونات */
@@ -33,71 +28,85 @@
 
 [data-theme="custom-theme"] .navbar .fa-user,
 [data-theme="custom-theme"] .navbar .fa-user-circle {
-    color: #ffffff !important; /* ذهبي مشرق */
+    color: #ffffff !important;
+    /* ذهبي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-bell,
 [data-theme="custom-theme"] .navbar .fa-bell-slash {
-    color: #e0ee7a !important; /* برتقالي مشرق */
+    color: #e0ee7a !important;
+    /* برتقالي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-cog,
 [data-theme="custom-theme"] .navbar .fa-cogs {
-    color: #E0E0E0 !important; /* فضي مشرق */
+    color: #E0E0E0 !important;
+    /* فضي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-home {
-    color: #98FB98 !important; /* أخضر مشرق */
+    color: #98FB98 !important;
+    /* أخضر مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-users {
-    color: #00CED1 !important; /* تركواز مشرق */
+    color: #00CED1 !important;
+    /* تركواز مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-chart-line,
 [data-theme="custom-theme"] .navbar .fa-chart-bar {
-    color: #87CEEB !important; /* أزرق سماوي مشرق */
+    color: #87CEEB !important;
+    /* أزرق سماوي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-file,
 [data-theme="custom-theme"] .navbar .fa-file-alt {
-    color: #1E90FF !important; /* أزرق مشرق */
+    color: #1E90FF !important;
+    /* أزرق مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-folder,
 [data-theme="custom-theme"] .navbar .fa-folder-open {
-    color: #FFB347 !important; /* برتقالي فاتح مشرق */
+    color: #FFB347 !important;
+    /* برتقالي فاتح مشرق */
 }
 
 /* أيقونات الأقسام الإضافية */
 [data-theme="custom-theme"] .navbar .fa-shopping-cart,
 [data-theme="custom-theme"] .navbar .fa-cart-plus {
-    color: #FFB6C1 !important; /* وردي فاتح مشرق - للطلبات */
+    color: #FFB6C1 !important;
+    /* وردي فاتح مشرق - للطلبات */
 }
 
 [data-theme="custom-theme"] .navbar .fa-boxes,
 [data-theme="custom-theme"] .navbar .fa-box {
-    color: #90EE90 !important; /* أخضر فاتح مشرق - للمخزون */
+    color: #90EE90 !important;
+    /* أخضر فاتح مشرق - للمخزون */
 }
 
 [data-theme="custom-theme"] .navbar .fa-search,
 [data-theme="custom-theme"] .navbar .fa-clipboard-check {
-    color: #87CEFA !important; /* أزرق فاتح مشرق - للمعاينات */
+    color: #87CEFA !important;
+    /* أزرق فاتح مشرق - للمعاينات */
 }
 
 [data-theme="custom-theme"] .navbar .fa-tools,
 [data-theme="custom-theme"] .navbar .fa-wrench {
-    color: #DDA0DD !important; /* بنفسجي فاتح مشرق - للتركيبات */
+    color: #DDA0DD !important;
+    /* بنفسجي فاتح مشرق - للتركيبات */
 }
 
 [data-theme="custom-theme"] .navbar .fa-industry,
 [data-theme="custom-theme"] .navbar .fa-factory {
-    color: #98FB98 !important; /* أخضر مشرق - للمصنع */
+    color: #98FB98 !important;
+    /* أخضر مشرق - للمصنع */
 }
 
 [data-theme="custom-theme"] .navbar .fa-database,
 [data-theme="custom-theme"] .navbar .fa-server {
-    color: #B0C4DE !important; /* أزرق فاتح مشرق - لإدارة البيانات */
+    color: #B0C4DE !important;
+    /* أزرق فاتح مشرق - لإدارة البيانات */
 }
 
 /* تأثير التوهج عند التحويم (hover) */
@@ -106,9 +115,8 @@
 [data-theme="custom-theme"] .navbar .far:hover,
 [data-theme="custom-theme"] .navbar .fab:hover,
 [data-theme="custom-theme"] .navbar .fal:hover {
-    transform: translateY(-3px) scale(1.1);
-    text-shadow: 0 0 15px currentColor;
-    filter: brightness(1.2);
+    transform: translateY(-1px);
+    text-shadow: 0 0 10px currentColor;
 }
 
 /* مظهر الأيقونات في القوائم المنسدلة */
@@ -118,12 +126,12 @@
     height: 20px !important;
     text-align: center !important;
     margin-left: 10px !important;
-    transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+    transition: all 0.2s ease !important;
 }
 
 [data-theme="custom-theme"] .dropdown-item:hover i {
-    transform: translateX(-5px) scale(1.1) !important;
-    text-shadow: 0 0 8px currentColor !important;
+    transform: translateX(-2px) !important;
+    text-shadow: 0 0 5px currentColor !important;
 }
 
 /* تقليص المسافات في شريط التنقل */
@@ -156,13 +164,14 @@
 
 /* تأثير حركي للبطاقات عند التحميل */
 @keyframes cardAppear {
-    from { 
-        opacity: 0; 
-        transform: translateY(20px); 
+    from {
+        opacity: 0;
+        transform: translateY(20px);
     }
-    to { 
-        opacity: 1; 
-        transform: translateY(0); 
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
@@ -171,11 +180,25 @@
 }
 
 /* تأخير متتالي للبطاقات المتعددة */
-[data-theme="custom-theme"] .card:nth-child(1) { animation-delay: 0.1s; }
-[data-theme="custom-theme"] .card:nth-child(2) { animation-delay: 0.2s; }
-[data-theme="custom-theme"] .card:nth-child(3) { animation-delay: 0.3s; }
-[data-theme="custom-theme"] .card:nth-child(4) { animation-delay: 0.4s; }
-[data-theme="custom-theme"] .card:nth-child(5) { animation-delay: 0.5s; }
+[data-theme="custom-theme"] .card:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+[data-theme="custom-theme"] .card:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+[data-theme="custom-theme"] .card:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+[data-theme="custom-theme"] .card:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+[data-theme="custom-theme"] .card:nth-child(5) {
+    animation-delay: 0.5s;
+}
 
 /* تأثيرات للجداول */
 [data-theme="custom-theme"] .table {
@@ -220,8 +243,8 @@
 
 [data-theme="custom-theme"] .table tbody tr:hover {
     background-color: rgba(106, 87, 67, 0.05) !important;
-    transform: scale(1.01) !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    transform: scale(1.002) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
     z-index: 1 !important;
     position: relative !important;
 }
@@ -291,8 +314,8 @@
 }
 
 /* تأثيرات للعناوين الرئيسية */
-[data-theme="custom-theme"] h1, 
-[data-theme="custom-theme"] h2, 
+[data-theme="custom-theme"] h1,
+[data-theme="custom-theme"] h2,
 [data-theme="custom-theme"] h3 {
     position: relative;
     display: inline-block;
@@ -322,8 +345,15 @@
 }
 
 @keyframes modalAppear {
-    from { opacity: 0; transform: scale(0.9) translateY(-20px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 [data-theme="custom-theme"] .modal-header {
@@ -357,7 +387,7 @@
 
 [data-theme="custom-theme"] .badge:hover {
     transform: scale(1.1) !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* التنبيهات - alerts */
@@ -369,8 +399,15 @@
 }
 
 @keyframes alertAppear {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* المؤشر المتحرك للصفحات النشطة - active page indicators */
@@ -386,17 +423,17 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-        to right,
-        rgba(255, 255, 255, 0),
-        rgba(255, 255, 255, 0.3),
-        rgba(255, 255, 255, 0)
-    );
+    background: linear-gradient(to right,
+            rgba(255, 255, 255, 0),
+            rgba(255, 255, 255, 0.3),
+            rgba(255, 255, 255, 0));
     animation: pageShine 2s infinite;
 }
 
 @keyframes pageShine {
-    100% { left: 100%; }
+    100% {
+        left: 100%;
+    }
 }
 
 /* تأثيرات لعناصر التنقل الرئيسية */
@@ -450,8 +487,15 @@
 
 /* تأثير التحميل المتتالي للعناصر داخل الصفحة */
 @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 [data-theme="custom-theme"] .animate-on-load {
@@ -460,8 +504,22 @@
 }
 
 /* تطبيق التأثير المتتالي على العناصر المختلفة */
-[data-theme="custom-theme"] .row > div:nth-child(1) .animate-on-load { animation-delay: 0.1s; }
-[data-theme="custom-theme"] .row > div:nth-child(2) .animate-on-load { animation-delay: 0.2s; }
-[data-theme="custom-theme"] .row > div:nth-child(3) .animate-on-load { animation-delay: 0.3s; }
-[data-theme="custom-theme"] .row > div:nth-child(4) .animate-on-load { animation-delay: 0.4s; }
-[data-theme="custom-theme"] .row > div:nth-child(5) .animate-on-load { animation-delay: 0.5s; }
+[data-theme="custom-theme"] .row>div:nth-child(1) .animate-on-load {
+    animation-delay: 0.1s;
+}
+
+[data-theme="custom-theme"] .row>div:nth-child(2) .animate-on-load {
+    animation-delay: 0.2s;
+}
+
+[data-theme="custom-theme"] .row>div:nth-child(3) .animate-on-load {
+    animation-delay: 0.3s;
+}
+
+[data-theme="custom-theme"] .row>div:nth-child(4) .animate-on-load {
+    animation-delay: 0.4s;
+}
+
+[data-theme="custom-theme"] .row>div:nth-child(5) .animate-on-load {
+    animation-delay: 0.5s;
+}
