@@ -822,10 +822,10 @@
                 icon: "{{ message.icon|escapejs }}",
                 iconSize: "{{ message.icon_size|default:'medium'|escapejs }}",
                 displayStyle: "{{ message.display_style|default:'sweetalert2'|escapejs }}",
-                displayDuration: {{ message.display_duration |default: 20 }},
-            autoClose: {{ message.auto_close | yesno: "true,false" }},
-            showCloseButton: {{ message.show_close_button | yesno: "true,false" }},
-            allowOutsideClick: {{ message.allow_outside_click | yesno: "true,false" }}
+                displayDuration: {{ message.display_duration|default:20 }},
+            autoClose: {{ message.auto_close|yesno:"true,false" }},
+            showCloseButton: {{ message.show_close_button|yesno:"true,false" }},
+            allowOutsideClick: {{ message.allow_outside_click|yesno:"true,false" }}
                     }{% if not forloop.last %}, {% endif %}
         {% endfor %}
             ];
