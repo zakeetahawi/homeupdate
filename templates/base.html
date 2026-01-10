@@ -822,10 +822,10 @@
                 icon: "{{ message.icon|escapejs }}",
                 iconSize: "{{ message.icon_size|default:'medium'|escapejs }}",
                 displayStyle: "{{ message.display_style|default:'sweetalert2'|escapejs }}",
-                displayDuration: {{ message.display_duration |default:20 }},
-            autoClose: {{ message.auto_close |yesno:"true,false" }},
-            showCloseButton: {{ message.show_close_button |yesno:"true,false" }},
-            allowOutsideClick: {{ message.allow_outside_click |yesno:"true,false" }}
+                displayDuration: {{ message.display_duration |default: 20 }},
+            autoClose: {{ message.auto_close | yesno: "true,false" }},
+            showCloseButton: {{ message.show_close_button | yesno: "true,false" }},
+            allowOutsideClick: {{ message.allow_outside_click | yesno: "true,false" }}
                     }{% if not forloop.last %}, {% endif %}
         {% endfor %}
             ];
@@ -1158,85 +1158,74 @@
                         <i class="fas fa-building me-2"></i>
                         {{ company_info.name }}
                     </h6>
-                    {% if company_info.facebook or company_info.twitter or company_info.instagram or
-                    company_info.linkedin %}
-                    <div class="social-icons d-flex">
-                        {% if company_info.facebook %}
-                        <a href="{{ company_info.facebook }}" class="social-icon me-2" target="_blank" title="Facebook">
-                            <i class="fab fa-facebook-f"></i>
-                        </a>
-                        {% endif %}
-                        {% if company_info.twitter %}
-                        <a href="{{ company_info.twitter }}" class="social-icon me-2" target="_blank" title="Twitter">
-                            <i class="fab fa-twitter"></i>
-                        </a>
-                        {% endif %}
-                        {% if company_info.instagram %}
-                        <a href="{{ company_info.instagram }}" class="social-icon me-2" target="_blank"
-                            title="Instagram">
-                            <i class="fab fa-instagram"></i>
-                        </a>
-                        {% endif %}
-                        {% if company_info.linkedin %}
-                        <a href="{{ company_info.linkedin }}" class="social-icon me-2" target="_blank" title="LinkedIn">
-                            <i class="fab fa-linkedin-in"></i>
-                        </a>
-                        {% endif %}
-                    </div>
+                    <i class="fab fa-twitter"></i>
+                    </a>
+                    {% endif %}
+                    {% if company_info.instagram %}
+                    <a href="{{ company_info.instagram }}" class="social-icon me-2" target="_blank" title="Instagram">
+                        <i class="fab fa-instagram"></i>
+                    </a>
+                    {% endif %}
+                    {% if company_info.linkedin %}
+                    <a href="{{ company_info.linkedin }}" class="social-icon me-2" target="_blank" title="LinkedIn">
+                        <i class="fab fa-linkedin-in"></i>
+                    </a>
                     {% endif %}
                 </div>
+                {% endif %}
+            </div>
 
-                <!-- الروابط السريعة -->
-                <div class="d-flex align-items-center">
-                    <a href="{% url 'home' %}" class="footer-link mx-2">
-                        <i class="fas fa-home"></i>
-                    </a>
-                    <a href="{% url 'about' %}" class="footer-link mx-2">
-                        <i class="fas fa-info-circle"></i>
-                    </a>
-                    <a href="{% url 'contact' %}" class="footer-link mx-2">
-                        <i class="fas fa-envelope"></i>
-                    </a>
+            <!-- الروابط السريعة -->
+            <div class="d-flex align-items-center">
+                <a href="{% url 'home' %}" class="footer-link mx-2">
+                    <i class="fas fa-home"></i>
+                </a>
+                <a href="{% url 'about' %}" class="footer-link mx-2">
+                    <i class="fas fa-info-circle"></i>
+                </a>
+                <a href="{% url 'contact' %}" class="footer-link mx-2">
+                    <i class="fas fa-envelope"></i>
+                </a>
+            </div>
+
+            <!-- معلومات الاتصال -->
+            <div class="d-flex align-items-center gap-3">
+                {% if company_info.phone %}
+                <a href="tel:{{ company_info.phone }}" class="footer-contact-item" title="رقم الهاتف">
+                    <i class="fas fa-phone-alt"></i>
+                    <span class="d-none d-md-inline small">{{ company_info.phone }}</span>
+                </a>
+                {% endif %}
+                {% if company_info.email %}
+                <a href="mailto:{{ company_info.email }}" class="footer-contact-item" title="البريد الإلكتروني">
+                    <i class="fas fa-at"></i>
+                    <span class="d-none d-md-inline small">{{ company_info.email }}</span>
+                </a>
+                {% endif %}
+                {% if company_info.address %}
+                <div class="footer-contact-item" title="العنوان">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span class="d-none d-md-inline small">{{ company_info.address }}</span>
                 </div>
-
-                <!-- معلومات الاتصال -->
-                <div class="d-flex align-items-center gap-3">
-                    {% if company_info.phone %}
-                    <a href="tel:{{ company_info.phone }}" class="footer-contact-item" title="رقم الهاتف">
-                        <i class="fas fa-phone-alt"></i>
-                        <span class="d-none d-md-inline small">{{ company_info.phone }}</span>
-                    </a>
-                    {% endif %}
-                    {% if company_info.email %}
-                    <a href="mailto:{{ company_info.email }}" class="footer-contact-item" title="البريد الإلكتروني">
-                        <i class="fas fa-at"></i>
-                        <span class="d-none d-md-inline small">{{ company_info.email }}</span>
-                    </a>
-                    {% endif %}
-                    {% if company_info.address %}
-                    <div class="footer-contact-item" title="العنوان">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span class="d-none d-md-inline small">{{ company_info.address }}</span>
-                    </div>
-                    {% endif %}
-                </div>
+                {% endif %}
             </div>
+        </div>
 
-            <!-- تفاصيل الشركة (وصف مختصر) -->
-            {% if company_info.description %}
-            <div class="text-center mt-2">
-                <span class="small">{{ company_info.description }}</span>
-            </div>
-            {% endif %}
+        <!-- تفاصيل الشركة (وصف مختصر) -->
+        {% if company_info.description %}
+        <div class="text-center mt-2">
+            <span class="small">{{ company_info.description }}</span>
+        </div>
+        {% endif %}
 
-            <!-- حقوق النشر -->
-            <div class="text-center mt-2">
-                <p class="copyright-text mb-0 small">
-                    <i class="far fa-copyright me-1"></i>
-                    {{ current_year }}
-                    {{ company_info.copyright_text|default:"جميع الحقوق محفوظة" }}
-                </p>
-            </div>
+        <!-- حقوق النشر -->
+        <div class="text-center mt-2">
+            <p class="copyright-text mb-0 small">
+                <i class="far fa-copyright me-1"></i>
+                {{ current_year }}
+                {{ company_info.copyright_text|default:"جميع الحقوق محفوظة" }}
+            </p>
+        </div>
         </div>
     </footer>
 
