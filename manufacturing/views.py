@@ -2800,9 +2800,17 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
         ).filter(
             # العناصر المكتملة فقط
             status='completed',
-            # التي لها اسم مستلم ورقم إذن
-            receiver_name__isnull=False,
-            permit_number__isnull=False
+            # لم يتم استلامها بعد (في نظام التقطيع)
+            fabric_received=False,
+        ).exclude(
+            # استبعاد العناصر بدون اسم مستلم أو رقم إذن
+            receiver_name__isnull=True
+        ).exclude(
+            receiver_name=''
+        ).exclude(
+            permit_number__isnull=True
+        ).exclude(
+            permit_number=''
         ).exclude(
             # استبعاد العناصر التي تم استلامها بالفعل في نظام التصنيع
             manufacturing_items__fabric_received=True
