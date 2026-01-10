@@ -135,10 +135,17 @@ def regenerate_contract_pdf(request, order_id):
         
         if contract_saved:
             logger.info(f"Contract PDF regenerated for order {order.order_number} by {request.user.username}")
+            
+            # إضافة timestamp للرابط لتجنب مشكلة cache المتصفح
+            import time
+            cache_buster = int(time.time())
+            contract_url_with_timestamp = f"{order.contract_file.url}?v={cache_buster}"
+            
             return JsonResponse({
                 'success': True,
                 'message': 'تم إعادة توليد العقد بنجاح وأرشفة العقد القديم',
-                'contract_url': order.contract_file.url
+                'contract_url': contract_url_with_timestamp,
+                'timestamp': cache_buster
             })
         else:
             return JsonResponse({

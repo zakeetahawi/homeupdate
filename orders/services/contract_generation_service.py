@@ -149,6 +149,17 @@ class ContractGenerationService:
             # توليد PDF
             pdf_file = self.generate_pdf()
             
+            # التحقق من حجم الملف (الذهاب لنهاية الملف للحصول على الحجم)
+            pdf_file.seek(0, 2)  # الذهاب لنهاية الملف
+            file_size = pdf_file.tell()
+            pdf_file.seek(0)  # العودة للبداية
+            
+            if not pdf_file or file_size == 0:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error("فشل توليد PDF - الملف فارغ")
+                return False
+            
             # تجهيز اسم العميل للملف (إزالة المسافات والأحرف الخاصة)
             customer_name = ''
             if self.order.customer:
@@ -168,32 +179,57 @@ class ContractGenerationService:
             # المسار الكامل للملف
             full_path = os.path.join(settings.MEDIA_ROOT, 'contracts', filename)
             
-            # حذف الملف القديم إذا كان موجوداً
+            # إنشاء المجلد إذا لم يكن موجوداً
+            contract_dir = os.path.join(settings.MEDIA_ROOT, 'contracts')
+            os.makedirs(contract_dir, exist_ok=True)
+            
+            # حذف الملف القديم إذا كان موجوداً مع معالجة أفضل للأخطاء
             if os.path.exists(full_path):
                 try:
                     os.remove(full_path)
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.info(f"تم حذف الملف القديم: {filename}")
+                except PermissionError as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"خطأ في الصلاحيات - لا يمكن حذف الملف القديم: {e}")
+                    # محاولة استخدام اسم ملف مختلف
+                    from datetime import datetime
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    filename = f'contract_{self.order.order_number}_{customer_name}_{timestamp}.pdf' if customer_name else f'contract_{self.order.order_number}_{timestamp}.pdf'
+                    full_path = os.path.join(contract_dir, filename)
                 except Exception as e:
                     import logging
                     logger = logging.getLogger(__name__)
                     logger.warning(f"تحذير: فشل حذف الملف القديم: {e}")
             
             # حذف جميع الملفات القديمة بنفس البادئة (لتنظيف الملفات ذات اللواحق العشوائية)
-            contract_dir = os.path.join(settings.MEDIA_ROOT, 'contracts')
             if os.path.exists(contract_dir):
                 prefix = f'contract_{self.order.order_number}_{customer_name}_' if customer_name else f'contract_{self.order.order_number}_'
                 for old_file in os.listdir(contract_dir):
-                    if old_file.startswith(prefix) or old_file == filename:
+                    if old_file.startswith(prefix) or (old_file.startswith(f'contract_{self.order.order_number}') and old_file != filename):
                         try:
-                            os.remove(os.path.join(contract_dir, old_file))
+                            old_file_path = os.path.join(contract_dir, old_file)
+                            if os.path.isfile(old_file_path):
+                                os.remove(old_file_path)
                         except:
                             pass
 
             # حفظ الملف في الطلب
+            pdf_file.seek(0)  # التأكد من أن المؤشر في بداية الملف
             self.order.contract_file.save(
                 filename,
                 ContentFile(pdf_file.read()),
                 save=True
             )
+            
+            # التحقق من أن الملف تم حفظه بنجاح
+            if not self.order.contract_file or not os.path.exists(self.order.contract_file.path):
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error("فشل حفظ ملف العقد - الملف غير موجود بعد الحفظ")
+                return False
 
             # تسجيل عملية الإنشاء
             ContractPrintLog.objects.create(
@@ -209,7 +245,9 @@ class ContractGenerationService:
             return True
 
         except Exception as e:
-            print(f'خطأ في حفظ العقد: {str(e)}')
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'خطأ في حفظ العقد: {str(e)}', exc_info=True)
             return False
 
     @staticmethod
