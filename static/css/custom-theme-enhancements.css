@@ -4,16 +4,19 @@
 /* تأثيرات الأيقونات الملونة والمشعة في الهيدر */
 [data-theme="custom-theme"] .navbar .nav-link {
     display: inline-flex !important;
+    flex-direction: column !important;
     align-items: center !important;
-    padding: 0.5rem 0.7rem !important;
+    justify-content: center !important;
+    padding: 0.3rem 0.5rem !important;
     transition: all 0.2s ease;
+    min-width: 60px;
 }
 
 /* التحكم في ارتفاع الـ navbar */
 [data-theme="custom-theme"] .navbar {
     min-height: auto !important;
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
+    padding-top: 0.3rem !important;
+    padding-bottom: 0.3rem !important;
 }
 
 [data-theme="custom-theme"] .navbar .fa,
@@ -21,8 +24,9 @@
 [data-theme="custom-theme"] .navbar .far,
 [data-theme="custom-theme"] .navbar .fab,
 [data-theme="custom-theme"] .navbar .fal {
-    font-size: 1.1rem !important;
-    margin-left: 0.3rem !important;
+    font-size: 1.3rem !important;
+    margin-left: 0 !important;
+    margin-bottom: 0.2rem !important;
     transition: all 0.2s ease;
     text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
 }
@@ -150,11 +154,11 @@
 }
 
 [data-theme="custom-theme"] .navbar-nav .nav-link {
-    font-size: 0.75rem !important;
+    font-size: 0.8rem !important;
     white-space: nowrap !important;
     position: relative !important;
     margin: 0 !important;
-    padding: 0.5rem 0.7rem !important;
+    text-align: center !important;
 }
 
 /* تأثيرات متحركة للبطاقات */
