@@ -487,25 +487,24 @@ class Order(models.Model):
             # إذا كان هناك مبلغ مدفوع، لا نغير السعر النهائي
             return self.final_price or 0
 
-        # حساب السعر الأساسي من عناصر الطلب مع الخصم
-        total = 0
-        total_discount = 0
+        # حساب السعر الأساسي من عناصر الطلب
+        total = Decimal('0')
+        total_discount = Decimal('0')
 
-        for item in self.items.select_related('product').all():
-            item_total = item.quantity * item.unit_price
-            item_discount = item_total * (item.discount_percentage / 100) if item.discount_percentage else 0
+        for item in self.items.all():
+            item_total = Decimal(str(item.quantity)) * Decimal(str(item.unit_price))
+            item_discount = item.discount_amount if item.discount_amount is not None else Decimal('0')
             total += item_total
             total_discount += item_discount
 
-        # تحديث القيم في الذاكرة فقط (بدون حفظ)
-        # final_price should represent the pre-discount subtotal.
-        # final_price_after_discount is provided by the property that subtracts total_discount_amount.
-        self.final_price = total
-        self.total_amount = total
+        # إضافة المالية
+        addition = self.financial_addition or Decimal('0.00')
 
-        # return the pre-discount subtotal to avoid callers accidentally treating
-        # the returned value as already-discounted (which would cause double-discounting).
-        return total
+        # تحديث القيم
+        self.total_amount = total  # المبلغ قبل الخصم (Subtotal)
+        self.final_price = total - total_discount + addition  # المبلغ النهائي بعد الخصم والإضافات (Grand Total)
+
+        return self.final_price
     
     @property
     def total_discount_amount(self):
@@ -526,14 +525,10 @@ class Order(models.Model):
     
     @property
     def final_price_after_discount(self):
-        """السعر النهائي بعد الخصم"""
-        # استخدم total_amount (المبلغ قبل الخصم) لتجنب خصم الخصم مرتين
+        """السعر النهائي بعد الخصم والإضافات"""
         subtotal = self.total_amount if self.total_amount is not None else Decimal('0')
-        try:
-            subtotal_dec = Decimal(str(subtotal))
-        except Exception:
-            subtotal_dec = Decimal('0')
-        return subtotal_dec - self.total_discount_amount
+        addition = self.financial_addition or Decimal('0.00')
+        return subtotal - self.total_discount_amount + addition
     def save(self, *args, **kwargs):
         try:
             # ⚡ تحقق مما إذا كان هذا كائن جديد (ليس له مفتاح أساسي)
@@ -2083,20 +2078,19 @@ class OrderItem(models.Model):
 
             super().save(*args, **kwargs)
 
-            # تحديث السعر النهائي للطلب (مع مراعاة الحماية)
+            # تحديث السعر النهائي للطلب فوراً لضمان الدقة
             if is_new or force_update:
                 try:
-                    from .tasks import calculate_order_totals_async
-                    calculate_order_totals_async.delay(self.order.pk)
-                except Exception as e:
-                    # في حالة فشل الجدولة، نحدث السعر مباشرة
-                    try:
-                        self.order.calculate_final_price(force_update=force_update)
-                        self.order.save(update_fields=['final_price', 'total_amount'])
-                    except Exception as calc_error:
-                        import logging
-                        logger = logging.getLogger(__name__)
-                        logger.error(f"خطأ في تحديث السعر النهائي للطلب {self.order.pk}: {str(calc_error)}")
+                    self.order.calculate_final_price(force_update=force_update)
+                    # تحديث مباشر باستخدام update لتجنب حلقات التكرار
+                    Order.objects.filter(pk=self.order.pk).update(
+                        final_price=self.order.final_price,
+                        total_amount=self.order.total_amount
+                    )
+                except Exception as calc_error:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"خطأ في تحديث السعر النهائي للطلب {self.order.pk}: {str(calc_error)}")
 
         except Exception as e:
             import logging

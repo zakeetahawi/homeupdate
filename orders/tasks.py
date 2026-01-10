@@ -210,7 +210,7 @@ def calculate_order_totals_async(order_id):
         final_price = order.calculate_final_price()
         
         # تحديث المبلغ الإجمالي
-        order.total_amount = final_price
+        order.total_amount = order.total_amount
         order.save(update_fields=['final_price', 'total_amount'])
         
         logger.info(f"تم حساب إجماليات الطلب {order.order_number}: {final_price}")

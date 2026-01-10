@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}قائمة السلف{% endblock %}
+{% block title %}قائمة العربونات{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -10,10 +10,10 @@
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h2 class="mb-0">
                     <i class="fas fa-hand-holding-usd me-2"></i>
-                    سلف العملاء
+                    عربونات العملاء
                 </h2>
                 <a href="{% url 'accounting:advance_create' %}" class="btn btn-success">
-                    <i class="fas fa-plus me-1"></i> سلفة جديدة
+                    <i class="fas fa-plus me-1"></i> عربون جديد
                 </a>
             </div>
         </div>
@@ -33,10 +33,10 @@
                             <label class="form-label">الحالة</label>
                             <select name="status" class="form-select">
                                 <option value="">الكل</option>
-                                <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>نشطة</option>
-                                <option value="partially_used" {% if request.GET.status == 'partially_used' %}selected{% endif %}>مستخدمة جزئياً</option>
-                                <option value="fully_used" {% if request.GET.status == 'fully_used' %}selected{% endif %}>مستخدمة بالكامل</option>
-                                <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغية</option>
+                                <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>نشط</option>
+                                <option value="partially_used" {% if request.GET.status == 'partially_used' %}selected{% endif %}>مستخدم جزئياً</option>
+                                <option value="fully_used" {% if request.GET.status == 'fully_used' %}selected{% endif %}>مستخدم بالكامل</option>
+                                <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغى</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -62,7 +62,7 @@
         </div>
     </div>
 
-    <!-- قائمة السلف -->
+    <!-- قائمة العربونات -->
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -71,7 +71,7 @@
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>رقم السلفة</th>
+                                    <th>رقم العربون</th>
                                     <th>العميل</th>
                                     <th>التاريخ</th>
                                     <th>المبلغ</th>
@@ -104,13 +104,13 @@
                                     <td>{{ advance.receipt_number|default:"-" }}</td>
                                     <td>
                                         {% if advance.status == 'active' %}
-                                        <span class="badge bg-success">نشطة</span>
+                                        <span class="badge bg-success">نشط</span>
                                         {% elif advance.status == 'partially_used' %}
-                                        <span class="badge bg-warning">مستخدمة جزئياً</span>
+                                        <span class="badge bg-warning">مستخدم جزئياً</span>
                                         {% elif advance.status == 'fully_used' %}
-                                        <span class="badge bg-secondary">مستخدمة بالكامل</span>
+                                        <span class="badge bg-secondary">مستخدم بالكامل</span>
                                         {% else %}
-                                        <span class="badge bg-danger">ملغية</span>
+                                        <span class="badge bg-danger">ملغى</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -130,7 +130,7 @@
                                 <tr>
                                     <td colspan="9" class="text-center py-5 text-muted">
                                         <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-                                        لا توجد سلف
+                                        لا توجد عربونات
                                     </td>
                                 </tr>
                                 {% endfor %}

@@ -142,7 +142,7 @@ def sync_order_to_manufacturing(sender, instance, created, **kwargs):
     ManufacturingOrder = apps.get_model('manufacturing', 'ManufacturingOrder')
 
     try:
-        manufacturing_order = ManufacturingOrder.objects.get(order=instance)
+        manufacturing_order = ManufacturingOrder.objects.filter(order=instance).latest('created_at')
 
         # تحديث حقول أمر التصنيع عند تغييرها في الطلب (بدون تحديث الحالة)
         update_fields = []

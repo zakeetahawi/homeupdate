@@ -86,7 +86,7 @@ def update_related_orders(installation, new_status, old_status, user=None):
         # البحث عن أمر التصنيع المقابل
         from manufacturing.models import ManufacturingOrder
         try:
-            manufacturing_order = ManufacturingOrder.objects.get(order=installation.order)
+            manufacturing_order = ManufacturingOrder.objects.filter(order=installation.order).latest('created_at')
 
             # mapping بين حالات التركيب وحالات التصنيع
             installation_to_manufacturing_mapping = {

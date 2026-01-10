@@ -741,27 +741,39 @@
                         {% endwith %}
                         {% endif %}
                         <tr>
-                            <th>المبلغ الإجمالي</th>
-                            <td>
-                                {% if computed_total_amount is not None %}
-                                    {{ computed_total_amount|clean_decimal_currency:currency_symbol }}
-                                {% else %}
-                                    {{ order.total_amount|clean_decimal_currency:currency_symbol }}
-                                {% endif %}
+                            <th>الإجمالي (قبل الخصم)</th>
+                            <td class="fw-bold text-muted">
+                                {{ order.total_amount|clean_decimal_currency:currency_symbol }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>إجمالي الخصم</th>
+                            <td class="text-danger">
+                                - {{ order.total_discount_amount|clean_decimal_currency:currency_symbol }}
+                            </td>
+                        </tr>
+                        {% if order.financial_addition > 0 %}
+                        <tr>
+                            <th>إضافات مالية</th>
+                            <td class="text-info">
+                                + {{ order.financial_addition|clean_decimal_currency:currency_symbol }}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        <tr class="table-primary border-top border-2">
+                            <th class="py-2">الصافي النهائي (المطلوب)</th>
+                            <td class="fw-bold fs-5 py-2">
+                                {{ order.final_price|clean_decimal_currency:currency_symbol }}
                             </td>
                         </tr>
                         <tr>
                             <th>المبلغ المدفوع</th>
-                            <td>{{ order.paid_amount|clean_decimal_currency:currency_symbol }}</td>
+                            <td class="text-success">{{ order.paid_amount|clean_decimal_currency:currency_symbol }}</td>
                         </tr>
-                        <tr>
-                            <th>المبلغ المتبقي</th>
-                            <td>
-                                {% if computed_remaining_amount is not None %}
-                                    {{ computed_remaining_amount|clean_decimal_currency:currency_symbol }}
-                                {% else %}
-                                    {{ order.remaining_amount|clean_decimal_currency:currency_symbol }}
-                                {% endif %}
+                        <tr class="{% if order.remaining_amount > 0 %}table-warning{% else %}table-success{% endif %} border-top">
+                            <th class="py-2">المبلغ المتبقي</th>
+                            <td class="fw-bold py-2">
+                                {{ order.remaining_amount|clean_decimal_currency:currency_symbol }}
                             </td>
                         </tr>
                         <tr>
@@ -1452,7 +1464,7 @@
                     </tbody>
                     <tfoot>
                         <tr class="table-light">
-                            <th colspan="4" class="text-start">المجموع قبل الخصم</th>
+                            <th colspan="4" class="text-start">المجموع قبل الخصم (عناصر الطلب)</th>
                             <th colspan="2">
                                 {% if computed_total_amount is not None %}
                                     {{ computed_total_amount|clean_decimal_currency:currency_symbol }}
@@ -1460,7 +1472,7 @@
                                     {{ order.total_amount|clean_decimal_currency:currency_symbol }}
                                 {% endif %}
                             </th>
-                            <td></td>
+                            <td colspan="2"></td>
                         </tr>
                         <tr class="table-warning">
                             <th colspan="4" class="text-start">إجمالي الخصم</th>
@@ -1471,18 +1483,47 @@
                                     {{ order.total_discount_amount|clean_decimal_currency:currency_symbol }}
                                 {% endif %}
                             </th>
-                            <td></td>
+                            <td colspan="2"></td>
                         </tr>
+                        {% if order.financial_addition > 0 %}
+                        <tr class="table-info">
+                            <th colspan="4" class="text-start">إضافات مالية</th>
+                            <th colspan="2">
+                                + {{ order.financial_addition|clean_decimal_currency:currency_symbol }}
+                            </th>
+                            <td colspan="2"></td>
+                        </tr>
+                        {% endif %}
                         <tr class="table-success">
-                            <th colspan="4" class="text-start">الإجمالي النهائي بعد الخصم</th>
+                            <th colspan="4" class="text-start">الإجمالي النهائي بعد الخصم والإضافات</th>
                             <th colspan="2">
                                 {% if computed_final_price_after_discount is not None %}
                                     {{ computed_final_price_after_discount|clean_decimal_currency:currency_symbol }}
                                 {% else %}
-                                    {{ order.final_price_after_discount|clean_decimal_currency:currency_symbol }}
+                                    {{ order.final_price|clean_decimal_currency:currency_symbol }}
                                 {% endif %}
                             </th>
-                            <td></td>
+                            <td colspan="2"></td>
+                        </tr>
+                        {% if order.used_customer_balance > 0 %}
+                        <tr class="table-secondary">
+                            <th colspan="4" class="text-start">رصيد مستخدم من الحساب</th>
+                            <th colspan="2">
+                                - {{ order.used_customer_balance|clean_decimal_currency:currency_symbol }}
+                            </th>
+                            <td colspan="2"></td>
+                        </tr>
+                        {% endif %}
+                        <tr class="table-primary">
+                            <th colspan="4" class="text-start">المتبقي المطلوب</th>
+                            <th colspan="2">
+                                {% if computed_remaining_amount is not None %}
+                                    {{ computed_remaining_amount|clean_decimal_currency:currency_symbol }}
+                                {% else %}
+                                    {{ order.remaining_amount|clean_decimal_currency:currency_symbol }}
+                                {% endif %}
+                            </th>
+                            <td colspan="2"></td>
                         </tr>
                     </tfoot>
                 </table>

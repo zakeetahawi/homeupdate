@@ -150,7 +150,7 @@ TransactionLineFormSet = inlineformset_factory(
 
 class CustomerAdvanceForm(forms.ModelForm):
     """
-    نموذج سلفة العميل
+    نموذج عربون العميل
     """
     class Meta:
         model = CustomerAdvance
@@ -166,7 +166,7 @@ class CustomerAdvanceForm(forms.ModelForm):
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0.01',
-                'placeholder': 'مبلغ السلفة'
+                'placeholder': 'مبلغ العربون'
             }),
             'payment_method': forms.Select(attrs={
                 'class': 'form-control'
@@ -196,7 +196,7 @@ class CustomerAdvanceForm(forms.ModelForm):
 
 class AdvanceUsageForm(forms.Form):
     """
-    نموذج استخدام السلفة
+    نموذج استخدام العربون
     """
     order = forms.IntegerField(
         label='رقم الطلب',
@@ -294,7 +294,7 @@ class QuickPaymentForm(forms.Form):
 
 class QuickAdvanceForm(forms.Form):
     """
-    نموذج سلفة سريعة من صفحة العميل
+    نموذج عربون سريع من صفحة العميل
     """
     amount = forms.DecimalField(
         label='المبلغ',

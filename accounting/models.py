@@ -193,7 +193,7 @@ class Transaction(models.Model):
     """القيود المحاسبية"""
     TRANSACTION_TYPES = [
         ('payment', 'دفعة من عميل'),
-        ('advance', 'عربون/سلفة'),
+        ('advance', 'عربون'),
         ('invoice', 'فاتورة مبيعات'),
         ('refund', 'استرداد'),
         ('expense', 'مصروف'),
@@ -428,7 +428,7 @@ class TransactionLine(models.Model):
 
 
 class CustomerAdvance(models.Model):
-    """سلف وعربون العملاء"""
+    """عربون العملاء"""
     ADVANCE_STATUS = [
         ('active', 'نشط'),
         ('partially_used', 'مستخدم جزئياً'),
@@ -514,8 +514,8 @@ class CustomerAdvance(models.Model):
     )
     
     class Meta:
-        verbose_name = _('عربون/سلفة')
-        verbose_name_plural = _('عربون وسلف العملاء')
+        verbose_name = _('عربون')
+        verbose_name_plural = _('عربون العملاء')
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['customer'], name='adv_customer_idx'),
@@ -557,8 +557,8 @@ class CustomerAdvance(models.Model):
         
         return f"{prefix}{new_num:05d}"
     
-    def use_amount(self, amount, order=None):
-        """استخدام جزء من العربون"""
+    def use_for_order(self, order, amount, user=None):
+        """استخدام جزء من العربون لطلب معين"""
         if amount > self.remaining_amount:
             raise ValueError('المبلغ المطلوب أكبر من الرصيد المتبقي')
         
@@ -576,7 +576,7 @@ class CustomerAdvance(models.Model):
             advance=self,
             order=order,
             amount=amount,
-            created_by=self.created_by
+            created_by=user or self.created_by
         )
         
         return self.remaining_amount

@@ -111,8 +111,8 @@ def create_order_transaction(order):
         # استخدام حساب العميل أو حساب المدينين العام
         debit_to = customer_account or receivables_account
         
-        # حساب المبلغ الإجمالي
-        total_amount = order.total_price if hasattr(order, 'total_price') else Decimal('0')
+        # حساب المبلغ الإجمالي - استخدم السعر النهائي بعد الخصم
+        total_amount = order.final_price_after_discount if hasattr(order, 'final_price_after_discount') else Decimal('0')
         if total_amount <= 0:
             return None
         
@@ -155,13 +155,13 @@ def create_order_transaction(order):
 
 
 # ============================================
-# إشارات السلف
-# Advance Signals
+# إشارات العربونات
+# Deposit Signals
 # ============================================
 
 def create_advance_transaction(advance):
     """
-    إنشاء قيد محاسبي لسلفة العميل
+    إنشاء قيد محاسبي لعربون العميل
     """
     from .models import Transaction, TransactionLine, AccountingSettings, Account
     
@@ -178,10 +178,10 @@ def create_advance_transaction(advance):
         
         with db_transaction.atomic():
             txn = Transaction.objects.create(
-                transaction_date=advance.received_date,
+                transaction_date=advance.created_at.date() if advance.created_at else timezone.now().date(),
                 transaction_type='receipt',
-                description=f'استلام سلفة من {advance.customer.name}',
-                notes=f'نوع السلفة: {advance.get_advance_type_display()}',
+                description=f'استلام عربون من {advance.customer.name}',
+                notes=f'حالة العربون: {advance.get_status_display()}',
                 customer=advance.customer,
                 customer_advance=advance,
                 is_auto_generated=True,
@@ -194,16 +194,16 @@ def create_advance_transaction(advance):
                 account=cash_account,
                 debit_amount=advance.amount,
                 credit_amount=Decimal('0'),
-                description=f'استلام سلفة نقدية'
+                description=f'استلام عربون نقدي'
             )
             
-            # دائن - سلف العملاء (التزام)
+            # دائن - عربونات العملاء (التزام)
             TransactionLine.objects.create(
                 transaction=txn,
                 account=advances_account,
                 debit_amount=Decimal('0'),
                 credit_amount=advance.amount,
-                description=f'سلفة {advance.customer.name}'
+                description=f'عربون {advance.customer.name}'
             )
             
             txn.check_balance()

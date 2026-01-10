@@ -339,14 +339,15 @@ def order_detail(request, pk):
             # حساب الخصم
             total_discount += Decimal(str(it.discount_amount if it.discount_amount else 0))
 
-        final_after = subtotal - total_discount
+        addition = Decimal(str(order.financial_addition or 0))
+        final_after = subtotal - total_discount + addition
 
         context['computed_total_amount'] = subtotal
         context['computed_total_discount_amount'] = total_discount
         context['computed_final_price_after_discount'] = final_after
         # remaining amount should be what remains to pay from the final after-discount total
         paid = Decimal(str(order.paid_amount or 0))
-        context['computed_remaining_amount'] = final_after - paid
+        context['computed_remaining_amount'] = final_after - paid - Decimal(str(order.used_customer_balance or 0))
     except Exception:
         # if anything goes wrong, leave computed values as None so template falls back
         pass
@@ -486,14 +487,9 @@ def order_create(request):
                             print("subtotal حتى الآن:", subtotal)
                     except Exception as e:
                         print(f"Error creating order items: {e}")
-                # final_price should be the pre-discount subtotal
-                order.final_price = subtotal
-                order._is_auto_update = True  # تمييز التحديث التلقائي
-                order.save(update_fields=['final_price'])
-                print("order.final_price بعد الحفظ:", order.final_price)
-                # اجعل المبلغ الإجمالي يساوي السعر النهائي قبل الخصم (مسمى total_amount يستخدم للـ pre-discount subtotal)
-                order.total_amount = order.final_price
-                order.save(update_fields=['total_amount'])
+                # أعد حساب الإجماليات باستخدام ميثود الموديل لضمان الاتساق
+                order.calculate_final_price(force_update=True)
+                order.save(update_fields=['final_price', 'total_amount'])
 
                 # --- معالجة الدفعة (بعد تحديث final_price) ---
                 paid_amount = request.POST.get('paid_amount')
@@ -757,18 +753,12 @@ def order_update(request, pk):
                             form_item.instance._modified_by = request.user
                     
                     formset.save()
-                    # إعادة حساب إجماليات الطلب بعد حفظ عناصر الطلب
+                    # إعادة حساب إجماليات الطلب فوراً لضمان دقة الأرقام
                     try:
-                        from .tasks import calculate_order_totals_async
-                        calculate_order_totals_async.delay(order.pk)
-                    except Exception:
-                        try:
-                            # Force recalculation locally when background tasks are not available
-                            order.calculate_final_price(force_update=True)
-                            order.total_amount = order.final_price
-                            order.save(update_fields=['final_price', 'total_amount'])
-                        except Exception:
-                            pass
+                        order.calculate_final_price(force_update=True)
+                        order.save(update_fields=['final_price', 'total_amount'])
+                    except Exception as e:
+                        print(f"Error in synchronous recalculation in order_update: {e}")
                 else:
                     print("UPDATE - Formset errors:", formset.errors)
                     messages.warning(request, 'تم تحديث الطلب ولكن هناك أخطاء في عناصر الطلب.')

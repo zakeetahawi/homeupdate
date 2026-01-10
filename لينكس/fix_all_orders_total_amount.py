@@ -51,18 +51,21 @@ def fix_all_orders():
             total_discount = Decimal('0')
             
             for item in order.items.all():
-                item_total = item.quantity * item.unit_price
+                # التحقق من صحة القيم
+                qty = Decimal(str(item.quantity or 0))
+                price = Decimal(str(item.unit_price or 0))
+                item_total = qty * price
                 total_before_discount += item_total
                 
                 # التحقق من وجود نسبة خصم وإصلاح مبلغ الخصم إذا لزم
-                discount_pct = item.discount_percentage or Decimal('0')
-                old_discount_amt = item.discount_amount or Decimal('0')
+                discount_pct = Decimal(str(item.discount_percentage or 0))
+                old_discount_amt = Decimal(str(item.discount_amount or 0))
                 
-                if discount_pct and discount_pct > 0:
+                if discount_pct > 0:
                     # حساب مبلغ الخصم الصحيح
                     expected_discount = (item_total * discount_pct) / 100
                     
-                    if old_discount_amt != expected_discount:
+                    if abs(old_discount_amt - expected_discount) > Decimal('0.01'):
                         print(f"   🔧 إصلاح خصم العنصر: {item.product.name}")
                         print(f"      نسبة الخصم: {discount_pct}%")
                         print(f"      مبلغ الخصم القديم: {old_discount_amt}")
@@ -77,7 +80,7 @@ def fix_all_orders():
                     total_discount += expected_discount
                 else:
                     # إذا لم يكن هناك نسبة خصم ولكن يوجد مبلغ خصم، نصفره
-                    if old_discount_amt and old_discount_amt > 0:
+                    if old_discount_amt > 0:
                         print(f"   🔧 تصفير خصم غير صحيح للعنصر: {item.product.name}")
                         item.discount_amount = Decimal('0')
                         item.save(update_fields=['discount_amount'])
@@ -88,33 +91,25 @@ def fix_all_orders():
                 print(f"   ✅ تم إصلاح {items_discount_fixed} عنصر من الخصومات")
                 discount_fixed_count += 1
             
-            # التحقق من وجود فرق في total_amount
-            if order.total_amount != total_before_discount:
-                difference = total_before_discount - order.total_amount
-                print(f"   ⚠️  يوجد فرق في المبلغ الإجمالي: {difference} ج.م")
-                print(f"      القديم: {order.total_amount} ج.م")
-                print(f"      الجديد: {total_before_discount} ج.م")
-                
-                # تحديث
-                order.total_amount = total_before_discount
-                order_modified = True
+            # استخدام ميثود الموديل لإعادة الحساب بشكل نهائي
+            old_total_amount = Decimal(str(order.total_amount or 0))
+            old_final_price = Decimal(str(order.final_price or 0))
             
-            # تحديث السعر النهائي بعد الخصم
-            final_price = total_before_discount - total_discount
-            old_final_price = order.final_price or Decimal('0')
+            # استدعاء الميثود التي قمنا بتصحيحها في الموديل
+            order.calculate_final_price(force_update=True)
             
-            if old_final_price != final_price:
-                print(f"   💰 تحديث السعر النهائي:")
-                print(f"      القديم: {old_final_price} ج.م")
-                print(f"      الجديد: {final_price} ج.م")
-                print(f"      الخصم: {total_discount} ج.م")
-                order.final_price = final_price
+            new_total_amount = Decimal(str(order.total_amount or 0))
+            new_final_price = Decimal(str(order.final_price or 0))
+            
+            if abs(new_total_amount - old_total_amount) > Decimal('0.01') or abs(new_final_price - old_final_price) > Decimal('0.01'):
                 order_modified = True
             
             # حفظ التغييرات إذا وجدت
             if order_modified:
                 order.save(update_fields=['total_amount', 'final_price'])
                 print(f"   ✅ تم تحديث الطلب بنجاح!")
+                print(f"      total_amount: {old_total_amount} -> {order.total_amount}")
+                print(f"      final_price: {old_final_price} -> {order.final_price} (يشمل إضافات: {order.financial_addition or 0})")
                 fixed_count += 1
             else:
                 print(f"   ✓ الطلب صحيح (المبلغ: {order.total_amount} ج.م، النهائي: {order.final_price} ج.م)")
@@ -123,7 +118,9 @@ def fix_all_orders():
             print()
             
         except Exception as e:
-            print(f"   ❌ حدث خطأ: {e}")
+            print(f"   ❌ حدث خطأ في الطلب {order.order_number}: {e}")
+            import traceback
+            traceback.print_exc()
             error_count += 1
             print()
     
@@ -144,14 +141,7 @@ if __name__ == '__main__':
     print("=" * 80)
     print()
     
-    # تأكيد من المستخدم
-    response = input("⚠️  هل أنت متأكد من تحديث جميع الطلبات؟ (نعم/لا): ")
-    
-    if response.strip().lower() in ['نعم', 'yes', 'y']:
-        print()
-        fix_all_orders()
-    else:
-        print("\n❌ تم إلغاء العملية")
+    fix_all_orders()
     
     print()
 

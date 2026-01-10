@@ -36,7 +36,7 @@
                         <i class="fas fa-plus me-1"></i> تسجيل دفعة
                     </button>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#advanceModal">
-                        <i class="fas fa-hand-holding-usd me-1"></i> تسجيل سلفة
+                        <i class="fas fa-hand-holding-usd me-1"></i> تسجيل عربون
                     </button>
                 </div>
             </div>
@@ -76,7 +76,7 @@
         <div class="col-md-3 mb-3">
             <div class="card bg-warning text-dark h-100">
                 <div class="card-body text-center">
-                    <h6 class="text-dark-50">السلف المتاحة</h6>
+                    <h6 class="text-dark-50">العربونات المتاحة</h6>
                     <h3 class="mb-0">{{ summary.remaining_advances|floatformat:2 }} {{ currency_symbol }}</h3>
                     <small>من {{ summary.total_advances|floatformat:2 }} {{ currency_symbol }}</small>
                 </div>
@@ -85,13 +85,13 @@
     </div>
 
     <div class="row">
-        <!-- السلف النشطة -->
+        <!-- العربونات النشط -->
         <div class="col-lg-6 mb-4">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-hand-holding-usd me-2 text-warning"></i>
-                        السلف النشطة
+                        العربونات النشط
                     </h5>
                     <a href="{% url 'accounting:customer_advances' customer.pk %}" class="btn btn-sm btn-outline-warning">
                         عرض الكل
@@ -119,7 +119,7 @@
                                 {% empty %}
                                 <tr>
                                     <td colspan="4" class="text-center text-muted py-3">
-                                        لا توجد سلف نشطة
+                                        لا توجد عربونات نشط
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -288,7 +288,7 @@
     </div>
 </div>
 
-<!-- Modal تسجيل سلفة -->
+<!-- Modal تسجيل عربون -->
 <div class="modal fade" id="advanceModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -297,7 +297,7 @@
                 <div class="modal-header">
                     <h5 class="modal-title">
                         <i class="fas fa-hand-holding-usd me-2"></i>
-                        تسجيل سلفة جديدة
+                        تسجيل عربون جديد
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
@@ -326,7 +326,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-check me-1"></i> تسجيل السلفة
+                        <i class="fas fa-check me-1"></i> تسجيل العربوناتة
                     </button>
                 </div>
             </form>

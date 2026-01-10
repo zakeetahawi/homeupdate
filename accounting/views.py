@@ -375,7 +375,7 @@ def transaction_print(request, pk):
 @login_required
 def advance_list(request):
     """
-    قائمة السلف
+    قائمة العربونات
     """
     advances = CustomerAdvance.objects.all().select_related(
         'customer', 'created_by'
@@ -414,7 +414,7 @@ def advance_list(request):
 @login_required
 def advance_create(request):
     """
-    إنشاء سلفة جديدة
+    إنشاء عربون جديد
     """
     customer_id = request.GET.get('customer')
     initial_customer = None
@@ -433,7 +433,7 @@ def advance_create(request):
             advance.created_by = request.user
             advance.save()
             
-            messages.success(request, 'تم تسجيل السلفة بنجاح')
+            messages.success(request, 'تم تسجيل العربون بنجاح')
             return redirect('accounting:advance_detail', pk=advance.pk)
     else:
         form = CustomerAdvanceForm(customer=initial_customer)
@@ -449,14 +449,14 @@ def advance_create(request):
 @login_required
 def advance_detail(request, pk):
     """
-    تفاصيل السلفة
+    تفاصيل العربون
     """
     advance = get_object_or_404(
         CustomerAdvance.objects.select_related('customer', 'created_by', 'transaction'),
         pk=pk
     )
     
-    # استخدامات السلفة
+    # استخدامات العربون
     usages = advance.usages.select_related('order', 'created_by').order_by('-created_at')
     
     context = {
@@ -470,7 +470,7 @@ def advance_detail(request, pk):
 @login_required
 def advance_use(request, pk):
     """
-    استخدام السلفة على طلب
+    استخدام العربون على طلب
     """
     advance = get_object_or_404(CustomerAdvance, pk=pk, status='active')
     
@@ -485,9 +485,9 @@ def advance_use(request, pk):
                 order = Order.objects.get(pk=order_id, customer=advance.customer)
                 
                 if advance.use_for_order(order, amount, request.user):
-                    messages.success(request, f'تم استخدام {amount} من السلفة للطلب {order.order_number}')
+                    messages.success(request, f'تم استخدام {amount} من العربون للطلب {order.order_number}')
                 else:
-                    messages.error(request, 'فشل استخدام السلفة')
+                    messages.error(request, 'فشل استخدام العربون')
             except Order.DoesNotExist:
                 messages.error(request, 'الطلب غير موجود')
         else:
@@ -576,7 +576,7 @@ def customer_statement(request, customer_id):
 @login_required
 def customer_advances(request, customer_id):
     """
-    سلف العميل
+    عربون العميل
     """
     try:
         from customers.models import Customer
@@ -698,7 +698,7 @@ def register_customer_advance(request, customer_id):
                 created_by=request.user,
                 status='active'
             )
-            messages.success(request, f'تم تسجيل السلفة بنجاح - المبلغ: {advance.amount}')
+            messages.success(request, f'تم تسجيل العربون بنجاح - المبلغ: {advance.amount}')
         else:
             messages.error(request, 'بيانات غير صحيحة')
     
@@ -900,7 +900,7 @@ def daily_transactions_report(request):
 @login_required
 def advances_report(request):
     """
-    تقرير السلف
+    تقرير العربون
     """
     advances = CustomerAdvance.objects.select_related(
         'customer'

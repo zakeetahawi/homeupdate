@@ -891,22 +891,17 @@ def order_item_post_save(sender, instance, created, **kwargs):
     """معالج حفظ عنصر الطلب"""
     if created:
         # تحديث المبلغ الإجمالي للطلب (للطلبات الجديدة فقط)
-        # Force recalculation to ensure stored final_price matches items
         try:
+            # Force recalculation to ensure stored final_price matches items
             instance.order.calculate_final_price(force_update=True)
-            # تحديث مباشر في قاعدة البيانات لتجنب التكرار الذاتي
-            instance.order._is_auto_update = True  # تمييز التحديث التلقائي
+            # تحديث مباشر في قاعدة البيانات لضمان دقة الأرقام فوراً
+            instance.order._is_auto_update = True  
             Order.objects.filter(pk=instance.order.pk).update(
                 final_price=instance.order.final_price,
-                total_amount=instance.order.final_price
+                total_amount=instance.order.total_amount
             )
-        except Exception:
-            # As a fallback, schedule async calculation
-            try:
-                from .tasks import calculate_order_totals_async
-                calculate_order_totals_async.delay(instance.order.pk)
-            except Exception:
-                pass
+        except Exception as e:
+            logger.error(f"Error in synchronous recalculation for order {instance.order.id}: {e}")
         # لا نسجل تعديلات عند الإنشاء الأولي
         return
     else:
@@ -1049,31 +1044,16 @@ def order_item_post_save(sender, instance, created, **kwargs):
                         }]
                     }
                 )
-            # بعد تسجيل التعديل، نعيد حساب إجماليات الطلب ونحدث الحقول المخزنة فوراً
+            # بعد تسجيل التعديل، نعيد حساب إجماليات الطلب ونحدث الحقول المخزنة فوراً بشكل متزامن
             try:
-                # لا نغيّر الأسعار إذا كان الطلب مدفوعًا بالفعل إلا إذا طُلب صراحة
-                allow_force = getattr(instance, '_force_price_update', False)
-                if float(getattr(instance.order, 'paid_amount', 0)) == 0 or allow_force:
-                    instance.order.calculate_final_price(force_update=True)
-                    instance.order._is_auto_update = True
-                    Order.objects.filter(pk=instance.order.pk).update(
-                        final_price=instance.order.final_price,
-                        total_amount=instance.order.final_price
-                    )
-                else:
-                    # إذا كان هناك دفعات، نجدد عبر مهمة خلفية لتجنب تغيير أسعار مدفوعة دون سجل
-                    try:
-                        from .tasks import calculate_order_totals_async
-                        calculate_order_totals_async.delay(instance.order.pk)
-                    except Exception:
-                        pass
-            except Exception:
-                # كاحتياط، حاول جدولة المهمة الخلفية
-                try:
-                    from .tasks import calculate_order_totals_async
-                    calculate_order_totals_async.delay(instance.order.pk)
-                except Exception:
-                    pass
+                instance.order.calculate_final_price(force_update=True)
+                instance.order._is_auto_update = True
+                Order.objects.filter(pk=instance.order.pk).update(
+                    final_price=instance.order.final_price,
+                    total_amount=instance.order.total_amount
+                )
+            except Exception as e:
+                logger.error(f"Error in synchronous update recalculation for order {instance.order.id}: {e}")
 
 @receiver(post_save, sender=Payment)
 def payment_post_save(sender, instance, created, **kwargs):
@@ -1299,6 +1279,17 @@ def log_order_item_deletion(sender, instance, **kwargs):
             notes=f'تم حذف عنصر: {instance.product.name} (الكمية: {instance.quantity}، السعر: {instance.unit_price})',
             field_name='عناصر الطلب'
         )
+        
+        # إعادة حساب إجماليات الطلب بعد الحذف لضمان دقة الأرقام
+        try:
+            instance.order.calculate_final_price(force_update=True)
+            instance.order._is_auto_update = True
+            Order.objects.filter(pk=instance.order.pk).update(
+                final_price=instance.order.final_price,
+                total_amount=instance.order.total_amount
+            )
+        except Exception as e:
+            logger.error(f"Error in recalculation after deletion for order {instance.order.id}: {e}")
     except Exception as e:
         # تجاهل الأخطاء بصمت إذا كان الطلب قيد الحذف
         pass

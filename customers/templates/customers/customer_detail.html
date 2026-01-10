@@ -894,7 +894,7 @@
                             <div class="col-md-3">
                                 <div class="card bg-warning text-dark h-100">
                                     <div class="card-body text-center">
-                                        <h6>السلف المتاحة</h6>
+                                        <h6>العربونات المتاحة</h6>
                                         <h4 class="mb-0">${data.available_advances.toLocaleString('ar-SA', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
                                         <small>من ${data.total_advances.toLocaleString('ar-SA', {minimumFractionDigits: 2})} ${currencySymbol}</small>
                                     </div>
@@ -909,7 +909,7 @@
                                 <i class="fas fa-money-bill me-2"></i>تسجيل دفعة
                             </button>
                             <button type="button" class="btn btn-warning ms-2" data-bs-toggle="modal" data-bs-target="#quickAdvanceModal">
-                                <i class="fas fa-hand-holding-usd me-2"></i>تسجيل سلفة
+                                <i class="fas fa-hand-holding-usd me-2"></i>تسجيل عربون
                             </button>
                         </div>
                     `;
@@ -1323,7 +1323,7 @@
     </div>
 </div>
 
-<!-- Modal تسجيل سلفة سريعة -->
+<!-- Modal تسجيل عربون سريعة -->
 <div class="modal fade" id="quickAdvanceModal" tabindex="-1" aria-labelledby="quickAdvanceModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1332,7 +1332,7 @@
                 <div class="modal-header bg-warning">
                     <h5 class="modal-title" id="quickAdvanceModalLabel">
                         <i class="fas fa-hand-holding-usd me-2"></i>
-                        تسجيل سلفة جديدة
+                        تسجيل عربون جديدة
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -1366,7 +1366,7 @@
                         <i class="fas fa-times me-1"></i>إلغاء
                     </button>
                     <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-check me-1"></i>تسجيل السلفة
+                        <i class="fas fa-check me-1"></i>تسجيل العربون
                     </button>
                 </div>
             </form>

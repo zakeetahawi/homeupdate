@@ -496,15 +496,18 @@ def wizard_step_1_basic_info(request, draft):
     
     total_steps = get_total_steps(draft)
     
-    # التحقق من وضع التعديل
-    editing_order_id = request.session.get('editing_order_id')
-    editing_mode = editing_order_id is not None
-    editing_order = None
-    if editing_mode:
-        try:
-            editing_order = Order.objects.get(pk=editing_order_id)
-        except Order.DoesNotExist:
-            pass
+    # التحقق من وضع التعديل - الأولوية لرابط الطلب في المسودة
+    editing_order = draft.original_order
+    editing_mode = editing_order is not None
+    
+    if not editing_mode:
+        editing_order_id = request.session.get('editing_order_id')
+        if editing_order_id:
+            try:
+                editing_order = Order.objects.get(pk=editing_order_id)
+                editing_mode = True
+            except Order.DoesNotExist:
+                pass
     
     # الحصول على العميل المحدد لاستخدامه في Select2
     selected_customer = None
@@ -1251,13 +1254,23 @@ def wizard_finalize(request):
                 'message': 'يجب إضافة عنصر واحد على الأقل'
             }, status=400)
         
-        # التحقق من وضع التعديل
-        editing_order_id = request.session.get('editing_order_id')
+        # التحقق من وضع التعديل - الأولوية لرابط الطلب الأصلي في المسودة
+        order = draft.original_order
+        is_editing = order is not None
         
-        if editing_order_id:
+        # إذا لم يوجد رابط مباشر، نحاول من الجلسة (للتوافق القديم)
+        if not order:
+            editing_order_id = request.session.get('editing_order_id')
+            if editing_order_id:
+                try:
+                    order = Order.objects.get(pk=editing_order_id)
+                    is_editing = True
+                except Order.DoesNotExist:
+                    order = None
+        
+        if is_editing and order:
             # وضع التعديل - تحديث الطلب الموجود
             try:
-                order = Order.objects.get(pk=editing_order_id)
                 
                 # ⚡ تحديث الحقول مباشرة
                 order.customer = draft.customer
@@ -1278,8 +1291,12 @@ def wizard_finalize(request):
                 order.total_amount = draft.subtotal
                 order.final_price = draft.final_total
                 order.paid_amount = draft.paid_amount
-                order.financial_addition = Decimal('0.00')
-                order.used_customer_balance = Decimal('0.00')
+                
+                # حفظ الإضافات المالية والرصيد المستخدم إذا كانت موجودة، وإلا تعيينها كصفر
+                if order.financial_addition is None:
+                    order.financial_addition = Decimal('0.00')
+                if order.used_customer_balance is None:
+                    order.used_customer_balance = Decimal('0.00')
                 
                 # تحديث الملفات إذا لزم الأمر
                 if draft.contract_file:
@@ -1394,11 +1411,23 @@ def wizard_finalize(request):
                 
                 if order_items_to_create:
                     OrderItem.objects.bulk_create(order_items_to_create, batch_size=200)
-                    
-                    # ⚡ تحديث Order triggering signals - هام لإنشاء أوامر التقطيع
-                    # bulk_create لا يطلق signals، لذلك نحتاج لحفظ الطلب يدوياً
-                    # لإطلاق signal create_cutting_orders_on_order_save
-                    order.save()
+                
+                # ⚡ إعادة حساب إجماليات الطلب فوراً لضمان الدقة (خاصة وأن عمليات bulk تتخطى signals)
+                try:
+                    order.calculate_final_price(force_update=True)
+                    # حفظ القيم النهائية في قاعدة البيانات
+                    Order.objects.filter(pk=order.pk).update(
+                        final_price=order.final_price,
+                        total_amount=order.total_amount
+                    )
+                    print(f"✅ [wizard] تم إعادة حساب الإجماليات للطلب {order.order_number}: {order.final_price}")
+                except Exception as e:
+                    print(f"❌ [wizard] خطأ في إعادة الحساب: {e}")
+                    logger.error(f"❌ خطأ في إعادة حساب إجماليات الطلب {order.id} في الويزارد: {e}")
+
+                # ⚡ تحديث Order triggering signals - هام لإنشاء أوامر التقطيع
+                # لإطلاق signal create_cutting_orders_on_order_save
+                order.save()
 
                 
                 # 5. مزامنة أوامر التصنيع والتقطيع للعناصر المحدثة
@@ -1568,9 +1597,9 @@ def wizard_finalize(request):
                     transaction.on_commit(regenerate_contract)
 
             except Order.DoesNotExist:
-                editing_order_id = None  # إنشاء طلب جديد
+                order = None  # إنشاء طلب جديد
         
-        if not editing_order_id:
+        if not order:
             # ⚡ وضع الإنشاء - إنشاء طلب جديد بأقل عمليات ممكنة
             order = Order.objects.create(
                 customer=draft.customer,
@@ -1706,7 +1735,7 @@ def wizard_finalize(request):
         
         return JsonResponse({
             'success': True,
-            'message': 'تم إنشاء الطلب بنجاح' if not editing_order_id else 'تم حفظ الطلب بنجاح',
+            'message': 'تم حفظ الطلب بنجاح' if is_editing else 'تم إنشاء الطلب بنجاح',
             'order_id': order.pk,
             'order_number': order.order_number,
             'redirect_url': f'/orders/order/{order.order_number}/'
@@ -2633,6 +2662,7 @@ def _create_draft_from_order(order, user):
         created_by=user,
         customer=order.customer,
         branch=order.branch,
+        original_order=order,
         salesperson=order.salesperson,
         status=order.status,
         selected_type=order.get_selected_types_list()[0] if order.get_selected_types_list() else None,

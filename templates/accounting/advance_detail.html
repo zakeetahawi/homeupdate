@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}تفاصيل السلفة - {{ advance.advance_number }}{% endblock %}
+{% block title %}تفاصيل العربوناتة - {{ advance.advance_number }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -10,7 +10,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">المحاسبة</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'accounting:advance_list' %}">السلف</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'accounting:advance_list' %}">العربونات</a></li>
                     <li class="breadcrumb-item active">{{ advance.advance_number }}</li>
                 </ol>
             </nav>
@@ -22,21 +22,21 @@
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h2 class="mb-0">
                     <i class="fas fa-hand-holding-usd me-2"></i>
-                    سلفة رقم: {{ advance.advance_number }}
+                    عربون رقم: {{ advance.advance_number }}
                     {% if advance.status == 'active' %}
-                    <span class="badge bg-success">نشطة</span>
+                    <span class="badge bg-success">نشط</span>
                     {% elif advance.status == 'partially_used' %}
-                    <span class="badge bg-warning">مستخدمة جزئياً</span>
+                    <span class="badge bg-warning">مستخدم جزئياً</span>
                     {% elif advance.status == 'fully_used' %}
-                    <span class="badge bg-secondary">مستخدمة بالكامل</span>
+                    <span class="badge bg-secondary">مستخدم بالكامل</span>
                     {% else %}
-                    <span class="badge bg-danger">ملغية</span>
+                    <span class="badge bg-danger">ملغى</span>
                     {% endif %}
                 </h2>
                 <div>
                     {% if advance.status == 'active' and advance.remaining_amount > 0 %}
                     <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#useAdvanceModal">
-                        <i class="fas fa-check me-1"></i> استخدام السلفة
+                        <i class="fas fa-check me-1"></i> استخدام العربون
                     </button>
                     {% endif %}
                     <button onclick="window.print()" class="btn btn-outline-secondary">
@@ -48,19 +48,19 @@
     </div>
 
     <div class="row">
-        <!-- معلومات السلفة -->
+        <!-- معلومات العربون -->
         <div class="col-lg-6 mb-4">
             <div class="card h-100">
                 <div class="card-header">
                     <h5 class="mb-0">
                         <i class="fas fa-info-circle me-2"></i>
-                        معلومات السلفة
+                        معلومات العربون
                     </h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-borderless mb-0">
                         <tr>
-                            <th width="40%">رقم السلفة:</th>
+                            <th width="40%">رقم العربون:</th>
                             <td>{{ advance.advance_number }}</td>
                         </tr>
                         <tr>
@@ -160,7 +160,7 @@
                 <div class="card-header">
                     <h5 class="mb-0">
                         <i class="fas fa-history me-2"></i>
-                        سجل استخدام السلفة
+                        سجل استخدام العربون
                     </h5>
                 </div>
                 <div class="card-body p-0">
@@ -195,7 +195,7 @@
                                 {% empty %}
                                 <tr>
                                     <td colspan="5" class="text-center py-4 text-muted">
-                                        لم يتم استخدام السلفة بعد
+                                        لم يتم استخدام العربون بعد
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -208,7 +208,7 @@
     </div>
 </div>
 
-<!-- Modal استخدام السلفة -->
+<!-- Modal استخدام العربون -->
 {% if advance.status == 'active' and advance.remaining_amount > 0 %}
 <div class="modal fade" id="useAdvanceModal" tabindex="-1">
     <div class="modal-dialog">
@@ -218,13 +218,13 @@
                 <div class="modal-header">
                     <h5 class="modal-title">
                         <i class="fas fa-check me-2"></i>
-                        استخدام السلفة
+                        استخدام العربون
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info">
-                        <strong>المتبقي من السلفة:</strong> {{ advance.remaining_amount|floatformat:2 }} {{ currency_symbol }}
+                        <strong>المتبقي من العربون:</strong> {{ advance.remaining_amount|floatformat:2 }} {{ currency_symbol }}
                     </div>
                     
                     <div class="mb-3">

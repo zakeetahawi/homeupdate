@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if advance %}تعديل سلفة{% else %}سلفة جديدة{% endif %}{% endblock %}
+{% block title %}{% if advance %}تعديل عربون{% else %}عربون جديد{% endif %}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -10,8 +10,8 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">المحاسبة</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'accounting:advance_list' %}">السلف</a></li>
-                    <li class="breadcrumb-item active">{% if advance %}تعديل{% else %}سلفة جديدة{% endif %}</li>
+                    <li class="breadcrumb-item"><a href="{% url 'accounting:advance_list' %}">العربونات</a></li>
+                    <li class="breadcrumb-item active">{% if advance %}تعديل{% else %}عربون جديد{% endif %}</li>
                 </ol>
             </nav>
         </div>
@@ -21,7 +21,7 @@
         <div class="col-12">
             <h2 class="mb-0">
                 <i class="fas fa-hand-holding-usd me-2"></i>
-                {% if advance %}تعديل سلفة{% else %}تسجيل سلفة جديدة{% endif %}
+                {% if advance %}تعديل عربون{% else %}تسجيل عربون جديد{% endif %}
             </h2>
         </div>
     </div>
@@ -36,7 +36,7 @@
                         {% if customer %}
                         <div class="alert alert-info">
                             <i class="fas fa-user me-2"></i>
-                            سلفة للعميل: <strong>{{ customer.name }}</strong>
+                            عربون للعميل: <strong>{{ customer.name }}</strong>
                         </div>
                         <input type="hidden" name="customer" value="{{ customer.pk }}">
                         {% else %}
@@ -104,7 +104,7 @@
                         
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-success">
-                                <i class="fas fa-check me-1"></i> حفظ السلفة
+                                <i class="fas fa-check me-1"></i> حفظ العربون
                             </button>
                             <a href="{% url 'accounting:advance_list' %}" class="btn btn-outline-secondary">
                                 <i class="fas fa-times me-1"></i> إلغاء
@@ -125,13 +125,13 @@
                 </div>
                 <div class="card-body">
                     <p class="small text-muted mb-2">
-                        <strong>السلفة:</strong> هي مبلغ يدفعه العميل مقدماً قبل تنفيذ الطلب.
+                        <strong>العربوناتة:</strong> هي مبلغ يدفعه العميل مقدماً قبل تنفيذ الطلب.
                     </p>
                     <p class="small text-muted mb-2">
-                        <strong>استخدام السلفة:</strong> يمكن خصم السلفة من أي طلب للعميل لاحقاً.
+                        <strong>استخدام العربون:</strong> يمكن خصم العربوناتة من أي طلب للعميل لاحقاً.
                     </p>
                     <p class="small text-muted mb-0">
-                        <strong>الإلغاء:</strong> يمكن إلغاء السلفة قبل استخدامها وإرجاع المبلغ للعميل.
+                        <strong>الإلغاء:</strong> يمكن إلغاء العربوناتة قبل استخدامها وإرجاع المبلغ للعميل.
                     </p>
                 </div>
             </div>

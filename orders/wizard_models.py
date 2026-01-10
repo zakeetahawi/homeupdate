@@ -103,6 +103,14 @@ class DraftOrder(models.Model):
         blank=True,
         verbose_name='الفرع'
     )
+    original_order = models.ForeignKey(
+        'orders.Order',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='edit_drafts',
+        verbose_name='الطلب الأصلي المراد تعديله'
+    )
     salesperson = models.ForeignKey(
         'accounts.Salesperson',
         on_delete=models.SET_NULL,

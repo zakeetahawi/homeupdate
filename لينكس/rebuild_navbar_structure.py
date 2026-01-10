@@ -336,7 +336,7 @@ def cleanup_and_create_navbar_units():
         {
             'parent_code': 'accounting',
             'code': 'accounting_advances',
-            'name': 'سلف العملاء',
+            'name': 'عربونات العملاء',
             'url_name': '/accounting/advances/',
             'icon': 'fa-hand-holding-usd',
             'order': 4,
