@@ -1174,6 +1174,16 @@
                     <i class="fas fa-chevron-down hf-chevron"></i>
                 </button>
 
+                <!-- 6. Fabric Status Filter Button -->
+                <button type="button" class="hf-filter-btn {% if fabric_status %}has-selection{% endif %}" data-filter="fabricstatus" id="fabricstatusBtn">
+                    <i class="fas fa-box"></i>
+                    <span>حالة القماش</span>
+                    {% if fabric_status %}
+                    <span class="hf-badge">1</span>
+                    {% endif %}
+                    <i class="fas fa-chevron-down hf-chevron"></i>
+                </button>
+
                 <!-- Inline Search Box -->
                 <div class="hf-inline-search">
                     <i class="fas fa-search search-icon"></i>
@@ -1216,7 +1226,7 @@
                         <i class="fas fa-check"></i>
                         تطبيق
                     </button>
-                    {% if status_filters or search_query or date_from or date_to or branch_filters or order_type_filters or production_line_filters or overdue_filter == 'true' or selected_year or selected_month %}
+                    {% if status_filters or search_query or date_from or date_to or branch_filters or order_type_filters or production_line_filters or fabric_status or overdue_filter == 'true' or selected_year or selected_month %}
                     <button type="button" class="hf-clear-btn" id="clearFiltersBtn">
                         <i class="fas fa-times"></i>
                         مسح الكل
@@ -1378,6 +1388,38 @@
                             {{ line.name }}
                         </label>
                         {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fabric Status Dropdown -->
+            <div class="hf-dropdown-panel" id="fabricstatusDropdown">
+                <div class="hf-dropdown-content">
+                    <div class="hf-dropdown-header">
+                        <span class="hf-dropdown-title"><i class="fas fa-box"></i> حالة القماش</span>
+                        <button type="button" class="hf-dropdown-close" data-close-dropdown><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="hf-checkbox-grid">
+                        <label class="hf-checkbox-item {% if fabric_status == 'needs_receipt' %}selected{% endif %}">
+                            <input type="radio" name="fabric_status" value="needs_receipt" class="auto-submit-filter" {% if fabric_status == 'needs_receipt' %}checked{% endif %}>
+                            بحاجة استلام
+                        </label>
+                        <label class="hf-checkbox-item {% if fabric_status == 'complete' %}selected{% endif %}">
+                            <input type="radio" name="fabric_status" value="complete" class="auto-submit-filter" {% if fabric_status == 'complete' %}checked{% endif %}>
+                            قماش كامل
+                        </label>
+                        <label class="hf-checkbox-item {% if fabric_status == 'partial' %}selected{% endif %}">
+                            <input type="radio" name="fabric_status" value="partial" class="auto-submit-filter" {% if fabric_status == 'partial' %}checked{% endif %}>
+                            ناقص
+                        </label>
+                        <label class="hf-checkbox-item {% if fabric_status == 'not_cut' %}selected{% endif %}">
+                            <input type="radio" name="fabric_status" value="not_cut" class="auto-submit-filter" {% if fabric_status == 'not_cut' %}checked{% endif %}>
+                            غير مقطوع
+                        </label>
+                        <label class="hf-checkbox-item">
+                            <input type="radio" name="fabric_status" value="" class="auto-submit-filter" {% if not fabric_status %}checked{% endif %}>
+                            الكل
+                        </label>
                     </div>
                 </div>
             </div>

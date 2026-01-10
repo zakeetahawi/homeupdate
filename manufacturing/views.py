@@ -98,16 +98,26 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
     
     def get_queryset(self):
         from core.monthly_filter_utils import apply_monthly_filter
+        from django.db.models import Case, When, F, Value
+        from django.db.models.functions import Coalesce
 
         # Optimize the query by selecting related fields that exist
         queryset = ManufacturingOrder.objects.select_related(
             'order',  # This is the only direct foreign key in the model
             'order__customer',  # Access customer through order
             'production_line'  # Production line information
-        ).order_by('expected_delivery_date', 'order_date')
+        )
         
         # استثناء طلبات المنتجات (products) من أوامر التصنيع - لا يجب أن تظهر هنا أبداً
         queryset = queryset.exclude(order__selected_types__contains=['products'])
+
+        # استثناء طلبات التعديل افتراضياً (إلا إذا تم اختيارها يدوياً في فلتر نوع الطلب)
+        order_type_filters = self.request.GET.getlist('order_type')
+        order_type_filters = [f for f in order_type_filters if f and f.strip()]
+        
+        # إذا لم يكن هناك فلتر يدوي لنوع الطلب، استثني طلبات التعديل
+        if not order_type_filters:
+            queryset = queryset.exclude(order_type='modification')
 
         # تطبيق الفلترة الشهرية (بناءً على تاريخ الطلب)
         queryset, self.monthly_filter_context = apply_monthly_filter(queryset, self.request, 'order_date')
@@ -140,8 +150,8 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
                 queryset = queryset.filter(branch_query)
 
         # فلتر أنواع الطلبات (اختيار متعدد)
-        order_type_filters = self.request.GET.getlist('order_type')
-        order_type_filters = [f for f in order_type_filters if f and f.strip()]
+        # ملاحظة: تم نقل هذا الكود للأعلى قبل الفلترة الشهرية لاستخدامه في استثناء طلبات التعديل
+        # order_type_filters تم تعريفه بالفعل في الأعلى
         
         if order_type_filters:
             queryset = queryset.filter(order_type__in=order_type_filters)
@@ -173,6 +183,47 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
                 status__in=['pending_approval', 'pending', 'in_progress'],
                 order_type__in=['installation', 'custom', 'delivery']
             )
+
+        # فلتر حالة الأقمشة للعناصر
+        fabric_status_filter = self.request.GET.get('fabric_status')
+        if fabric_status_filter:
+            from django.db.models import Count, Q, Exists, OuterRef
+            from manufacturing.models import ManufacturingOrderItem
+            
+            if fabric_status_filter == 'needs_receipt':
+                # بحاجة استلام: لديه عناصر غير مستلمة
+                queryset = queryset.filter(
+                    Exists(
+                        ManufacturingOrderItem.objects.filter(
+                            manufacturing_order=OuterRef('pk'),
+                            fabric_received=False
+                        )
+                    )
+                )
+            elif fabric_status_filter == 'complete':
+                # قماش كامل: جميع العناصر مستلمة
+                queryset = queryset.annotate(
+                    total_items=Count('items'),
+                    received_items=Count('items', filter=Q(items__fabric_received=True))
+                ).filter(
+                    total_items__gt=0,
+                    total_items=F('received_items')
+                )
+            elif fabric_status_filter == 'partial':
+                # ناقص: بعض العناصر مستلمة وبعضها لا
+                queryset = queryset.annotate(
+                    total_items=Count('items'),
+                    received_items=Count('items', filter=Q(items__fabric_received=True))
+                ).filter(
+                    total_items__gt=0,
+                    received_items__gt=0,
+                    received_items__lt=F('total_items')
+                )
+            elif fabric_status_filter == 'not_cut':
+                # غير مقطوع: لا يوجد عناصر تصنيع أصلاً
+                queryset = queryset.annotate(
+                    total_items=Count('items')
+                ).filter(total_items=0)
 
         # البحث النصي مع اختيار أعمدة البحث
         search = self.request.GET.get('search')
@@ -255,9 +306,25 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
                     sort_field = f'-{sort_field}'
                 queryset = queryset.order_by(sort_field)
             else:
-                queryset = queryset.order_by('expected_delivery_date', 'order_date')
+                # الترتيب الافتراضي عند عدم تحديد عمود
+                from django.db.models import Case, When, Value, IntegerField
+                queryset = queryset.annotate(
+                    priority=Case(
+                        When(status__in=['pending_approval', 'pending', 'in_progress'], then=Value(1)),
+                        default=Value(2),
+                        output_field=IntegerField()
+                    )
+                ).order_by('priority', 'expected_delivery_date', 'order_date')
         else:
-            queryset = queryset.order_by('expected_delivery_date', 'order_date')
+            # الترتيب الافتراضي: الطلبات النشطة أولاً ثم حسب تاريخ التسليم
+            from django.db.models import Case, When, Value, IntegerField
+            queryset = queryset.annotate(
+                priority=Case(
+                    When(status__in=['pending_approval', 'pending', 'in_progress'], then=Value(1)),
+                    default=Value(2),
+                    output_field=IntegerField()
+                )
+            ).order_by('priority', 'expected_delivery_date', 'order_date')
 
         return queryset
 
@@ -322,6 +389,7 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
             'salesperson',      # فلتر البائع
             'branch',           # فلتر الفرع
             'production_line',  # فلتر خط الإنتاج
+            'fabric_status',    # فلتر حالة القماش
             'contract_number',  # رقم العقد
             'invoice_number',   # رقم الفاتورة
         ]
@@ -362,6 +430,7 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
             'order_type_filters': self.request.GET.getlist('order_type'),
             'production_line_filters': self.request.GET.getlist('production_line'),
             'overdue_filter': self.request.GET.get('overdue', ''),
+            'fabric_status': self.request.GET.get('fabric_status', ''),
             'search_query': self.request.GET.get('search', ''),
             'search_columns': self.request.GET.getlist('search_columns'),
             'date_from': self.request.GET.get('date_from', ''),
