@@ -330,9 +330,16 @@ def order_detail(request, pk):
     # Compute totals from items (use on-the-fly values to avoid inconsistencies)
     try:
         from decimal import Decimal
+        from .models import OrderItem
+        import logging
+        logger = logging.getLogger(__name__)
+        
         subtotal = Decimal('0')
         total_discount = Decimal('0')
-        for it in order_items:
+        
+        # Use direct query to bypass relationship caching
+        items_to_calc = OrderItem.objects.filter(order=order)
+        for it in items_to_calc:
             # حساب المجموع قبل الخصم (quantity * unit_price)
             item_subtotal = Decimal(str(it.quantity)) * Decimal(str(it.unit_price))
             subtotal += item_subtotal
@@ -348,7 +355,10 @@ def order_detail(request, pk):
         # remaining amount should be what remains to pay from the final after-discount total
         paid = Decimal(str(order.paid_amount or 0))
         context['computed_remaining_amount'] = final_after - paid - Decimal(str(order.used_customer_balance or 0))
-    except Exception:
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in on-the-fly calculation for order {order.id}: {e}")
         # if anything goes wrong, leave computed values as None so template falls back
         pass
 

@@ -491,7 +491,11 @@ class Order(models.Model):
         total = Decimal('0')
         total_discount = Decimal('0')
 
-        for item in self.items.all():
+        from .models import OrderItem
+        # Use direct query instead of self.items.all() to avoid stale relationship caching
+        items_to_calc = OrderItem.objects.filter(order=self)
+        
+        for item in items_to_calc:
             item_total = Decimal(str(item.quantity)) * Decimal(str(item.unit_price))
             item_discount = item.discount_amount if item.discount_amount is not None else Decimal('0')
             total += item_total
@@ -509,8 +513,9 @@ class Order(models.Model):
     @property
     def total_discount_amount(self):
         """إجمالي مبلغ الخصم"""
-        total_discount = Decimal('0')
-        for item in self.items.all():
+        from .models import OrderItem
+        items_to_calc = OrderItem.objects.filter(order=self)
+        for item in items_to_calc:
             try:
                 # item.discount_amount is usually a Decimal, but guard against None
                 amt = item.discount_amount if item.discount_amount is not None else 0
