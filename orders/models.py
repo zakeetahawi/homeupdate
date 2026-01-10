@@ -514,6 +514,7 @@ class Order(models.Model):
     def total_discount_amount(self):
         """إجمالي مبلغ الخصم"""
         from .models import OrderItem
+        total_discount = Decimal('0')
         items_to_calc = OrderItem.objects.filter(order=self)
         for item in items_to_calc:
             try:
