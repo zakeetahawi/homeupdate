@@ -107,7 +107,7 @@ for mfg_order in manufacturing_orders_completed:
         
         with transaction.atomic():
             for item in unreceived_items:
-                # تحديث حالة الاستلام
+                # تحديث حالة الاستلام في ManufacturingOrderItem
                 item.fabric_received = True
                 item.fabric_received_date = timezone.now()
                 item.fabric_notes = (item.fabric_notes or '') + '\n[تم الاستلام تلقائياً - سكريبت إتمام أوامر التقطيع]'
@@ -117,6 +117,19 @@ for mfg_order in manufacturing_orders_completed:
                     item.bag_number = 'AUTO-SCRIPT'
                 
                 item.save(update_fields=['fabric_received', 'fabric_received_date', 'fabric_notes', 'bag_number'])
+                
+                # تحديث حالة الاستلام في CuttingOrderItem أيضاً (لإخفائه من صفحة الاستلام)
+                if item.cutting_item:
+                    item.cutting_item.fabric_received = True
+                    item.cutting_item.save(update_fields=['fabric_received'])
+                
+                # البحث عن عناصر التقطيع المرتبطة عبر order_item إذا لم يكن هناك ربط مباشر
+                if item.order_item:
+                    from cutting.models import CuttingOrderItem
+                    CuttingOrderItem.objects.filter(
+                        order_item=item.order_item,
+                        fabric_received=False
+                    ).update(fabric_received=True)
                 
                 # إنشاء سجل FabricReceipt إذا لم يكن موجوداً
                 fabric_receipt, created = FabricReceipt.objects.get_or_create(
