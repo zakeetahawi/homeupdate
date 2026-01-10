@@ -2431,8 +2431,20 @@ function regenerateContract(orderId) {
                         title: 'تم!',
                         text: 'تم إعادة توليد ملف العقد بنجاح',
                         icon: 'success',
-                        confirmButtonText: 'حسناً'
-                    }).then(() => location.reload());
+                        showCancelButton: true,
+                        confirmButtonText: 'فتح العقد',
+                        cancelButtonText: 'إغلاق'
+                    }).then((result) => {
+                        if (result.isConfirmed && data.contract_url) {
+                            // فتح العقد مع timestamp لمنع الكاش
+                            const timestamp = new Date().getTime();
+                            // التحقق إذا كان الرابط يحتوي على query params مسبقاً
+                            const separator = data.contract_url.includes('?') ? '&' : '?';
+                            window.open(data.contract_url + separator + 't=' + timestamp, '_blank');
+                        }
+                        // إعادة تحميل الصفحة لتحديث البيانات
+                        location.reload();
+                    });
                 } else {
                     Swal.fire('خطأ!', data.message, 'error');
                 }

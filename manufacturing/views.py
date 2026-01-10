@@ -187,7 +187,7 @@ class ManufacturingOrderListView(PaginationFixMixin, LoginRequiredMixin, Permiss
         # فلتر حالة الأقمشة للعناصر
         fabric_status_filter = self.request.GET.get('fabric_status')
         if fabric_status_filter:
-            from django.db.models import Count, Q, Exists, OuterRef
+            from django.db.models import Exists, OuterRef
             from manufacturing.models import ManufacturingOrderItem
             
             if fabric_status_filter == 'needs_receipt':

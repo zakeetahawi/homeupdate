@@ -31,6 +31,12 @@ def contract_pdf_view(request, order_id):
                 with order.contract_file.open('rb') as pdf:
                     response = HttpResponse(pdf.read(), content_type='application/pdf')
                     response['Content-Disposition'] = f'inline; filename="contract_{order.order_number}.pdf"'
+                    
+                    # منع الكاش لضمان عرض أحدث نسخة دائماً
+                    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                    response['Pragma'] = 'no-cache'
+                    response['Expires'] = '0'
+                    
                     logger.info(f"Serving saved contract PDF for order {order.order_number}")
                     return response
             except Exception as e:
