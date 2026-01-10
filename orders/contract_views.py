@@ -29,15 +29,18 @@ def contract_pdf_view(request, order_id):
         if order.contract_file and order.contract_file.name:
             try:
                 with order.contract_file.open('rb') as pdf:
-                    response = HttpResponse(pdf.read(), content_type='application/pdf')
+                    pdf_content = pdf.read()
+                    response = HttpResponse(pdf_content, content_type='application/pdf')
                     response['Content-Disposition'] = f'inline; filename="contract_{order.order_number}.pdf"'
+                    response['Content-Length'] = len(pdf_content)
                     
                     # منع الكاش لضمان عرض أحدث نسخة دائماً
-                    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
                     response['Pragma'] = 'no-cache'
                     response['Expires'] = '0'
+                    response['X-Content-Type-Options'] = 'nosniff'
                     
-                    logger.info(f"Serving saved contract PDF for order {order.order_number}")
+                    logger.info(f"Serving saved contract PDF for order {order.order_number} ({len(pdf_content)/1024:.1f} KB)")
                     return response
             except Exception as e:
                 logger.error(f"Could not read saved contract file: {e}")

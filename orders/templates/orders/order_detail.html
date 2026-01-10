@@ -1118,19 +1118,33 @@
                             <th>ملف العقد</th>
                             <td>
                                 {% if order.contract_file %}
-                                    <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-file-pdf"></i> عرض
+                                    <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-primary" rel="noopener noreferrer">
+                                        <i class="fas fa-file-pdf"></i> عرض العقد
                                     </a>
                                     {% if user.is_superuser or user.is_staff %}
-                                        <button type="button" class="btn btn-sm btn-outline-warning ms-1" onclick="regenerateContract({{ order.pk }})" title="إعادة توليد العقد">
-                                            <i class="fas fa-sync-alt"></i>
+                                        <button type="button" class="btn btn-sm btn-outline-warning ms-1" onclick="regenerateContract({{ order.pk }})" title="إعادة توليد العقد - سيتم إنشاء ملف جديد">
+                                            <i class="fas fa-sync-alt"></i> إعادة توليد
                                         </button>
                                     {% endif %}
+                                    <br>
+                                    <small class="text-muted">
+                                        آخر تحديث: 
+                                        {% if order.contract_file.name %}
+                                            {% with order.contract_file.name|slice:"-19:-4" as timestamp %}
+                                                {% if timestamp|length == 15 %}
+                                                    {{ timestamp|slice:":4" }}-{{ timestamp|slice:"4:6" }}-{{ timestamp|slice:"6:8" }} 
+                                                    {{ timestamp|slice:"9:11" }}:{{ timestamp|slice:"11:13" }}:{{ timestamp|slice:"13:15" }}
+                                                {% else %}
+                                                    غير معروف
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% endif %}
+                                    </small>
                                 {% else %}
                                     <span class="text-muted small">لم يتم توليد العقد</span>
                                     {% if user.is_superuser or user.is_staff %}
                                         <button type="button" class="btn btn-sm btn-success ms-1" onclick="regenerateContract({{ order.pk }})" title="توليد ملف العقد">
-                                            <i class="fas fa-file-pdf"></i>
+                                            <i class="fas fa-file-pdf"></i> توليد العقد
                                         </button>
                                     {% endif %}
                                 {% endif %}
@@ -2417,14 +2431,22 @@ function regenerateContract(orderId) {
                 }
             });
             
+            // زيادة timeout للطلبات الكبيرة
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 دقيقة
+            
             fetch(`/orders/order/${orderId}/contract/regenerate/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}',
                     'Content-Type': 'application/json'
-                }
+                },
+                signal: controller.signal
             })
-            .then(response => response.json())
+            .then(response => {
+                clearTimeout(timeoutId);
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     Swal.fire({
@@ -2436,11 +2458,8 @@ function regenerateContract(orderId) {
                         cancelButtonText: 'إغلاق'
                     }).then((result) => {
                         if (result.isConfirmed && data.contract_url) {
-                            // فتح العقد مع timestamp لمنع الكاش
-                            const timestamp = new Date().getTime();
-                            // التحقق إذا كان الرابط يحتوي على query params مسبقاً
-                            const separator = data.contract_url.includes('?') ? '&' : '?';
-                            window.open(data.contract_url + separator + 't=' + timestamp, '_blank');
+                            // استخدام الرابط مع timestamp من السيرفر
+                            window.open(data.contract_url, '_blank');
                         }
                         // إعادة تحميل الصفحة لتحديث البيانات
                         location.reload();
@@ -2450,7 +2469,20 @@ function regenerateContract(orderId) {
                 }
             })
             .catch(error => {
-                Swal.fire('خطأ!', 'حدث خطأ في الاتصال بالخادم', 'error');
+                clearTimeout(timeoutId);
+                let errorMsg = 'حدث خطأ في الاتصال بالخادم';
+                if (error.name === 'AbortError') {
+                    errorMsg = 'انتهت مهلة الطلب. قد يكون العقد كبيراً جداً. يرجى المحاولة مرة أخرى.';
+                }
+                Swal.fire({
+                    title: 'خطأ!',
+                    text: errorMsg,
+                    icon: 'error',
+                    confirmButtonText: 'حسناً'
+                }).then(() => {
+                    // إعادة تحميل الصفحة للتحقق من حالة العقد
+                    location.reload();
+                });
             });
         }
     });

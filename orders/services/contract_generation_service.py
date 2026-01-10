@@ -89,51 +89,68 @@ class ContractGenerationService:
     
     def generate_pdf(self):
         """
-        توليد ملف PDF للعقد
+        توليد ملف PDF للعقد - محسّن للأداء
         
         Returns:
             BytesIO: ملف PDF
         """
-        # توليد HTML
-        html_content = self.generate_html()
+        import logging
+        logger = logging.getLogger(__name__)
         
-        # إعداد الخطوط
-        font_config = FontConfiguration()
-        
-        # CSS إضافي من القالب
-        css_content = self.template.css_styles if self.template.css_styles else ''
-        
-        # CSS أساسي للعقد - مناسب لصفحة عمودية
-        base_css = """
-        @page {
-            size: A4 portrait;
-            margin: 1.5cm;
-        }
-        body {
-            font-family: 'Arial', 'Segoe UI', Tahoma, sans-serif;
-            font-size: 9px;
-            direction: rtl;
-            text-align: right;
-            color: #000;
-        }
-        """
-        
-        # دمج CSS - CSS الإضافي من القالب فقط إذا كان موجوداً
-        if css_content:
-            full_css = base_css + '\n' + css_content
-        else:
-            full_css = base_css
-        
-        # توليد PDF
-        pdf_file = BytesIO()
-        HTML(string=html_content, base_url=settings.MEDIA_URL).write_pdf(
-            pdf_file,
-            stylesheets=[CSS(string=full_css, font_config=font_config)],
-            font_config=font_config
-        )
-        
-        pdf_file.seek(0)
-        return pdf_file
+        try:
+            # توليد HTML
+            html_content = self.generate_html()
+            
+            # إعداد الخطوط - محسّن
+            font_config = FontConfiguration()
+            
+            # CSS إضافي من القالب
+            css_content = self.template.css_styles if self.template.css_styles else ''
+            
+            # CSS أساسي للعقد - مناسب لصفحة عمودية
+            base_css = """
+            @page {
+                size: A4 portrait;
+                margin: 1.5cm;
+            }
+            body {
+                font-family: 'Arial', 'Segoe UI', Tahoma, sans-serif;
+                font-size: 9px;
+                direction: rtl;
+                text-align: right;
+                color: #000;
+            }
+            """
+            
+            # دمج CSS - CSS الإضافي من القالب فقط إذا كان موجوداً
+            if css_content:
+                full_css = base_css + '\n' + css_content
+            else:
+                full_css = base_css
+            
+            # توليد PDF مع تحسينات الأداء
+            pdf_file = BytesIO()
+            
+            # استخدام base_url بشكل صحيح
+            base_url = settings.MEDIA_ROOT if hasattr(settings, 'MEDIA_ROOT') else None
+            
+            HTML(string=html_content, base_url=base_url).write_pdf(
+                pdf_file,
+                stylesheets=[CSS(string=full_css, font_config=font_config)],
+                font_config=font_config,
+                # تحسينات الأداء
+                optimize_images=True,  # تحسين الصور
+            )
+            
+            pdf_file.seek(0)
+            file_size = len(pdf_file.getvalue())
+            logger.info(f"✅ PDF generated successfully - Size: {file_size / 1024:.2f} KB")
+            
+            return pdf_file
+            
+        except Exception as e:
+            logger.error(f"❌ Error generating PDF: {str(e)}", exc_info=True)
+            raise
     
     def save_contract_to_order(self, user=None):
         """
@@ -169,12 +186,16 @@ class ContractGenerationService:
                 if len(customer_name) > 30:
                     customer_name = customer_name[:30]
             
-            # اسم الملف مع اسم العميل
+            # إضافة timestamp لتجنب مشاكل cache المتصفح
+            from datetime import datetime
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            
+            # اسم الملف مع timestamp لضمان اسم فريد في كل مرة
             if customer_name:
-                filename = f'contract_{self.order.order_number}_{customer_name}.pdf'
+                filename = f'contract_{self.order.order_number}_{customer_name}_{timestamp}.pdf'
             else:
-                # في حالة عدم وجود عميل، استخدم رقم الطلب فقط
-                filename = f'contract_{self.order.order_number}.pdf'
+                # في حالة عدم وجود عميل، استخدم رقم الطلب مع timestamp
+                filename = f'contract_{self.order.order_number}_{timestamp}.pdf'
             
             # المسار الكامل للملف
             full_path = os.path.join(settings.MEDIA_ROOT, 'contracts', filename)
@@ -183,38 +204,26 @@ class ContractGenerationService:
             contract_dir = os.path.join(settings.MEDIA_ROOT, 'contracts')
             os.makedirs(contract_dir, exist_ok=True)
             
-            # حذف الملف القديم إذا كان موجوداً مع معالجة أفضل للأخطاء
-            if os.path.exists(full_path):
-                try:
-                    os.remove(full_path)
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.info(f"تم حذف الملف القديم: {filename}")
-                except PermissionError as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.error(f"خطأ في الصلاحيات - لا يمكن حذف الملف القديم: {e}")
-                    # محاولة استخدام اسم ملف مختلف
-                    from datetime import datetime
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                    filename = f'contract_{self.order.order_number}_{customer_name}_{timestamp}.pdf' if customer_name else f'contract_{self.order.order_number}_{timestamp}.pdf'
-                    full_path = os.path.join(contract_dir, filename)
-                except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"تحذير: فشل حذف الملف القديم: {e}")
-            
-            # حذف جميع الملفات القديمة بنفس البادئة (لتنظيف الملفات ذات اللواحق العشوائية)
+            # حذف جميع الملفات القديمة لنفس الطلب (تنظيف)
             if os.path.exists(contract_dir):
-                prefix = f'contract_{self.order.order_number}_{customer_name}_' if customer_name else f'contract_{self.order.order_number}_'
+                prefix = f'contract_{self.order.order_number}_'
+                deleted_count = 0
                 for old_file in os.listdir(contract_dir):
-                    if old_file.startswith(prefix) or (old_file.startswith(f'contract_{self.order.order_number}') and old_file != filename):
+                    if old_file.startswith(prefix) and old_file.endswith('.pdf'):
                         try:
                             old_file_path = os.path.join(contract_dir, old_file)
                             if os.path.isfile(old_file_path):
                                 os.remove(old_file_path)
-                        except:
-                            pass
+                                deleted_count += 1
+                        except Exception as e:
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.warning(f"فشل حذف الملف القديم {old_file}: {e}")
+                
+                if deleted_count > 0:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.info(f"🗑️ تم حذف {deleted_count} ملف قديم للطلب {self.order.order_number}")
 
             # حفظ الملف في الطلب
             pdf_file.seek(0)  # التأكد من أن المؤشر في بداية الملف
