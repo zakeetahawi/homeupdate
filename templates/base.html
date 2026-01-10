@@ -413,10 +413,15 @@
                                     </a>
                                 </li>
                             {% elif user.is_factory_receiver %}
-                                <!-- مسؤول استلام المصنع يرى رابط استلام الأقمشة مباشرة -->
+                                {# مسؤول استلام المصنع يرى رابط استلام الأقمشة ورابط أوامر التصنيع #}
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/manufacturing/">
+                                        <i class="fas fa-industry"></i><span class="nav-text">أوامر التصنيع</span>
+                                    </a>
+                                </li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="/manufacturing/fabric-receipt/">
-                                        <i class="fas fa-industry"></i><span class="nav-text">استلام من المصنع</span>
+                                        <i class="fas fa-boxes"></i><span class="nav-text">استلام الأقمشة</span>
                                     </a>
                                 </li>
                             {% elif user.is_staff %}
