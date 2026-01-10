@@ -28,74 +28,74 @@ main.container-fluid {
     opacity: 1 !important;
 }
 
-/* أنماط التذييل المُحسَّن - ثابت في الأسفل */
+/* تحسينات التصميم المتجاوب للفوتر - التوزيع الثلاثي */
 .footer-area {
     flex-shrink: 0;
-    background: linear-gradient(to right, var(--accent), var(--dark));
-    padding: 10px 0 5px 0 !important;
+    padding: 15px 0 10px 0 !important;
     width: 100%;
     position: relative;
-    bottom: 0;
-    left: 0;
-    right: 0;
     z-index: 1000;
     transition: all 0.3s ease;
-    opacity: 1 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: var(--primary) !important;
+    color: #F5EBD4 !important; /* لون الخط البيج الفخم من الثيم الزخرفي */
 }
 
-/* تحسين الانتقال السلس - منع الوميض */
-#main-content {
-    transition: opacity 0.3s ease, transform 0.3s ease !important;
-    opacity: 1 !important;
+/* توحيد ألوان جميع عناصر الفوتر باللون البيج */
+.footer-area a, 
+.footer-area h6, 
+.footer-area p, 
+.footer-area span, 
+.footer-area i:not([class*="footer-icon-"]) {
+    color: #F5EBD4 !important;
+    transition: all 0.3s ease;
 }
 
-#main-content.loading {
-    opacity: 0.9 !important;
-    transform: translateY(5px);
+/* تأثير التمرير الذهبي الرائع */
+.footer-area a:hover,
+.footer-area a:hover i,
+.footer-area .footer-link:hover i {
+    color: #D4A362 !important;
+    transform: scale(1.1);
+    text-shadow: 0 0 10px rgba(212, 163, 98, 0.4);
 }
 
-/* منع الوميض في العناصر المهمة */
-header, nav, footer, main {
-    opacity: 1 !important;
-    transition: opacity 0.3s ease !important;
+.footer-icon-email { color: #00bcd4 !important; font-size: 1.1rem; }
+.footer-icon-phone { color: #4caf50 !important; font-size: 1.1rem; }
+.footer-icon-brand { color: #ffffff !important; font-size: 1.2rem; }
+
+.footer-link i {
+    font-size: 1.3rem;
+    transition: transform 0.2s ease;
 }
 
-/* تحسين الانتقال للعناصر */
-.container-fluid, .card, .table, .row, .col {
-    transition: opacity 0.3s ease, transform 0.3s ease !important;
-    opacity: 1 !important;
+.footer-link:hover i {
+    transform: scale(1.2);
+}
+
+.footer-contact-item {
+    text-decoration: none !important;
+    color: inherit !important;
+    transition: opacity 0.2s;
+}
+
+.footer-contact-item:hover {
+    opacity: 0.8;
 }
 
 /* تحسينات للهواتف المحمولة */
 @media (max-width: 768px) {
-    main.container-fluid {
-        min-height: calc(100vh - 150px);
-        padding-bottom: 15px;
+    .footer-section {
+        text-align: center !important;
+        margin-bottom: 15px;
     }
     
-    .footer-area {
-        padding: 8px 0 4px 0 !important;
-        position: relative;
-        bottom: 0;
+    .brand-section .d-flex {
+        justify-content: center !important;
     }
-    
-    .footer-title {
-        font-size: 0.8rem;
-    }
-    
-    /* تحسين عرض الروابط في الفوتر للهواتف */
-    .footer-area .d-flex {
-        flex-direction: column;
-        gap: 10px;
-        text-align: center;
-    }
-    
-    .footer-area .social-icons {
-        justify-content: center;
-    }
-    
-    .footer-area .footer-contact-item {
-        font-size: 0.75rem;
+
+    .contact-section .d-flex {
+        justify-content: center !important;
     }
 }
 

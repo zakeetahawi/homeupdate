@@ -906,3 +906,10 @@ body,
     z-index: 1050 !important;
     position: absolute !important;
 }
+/* أزرار فائقة الصغر للمساحات الضيقة */
+.btn-xs {
+    padding: 0.15rem 0.35rem;
+    font-size: 0.75rem;
+    line-height: normal;
+    border-radius: 4px;
+}

@@ -25,95 +25,102 @@
 [data-theme="custom-theme"] .navbar .fab,
 [data-theme="custom-theme"] .navbar .fal {
     font-size: 1.3rem !important;
-    margin-left: 0 !important;
-    margin-bottom: 0.2rem !important;
+    margin: 0 !important;
+    margin-bottom: 0.15rem !important;
     transition: all 0.2s ease;
     text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+    display: block !important;
+    order: 1 !important;
 }
 
-/* ألوان مخصصة ومتنوعة للأيقونات */
+/* تنسيق النص تحت الأيقونات */
+[data-theme="custom-theme"] .navbar .nav-link span,
+[data-theme="custom-theme"] .navbar .nav-link .nav-text {
+    order: 2 !important;
+    display: block !important;
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
+}
 
+/* ألوان مخصصة ومتنوعة للأيقونات - Restore Colorful Glow */
 [data-theme="custom-theme"] .navbar .fa-user,
 [data-theme="custom-theme"] .navbar .fa-user-circle {
-    color: #ffffff !important;
-    /* ذهبي مشرق */
+    color: #ffffff !important; /* ذهبي مشرق سابقاً كان ابيض في الكود الاصلي */
 }
 
 [data-theme="custom-theme"] .navbar .fa-bell,
 [data-theme="custom-theme"] .navbar .fa-bell-slash {
-    color: #e0ee7a !important;
-    /* برتقالي مشرق */
+    color: #e0ee7a !important; /* برتقالي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-cog,
 [data-theme="custom-theme"] .navbar .fa-cogs {
-    color: #E0E0E0 !important;
-    /* فضي مشرق */
+    color: #E0E0E0 !important; /* فضي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-home {
-    color: #98FB98 !important;
-    /* أخضر مشرق */
+    color: #98FB98 !important; /* أخضر مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-users {
-    color: #00CED1 !important;
-    /* تركواز مشرق */
+    color: #00CED1 !important; /* تركواز مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-chart-line,
 [data-theme="custom-theme"] .navbar .fa-chart-bar {
-    color: #87CEEB !important;
-    /* أزرق سماوي مشرق */
+    color: #87CEEB !important; /* أزرق سماوي مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-file,
 [data-theme="custom-theme"] .navbar .fa-file-alt {
-    color: #1E90FF !important;
-    /* أزرق مشرق */
+    color: #1E90FF !important; /* أزرق مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-folder,
 [data-theme="custom-theme"] .navbar .fa-folder-open {
-    color: #FFB347 !important;
-    /* برتقالي فاتح مشرق */
+    color: #FFB347 !important; /* برتقالي فاتح مشرق */
 }
 
 /* أيقونات الأقسام الإضافية */
 [data-theme="custom-theme"] .navbar .fa-shopping-cart,
 [data-theme="custom-theme"] .navbar .fa-cart-plus {
-    color: #FFB6C1 !important;
-    /* وردي فاتح مشرق - للطلبات */
+    color: #FFB6C1 !important; /* وردي فاتح مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-boxes,
 [data-theme="custom-theme"] .navbar .fa-box {
-    color: #90EE90 !important;
-    /* أخضر فاتح مشرق - للمخزون */
+    color: #90EE90 !important; /* أخضر فاتح مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-search,
 [data-theme="custom-theme"] .navbar .fa-clipboard-check {
-    color: #87CEFA !important;
-    /* أزرق فاتح مشرق - للمعاينات */
+    color: #87CEFA !important; /* أزرق فاتح مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-tools,
 [data-theme="custom-theme"] .navbar .fa-wrench {
-    color: #DDA0DD !important;
-    /* بنفسجي فاتح مشرق - للتركيبات */
+    color: #DDA0DD !important; /* بنفسجي فاتح مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-industry,
 [data-theme="custom-theme"] .navbar .fa-factory {
-    color: #98FB98 !important;
-    /* أخضر مشرق - للمصنع */
+    color: #98FB98 !important; /* أخضر مشرق */
 }
 
 [data-theme="custom-theme"] .navbar .fa-database,
 [data-theme="custom-theme"] .navbar .fa-server {
-    color: #B0C4DE !important;
-    /* أزرق فاتح مشرق - لإدارة البيانات */
+    color: #B0C4DE !important; /* أزرق فاتح مشرق */
+}
+
+/* Reset uniform style */
+[data-theme="custom-theme"] .navbar .nav-link > .fa,
+[data-theme="custom-theme"] .navbar .nav-link > .fas,
+[data-theme="custom-theme"] .navbar .nav-link > .far,
+[data-theme="custom-theme"] .navbar .nav-link > .fab {
+    font-weight: 900 !important; /* Restore Solid */
+    font-size: 1.3rem !important; /* Restore Size */
+    /* Color is handled by specific classes above */
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
 }
 
 /* تأثير التوهج عند التحويم (hover) */
@@ -126,25 +133,94 @@
     text-shadow: 0 0 10px currentColor;
 }
 
-/* مظهر الأيقونات في القوائم المنسدلة */
+/* تنسيق قائمة الإشعارات للثيم المخصص - مطابق بالكامل لهيكل الثيم الزخرفي */
+[data-theme="custom-theme"] #notificationsDropdown+.dropdown-menu {
+    background: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 12px !important; /* الهيكل الزخرفي */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important; /* الهيكل الزخرفي */
+    padding: 0 !important;
+    width: 600px !important;
+}
+
+[data-theme="custom-theme"] #notificationsDropdown+.dropdown-menu .dropdown-header {
+    background: #f8f9fa !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    padding: 0.75rem 1rem !important;
+    color: #495057 !important;
+    border-radius: 12px 12px 0 0 !important;
+}
+
+/* أزرار تنسيق قوائم الهيدر (الإشعارات والرسائل) للثيم المخصص */
+[data-theme="custom-theme"] #notificationsDropdown+.dropdown-menu .dropdown-header button,
+[data-theme="custom-theme"] #internalMessagesDropdown+.dropdown-menu .dropdown-header button,
+[data-theme="custom-theme"] .dropdown-header .btn-outline-primary {
+    color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    font-weight: bold !important;
+}
+
+[data-theme="custom-theme"] #internalMessagesDropdown+.dropdown-menu {
+    background: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+    padding: 0 !important;
+}
+
+[data-theme="custom-theme"] #notificationsDropdown+.dropdown-menu .dropdown-header button:hover,
+[data-theme="custom-theme"] .dropdown-header .btn-outline-primary:hover {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+[data-theme="custom-theme"] .notification-dropdown-item {
+    border-bottom: 1px solid #f8f9fa !important;
+    padding: 1rem !important; /* مساحة مريحة مثل الزخرفي */
+    transition: all 0.2s ease;
+}
+
+[data-theme="custom-theme"] .notification-dropdown-item:hover {
+    background: rgba(13, 110, 253, 0.05) !important;
+}
+
+/* باج الإشعارات - نفس أحجام وهيكل الثيم الزخرفي */
+[data-theme="custom-theme"] .navbar .btn > .badge,
+[data-theme="custom-theme"] .navbar .nav-link > .badge {
+    background: #dc3545 !important; /* أحمر للتنبيه */
+    color: #ffffff !important;
+    font-size: 0.6rem !important;
+    padding: 0.15rem 0.35rem !important;
+    border-radius: 10px !important; /* مثل الزخرفي */
+    font-weight: 600 !important;
+    position: absolute !important;
+    top: 2px !important;
+    right: 5px !important;
+    transform: none !important;
+    z-index: 100 !important;
+}
+
+/* باج "جديد" داخل القائمة */
+[data-theme="custom-theme"] .dropdown-menu .badge {
+    position: static !important;
+    transform: none !important;
+}
+
+[data-theme="custom-theme"] .dropdown-item {
+    color: #495057 !important;
+    padding: 0.5rem 1rem !important;
+}
+
+[data-theme="custom-theme"] .dropdown-item:hover {
+    background: rgba(13, 110, 253, 0.1) !important;
+    color: #0d6efd !important;
+}
+
 [data-theme="custom-theme"] .dropdown-item i {
     font-size: 1rem !important;
     width: 20px !important;
-    height: 20px !important;
     text-align: center !important;
     margin-left: 10px !important;
-    transition: all 0.2s ease !important;
-}
-
-[data-theme="custom-theme"] .dropdown-item:hover i {
-    transform: translateX(-2px) !important;
-    text-shadow: 0 0 5px currentColor !important;
-}
-
-/* إصلاح القوائم المنسدلة */
-[data-theme="custom-theme"] .dropdown-menu {
-    position: absolute !important;
-    z-index: 1050 !important;
 }
 
 /* تقليص المسافات في شريط التنقل */

@@ -393,6 +393,8 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
                 messages.warning(self.request, f'تعذر تحديث عنوان العميل: {str(e)}')
 
         # Save inspection first to ensure it exists
+        # تعيين المستخدم الذي قام بالتغيير للاستخدام في الإشعارات
+        inspection._changed_by = self.request.user
         response = super().form_valid(form)
         
         # إنشاء سجل تغيير الحالة في OrderStatusLog إذا كان هناك طلب مرتبط

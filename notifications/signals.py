@@ -245,6 +245,13 @@ def inspection_status_changed_notification(sender, instance, **kwargs):
                 if hasattr(instance, 'customer') and instance.customer:
                     message += f" - العميل: {instance.customer.name}"
 
+                # محاولة الحصول على المستخدم الذي قام بالتغيير
+                changed_by = getattr(instance, '_changed_by', None)
+                
+                # إضافة اسم المستخدم للرسالة والبيانات الإضافية
+                if changed_by:
+                    message += f" بواسطة {changed_by.get_full_name() or changed_by.username}"
+
                 # إضافة ملاحظة أن النقر سيوجه لتفاصيل الطلب
                 message += f" (انقر لعرض تفاصيل الطلب)"
                 
@@ -257,7 +264,7 @@ def inspection_status_changed_notification(sender, instance, **kwargs):
                     message=message,
                     notification_type='inspection_status_changed',
                     related_object=instance,
-                    created_by=None,
+                    created_by=changed_by,  # المستخدم الذي قام بالتغيير
                     priority=priority,
                     extra_data={
                         'contract_number': instance.contract_number,
@@ -265,6 +272,8 @@ def inspection_status_changed_notification(sender, instance, **kwargs):
                         'new_status': instance.status,
                         'old_status_display': old_status_display,
                         'new_status_display': new_status_display,
+                        'changed_by': changed_by.get_full_name() or changed_by.username if changed_by else None,
+                        'changed_by_username': changed_by.username if changed_by else None,
                     }
                 )
 
@@ -325,16 +334,25 @@ def installation_completed_notification(sender, instance, **kwargs):
                 if instance.completion_date:
                     message += f" في تاريخ {instance.completion_date.strftime('%Y-%m-%d')}"
                 
+                # محاولة الحصول على المستخدم الذي قام بالتغيير
+                changed_by = getattr(instance, '_changed_by', None)
+                
+                # إضافة اسم المستخدم للرسالة
+                if changed_by:
+                    message += f" بواسطة {changed_by.get_full_name() or changed_by.username}"
+                
                 create_notification(
                     title=title,
                     message=message,
                     notification_type='installation_completed',
                     related_object=instance,
-                    created_by=None,
+                    created_by=changed_by,  # المستخدم الذي قام بالتغيير
                     priority='high',
                     extra_data={
                         'order_number': instance.order.order_number,
                         'completion_date': instance.completion_date.isoformat() if instance.completion_date else None,
+                        'changed_by': changed_by.get_full_name() or changed_by.username if changed_by else None,
+                        'changed_by_username': changed_by.username if changed_by else None,
                     }
                 )
                 

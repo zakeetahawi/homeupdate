@@ -41,15 +41,39 @@ html[data-theme="ornamental"] .navbar.navbar-dark.bg-primary:hover {
 html[data-theme="ornamental"] .navbar .nav-link {
     transition: all 0.3s ease;
     position: relative;
+    display: inline-flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0.3rem 0.5rem !important;
+    min-width: 60px;
+    text-align: center !important;
 }
 
 html[data-theme="ornamental"] .navbar .nav-link:hover {
-    transform: translateY(-3px) scale(1.1);
-    filter: drop-shadow(0 4px 8px rgba(212, 163, 98, 0.4));
+    transform: translateY(-3px);
+    color: #D4A362 !important;
 }
 
-html[data-theme="ornamental"] .navbar .nav-link i {
+html[data-theme="ornamental"] .navbar .nav-link i,
+html[data-theme="ornamental"] .navbar .nav-link .fas,
+html[data-theme="ornamental"] .navbar .nav-link .far,
+html[data-theme="ornamental"] .navbar .nav-link .fab {
+    font-size: 1.3rem !important;
+    margin: 0 !important;
+    margin-bottom: 0.15rem !important;
+    display: block !important;
+    order: 1 !important;
     transition: all 0.3s ease;
+}
+
+/* تنسيق النص تحت الأيقونات */
+html[data-theme="ornamental"] .navbar .nav-link span,
+html[data-theme="ornamental"] .navbar .nav-link .nav-text {
+    order: 2 !important;
+    display: block !important;
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
 }
 
 html[data-theme="ornamental"] .navbar .nav-link:hover i {
@@ -74,6 +98,112 @@ html[data-theme="ornamental"] .navbar .logo-img {
 html[data-theme="ornamental"] .navbar .logo-img:hover {
     transform: scale(1.1) rotate(5deg);
     filter: drop-shadow(4px 4px 12px rgba(212, 163, 98, 0.6));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   أيقونات المستخدم والإشعارات والأدوات - Utility Icons
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* أزرار الأدوات - تصميم بسيط ونظيف */
+html[data-theme="ornamental"] .navbar .btn-outline-light,
+html[data-theme="ornamental"] .navbar .btn-sm {
+    background: transparent !important;
+    border: none !important;
+    padding: 0.5rem !important;
+    color: #F5EBD4 !important;
+    transition: all 0.2s ease !important;
+}
+
+html[data-theme="ornamental"] .navbar .btn-outline-light:hover,
+html[data-theme="ornamental"] .navbar .btn-sm:hover {
+    color: #D4A362 !important;
+    transform: scale(1.1);
+}
+
+/* أيقونات الأزرار */
+html[data-theme="ornamental"] .navbar .btn i {
+    font-size: 1.1rem !important;
+}
+
+/* باج الإشعارات - دائري صغير */
+html[data-theme="ornamental"] .navbar .badge {
+    background: #D4A362 !important;
+    color: #5D3A1A !important;
+    font-size: 0.6rem !important;
+    padding: 0.15rem 0.35rem !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+}
+
+/* قائمة المستخدم المنسدلة - خلفية فاتحة */
+html[data-theme="ornamental"] .navbar .dropdown-toggle {
+    background: transparent !important;
+    border: none !important;
+    color: #F5EBD4 !important;
+}
+
+html[data-theme="ornamental"] .navbar .dropdown-menu {
+    background: #F5EBD4 !important;
+    border: 1px solid #D4A362 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 16px rgba(93, 58, 26, 0.3) !important;
+}
+
+/* تخصيص قوائم الهيدر (الإشعارات والرسائل) للثيم الزخرفي */
+html[data-theme="ornamental"] #notificationsDropdown + .dropdown-menu,
+html[data-theme="ornamental"] #internalMessagesDropdown + .dropdown-menu {
+    background: #F5EBD4 !important;
+    border: 1px solid #D4A362 !important;
+}
+
+html[data-theme="ornamental"] #notificationsDropdown + .dropdown-menu .dropdown-header,
+html[data-theme="ornamental"] #internalMessagesDropdown + .dropdown-menu .dropdown-header {
+    background: #e6dcc3 !important;
+    border-bottom: 1px solid #D4A362 !important;
+    color: #5D3A1A !important;
+}
+
+html[data-theme="ornamental"] #notificationsDropdown + .dropdown-menu .btn-outline-primary,
+html[data-theme="ornamental"] #internalMessagesDropdown + .dropdown-menu .btn-outline-primary {
+    color: #5D3A1A !important;
+    border-color: #5D3A1A !important;
+}
+
+html[data-theme="ornamental"] #notificationsDropdown + .dropdown-menu .btn-outline-primary:hover,
+html[data-theme="ornamental"] #internalMessagesDropdown + .dropdown-menu .btn-outline-primary:hover {
+    background-color: #5D3A1A !important;
+    color: #F5EBD4 !important;
+}
+
+html[data-theme="ornamental"] .notification-dropdown-item:hover {
+    background: rgba(212, 163, 98, 0.2) !important;
+}
+
+html[data-theme="ornamental"] .navbar .dropdown-item {
+    color: #5D3A1A !important;
+    padding: 0.5rem 1rem !important;
+}
+
+html[data-theme="ornamental"] .navbar .dropdown-item:hover {
+    background: rgba(212, 163, 98, 0.3) !important;
+    color: #5D3A1A !important;
+}
+
+html[data-theme="ornamental"] .navbar .dropdown-item i {
+    color: #5D3A1A !important;
+    margin-left: 8px !important;
+}
+
+/* زر اسم المستخدم */
+html[data-theme="ornamental"] .navbar #userDropdown {
+    background: transparent !important;
+    border: none !important;
+    color: #F5EBD4 !important;
+    font-size: 0.9rem !important;
+}
+
+html[data-theme="ornamental"] .navbar #userDropdown:hover {
+    color: #D4A362 !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

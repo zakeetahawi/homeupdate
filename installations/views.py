@@ -828,6 +828,9 @@ def update_status(request, installation_id):
 
             # تحديث الحالة
             installation.status = new_status
+            
+            # تعيين المستخدم الذي قام بالتغيير للإشعارات
+            installation._changed_by = request.user
 
             # إذا كانت الحالة الجديدة مكتمل، تعيين تاريخ الإكمال
             if new_status == 'completed' and not installation.completion_date:
@@ -975,6 +978,9 @@ def update_status_by_code(request, installation_code):
 
             # تحديث الحالة
             installation.status = new_status
+            
+            # تعيين المستخدم الذي قام بالتغيير للإشعارات
+            installation._changed_by = request.user
 
             # إذا كانت الحالة الجديدة مكتمل، تعيين تاريخ الإكمال
             if new_status == 'completed' and not installation.completion_date:
