@@ -340,11 +340,17 @@ def order_detail(request, pk):
         # Use direct query to bypass relationship caching
         items_to_calc = OrderItem.objects.filter(order=order)
         for it in items_to_calc:
-            # حساب المجموع قبل الخصم (quantity * unit_price)
-            item_subtotal = Decimal(str(it.quantity)) * Decimal(str(it.unit_price))
-            subtotal += item_subtotal
-            # حساب الخصم
-            total_discount += Decimal(str(it.discount_amount if it.discount_amount else 0))
+            try:
+                # Defensive check for None values
+                qty = Decimal(str(it.quantity or 0))
+                price = Decimal(str(it.unit_price or 0))
+                # حساب المجموع قبل الخصم (quantity * unit_price)
+                item_subtotal = qty * price
+                subtotal += item_subtotal
+                # حساب الخصم
+                total_discount += Decimal(str(it.discount_amount or 0))
+            except Exception as item_err:
+                logger.error(f"Error in on-the-fly item calc for item {it.id} in order {order.id}: {item_err}")
 
         addition = Decimal(str(order.financial_addition or 0))
         final_after = subtotal - total_discount + addition
@@ -354,11 +360,13 @@ def order_detail(request, pk):
         context['computed_final_price_after_discount'] = final_after
         # remaining amount should be what remains to pay from the final after-discount total
         paid = Decimal(str(order.paid_amount or 0))
-        context['computed_remaining_amount'] = final_after - paid - Decimal(str(order.used_customer_balance or 0))
+        # Ensure used_customer_balance exists and is Decimal
+        used_balance = Decimal(str(getattr(order, 'used_customer_balance', 0) or 0))
+        context['computed_remaining_amount'] = final_after - paid - used_balance
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Error in on-the-fly calculation for order {order.id}: {e}")
+        logger.error(f"Global error in on-the-fly calculation for order {order.id}: {e}")
         # if anything goes wrong, leave computed values as None so template falls back
         pass
 

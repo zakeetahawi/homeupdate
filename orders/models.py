@@ -488,26 +488,45 @@ class Order(models.Model):
             return self.final_price or 0
 
         # حساب السعر الأساسي من عناصر الطلب
-        total = Decimal('0')
-        total_discount = Decimal('0')
+        try:
+            from decimal import Decimal
+            from .models import OrderItem
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            subtotal = Decimal('0')
+            total_discount = Decimal('0')
+            
+            # Use direct query to bypass relationship caching
+            items_to_calc = OrderItem.objects.filter(order=self)
+            for it in items_to_calc:
+                try:
+                    # Defensive check for None values
+                    qty = Decimal(str(it.quantity or 0))
+                    price = Decimal(str(it.unit_price or 0))
+                    # حساب المجموع قبل الخصم (quantity * unit_price)
+                    item_subtotal = qty * price
+                    subtotal += item_subtotal
+                    # حساب الخصم
+                    total_discount += Decimal(str(it.discount_amount or 0))
+                except Exception as item_err:
+                    logger.error(f"Error calculating item {it.id} totals for order {self.pk}: {item_err}")
 
-        from .models import OrderItem
-        # Use direct query instead of self.items.all() to avoid stale relationship caching
-        items_to_calc = OrderItem.objects.filter(order=self)
-        
-        for item in items_to_calc:
-            item_total = Decimal(str(item.quantity)) * Decimal(str(item.unit_price))
-            item_discount = item.discount_amount if item.discount_amount is not None else Decimal('0')
-            total += item_total
-            total_discount += item_discount
+            addition = Decimal(str(self.financial_addition or 0))
+            final_after = subtotal - total_discount + addition
 
-        # إضافة المالية
-        addition = self.financial_addition or Decimal('0.00')
+            # تحديث القيم
+            self.total_amount = subtotal  # المبلغ قبل الخصم (Subtotal)
+            self.final_price = final_after  # المبلغ النهائي بعد الخصم والإضافات (Grand Total)
 
-        # تحديث القيم
-        self.total_amount = total  # المبلغ قبل الخصم (Subtotal)
-        self.final_price = total - total_discount + addition  # المبلغ النهائي بعد الخصم والإضافات (Grand Total)
-
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Global error in calculate_final_price for order {self.pk}: {e}")
+            # If anything goes wrong, ensure values are reset or kept as is
+            self.total_amount = Decimal('0')
+            self.final_price = Decimal('0')
+            
         return self.final_price
     
     @property
