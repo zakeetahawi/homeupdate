@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-سكريبت لمرة واحدة: إقفال أوامر التقطيع للطلبات التي أمر التصنيع الخاص بها مكتمل أو جاهز للتركيب
+سكريبت لمرة واحدة: إقفال أوامر التقطيع وإتمام استلام الأقمشة للطلبات ذات أوامر التصنيع المكتملة
 
 الاستخدام:
     python manage.py shell < لينكس/complete_cutting_orders_by_manufacturing_status.py
@@ -25,10 +25,10 @@ except:
 from django.utils import timezone
 from django.db import transaction
 from cutting.models import CuttingOrder
-from manufacturing.models import ManufacturingOrder
+from manufacturing.models import ManufacturingOrder, ManufacturingOrderItem, FabricReceipt, FabricReceiptItem
 
 print("=" * 70)
-print("🔄 بدء إقفال أوامر التقطيع للطلبات ذات أوامر التصنيع المكتملة/الجاهزة للتركيب")
+print("🔄 بدء إقفال أوامر التقطيع وإتمام استلام الأقمشة")
 print("=" * 70)
 
 # الحالات التي تعني أن التصنيع مكتمل
@@ -42,11 +42,11 @@ print(f"\n📊 عدد أوامر التقطيع غير المكتملة للفح
 
 if total_checked == 0:
     print("✅ جميع أوامر التقطيع مكتملة بالفعل.")
-    sys.exit(0)
 
 updated_count = 0
 skipped_count = 0
 error_count = 0
+fabric_receipt_count = 0
 
 for cutting_order in cutting_orders_to_check:
     try:
@@ -87,10 +87,80 @@ for cutting_order in cutting_orders_to_check:
         print(f"  ❌ خطأ في أمر التقطيع {cutting_order.cutting_code}: {str(e)}")
 
 print("\n" + "=" * 70)
-print(f"📊 ملخص التحديث:")
-print(f"   - إجمالي أوامر التقطيع المفحوصة: {total_checked}")
-print(f"   - تم الإقفال بنجاح: {updated_count}")
-print(f"   - تم التخطي (لا يوجد تصنيع مكتمل): {skipped_count}")
+print("📦 بدء إتمام استلام الأقمشة من المصنع")
+print("=" * 70)
+
+# الجزء الثاني: إتمام استلام الأقمشة لأوامر التصنيع المكتملة
+manufacturing_orders_completed = ManufacturingOrder.objects.filter(
+    status__in=MANUFACTURING_COMPLETED_STATUSES
+)
+
+print(f"\n📊 عدد أوامر التصنيع المكتملة: {manufacturing_orders_completed.count()}")
+
+for mfg_order in manufacturing_orders_completed:
+    try:
+        # البحث عن عناصر التصنيع التي لم يتم استلامها
+        unreceived_items = mfg_order.items.filter(fabric_received=False)
+        
+        if not unreceived_items.exists():
+            continue
+        
+        with transaction.atomic():
+            for item in unreceived_items:
+                # تحديث حالة الاستلام
+                item.fabric_received = True
+                item.fabric_received_date = timezone.now()
+                item.fabric_notes = (item.fabric_notes or '') + '\n[تم الاستلام تلقائياً - سكريبت إتمام أوامر التقطيع]'
+                
+                # تعيين رقم شنطة تلقائي إذا لم يكن موجوداً
+                if not item.bag_number:
+                    item.bag_number = 'AUTO-SCRIPT'
+                
+                item.save(update_fields=['fabric_received', 'fabric_received_date', 'fabric_notes', 'bag_number'])
+                
+                # إنشاء سجل FabricReceipt إذا لم يكن موجوداً
+                fabric_receipt, created = FabricReceipt.objects.get_or_create(
+                    manufacturing_order=mfg_order,
+                    bag_number=item.bag_number,
+                    defaults={
+                        'receipt_type': 'manufacturing_order',
+                        'order': mfg_order.order,
+                        'permit_number': item.permit_number or 'AUTO-SCRIPT',
+                        'received_by_name': 'نظام آلي',
+                        'receipt_date': timezone.now(),
+                        'notes': 'تم الاستلام تلقائياً - سكريبت إتمام أوامر التقطيع'
+                    }
+                )
+                
+                # إنشاء عنصر الاستلام إذا لم يكن موجوداً
+                if not FabricReceiptItem.objects.filter(
+                    fabric_receipt=fabric_receipt,
+                    order_item=item.order_item
+                ).exists():
+                    FabricReceiptItem.objects.create(
+                        fabric_receipt=fabric_receipt,
+                        order_item=item.order_item,
+                        cutting_item=item.cutting_item,
+                        product_name=item.product_name,
+                        quantity_received=item.quantity,
+                        item_notes='تم الاستلام تلقائياً - سكريبت'
+                    )
+                
+                fabric_receipt_count += 1
+            
+            print(f"  📦 تم إتمام استلام {unreceived_items.count()} عنصر لأمر التصنيع: {mfg_order.manufacturing_code}")
+            
+    except Exception as e:
+        error_count += 1
+        print(f"  ❌ خطأ في أمر التصنيع {mfg_order.manufacturing_code}: {str(e)}")
+
+print("\n" + "=" * 70)
+print(f"📊 ملخص التحديث النهائي:")
+print(f"   - أوامر التقطيع المفحوصة: {total_checked}")
+print(f"   - أوامر التقطيع المُقفلة: {updated_count}")
+print(f"   - تم التخطي: {skipped_count}")
+print(f"   - عناصر استلام الأقمشة المُكتملة: {fabric_receipt_count}")
 print(f"   - أخطاء: {error_count}")
 print("=" * 70)
 print("✅ اكتمل السكريبت!")
+
