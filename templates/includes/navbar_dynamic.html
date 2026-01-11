@@ -21,11 +21,21 @@
                        data-bs-toggle="dropdown"
                        aria-expanded="false">
                         <i class="fas {{ item.icon }}"></i><span class="nav-text">{{ item.name }}</span>
+                        {% if "مخازن" in item.name or "تقطيع" in item.name %}
+                            {% if cutting_orders_pending_fix > 0 %}
+                                <span class="badge rounded-pill bg-danger"
+                                      style="font-size: 0.6rem;
+                                             position: absolute;
+                                             top: 5px;
+                                             right: 5px">{{ cutting_orders_pending_fix }}</span>
+                            {% endif %}
+                        {% endif %}
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="{{ key }}Dropdown">
                         {% for unit in item.units %}
                             <li>
-                                <a class="dropdown-item" href="{{ unit.url_name }}">
+                                <a class="dropdown-item"
+                                   href="{{ unit.url_name }}{% if 'cutting' in unit.url_name %}?needs_fix=true{% endif %}">
                                     {% if unit.icon %}<i class="fas {{ unit.icon }}"></i>{% endif %}
                                     {{ unit.name }}
                                 </a>

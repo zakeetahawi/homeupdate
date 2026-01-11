@@ -6,7 +6,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from inventory.models import Warehouse
+from inventory.models import StockTransaction, Warehouse
 from orders.models import Order, OrderItem
 
 from .models import CuttingOrder, CuttingOrderItem
@@ -803,3 +803,158 @@ def update_order_status_based_on_cutting_orders(order):
         logger.info(
             f"📋 تم تحديث order_status للطلب {order.order_number} من {old_status} إلى {new_status}"
         )
+
+
+# --- حقول الربط التلقائي والإصلاح (Auto-Fix) ---
+
+
+def create_operation_log(cutting_order, results, trigger_source):
+    """إنشاء سجل تفصيلي لعملية الإصلاح التلقائي"""
+    try:
+        from .models import CuttingOrderFixLog
+
+        details = {
+            "moved_items": results.get("moved_items", []),
+            "deleted_service_items": results.get("deleted_service_items", []),
+            "deleted_duplicates": results.get("deleted_duplicates", []),
+            "new_orders_created": results.get("new_orders_created", []),
+            "moved_to_existing": results.get("moved_to_existing", []),
+            "original_deleted": results.get("original_deleted", False),
+            "error": results.get("error", None),
+        }
+
+        CuttingOrderFixLog.objects.create(
+            cutting_order=cutting_order,
+            trigger_source=trigger_source,
+            items_moved=len(results.get("moved_items", [])),
+            service_items_deleted=len(results.get("deleted_service_items", [])),
+            duplicates_deleted=len(results.get("deleted_duplicates", [])),
+            new_orders_created=len(results.get("new_orders_created", [])),
+            details=details,
+            success=results.get("success", True),
+            error_message=results.get("error", ""),
+        )
+    except Exception as e:
+        logger.error(f"❌ خطأ في إنشاء سجل الإصلاح التلقائي: {str(e)}")
+
+
+@receiver(post_save, sender=CuttingOrderItem)
+def auto_fix_on_item_creation(sender, instance, created, **kwargs):
+    """تشغيل الإصلاح التلقائي عند إضافة عنصر جديد لأمر التقطيع"""
+    if created:
+        from .auto_fix import auto_fix_cutting_order_items
+
+        def run_fix():
+            try:
+                # التأكد من بقاء أمر التقطيع (قد يتم حذفه إذا فرغ في معاملة سابقة)
+                cutting_order = CuttingOrder.objects.get(id=instance.cutting_order_id)
+                results = auto_fix_cutting_order_items(
+                    cutting_order, trigger_source="auto_on_create"
+                )
+
+                if results.get("needs_fix"):
+                    create_operation_log(
+                        cutting_order, results, trigger_source="auto_on_create"
+                    )
+            except CuttingOrder.DoesNotExist:
+                pass
+            except Exception as e:
+                logger.error(f"❌ خطأ في إشارة الإصلاح التلقائي (item): {str(e)}")
+
+        transaction.on_commit(run_fix)
+
+
+@receiver(post_save, sender=CuttingOrder)
+def auto_fix_on_order_update(sender, instance, created, **kwargs):
+    """إطلاق الإصلاح التلقائي عند تحديث أمر التقطيع (مثلاً بعد الاستلام)"""
+    # تجنب التشغيل المتكرر خلال دقيقة واحدة لنفس الأمر
+    from .models import CuttingOrderFixLog
+
+    last_log = (
+        CuttingOrderFixLog.objects.filter(cutting_order=instance)
+        .order_by("-timestamp")
+        .first()
+    )
+    if last_log and (timezone.now() - last_log.timestamp).total_seconds() < 60:
+        return
+
+    from .auto_fix import auto_fix_cutting_order_items
+
+    def run_fix():
+        try:
+            order = CuttingOrder.objects.get(id=instance.id)
+            results = auto_fix_cutting_order_items(
+                order, trigger_source="auto_on_receive"
+            )
+
+            if results.get("needs_fix"):
+                create_operation_log(order, results, trigger_source="auto_on_receive")
+        except CuttingOrder.DoesNotExist:
+            pass
+        except Exception as e:
+            logger.error(f"❌ خطأ في إشارة الإصلاح التلقائي (order): {str(e)}")
+
+    transaction.on_commit(run_fix)
+
+
+@receiver(post_save, sender=StockTransaction)
+def auto_fix_on_stock_change(sender, instance, created, **kwargs):
+    """
+    إعادة تقييم أوامر التقطيع عند حدوث أي حركة مخزنية للمنتج
+    هذا يضمن تحديث المستودعات عند الاستلام أو التحويل، واستعادة الأوامر التي حُذفت سابقاً لنقص المخزون
+    """
+    from .auto_fix import auto_fix_cutting_order_items
+
+    # 1. البحث عن أوامر التقطيع الموجودة حالياً والتي تحتوي على هذا المنتج
+    affected_items = CuttingOrderItem.objects.filter(
+        order_item__product=instance.product,
+        cutting_order__status__in=["pending", "in_progress", "partially_completed"],
+    )
+    affected_order_ids = set(affected_items.values_list("cutting_order_id", flat=True))
+
+    # 2. البحث عن الطلبات التي تحتوي على هذا المنتج ولكن ليس لها "أمر تقطيع" (بسبب حذفه سابقاً لنقص المخزون)
+    # نركز فقط على الطلبات النشطة (غير المكتملة أو الملغاة)
+    orders_needing_creation = (
+        Order.objects.filter(
+            items__product=instance.product,
+            status__in=["pending", "processing", "confirmed"],
+        )
+        .exclude(items__cutting_items__isnull=False, items__product=instance.product)
+        .distinct()
+    )
+
+    orders_to_process = set(orders_needing_creation.values_list("id", flat=True))
+
+    if not affected_order_ids and not orders_to_process:
+        return
+
+    def run_bulk_fix():
+        # معالجة الأوامر الموجودة
+        for order_id in affected_order_ids:
+            try:
+                co = CuttingOrder.objects.get(id=order_id)
+                results = auto_fix_cutting_order_items(
+                    co, trigger_source="stock_change"
+                )
+                if results.get("needs_fix"):
+                    create_operation_log(co, results, trigger_source="stock_change")
+            except Exception as e:
+                logger.error(
+                    f"❌ خطأ في معالجة تحديث المخزون للتقطيع {order_id}: {str(e)}"
+                )
+
+        # معالجة الطلبات التي تحتاج لإنشاء أوامر تقطيع جديدة
+        # نستخدم نفس الوظيفة التي تُستخدم عند تعديل الطلب (توزيع الأصناف)
+        for order_id in orders_to_process:
+            try:
+                order_obj = Order.objects.get(id=order_id)
+                # استدعاء دالة التوزيع للأصناف غير الموزعة
+                from .signals import handle_order_item_creation
+
+                for item in order_obj.items.filter(product=instance.product):
+                    if not CuttingOrderItem.objects.filter(order_item=item).exists():
+                        handle_order_item_creation(OrderItem, item, created=True)
+            except Exception as e:
+                logger.error(f"❌ خطأ في إنشاء قطع للطلب {order_id}: {str(e)}")
+
+    transaction.on_commit(run_bulk_fix)

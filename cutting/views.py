@@ -217,6 +217,11 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
                     | Q(order__selected_types__icontains="accessory")
                 )
 
+        # فلتر حسب الحاجة للإصلاح (جديد)
+        needs_fix = self.request.GET.get("needs_fix")
+        if needs_fix == "true":
+            queryset = queryset.filter(needs_fix=True)
+
         return queryset.order_by("-created_at")
 
     def get_user_warehouses(self):
@@ -320,6 +325,7 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
                 "current_status": self.request.GET.get("status", ""),
                 "current_date_filter": self.request.GET.get("date_filter", ""),
                 "current_order_type": self.request.GET.get("order_type", ""),
+                "current_needs_fix": self.request.GET.get("needs_fix", ""),
                 "pending_count": pending_count,
                 "in_progress_count": in_progress_count,
                 "completed_count": completed_count,

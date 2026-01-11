@@ -404,8 +404,7 @@
                                     <li class="nav-item">
                                         <a class="nav-link"
                                            href="/cutting/orders/warehouse/{{ user.assigned_warehouse.id }}/">
-                                            <i class="fas fa-warehouse"></i><span class="nav-text">{{ user.assigned_warehouse.name
-                                            }}</span>
+                                            <i class="fas fa-warehouse"></i><span class="nav-text">{{ user.assigned_warehouse.name }}</span>
                                         </a>
                                     </li>
                                 {% endif %}
@@ -511,12 +510,10 @@
                                                             </div>
                                                             <div class="mb-2">
                                                                 <small class="text-muted d-block">
-                                                                    <i class="fas fa-warehouse text-danger"></i> من: <strong>{{
-                                                                    transfer.from_warehouse.name }}</strong>
+                                                                    <i class="fas fa-warehouse text-danger"></i> من: <strong>{{ transfer.from_warehouse.name }}</strong>
                                                                 </small>
                                                                 <small class="text-muted d-block">
-                                                                    <i class="fas fa-warehouse text-success"></i> إلى: <strong>{{
-                                                                    transfer.to_warehouse.name }}</strong>
+                                                                    <i class="fas fa-warehouse text-success"></i> إلى: <strong>{{ transfer.to_warehouse.name }}</strong>
                                                                 </small>
                                                             </div>
                                                             <div class="d-flex justify-content-between align-items-center">
@@ -559,6 +556,16 @@
                                             aria-expanded="false"
                                             title="إجراءات المخازن">
                                         <i class="fas fa-bolt"></i>
+                                        {% if pending_transfers_count > 0 %}
+                                            <span class="badge rounded-pill bg-danger"
+                                                  style="font-size: 0.6rem;
+                                                         position: absolute;
+                                                         top: 0;
+                                                         right: 0;
+                                                         transform: translate(25%, -25%)">
+                                                {{ pending_transfers_count }}
+                                            </span>
+                                        {% endif %}
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end"
                                         aria-labelledby="warehouseActionsDropdown"

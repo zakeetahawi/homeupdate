@@ -20,13 +20,15 @@ def pending_transfers(request):
     # مدير النظام يرى جميع التحويلات المعلقة
     if user.is_superuser:
         pending_transfers = (
-            StockTransfer.objects.filter(status__in=["approved", "in_transit"])
+            StockTransfer.objects.filter(
+                status__in=["pending", "approved", "in_transit"]
+            )
             .select_related("from_warehouse", "to_warehouse", "created_by")
             .order_by("-transfer_date")[:10]
         )
 
         pending_count = StockTransfer.objects.filter(
-            status__in=["approved", "in_transit"]
+            status__in=["pending", "approved", "in_transit"]
         ).count()
 
     else:
@@ -43,7 +45,7 @@ def pending_transfers(request):
             pending_transfers = (
                 StockTransfer.objects.filter(
                     to_warehouse__in=managed_warehouses,
-                    status__in=["approved", "in_transit"],
+                    status__in=["pending", "approved", "in_transit"],
                 )
                 .select_related("from_warehouse", "to_warehouse", "created_by")
                 .order_by("-transfer_date")[:10]
@@ -51,18 +53,20 @@ def pending_transfers(request):
 
             pending_count = StockTransfer.objects.filter(
                 to_warehouse__in=managed_warehouses,
-                status__in=["approved", "in_transit"],
+                status__in=["pending", "approved", "in_transit"],
             ).count()
         elif is_in_warehouse_group:
             # في مجموعة مسؤول مخزون بدون مستودعات محددة - يرى جميع التحويلات
             pending_transfers = (
-                StockTransfer.objects.filter(status__in=["approved", "in_transit"])
+                StockTransfer.objects.filter(
+                    status__in=["pending", "approved", "in_transit"]
+                )
                 .select_related("from_warehouse", "to_warehouse", "created_by")
                 .order_by("-transfer_date")[:10]
             )
 
             pending_count = StockTransfer.objects.filter(
-                status__in=["approved", "in_transit"]
+                status__in=["pending", "approved", "in_transit"]
             ).count()
         else:
             # ليس لديه صلاحيات

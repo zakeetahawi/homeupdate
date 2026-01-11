@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from .models import CuttingOrder, CuttingOrderItem, CuttingReport
+from .models import CuttingOrder, CuttingOrderFixLog, CuttingOrderItem, CuttingReport
 
 
 class CuttingOrderItemInline(admin.TabularInline):
@@ -270,6 +270,41 @@ class CuttingReportAdmin(admin.ModelAdmin):
         if not change:  # إذا كان تقرير جديد
             obj.generated_by = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(CuttingOrderFixLog)
+class CuttingOrderFixLogAdmin(admin.ModelAdmin):
+    list_display = (
+        "cutting_order",
+        "timestamp",
+        "trigger_source",
+        "items_moved",
+        "service_items_deleted",
+        "duplicates_deleted",
+        "new_orders_created",
+        "success_badge",
+    )
+    list_filter = ("trigger_source", "success", "timestamp", "cutting_order__warehouse")
+    search_fields = ("cutting_order__cutting_code", "error_message")
+    readonly_fields = ("details_display", "timestamp")
+
+    def success_badge(self, obj):
+        color = "success" if obj.success else "danger"
+        text = "تم بنجاح" if obj.success else "فشل"
+        return format_html('<span class="badge badge-{}">{}</span>', color, text)
+
+    success_badge.short_description = "الحالة"
+
+    def details_display(self, obj):
+        """عرض تفاصيل الـ JSON بشكل منسق"""
+        import json
+
+        return format_html(
+            '<pre style="background: #f4f4f4; padding: 10px; border-radius: 5px;">{}</pre>',
+            json.dumps(obj.details, indent=4, ensure_ascii=False),
+        )
+
+    details_display.short_description = "تفاصيل العملية"
 
 
 # تخصيص عنوان الإدارة

@@ -456,6 +456,7 @@ TEMPLATES = [
                 "crm.context_processors.admin_stats",
                 "crm.context_processors.jazzmin_extras",
                 "inventory.context_processors.pending_transfers",
+                "cutting.context_processors.cutting_notifications",
             ],
         },
     },

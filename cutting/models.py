@@ -88,6 +88,11 @@ class CuttingOrder(models.Model):
         blank=True, verbose_name="سبب الرفض", help_text="يُملأ في حالة رفض أمر التقطيع"
     )
 
+    # حقل جديد لتتبع ما إذا كان الأمر يحتاج لإصلاح (لأغراض الأداء)
+    needs_fix = models.BooleanField(
+        default=False, verbose_name="يحتاج لإصلاح", db_index=True
+    )
+
     # المستخدم المسؤول
     assigned_to = models.ForeignKey(
         User,
@@ -676,3 +681,52 @@ class CuttingReport(models.Model):
         verbose_name = "تقرير تقطيع"
         verbose_name_plural = "تقارير التقطيع"
         ordering = ["-generated_at"]
+
+
+class CuttingOrderFixLog(models.Model):
+    """سجل إصلاح أوامر التقطيع تلقائياً"""
+
+    TRIGGER_CHOICES = [
+        ("auto_on_create", "تلقائي عند الإنشاء"),
+        ("auto_on_receive", "تلقائي عند الاستلام"),
+        ("manual", "يدوي"),
+    ]
+
+    cutting_order = models.ForeignKey(
+        CuttingOrder,
+        on_delete=models.CASCADE,
+        related_name="fix_logs",
+        verbose_name="أمر التقطيع",
+    )
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الإصلاح")
+    trigger_source = models.CharField(
+        max_length=20,
+        choices=TRIGGER_CHOICES,
+        default="auto_on_create",
+        verbose_name="مصدر التشغيل",
+    )
+
+    # ملخص النتائج
+    items_moved = models.IntegerField(default=0, verbose_name="أصناف منقولة")
+    service_items_deleted = models.IntegerField(
+        default=0, verbose_name="أصناف خدمية محذوفة"
+    )
+    duplicates_deleted = models.IntegerField(default=0, verbose_name="تكرارات محذوفة")
+    new_orders_created = models.IntegerField(
+        default=0, verbose_name="أوامر جديدة منشأة"
+    )
+
+    # تفاصيل دقيقة (JSON)
+    details = models.JSONField(default=dict, verbose_name="تفاصيل العملية")
+
+    # النجاح/الفشل
+    success = models.BooleanField(default=True, verbose_name="نجاح")
+    error_message = models.TextField(blank=True, verbose_name="رسالة الخطأ")
+
+    class Meta:
+        verbose_name = "سجل إصلاح أمر تقطيع"
+        verbose_name_plural = "سجلات إصلاح أوامر التقطيع"
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return f"إصلاح {self.cutting_order.cutting_code} - {self.timestamp}"
