@@ -1,0 +1,192 @@
+<!-- Modal للتحويلات المخزنية الجديدة -->
+<div class="modal fade"
+     id="newTransferModal"
+     tabindex="-1"
+     aria-labelledby="newTransferModalLabel"
+     aria-hidden="true"
+     style="z-index: 1060">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow-lg"
+             style="border-radius: 15px;
+                    overflow: hidden">
+            <div class="modal-header bg-gradient-primary text-white p-4"
+                 style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%)">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-white p-2 me-3 d-flex align-items-center justify-content-center"
+                         style="width: 50px;
+                                height: 50px">
+                        <i class="fas fa-truck-loading text-primary fa-lg"></i>
+                    </div>
+                    <h5 class="modal-title mb-0" id="newTransferModalLabel">تحويل مخزني وارد جديد!</h5>
+                </div>
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="transferDetailContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0 p-3">
+                <button type="button"
+                        class="btn btn-secondary px-4"
+                        data-bs-dismiss="modal"
+                        style="border-radius: 8px">إغلاق</button>
+                <a href="#"
+                   id="viewTransferBtn"
+                   class="btn btn-primary px-4"
+                   style="border-radius: 8px">
+                    <i class="fas fa-eye me-1"></i> عرض التفاصيل
+                </a>
+                <a href="#"
+                   id="receiveTransferBtn"
+                   class="btn btn-success px-4"
+                   style="border-radius: 8px">
+                    <i class="fas fa-check-double me-1"></i> استلام الآن
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // إعدادات التنبيه
+    let lastTransferId = null;
+    const POLLING_INTERVAL = 30000; // 30 ثانية
+    
+    // منع التكرار الفوري عند فتح الموقع
+    const sessionStartTime = new Date();
+
+    function checkNewTransfers() {
+        fetch('{% url "inventory:api_pending_transfers" %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.transfers.length > 0) {
+                    const latestTransfer = data.transfers[0];
+                    
+                    // التحقق إذا كان التحويل جديداً
+                    if (lastTransferId === null) {
+                        lastTransferId = latestTransfer.id;
+                        return; // لا تظهر عند التحميل الأول للصفحة
+                    }
+
+                    if (latestTransfer.id !== lastTransferId) {
+                        lastTransferId = latestTransfer.id;
+                        showNewTransferModal(latestTransfer);
+                    }
+                }
+            })
+            .catch(error => console.error('Error fetching transfers:', error));
+    }
+
+    function showNewTransferModal(transfer) {
+        const content = document.getElementById('transferDetailContent');
+        const viewBtn = document.getElementById('viewTransferBtn');
+        const receiveBtn = document.getElementById('receiveTransferBtn');
+
+        // تحديث الروابط
+        viewBtn.href = `/inventory/stock-transfer/${transfer.id}/`;
+        receiveBtn.href = `/inventory/stock-transfer/${transfer.id}/receive/`;
+
+        // بناء محتوى الأصناف
+        let itemsHtml = '';
+        if (transfer.items && transfer.items.length > 0) {
+            itemsHtml = `
+                <div class="mt-4">
+                    <h6 class="text-primary fw-bold mb-3"><i class="fas fa-list me-2"></i>الأصناف المحولة (${transfer.items.length}):</h6>
+                    <div class="table-responsive rounded-3 border">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>الصنف</th>
+                                    <th>الكمية</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${transfer.items.map(item => `
+                                    <tr>
+                                        <td>
+                                            <div class="fw-bold text-dark">${item.product_name}</div>
+                                            <small class="text-muted">${item.product_code}</small>
+                                        </td>
+                                        <td class="fw-bold text-primary">${item.quantity} ${item.unit || ''}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        content.innerHTML = `
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded-3 h-100">
+                        <small class="text-muted d-block text-uppercase small ls-1 fw-bold">رقم التحويل</small>
+                        <div class="h5 fw-bold text-primary mb-3">${transfer.transfer_number}</div>
+                        
+                        <small class="text-muted d-block text-uppercase small ls-1 fw-bold">بواسطة</small>
+                        <div class="text-dark fw-bold mb-0">${transfer.created_by}</div>
+                        <small class="text-muted">${new Date(transfer.created_at).toLocaleString('ar-EG')}</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded-3 h-100">
+                        <div class="mb-3">
+                            <small class="text-muted d-block text-uppercase small ls-1 fw-bold">من مستودع</small>
+                            <span class="badge bg-danger p-2 px-3 mt-1" style="font-size: 0.9rem;">
+                                <i class="fas fa-warehouse me-1"></i> ${transfer.from_warehouse.name}
+                            </span>
+                        </div>
+                        <div>
+                            <small class="text-muted d-block text-uppercase small ls-1 fw-bold">إلى مستودع</small>
+                            <span class="badge bg-success p-2 px-3 mt-1" style="font-size: 0.9rem;">
+                                <i class="fas fa-warehouse me-1"></i> ${transfer.to_warehouse.name}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                ${transfer.reason ? `
+                    <div class="col-12">
+                        <div class="p-3" style="background-color: #fff9db; border-right: 4px solid #fcc419; border-radius: 8px;">
+                            <small class="text-muted d-block text-uppercase small ls-1 fw-bold">سبب التحويل</small>
+                            <div class="text-dark">${transfer.reason}</div>
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+            ${itemsHtml}
+        `;
+
+        const modal = new bootstrap.Modal(document.getElementById('newTransferModal'));
+        modal.show();
+        
+        // تشغيل صوت تنبيه بسيط إذا أمكن
+        try {
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+            audio.play().catch(e => {}); // تجاهل أخطاء المتصفح للمنع
+        } catch(e) {}
+    }
+
+    // بدء الفحص الدوري لمدراء المخازن والمسؤولين
+    {% if is_warehouse_manager or user.is_superuser %}
+        // جلب الحالة الأولية
+        fetch('{% url "inventory:api_pending_transfers" %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.transfers.length > 0) {
+                    lastTransferId = data.transfers[0].id;
+                }
+            });
+            
+        setInterval(checkNewTransfers, POLLING_INTERVAL);
+    {% endif %}
+});
+</script>

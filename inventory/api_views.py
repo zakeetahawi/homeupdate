@@ -820,8 +820,11 @@ def pending_transfers_api(request):
         # مدير النظام يرى جميع التحويلات المعلقة
         if user.is_superuser:
             pending_transfers = (
-                StockTransfer.objects.filter(status__in=["approved", "in_transit"])
+                StockTransfer.objects.filter(
+                    status__in=["pending", "approved", "in_transit"]
+                )
                 .select_related("from_warehouse", "to_warehouse", "created_by")
+                .prefetch_related("items", "items__product")
                 .order_by("-transfer_date")
             )
         else:
@@ -841,9 +844,10 @@ def pending_transfers_api(request):
             pending_transfers = (
                 StockTransfer.objects.filter(
                     to_warehouse__in=managed_warehouses,
-                    status__in=["approved", "in_transit"],
+                    status__in=["pending", "approved", "in_transit"],
                 )
                 .select_related("from_warehouse", "to_warehouse", "created_by")
+                .prefetch_related("items", "items__product")
                 .order_by("-transfer_date")
             )
 
@@ -880,9 +884,16 @@ def pending_transfers_api(request):
                         else "النظام"
                     ),
                     "created_at": transfer.created_at.isoformat(),
-                    "total_items": (
-                        transfer.items.count() if hasattr(transfer, "items") else 0
-                    ),
+                    "total_items_count": transfer.items.count(),
+                    "items": [
+                        {
+                            "product_name": item.product.name,
+                            "product_code": item.product.code,
+                            "quantity": float(item.quantity),
+                            "unit": item.product.unit,
+                        }
+                        for item in transfer.items.all()
+                    ],
                     "reason": transfer.reason or "",
                     "url": f"/inventory/stock-transfer/{transfer.id}/",
                 }
