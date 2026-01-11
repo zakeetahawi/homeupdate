@@ -831,25 +831,44 @@ def pending_transfers_api(request):
             # مسؤول المخزون يرى فقط التحويلات الواردة لمستودعاته
             managed_warehouses = Warehouse.objects.filter(manager=user)
 
-            if not managed_warehouses.exists():
+            is_in_warehouse_group = user.groups.filter(
+                name__in=[
+                    "مسؤول مخزون",
+                    "مسؤول مخازن",
+                    "Warehouse Manager",
+                    "مسؤول مستودع",
+                ]
+            ).exists()
+
+            if managed_warehouses.exists():
+                pending_transfers = (
+                    StockTransfer.objects.filter(
+                        to_warehouse__in=managed_warehouses,
+                        status__in=["pending", "approved", "in_transit"],
+                    )
+                    .select_related("from_warehouse", "to_warehouse", "created_by")
+                    .prefetch_related("items", "items__product")
+                    .order_by("-transfer_date")
+                )
+            elif is_in_warehouse_group:
+                # في مجموعة مسؤول مخزون بدون مستودعات محددة - يرى جميع التحويلات
+                pending_transfers = (
+                    StockTransfer.objects.filter(
+                        status__in=["pending", "approved", "in_transit"]
+                    )
+                    .select_related("from_warehouse", "to_warehouse", "created_by")
+                    .prefetch_related("items", "items__product")
+                    .order_by("-transfer_date")
+                )
+            else:
                 return JsonResponse(
                     {
                         "success": True,
                         "count": 0,
                         "transfers": [],
-                        "message": "لا توجد مستودعات مسجلة باسمك",
+                        "message": "لا توجد صلاحيات لمشاهدة التحويلات",
                     }
                 )
-
-            pending_transfers = (
-                StockTransfer.objects.filter(
-                    to_warehouse__in=managed_warehouses,
-                    status__in=["pending", "approved", "in_transit"],
-                )
-                .select_related("from_warehouse", "to_warehouse", "created_by")
-                .prefetch_related("items", "items__product")
-                .order_by("-transfer_date")
-            )
 
         # بناء البيانات
         transfers_data = []
