@@ -1,281 +1,272 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block title %}ترحيل المنتجات{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-1">
-                <i class="fas fa-sync-alt text-warning me-2"></i>
-                ترحيل المنتجات
-            </h2>
-            <p class="text-muted mb-0">تحويل المنتجات القديمة إلى نظام المتغيرات الجديد</p>
-        </div>
-        <a href="{% url 'inventory:base_product_list' %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-right me-1"></i>
-            رجوع
-        </a>
-    </div>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="mb-1">
+                    <i class="fas fa-sync-alt text-warning me-2"></i>
+                    ترحيل المنتجات
+                </h2>
+                <p class="text-muted mb-0">تحويل المنتجات القديمة إلى نظام المتغيرات الجديد</p>
             </div>
-        {% endfor %}
-    {% endif %}
-
-    <div class="row">
-        <!-- Statistics -->
-        <div class="col-lg-4 mb-4">
-            <div class="card shadow h-100">
-                <div class="card-header bg-primary text-white">
+            <a href="{% url 'inventory:base_product_list' %}"
+               class="btn btn-secondary">
+                <i class="fas fa-arrow-right me-1"></i>
+                رجوع
+            </a>
+        </div>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        <div class="row">
+            <!-- Statistics -->
+            <div class="col-lg-4 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            إحصائيات الترحيل
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6 mb-3">
+                                <div class="border rounded p-3">
+                                    <h3 class="text-primary mb-0">{{ stats.total_products }}</h3>
+                                    <small class="text-muted">إجمالي المنتجات</small>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="border rounded p-3">
+                                    <h3 class="text-success mb-0">{{ stats.migrated }}</h3>
+                                    <small class="text-muted">تم ترحيلها</small>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="border rounded p-3">
+                                    <h3 class="text-warning mb-0">{{ stats.pending }}</h3>
+                                    <small class="text-muted">في الانتظار</small>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="border rounded p-3">
+                                    <h3 class="text-info mb-0">{{ stats.parseable }}</h3>
+                                    <small class="text-muted">قابلة للتحليل</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% if stats.pending > 0 %}
+                            <div class="progress mt-3" style="height: 25px;">
+                                {% widthratio stats.migrated stats.total_products 100 as migrated_perc %}
+                                <div class="progress-bar bg-success"
+                                     role="progressbar"
+                                     style="width: {{ migrated_perc }}%"
+                                     aria-valuenow="{{ migrated_perc }}"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">{{ migrated_perc }}%</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <!-- Migration Form -->
+            <div class="col-lg-8 mb-4">
+                <div class="card shadow">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cogs me-2"></i>
+                            خيارات الترحيل
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Info Box -->
+                        <div class="alert alert-info mb-4">
+                            <h6>
+                                <i class="fas fa-info-circle me-2"></i>كيف يعمل الترحيل؟
+                            </h6>
+                            <ul class="mb-0">
+                                <li>
+                                    يتم تحليل <strong>اسم المنتج</strong> لاستخراج الاسم الأساسي وكود المتغير
+                                </li>
+                                <li>
+                                    مثال: <code>ORION/C 004</code> → المنتج الأساسي: <strong>ORION</strong>، المتغير: <strong>C 004</strong>
+                                </li>
+                                <li>يتم إنشاء منتج أساسي جديد إذا لم يكن موجوداً</li>
+                                <li>يتم حفظ الكود الأصلي كباركود في المتغير</li>
+                                <li>يتم ربط المنتج القديم بالمتغير الجديد للحفاظ على البيانات التاريخية</li>
+                            </ul>
+                        </div>
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+                            <div class="row mb-4">
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check">
+                                        {{ form.dry_run }}
+                                        <label class="form-check-label" for="{{ form.dry_run.id_for_label }}">{{ form.dry_run.label }}</label>
+                                        <div class="form-text">عرض المنتجات التي سيتم ترحيلها دون تنفيذ فعلي</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check">
+                                        {{ form.confirm }}
+                                        <label class="form-check-label" for="{{ form.confirm.id_for_label }}">{{ form.confirm.label }}</label>
+                                        {% if form.confirm.errors %}<div class="invalid-feedback d-block">{{ form.confirm.errors.0 }}</div>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="submit" name="action" value="preview" class="btn btn-info">
+                                    <i class="fas fa-eye me-1"></i>
+                                    معاينة
+                                </button>
+                                <button type="submit" name="action" value="migrate" class="btn btn-warning">
+                                    <i class="fas fa-sync-alt me-1"></i>
+                                    تنفيذ الترحيل
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Preview Results -->
+        {% if preview_results %}
+            <div class="card shadow mb-4">
+                <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
-                        <i class="fas fa-chart-pie me-2"></i>
-                        إحصائيات الترحيل
+                        <i class="fas fa-list me-2"></i>
+                        نتائج المعاينة ({{ preview_results|length }} منتج)
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-6 mb-3">
-                            <div class="border rounded p-3">
-                                <h3 class="text-primary mb-0">{{ stats.total_products }}</h3>
-                                <small class="text-muted">إجمالي المنتجات</small>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>الكود الأصلي</th>
+                                    <th>اسم المنتج</th>
+                                    <th>الكود الأساسي</th>
+                                    <th>كود المتغير</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in preview_results %}
+                                    <tr>
+                                        <td>
+                                            <code>{{ result.original_code }}</code>
+                                        </td>
+                                        <td>{{ result.name }}</td>
+                                        <td>
+                                            {% if result.base_code %}
+                                                <strong class="text-primary">{{ result.base_code }}</strong>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if result.variant_code %}
+                                                <span class="badge bg-secondary">{{ result.variant_code }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if result.can_migrate %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i>جاهز
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>{{ result.reason }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        <!-- Migration Results -->
+        {% if migration_results %}
+            <div class="card shadow">
+                <div class="card-header {% if migration_results.error_count > 0 %}bg-warning{% else %}bg-success{% endif %} text-{% if migration_results.error_count > 0 %}dark{% else %}white{% endif %}">
+                    <h5 class="mb-0">
+                        <i class="fas fa-{% if migration_results.error_count > 0 %}exclamation-triangle{% else %}check-circle{% endif %} me-2"></i>
+                        نتائج الترحيل
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="alert alert-success mb-0 text-center">
+                                <h4 class="mb-0">{{ migration_results.success_count }}</h4>
+                                <small>تم ترحيلها بنجاح</small>
                             </div>
                         </div>
-                        <div class="col-6 mb-3">
-                            <div class="border rounded p-3">
-                                <h3 class="text-success mb-0">{{ stats.migrated }}</h3>
-                                <small class="text-muted">تم ترحيلها</small>
+                        <div class="col-md-4">
+                            <div class="alert alert-danger mb-0 text-center">
+                                <h4 class="mb-0">{{ migration_results.error_count }}</h4>
+                                <small>فشل في الترحيل</small>
                             </div>
                         </div>
-                        <div class="col-6 mb-3">
-                            <div class="border rounded p-3">
-                                <h3 class="text-warning mb-0">{{ stats.pending }}</h3>
-                                <small class="text-muted">في الانتظار</small>
-                            </div>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <div class="border rounded p-3">
-                                <h3 class="text-info mb-0">{{ stats.parseable }}</h3>
-                                <small class="text-muted">قابلة للتحليل</small>
+                        <div class="col-md-4">
+                            <div class="alert alert-secondary mb-0 text-center">
+                                <h4 class="mb-0">{{ migration_results.skipped }}</h4>
+                                <small>تم تخطيها (مرحّلة سابقاً)</small>
                             </div>
                         </div>
                     </div>
-                    
-                    {% if stats.pending > 0 %}
-                        <div class="progress mt-3" style="height: 25px;">
-                            {% widthratio stats.migrated stats.total_products 100 as migrated_perc %}
-                            <div class="progress-bar bg-success" role="progressbar" 
-                                 style="width: {{ migrated_perc }}%;"
-                                 aria-valuenow="{{ migrated_perc }}" aria-valuemin="0" aria-valuemax="100">
-                                {{ migrated_perc }}%
-                            </div>
+                    {% if migration_results.errors %}
+                        <h6 class="text-danger mt-4 mb-3">
+                            <i class="fas fa-times-circle me-2"></i>
+                            المنتجات التي فشل ترحيلها:
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-danger">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>الكود</th>
+                                        <th>الخطأ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for error in migration_results.errors %}
+                                        <tr>
+                                            <td>{{ error.product_id }}</td>
+                                            <td>
+                                                <code>{{ error.code }}</code>
+                                            </td>
+                                            <td class="text-danger">{{ error.error }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>ملاحظة:</strong> يمكنك محاولة إصلاح هذه المنتجات يدوياً أو إعادة تشغيل الترحيل بعد معالجة المشاكل.
                         </div>
                     {% endif %}
                 </div>
             </div>
-        </div>
-
-        <!-- Migration Form -->
-        <div class="col-lg-8 mb-4">
-            <div class="card shadow">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">
-                        <i class="fas fa-cogs me-2"></i>
-                        خيارات الترحيل
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <!-- Info Box -->
-                    <div class="alert alert-info mb-4">
-                        <h6><i class="fas fa-info-circle me-2"></i>كيف يعمل الترحيل؟</h6>
-                        <ul class="mb-0">
-                            <li>يتم تحليل <strong>اسم المنتج</strong> لاستخراج الاسم الأساسي وكود المتغير</li>
-                            <li>مثال: <code>ORION/C 004</code> → المنتج الأساسي: <strong>ORION</strong>، المتغير: <strong>C 004</strong></li>
-                            <li>يتم إنشاء منتج أساسي جديد إذا لم يكن موجوداً</li>
-                            <li>يتم حفظ الكود الأصلي كباركود في المتغير</li>
-                            <li>يتم ربط المنتج القديم بالمتغير الجديد للحفاظ على البيانات التاريخية</li>
-                        </ul>
-                    </div>
-
-                    <form method="post" novalidate>
-                        {% csrf_token %}
-                        
-                        <div class="row mb-4">
-                            <div class="col-md-6 mb-3">
-                                <div class="form-check">
-                                    {{ form.dry_run }}
-                                    <label class="form-check-label" for="{{ form.dry_run.id_for_label }}">
-                                        {{ form.dry_run.label }}
-                                    </label>
-                                    <div class="form-text">عرض المنتجات التي سيتم ترحيلها دون تنفيذ فعلي</div>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <div class="form-check">
-                                    {{ form.confirm }}
-                                    <label class="form-check-label" for="{{ form.confirm.id_for_label }}">
-                                        {{ form.confirm.label }}
-                                    </label>
-                                    {% if form.confirm.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.confirm.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-end gap-2">
-                            <button type="submit" name="action" value="preview" class="btn btn-info">
-                                <i class="fas fa-eye me-1"></i>
-                                معاينة
-                            </button>
-                            <button type="submit" name="action" value="migrate" class="btn btn-warning">
-                                <i class="fas fa-sync-alt me-1"></i>
-                                تنفيذ الترحيل
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+        {% endif %}
     </div>
-
-    <!-- Preview Results -->
-    {% if preview_results %}
-    <div class="card shadow mb-4">
-        <div class="card-header bg-info text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-list me-2"></i>
-                نتائج المعاينة ({{ preview_results|length }} منتج)
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover table-sm">
-                    <thead class="table-light">
-                        <tr>
-                            <th>الكود الأصلي</th>
-                            <th>اسم المنتج</th>
-                            <th>الكود الأساسي</th>
-                            <th>كود المتغير</th>
-                            <th>الحالة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for result in preview_results %}
-                            <tr>
-                                <td><code>{{ result.original_code }}</code></td>
-                                <td>{{ result.name }}</td>
-                                <td>
-                                    {% if result.base_code %}
-                                        <strong class="text-primary">{{ result.base_code }}</strong>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if result.variant_code %}
-                                        <span class="badge bg-secondary">{{ result.variant_code }}</span>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if result.can_migrate %}
-                                        <span class="badge bg-success">
-                                            <i class="fas fa-check me-1"></i>جاهز
-                                        </span>
-                                    {% else %}
-                                        <span class="badge bg-warning text-dark">
-                                            <i class="fas fa-exclamation-triangle me-1"></i>{{ result.reason }}
-                                        </span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Migration Results -->
-    {% if migration_results %}
-    <div class="card shadow">
-        <div class="card-header {% if migration_results.error_count > 0 %}bg-warning{% else %}bg-success{% endif %} text-{% if migration_results.error_count > 0 %}dark{% else %}white{% endif %}">
-            <h5 class="mb-0">
-                <i class="fas fa-{% if migration_results.error_count > 0 %}exclamation-triangle{% else %}check-circle{% endif %} me-2"></i>
-                نتائج الترحيل
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <div class="alert alert-success mb-0 text-center">
-                        <h4 class="mb-0">{{ migration_results.success_count }}</h4>
-                        <small>تم ترحيلها بنجاح</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="alert alert-danger mb-0 text-center">
-                        <h4 class="mb-0">{{ migration_results.error_count }}</h4>
-                        <small>فشل في الترحيل</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="alert alert-secondary mb-0 text-center">
-                        <h4 class="mb-0">{{ migration_results.skipped }}</h4>
-                        <small>تم تخطيها (مرحّلة سابقاً)</small>
-                    </div>
-                </div>
-            </div>
-            
-            {% if migration_results.errors %}
-            <h6 class="text-danger mt-4 mb-3">
-                <i class="fas fa-times-circle me-2"></i>
-                المنتجات التي فشل ترحيلها:
-            </h6>
-            <div class="table-responsive">
-                <table class="table table-sm table-bordered">
-                    <thead class="table-danger">
-                        <tr>
-                            <th>ID</th>
-                            <th>الكود</th>
-                            <th>الخطأ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for error in migration_results.errors %}
-                            <tr>
-                                <td>{{ error.product_id }}</td>
-                                <td><code>{{ error.code }}</code></td>
-                                <td class="text-danger">{{ error.error }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="alert alert-info mt-3">
-                <i class="fas fa-info-circle me-2"></i>
-                <strong>ملاحظة:</strong> يمكنك محاولة إصلاح هذه المنتجات يدوياً أو إعادة تشغيل الترحيل بعد معالجة المشاكل.
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Add form-control class
         document.querySelectorAll('input, select, textarea').forEach(function(el) {
@@ -284,5 +275,5 @@
             }
         });
     });
-</script>
+    </script>
 {% endblock %}

@@ -1,72 +1,71 @@
 {% extends 'inventory/inventory_base_custom.html' %}
 {% load static %}
-
 {% block inventory_title %}حذف موقع التخزين{% endblock %}
-
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
-<li class="breadcrumb-item"><a href="{% url 'inventory:warehouse_location_list' %}">مواقع التخزين</a></li>
-<li class="breadcrumb-item active">حذف {{ location.name }}</li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a>
+    </li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:warehouse_location_list' %}">مواقع التخزين</a>
+    </li>
+    <li class="breadcrumb-item active">حذف {{ location.name }}</li>
 {% endblock %}
-
 {% block inventory_content %}
-<div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        تأكيد حذف موقع التخزين
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-info-circle"></i>
-                        هل أنت متأكد من حذف موقع التخزين التالي؟
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            تأكيد حذف موقع التخزين
+                        </h5>
                     </div>
-
-                    <ul class="list-group list-group-flush mb-4">
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span>الاسم</span>
-                            <strong>{{ location.name }}</strong>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span>الرمز</span>
-                            <code>{{ location.code }}</code>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span>المستودع</span>
-                            <span>{{ location.warehouse.name }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span>عدد الدفعات</span>
-                            <span class="badge bg-info">{{ location.product_batches.count }}</span>
-                        </li>
-                    </ul>
-
-                    {% if location.product_batches.exists %}
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <strong>تحذير:</strong> هذا الموقع يحتوي على {{ location.product_batches.count }} دفعة.
-                        سيتم إزالة ارتباط الدفعات بهذا الموقع.
-                    </div>
-                    {% endif %}
-
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'inventory:warehouse_location_list' %}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> إلغاء
-                            </a>
-                            <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-trash"></i> تأكيد الحذف
-                            </button>
+                    <div class="card-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle"></i>
+                            هل أنت متأكد من حذف موقع التخزين التالي؟
                         </div>
-                    </form>
+                        <ul class="list-group list-group-flush mb-4">
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>الاسم</span>
+                                <strong>{{ location.name }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>الرمز</span>
+                                <code>{{ location.code }}</code>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>المستودع</span>
+                                <span>{{ location.warehouse.name }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>عدد الدفعات</span>
+                                <span class="badge bg-info">{{ location.product_batches.count }}</span>
+                            </li>
+                        </ul>
+                        {% if location.product_batches.exists %}
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <strong>تحذير:</strong> هذا الموقع يحتوي على {{ location.product_batches.count }} دفعة.
+                                سيتم إزالة ارتباط الدفعات بهذا الموقع.
+                            </div>
+                        {% endif %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'inventory:warehouse_location_list' %}"
+                                   class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> إلغاء
+                                </a>
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash"></i> تأكيد الحذف
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

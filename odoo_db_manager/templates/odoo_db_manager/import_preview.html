@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
-<style>
+    <link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+    <style>
     .preview-table {
         max-height: 500px;
         overflow-y: auto;
@@ -16,110 +14,107 @@
         background: var(--bs-body-bg);
         z-index: 1;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="odoo-dashboard">
-    <div class="odoo-toolbar">
-        <div class="odoo-toolbar-left">
-            <h1>{{ title }}</h1>
+    <div class="odoo-dashboard">
+        <div class="odoo-toolbar">
+            <div class="odoo-toolbar-left">
+                <h1>{{ title }}</h1>
+            </div>
+            <div class="odoo-toolbar-right">
+                <a href="{% url 'odoo_db_manager:import_select' %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> العودة
+                </a>
+            </div>
         </div>
-        <div class="odoo-toolbar-right">
-            <a href="{% url 'odoo_db_manager:import_select' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> العودة
-            </a>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-body">
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <h5>{{ sheet_name }}</h5>
-                    <p class="text-muted">
-                        إجمالي السجلات: {{ total_records }}
-                        {% if page_range %}
-                        <br>
-                        الصفحات: {{ page_range.start }} إلى {{ page_range.end }}
-                        {% endif %}
-                    </p>
-                </div>
-                <div class="col-md-6 text-end">
-                    {% if clear_existing %}
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        سيتم حذف البيانات القديمة قبل الاستيراد
+        <div class="card">
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5>{{ sheet_name }}</h5>
+                        <p class="text-muted">
+                            إجمالي السجلات: {{ total_records }}
+                            {% if page_range %}
+                                <br>
+                                الصفحات: {{ page_range.start }} إلى {{ page_range.end }}
+                            {% endif %}
+                        </p>
                     </div>
-                    {% endif %}
+                    <div class="col-md-6 text-end">
+                        {% if clear_existing %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                سيتم حذف البيانات القديمة قبل الاستيراد
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
-            </div>
-
-            <div class="preview-table">
-                <table class="table table-bordered table-hover">
-                    <thead>
-                        <tr>
-                            {% for header in headers %}
-                            <th>{{ header }}</th>
+                <div class="preview-table">
+                    <table class="table table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                {% for header in headers %}<th>{{ header }}</th>{% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in preview_data %}
+                                <tr>
+                                    {% for value in row %}<td>{{ value }}</td>{% endfor %}
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="{{ headers|length }}" class="text-center">لا توجد بيانات للمعاينة</td>
+                                </tr>
                             {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in preview_data %}
-                        <tr>
-                            {% for value in row %}
-                            <td>{{ value }}</td>
-                            {% endfor %}
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="{{ headers|length }}" class="text-center">
-                                لا توجد بيانات للمعاينة
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="mt-4">
-                <form id="import-form" method="post" action="{% url 'odoo_db_manager:import_execute' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="sheet_name" value="{{ sheet_name }}">
-                    <input type="hidden" name="clear_existing" value="{{ clear_existing }}">
-                    {% if page_range %}
-                    <input type="hidden" name="page_start" value="{{ page_range.start }}">
-                    <input type="hidden" name="page_end" value="{{ page_range.end }}">
-                    {% endif %}
-
-                    <button type="button" class="btn btn-primary" onclick="executeImport()">
-                        <i class="fas fa-file-import"></i> تنفيذ الاستيراد
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- مؤشر التقدم -->
-<div class="modal fade" id="progress-modal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">جاري الاستيراد...</h5>
-            </div>
-            <div class="modal-body">
-                <div class="progress">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                         role="progressbar" style="width: 0%" 
-                         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4">
+                    <form id="import-form"
+                          method="post"
+                          action="{% url 'odoo_db_manager:import_execute' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="sheet_name" value="{{ sheet_name }}">
+                        <input type="hidden" name="clear_existing" value="{{ clear_existing }}">
+                        {% if page_range %}
+                            <input type="hidden" name="page_start" value="{{ page_range.start }}">
+                            <input type="hidden" name="page_end" value="{{ page_range.end }}">
+                        {% endif %}
+                        <button type="button" class="btn btn-primary" onclick="executeImport()">
+                            <i class="fas fa-file-import"></i> تنفيذ الاستيراد
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
-</div>
+    <!-- مؤشر التقدم -->
+    <div class="modal fade"
+         id="progress-modal"
+         tabindex="-1"
+         role="dialog"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">جاري الاستيراد...</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated"
+                             role="progressbar"
+                             style="width: 0%"
+                             aria-valuenow="0"
+                             aria-valuemin="0"
+                             aria-valuemax="100">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="{% static 'odoo_db_manager/js/import.js' %}"></script>
+    <script src="{% static 'odoo_db_manager/js/import.js' %}"></script>
 {% endblock %}

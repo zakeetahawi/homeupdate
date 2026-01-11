@@ -11,25 +11,22 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AlterField(
-            model_name='branchdevice',
-            name='hardware_serial',
+            model_name="branchdevice",
+            name="hardware_serial",
             field=models.CharField(
                 blank=True,
                 db_index=True,
-                help_text='الرقم التسلسلي للجهاز (Hardware UUID/Serial) - احتياطي',
+                help_text="الرقم التسلسلي للجهاز (Hardware UUID/Serial) - احتياطي",
                 max_length=200,
                 null=True,
-                verbose_name='الرقم التسلسلي للجهاز'
+                verbose_name="الرقم التسلسلي للجهاز",
             ),
         ),
         migrations.AlterField(
-            model_name='unauthorizeddeviceattempt',
-            name='hardware_serial',
+            model_name="unauthorizeddeviceattempt",
+            name="hardware_serial",
             field=models.CharField(
-                blank=True,
-                max_length=200,
-                null=True,
-                verbose_name='الرقم التسلسلي'
+                blank=True, max_length=200, null=True, verbose_name="الرقم التسلسلي"
             ),
         ),
     ]

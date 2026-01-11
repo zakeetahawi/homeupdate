@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
-
-{% block title %}{% trans "حالة الاستيراد" %}{% endblock %}
-
+{% block title %}
+    {% trans "حالة الاستيراد" %}
+{% endblock %}
 {% block extra_css %}
-<style>
+    <style>
     .status-container {
         max-width: 800px;
         margin: 0 auto;
@@ -79,113 +79,127 @@
     .spinner-container .spinner-border {
         margin-right: 10px;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container mt-4 mb-5">
-    <div class="status-container">
-        <div class="status-header">
-            <h1>{% trans "حالة الاستيراد" %}</h1>
-            <p class="lead">{% trans "متابعة حالة عملية استيراد البيانات" %}</p>
-        </div>
-
-        <div class="status-section">
-            <h4>{% trans "معلومات الاستيراد" %}</h4>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>{% trans "قاعدة البيانات:" %}</strong> {{ db_import.database_config.name }}</p>
-                    <p><strong>{% trans "تاريخ البدء:" %}</strong> {{ db_import.created_at|date:"Y-m-d H:i" }}</p>
-                    {% if db_import.completed_at %}
-                        <p><strong>{% trans "تاريخ الانتهاء:" %}</strong> {{ db_import.completed_at|date:"Y-m-d H:i" }}</p>
-                    {% endif %}
-                </div>
-                <div class="col-md-6">
-                    <p><strong>{% trans "الحالة:" %}</strong>
-                        <span class="status-badge {{ db_import.status }}">
-                            {% if db_import.status == 'pending' %}
-                                {% trans "قيد الانتظار" %}
-                            {% elif db_import.status == 'in_progress' %}
-                                {% trans "قيد التنفيذ" %}
-                            {% elif db_import.status == 'completed' %}
-                                {% trans "مكتمل" %}
-                            {% elif db_import.status == 'failed' %}
-                                {% trans "فشل" %}
-                            {% endif %}
-                        </span>
-                    </p>
-                    <p><strong>{% trans "الملف:" %}</strong> {{ db_import.file.name|default:"-" }}</p>
-                    <p><strong>{% trans "المستخدم:" %}</strong> {{ db_import.created_by.username|default:"-" }}</p>
-                </div>
+    <div class="container mt-4 mb-5">
+        <div class="status-container">
+            <div class="status-header">
+                <h1>{% trans "حالة الاستيراد" %}</h1>
+                <p class="lead">{% trans "متابعة حالة عملية استيراد البيانات" %}</p>
             </div>
-
-            {% if db_import.status == 'in_progress' %}
-                <div class="spinner-container">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="sr-only">{% trans "جاري التنفيذ..." %}</span>
+            <div class="status-section">
+                <h4>{% trans "معلومات الاستيراد" %}</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p>
+                            <strong>{% trans "قاعدة البيانات:" %}</strong> {{ db_import.database_config.name }}
+                        </p>
+                        <p>
+                            <strong>{% trans "تاريخ البدء:" %}</strong> {{ db_import.created_at|date:"Y-m-d H:i" }}
+                        </p>
+                        {% if db_import.completed_at %}
+                            <p>
+                                <strong>{% trans "تاريخ الانتهاء:" %}</strong> {{ db_import.completed_at|date:"Y-m-d H:i" }}
+                            </p>
+                        {% endif %}
                     </div>
-                    <span id="status-message">{% trans "جاري استيراد البيانات، يرجى الانتظار..." %}</span>
-                </div>
-
-                <div class="progress">
-                    <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                </div>
-
-                <div class="alert alert-info mt-3">
-                    <i class="fas fa-info-circle"></i>
-                    <span>{% trans "قد تستغرق عملية الاستيراد وقتًا طويلاً اعتمادًا على حجم البيانات. يرجى عدم إغلاق هذه الصفحة." %}</span>
-                    <div class="mt-2">
-                        <small id="time-elapsed">{% trans "الوقت المنقضي:" %} 0 ثانية</small>
+                    <div class="col-md-6">
+                        <p>
+                            <strong>{% trans "الحالة:" %}</strong>
+                            <span class="status-badge {{ db_import.status }}">
+                                {% if db_import.status == 'pending' %}
+                                    {% trans "قيد الانتظار" %}
+                                {% elif db_import.status == 'in_progress' %}
+                                    {% trans "قيد التنفيذ" %}
+                                {% elif db_import.status == 'completed' %}
+                                    {% trans "مكتمل" %}
+                                {% elif db_import.status == 'failed' %}
+                                    {% trans "فشل" %}
+                                {% endif %}
+                            </span>
+                        </p>
+                        <p>
+                            <strong>{% trans "الملف:" %}</strong> {{ db_import.file.name|default:"-" }}
+                        </p>
+                        <p>
+                            <strong>{% trans "المستخدم:" %}</strong> {{ db_import.created_by.username|default:"-" }}
+                        </p>
                     </div>
                 </div>
-            {% endif %}
-        </div>
-
-        <div class="status-section">
-            <h4>{% trans "سجل العملية" %}</h4>
-
-            <div class="log-container">
-                <pre id="log-content">{{ db_import.log|default:"لا توجد سجلات حتى الآن..." }}</pre>
+                {% if db_import.status == 'in_progress' %}
+                    <div class="spinner-container">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">{% trans "جاري التنفيذ..." %}</span>
+                        </div>
+                        <span id="status-message">{% trans "جاري استيراد البيانات، يرجى الانتظار..." %}</span>
+                    </div>
+                    <div class="progress">
+                        <div id="progress-bar"
+                             class="progress-bar progress-bar-striped progress-bar-animated"
+                             role="progressbar"
+                             style="width: 0%"></div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i>
+                        <span>{% trans "قد تستغرق عملية الاستيراد وقتًا طويلاً اعتمادًا على حجم البيانات. يرجى عدم إغلاق هذه الصفحة." %}</span>
+                        <div class="mt-2">
+                            <small id="time-elapsed">{% trans "الوقت المنقضي:" %} 0 ثانية</small>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
-        </div>
-
-        <div class="status-footer">
-            {% if db_import.status == 'completed' %}
-                <div class="alert alert-success">
-                    <h4 class="alert-heading"><i class="fas fa-check-circle"></i> {% trans "تم استيراد البيانات بنجاح!" %}</h4>
-                    <p>{% trans "تم استيراد البيانات إلى قاعدة البيانات بنجاح. يمكنك الآن استخدام النظام بالبيانات الجديدة." %}</p>
-                    <hr>
-                    <p class="mb-0">{% trans "قاعدة البيانات:" %} <strong>{{ db_import.database_config.name }}</strong></p>
-                    <p class="mb-0">{% trans "تاريخ الاكتمال:" %} <strong>{{ db_import.completed_at|date:"Y-m-d H:i" }}</strong></p>
+            <div class="status-section">
+                <h4>{% trans "سجل العملية" %}</h4>
+                <div class="log-container">
+                    <pre id="log-content">{{ db_import.log|default:"لا توجد سجلات حتى الآن..." }}</pre>
                 </div>
-
-                <div class="btn-group mt-3">
-                    <a href="{% url 'db_manager:database_list' %}" class="btn btn-primary btn-lg">{% trans "العودة إلى قائمة قواعد البيانات" %}</a>
-                    <a href="/" class="btn btn-success btn-lg">{% trans "الذهاب إلى الصفحة الرئيسية" %}</a>
-                </div>
-            {% elif db_import.status == 'failed' %}
-                <div class="alert alert-danger">
-                    <h4 class="alert-heading"><i class="fas fa-times-circle"></i> {% trans "فشل استيراد البيانات" %}</h4>
-                    <p>{% trans "حدث خطأ أثناء استيراد البيانات. يرجى التحقق من سجل العملية للحصول على مزيد من المعلومات." %}</p>
-                    <hr>
-                    <p class="mb-0">{% trans "يمكنك محاولة استيراد البيانات مرة أخرى أو الاتصال بمسؤول النظام للحصول على المساعدة." %}</p>
-                </div>
-
-                <div class="btn-group mt-3">
-                    <a href="{% url 'db_manager:database_list' %}" class="btn btn-primary btn-lg">{% trans "العودة إلى قائمة قواعد البيانات" %}</a>
-                    <a href="{% url 'db_manager:database_import' %}" class="btn btn-warning btn-lg">{% trans "محاولة مرة أخرى" %}</a>
-                </div>
-            {% else %}
-                <a href="{% url 'db_manager:database_list' %}" class="btn btn-primary btn-lg">{% trans "العودة إلى قائمة قواعد البيانات" %}</a>
-            {% endif %}
+            </div>
+            <div class="status-footer">
+                {% if db_import.status == 'completed' %}
+                    <div class="alert alert-success">
+                        <h4 class="alert-heading">
+                            <i class="fas fa-check-circle"></i> {% trans "تم استيراد البيانات بنجاح!" %}
+                        </h4>
+                        <p>{% trans "تم استيراد البيانات إلى قاعدة البيانات بنجاح. يمكنك الآن استخدام النظام بالبيانات الجديدة." %}</p>
+                        <hr>
+                        <p class="mb-0">
+                            {% trans "قاعدة البيانات:" %} <strong>{{ db_import.database_config.name }}</strong>
+                        </p>
+                        <p class="mb-0">
+                            {% trans "تاريخ الاكتمال:" %} <strong>{{ db_import.completed_at|date:"Y-m-d H:i" }}</strong>
+                        </p>
+                    </div>
+                    <div class="btn-group mt-3">
+                        <a href="{% url 'db_manager:database_list' %}"
+                           class="btn btn-primary btn-lg">{% trans "العودة إلى قائمة قواعد البيانات" %}</a>
+                        <a href="/" class="btn btn-success btn-lg">{% trans "الذهاب إلى الصفحة الرئيسية" %}</a>
+                    </div>
+                {% elif db_import.status == 'failed' %}
+                    <div class="alert alert-danger">
+                        <h4 class="alert-heading">
+                            <i class="fas fa-times-circle"></i> {% trans "فشل استيراد البيانات" %}
+                        </h4>
+                        <p>{% trans "حدث خطأ أثناء استيراد البيانات. يرجى التحقق من سجل العملية للحصول على مزيد من المعلومات." %}</p>
+                        <hr>
+                        <p class="mb-0">{% trans "يمكنك محاولة استيراد البيانات مرة أخرى أو الاتصال بمسؤول النظام للحصول على المساعدة." %}</p>
+                    </div>
+                    <div class="btn-group mt-3">
+                        <a href="{% url 'db_manager:database_list' %}"
+                           class="btn btn-primary btn-lg">{% trans "العودة إلى قائمة قواعد البيانات" %}</a>
+                        <a href="{% url 'db_manager:database_import' %}"
+                           class="btn btn-warning btn-lg">{% trans "محاولة مرة أخرى" %}</a>
+                    </div>
+                {% else %}
+                    <a href="{% url 'db_manager:database_list' %}"
+                       class="btn btn-primary btn-lg">{% trans "العودة إلى قائمة قواعد البيانات" %}</a>
+                {% endif %}
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     $(document).ready(function() {
         {% if db_import.status == 'in_progress' %}
             // تحديث حالة الاستيراد كل 2 ثوانٍ
@@ -357,5 +371,5 @@
             updateStatus();
         {% endif %}
     });
-</script>
+    </script>
 {% endblock %}

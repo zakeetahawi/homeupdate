@@ -6,11 +6,11 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('odoo_db_manager', '0002_add_comprehensive_sync_fields'),
+        ("odoo_db_manager", "0002_add_comprehensive_sync_fields"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='Backup',
+            name="Backup",
         ),
     ]

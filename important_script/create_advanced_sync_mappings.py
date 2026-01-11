@@ -5,7 +5,6 @@
 
 from odoo_db_manager.google_sync_advanced import GoogleSheetMapping
 
-
 try:
     original = GoogleSheetMapping.objects.get(name="النحاس 2025")
 except GoogleSheetMapping.DoesNotExist:

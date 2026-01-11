@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}قائمة الشكاوى{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .complaints-page {
         padding: 20px 0;
     }
@@ -101,146 +99,139 @@
         border-bottom-color: #dc3545;
         background: none;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid complaints-page">
-    {% csrf_token %}
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>📢 قائمة الشكاوى</h2>
-                <div class="d-flex gap-2">
-                    <span class="badge bg-danger">{{ unread_count }} غير مقروء</span>
-                    <span class="badge bg-secondary">{{ total_count }} إجمالي</span>
+    <div class="container-fluid complaints-page">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>📢 قائمة الشكاوى</h2>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-danger">{{ unread_count }} غير مقروء</span>
+                        <span class="badge bg-secondary">{{ total_count }} إجمالي</span>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- تبويبات الفلترة -->
-            <ul class="nav nav-tabs filter-tabs" id="complaintTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
-                        جميع الشكاوى
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="unread-tab" data-bs-toggle="tab" data-bs-target="#unread" type="button" role="tab">
-                        غير مقروءة ({{ unread_count }})
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="read-tab" data-bs-toggle="tab" data-bs-target="#read" type="button" role="tab">
-                        مقروءة
-                    </button>
-                </li>
-            </ul>
-            
-            <!-- محتوى التبويبات -->
-            <div class="tab-content" id="complaintTabsContent">
-                <div class="tab-pane fade show active" id="all" role="tabpanel">
-                    {% if complaints %}
+                <!-- تبويبات الفلترة -->
+                <ul class="nav nav-tabs filter-tabs" id="complaintTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active"
+                                id="all-tab"
+                                data-bs-toggle="tab"
+                                data-bs-target="#all"
+                                type="button"
+                                role="tab">جميع الشكاوى</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link"
+                                id="unread-tab"
+                                data-bs-toggle="tab"
+                                data-bs-target="#unread"
+                                type="button"
+                                role="tab">غير مقروءة ({{ unread_count }})</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link"
+                                id="read-tab"
+                                data-bs-toggle="tab"
+                                data-bs-target="#read"
+                                type="button"
+                                role="tab">مقروءة</button>
+                    </li>
+                </ul>
+                <!-- محتوى التبويبات -->
+                <div class="tab-content" id="complaintTabsContent">
+                    <div class="tab-pane fade show active" id="all" role="tabpanel">
+                        {% if complaints %}
+                            {% for complaint in complaints %}
+                                <div class="complaint-card {% if not complaint.is_read %}unread{% else %}read{% endif %} priority-{{ complaint.priority }}"
+                                     data-complaint-id="{{ complaint.id }}">
+                                    <div class="complaint-header">
+                                        <div class="d-flex align-items-center">
+                                            <span class="complaint-icon">{{ complaint.get_icon }}</span>
+                                            <div>
+                                                <div class="complaint-title">{{ complaint.title }}</div>
+                                                <div class="complaint-meta">
+                                                    <span class="meta-badge">{{ complaint.complaint_number }}</span>
+                                                    <span class="meta-badge" style="background: #28a745;">{{ complaint.get_complaint_type_display }}</span>
+                                                    <span class="meta-badge" style="background: #6c757d;">{{ complaint.get_priority_display }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="complaint-time">{{ complaint.get_time_ago }}</div>
+                                            {% if not complaint.is_read %}
+                                                <button class="btn btn-sm btn-outline-danger mark-read-btn"
+                                                        data-complaint-id="{{ complaint.id }}">تحديد كمقروء</button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="no-complaints">📢 لا توجد شكاوى</div>
+                        {% endif %}
+                    </div>
+                    <div class="tab-pane fade" id="unread" role="tabpanel">
                         {% for complaint in complaints %}
-                        <div class="complaint-card {% if not complaint.is_read %}unread{% else %}read{% endif %} priority-{{ complaint.priority }}" 
-                             data-complaint-id="{{ complaint.id }}">
-                            <div class="complaint-header">
-                                <div class="d-flex align-items-center">
-                                    <span class="complaint-icon">{{ complaint.get_icon }}</span>
-                                    <div>
-                                        <div class="complaint-title">{{ complaint.title }}</div>
-                                        <div class="complaint-meta">
-                                            <span class="meta-badge">{{ complaint.complaint_number }}</span>
-                                            <span class="meta-badge" style="background: #28a745;">{{ complaint.get_complaint_type_display }}</span>
-                                            <span class="meta-badge" style="background: #6c757d;">{{ complaint.get_priority_display }}</span>
+                            {% if not complaint.is_read %}
+                                <div class="complaint-card unread priority-{{ complaint.priority }}"
+                                     data-complaint-id="{{ complaint.id }}">
+                                    <div class="complaint-header">
+                                        <div class="d-flex align-items-center">
+                                            <span class="complaint-icon">{{ complaint.get_icon }}</span>
+                                            <div>
+                                                <div class="complaint-title">{{ complaint.title }}</div>
+                                                <div class="complaint-meta">
+                                                    <span class="meta-badge">{{ complaint.complaint_number }}</span>
+                                                    <span class="meta-badge" style="background: #28a745;">{{ complaint.get_complaint_type_display }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="complaint-time">{{ complaint.get_time_ago }}</div>
+                                            <button class="btn btn-sm btn-outline-danger mark-read-btn"
+                                                    data-complaint-id="{{ complaint.id }}">تحديد كمقروء</button>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="text-end">
-                                    <div class="complaint-time">{{ complaint.get_time_ago }}</div>
-                                    {% if not complaint.is_read %}
-                                        <button class="btn btn-sm btn-outline-danger mark-read-btn" 
-                                                data-complaint-id="{{ complaint.id }}">
-                                            تحديد كمقروء
-                                        </button>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
+                            {% endif %}
+                        {% empty %}
+                            <div class="no-complaints">✅ جميع الشكاوى مقروءة</div>
                         {% endfor %}
-                    {% else %}
-                        <div class="no-complaints">
-                            📢 لا توجد شكاوى
-                        </div>
-                    {% endif %}
-                </div>
-                
-                <div class="tab-pane fade" id="unread" role="tabpanel">
-                    {% for complaint in complaints %}
-                        {% if not complaint.is_read %}
-                        <div class="complaint-card unread priority-{{ complaint.priority }}" 
-                             data-complaint-id="{{ complaint.id }}">
-                            <div class="complaint-header">
-                                <div class="d-flex align-items-center">
-                                    <span class="complaint-icon">{{ complaint.get_icon }}</span>
-                                    <div>
-                                        <div class="complaint-title">{{ complaint.title }}</div>
-                                        <div class="complaint-meta">
-                                            <span class="meta-badge">{{ complaint.complaint_number }}</span>
-                                            <span class="meta-badge" style="background: #28a745;">{{ complaint.get_complaint_type_display }}</span>
+                    </div>
+                    <div class="tab-pane fade" id="read" role="tabpanel">
+                        {% for complaint in complaints %}
+                            {% if complaint.is_read %}
+                                <div class="complaint-card read">
+                                    <div class="complaint-header">
+                                        <div class="d-flex align-items-center">
+                                            <span class="complaint-icon">{{ complaint.get_icon }}</span>
+                                            <div>
+                                                <div class="complaint-title">{{ complaint.title }}</div>
+                                                <div class="complaint-meta">
+                                                    <span class="meta-badge">{{ complaint.complaint_number }}</span>
+                                                    <span class="meta-badge" style="background: #28a745;">{{ complaint.get_complaint_type_display }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="complaint-time">{{ complaint.get_time_ago }}</div>
+                                            <span class="badge bg-success">✅ مقروء</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="text-end">
-                                    <div class="complaint-time">{{ complaint.get_time_ago }}</div>
-                                    <button class="btn btn-sm btn-outline-danger mark-read-btn" 
-                                            data-complaint-id="{{ complaint.id }}">
-                                        تحديد كمقروء
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    {% empty %}
-                        <div class="no-complaints">
-                            ✅ جميع الشكاوى مقروءة
-                        </div>
-                    {% endfor %}
-                </div>
-                
-                <div class="tab-pane fade" id="read" role="tabpanel">
-                    {% for complaint in complaints %}
-                        {% if complaint.is_read %}
-                        <div class="complaint-card read">
-                            <div class="complaint-header">
-                                <div class="d-flex align-items-center">
-                                    <span class="complaint-icon">{{ complaint.get_icon }}</span>
-                                    <div>
-                                        <div class="complaint-title">{{ complaint.title }}</div>
-                                        <div class="complaint-meta">
-                                            <span class="meta-badge">{{ complaint.complaint_number }}</span>
-                                            <span class="meta-badge" style="background: #28a745;">{{ complaint.get_complaint_type_display }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="text-end">
-                                    <div class="complaint-time">{{ complaint.get_time_ago }}</div>
-                                    <span class="badge bg-success">✅ مقروء</span>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    {% empty %}
-                        <div class="no-complaints">
-                            📢 لا توجد شكاوى مقروءة
-                        </div>
-                    {% endfor %}
+                            {% endif %}
+                        {% empty %}
+                            <div class="no-complaints">📢 لا توجد شكاوى مقروءة</div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<script>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     // تحديد الشكوى كمقروءة
     document.querySelectorAll('.mark-read-btn').forEach(btn => {
@@ -270,5 +261,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-</script>
+    </script>
 {% endblock %}

@@ -1,7 +1,9 @@
+from decimal import ROUND_HALF_UP, Decimal
+
 from django import template
-from decimal import Decimal, ROUND_HALF_UP
 
 register = template.Library()
+
 
 @register.filter
 def clean_decimal(value, max_decimals=2):
@@ -10,7 +12,7 @@ def clean_decimal(value, max_decimals=2):
     - يحتفظ فقط بالأرقام المعنوية (1-9)
     - يسمح بصفر واحد فقط بعد الفاصلة إذا كان ضرورياً
     - التقريب التلقائي إلى max_decimals
-    
+
     Usage: {{ value|clean_decimal }}
     Examples:
     - 440.00000 -> 440
@@ -21,9 +23,9 @@ def clean_decimal(value, max_decimals=2):
     - 100.10 -> 100.1
     - 100.01 -> 100.01
     """
-    if value is None or value == '':
-        return '0'
-    
+    if value is None or value == "":
+        return "0"
+
     try:
         # تحويل إلى Decimal للدقة
         if isinstance(value, str):
@@ -31,41 +33,41 @@ def clean_decimal(value, max_decimals=2):
         elif isinstance(value, (int, float)):
             value = Decimal(str(value))
         elif not isinstance(value, Decimal):
-            return '0'
-        
+            return "0"
+
         # معالجة القيم الصغيرة جداً (أقل من 0.01)
-        if abs(value) < Decimal('0.01'):
-            return '0'
-        
+        if abs(value) < Decimal("0.01"):
+            return "0"
+
         # التقريب إلى max_decimals خانات
-        quantizer = Decimal('0.1') ** max_decimals
+        quantizer = Decimal("0.1") ** max_decimals
         rounded = value.quantize(quantizer, rounding=ROUND_HALF_UP)
-        
+
         # تحويل إلى string وتنظيف
         str_value = str(rounded)
-        
+
         # إزالة الأصفار الزائدة بذكاء
-        if '.' in str_value:
+        if "." in str_value:
             # إزالة الأصفار من النهاية
-            str_value = str_value.rstrip('0')
+            str_value = str_value.rstrip("0")
             # إزالة الفاصلة إذا لم يبق أي رقم بعدها
-            str_value = str_value.rstrip('.')
-        
+            str_value = str_value.rstrip(".")
+
         return str_value
-        
+
     except (ValueError, TypeError, ArithmeticError):
-        return '0'
+        return "0"
 
 
 @register.filter
 def format_currency(value, currency_symbol=None):
     """
     ⚡ تنسيق المبلغ المالي مع رمز العملة من إعدادات النظام
-    
-    Usage: 
+
+    Usage:
     - {{ value|format_currency }}  -> يستخدم العملة من الإعدادات
     - {{ value|format_currency:"$" }}  -> 150.5 $
-    
+
     Examples:
     - 440.00 -> 440 ج.م
     - 150.50 -> 150.5 ج.م
@@ -73,33 +75,34 @@ def format_currency(value, currency_symbol=None):
     """
     # تنظيف القيمة
     clean_value = clean_decimal(value, max_decimals=2)
-    
+
     # الحصول على رمز العملة
     if currency_symbol is None:
         try:
             from accounts.models import SystemSettings
+
             settings = SystemSettings.get_settings()
             currency_symbol = settings.currency_symbol
         except:
-            currency_symbol = 'ج.م'
-    
+            currency_symbol = "ج.م"
+
     # إضافة الفواصل للأرقام الكبيرة (اختياري)
     try:
         num = float(clean_value)
         if abs(num) >= 1000:
             # تنسيق مع فواصل الآلاف
-            clean_value = f"{num:,.10f}".rstrip('0').rstrip('.')
+            clean_value = f"{num:,.10f}".rstrip("0").rstrip(".")
     except:
         pass
-    
+
     return f"{clean_value} {currency_symbol}"
 
 
-@register.filter  
-def format_quantity(value, unit=''):
+@register.filter
+def format_quantity(value, unit=""):
     """
     ⚡ تنسيق الكميات مع الوحدة
-    
+
     Usage: {{ value|format_quantity:"متر" }}
     Examples:
     - 4.250 + "متر" -> 4.25 متر
@@ -116,7 +119,7 @@ def format_quantity(value, unit=''):
 def format_percentage(value):
     """
     ⚡ تنسيق النسب المئوية
-    
+
     Usage: {{ value|format_percentage }}
     Examples:
     - 15.00 -> 15%
@@ -129,7 +132,7 @@ def format_percentage(value):
 
 # Aliases للتوافق مع الكود القديم
 @register.filter
-def clean_decimal_with_unit(value, unit=''):
+def clean_decimal_with_unit(value, unit=""):
     """Alias لـ format_quantity"""
     return format_quantity(value, unit)
 

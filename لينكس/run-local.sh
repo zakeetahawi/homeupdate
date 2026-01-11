@@ -16,7 +16,10 @@ print_info() { echo -e "${WHITE}$1${NC}"; }
 print_local() { echo -e "${PURPLE}$1${NC}"; }
 print_debug() { echo -e "${CYAN}$1${NC}"; }
 
-if [ ! -d "$PROJECT_DIR" ]; then print_error "مجلد المشروع غير موجود: $PROJECT_DIR"; exit 1; fi
+if [ ! -d "$PROJECT_DIR" ]; then
+	print_error "مجلد المشروع غير موجود: $PROJECT_DIR"
+	exit 1
+fi
 cd "$PROJECT_DIR"
 
 print_info "عرض معلومات النظام..."
@@ -35,16 +38,19 @@ print_status "✔️ تم تجميع الملفات الثابتة"
 print_info "فحص المستخدمين..."
 USER_COUNT=$(python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings'); import django; django.setup(); from accounts.models import User; print(User.objects.count())")
 if [ "$USER_COUNT" -eq 0 ]; then
-  print_status "لا يوجد مستخدمين، سيتم إنشاء admin/admin123"
-  python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings'); import django; django.setup(); from accounts.models import User; User.objects.create_superuser('admin', 'admin@example.com', 'admin123'); print('تم إنشاء المستخدم admin/admin123')"
+	print_status "لا يوجد مستخدمين، سيتم إنشاء admin/admin123"
+	python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings'); import django; django.setup(); from accounts.models import User; User.objects.create_superuser('admin', 'admin@example.com', 'admin123'); print('تم إنشاء المستخدم admin/admin123')"
 else
-  print_status "عدد المستخدمين الحالي: $USER_COUNT (لن يتم إنشاء مستخدم جديد)"
+	print_status "عدد المستخدمين الحالي: $USER_COUNT (لن يتم إنشاء مستخدم جديد)"
 fi
 
 cleanup() {
-    print_info "إيقاف العمليات..."
-    if [ ! -z "$DJANGO_PID" ]; then kill $DJANGO_PID 2>/dev/null; print_status "تم إيقاف خادم Django"; fi
-    exit 0
+	print_info "إيقاف العمليات..."
+	if [ ! -z "$DJANGO_PID" ]; then
+		kill $DJANGO_PID 2>/dev/null
+		print_status "تم إيقاف خادم Django"
+	fi
+	exit 0
 }
 trap cleanup INT TERM
 
@@ -61,11 +67,20 @@ print_status "خادم Django يعمل (PID: $DJANGO_PID)"
 
 COUNTER=0
 while true; do
-    sleep 10
-    COUNTER=$((COUNTER + 1))
-    if ! kill -0 $DJANGO_PID 2>/dev/null; then print_error "❌ خادم Django توقف!"; break; fi
-    if [ $((COUNTER % 6)) -eq 0 ]; then print_status "✅ النظام يعمل بشكل طبيعي"; print_debug "الذاكرة: $(ps -o pid,vsz,rss,comm -p $DJANGO_PID | tail -1)"; fi
-    if [ $((COUNTER % 30)) -eq 0 ]; then print_info "تقرير دوري - النظام يعمل منذ $((COUNTER * 10)) ثانية"; print_debug "الاتصالات: $(netstat -an | grep :8000 | grep ESTABLISHED | wc -l)"; fi
+	sleep 10
+	COUNTER=$((COUNTER + 1))
+	if ! kill -0 $DJANGO_PID 2>/dev/null; then
+		print_error "❌ خادم Django توقف!"
+		break
+	fi
+	if [ $((COUNTER % 6)) -eq 0 ]; then
+		print_status "✅ النظام يعمل بشكل طبيعي"
+		print_debug "الذاكرة: $(ps -o pid,vsz,rss,comm -p $DJANGO_PID | tail -1)"
+	fi
+	if [ $((COUNTER % 30)) -eq 0 ]; then
+		print_info "تقرير دوري - النظام يعمل منذ $((COUNTER * 10)) ثانية"
+		print_debug "الاتصالات: $(netstat -an | grep :8000 | grep ESTABLISHED | wc -l)"
+	fi
 done
 
-cleanup 
+cleanup

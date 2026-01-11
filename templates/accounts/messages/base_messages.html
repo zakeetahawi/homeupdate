@@ -1,8 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block extra_css %}
-<style>
+    <style>
     .messages-container {
         max-width: 1400px;
         margin: 2rem auto;
@@ -115,49 +114,49 @@
             padding: 0 0.5rem;
         }
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="messages-container">
-    <div class="row">
-        <!-- Sidebar -->
-        <div class="col-lg-3 col-md-4 mb-4">
-            <div class="messages-sidebar">
-                <h5><i class="fas fa-envelope me-2"></i>الرسائل</h5>
-                <ul class="sidebar-menu">
-                    <li>
-                        <a href="{% url 'accounts:compose_message' %}" class="btn-compose text-center">
-                            <i class="fas fa-plus"></i>
-                            رسالة جديدة
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'accounts:inbox' %}" class="{% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
-                            <i class="fas fa-inbox"></i>
-                            الوارد
-                            {% if unread_count > 0 %}
-                            <span class="badge bg-danger">{{ unread_count }}</span>
-                            {% endif %}
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'accounts:sent_messages' %}" class="{% if request.resolver_match.url_name == 'sent_messages' %}active{% endif %}">
-                            <i class="fas fa-paper-plane"></i>
-                            الصادر
-                        </a>
-                    </li>
-                </ul>
+    <div class="messages-container">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3 col-md-4 mb-4">
+                <div class="messages-sidebar">
+                    <h5>
+                        <i class="fas fa-envelope me-2"></i>الرسائل
+                    </h5>
+                    <ul class="sidebar-menu">
+                        <li>
+                            <a href="{% url 'accounts:compose_message' %}"
+                               class="btn-compose text-center">
+                                <i class="fas fa-plus"></i>
+                                رسالة جديدة
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'accounts:inbox' %}"
+                               class="{% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
+                                <i class="fas fa-inbox"></i>
+                                الوارد
+                                {% if unread_count > 0 %}<span class="badge bg-danger">{{ unread_count }}</span>{% endif %}
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'accounts:sent_messages' %}"
+                               class="{% if request.resolver_match.url_name == 'sent_messages' %}active{% endif %}">
+                                <i class="fas fa-paper-plane"></i>
+                                الصادر
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
-        </div>
-        
-        <!-- Content -->
-        <div class="col-lg-9 col-md-8">
-            <div class="messages-content">
-                {% block messages_content %}
-                {% endblock %}
+            <!-- Content -->
+            <div class="col-lg-9 col-md-8">
+                <div class="messages-content">
+                    {% block messages_content %}{% endblock %}
+                </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

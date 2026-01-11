@@ -6,36 +6,36 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0012_alter_onlineuser_options_and_more'),
+        ("accounts", "0012_alter_onlineuser_options_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='useractivitylog',
-            name='session',
+            model_name="useractivitylog",
+            name="session",
         ),
         migrations.RemoveField(
-            model_name='useractivitylog',
-            name='user',
+            model_name="useractivitylog",
+            name="user",
         ),
         migrations.RemoveField(
-            model_name='userloginhistory',
-            name='user',
+            model_name="userloginhistory",
+            name="user",
         ),
         migrations.RemoveField(
-            model_name='usersession',
-            name='user',
+            model_name="usersession",
+            name="user",
         ),
         migrations.DeleteModel(
-            name='OnlineUser',
+            name="OnlineUser",
         ),
         migrations.DeleteModel(
-            name='UserActivityLog',
+            name="UserActivityLog",
         ),
         migrations.DeleteModel(
-            name='UserLoginHistory',
+            name="UserLoginHistory",
         ),
         migrations.DeleteModel(
-            name='UserSession',
+            name="UserSession",
         ),
     ]

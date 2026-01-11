@@ -1,5 +1,4 @@
 {% load report_math_filters %}
-
 <div class="card">
     <div class="card-header">
         <h5 class="mb-0">تقرير المخزون</h5>
@@ -18,13 +17,13 @@
                 </thead>
                 <tbody>
                     {% for product in products %}
-                    <tr>
-                        <td>{{ product.name }}</td>
-                        <td>{{ product.available_quantity }}</td>
-                        <td>{{ product.reserved_quantity }}</td>
-                        <td>{{ product.unit_cost }}</td>
-                        <td>{{ product.available_quantity|multiply:product.unit_cost }}</td>
-                    </tr>
+                        <tr>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.available_quantity }}</td>
+                            <td>{{ product.reserved_quantity }}</td>
+                            <td>{{ product.unit_cost }}</td>
+                            <td>{{ product.available_quantity|multiply:product.unit_cost }}</td>
+                        </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
@@ -37,17 +36,15 @@
         </div>
     </div>
 </div>
-
 class Order(models.Model):
-    ORDER_TYPES = (
-        ('regular', 'طلب عادي'),
-        ('urgent', 'طلب عاجل'),
-    )
-    
-    # ... الحقول الأخرى الموجودة ...
-    order_type = models.CharField(
-        max_length=20,
-        choices=ORDER_TYPES,
-        default='regular',
-        verbose_name='نوع الطلب'
-    )
+ORDER_TYPES = (
+('regular', 'طلب عادي'),
+('urgent', 'طلب عاجل'),
+)
+# ... الحقول الأخرى الموجودة ...
+order_type = models.CharField(
+max_length=20,
+choices=ORDER_TYPES,
+default='regular',
+verbose_name='نوع الطلب'
+)

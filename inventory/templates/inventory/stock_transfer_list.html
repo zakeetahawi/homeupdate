@@ -1,266 +1,255 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}التحويلات المخزنية{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- العنوان والإحصائيات -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h3 mb-0">
-                    <i class="fas fa-exchange-alt text-primary"></i>
-                    التحويلات المخزنية
-                </h1>
-                <a href="{% url 'inventory:stock_transfer_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i>
-                    تحويل مخزني جديد
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- الإحصائيات -->
-    <div class="row mb-4">
-        <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                إجمالي التحويلات
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-exchange-alt fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                قيد الانتظار
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.pending }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clock fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                قيد النقل
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.in_transit }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-truck fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                مكتمل
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.completed }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- الفلاتر -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-filter"></i>
-                الفلاتر
-            </h6>
-        </div>
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">الحالة</label>
-                    <select name="status" class="form-select">
-                        <option value="">جميع الحالات</option>
-                        {% for value, label in status_choices %}
-                        <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">من مستودع</label>
-                    <select name="from_warehouse" class="form-select">
-                        <option value="">جميع المستودعات</option>
-                        {% for warehouse in warehouses %}
-                        <option value="{{ warehouse.id }}" {% if current_from_warehouse == warehouse.id|stringformat:"s" %}selected{% endif %}>
-                            {{ warehouse.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">إلى مستودع</label>
-                    <select name="to_warehouse" class="form-select">
-                        <option value="">جميع المستودعات</option>
-                        {% for warehouse in warehouses %}
-                        <option value="{{ warehouse.id }}" {% if current_to_warehouse == warehouse.id|stringformat:"s" %}selected{% endif %}>
-                            {{ warehouse.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">بحث</label>
-                    <input type="text" name="search" class="form-control" placeholder="رقم التحويل..." value="{{ current_search }}">
-                </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search"></i>
-                        بحث
-                    </button>
-                    <a href="{% url 'inventory:stock_transfer_list' %}" class="btn btn-secondary">
-                        <i class="fas fa-redo"></i>
-                        إعادة تعيين
+    <div class="container-fluid">
+        <!-- العنوان والإحصائيات -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-exchange-alt text-primary"></i>
+                        التحويلات المخزنية
+                    </h1>
+                    <a href="{% url 'inventory:stock_transfer_create' %}"
+                       class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        تحويل مخزني جديد
                     </a>
                 </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- قائمة التحويلات -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-list"></i>
-                قائمة التحويلات
-            </h6>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover">
-                    <thead class="table-light">
-                        <tr>
-                            <th>رقم التحويل</th>
-                            <th>من مستودع</th>
-                            <th>إلى مستودع</th>
-                            <th>عدد الأصناف</th>
-                            <th>الكمية الإجمالية</th>
-                            <th>الحالة</th>
-                            <th>تاريخ التحويل</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for transfer in page_obj %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'inventory:stock_transfer_detail' transfer.pk %}">
-                                    <strong>{{ transfer.transfer_number }}</strong>
-                                </a>
-                            </td>
-                            <td>{{ transfer.from_warehouse.name }}</td>
-                            <td>{{ transfer.to_warehouse.name }}</td>
-                            <td>{{ transfer.total_items }}</td>
-                            <td>{{ transfer.total_quantity }}</td>
-                            <td>
-                                {% if transfer.status == 'draft' %}
-                                <span class="badge bg-secondary">مسودة</span>
-                                {% elif transfer.status == 'pending' %}
-                                <span class="badge bg-warning">قيد الانتظار</span>
-                                {% elif transfer.status == 'approved' %}
-                                <span class="badge bg-info">تمت الموافقة</span>
-                                {% elif transfer.status == 'in_transit' %}
-                                <span class="badge bg-primary">قيد النقل</span>
-                                {% elif transfer.status == 'completed' %}
-                                <span class="badge bg-success">مكتمل</span>
-                                {% elif transfer.status == 'cancelled' %}
-                                <span class="badge bg-danger">ملغي</span>
-                                {% elif transfer.status == 'rejected' %}
-                                <span class="badge bg-dark">مرفوض</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ transfer.transfer_date|date:"Y-m-d H:i" }}</td>
-                            <td>
-                                <a href="{% url 'inventory:stock_transfer_detail' transfer.pk %}" 
-                                   class="btn btn-sm btn-info" title="التفاصيل">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if transfer.status == 'draft' %}
-                                <a href="{% url 'inventory:stock_transfer_edit' transfer.pk %}" 
-                                   class="btn btn-sm btn-warning" title="تعديل">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center text-muted">
-                                <i class="fas fa-inbox fa-3x mb-3"></i>
-                                <p>لا توجد تحويلات مخزنية</p>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
             </div>
-
-            <!-- Pagination -->
-            {% if page_obj.has_other_pages %}
-            <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">السابق</a>
-                    </li>
-                    {% endif %}
-
-                    {% for num in page_obj.paginator.page_range %}
-                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
-                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                    </li>
-                    {% endfor %}
-
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">التالي</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
+        </div>
+        <!-- الإحصائيات -->
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">إجمالي التحويلات</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-exchange-alt fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">قيد الانتظار</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.pending }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-clock fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">قيد النقل</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.in_transit }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-truck fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">مكتمل</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.completed }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- الفلاتر -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-filter"></i>
+                    الفلاتر
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">الحالة</label>
+                        <select name="status" class="form-select">
+                            <option value="">جميع الحالات</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}"
+                                        {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">من مستودع</label>
+                        <select name="from_warehouse" class="form-select">
+                            <option value="">جميع المستودعات</option>
+                            {% for warehouse in warehouses %}
+                                <option value="{{ warehouse.id }}"
+                                        {% if current_from_warehouse == warehouse.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ warehouse.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">إلى مستودع</label>
+                        <select name="to_warehouse" class="form-select">
+                            <option value="">جميع المستودعات</option>
+                            {% for warehouse in warehouses %}
+                                <option value="{{ warehouse.id }}"
+                                        {% if current_to_warehouse == warehouse.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ warehouse.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">بحث</label>
+                        <input type="text"
+                               name="search"
+                               class="form-control"
+                               placeholder="رقم التحويل..."
+                               value="{{ current_search }}">
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                            بحث
+                        </button>
+                        <a href="{% url 'inventory:stock_transfer_list' %}"
+                           class="btn btn-secondary">
+                            <i class="fas fa-redo"></i>
+                            إعادة تعيين
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- قائمة التحويلات -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-list"></i>
+                    قائمة التحويلات
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>رقم التحويل</th>
+                                <th>من مستودع</th>
+                                <th>إلى مستودع</th>
+                                <th>عدد الأصناف</th>
+                                <th>الكمية الإجمالية</th>
+                                <th>الحالة</th>
+                                <th>تاريخ التحويل</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transfer in page_obj %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'inventory:stock_transfer_detail' transfer.pk %}">
+                                            <strong>{{ transfer.transfer_number }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>{{ transfer.from_warehouse.name }}</td>
+                                    <td>{{ transfer.to_warehouse.name }}</td>
+                                    <td>{{ transfer.total_items }}</td>
+                                    <td>{{ transfer.total_quantity }}</td>
+                                    <td>
+                                        {% if transfer.status == 'draft' %}
+                                            <span class="badge bg-secondary">مسودة</span>
+                                        {% elif transfer.status == 'pending' %}
+                                            <span class="badge bg-warning">قيد الانتظار</span>
+                                        {% elif transfer.status == 'approved' %}
+                                            <span class="badge bg-info">تمت الموافقة</span>
+                                        {% elif transfer.status == 'in_transit' %}
+                                            <span class="badge bg-primary">قيد النقل</span>
+                                        {% elif transfer.status == 'completed' %}
+                                            <span class="badge bg-success">مكتمل</span>
+                                        {% elif transfer.status == 'cancelled' %}
+                                            <span class="badge bg-danger">ملغي</span>
+                                        {% elif transfer.status == 'rejected' %}
+                                            <span class="badge bg-dark">مرفوض</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ transfer.transfer_date|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'inventory:stock_transfer_detail' transfer.pk %}"
+                                           class="btn btn-sm btn-info"
+                                           title="التفاصيل">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if transfer.status == 'draft' %}
+                                            <a href="{% url 'inventory:stock_transfer_edit' transfer.pk %}"
+                                               class="btn btn-sm btn-warning"
+                                               title="تعديل">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">
+                                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                                        <p>لا توجد تحويلات مخزنية</p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">السابق</a>
+                                </li>
+                            {% endif %}
+                            {% for num in page_obj.paginator.page_range %}
+                                <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endfor %}
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">التالي</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}
-

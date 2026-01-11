@@ -6,13 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('customers', '0001_initial'),
+        ("customers", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customer',
-            name='location_type',
-            field=models.CharField(blank=True, choices=[('open', 'مفتوح'), ('compound', 'كومبوند')], help_text='نوع المكان (مفتوح أو كومبوند)', max_length=20, null=True, verbose_name='نوع المكان'),
+            model_name="customer",
+            name="location_type",
+            field=models.CharField(
+                blank=True,
+                choices=[("open", "مفتوح"), ("compound", "كومبوند")],
+                help_text="نوع المكان (مفتوح أو كومبوند)",
+                max_length=20,
+                null=True,
+                verbose_name="نوع المكان",
+            ),
         ),
     ]

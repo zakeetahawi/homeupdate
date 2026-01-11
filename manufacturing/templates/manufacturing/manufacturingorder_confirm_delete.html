@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}تأكيد حذف أمر التصنيع{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/enhanced-forms.css' %}">
-<style>
+    <link rel="stylesheet" href="{% static 'css/enhanced-forms.css' %}">
+    <style>
     .delete-warning {
         background: linear-gradient(135deg, #ff6b6b, #ee5a52);
         color: white;
@@ -107,192 +105,171 @@
     .status-in-progress { background: #cce5ff; color: #004085; }
     .status-completed { background: #d1ecf1; color: #0c5460; }
     .status-rejected { background: #f8d7da; color: #721c24; }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2 class="mb-0">
-                        <i class="fas fa-trash-alt text-danger me-2"></i>
-                        تأكيد حذف أمر التصنيع
-                    </h2>
-                    <p class="text-muted mb-0">تأكيد حذف أمر التصنيع نهائياً من النظام</p>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="mb-0">
+                            <i class="fas fa-trash-alt text-danger me-2"></i>
+                            تأكيد حذف أمر التصنيع
+                        </h2>
+                        <p class="text-muted mb-0">تأكيد حذف أمر التصنيع نهائياً من النظام</p>
+                    </div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'manufacturing:dashboard' %}">
+                                    <i class="fas fa-home"></i> الرئيسية
+                                </a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'manufacturing:order_list' %}">أوامر التصنيع</a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'manufacturing:order_detail' object.pk %}">أمر #{{ object.pk }}</a>
+                            </li>
+                            <li class="breadcrumb-item active">حذف</li>
+                        </ol>
+                    </nav>
                 </div>
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item">
-                            <a href="{% url 'manufacturing:dashboard' %}">
-                                <i class="fas fa-home"></i> الرئيسية
+                <!-- Delete Warning -->
+                <div class="delete-warning">
+                    <div class="icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h3>تحذير: عملية حذف نهائية!</h3>
+                    <p class="mb-0">
+                        هل أنت متأكد من رغبتك في حذف أمر التصنيع هذا؟
+                        <br>
+                        <strong>لا يمكن التراجع عن هذه العملية!</strong>
+                    </p>
+                </div>
+                <!-- Order Information -->
+                <div class="order-info">
+                    <h5>
+                        <i class="fas fa-info-circle me-2"></i>
+                        معلومات أمر التصنيع المراد حذفه
+                    </h5>
+                    <div class="info-row">
+                        <span class="info-label">رقم أمر التصنيع:</span>
+                        <span class="info-value">#{{ object.pk }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">رقم الطلب الأصلي:</span>
+                        <span class="info-value">
+                            {% if object.order %}
+                                {{ object.order.order_number|default:object.order.pk }}
+                            {% else %}
+                                غير محدد
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">العميل:</span>
+                        <span class="info-value">
+                            {% if object.order and object.order.customer %}
+                                {{ object.order.customer.name }}
+                            {% else %}
+                                غير محدد
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">حالة أمر التصنيع:</span>
+                        <span class="info-value">
+                            {% if object.status == 'pending_approval' %}
+                                <span class="badge bg-warning text-dark">قيد الموافقة</span>
+                            {% elif object.status == 'pending' %}
+                                <span class="badge bg-info text-white">قيد الانتظار</span>
+                            {% elif object.status == 'in_progress' %}
+                                <span class="badge bg-primary text-white">قيد التصنيع</span>
+                            {% elif object.status == 'ready_install' %}
+                                <span class="badge bg-success text-white">جاهز للتركيب</span>
+                            {% elif object.status == 'completed' %}
+                                <span class="badge bg-success text-white">مكتمل</span>
+                            {% elif object.status == 'delivered' %}
+                                <span class="badge bg-dark text-white">تم التسليم</span>
+                            {% elif object.status == 'rejected' %}
+                                <span class="badge bg-danger text-white">مرفوض</span>
+                            {% elif object.status == 'cancelled' %}
+                                <span class="badge bg-secondary text-white">ملغي</span>
+                            {% else %}
+                                <span class="badge bg-secondary text-white">{{ object.get_status_display }}</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">رقم العقد:</span>
+                        <span class="info-value">{{ object.contract_number|default:'غير محدد' }}</span>
+                    </div>
+                    {% if object.order.contract_number_2 %}
+                        <div class="info-row">
+                            <span class="info-label">رقم العقد الإضافي 2:</span>
+                            <span class="info-value">{{ object.order.contract_number_2 }}</span>
+                        </div>
+                    {% endif %}
+                    {% if object.order.contract_number_3 %}
+                        <div class="info-row">
+                            <span class="info-label">رقم العقد الإضافي 3:</span>
+                            <span class="info-value">{{ object.order.contract_number_3 }}</span>
+                        </div>
+                    {% endif %}
+                    <div class="info-row">
+                        <span class="info-label">تاريخ الإنشاء:</span>
+                        <span class="info-value">{{ object.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    {% if object.expected_delivery_date %}
+                        <div class="info-row">
+                            <span class="info-label">تاريخ التسليم المتوقع:</span>
+                            <span class="info-value">{{ object.expected_delivery_date|date:"Y-m-d" }}</span>
+                        </div>
+                    {% endif %}
+                    {% if object.notes %}
+                        <div class="info-row">
+                            <span class="info-label">الملاحظات:</span>
+                            <span class="info-value">{{ object.notes|truncatewords:10 }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <!-- Confirmation Form -->
+                <div class="card">
+                    <div class="card-body">
+                        <form method="post" class="d-flex justify-content-center gap-3">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-trash-alt me-2"></i>
+                                نعم، احذف أمر التصنيع
+                            </button>
+                            <a href="{% url 'manufacturing:order_detail' object.pk %}"
+                               class="btn btn-secondary btn-lg">
+                                <i class="fas fa-arrow-right me-2"></i>
+                                إلغاء والعودة
                             </a>
-                        </li>
-                        <li class="breadcrumb-item">
-                            <a href="{% url 'manufacturing:order_list' %}">أوامر التصنيع</a>
-                        </li>
-                        <li class="breadcrumb-item">
-                            <a href="{% url 'manufacturing:order_detail' object.pk %}">
-                                أمر #{{ object.pk }}
-                            </a>
-                        </li>
-                        <li class="breadcrumb-item active">حذف</li>
-                    </ol>
-                </nav>
-            </div>
-            
-            <!-- Delete Warning -->
-            <div class="delete-warning">
-                <div class="icon">
-                    <i class="fas fa-exclamation-triangle"></i>
+                        </form>
+                    </div>
                 </div>
-                <h3>تحذير: عملية حذف نهائية!</h3>
-                <p class="mb-0">
-                    هل أنت متأكد من رغبتك في حذف أمر التصنيع هذا؟ 
-                    <br>
-                    <strong>لا يمكن التراجع عن هذه العملية!</strong>
-                </p>
-            </div>
-            
-            <!-- Order Information -->
-            <div class="order-info">
-                <h5>
-                    <i class="fas fa-info-circle me-2"></i>
-                    معلومات أمر التصنيع المراد حذفه
-                </h5>
-                
-                <div class="info-row">
-                    <span class="info-label">رقم أمر التصنيع:</span>
-                    <span class="info-value">#{{ object.pk }}</span>
+                <!-- Additional Warning -->
+                <div class="alert alert-warning mt-4">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>تنبيه:</strong>
+                    حذف أمر التصنيع سيؤثر على:
+                    <ul class="mb-0 mt-2">
+                        <li>جميع عناصر أمر التصنيع المرتبطة</li>
+                        <li>حالة الطلب الأصلي (ستعود إلى الحالة السابقة)</li>
+                        <li>التقارير والإحصائيات المرتبطة</li>
+                    </ul>
                 </div>
-                
-                <div class="info-row">
-                    <span class="info-label">رقم الطلب الأصلي:</span>
-                    <span class="info-value">
-                        {% if object.order %}
-                            {{ object.order.order_number|default:object.order.pk }}
-                        {% else %}
-                            غير محدد
-                        {% endif %}
-                    </span>
-                </div>
-                
-                <div class="info-row">
-                    <span class="info-label">العميل:</span>
-                    <span class="info-value">
-                        {% if object.order and object.order.customer %}
-                            {{ object.order.customer.name }}
-                        {% else %}
-                            غير محدد
-                        {% endif %}
-                    </span>
-                </div>
-                
-
-                
-                <div class="info-row">
-                    <span class="info-label">حالة أمر التصنيع:</span>
-                    <span class="info-value">
-                        {% if object.status == 'pending_approval' %}
-                            <span class="badge bg-warning text-dark">قيد الموافقة</span>
-                        {% elif object.status == 'pending' %}
-                            <span class="badge bg-info text-white">قيد الانتظار</span>
-                        {% elif object.status == 'in_progress' %}
-                            <span class="badge bg-primary text-white">قيد التصنيع</span>
-                        {% elif object.status == 'ready_install' %}
-                            <span class="badge bg-success text-white">جاهز للتركيب</span>
-                        {% elif object.status == 'completed' %}
-                            <span class="badge bg-success text-white">مكتمل</span>
-                        {% elif object.status == 'delivered' %}
-                            <span class="badge bg-dark text-white">تم التسليم</span>
-                        {% elif object.status == 'rejected' %}
-                            <span class="badge bg-danger text-white">مرفوض</span>
-                        {% elif object.status == 'cancelled' %}
-                            <span class="badge bg-secondary text-white">ملغي</span>
-                        {% else %}
-                            <span class="badge bg-secondary text-white">{{ object.get_status_display }}</span>
-                        {% endif %}
-                    </span>
-                </div>
-                
-                <div class="info-row">
-                    <span class="info-label">رقم العقد:</span>
-                    <span class="info-value">{{ object.contract_number|default:'غير محدد' }}</span>
-                </div>
-                
-                {% if object.order.contract_number_2 %}
-                <div class="info-row">
-                    <span class="info-label">رقم العقد الإضافي 2:</span>
-                    <span class="info-value">{{ object.order.contract_number_2 }}</span>
-                </div>
-                {% endif %}
-                
-                {% if object.order.contract_number_3 %}
-                <div class="info-row">
-                    <span class="info-label">رقم العقد الإضافي 3:</span>
-                    <span class="info-value">{{ object.order.contract_number_3 }}</span>
-                </div>
-                {% endif %}
-                
-                <div class="info-row">
-                    <span class="info-label">تاريخ الإنشاء:</span>
-                    <span class="info-value">{{ object.created_at|date:"Y-m-d H:i" }}</span>
-                </div>
-                
-                {% if object.expected_delivery_date %}
-                <div class="info-row">
-                    <span class="info-label">تاريخ التسليم المتوقع:</span>
-                    <span class="info-value">{{ object.expected_delivery_date|date:"Y-m-d" }}</span>
-                </div>
-                {% endif %}
-                
-                {% if object.notes %}
-                <div class="info-row">
-                    <span class="info-label">الملاحظات:</span>
-                    <span class="info-value">{{ object.notes|truncatewords:10 }}</span>
-                </div>
-                {% endif %}
-            </div>
-            
-            <!-- Confirmation Form -->
-            <div class="card">
-                <div class="card-body">
-                    <form method="post" class="d-flex justify-content-center gap-3">
-                        {% csrf_token %}
-                        
-                        <button type="submit" class="btn btn-danger btn-lg">
-                            <i class="fas fa-trash-alt me-2"></i>
-                            نعم، احذف أمر التصنيع
-                        </button>
-                        
-                        <a href="{% url 'manufacturing:order_detail' object.pk %}" class="btn btn-secondary btn-lg">
-                            <i class="fas fa-arrow-right me-2"></i>
-                            إلغاء والعودة
-                        </a>
-                    </form>
-                </div>
-            </div>
-            
-            <!-- Additional Warning -->
-            <div class="alert alert-warning mt-4">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>تنبيه:</strong> 
-                حذف أمر التصنيع سيؤثر على:
-                <ul class="mb-0 mt-2">
-                    <li>جميع عناصر أمر التصنيع المرتبطة</li>
-                    <li>حالة الطلب الأصلي (ستعود إلى الحالة السابقة)</li>
-                    <li>التقارير والإحصائيات المرتبطة</li>
-                </ul>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     // تأكيد إضافي قبل الحذف
     const deleteForm = document.querySelector('form[method="post"]');
@@ -317,5 +294,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-</script>
-{% endblock %} 
+    </script>
+{% endblock %}

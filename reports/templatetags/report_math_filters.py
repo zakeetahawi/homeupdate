@@ -1,8 +1,10 @@
-from django import template
-from django.utils.safestring import mark_safe
 import json
 
+from django import template
+from django.utils.safestring import mark_safe
+
 register = template.Library()
+
 
 @register.filter
 def currency(value):
@@ -16,6 +18,7 @@ def currency(value):
 
         # استخدام القيمة الافتراضية (ريال سعودي) إذا لم يتم العثور على رمز العملة في السياق
         from accounts.models import SystemSettings
+
         settings = SystemSettings.get_settings()
         currency_symbol = settings.currency_symbol
 
@@ -24,19 +27,21 @@ def currency(value):
         # القيمة الافتراضية في حالة حدوث خطأ
         return "0.00 ر.س"
 
+
 @register.filter
 def growth_class(value):
     """تحديد لون النمو بناءً على القيمة"""
     try:
         value = float(value)
         if value > 5:
-            return 'text-success'
+            return "text-success"
         elif value < -5:
-            return 'text-danger'
+            return "text-danger"
         else:
-            return 'text-warning'
+            return "text-warning"
     except (ValueError, TypeError):
-        return ''
+        return ""
+
 
 @register.filter
 def retention_class(value):
@@ -44,13 +49,14 @@ def retention_class(value):
     try:
         value = float(value)
         if value >= 80:
-            return 'text-success'
+            return "text-success"
         elif value >= 60:
-            return 'text-warning'
+            return "text-warning"
         else:
-            return 'text-danger'
+            return "text-danger"
     except (ValueError, TypeError):
-        return ''
+        return ""
+
 
 @register.filter
 def margin_class(value):
@@ -58,13 +64,14 @@ def margin_class(value):
     try:
         value = float(value)
         if value >= 25:
-            return 'text-success'
+            return "text-success"
         elif value >= 15:
-            return 'text-warning'
+            return "text-warning"
         else:
-            return 'text-danger'
+            return "text-danger"
     except (ValueError, TypeError):
-        return ''
+        return ""
+
 
 @register.filter
 def map(value, attr):
@@ -72,7 +79,8 @@ def map(value, attr):
     try:
         return mark_safe(json.dumps([item[attr] for item in value]))
     except (KeyError, TypeError):
-        return '[]'
+        return "[]"
+
 
 @register.filter
 def percentage(value, total):
@@ -81,6 +89,7 @@ def percentage(value, total):
         return (float(value) / float(total)) * 100
     except (ValueError, TypeError, ZeroDivisionError):
         return 0
+
 
 @register.filter
 def trend_icon(value):
@@ -94,7 +103,8 @@ def trend_icon(value):
         else:
             return mark_safe('<i class="fas fa-minus text-warning"></i>')
     except (ValueError, TypeError):
-        return ''
+        return ""
+
 
 @register.filter
 def format_frequency(value):
@@ -106,34 +116,37 @@ def format_frequency(value):
         else:
             return f"{value*100:.0f}%"
     except (ValueError, TypeError):
-        return '0%'
+        return "0%"
+
 
 @register.filter
 def status_class(value):
     """تحديد لون الحالة"""
     status_classes = {
-        'completed': 'success',
-        'pending': 'warning',
-        'cancelled': 'danger',
-        'processing': 'info',
-        'delayed': 'secondary'
+        "completed": "success",
+        "pending": "warning",
+        "cancelled": "danger",
+        "processing": "info",
+        "delayed": "secondary",
     }
     return f"text-{status_classes.get(value, 'secondary')}"
+
 
 @register.filter
 def chart_color(index):
     """إرجاع لون للرسم البياني"""
     colors = [
-        '#FF6384',  # أحمر
-        '#36A2EB',  # أزرق
-        '#FFCE56',  # أصفر
-        '#4BC0C0',  # أخضر مائل للأزرق
-        '#9966FF',  # بنفسجي
-        '#FF9F40',  # برتقالي
-        '#FF6384',  # وردي
-        '#C9CBCF'   # رمادي
+        "#FF6384",  # أحمر
+        "#36A2EB",  # أزرق
+        "#FFCE56",  # أصفر
+        "#4BC0C0",  # أخضر مائل للأزرق
+        "#9966FF",  # بنفسجي
+        "#FF9F40",  # برتقالي
+        "#FF6384",  # وردي
+        "#C9CBCF",  # رمادي
     ]
     return colors[index % len(colors)]
+
 
 @register.filter
 def format_time(minutes):
@@ -152,6 +165,7 @@ def format_time(minutes):
     except (ValueError, TypeError):
         return "0 دقيقة"
 
+
 @register.filter
 def format_number(value):
     """تنسيق الأرقام الكبيرة"""
@@ -166,6 +180,7 @@ def format_number(value):
     except (ValueError, TypeError):
         return "0"
 
+
 @register.filter
 def div(value, arg):
     """قسمة قيمة على أخرى"""
@@ -173,6 +188,7 @@ def div(value, arg):
         return float(value) / float(arg)
     except (ValueError, TypeError, ZeroDivisionError):
         return 0
+
 
 @register.filter
 def divide(value, arg):
@@ -182,6 +198,7 @@ def divide(value, arg):
     except (ValueError, TypeError, ZeroDivisionError):
         return 0
 
+
 @register.filter
 def mul(value, arg):
     """ضرب قيمة في أخرى"""
@@ -189,6 +206,7 @@ def mul(value, arg):
         return float(value) * float(arg)
     except (ValueError, TypeError):
         return 0
+
 
 @register.filter
 def multiply(value, arg):
@@ -198,6 +216,7 @@ def multiply(value, arg):
     except (ValueError, TypeError):
         return 0
 
+
 @register.filter
 def sub(value, arg):
     """طرح قيمة من أخرى"""
@@ -205,6 +224,7 @@ def sub(value, arg):
         return float(value) - float(arg)
     except (ValueError, TypeError):
         return 0
+
 
 @register.filter
 def subtract(value, arg):
@@ -214,6 +234,7 @@ def subtract(value, arg):
     except (ValueError, TypeError):
         return 0
 
+
 @register.filter
 def add(value, arg):
     """جمع قيمتين"""
@@ -221,6 +242,7 @@ def add(value, arg):
         return float(value) + float(arg)
     except (ValueError, TypeError):
         return 0
+
 
 @register.filter
 def sum_attr(items, attr):
@@ -235,6 +257,7 @@ def sum_attr(items, attr):
         return total
     except (ValueError, TypeError, AttributeError):
         return 0
+
 
 @register.filter
 def avg_attr(items, attr):
@@ -257,6 +280,7 @@ def avg_attr(items, attr):
     except (ValueError, TypeError, AttributeError):
         return 0
 
+
 @register.filter
 def max_attr(items, attr):
     """الحصول على أقصى قيمة لصفة معينة في قائمة من الكائنات"""
@@ -274,6 +298,7 @@ def max_attr(items, attr):
         return max(values) if values else 0
     except (ValueError, TypeError, AttributeError):
         return 0
+
 
 @register.filter
 def min_attr(items, attr):

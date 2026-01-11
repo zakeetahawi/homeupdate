@@ -13,47 +13,47 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 print_status() {
-    echo -e "${GREEN}✅ $1${NC}"
+	echo -e "${GREEN}✅ $1${NC}"
 }
 
 print_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
+	echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+	echo -e "${YELLOW}⚠️  $1${NC}"
 }
 
 print_error() {
-    echo -e "${RED}❌ $1${NC}"
+	echo -e "${RED}❌ $1${NC}"
 }
 
 print_info "🚨 بدء إصلاح طوارئ لمشكلة اتصالات قاعدة البيانات"
 
 # التحقق من صلاحيات المستخدم
 if [[ $EUID -eq 0 ]]; then
-    print_warning "يتم تشغيل السكريبت كـ root"
-    POSTGRES_USER="postgres"
+	print_warning "يتم تشغيل السكريبت كـ root"
+	POSTGRES_USER="postgres"
 else
-    print_info "يتم تشغيل السكريبت كمستخدم عادي"
-    POSTGRES_USER=$(whoami)
+	print_info "يتم تشغيل السكريبت كمستخدم عادي"
+	POSTGRES_USER=$(whoami)
 fi
 
 # الخطوة 1: فحص حالة PostgreSQL
 print_info "1️⃣ فحص حالة PostgreSQL..."
 if systemctl is-active --quiet postgresql; then
-    print_status "PostgreSQL يعمل"
+	print_status "PostgreSQL يعمل"
 else
-    print_error "PostgreSQL لا يعمل!"
-    print_info "محاولة تشغيل PostgreSQL..."
-    sudo systemctl start postgresql
-    sleep 3
-    if systemctl is-active --quiet postgresql; then
-        print_status "تم تشغيل PostgreSQL بنجاح"
-    else
-        print_error "فشل في تشغيل PostgreSQL"
-        exit 1
-    fi
+	print_error "PostgreSQL لا يعمل!"
+	print_info "محاولة تشغيل PostgreSQL..."
+	sudo systemctl start postgresql
+	sleep 3
+	if systemctl is-active --quiet postgresql; then
+		print_status "تم تشغيل PostgreSQL بنجاح"
+	else
+		print_error "فشل في تشغيل PostgreSQL"
+		exit 1
+	fi
 fi
 
 # الخطوة 2: فحص عدد الاتصالات الحالية
@@ -62,11 +62,11 @@ CONNECTION_COUNT=$(sudo -u postgres psql -t -c "SELECT count(*) FROM pg_stat_act
 print_info "عدد الاتصالات الحالية: $CONNECTION_COUNT"
 
 if [ "$CONNECTION_COUNT" -gt 50 ]; then
-    print_warning "عدد الاتصالات مرتفع جداً!"
-    
-    # الخطوة 3: قتل الاتصالات الخاملة
-    print_info "3️⃣ قتل الاتصالات الخاملة..."
-    KILLED_CONNECTIONS=$(sudo -u postgres psql -t -c "
+	print_warning "عدد الاتصالات مرتفع جداً!"
+
+	# الخطوة 3: قتل الاتصالات الخاملة
+	print_info "3️⃣ قتل الاتصالات الخاملة..."
+	KILLED_CONNECTIONS=$(sudo -u postgres psql -t -c "
         SELECT count(pg_terminate_backend(pid))
         FROM pg_stat_activity 
         WHERE datname = 'crm_system' 
@@ -74,11 +74,11 @@ if [ "$CONNECTION_COUNT" -gt 50 ]; then
         AND state_change < now() - interval '2 minutes'
         AND pid != pg_backend_pid();
     " 2>/dev/null || echo "0")
-    print_status "تم قتل $KILLED_CONNECTIONS اتصال خامل"
-    
-    # الخطوة 4: قتل الاتصالات المعلقة في المعاملات
-    print_info "4️⃣ قتل الاتصالات المعلقة في المعاملات..."
-    KILLED_TRANSACTIONS=$(sudo -u postgres psql -t -c "
+	print_status "تم قتل $KILLED_CONNECTIONS اتصال خامل"
+
+	# الخطوة 4: قتل الاتصالات المعلقة في المعاملات
+	print_info "4️⃣ قتل الاتصالات المعلقة في المعاملات..."
+	KILLED_TRANSACTIONS=$(sudo -u postgres psql -t -c "
         SELECT count(pg_terminate_backend(pid))
         FROM pg_stat_activity 
         WHERE datname = 'crm_system' 
@@ -86,9 +86,9 @@ if [ "$CONNECTION_COUNT" -gt 50 ]; then
         AND state_change < now() - interval '1 minute'
         AND pid != pg_backend_pid();
     " 2>/dev/null || echo "0")
-    print_status "تم قتل $KILLED_TRANSACTIONS اتصال معلق في معاملة"
+	print_status "تم قتل $KILLED_TRANSACTIONS اتصال معلق في معاملة"
 else
-    print_status "عدد الاتصالات ضمن الحد المقبول"
+	print_status "عدد الاتصالات ضمن الحد المقبول"
 fi
 
 # الخطوة 5: تحسين إعدادات PostgreSQL
@@ -97,32 +97,32 @@ print_info "5️⃣ تحسين إعدادات PostgreSQL..."
 # البحث عن ملف الإعدادات
 POSTGRES_CONF=""
 for conf_path in "/etc/postgresql/*/main/postgresql.conf" "/var/lib/pgsql/data/postgresql.conf" "/usr/local/pgsql/data/postgresql.conf"; do
-    if [ -f $conf_path ]; then
-        POSTGRES_CONF=$conf_path
-        break
-    fi
+	if [ -f $conf_path ]; then
+		POSTGRES_CONF=$conf_path
+		break
+	fi
 done
 
 if [ -z "$POSTGRES_CONF" ]; then
-    # محاولة العثور على الملف باستخدام PostgreSQL
-    POSTGRES_CONF=$(sudo -u postgres psql -t -c "SHOW config_file;" 2>/dev/null | xargs)
+	# محاولة العثور على الملف باستخدام PostgreSQL
+	POSTGRES_CONF=$(sudo -u postgres psql -t -c "SHOW config_file;" 2>/dev/null | xargs)
 fi
 
 if [ -n "$POSTGRES_CONF" ] && [ -f "$POSTGRES_CONF" ]; then
-    print_info "ملف الإعدادات: $POSTGRES_CONF"
-    
-    # إنشاء نسخة احتياطية
-    sudo cp "$POSTGRES_CONF" "$POSTGRES_CONF.backup.$(date +%Y%m%d_%H%M%S)"
-    print_status "تم إنشاء نسخة احتياطية"
-    
-    # تطبيق الإعدادات المحسنة
-    print_info "تطبيق الإعدادات المحسنة..."
-    
-    # إزالة الإعدادات القديمة إن وجدت
-    sudo sed -i '/# === إعدادات محسنة لتجنب مشكلة "too many clients" ===/,/# === نهاية الإعدادات المحسنة ===/d' "$POSTGRES_CONF"
-    
-    # إضافة الإعدادات الجديدة
-    sudo tee -a "$POSTGRES_CONF" > /dev/null << 'EOF'
+	print_info "ملف الإعدادات: $POSTGRES_CONF"
+
+	# إنشاء نسخة احتياطية
+	sudo cp "$POSTGRES_CONF" "$POSTGRES_CONF.backup.$(date +%Y%m%d_%H%M%S)"
+	print_status "تم إنشاء نسخة احتياطية"
+
+	# تطبيق الإعدادات المحسنة
+	print_info "تطبيق الإعدادات المحسنة..."
+
+	# إزالة الإعدادات القديمة إن وجدت
+	sudo sed -i '/# === إعدادات محسنة لتجنب مشكلة "too many clients" ===/,/# === نهاية الإعدادات المحسنة ===/d' "$POSTGRES_CONF"
+
+	# إضافة الإعدادات الجديدة
+	sudo tee -a "$POSTGRES_CONF" >/dev/null <<'EOF'
 
 # === إعدادات محسنة لتجنب مشكلة "too many clients" ===
 
@@ -163,27 +163,27 @@ log_min_duration_statement = 1000  # 1 ثانية
 # === نهاية الإعدادات المحسنة ===
 EOF
 
-    print_status "تم تطبيق الإعدادات المحسنة"
-    
-    # إعادة تشغيل PostgreSQL
-    print_info "6️⃣ إعادة تشغيل PostgreSQL..."
-    sudo systemctl restart postgresql
-    
-    # انتظار بدء الخدمة
-    sleep 5
-    
-    # التحقق من حالة الخدمة
-    if systemctl is-active --quiet postgresql; then
-        print_status "PostgreSQL يعمل بنجاح مع الإعدادات الجديدة"
-    else
-        print_error "فشل في إعادة تشغيل PostgreSQL"
-        print_info "استعادة النسخة الاحتياطية..."
-        sudo cp "$POSTGRES_CONF.backup."* "$POSTGRES_CONF"
-        sudo systemctl restart postgresql
-        exit 1
-    fi
+	print_status "تم تطبيق الإعدادات المحسنة"
+
+	# إعادة تشغيل PostgreSQL
+	print_info "6️⃣ إعادة تشغيل PostgreSQL..."
+	sudo systemctl restart postgresql
+
+	# انتظار بدء الخدمة
+	sleep 5
+
+	# التحقق من حالة الخدمة
+	if systemctl is-active --quiet postgresql; then
+		print_status "PostgreSQL يعمل بنجاح مع الإعدادات الجديدة"
+	else
+		print_error "فشل في إعادة تشغيل PostgreSQL"
+		print_info "استعادة النسخة الاحتياطية..."
+		sudo cp "$POSTGRES_CONF.backup."* "$POSTGRES_CONF"
+		sudo systemctl restart postgresql
+		exit 1
+	fi
 else
-    print_warning "لم يتم العثور على ملف إعدادات PostgreSQL"
+	print_warning "لم يتم العثور على ملف إعدادات PostgreSQL"
 fi
 
 # الخطوة 7: فحص نهائي

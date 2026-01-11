@@ -1,132 +1,133 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}أرصدة العملاء{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2 class="mb-0">
-                    <i class="fas fa-users me-2"></i>
-                    تقرير أرصدة العملاء
-                </h2>
-                <button onclick="window.print()" class="btn btn-outline-secondary">
-                    <i class="fas fa-print me-1"></i> طباعة
-                </button>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        تقرير أرصدة العملاء
+                    </h2>
+                    <button onclick="window.print()" class="btn btn-outline-secondary">
+                        <i class="fas fa-print me-1"></i> طباعة
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-
-    <!-- فلترة -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <form method="get" class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">الحالة المالية</label>
-                            <select name="status" class="form-select">
-                                <option value="">الكل</option>
-                                <option value="debit" {% if request.GET.status == 'debit' %}selected{% endif %}>مدين (عليه)</option>
-                                <option value="credit" {% if request.GET.status == 'credit' %}selected{% endif %}>دائن (له)</option>
-                                <option value="clear" {% if request.GET.status == 'clear' %}selected{% endif %}>حساب صافي</option>
-                            </select>
+        <!-- فلترة -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="get" class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">الحالة المالية</label>
+                                <select name="status" class="form-select">
+                                    <option value="">الكل</option>
+                                    <option value="debit"
+                                            {% if request.GET.status == 'debit' %}selected{% endif %}>
+                                        مدين (عليه)
+                                    </option>
+                                    <option value="credit"
+                                            {% if request.GET.status == 'credit' %}selected{% endif %}>
+                                        دائن (له)
+                                    </option>
+                                    <option value="clear"
+                                            {% if request.GET.status == 'clear' %}selected{% endif %}>
+                                        حساب صافي
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter me-1"></i> تصفية
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ملخص -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card border-danger">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">إجمالي المديونيات (على العملاء)</h6>
+                        <h2 class="text-danger">{{ totals.total_receivables|floatformat:2|default:'0.00' }} {{ currency_symbol }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">إجمالي الدائنيات (للعملاء)</h6>
+                        <h2 class="text-success">{{ totals.total_payables|floatformat:2|default:'0.00' }} {{ currency_symbol }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- الجدول -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>العميل</th>
+                                        <th>عدد الطلبات</th>
+                                        <th>إجمالي الطلبات</th>
+                                        <th>المدفوع</th>
+                                        <th>الرصيد</th>
+                                        <th>العربونات المتاحة</th>
+                                        <th>الحالة</th>
+                                        <th>إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for summary in summaries %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'customers:customer_detail' summary.customer.pk %}">{{ summary.customer.name }}</a>
+                                            </td>
+                                            <td>{{ summary.total_orders_count }}</td>
+                                            <td>{{ summary.total_orders_amount|floatformat:2 }}</td>
+                                            <td class="text-success">{{ summary.total_paid|floatformat:2 }}</td>
+                                            <td class="{% if summary.total_debt > 0 %}text-danger{% elif summary.total_debt < 0 %}text-success{% endif %} fw-bold">
+                                                {{ summary.total_debt|floatformat:2 }}
+                                            </td>
+                                            <td class="text-info">{{ summary.remaining_advances|floatformat:2 }}</td>
+                                            <td>
+                                                {% if summary.total_debt > 0 %}
+                                                    <span class="badge bg-danger">مدين</span>
+                                                {% elif summary.total_debt < 0 %}
+                                                    <span class="badge bg-success">دائن</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">صافي</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'accounting:customer_financial' summary.customer.pk %}"
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-wallet"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="8" class="text-center py-4 text-muted">لا توجد بيانات</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-filter me-1"></i> تصفية
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ملخص -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card border-danger">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">إجمالي المديونيات (على العملاء)</h6>
-                    <h2 class="text-danger">{{ totals.total_receivables|floatformat:2|default:'0.00' }} {{ currency_symbol }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card border-success">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">إجمالي الدائنيات (للعملاء)</h6>
-                    <h2 class="text-success">{{ totals.total_payables|floatformat:2|default:'0.00' }} {{ currency_symbol }}</h2>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- الجدول -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>العميل</th>
-                                    <th>عدد الطلبات</th>
-                                    <th>إجمالي الطلبات</th>
-                                    <th>المدفوع</th>
-                                    <th>الرصيد</th>
-                                    <th>العربونات المتاحة</th>
-                                    <th>الحالة</th>
-                                    <th>إجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for summary in summaries %}
-                                <tr>
-                                    <td>
-                                        <a href="{% url 'customers:customer_detail' summary.customer.pk %}">
-                                            {{ summary.customer.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ summary.total_orders_count }}</td>
-                                    <td>{{ summary.total_orders_amount|floatformat:2 }}</td>
-                                    <td class="text-success">{{ summary.total_paid|floatformat:2 }}</td>
-                                    <td class="{% if summary.total_debt > 0 %}text-danger{% elif summary.total_debt < 0 %}text-success{% endif %} fw-bold">
-                                        {{ summary.total_debt|floatformat:2 }}
-                                    </td>
-                                    <td class="text-info">{{ summary.remaining_advances|floatformat:2 }}</td>
-                                    <td>
-                                        {% if summary.total_debt > 0 %}
-                                        <span class="badge bg-danger">مدين</span>
-                                        {% elif summary.total_debt < 0 %}
-                                        <span class="badge bg-success">دائن</span>
-                                        {% else %}
-                                        <span class="badge bg-secondary">صافي</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <a href="{% url 'accounting:customer_financial' summary.customer.pk %}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-wallet"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="8" class="text-center py-4 text-muted">
-                                        لا توجد بيانات
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

@@ -1,11 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
 {% load i18n %}
-
 {% block title %}تعديل نوع الطلب - {{ order.order_number }}{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .edit-type-container {
         max-width: 700px;
         margin: 50px auto;
@@ -235,72 +233,68 @@
             padding: 16px 12px;
         }
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="edit-type-container">
-    <div class="order-header">
-        <h2>
-            <i class="fas fa-exchange-alt"></i>
-            تعديل نوع الطلب: {{ order.order_number }}
-        </h2>
-    </div>
-
-    <div class="form-card">
-        <div class="current-type">
-            <i class="fas fa-info-circle"></i>
-            النوع الحالي: <strong>{{ order.get_selected_types_display }}</strong>
+    <div class="edit-type-container">
+        <div class="order-header">
+            <h2>
+                <i class="fas fa-exchange-alt"></i>
+                تعديل نوع الطلب: {{ order.order_number }}
+            </h2>
         </div>
-
-        <form method="post" id="editTypeForm">
-            {% csrf_token %}
-            
-            <h4 style="margin-bottom: 20px; color: #333;">اختر النوع الجديد:</h4>
-            
-            <div class="type-options">
-                {% for service_type in service_types %}
-                <div class="type-option">
-                    <input type="radio" name="selected_type" value="{{ service_type.value }}" 
-                           id="type_{{ service_type.value }}"
-                           {% if order.selected_types.0 == service_type.value %}checked{% endif %}>
-                    <label for="type_{{ service_type.value }}">
-                        <span class="type-icon">
-                            {% if service_type.value == 'installation' %}
-                                <i class="fas fa-tools"></i>
-                            {% elif service_type.value == 'tailoring' %}
-                                <i class="fas fa-cut"></i>
-                            {% elif service_type.value == 'products' %}
-                                <i class="fas fa-box"></i>
-                            {% elif service_type.value == 'accessory' %}
-                                <i class="fas fa-tags"></i>
-                            {% elif service_type.value == 'inspection' %}
-                                <i class="fas fa-search"></i>
-                            {% else %}
-                                <i class="fas fa-circle"></i>
-                            {% endif %}
-                        </span>
-                        {{ service_type.display_name }}
-                    </label>
+        <div class="form-card">
+            <div class="current-type">
+                <i class="fas fa-info-circle"></i>
+                النوع الحالي: <strong>{{ order.get_selected_types_display }}</strong>
+            </div>
+            <form method="post" id="editTypeForm">
+                {% csrf_token %}
+                <h4 style="margin-bottom: 20px; color: #333;">اختر النوع الجديد:</h4>
+                <div class="type-options">
+                    {% for service_type in service_types %}
+                        <div class="type-option">
+                            <input type="radio"
+                                   name="selected_type"
+                                   value="{{ service_type.value }}"
+                                   id="type_{{ service_type.value }}"
+                                   {% if order.selected_types.0 == service_type.value %}checked{% endif %}>
+                            <label for="type_{{ service_type.value }}">
+                                <span class="type-icon">
+                                    {% if service_type.value == 'installation' %}
+                                        <i class="fas fa-tools"></i>
+                                    {% elif service_type.value == 'tailoring' %}
+                                        <i class="fas fa-cut"></i>
+                                    {% elif service_type.value == 'products' %}
+                                        <i class="fas fa-box"></i>
+                                    {% elif service_type.value == 'accessory' %}
+                                        <i class="fas fa-tags"></i>
+                                    {% elif service_type.value == 'inspection' %}
+                                        <i class="fas fa-search"></i>
+                                    {% else %}
+                                        <i class="fas fa-circle"></i>
+                                    {% endif %}
+                                </span>
+                                {{ service_type.display_name }}
+                            </label>
+                        </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn-save">
-                    <i class="fas fa-save"></i> حفظ التعديلات
-                </button>
-                <a href="{% url 'orders:order_detail_by_number' order.order_number %}" class="btn-cancel">
-                    <i class="fas fa-times"></i> إلغاء
-                </a>
-            </div>
-        </form>
+                <div class="form-actions">
+                    <button type="submit" class="btn-save">
+                        <i class="fas fa-save"></i> حفظ التعديلات
+                    </button>
+                    <a href="{% url 'orders:order_detail_by_number' order.order_number %}"
+                       class="btn-cancel">
+                        <i class="fas fa-times"></i> إلغاء
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('editTypeForm');
     const typeOptions = document.querySelectorAll('.type-option');
@@ -357,5 +351,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-</script>
+    </script>
 {% endblock %}

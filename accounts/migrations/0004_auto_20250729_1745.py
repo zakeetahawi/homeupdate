@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0003_companyinfo_header_logo_alter_companyinfo_logo'),
+        ("accounts", "0003_companyinfo_header_logo_alter_companyinfo_logo"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='is_salesperson',
-            field=models.BooleanField(default=False, verbose_name='بائع'),
+            model_name="user",
+            name="is_salesperson",
+            field=models.BooleanField(default=False, verbose_name="بائع"),
         ),
     ]

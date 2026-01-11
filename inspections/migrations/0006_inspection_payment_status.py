@@ -6,13 +6,21 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('inspections', '0005_inspection_scheduled_time_and_more'),
+        ("inspections", "0005_inspection_scheduled_time_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='inspection',
-            name='payment_status',
-            field=models.CharField(choices=[('paid', 'مكتمل السداد'), ('collect_on_visit', 'تحصيل عند العميل')], default='paid', max_length=20, verbose_name='حالة المديونية'),
+            model_name="inspection",
+            name="payment_status",
+            field=models.CharField(
+                choices=[
+                    ("paid", "مكتمل السداد"),
+                    ("collect_on_visit", "تحصيل عند العميل"),
+                ],
+                default="paid",
+                max_length=20,
+                verbose_name="حالة المديونية",
+            ),
         ),
     ]

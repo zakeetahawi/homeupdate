@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% csrf_token %}
-
 {% block title %}الإشعارات{% endblock %}
-
 {% block extra_head %}
-<style>
+    <style>
 .notification-item {
     transition: all 0.3s ease;
     border-left: 4px solid transparent;
@@ -244,314 +242,299 @@
     padding: 20px;
     margin-bottom: 20px;
 }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- عنوان الصفحة -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">
-            <i class="fas fa-bell me-2"></i>
-            الإشعارات
-        </h1>
-        <div class="btn-group">
-            {% if unread_count > 0 %}
-            <!-- زر سريع مع AJAX -->
-            <button type="button"
-                    class="btn btn-outline-primary me-2"
-                    id="mark-all-read-ajax-btn"
-                    title="تحديد سريع بدون إعادة تحميل">
-                <i class="fas fa-check-double"></i>
-                تحديد سريع
-            </button>
-
-            <!-- رابط لصفحة التأكيد -->
-            <a href="{% url 'notifications:mark_all_read' %}"
-               class="btn btn-primary"
-               title="تحديد مع صفحة تأكيد">
-                <i class="fas fa-check-circle"></i>
-                تحديد الكل كمقروء
-            </a>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- إحصائيات سريعة -->
-    <div class="stats-card">
-        <div class="row text-center">
-            <div class="col-md-3">
-                <h4>{{ notifications.paginator.count }}</h4>
-                <small>إجمالي الإشعارات</small>
-            </div>
-            <div class="col-md-3">
-                <h4>{{ unread_count }}</h4>
-                <small>غير مقروءة</small>
-            </div>
-            <div class="col-md-3">
-                <h4>{{ notifications.paginator.count|add:"-"|add:unread_count }}</h4>
-                <small>مقروءة</small>
-            </div>
-            <div class="col-md-3">
-                <h4>{{ notifications|length }}</h4>
-                <small>في هذه الصفحة</small>
-            </div>
-        </div>
-    </div>
-
-    <!-- فلاتر البحث -->
-    <div class="filter-card">
-        <form method="get" class="row g-3">
-            <div class="col-md-2">
-                <label for="type" class="form-label">نوع الإشعار</label>
-                <select name="type" id="type" class="form-select">
-                    <option value="">جميع الأنواع</option>
-                    {% for value, label in notification_types %}
-                    <option value="{{ value }}" {% if current_type == value %}selected{% endif %}>
-                        {{ label }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="col-md-2">
-                <label for="priority" class="form-label">الأولوية</label>
-                <select name="priority" id="priority" class="form-select">
-                    <option value="">جميع الأولويات</option>
-                    {% for value, label in priority_levels %}
-                    <option value="{{ value }}" {% if current_priority == value %}selected{% endif %}>
-                        {{ label }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="col-md-2">
-                <label for="read" class="form-label">حالة القراءة</label>
-                <select name="read" id="read" class="form-select">
-                    <option value="">الكل</option>
-                    <option value="unread" {% if current_read == 'unread' %}selected{% endif %}>غير مقروءة</option>
-                    <option value="read" {% if current_read == 'read' %}selected{% endif %}>مقروءة</option>
-                </select>
-            </div>
-            
-            <div class="col-md-3">
-                <label for="search" class="form-label">البحث</label>
-                <div class="input-group">
-                    <input type="text" name="search" id="search" class="form-control" 
-                           placeholder="رقم الطلب، كود العميل، العنوان..." value="{{ current_search }}">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search"></i>
+    <div class="container-fluid">
+        <!-- عنوان الصفحة -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-bell me-2"></i>
+                الإشعارات
+            </h1>
+            <div class="btn-group">
+                {% if unread_count > 0 %}
+                    <!-- زر سريع مع AJAX -->
+                    <button type="button"
+                            class="btn btn-outline-primary me-2"
+                            id="mark-all-read-ajax-btn"
+                            title="تحديد سريع بدون إعادة تحميل">
+                        <i class="fas fa-check-double"></i>
+                        تحديد سريع
                     </button>
-                </div>
-            </div>
-            
-            <div class="col-md-3">
-                <label for="date_from" class="form-label">من تاريخ</label>
-                <input type="date" name="date_from" id="date_from" class="form-control" 
-                       value="{{ request.GET.date_from }}">
-            </div>
-            
-            <div class="col-md-3">
-                <label for="date_to" class="form-label">إلى تاريخ</label>
-                <input type="date" name="date_to" id="date_to" class="form-control" 
-                       value="{{ request.GET.date_to }}">
-            </div>
-            
-            <div class="col-md-3">
-                <label for="created_by" class="form-label">المستخدم</label>
-                <select name="created_by" id="created_by" class="form-select">
-                    <option value="">جميع المستخدمين</option>
-                    {% for user in users_with_notifications %}
-                    <option value="{{ user.id }}" {% if request.GET.created_by == user.id|stringformat:'s' %}selected{% endif %}>
-                        {{ user.get_full_name|default:user.username }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="col-md-3 d-flex align-items-end">
-                <div class="btn-group w-100">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-filter"></i> فلترة
-                    </button>
-                    <a href="{% url 'notifications:list' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-times"></i> مسح
+                    <!-- رابط لصفحة التأكيد -->
+                    <a href="{% url 'notifications:mark_all_read' %}"
+                       class="btn btn-primary"
+                       title="تحديد مع صفحة تأكيد">
+                        <i class="fas fa-check-circle"></i>
+                        تحديد الكل كمقروء
                     </a>
-                </div>
+                {% endif %}
             </div>
-        </form>
-    </div>
-
-    <!-- قائمة الإشعارات -->
-    {% if notifications %}
-    <div class="card">
-        <div class="card-body p-0">
-            {% for notification in notifications %}
-            {% with visibility=notification.user_visibility %}
-            <div class="notification-item p-3 border-bottom d-flex align-items-start
-                        {% if visibility and not visibility.is_read %}unread{% else %}read{% endif %}
-                        priority-{{ notification.priority }}"
-                 data-notification-id="{{ notification.pk }}"
-                 data-is-read="{% if visibility %}{{ visibility.is_read|yesno:'true,false' }}{% else %}false{% endif %}">
-                
-                <!-- أيقونة الإشعار -->
-                <div class="notification-icon notification-icon-{{ notification.notification_type }}"
-                     data-notification-type="{{ notification.notification_type }}">
-                    <i class="notification-icon-i" data-notification-type="{{ notification.notification_type }}"></i>
-                </div>
-                
-                <!-- محتوى الإشعار -->
-                <div class="notification-content">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="mb-0 {% if not visibility.is_read %}fw-bold text-primary{% else %}text-muted{% endif %}">
-                            <a href="{{ notification.get_absolute_url }}"
-                               class="text-decoration-none {% if not visibility.is_read %}text-primary fw-bold{% else %}text-muted{% endif %}">
-                                {% if not visibility.is_read %}
-                                <i class="fas fa-circle text-primary me-1" style="font-size: 8px;"></i>
-                                {% endif %}
-                                {{ notification.title }}
-                            </a>
-                            {% if not visibility.is_read %}
-                            <span class="badge bg-primary ms-2 pulse-badge">جديد</span>
-                            {% else %}
-                            <span class="badge bg-secondary ms-2">مقروء</span>
-                            {% endif %}
-                        </h6>
-                        <small class="{% if not visibility.is_read %}text-primary fw-bold{% else %}text-muted{% endif %}">
-                            {{ notification.created_at|timesince }}
-                        </small>
-                    </div>
-
-                    <p class="mb-2 {% if not visibility.is_read %}text-dark{% else %}text-muted{% endif %}">
-                        {{ notification.message|truncatewords:20 }}
-                    </p>
-                    
-                    <div class="notification-meta d-flex justify-content-between align-items-center">
-                        <div class="w-100">
-                            <div class="d-flex flex-wrap gap-2 mb-1">
-                                <span class="badge bg-secondary">{{ notification.get_notification_type_display }}</span>
-                                <span class="badge bg-{{ notification.priority }}">{{ notification.get_priority_display }}</span>
-                                {% if notification.created_by %}
-                                <span class="badge bg-primary">
-                                    <i class="fas fa-user"></i>
-                                    {{ notification.created_by.get_full_name|default:notification.created_by.username }}
-                                </span>
-                                {% elif notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}
-                                <span class="badge bg-info">
-                                    <i class="fas fa-user"></i>
-                                    {{ notification.extra_data.changed_by }}
-                                </span>
-                                {% else %}
-                                <span class="badge bg-secondary">
-                                    <i class="fas fa-robot"></i>
-                                    مستخدم النظام
-                                </span>
-                                {% endif %}
-                            </div>
-                            
-                            {% with related_info=notification.get_related_info %}
-                            {% if related_info %}
-                            <div class="d-flex flex-wrap gap-2 text-sm">
-                                {% if related_info.code %}
-                                <span class="badge bg-info">
-                                    <i class="fas fa-tag me-1"></i>{{ related_info.code }}
-                                </span>
-                                {% endif %}
-                                {% if related_info.customer %}
-                                <span class="badge bg-success">
-                                    <i class="fas fa-user me-1"></i>{{ related_info.customer }}
-                                </span>
-                                {% endif %}
-                                {% if related_info.order %}
-                                <span class="badge bg-warning text-dark">
-                                    <i class="fas fa-shopping-cart me-1"></i>{{ related_info.order }}
-                                </span>
-                                {% endif %}
-                                {% if related_info.url %}
-                                <a href="{{ related_info.url }}" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
-                                    <i class="fas fa-external-link-alt"></i>
-                                </a>
-                                {% endif %}
-                            </div>
-                            {% endif %}
-                            {% endwith %}
-                        </div>
-                        
-                        <div class="btn-group btn-group-sm">
-                            {% if not visibility.is_read %}
-                            <a href="{% url 'notifications:mark_read' notification.pk %}" 
-                               class="btn btn-outline-primary btn-sm"
-                               title="تحديد كمقروء">
-                                <i class="fas fa-check"></i>
-                            </a>
-                            {% endif %}
-                            <a href="{{ notification.get_absolute_url }}" 
-                               class="btn btn-outline-secondary btn-sm"
-                               title="عرض التفاصيل">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endwith %}
-            {% endfor %}
         </div>
+        <!-- إحصائيات سريعة -->
+        <div class="stats-card">
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <h4>{{ notifications.paginator.count }}</h4>
+                    <small>إجمالي الإشعارات</small>
+                </div>
+                <div class="col-md-3">
+                    <h4>{{ unread_count }}</h4>
+                    <small>غير مقروءة</small>
+                </div>
+                <div class="col-md-3">
+                    <h4>{{ notifications.paginator.count|add:"-"|add:unread_count }}</h4>
+                    <small>مقروءة</small>
+                </div>
+                <div class="col-md-3">
+                    <h4>{{ notifications|length }}</h4>
+                    <small>في هذه الصفحة</small>
+                </div>
+            </div>
+        </div>
+        <!-- فلاتر البحث -->
+        <div class="filter-card">
+            <form method="get" class="row g-3">
+                <div class="col-md-2">
+                    <label for="type" class="form-label">نوع الإشعار</label>
+                    <select name="type" id="type" class="form-select">
+                        <option value="">جميع الأنواع</option>
+                        {% for value, label in notification_types %}
+                            <option value="{{ value }}" {% if current_type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="priority" class="form-label">الأولوية</label>
+                    <select name="priority" id="priority" class="form-select">
+                        <option value="">جميع الأولويات</option>
+                        {% for value, label in priority_levels %}
+                            <option value="{{ value }}"
+                                    {% if current_priority == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="read" class="form-label">حالة القراءة</label>
+                    <select name="read" id="read" class="form-select">
+                        <option value="">الكل</option>
+                        <option value="unread" {% if current_read == 'unread' %}selected{% endif %}>غير مقروءة</option>
+                        <option value="read" {% if current_read == 'read' %}selected{% endif %}>مقروءة</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="search" class="form-label">البحث</label>
+                    <div class="input-group">
+                        <input type="text"
+                               name="search"
+                               id="search"
+                               class="form-control"
+                               placeholder="رقم الطلب، كود العميل، العنوان..."
+                               value="{{ current_search }}">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label for="date_from" class="form-label">من تاريخ</label>
+                    <input type="date"
+                           name="date_from"
+                           id="date_from"
+                           class="form-control"
+                           value="{{ request.GET.date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="date_to" class="form-label">إلى تاريخ</label>
+                    <input type="date"
+                           name="date_to"
+                           id="date_to"
+                           class="form-control"
+                           value="{{ request.GET.date_to }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="created_by" class="form-label">المستخدم</label>
+                    <select name="created_by" id="created_by" class="form-select">
+                        <option value="">جميع المستخدمين</option>
+                        {% for user in users_with_notifications %}
+                            <option value="{{ user.id }}"
+                                    {% if request.GET.created_by == user.id|stringformat:'s' %}selected{% endif %}>
+                                {{ user.get_full_name|default:user.username }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="btn-group w-100">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> فلترة
+                        </button>
+                        <a href="{% url 'notifications:list' %}"
+                           class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> مسح
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <!-- قائمة الإشعارات -->
+        {% if notifications %}
+            <div class="card">
+                <div class="card-body p-0">
+                    {% for notification in notifications %}
+                        {% with visibility=notification.user_visibility %}
+                            <div class="notification-item p-3 border-bottom d-flex align-items-start {% if visibility and not visibility.is_read %}unread{% else %}read{% endif %} priority-{{ notification.priority }}"
+                                 data-notification-id="{{ notification.pk }}"
+                                 data-is-read="{% if visibility %}{{ visibility.is_read|yesno:'true,false' }}{% else %}false{% endif %}">
+                                <!-- أيقونة الإشعار -->
+                                <div class="notification-icon notification-icon-{{ notification.notification_type }}"
+                                     data-notification-type="{{ notification.notification_type }}">
+                                    <i class="notification-icon-i"
+                                       data-notification-type="{{ notification.notification_type }}"></i>
+                                </div>
+                                <!-- محتوى الإشعار -->
+                                <div class="notification-content">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="mb-0 {% if not visibility.is_read %}fw-bold text-primary{% else %}text-muted{% endif %}">
+                                            <a href="{{ notification.get_absolute_url }}"
+                                               class="text-decoration-none {% if not visibility.is_read %}text-primary fw-bold{% else %}text-muted{% endif %}">
+                                                {% if not visibility.is_read %}<i class="fas fa-circle text-primary me-1" style="font-size: 8px;"></i>{% endif %}
+                                                {{ notification.title }}
+                                            </a>
+                                            {% if not visibility.is_read %}
+                                                <span class="badge bg-primary ms-2 pulse-badge">جديد</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary ms-2">مقروء</span>
+                                            {% endif %}
+                                        </h6>
+                                        <small class="{% if not visibility.is_read %}text-primary fw-bold{% else %}text-muted{% endif %}">
+                                            {{ notification.created_at|timesince }}
+                                        </small>
+                                    </div>
+                                    <p class="mb-2 {% if not visibility.is_read %}text-dark{% else %}text-muted{% endif %}">
+                                        {{ notification.message|truncatewords:20 }}
+                                    </p>
+                                    <div class="notification-meta d-flex justify-content-between align-items-center">
+                                        <div class="w-100">
+                                            <div class="d-flex flex-wrap gap-2 mb-1">
+                                                <span class="badge bg-secondary">{{ notification.get_notification_type_display }}</span>
+                                                <span class="badge bg-{{ notification.priority }}">{{ notification.get_priority_display }}</span>
+                                                {% if notification.created_by %}
+                                                    <span class="badge bg-primary">
+                                                        <i class="fas fa-user"></i>
+                                                        {{ notification.created_by.get_full_name|default:notification.created_by.username }}
+                                                    </span>
+                                                {% elif notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}
+                                                    <span class="badge bg-info">
+                                                        <i class="fas fa-user"></i>
+                                                        {{ notification.extra_data.changed_by }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">
+                                                        <i class="fas fa-robot"></i>
+                                                        مستخدم النظام
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                            {% with related_info=notification.get_related_info %}
+                                                {% if related_info %}
+                                                    <div class="d-flex flex-wrap gap-2 text-sm">
+                                                        {% if related_info.code %}
+                                                            <span class="badge bg-info">
+                                                                <i class="fas fa-tag me-1"></i>{{ related_info.code }}
+                                                            </span>
+                                                        {% endif %}
+                                                        {% if related_info.customer %}
+                                                            <span class="badge bg-success">
+                                                                <i class="fas fa-user me-1"></i>{{ related_info.customer }}
+                                                            </span>
+                                                        {% endif %}
+                                                        {% if related_info.order %}
+                                                            <span class="badge bg-warning text-dark">
+                                                                <i class="fas fa-shopping-cart me-1"></i>{{ related_info.order }}
+                                                            </span>
+                                                        {% endif %}
+                                                        {% if related_info.url %}
+                                                            <a href="{{ related_info.url }}"
+                                                               class="btn btn-sm btn-outline-primary"
+                                                               title="عرض التفاصيل">
+                                                                <i class="fas fa-external-link-alt"></i>
+                                                            </a>
+                                                        {% endif %}
+                                                    </div>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </div>
+                                        <div class="btn-group btn-group-sm">
+                                            {% if not visibility.is_read %}
+                                                <a href="{% url 'notifications:mark_read' notification.pk %}"
+                                                   class="btn btn-outline-primary btn-sm"
+                                                   title="تحديد كمقروء">
+                                                    <i class="fas fa-check"></i>
+                                                </a>
+                                            {% endif %}
+                                            <a href="{{ notification.get_absolute_url }}"
+                                               class="btn btn-outline-secondary btn-sm"
+                                               title="عرض التفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endwith %}
+                    {% endfor %}
+                </div>
+            </div>
+            <!-- ترقيم الصفحات -->
+            {% if notifications.has_other_pages %}
+                <nav aria-label="ترقيم الصفحات" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if notifications.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?page={{ notifications.previous_page_number }}&{{ request.GET.urlencode }}">
+                                    السابق
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% for num in notifications.paginator.page_range %}
+                            {% if num == notifications.number %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > notifications.number|add:'-3' and num < notifications.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if notifications.has_next %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?page={{ notifications.next_page_number }}&{{ request.GET.urlencode }}">
+                                    التالي
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}
+            <!-- رسالة عدم وجود إشعارات -->
+            <div class="text-center py-5">
+                <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">لا توجد إشعارات</h4>
+                <p class="text-muted">لم يتم العثور على إشعارات تطابق معايير البحث المحددة.</p>
+                <a href="{% url 'notifications:list' %}" class="btn btn-primary">
+                    <i class="fas fa-refresh"></i>
+                    عرض جميع الإشعارات
+                </a>
+            </div>
+        {% endif %}
     </div>
-
-    <!-- ترقيم الصفحات -->
-    {% if notifications.has_other_pages %}
-    <nav aria-label="ترقيم الصفحات" class="mt-4">
-        <ul class="pagination justify-content-center">
-            {% if notifications.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ notifications.previous_page_number }}&{{ request.GET.urlencode }}">
-                    السابق
-                </a>
-            </li>
-            {% endif %}
-            
-            {% for num in notifications.paginator.page_range %}
-            {% if num == notifications.number %}
-            <li class="page-item active">
-                <span class="page-link">{{ num }}</span>
-            </li>
-            {% elif num > notifications.number|add:'-3' and num < notifications.number|add:'3' %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ num }}&{{ request.GET.urlencode }}">
-                    {{ num }}
-                </a>
-            </li>
-            {% endif %}
-            {% endfor %}
-            
-            {% if notifications.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ notifications.next_page_number }}&{{ request.GET.urlencode }}">
-                    التالي
-                </a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
-    {% endif %}
-
-    {% else %}
-    <!-- رسالة عدم وجود إشعارات -->
-    <div class="text-center py-5">
-        <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
-        <h4 class="text-muted">لا توجد إشعارات</h4>
-        <p class="text-muted">لم يتم العثور على إشعارات تطابق معايير البحث المحددة.</p>
-        <a href="{% url 'notifications:list' %}" class="btn btn-primary">
-            <i class="fas fa-refresh"></i>
-            عرض جميع الإشعارات
-        </a>
-    </div>
-    {% endif %}
-</div>
-
-<script>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     // تحديث عداد الإشعارات في الـ navbar
     updateNotificationCount();
@@ -858,5 +841,5 @@ function updateSingleNotificationUI(itemElement) {
         iconContainer.style.transform = 'scale(0.95)';
     }
 }
-</script>
+    </script>
 {% endblock %}

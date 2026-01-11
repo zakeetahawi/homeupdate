@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .stat-card {
         padding: 15px;
         border-radius: 8px;
@@ -45,248 +43,243 @@
         width: 1rem;
         height: 1rem;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2 class="mb-1">
-                        <i class="fab fa-google-drive google-drive-icon"></i>
-                        {{ title }}
-                    </h2>
-                    <p class="text-muted mb-0">إدارة إعدادات رفع ملفات المعاينات إلى Google Drive</p>
-                </div>
-                <div>
-                    <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-right"></i> العودة
-                    </a>
-                </div>
-            </div>
-
-            <!-- معلومات تسمية الملفات -->
-            <div class="alert alert-info mb-4">
-                <div class="row align-items-center">
-                    <div class="col-md-1 text-center">
-                        <i class="fas fa-info-circle fa-2x text-info"></i>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="mb-1">
+                            <i class="fab fa-google-drive google-drive-icon"></i>
+                            {{ title }}
+                        </h2>
+                        <p class="text-muted mb-0">إدارة إعدادات رفع ملفات المعاينات إلى Google Drive</p>
                     </div>
-                    <div class="col-md-11">
-                        <h6 class="mb-2"><i class="fas fa-file-signature"></i> نمط تسمية الملفات:</h6>
-                        <p class="mb-1"><strong>النمط الحالي:</strong> اسم_العميل_الفرع_التاريخ_رقم_الطلب.pdf</p>
-                        <p class="mb-0 text-muted"><strong>مثال:</strong> احمد_محمد_فرع_القاهرة_2024-01-15_ORD-001.pdf</p>
+                    <div>
+                        <a href="{% url 'odoo_db_manager:dashboard' %}"
+                           class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-right"></i> العودة
+                        </a>
                     </div>
                 </div>
-            </div>
-
-            <!-- نموذج الإعدادات -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-cog"></i> إعدادات Google Drive
-                    </h5>
+                <!-- معلومات تسمية الملفات -->
+                <div class="alert alert-info mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-1 text-center">
+                            <i class="fas fa-info-circle fa-2x text-info"></i>
+                        </div>
+                        <div class="col-md-11">
+                            <h6 class="mb-2">
+                                <i class="fas fa-file-signature"></i> نمط تسمية الملفات:
+                            </h6>
+                            <p class="mb-1">
+                                <strong>النمط الحالي:</strong> اسم_العميل_الفرع_التاريخ_رقم_الطلب.pdf
+                            </p>
+                            <p class="mb-0 text-muted">
+                                <strong>مثال:</strong> احمد_محمد_فرع_القاهرة_2024-01-15_ORD-001.pdf
+                            </p>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form method="post" enctype="multipart/form-data" id="googleDriveForm">
-                        {% csrf_token %}
-
-                        <!-- اسم الإعداد -->
-                        <div class="mb-3">
-                            <label for="{{ form.name.id_for_label }}" class="form-label">
-                                <i class="fas fa-tag"></i> {{ form.name.label }}
-                            </label>
-                            {{ form.name }}
-                            {% if form.name.help_text %}
-                                <small class="form-text text-muted">{{ form.name.help_text }}</small>
-                            {% endif %}
+                <!-- نموذج الإعدادات -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cog"></i> إعدادات Google Drive
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" enctype="multipart/form-data" id="googleDriveForm">
+                            {% csrf_token %}
+                            <!-- اسم الإعداد -->
+                            <div class="mb-3">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">
+                                    <i class="fas fa-tag"></i> {{ form.name.label }}
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.help_text %}<small class="form-text text-muted">{{ form.name.help_text }}</small>{% endif %}
+                            </div>
+                            <!-- إعدادات مجلد المعاينات -->
+                            <h6 class="mb-3 text-primary">
+                                <i class="fas fa-eye me-2"></i>إعدادات مجلد المعاينات
+                            </h6>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="{{ form.inspections_folder_id.id_for_label }}"
+                                           class="form-label">
+                                        <i class="fas fa-folder"></i> {{ form.inspections_folder_id.label }}
+                                    </label>
+                                    {{ form.inspections_folder_id }}
+                                    {% if form.inspections_folder_id.help_text %}
+                                        <small class="form-text text-muted">{{ form.inspections_folder_id.help_text }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.inspections_folder_name.id_for_label }}"
+                                           class="form-label">
+                                        <i class="fas fa-folder-open"></i> {{ form.inspections_folder_name.label }}
+                                    </label>
+                                    {{ form.inspections_folder_name }}
+                                    {% if form.inspections_folder_name.help_text %}
+                                        <small class="form-text text-muted">{{ form.inspections_folder_name.help_text }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <!-- إعدادات مجلد العقود -->
+                            <h6 class="mb-3 text-success">
+                                <i class="fas fa-file-contract me-2"></i>إعدادات مجلد العقود
+                            </h6>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="{{ form.contracts_folder_id.id_for_label }}" class="form-label">
+                                        <i class="fas fa-folder"></i> {{ form.contracts_folder_id.label }}
+                                    </label>
+                                    {{ form.contracts_folder_id }}
+                                    {% if form.contracts_folder_id.help_text %}
+                                        <small class="form-text text-muted">{{ form.contracts_folder_id.help_text }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="{{ form.contracts_folder_name.id_for_label }}"
+                                           class="form-label">
+                                        <i class="fas fa-folder-open"></i> {{ form.contracts_folder_name.label }}
+                                    </label>
+                                    {{ form.contracts_folder_name }}
+                                    {% if form.contracts_folder_name.help_text %}
+                                        <small class="form-text text-muted">{{ form.contracts_folder_name.help_text }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <!-- ملف الاعتماد -->
+                            <div class="mb-3">
+                                <label for="{{ form.credentials_file.id_for_label }}" class="form-label">
+                                    <i class="fas fa-key"></i> {{ form.credentials_file.label }}
+                                </label>
+                                {{ form.credentials_file }}
+                                {% if form.credentials_file.help_text %}
+                                    <small class="form-text text-muted">{{ form.credentials_file.help_text }}</small>
+                                {% endif %}
+                                {% if config.credentials_file %}
+                                    <div class="mt-2">
+                                        <small class="text-success">
+                                            <i class="fas fa-check-circle"></i>
+                                            ملف الاعتماد موجود: {{ config.credentials_file.name|default:"غير محدد" }}
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <!-- نمط تسمية الملفات -->
+                            <div class="mb-3">
+                                <label for="{{ form.filename_pattern.id_for_label }}" class="form-label">
+                                    <i class="fas fa-file-signature"></i> {{ form.filename_pattern.label }}
+                                </label>
+                                {{ form.filename_pattern }}
+                                {% if form.filename_pattern.help_text %}
+                                    <small class="form-text text-muted">{{ form.filename_pattern.help_text }}</small>
+                                {% endif %}
+                            </div>
+                            <!-- حالة الخدمة -->
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                        <i class="fas fa-toggle-on"></i> {{ form.is_active.label }}
+                                    </label>
+                                </div>
+                            </div>
+                            <!-- أزرار التحكم -->
+                            <div class="d-flex gap-2 mb-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> حفظ الإعدادات
+                                </button>
+                                <button type="button"
+                                        class="btn btn-info test-connection-btn"
+                                        onclick="testConnection()">
+                                    <i class="fas fa-plug"></i> اختبار الاتصال
+                                </button>
+                                <button type="button" class="btn btn-warning" onclick="createTestFolder()">
+                                    <i class="fas fa-folder-plus"></i> إنشاء مجلد تجريبي
+                                </button>
+                                <button type="button" class="btn btn-success" onclick="testFileUpload()">
+                                    <i class="fas fa-upload"></i> اختبار رفع ملف
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <!-- إحصائيات -->
+                {% if config %}
+                    <div class="card shadow-sm mt-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-chart-bar"></i> إحصائيات الاستخدام
+                            </h6>
                         </div>
-
-                        <!-- إعدادات مجلد المعاينات -->
-                        <h6 class="mb-3 text-primary">
-                            <i class="fas fa-eye me-2"></i>إعدادات مجلد المعاينات
-                        </h6>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="{{ form.inspections_folder_id.id_for_label }}" class="form-label">
-                                    <i class="fas fa-folder"></i> {{ form.inspections_folder_id.label }}
-                                </label>
-                                {{ form.inspections_folder_id }}
-                                {% if form.inspections_folder_id.help_text %}
-                                    <small class="form-text text-muted">{{ form.inspections_folder_id.help_text }}</small>
-                                {% endif %}
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <div class="stat-card">
+                                        <h4 class="text-primary mb-1">{{ config.total_uploads|default:0 }}</h4>
+                                        <p class="text-muted mb-0">إجمالي الرفعات</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="stat-card">
+                                        <h6 class="text-success mb-1">
+                                            {% if config.last_upload %}
+                                                {{ config.last_upload|date:"Y-m-d H:i" }}
+                                            {% else %}
+                                                لا يوجد
+                                            {% endif %}
+                                        </h6>
+                                        <p class="text-muted mb-0">آخر رفع</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="stat-card">
+                                        {% if config.test_status == 'success' %}
+                                            <span class="badge bg-success">متصل</span>
+                                        {% elif config.test_status == 'failed' %}
+                                            <span class="badge bg-danger">غير متصل</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">لم يتم الاختبار</span>
+                                        {% endif %}
+                                        <p class="text-muted mb-0 mt-1">حالة الاتصال</p>
+                                        {% if config.last_test %}<small class="text-muted">{{ config.last_test|date:"Y-m-d H:i" }}</small>{% endif %}
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label for="{{ form.inspections_folder_name.id_for_label }}" class="form-label">
-                                    <i class="fas fa-folder-open"></i> {{ form.inspections_folder_name.label }}
-                                </label>
-                                {{ form.inspections_folder_name }}
-                                {% if form.inspections_folder_name.help_text %}
-                                    <small class="form-text text-muted">{{ form.inspections_folder_name.help_text }}</small>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <!-- إعدادات مجلد العقود -->
-                        <h6 class="mb-3 text-success">
-                            <i class="fas fa-file-contract me-2"></i>إعدادات مجلد العقود
-                        </h6>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="{{ form.contracts_folder_id.id_for_label }}" class="form-label">
-                                    <i class="fas fa-folder"></i> {{ form.contracts_folder_id.label }}
-                                </label>
-                                {{ form.contracts_folder_id }}
-                                {% if form.contracts_folder_id.help_text %}
-                                    <small class="form-text text-muted">{{ form.contracts_folder_id.help_text }}</small>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-6">
-                                <label for="{{ form.contracts_folder_name.id_for_label }}" class="form-label">
-                                    <i class="fas fa-folder-open"></i> {{ form.contracts_folder_name.label }}
-                                </label>
-                                {{ form.contracts_folder_name }}
-                                {% if form.contracts_folder_name.help_text %}
-                                    <small class="form-text text-muted">{{ form.contracts_folder_name.help_text }}</small>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <!-- ملف الاعتماد -->
-                        <div class="mb-3">
-                            <label for="{{ form.credentials_file.id_for_label }}" class="form-label">
-                                <i class="fas fa-key"></i> {{ form.credentials_file.label }}
-                            </label>
-                            {{ form.credentials_file }}
-                            {% if form.credentials_file.help_text %}
-                                <small class="form-text text-muted">{{ form.credentials_file.help_text }}</small>
-                            {% endif %}
-                            {% if config.credentials_file %}
-                                <div class="mt-2">
-                                    <small class="text-success">
-                                        <i class="fas fa-check-circle"></i>
-                                        ملف الاعتماد موجود: {{ config.credentials_file.name|default:"غير محدد" }}
-                                    </small>
+                            {% if config.test_message %}
+                                <div class="mt-3">
+                                    <div class="card">
+                                        <div class="card-header {% if config.test_status == 'success' %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+                                            <h6 class="mb-0">
+                                                {% if config.test_status == 'success' %}
+                                                    <i class="fas fa-check-circle"></i> نتيجة الاختبار - نجح
+                                                {% else %}
+                                                    <i class="fas fa-exclamation-triangle"></i> نتيجة الاختبار - فشل
+                                                {% endif %}
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <pre class="mb-0" style="white-space: pre-wrap; font-size: 12px;">{{ config.test_message }}</pre>
+                                        </div>
+                                    </div>
                                 </div>
                             {% endif %}
                         </div>
-
-                        <!-- نمط تسمية الملفات -->
-                        <div class="mb-3">
-                            <label for="{{ form.filename_pattern.id_for_label }}" class="form-label">
-                                <i class="fas fa-file-signature"></i> {{ form.filename_pattern.label }}
-                            </label>
-                            {{ form.filename_pattern }}
-                            {% if form.filename_pattern.help_text %}
-                                <small class="form-text text-muted">{{ form.filename_pattern.help_text }}</small>
-                            {% endif %}
-                        </div>
-
-                        <!-- حالة الخدمة -->
-                        <div class="mb-4">
-                            <div class="form-check">
-                                {{ form.is_active }}
-                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                                    <i class="fas fa-toggle-on"></i> {{ form.is_active.label }}
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- أزرار التحكم -->
-                        <div class="d-flex gap-2 mb-4">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> حفظ الإعدادات
-                            </button>
-                            <button type="button" class="btn btn-info test-connection-btn" onclick="testConnection()">
-                                <i class="fas fa-plug"></i> اختبار الاتصال
-                            </button>
-                            <button type="button" class="btn btn-warning" onclick="createTestFolder()">
-                                <i class="fas fa-folder-plus"></i> إنشاء مجلد تجريبي
-                            </button>
-                            <button type="button" class="btn btn-success" onclick="testFileUpload()">
-                                <i class="fas fa-upload"></i> اختبار رفع ملف
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- إحصائيات -->
-            {% if config %}
-            <div class="card shadow-sm mt-4">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0">
-                        <i class="fas fa-chart-bar"></i> إحصائيات الاستخدام
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-md-4">
-                            <div class="stat-card">
-                                <h4 class="text-primary mb-1">{{ config.total_uploads|default:0 }}</h4>
-                                <p class="text-muted mb-0">إجمالي الرفعات</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="stat-card">
-                                <h6 class="text-success mb-1">
-                                    {% if config.last_upload %}
-                                        {{ config.last_upload|date:"Y-m-d H:i" }}
-                                    {% else %}
-                                        لا يوجد
-                                    {% endif %}
-                                </h6>
-                                <p class="text-muted mb-0">آخر رفع</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="stat-card">
-                                {% if config.test_status == 'success' %}
-                                    <span class="badge bg-success">متصل</span>
-                                {% elif config.test_status == 'failed' %}
-                                    <span class="badge bg-danger">غير متصل</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">لم يتم الاختبار</span>
-                                {% endif %}
-                                <p class="text-muted mb-0 mt-1">حالة الاتصال</p>
-                                {% if config.last_test %}
-                                    <small class="text-muted">{{ config.last_test|date:"Y-m-d H:i" }}</small>
-                                {% endif %}
-                            </div>
-                        </div>
                     </div>
-
-                    {% if config.test_message %}
-                    <div class="mt-3">
-                        <div class="card">
-                            <div class="card-header {% if config.test_status == 'success' %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
-                                <h6 class="mb-0">
-                                    {% if config.test_status == 'success' %}
-                                        <i class="fas fa-check-circle"></i> نتيجة الاختبار - نجح
-                                    {% else %}
-                                        <i class="fas fa-exclamation-triangle"></i> نتيجة الاختبار - فشل
-                                    {% endif %}
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <pre class="mb-0" style="white-space: pre-wrap; font-size: 12px;">{{ config.test_message }}</pre>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
 function testConnection() {
     const btn = document.querySelector('.test-connection-btn');
     const originalHtml = btn.innerHTML;
@@ -521,5 +514,5 @@ function testFileUpload() {
         }
     });
 }
-</script>
+    </script>
 {% endblock %}

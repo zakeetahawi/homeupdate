@@ -1,10 +1,8 @@
 {% extends "admin/base_site.html" %}
 {% load static %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block extrahead %}
-<style>
+    <style>
 .form-container {
     background: white;
     border-radius: 8px;
@@ -143,70 +141,63 @@
     margin-left: 8px;
     color: #f39c12;
 }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <h1>{{ title }}</h1>
-    
-    <div class="form-container">
-        <div class="warning-box">
-            <i class="fas fa-exclamation-triangle"></i>
-            <strong>تنبيه:</strong> سيتم تحديث حالة التركيب للعناصر المحددة. هذا الإجراء لا يمكن التراجع عنه.
-        </div>
-
-        <div class="selected-items">
-            <h4><i class="fas fa-list"></i> العناصر المحددة ({{ queryset.count }} عنصر):</h4>
-            <div class="item-list">
-                {% for item in queryset %}
-                <div class="item">
-                    <div class="item-info">
-                        <strong>{{ item.manufacturing_code }}</strong> - {{ item.order.customer.name }}
-                        <br>
-                        <small>{{ item.order.order_number }}</small>
-                    </div>
-                    <div class="item-status status-{{ item.order.installation_status }}">
-                        {{ item.order.get_installation_status_display }}
-                    </div>
+    <div class="container-fluid">
+        <h1>{{ title }}</h1>
+        <div class="form-container">
+            <div class="warning-box">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>تنبيه:</strong> سيتم تحديث حالة التركيب للعناصر المحددة. هذا الإجراء لا يمكن التراجع عنه.
+            </div>
+            <div class="selected-items">
+                <h4>
+                    <i class="fas fa-list"></i> العناصر المحددة ({{ queryset.count }} عنصر):
+                </h4>
+                <div class="item-list">
+                    {% for item in queryset %}
+                        <div class="item">
+                            <div class="item-info">
+                                <strong>{{ item.manufacturing_code }}</strong> - {{ item.order.customer.name }}
+                                <br>
+                                <small>{{ item.order.order_number }}</small>
+                            </div>
+                            <div class="item-status status-{{ item.order.installation_status }}">
+                                {{ item.order.get_installation_status_display }}
+                            </div>
+                        </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
+            <form method="post">
+                {% csrf_token %}
+                <!-- إضافة العناصر المحددة -->
+                {% for item in queryset %}<input type="hidden" name="_selected_action" value="{{ item.pk }}">{% endfor %}
+                <div class="form-group">
+                    <label for="{{ form.installation_status.id_for_label }}">
+                        <i class="fas fa-tools"></i> {{ form.installation_status.label }}
+                    </label>
+                    {{ form.installation_status }}
+                    {% if form.installation_status.help_text %}
+                        <small class="form-text text-muted">{{ form.installation_status.help_text }}</small>
+                    {% endif %}
+                </div>
+                <div class="form-actions">
+                    <button type="submit" name="apply" class="btn-primary">
+                        <i class="fas fa-check"></i> تطبيق التحديث
+                    </button>
+                    <a href="{% url 'admin:manufacturing_manufacturingorder_changelist' %}"
+                       class="btn-secondary">
+                        <i class="fas fa-times"></i> إلغاء
+                    </a>
+                </div>
+            </form>
         </div>
-
-        <form method="post">
-            {% csrf_token %}
-            
-            <!-- إضافة العناصر المحددة -->
-            {% for item in queryset %}
-                <input type="hidden" name="_selected_action" value="{{ item.pk }}">
-            {% endfor %}
-            
-            <div class="form-group">
-                <label for="{{ form.installation_status.id_for_label }}">
-                    <i class="fas fa-tools"></i> {{ form.installation_status.label }}
-                </label>
-                {{ form.installation_status }}
-                {% if form.installation_status.help_text %}
-                    <small class="form-text text-muted">{{ form.installation_status.help_text }}</small>
-                {% endif %}
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" name="apply" class="btn-primary">
-                    <i class="fas fa-check"></i> تطبيق التحديث
-                </button>
-                <a href="{% url 'admin:manufacturing_manufacturingorder_changelist' %}" class="btn-secondary">
-                    <i class="fas fa-times"></i> إلغاء
-                </a>
-            </div>
-        </form>
     </div>
-</div>
 {% endblock %}
-
 {% block extrajs %}
-<script>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     // تأكيد قبل التطبيق
     const form = document.querySelector('form');
@@ -248,5 +239,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 2000);
     }
 });
-</script>
+    </script>
 {% endblock %}

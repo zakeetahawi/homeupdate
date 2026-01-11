@@ -1,12 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
-
 {% block title %}أوامر التقطيع المجمعة{% endblock %}
-
 {% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
-<style>
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css"
+          rel="stylesheet">
+    <style>
     .cutting-card {
         border-radius: 10px;
         transition: all 0.3s ease;
@@ -29,201 +28,210 @@
     .table-responsive {
         overflow-x: auto;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- عنوان الصفحة -->
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-list-check text-primary"></i>
-            أوامر التقطيع المجمعة
-        </h1>
-        <div class="btn-group" role="group">
-            <a href="{% url 'cutting:dashboard' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> العودة للوحة التحكم
-            </a>
-            <a href="{% url 'cutting:order_list' %}" class="btn btn-info">
-                <i class="fas fa-cut"></i> أوامر التقطيع النشطة
-            </a>
-            <a href="{% url 'cutting:reports' %}" class="btn btn-success">
-                <i class="fas fa-chart-bar"></i> التقارير
-            </a>
-        </div>
-    </div>
-
-    <!-- فلاتر البحث -->
-    <div class="card filter-card shadow mb-4">
-        <div class="card-body">
-            <form method="GET" class="row align-items-end">
-                <div class="col-md-3 mb-2">
-                    <label class="form-label text-white">المستودع</label>
-                    <select name="warehouse" class="form-select">
-                        <option value="">جميع المستودعات</option>
-                        {% for warehouse in warehouses %}
-                            <option value="{{ warehouse.id }}" {% if selected_warehouse == warehouse.id|stringformat:"s" %}selected{% endif %}>
-                                {{ warehouse.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3 mb-2">
-                    <label class="form-label text-white">حالة الإكمال</label>
-                    <select name="status_filter" class="form-select">
-                        <option value="">جميع الحالات</option>
-                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>مكتملة</option>
-                        <option value="incomplete" {% if status_filter == 'incomplete' %}selected{% endif %}>غير مكتملة</option>
-                        <option value="partially_completed" {% if status_filter == 'partially_completed' %}selected{% endif %}>مكتملة جزئياً</option>
-                    </select>
-                </div>
-                <div class="col-md-4 mb-2">
-                    <label class="form-label text-white">البحث</label>
-                    <input type="text" name="search" class="form-control" placeholder="كود التقطيع، رقم العقد، اسم العميل..." value="{{ search_query }}">
-                </div>
-                <div class="col-md-2 mb-2">
-                    <button type="submit" class="btn btn-light w-100">
-                        <i class="fas fa-search"></i> بحث
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- قائمة أوامر التقطيع -->
-    {% if cutting_orders %}
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-list"></i>
-                قائمة أوامر التقطيع ({{ page_obj.paginator.count }} أمر)
-            </h6>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover">
-                    <thead class="table-primary">
-                        <tr>
-                            <th>كود التقطيع</th>
-                            <th>العميل</th>
-                            <th>أرقام الفواتير/العقود</th>
-                            <th>المستودع</th>
-                            <th>عدد العناصر</th>
-                            <th>العناصر المكتملة</th>
-                            <th>نسبة الإكمال</th>
-                            <th>الحالة</th>
-                            <th>تاريخ الإنشاء</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in cutting_orders %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'cutting:order_detail' order.id %}" class="text-primary font-weight-bold">
-                                    {{ order.cutting_code }}
-                                </a>
-                            </td>
-                            <td>{{ order.order.customer.name }}</td>
-                            <td>
-                                <div class="d-flex flex-wrap gap-1">
-                                    {% with all_invoices=order.order.get_all_invoice_numbers %}
-                                        {% for invoice in all_invoices %}
-                                            <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">{{ invoice }}</span>
-                                        {% empty %}
-                                            <span class="text-muted" style="font-size: 0.7rem;">-</span>
-                                        {% endfor %}
-                                    {% endwith %}
-                                    {% with all_contracts=order.order.get_all_contract_numbers %}
-                                        {% for contract in all_contracts %}
-                                            <span class="badge bg-secondary" style="font-size: 0.7rem;">{{ contract }}</span>
-                                        {% endfor %}
-                                    {% endwith %}
-                                </div>
-                            </td>
-                            <td>{{ order.warehouse.name }}</td>
-                            <td><span class="badge bg-primary">{{ order.total_items }}</span></td>
-                            <td><span class="badge bg-success">{{ order.completed_items }}</span></td>
-                            <td>
-                                <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar {% if order.completion_percentage == 100 %}bg-success{% elif order.completion_percentage >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
-                                         role="progressbar" 
-                                         style="width: {{ order.completion_percentage }}%"
-                                         aria-valuenow="{{ order.completion_percentage }}" 
-                                         aria-valuemin="0" 
-                                         aria-valuemax="100">
-                                        {{ order.completion_percentage }}%
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                {% if order.status == 'pending' %}
-                                    <span class="badge bg-warning text-dark">قيد الانتظار</span>
-                                {% elif order.status == 'in_progress' %}
-                                    <span class="badge bg-info">قيد التقطيع</span>
-                                {% elif order.status == 'completed' %}
-                                    <span class="badge bg-success">مكتمل</span>
-                                {% elif order.status == 'rejected' %}
-                                    <span class="badge bg-danger">مرفوض</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">{{ order.get_status_display }}</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
-                            <td>
-                                <a href="{% url 'cutting:order_detail' order.id %}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-eye"></i> عرض
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <div class="container-fluid">
+        <!-- عنوان الصفحة -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-list-check text-primary"></i>
+                أوامر التقطيع المجمعة
+            </h1>
+            <div class="btn-group" role="group">
+                <a href="{% url 'cutting:dashboard' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> العودة للوحة التحكم
+                </a>
+                <a href="{% url 'cutting:order_list' %}" class="btn btn-info">
+                    <i class="fas fa-cut"></i> أوامر التقطيع النشطة
+                </a>
+                <a href="{% url 'cutting:reports' %}" class="btn btn-success">
+                    <i class="fas fa-chart-bar"></i> التقارير
+                </a>
             </div>
-
-            <!-- Pagination -->
-            {% if page_obj.has_other_pages %}
-            <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_warehouse %}&warehouse={{ selected_warehouse }}{% endif %}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">السابق</a>
-                        </li>
-                    {% endif %}
-                    
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}{% if selected_warehouse %}&warehouse={{ selected_warehouse }}{% endif %}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_warehouse %}&warehouse={{ selected_warehouse }}{% endif %}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">التالي</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
         </div>
-    </div>
-    {% else %}
-    <div class="card shadow mb-4">
-        <div class="card-body text-center py-5">
-            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">لا توجد أوامر تقطيع</h5>
-            <p class="text-muted">لم يتم العثور على أوامر تقطيع تطابق معايير البحث</p>
+        <!-- فلاتر البحث -->
+        <div class="card filter-card shadow mb-4">
+            <div class="card-body">
+                <form method="GET" class="row align-items-end">
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label text-white">المستودع</label>
+                        <select name="warehouse" class="form-select">
+                            <option value="">جميع المستودعات</option>
+                            {% for warehouse in warehouses %}
+                                <option value="{{ warehouse.id }}"
+                                        {% if selected_warehouse == warehouse.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ warehouse.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="form-label text-white">حالة الإكمال</label>
+                        <select name="status_filter" class="form-select">
+                            <option value="">جميع الحالات</option>
+                            <option value="completed"
+                                    {% if status_filter == 'completed' %}selected{% endif %}>مكتملة</option>
+                            <option value="incomplete"
+                                    {% if status_filter == 'incomplete' %}selected{% endif %}>غير مكتملة</option>
+                            <option value="partially_completed"
+                                    {% if status_filter == 'partially_completed' %}selected{% endif %}>
+                                مكتملة جزئياً
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label text-white">البحث</label>
+                        <input type="text"
+                               name="search"
+                               class="form-control"
+                               placeholder="كود التقطيع، رقم العقد، اسم العميل..."
+                               value="{{ search_query }}">
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <button type="submit" class="btn btn-light w-100">
+                            <i class="fas fa-search"></i> بحث
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
+        <!-- قائمة أوامر التقطيع -->
+        {% if cutting_orders %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-list"></i>
+                        قائمة أوامر التقطيع ({{ page_obj.paginator.count }} أمر)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>كود التقطيع</th>
+                                    <th>العميل</th>
+                                    <th>أرقام الفواتير/العقود</th>
+                                    <th>المستودع</th>
+                                    <th>عدد العناصر</th>
+                                    <th>العناصر المكتملة</th>
+                                    <th>نسبة الإكمال</th>
+                                    <th>الحالة</th>
+                                    <th>تاريخ الإنشاء</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in cutting_orders %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'cutting:order_detail' order.id %}"
+                                               class="text-primary font-weight-bold">{{ order.cutting_code }}</a>
+                                        </td>
+                                        <td>{{ order.order.customer.name }}</td>
+                                        <td>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                {% with all_invoices=order.order.get_all_invoice_numbers %}
+                                                    {% for invoice in all_invoices %}
+                                                        <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">{{ invoice }}</span>
+                                                    {% empty %}
+                                                        <span class="text-muted" style="font-size: 0.7rem;">-</span>
+                                                    {% endfor %}
+                                                {% endwith %}
+                                                {% with all_contracts=order.order.get_all_contract_numbers %}
+                                                    {% for contract in all_contracts %}
+                                                        <span class="badge bg-secondary" style="font-size: 0.7rem;">{{ contract }}</span>
+                                                    {% endfor %}
+                                                {% endwith %}
+                                            </div>
+                                        </td>
+                                        <td>{{ order.warehouse.name }}</td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ order.total_items }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">{{ order.completed_items }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar {% if order.completion_percentage == 100 %}bg-success{% elif order.completion_percentage >= 50 %}bg-info{% else %}bg-warning{% endif %}"
+                                                     role="progressbar"
+                                                     style="width: {{ order.completion_percentage }}%"
+                                                     aria-valuenow="{{ order.completion_percentage }}"
+                                                     aria-valuemin="0"
+                                                     aria-valuemax="100">{{ order.completion_percentage }}%</div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if order.status == 'pending' %}
+                                                <span class="badge bg-warning text-dark">قيد الانتظار</span>
+                                            {% elif order.status == 'in_progress' %}
+                                                <span class="badge bg-info">قيد التقطيع</span>
+                                            {% elif order.status == 'completed' %}
+                                                <span class="badge bg-success">مكتمل</span>
+                                            {% elif order.status == 'rejected' %}
+                                                <span class="badge bg-danger">مرفوض</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ order.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            <a href="{% url 'cutting:order_detail' order.id %}"
+                                               class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye"></i> عرض
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ page_obj.previous_page_number }}{% if selected_warehouse %}&warehouse={{ selected_warehouse }}{% endif %}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">السابق</a>
+                                    </li>
+                                {% endif %}
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link"
+                                               href="?page={{ num }}{% if selected_warehouse %}&warehouse={{ selected_warehouse }}{% endif %}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ page_obj.next_page_number }}{% if selected_warehouse %}&warehouse={{ selected_warehouse }}{% endif %}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">التالي</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="card shadow mb-4">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">لا توجد أوامر تقطيع</h5>
+                    <p class="text-muted">لم يتم العثور على أوامر تقطيع تطابق معايير البحث</p>
+                </div>
+            </div>
+        {% endif %}
     </div>
-    {% endif %}
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
 {% endblock %}
-

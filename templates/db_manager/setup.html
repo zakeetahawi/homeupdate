@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
-
-{% block title %}{% trans "إعداد النظام" %}{% endblock %}
-
+{% block title %}
+    {% trans "إعداد النظام" %}
+{% endblock %}
 {% block extra_css %}
-<style>
+    <style>
     .setup-container {
         max-width: 800px;
         margin: 0 auto;
@@ -57,11 +57,10 @@
         border-radius: 5px;
         margin-top: 10px;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     document.addEventListener('DOMContentLoaded', function() {
         // التحقق من وجود عنصر create_admin
         var createAdminCheckbox = document.getElementById('create_admin');
@@ -103,142 +102,152 @@
             dbTypeSelect.dispatchEvent(new Event('change'));
         }
     });
-</script>
+    </script>
 {% endblock %}
-
 {% block content %}
-<div class="container mt-5">
-    <div class="setup-container">
-        <div class="setup-header">
-            <img src="{% static 'img/logo.png' %}" alt="{% trans 'شعار النظام' %}" class="img-fluid">
-            <h1>{% trans "مرحبًا بك في إعداد نظام الخواجه" %}</h1>
-            <p class="lead">{% trans "نحن بحاجة إلى إعداد قاعدة البيانات الخاصة بك لبدء استخدام النظام" %}</p>
-        </div>
-
-        <div class="setup-content">
-            {% if simple_setup %}
-                {% if error %}
-                <div class="alert alert-warning">
-                    <h4>{% trans "تنبيه" %}</h4>
-                    <p>{% trans "حدث خطأ أثناء محاولة إعداد النظام:" %} {{ error }}</p>
-                    <p>{% trans "يرجى إكمال النموذج أدناه لإعداد النظام." %}</p>
-                </div>
-                {% endif %}
-
-                <form method="post" class="mt-4">
-                    {% csrf_token %}
-
-                    <h4>{% trans "إعداد قاعدة البيانات" %}</h4>
-                    <div class="form-group row mb-3">
-                        <label for="db_type" class="col-sm-3 col-form-label">{% trans "نوع قاعدة البيانات" %}</label>
-                        <div class="col-sm-9">
-                            <select name="db_type" id="db_type" class="form-control">
-                                <option value="postgresql" selected>PostgreSQL</option>
-                                <option value="sqlite">SQLite</option>
-                            </select>
+    <div class="container mt-5">
+        <div class="setup-container">
+            <div class="setup-header">
+                <img src="{% static 'img/logo.png' %}"
+                     alt="{% trans 'شعار النظام' %}"
+                     class="img-fluid">
+                <h1>{% trans "مرحبًا بك في إعداد نظام الخواجه" %}</h1>
+                <p class="lead">{% trans "نحن بحاجة إلى إعداد قاعدة البيانات الخاصة بك لبدء استخدام النظام" %}</p>
+            </div>
+            <div class="setup-content">
+                {% if simple_setup %}
+                    {% if error %}
+                        <div class="alert alert-warning">
+                            <h4>{% trans "تنبيه" %}</h4>
+                            <p>{% trans "حدث خطأ أثناء محاولة إعداد النظام:" %} {{ error }}</p>
+                            <p>{% trans "يرجى إكمال النموذج أدناه لإعداد النظام." %}</p>
                         </div>
-                    </div>
-
-                    <div class="form-group row mb-3">
-                        <label for="host" class="col-sm-3 col-form-label">{% trans "المضيف" %}</label>
-                        <div class="col-sm-9">
-                            <input type="text" name="host" id="host" class="form-control" value="localhost">
-                            <small class="form-text text-muted">{% trans "عنوان الخادم المستضيف لقاعدة البيانات (مثال: localhost)" %}</small>
-                        </div>
-                    </div>
-
-                    <div class="form-group row mb-3">
-                        <label for="port" class="col-sm-3 col-form-label">{% trans "المنفذ" %}</label>
-                        <div class="col-sm-9">
-                            <input type="text" name="port" id="port" class="form-control" value="5433">
-                            <small class="form-text text-muted">{% trans "منفذ الاتصال بقاعدة البيانات (مثال: 5433 لـ PostgreSQL، 3306 لـ MySQL)" %}</small>
-                        </div>
-                    </div>
-
-                    <div class="form-group row mb-3">
-                        <label for="username" class="col-sm-3 col-form-label">{% trans "اسم المستخدم" %}</label>
-                        <div class="col-sm-9">
-                            <input type="text" name="username" id="username" class="form-control" value="postgres">
-                        </div>
-                    </div>
-
-                    <div class="form-group row mb-3">
-                        <label for="password" class="col-sm-3 col-form-label">{% trans "كلمة المرور" %}</label>
-                        <div class="col-sm-9">
-                            <input type="password" name="password" id="password" class="form-control">
-                        </div>
-                    </div>
-
-                    <div class="form-group row mb-3">
-                        <label for="database_name" class="col-sm-3 col-form-label">{% trans "اسم قاعدة البيانات" %}</label>
-                        <div class="col-sm-9">
-                            <input type="text" name="database_name" id="database_name" class="form-control" value="crm_system">
-                        </div>
-                    </div>
-
-                    {% if not has_users %}
-                    <h4 class="mt-4">{% trans "إنشاء مستخدم مسؤول" %}</h4>
-                    <div class="form-check mb-3">
-                        <input type="checkbox" name="create_admin" id="create_admin" class="form-check-input" checked>
-                        <label for="create_admin" class="form-check-label">{% trans "إنشاء مستخدم مسؤول" %}</label>
-                    </div>
-
-                    <div id="admin_fields">
-                        <div class="form-group row mb-3">
-                            <label for="admin_username" class="col-sm-3 col-form-label">{% trans "اسم المستخدم" %}</label>
-                            <div class="col-sm-9">
-                                <input type="text" name="admin_username" id="admin_username" class="form-control" value="admin">
-                            </div>
-                        </div>
-
-                        <div class="form-group row mb-3">
-                            <label for="admin_email" class="col-sm-3 col-form-label">{% trans "البريد الإلكتروني" %}</label>
-                            <div class="col-sm-9">
-                                <input type="email" name="admin_email" id="admin_email" class="form-control" value="admin@example.com">
-                            </div>
-                        </div>
-
-                        <div class="form-group row mb-3">
-                            <label for="admin_password" class="col-sm-3 col-form-label">{% trans "كلمة المرور" %}</label>
-                            <div class="col-sm-9">
-                                <input type="password" name="admin_password" id="admin_password" class="form-control" value="admin">
-                            </div>
-                        </div>
-                    </div>
                     {% endif %}
-
-                    <div class="text-center mt-4">
-                        <button type="submit" class="btn btn-primary btn-lg">{% trans "إعداد النظام" %}</button>
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <h4>{% trans "إعداد قاعدة البيانات" %}</h4>
+                        <div class="form-group row mb-3">
+                            <label for="db_type" class="col-sm-3 col-form-label">{% trans "نوع قاعدة البيانات" %}</label>
+                            <div class="col-sm-9">
+                                <select name="db_type" id="db_type" class="form-control">
+                                    <option value="postgresql" selected>PostgreSQL</option>
+                                    <option value="sqlite">SQLite</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="host" class="col-sm-3 col-form-label">{% trans "المضيف" %}</label>
+                            <div class="col-sm-9">
+                                <input type="text"
+                                       name="host"
+                                       id="host"
+                                       class="form-control"
+                                       value="localhost">
+                                <small class="form-text text-muted">{% trans "عنوان الخادم المستضيف لقاعدة البيانات (مثال: localhost)" %}</small>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="port" class="col-sm-3 col-form-label">{% trans "المنفذ" %}</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="port" id="port" class="form-control" value="5433">
+                                <small class="form-text text-muted">{% trans "منفذ الاتصال بقاعدة البيانات (مثال: 5433 لـ PostgreSQL، 3306 لـ MySQL)" %}</small>
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="username" class="col-sm-3 col-form-label">{% trans "اسم المستخدم" %}</label>
+                            <div class="col-sm-9">
+                                <input type="text"
+                                       name="username"
+                                       id="username"
+                                       class="form-control"
+                                       value="postgres">
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="password" class="col-sm-3 col-form-label">{% trans "كلمة المرور" %}</label>
+                            <div class="col-sm-9">
+                                <input type="password" name="password" id="password" class="form-control">
+                            </div>
+                        </div>
+                        <div class="form-group row mb-3">
+                            <label for="database_name" class="col-sm-3 col-form-label">{% trans "اسم قاعدة البيانات" %}</label>
+                            <div class="col-sm-9">
+                                <input type="text"
+                                       name="database_name"
+                                       id="database_name"
+                                       class="form-control"
+                                       value="crm_system">
+                            </div>
+                        </div>
+                        {% if not has_users %}
+                            <h4 class="mt-4">{% trans "إنشاء مستخدم مسؤول" %}</h4>
+                            <div class="form-check mb-3">
+                                <input type="checkbox"
+                                       name="create_admin"
+                                       id="create_admin"
+                                       class="form-check-input"
+                                       checked>
+                                <label for="create_admin" class="form-check-label">{% trans "إنشاء مستخدم مسؤول" %}</label>
+                            </div>
+                            <div id="admin_fields">
+                                <div class="form-group row mb-3">
+                                    <label for="admin_username" class="col-sm-3 col-form-label">{% trans "اسم المستخدم" %}</label>
+                                    <div class="col-sm-9">
+                                        <input type="text"
+                                               name="admin_username"
+                                               id="admin_username"
+                                               class="form-control"
+                                               value="admin">
+                                    </div>
+                                </div>
+                                <div class="form-group row mb-3">
+                                    <label for="admin_email" class="col-sm-3 col-form-label">{% trans "البريد الإلكتروني" %}</label>
+                                    <div class="col-sm-9">
+                                        <input type="email"
+                                               name="admin_email"
+                                               id="admin_email"
+                                               class="form-control"
+                                               value="admin@example.com">
+                                    </div>
+                                </div>
+                                <div class="form-group row mb-3">
+                                    <label for="admin_password" class="col-sm-3 col-form-label">{% trans "كلمة المرور" %}</label>
+                                    <div class="col-sm-9">
+                                        <input type="password"
+                                               name="admin_password"
+                                               id="admin_password"
+                                               class="form-control"
+                                               value="admin">
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">{% trans "إعداد النظام" %}</button>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="alert alert-info">
+                        <h4>{% trans "تم إنشاء رمز إعداد جديد" %}</h4>
+                        <p>{% trans "استخدم هذا الرمز للوصول إلى صفحة إعداد النظام. يرجى الاحتفاظ بهذا الرمز في مكان آمن." %}</p>
                     </div>
-                </form>
-            {% else %}
-                <div class="alert alert-info">
-                    <h4>{% trans "تم إنشاء رمز إعداد جديد" %}</h4>
-                    <p>{% trans "استخدم هذا الرمز للوصول إلى صفحة إعداد النظام. يرجى الاحتفاظ بهذا الرمز في مكان آمن." %}</p>
-                </div>
-
-                <div class="setup-token">
-                    {{ token.token }}
-                </div>
-
-                <h5>{% trans "رابط الإعداد:" %}</h5>
-                <div class="setup-url">
-                    <a href="{{ setup_url }}" target="_blank">{{ setup_url }}</a>
-                </div>
-
-                <div class="alert alert-warning">
-                    <h5>{% trans "ملاحظة هامة:" %}</h5>
-                    <p>{% trans "هذا الرمز صالح لمدة 24 ساعة فقط. بعد ذلك، ستحتاج إلى إنشاء رمز جديد." %}</p>
-                    <p>{% trans "يمكن استخدام هذا الرمز مرة واحدة فقط." %}</p>
-                </div>
-            {% endif %}
-        </div>
-
-        <div class="setup-footer">
-            {% if not simple_setup %}
-                <a href="{{ setup_url }}" class="btn btn-primary btn-lg">{% trans "متابعة إلى صفحة الإعداد" %}</a>
-            {% endif %}
+                    <div class="setup-token">{{ token.token }}</div>
+                    <h5>{% trans "رابط الإعداد:" %}</h5>
+                    <div class="setup-url">
+                        <a href="{{ setup_url }}" target="_blank">{{ setup_url }}</a>
+                    </div>
+                    <div class="alert alert-warning">
+                        <h5>{% trans "ملاحظة هامة:" %}</h5>
+                        <p>{% trans "هذا الرمز صالح لمدة 24 ساعة فقط. بعد ذلك، ستحتاج إلى إنشاء رمز جديد." %}</p>
+                        <p>{% trans "يمكن استخدام هذا الرمز مرة واحدة فقط." %}</p>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="setup-footer">
+                {% if not simple_setup %}
+                    <a href="{{ setup_url }}" class="btn btn-primary btn-lg">{% trans "متابعة إلى صفحة الإعداد" %}</a>
+                {% endif %}
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}

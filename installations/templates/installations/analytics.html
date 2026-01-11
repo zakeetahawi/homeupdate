@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}تحليل التركيبات الشهري{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .analytics-card {
         transition: transform 0.2s;
     }
@@ -50,143 +48,145 @@
         background: rgba(255,255,255,0.8);
         transition: width 0.3s ease;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- عنوان الصفحة -->
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">تحليل التركيبات الشهري</h1>
-        <div>
-            <form method="get" class="d-inline">
-                <select name="months" class="form-control d-inline-block w-auto" onchange="this.form.submit()">
-                    <option value="3" {% if months_back == 3 %}selected{% endif %}>آخر 3 أشهر</option>
-                    <option value="6" {% if months_back == 6 %}selected{% endif %}>آخر 6 أشهر</option>
-                    <option value="12" {% if months_back == 12 %}selected{% endif %}>آخر 12 شهر</option>
-                </select>
-            </form>
-        </div>
-    </div>
-
-    <!-- إحصائيات إجمالية -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <h3>{{ total_stats.total_installations }}</h3>
-            <p>إجمالي التركيبات</p>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: 100%"></div>
+    <div class="container-fluid">
+        <!-- عنوان الصفحة -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-0 text-gray-800">تحليل التركيبات الشهري</h1>
+            <div>
+                <form method="get" class="d-inline">
+                    <select name="months"
+                            class="form-control d-inline-block w-auto"
+                            onchange="this.form.submit()">
+                        <option value="3" {% if months_back == 3 %}selected{% endif %}>آخر 3 أشهر</option>
+                        <option value="6" {% if months_back == 6 %}selected{% endif %}>آخر 6 أشهر</option>
+                        <option value="12" {% if months_back == 12 %}selected{% endif %}>آخر 12 شهر</option>
+                    </select>
+                </form>
             </div>
         </div>
-        <div class="stat-card">
-            <h3>{{ total_stats.total_completed }}</h3>
-            <p>التركيبات المكتملة</p>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: {{ total_stats.avg_completion_rate }}%"></div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <h3>{{ total_stats.total_modifications }}</h3>
-            <p>إجمالي التعديلات</p>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: {{ total_stats.avg_modification_rate }}%"></div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <h3>{{ total_stats.avg_completion_rate|floatformat:1 }}%</h3>
-            <p>متوسط نسبة الإكمال</p>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: {{ total_stats.avg_completion_rate }}%"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- جدول البيانات الشهرية -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">البيانات الشهرية</h6>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered" id="analyticsTable">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th>الشهر</th>
-                            <th>إجمالي التركيبات</th>
-                            <th>مكتمل</th>
-                            <th>في الانتظار</th>
-                            <th>قيد التنفيذ</th>
-                            <th>العملاء</th>
-                            <th>التعديلات</th>
-                            <th>نسبة الإكمال</th>
-                            <th>نسبة التعديلات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for data in analytics_data %}
-                        <tr>
-                            <td>{{ data.month|date:"Y-m" }}</td>
-                            <td>{{ data.total_installations }}</td>
-                            <td>{{ data.completed_installations }}</td>
-                            <td>{{ data.pending_installations }}</td>
-                            <td>{{ data.in_progress_installations }}</td>
-                            <td>{{ data.total_customers }}</td>
-                            <td>{{ data.total_modifications }}</td>
-                            <td>
-                                <div class="progress">
-                                    <div class="progress-bar bg-success" style="width: {{ data.completion_rate }}%">
-                                        {{ data.completion_rate }}%
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="progress">
-                                    <div class="progress-bar bg-warning" style="width: {{ data.modification_rate }}%">
-                                        {{ data.modification_rate }}%
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- الرسوم البيانية -->
-    <div class="row">
-        <div class="col-xl-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">تطور التركيبات الشهري</h6>
+        <!-- إحصائيات إجمالية -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>{{ total_stats.total_installations }}</h3>
+                <p>إجمالي التركيبات</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 100%"></div>
                 </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="installationsChart"></canvas>
+            </div>
+            <div class="stat-card">
+                <h3>{{ total_stats.total_completed }}</h3>
+                <p>التركيبات المكتملة</p>
+                <div class="progress-bar">
+                    <div class="progress-fill"
+                         style="width: {{ total_stats.avg_completion_rate }}%"></div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <h3>{{ total_stats.total_modifications }}</h3>
+                <p>إجمالي التعديلات</p>
+                <div class="progress-bar">
+                    <div class="progress-fill"
+                         style="width: {{ total_stats.avg_modification_rate }}%"></div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <h3>{{ total_stats.avg_completion_rate|floatformat:1 }}%</h3>
+                <p>متوسط نسبة الإكمال</p>
+                <div class="progress-bar">
+                    <div class="progress-fill"
+                         style="width: {{ total_stats.avg_completion_rate }}%"></div>
+                </div>
+            </div>
+        </div>
+        <!-- جدول البيانات الشهرية -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">البيانات الشهرية</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="analyticsTable">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>الشهر</th>
+                                <th>إجمالي التركيبات</th>
+                                <th>مكتمل</th>
+                                <th>في الانتظار</th>
+                                <th>قيد التنفيذ</th>
+                                <th>العملاء</th>
+                                <th>التعديلات</th>
+                                <th>نسبة الإكمال</th>
+                                <th>نسبة التعديلات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for data in analytics_data %}
+                                <tr>
+                                    <td>{{ data.month|date:"Y-m" }}</td>
+                                    <td>{{ data.total_installations }}</td>
+                                    <td>{{ data.completed_installations }}</td>
+                                    <td>{{ data.pending_installations }}</td>
+                                    <td>{{ data.in_progress_installations }}</td>
+                                    <td>{{ data.total_customers }}</td>
+                                    <td>{{ data.total_modifications }}</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-success"
+                                                 style="width: {{ data.completion_rate }}%">
+                                                {{ data.completion_rate }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-warning"
+                                                 style="width: {{ data.modification_rate }}%">
+                                                {{ data.modification_rate }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- الرسوم البيانية -->
+        <div class="row">
+            <div class="col-xl-6">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">تطور التركيبات الشهري</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="installationsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-6">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">نسب الإكمال والتعديلات</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="ratesChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">نسب الإكمال والتعديلات</h6>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="ratesChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     // بيانات الرسوم البيانية
     const months = [{% for data in analytics_data %}'{{ data.month|date:"Y-m" }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
@@ -266,5 +266,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-</script>
-{% endblock %} 
+    </script>
+{% endblock %}

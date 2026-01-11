@@ -1,10 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block title %}لوحة مراقبة النظام{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .monitoring-card {
         background: white;
         border-radius: 8px;
@@ -106,149 +104,141 @@
         background-color: #28a745;
         color: white;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <h1>
-                🔍 لوحة مراقبة النظام
-                <span class="refresh-indicator" id="refreshIndicator">
-                    <i class="fas fa-sync-alt fa-spin"></i>
-                </span>
-            </h1>
-            <p class="text-muted">مراقبة اتصالات قاعدة البيانات وأداء النظام في الوقت الفعلي</p>
-        </div>
-    </div>
-    
-    <!-- إحصائيات قاعدة البيانات -->
-    <div class="row">
-        <div class="col-md-3">
-            <div class="monitoring-card">
-                <div class="d-flex align-items-center">
-                    <span class="status-indicator" id="dbStatusIndicator"></span>
-                    <h5 class="mb-0">إجمالي الاتصالات</h5>
-                </div>
-                <div class="metric-value" id="totalConnections">--</div>
-                <div class="metric-label">من أصل 200 اتصال</div>
-                <div class="progress-bar-custom">
-                    <div class="progress-fill" id="connectionsProgress"></div>
-                </div>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <h1>
+                    🔍 لوحة مراقبة النظام
+                    <span class="refresh-indicator" id="refreshIndicator">
+                        <i class="fas fa-sync-alt fa-spin"></i>
+                    </span>
+                </h1>
+                <p class="text-muted">مراقبة اتصالات قاعدة البيانات وأداء النظام في الوقت الفعلي</p>
             </div>
         </div>
-        
-        <div class="col-md-3">
-            <div class="monitoring-card">
-                <h5>الاتصالات النشطة</h5>
-                <div class="metric-value" id="activeConnections">--</div>
-                <div class="metric-label">قيد التنفيذ</div>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="monitoring-card">
-                <h5>الاتصالات الخاملة</h5>
-                <div class="metric-value" id="idleConnections">--</div>
-                <div class="metric-label">في انتظار</div>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="monitoring-card">
-                <h5>معلقة في معاملة</h5>
-                <div class="metric-value" id="idleInTransaction">--</div>
-                <div class="metric-label">تحتاج تنظيف</div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- إحصائيات النظام -->
-    <div class="row">
-        <div class="col-md-4">
-            <div class="monitoring-card">
-                <h5>استخدام الذاكرة</h5>
-                <div class="metric-value" id="memoryUsage">--</div>
-                <div class="metric-label">من إجمالي الذاكرة</div>
-                <div class="progress-bar-custom">
-                    <div class="progress-fill" id="memoryProgress"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="monitoring-card">
-                <h5>استخدام المعالج</h5>
-                <div class="metric-value" id="cpuUsage">--</div>
-                <div class="metric-label">متوسط الاستخدام</div>
-                <div class="progress-bar-custom">
-                    <div class="progress-fill" id="cpuProgress"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="monitoring-card">
-                <h5>عدد الخيوط</h5>
-                <div class="metric-value" id="threadCount">--</div>
-                <div class="metric-label">خيط نشط</div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- التحذيرات والإجراءات -->
-    <div class="row">
-        <div class="col-md-8">
-            <div class="monitoring-card">
-                <h5>التحذيرات النشطة</h5>
-                <div id="alertsContainer">
-                    <p class="text-muted">لا توجد تحذيرات نشطة</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="monitoring-card">
-                <h5>إجراءات سريعة</h5>
-                <div class="d-flex flex-column">
-                    <button class="action-button btn-cleanup" onclick="performAction('cleanup')">
-                        🧹 تنظيف الاتصالات الخاملة
-                    </button>
-                    <button class="action-button btn-emergency" onclick="performAction('emergency')">
-                        🚨 تنظيف طوارئ
-                    </button>
-                    <button class="action-button btn-optimize" onclick="performAction('optimize')">
-                        ⚡ تحسين قاعدة البيانات
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- معلومات إضافية -->
-    <div class="row">
-        <div class="col-12">
-            <div class="monitoring-card">
-                <h5>معلومات النظام</h5>
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>آخر تحديث:</strong> <span id="lastUpdate">--</span></p>
-                        <p><strong>حالة المراقبة:</strong> <span id="monitoringStatus">--</span></p>
+        <!-- إحصائيات قاعدة البيانات -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="monitoring-card">
+                    <div class="d-flex align-items-center">
+                        <span class="status-indicator" id="dbStatusIndicator"></span>
+                        <h5 class="mb-0">إجمالي الاتصالات</h5>
                     </div>
-                    <div class="col-md-6">
-                        <p><strong>وقت التشغيل:</strong> <span id="uptime">--</span></p>
-                        <p><strong>إجمالي التحذيرات:</strong> <span id="totalAlerts">--</span></p>
+                    <div class="metric-value" id="totalConnections">--</div>
+                    <div class="metric-label">من أصل 200 اتصال</div>
+                    <div class="progress-bar-custom">
+                        <div class="progress-fill" id="connectionsProgress"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="monitoring-card">
+                    <h5>الاتصالات النشطة</h5>
+                    <div class="metric-value" id="activeConnections">--</div>
+                    <div class="metric-label">قيد التنفيذ</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="monitoring-card">
+                    <h5>الاتصالات الخاملة</h5>
+                    <div class="metric-value" id="idleConnections">--</div>
+                    <div class="metric-label">في انتظار</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="monitoring-card">
+                    <h5>معلقة في معاملة</h5>
+                    <div class="metric-value" id="idleInTransaction">--</div>
+                    <div class="metric-label">تحتاج تنظيف</div>
+                </div>
+            </div>
+        </div>
+        <!-- إحصائيات النظام -->
+        <div class="row">
+            <div class="col-md-4">
+                <div class="monitoring-card">
+                    <h5>استخدام الذاكرة</h5>
+                    <div class="metric-value" id="memoryUsage">--</div>
+                    <div class="metric-label">من إجمالي الذاكرة</div>
+                    <div class="progress-bar-custom">
+                        <div class="progress-fill" id="memoryProgress"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="monitoring-card">
+                    <h5>استخدام المعالج</h5>
+                    <div class="metric-value" id="cpuUsage">--</div>
+                    <div class="metric-label">متوسط الاستخدام</div>
+                    <div class="progress-bar-custom">
+                        <div class="progress-fill" id="cpuProgress"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="monitoring-card">
+                    <h5>عدد الخيوط</h5>
+                    <div class="metric-value" id="threadCount">--</div>
+                    <div class="metric-label">خيط نشط</div>
+                </div>
+            </div>
+        </div>
+        <!-- التحذيرات والإجراءات -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="monitoring-card">
+                    <h5>التحذيرات النشطة</h5>
+                    <div id="alertsContainer">
+                        <p class="text-muted">لا توجد تحذيرات نشطة</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="monitoring-card">
+                    <h5>إجراءات سريعة</h5>
+                    <div class="d-flex flex-column">
+                        <button class="action-button btn-cleanup" onclick="performAction('cleanup')">🧹 تنظيف الاتصالات الخاملة</button>
+                        <button class="action-button btn-emergency"
+                                onclick="performAction('emergency')">🚨 تنظيف طوارئ</button>
+                        <button class="action-button btn-optimize"
+                                onclick="performAction('optimize')">⚡ تحسين قاعدة البيانات</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- معلومات إضافية -->
+        <div class="row">
+            <div class="col-12">
+                <div class="monitoring-card">
+                    <h5>معلومات النظام</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p>
+                                <strong>آخر تحديث:</strong> <span id="lastUpdate">--</span>
+                            </p>
+                            <p>
+                                <strong>حالة المراقبة:</strong> <span id="monitoringStatus">--</span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p>
+                                <strong>وقت التشغيل:</strong> <span id="uptime">--</span>
+                            </p>
+                            <p>
+                                <strong>إجمالي التحذيرات:</strong> <span id="totalAlerts">--</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 let refreshInterval;
 let isRefreshing = false;
 
@@ -453,5 +443,5 @@ window.addEventListener('beforeunload', function() {
         clearInterval(refreshInterval);
     }
 });
-</script>
+    </script>
 {% endblock %}

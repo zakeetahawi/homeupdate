@@ -13,25 +13,25 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 print_status() {
-    echo -e "${GREEN}✅ $1${NC}"
+	echo -e "${GREEN}✅ $1${NC}"
 }
 
 print_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
+	echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+	echo -e "${YELLOW}⚠️  $1${NC}"
 }
 
 print_error() {
-    echo -e "${RED}❌ $1${NC}"
+	echo -e "${RED}❌ $1${NC}"
 }
 
 # التحقق من صلاحيات المستخدم
 if [[ $EUID -ne 0 ]]; then
-    print_error "يجب تشغيل هذا السكريبت كـ root (استخدم sudo)"
-    exit 1
+	print_error "يجب تشغيل هذا السكريبت كـ root (استخدم sudo)"
+	exit 1
 fi
 
 PROJECT_DIR="/home/xhunterx/homeupdate"
@@ -43,7 +43,7 @@ print_info "🔧 إعداد خدمة مراقبة النظام..."
 # الخطوة 1: إنشاء خدمة مراقبة قاعدة البيانات
 print_info "1️⃣ إنشاء خدمة مراقبة قاعدة البيانات..."
 
-cat > /etc/systemd/system/homeupdate-db-monitor.service << EOF
+cat >/etc/systemd/system/homeupdate-db-monitor.service <<EOF
 [Unit]
 Description=HomeUpdate Database Monitor
 Documentation=https://github.com/homeupdate/monitoring
@@ -88,7 +88,7 @@ print_status "تم إنشاء خدمة مراقبة قاعدة البيانات"
 # الخطوة 2: إنشاء خدمة تنظيف دورية
 print_info "2️⃣ إنشاء خدمة التنظيف الدورية..."
 
-cat > /etc/systemd/system/homeupdate-db-cleanup.service << EOF
+cat >/etc/systemd/system/homeupdate-db-cleanup.service <<EOF
 [Unit]
 Description=HomeUpdate Database Cleanup
 Documentation=https://github.com/homeupdate/monitoring
@@ -109,7 +109,7 @@ SyslogIdentifier=homeupdate-db-cleanup
 EOF
 
 # إنشاء timer للتنظيف الدوري
-cat > /etc/systemd/system/homeupdate-db-cleanup.timer << EOF
+cat >/etc/systemd/system/homeupdate-db-cleanup.timer <<EOF
 [Unit]
 Description=HomeUpdate Database Cleanup Timer
 Requires=homeupdate-db-cleanup.service
@@ -128,7 +128,7 @@ print_status "تم إنشاء خدمة التنظيف الدورية"
 # الخطوة 3: إنشاء خدمة تحسين قاعدة البيانات
 print_info "3️⃣ إنشاء خدمة تحسين قاعدة البيانات..."
 
-cat > /etc/systemd/system/homeupdate-db-optimize.service << EOF
+cat >/etc/systemd/system/homeupdate-db-optimize.service <<EOF
 [Unit]
 Description=HomeUpdate Database Optimization
 Documentation=https://github.com/homeupdate/monitoring
@@ -150,7 +150,7 @@ TimeoutStartSec=1800  # 30 دقيقة
 EOF
 
 # إنشاء timer للتحسين الدوري
-cat > /etc/systemd/system/homeupdate-db-optimize.timer << EOF
+cat >/etc/systemd/system/homeupdate-db-optimize.timer <<EOF
 [Unit]
 Description=HomeUpdate Database Optimization Timer
 Requires=homeupdate-db-optimize.service
@@ -169,7 +169,7 @@ print_status "تم إنشاء خدمة تحسين قاعدة البيانات"
 # الخطوة 4: إنشاء خدمة مراقبة النظام العامة
 print_info "4️⃣ إنشاء خدمة مراقبة النظام العامة..."
 
-cat > /etc/systemd/system/homeupdate-system-monitor.service << EOF
+cat >/etc/systemd/system/homeupdate-system-monitor.service <<EOF
 [Unit]
 Description=HomeUpdate System Monitor
 Documentation=https://github.com/homeupdate/monitoring
@@ -249,26 +249,26 @@ echo ""
 print_info "📊 حالة الخدمات:"
 
 services=(
-    "homeupdate-db-monitor.service"
-    "homeupdate-db-cleanup.timer"
-    "homeupdate-db-optimize.timer"
-    "homeupdate-system-monitor.service"
+	"homeupdate-db-monitor.service"
+	"homeupdate-db-cleanup.timer"
+	"homeupdate-db-optimize.timer"
+	"homeupdate-system-monitor.service"
 )
 
 for service in "${services[@]}"; do
-    if systemctl is-active --quiet "$service"; then
-        print_status "$service: نشط"
-    else
-        print_error "$service: غير نشط"
-        echo "   السجلات:"
-        journalctl -u "$service" --no-pager -n 5
-    fi
+	if systemctl is-active --quiet "$service"; then
+		print_status "$service: نشط"
+	else
+		print_error "$service: غير نشط"
+		echo "   السجلات:"
+		journalctl -u "$service" --no-pager -n 5
+	fi
 done
 
 # الخطوة 8: إنشاء سكريبت إدارة الخدمات
 print_info "8️⃣ إنشاء سكريبت إدارة الخدمات..."
 
-cat > /usr/local/bin/homeupdate-services << 'EOF'
+cat >/usr/local/bin/homeupdate-services <<'EOF'
 #!/bin/bash
 
 # سكريبت إدارة خدمات HomeUpdate

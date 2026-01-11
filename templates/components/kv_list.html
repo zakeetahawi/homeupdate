@@ -1,10 +1,11 @@
 {% load static %}
-
 <dl class="kv-grid {% if grid_class %}{{ grid_class }}{% endif %}">
-  {% for item in items %}
-    <div>
-      <dt>{{ item.label }}</dt>
-      <dd>{{ item.value|default:"—" }}</dd>
-    </div>
-  {% endfor %}
+    {% for item in items %}
+        <div>
+            <dt>{{ item.label }}</dt>
+            <dd>
+                {{ item.value|default:"—" }}
+            </dd>
+        </div>
+    {% endfor %}
 </dl>

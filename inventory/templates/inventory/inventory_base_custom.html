@@ -1,116 +1,127 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}لوحة تحكم المخزون | نظام إدارة العملاء{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/inventory-dashboard.css' %}">
-<link rel="stylesheet" href="{% static 'css/inventory-custom.css' %}">
-<link rel="stylesheet" href="{% static 'css/inventory-stats-unified.css' %}">
-<link rel="stylesheet" href="{% static 'css/mobile.css' %}">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="{% static 'css/inventory-dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'css/inventory-custom.css' %}">
+    <link rel="stylesheet"
+          href="{% static 'css/inventory-stats-unified.css' %}">
+    <link rel="stylesheet" href="{% static 'css/mobile.css' %}">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid inventory-container">
-    <!-- شريط التنقل السريع -->
-    <nav aria-label="breadcrumb" class="inventory-breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/">الرئيسية</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">المخزون</a></li>
-            {% block breadcrumb_items %}{% endblock %}
-        </ol>
-    </nav>
-
-    <!-- العنوان والإجراءات السريعة -->
-    <div class="page-header">
-        <div class="row align-items-center">
-            <div class="col">
-                <h1 class="page-title">
-                    <i class="fas fa-warehouse"></i>
-                    {% block inventory_title %}لوحة تحكم المخزون{% endblock %}
-                </h1>
-            </div>
-            <div class="col-auto">
-                <div class="btn-group" role="group">
-                    <!-- زر التحويلات - يظهر دائماً لمسؤولي المخازن ومديري النظام -->
-                    {% if is_warehouse_manager %}
-                    <a href="{% url 'inventory:stock_transfer_list' %}" 
-                       class="btn {% if has_pending_transfers %}btn-warning{% else %}btn-outline-secondary{% endif %} position-relative me-2" 
-                       title="{% if has_pending_transfers %}لديك {{ pending_transfers_count }} تحويل معلق{% else %}التحويلات المخزنية{% endif %}">
-                        <i class="fas fa-truck"></i> التحويلات
-                        {% if has_pending_transfers %}
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            {{ pending_transfers_count }}
-                            <span class="visually-hidden">تحويلات معلقة</span>
-                        </span>
+    <div class="container-fluid inventory-container">
+        <!-- شريط التنقل السريع -->
+        <nav aria-label="breadcrumb" class="inventory-breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="/">الرئيسية</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'inventory:dashboard' %}">المخزون</a>
+                </li>
+                {% block breadcrumb_items %}{% endblock %}
+            </ol>
+        </nav>
+        <!-- العنوان والإجراءات السريعة -->
+        <div class="page-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="page-title">
+                        <i class="fas fa-warehouse"></i>
+                        {% block inventory_title %}لوحة تحكم المخزون{% endblock %}
+                    </h1>
+                </div>
+                <div class="col-auto">
+                    <div class="btn-group" role="group">
+                        <!-- زر التحويلات - يظهر دائماً لمسؤولي المخازن ومديري النظام -->
+                        {% if is_warehouse_manager %}
+                            <a href="{% url 'inventory:stock_transfer_list' %}"
+                               class="btn {% if has_pending_transfers %}btn-warning{% else %}btn-outline-secondary{% endif %} position-relative me-2"
+                               title="{% if has_pending_transfers %}لديك {{ pending_transfers_count }} تحويل معلق{% else %}التحويلات المخزنية{% endif %}">
+                                <i class="fas fa-truck"></i> التحويلات
+                                {% if has_pending_transfers %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        {{ pending_transfers_count }}
+                                        <span class="visually-hidden">تحويلات معلقة</span>
+                                    </span>
+                                {% endif %}
+                            </a>
                         {% endif %}
-                    </a>
-                    {% endif %}
-                    {% block quick_actions %}
-                    <a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> منتج جديد
-                    </a>
-                    <a href="{% url 'inventory:product_bulk_upload' %}" class="btn btn-success">
-                        <i class="fas fa-upload"></i> رفع ملف
-                    </a>
-                    <a href="{% url 'inventory:check_duplicates' %}" class="btn btn-warning">
-                        <i class="fas fa-exclamation-triangle"></i> فحص التكرارات
-                    </a>
-                    {% endblock %}
+                        {% block quick_actions %}
+                            <a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> منتج جديد
+                            </a>
+                            <a href="{% url 'inventory:product_bulk_upload' %}"
+                               class="btn btn-success">
+                                <i class="fas fa-upload"></i> رفع ملف
+                            </a>
+                            <a href="{% url 'inventory:check_duplicates' %}" class="btn btn-warning">
+                                <i class="fas fa-exclamation-triangle"></i> فحص التكرارات
+                            </a>
+                        {% endblock %}
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- إشعارات التحويلات المعلقة -->
-    {% if has_pending_transfers %}
-    <div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
-        <div class="d-flex align-items-center">
-            <div class="flex-shrink-0">
-                <i class="fas fa-truck fa-2x"></i>
+        <!-- إشعارات التحويلات المعلقة -->
+        {% if has_pending_transfers %}
+            <div class="alert alert-warning alert-dismissible fade show mb-4"
+                 role="alert">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-truck fa-2x"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="alert-heading mb-1">
+                            {% if user.is_superuser %}
+                                لديك {{ pending_transfers_count }} تحويل
+                                {% if pending_transfers_count > 1 %}ات{% endif %}
+                                معلق
+                                {% if pending_transfers_count > 1 %}ة{% endif %}
+                            {% else %}
+                                لديك {{ pending_transfers_count }} تحويل
+                                {% if pending_transfers_count > 1 %}ات{% endif %}
+                                وارد
+                                {% if pending_transfers_count > 1 %}ة{% endif %}
+                                بحاجة للاستلام
+                            {% endif %}
+                        </h5>
+                        <p class="mb-2">التحويلات التالية بحاجة للمراجعة والاستلام:</p>
+                        <ul class="list-unstyled mb-0">
+                            {% for transfer in pending_transfers|slice:":5" %}
+                                <li class="mb-1">
+                                    <a href="{% url 'inventory:stock_transfer_detail' transfer.id %}"
+                                       class="text-decoration-none">
+                                        <strong>#{{ transfer.transfer_number }}</strong>
+                                        - من: {{ transfer.from_warehouse.name }}
+                                        إلى: {{ transfer.to_warehouse.name }}
+                                        - الحالة: <span class="badge bg-info">{{ transfer.get_status_display }}</span>
+                                    </a>
+                                </li>
+                            {% endfor %}
+                            {% if pending_transfers_count > 5 %}
+                                <li class="mt-2">
+                                    <a href="{% url 'inventory:stock_transfer_list' %}?status=approved,in_transit"
+                                       class="btn btn-sm btn-outline-warning">
+                                        عرض جميع التحويلات ({{ pending_transfers_count }})
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="alert"
+                        aria-label="Close"></button>
             </div>
-            <div class="flex-grow-1 ms-3">
-                <h5 class="alert-heading mb-1">
-                    {% if user.is_superuser %}
-                    لديك {{ pending_transfers_count }} تحويل{% if pending_transfers_count > 1 %}ات{% endif %} معلق{% if pending_transfers_count > 1 %}ة{% endif %}
-                    {% else %}
-                    لديك {{ pending_transfers_count }} تحويل{% if pending_transfers_count > 1 %}ات{% endif %} وارد{% if pending_transfers_count > 1 %}ة{% endif %} بحاجة للاستلام
-                    {% endif %}
-                </h5>
-                <p class="mb-2">التحويلات التالية بحاجة للمراجعة والاستلام:</p>
-                <ul class="list-unstyled mb-0">
-                    {% for transfer in pending_transfers|slice:":5" %}
-                    <li class="mb-1">
-                        <a href="{% url 'inventory:stock_transfer_detail' transfer.id %}" class="text-decoration-none">
-                            <strong>#{{ transfer.transfer_number }}</strong>
-                            - من: {{ transfer.from_warehouse.name }}
-                            إلى: {{ transfer.to_warehouse.name }}
-                            - الحالة: <span class="badge bg-info">{{ transfer.get_status_display }}</span>
-                        </a>
-                    </li>
-                    {% endfor %}
-                    {% if pending_transfers_count > 5 %}
-                    <li class="mt-2">
-                        <a href="{% url 'inventory:stock_transfer_list' %}?status=approved,in_transit" class="btn btn-sm btn-outline-warning">
-                            عرض جميع التحويلات ({{ pending_transfers_count }})
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
+        {% endif %}
+        <!-- المحتوى الرئيسي -->
+        <div class="dashboard-content">
+            {% block inventory_content %}{% endblock %}
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-    {% endif %}
-
-    <!-- المحتوى الرئيسي -->
-    <div class="dashboard-content">
-        {% block inventory_content %}{% endblock %}
-    </div>
-</div>
 {% endblock %}
-
-{% block extra_js %}
-<!-- يتم تحميل الـ JavaScript في الصفحات التي تحتاجه فقط -->
-{% endblock %}
+{% block extra_js %}<!-- يتم تحميل الـ JavaScript في الصفحات التي تحتاجه فقط -->{% endblock %}

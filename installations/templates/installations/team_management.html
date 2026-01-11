@@ -1,259 +1,270 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}إدارة الفرق - قسم التركيبات{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- عنوان الصفحة -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">
-            <i class="fas fa-users text-primary"></i>
-            إدارة الفرق
-        </h1>
-        <div class="btn-group">
-            <a href="{% url 'installations:add_team' %}" class="btn btn-success">
-                <i class="fas fa-plus"></i> إضافة فريق
-            </a>
-            <a href="{% url 'installations:add_technician' %}" class="btn btn-info">
-                <i class="fas fa-user-plus"></i> إضافة فني
-            </a>
-            <a href="{% url 'installations:add_driver' %}" class="btn btn-warning">
-                <i class="fas fa-truck"></i> إضافة سائق
-            </a>
-            <a href="{% url 'installations:dashboard' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
-            </a>
+    <div class="container-fluid">
+        <!-- عنوان الصفحة -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-users text-primary"></i>
+                إدارة الفرق
+            </h1>
+            <div class="btn-group">
+                <a href="{% url 'installations:add_team' %}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> إضافة فريق
+                </a>
+                <a href="{% url 'installations:add_technician' %}" class="btn btn-info">
+                    <i class="fas fa-user-plus"></i> إضافة فني
+                </a>
+                <a href="{% url 'installations:add_driver' %}" class="btn btn-warning">
+                    <i class="fas fa-truck"></i> إضافة سائق
+                </a>
+                <a href="{% url 'installations:dashboard' %}"
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
+                </a>
+            </div>
         </div>
-    </div>
-
-    <div class="row">
-        <!-- الفرق -->
-        <div class="col-lg-8">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-users"></i>
-                        فرق التركيب
-                    </h6>
-                </div>
-                <div class="card-body">
-                    {% if teams %}
-                        <div class="row">
-                            {% for team in teams %}
-                            <div class="col-md-6 mb-4">
-                                <div class="card border-left-primary h-100">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <h5 class="card-title">{{ team.name }}</h5>
-                                                <p class="card-text">
-                                                    <small class="text-muted">
-                                                        {% if team.is_active %}
-                                                            <span class="badge badge-success">نشط</span>
-                                                        {% else %}
-                                                            <span class="badge badge-secondary">غير نشط</span>
-                                                        {% endif %}
-                                                    </small>
-                                                </p>
-                                            </div>
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
-                                                        type="button" data-bs-toggle="dropdown">
-                                                    <i class="fas fa-ellipsis-v"></i>
-                                                </button>
-                                                <ul class="dropdown-menu">
-                                                    <li><a class="dropdown-item" href="{% url 'installations:edit_team' team.id %}"><i class="fas fa-edit"></i> تعديل</a></li>
-                                                    <li><a class="dropdown-item" href="{% url 'installations:team_detail' team.id %}"><i class="fas fa-eye"></i> عرض</a></li>
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li><a class="dropdown-item text-danger" href="{% url 'installations:delete_team' team.id %}" onclick="return confirm('هل أنت متأكد من حذف هذا الفريق؟')"><i class="fas fa-trash"></i> حذف</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        
-                                        {% if team.technicians.all %}
-                                        <div class="mt-3">
-                                            <h6 class="text-primary">الفنيين:</h6>
-                                            <div class="row">
-                                                {% for technician in team.technicians.all %}
-                                                <div class="col-12 mb-1">
-                                                    <small>
-                                                        <i class="fas fa-user-cog"></i>
-                                                        {{ technician.name }}
-                                                        {% if technician.specialization %}
-                                                            <span class="text-muted">({{ technician.specialization }})</span>
-                                                        {% endif %}
-                                                    </small>
+        <div class="row">
+            <!-- الفرق -->
+            <div class="col-lg-8">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-users"></i>
+                            فرق التركيب
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if teams %}
+                            <div class="row">
+                                {% for team in teams %}
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card border-left-primary h-100">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div>
+                                                        <h5 class="card-title">{{ team.name }}</h5>
+                                                        <p class="card-text">
+                                                            <small class="text-muted">
+                                                                {% if team.is_active %}
+                                                                    <span class="badge badge-success">نشط</span>
+                                                                {% else %}
+                                                                    <span class="badge badge-secondary">غير نشط</span>
+                                                                {% endif %}
+                                                            </small>
+                                                        </p>
+                                                    </div>
+                                                    <div class="dropdown">
+                                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                                type="button"
+                                                                data-bs-toggle="dropdown">
+                                                            <i class="fas fa-ellipsis-v"></i>
+                                                        </button>
+                                                        <ul class="dropdown-menu">
+                                                            <li>
+                                                                <a class="dropdown-item"
+                                                                   href="{% url 'installations:edit_team' team.id %}"><i class="fas fa-edit"></i> تعديل</a>
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item"
+                                                                   href="{% url 'installations:team_detail' team.id %}"><i class="fas fa-eye"></i> عرض</a>
+                                                            </li>
+                                                            <li>
+                                                                <hr class="dropdown-divider">
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item text-danger"
+                                                                   href="{% url 'installations:delete_team' team.id %}"
+                                                                   onclick="return confirm('هل أنت متأكد من حذف هذا الفريق؟')"><i class="fas fa-trash"></i> حذف</a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
                                                 </div>
-                                                {% endfor %}
+                                                {% if team.technicians.all %}
+                                                    <div class="mt-3">
+                                                        <h6 class="text-primary">الفنيين:</h6>
+                                                        <div class="row">
+                                                            {% for technician in team.technicians.all %}
+                                                                <div class="col-12 mb-1">
+                                                                    <small>
+                                                                        <i class="fas fa-user-cog"></i>
+                                                                        {{ technician.name }}
+                                                                        {% if technician.specialization %}<span class="text-muted">({{ technician.specialization }})</span>{% endif %}
+                                                                    </small>
+                                                                </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+                                                {% if team.driver %}
+                                                    <div class="mt-3">
+                                                        <h6 class="text-warning">السائق:</h6>
+                                                        <small>
+                                                            <i class="fas fa-truck"></i>
+                                                            {{ team.driver.name }}
+                                                            {% if team.driver.vehicle_number %}<span class="text-muted">({{ team.driver.vehicle_number }})</span>{% endif %}
+                                                        </small>
+                                                    </div>
+                                                {% endif %}
                                             </div>
                                         </div>
-                                        {% endif %}
-                                        
-                                        {% if team.driver %}
-                                        <div class="mt-3">
-                                            <h6 class="text-warning">السائق:</h6>
-                                            <small>
-                                                <i class="fas fa-truck"></i>
-                                                {{ team.driver.name }}
-                                                {% if team.driver.vehicle_number %}
-                                                    <span class="text-muted">({{ team.driver.vehicle_number }})</span>
-                                                {% endif %}
-                                            </small>
-                                        </div>
-                                        {% endif %}
                                     </div>
-                                </div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="text-center py-5">
-                            <i class="fas fa-users fa-4x text-gray-300 mb-3"></i>
-                            <h5 class="text-gray-500">لا توجد فرق مسجلة</h5>
-                            <p class="text-gray-400">قم بإضافة فريق جديد للبدء</p>
-                            <a href="{% url 'installations:add_team' %}" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> إضافة فريق
-                            </a>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- الفنيين والسائقين -->
-        <div class="col-lg-4">
-            <!-- الفنيين المرتبطين بالفرق -->
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-user-cog"></i>
-                        فنيي التركيبات
-                    </h6>
-                </div>
-                <div class="card-body">
-                    {% if technicians %}
-                        <small class="text-muted mb-3 d-block">
-                            <i class="fas fa-info-circle"></i>
-                            هؤلاء الفنيون مرتبطون بفرق التركيب حالياً
-                        </small>
-                        <div class="list-group list-group-flush">
-                            {% for technician in technicians %}
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-1">{{ technician.name }}</h6>
-                                    <small class="text-muted">{{ technician.phone }}</small>
-                                    {% if technician.specialization %}
-                                        <br><small class="text-info">{{ technician.specialization }}</small>
-                                    {% endif %}
-                                    <br><small class="text-primary">{{ technician.get_department_display }}</small>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <span class="badge badge-{{ technician.is_active|yesno:'success,secondary' }} mr-2">
-                                        {{ technician.is_active|yesno:'نشط,غير نشط' }}
-                                    </span>
-                                    <a href="{% url 'installations:edit_technician' technician.id %}" class="btn btn-outline-primary btn-sm" title="عرض التفاصيل">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="text-center py-3">
-                            <i class="fas fa-user-cog fa-3x text-gray-300 mb-2"></i>
-                            <p class="text-gray-500">لا يوجد فنيين مرتبطين بفرق التركيب</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-                        <!-- الفنيين المتاحين للإضافة -->
-            {% if unassigned_technicians %}
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-warning">
-                        <i class="fas fa-user-plus"></i>
-                        فنيين متاحين للإضافة
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <small class="text-muted mb-3 d-block">
-                        <i class="fas fa-info-circle"></i>
-                        هؤلاء الفنيون غير مرتبطين بفرق التركيب حالياً ويمكن إضافتهم للفرق
-                    </small>
-                    <div class="list-group list-group-flush">
-                        {% for technician in unassigned_technicians %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-1">{{ technician.name }}</h6>
-                                <small class="text-muted">{{ technician.phone }}</small>
-                                {% if technician.specialization %}
-                                    <br><small class="text-info">{{ technician.specialization }}</small>
-                                {% endif %}
-                                <br><small class="text-primary">{{ technician.get_department_display }}</small>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <span class="badge badge-warning mr-2">
-                                    متاح للإضافة
-                                </span>
-                                <a href="{% url 'installations:edit_technician' technician.id %}" class="btn btn-outline-primary btn-sm" title="عرض التفاصيل">
-                                    <i class="fas fa-eye"></i>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-users fa-4x text-gray-300 mb-3"></i>
+                                <h5 class="text-gray-500">لا توجد فرق مسجلة</h5>
+                                <p class="text-gray-400">قم بإضافة فريق جديد للبدء</p>
+                                <a href="{% url 'installations:add_team' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> إضافة فريق
                                 </a>
                             </div>
-                        </div>
-                        {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
             </div>
-            {% endif %}
-
-            <!-- السائقين -->
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-truck"></i>
-                        السائقين
-                    </h6>
-                </div>
-                <div class="card-body">
-                    {% if drivers %}
-                        <div class="list-group list-group-flush">
-                            {% for driver in drivers %}
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-1">{{ driver.name }}</h6>
-                                    <small class="text-muted">{{ driver.phone }}</small>
-                                    {% if driver.vehicle_number %}
-                                        <br><small class="text-info">مركبة: {{ driver.vehicle_number }}</small>
-                                    {% endif %}
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <span class="badge badge-{{ driver.is_active|yesno:'success,secondary' }} me-2">
-                                        {{ driver.is_active|yesno:'نشط,غير نشط' }}
-                                    </span>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{% url 'installations:edit_driver' driver.id %}" class="btn btn-outline-primary btn-sm">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <a href="{% url 'installations:delete_driver' driver.id %}" class="btn btn-outline-danger btn-sm" 
-                                           onclick="return confirm('هل أنت متأكد من حذف هذا السائق؟')">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
+            <!-- الفنيين والسائقين -->
+            <div class="col-lg-4">
+                <!-- الفنيين المرتبطين بالفرق -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-user-cog"></i>
+                            فنيي التركيبات
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if technicians %}
+                            <small class="text-muted mb-3 d-block">
+                                <i class="fas fa-info-circle"></i>
+                                هؤلاء الفنيون مرتبطون بفرق التركيب حالياً
+                            </small>
+                            <div class="list-group list-group-flush">
+                                {% for technician in technicians %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ technician.name }}</h6>
+                                            <small class="text-muted">{{ technician.phone }}</small>
+                                            {% if technician.specialization %}
+                                                <br>
+                                                <small class="text-info">{{ technician.specialization }}</small>
+                                            {% endif %}
+                                            <br>
+                                            <small class="text-primary">{{ technician.get_department_display }}</small>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge badge-{{ technician.is_active|yesno:'success,secondary' }} mr-2">
+                                                {{ technician.is_active|yesno:'نشط,غير نشط' }}
+                                            </span>
+                                            <a href="{% url 'installations:edit_technician' technician.id %}"
+                                               class="btn btn-outline-primary btn-sm"
+                                               title="عرض التفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
                                     </div>
-                                </div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-user-cog fa-3x text-gray-300 mb-2"></i>
+                                <p class="text-gray-500">لا يوجد فنيين مرتبطين بفرق التركيب</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- الفنيين المتاحين للإضافة -->
+                {% if unassigned_technicians %}
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-warning">
+                                <i class="fas fa-user-plus"></i>
+                                فنيين متاحين للإضافة
+                            </h6>
                         </div>
-                    {% else %}
-                        <div class="text-center py-3">
-                            <i class="fas fa-truck fa-3x text-gray-300 mb-2"></i>
-                            <p class="text-gray-500">لا يوجد سائقين</p>
+                        <div class="card-body">
+                            <small class="text-muted mb-3 d-block">
+                                <i class="fas fa-info-circle"></i>
+                                هؤلاء الفنيون غير مرتبطين بفرق التركيب حالياً ويمكن إضافتهم للفرق
+                            </small>
+                            <div class="list-group list-group-flush">
+                                {% for technician in unassigned_technicians %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ technician.name }}</h6>
+                                            <small class="text-muted">{{ technician.phone }}</small>
+                                            {% if technician.specialization %}
+                                                <br>
+                                                <small class="text-info">{{ technician.specialization }}</small>
+                                            {% endif %}
+                                            <br>
+                                            <small class="text-primary">{{ technician.get_department_display }}</small>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge badge-warning mr-2">متاح للإضافة</span>
+                                            <a href="{% url 'installations:edit_technician' technician.id %}"
+                                               class="btn btn-outline-primary btn-sm"
+                                               title="عرض التفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
                         </div>
-                    {% endif %}
+                    </div>
+                {% endif %}
+                <!-- السائقين -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-truck"></i>
+                            السائقين
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if drivers %}
+                            <div class="list-group list-group-flush">
+                                {% for driver in drivers %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ driver.name }}</h6>
+                                            <small class="text-muted">{{ driver.phone }}</small>
+                                            {% if driver.vehicle_number %}
+                                                <br>
+                                                <small class="text-info">مركبة: {{ driver.vehicle_number }}</small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge badge-{{ driver.is_active|yesno:'success,secondary' }} me-2">
+                                                {{ driver.is_active|yesno:'نشط,غير نشط' }}
+                                            </span>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{% url 'installations:edit_driver' driver.id %}"
+                                                   class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="{% url 'installations:delete_driver' driver.id %}"
+                                                   class="btn btn-outline-danger btn-sm"
+                                                   onclick="return confirm('هل أنت متأكد من حذف هذا السائق؟')">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-truck fa-3x text-gray-300 mb-2"></i>
+                                <p class="text-gray-500">لا يوجد سائقين</p>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-{% endblock %} 
+{% endblock %}

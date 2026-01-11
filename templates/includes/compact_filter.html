@@ -1,18 +1,17 @@
 {% load static %}
-
 <!-- Compact Filter Component -->
 <div class="compact-filter-component">
     <div class="filter-toggle-header" onclick="toggleFilters()">
         <div class="filter-title">
             <i class="fas fa-filter me-2"></i>
             <span>فلاتر البحث</span>
-            {% if has_active_filters %}
-                <span class="active-filters-count">{{ active_filters_count }}</span>
-            {% endif %}
+            {% if has_active_filters %}<span class="active-filters-count">{{ active_filters_count }}</span>{% endif %}
         </div>
         <div class="filter-actions">
             {% if has_active_filters %}
-                <button type="button" class="btn btn-sm btn-outline-danger me-2" onclick="clearAllFilters(event)">
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger me-2"
+                        onclick="clearAllFilters(event)">
                     <i class="fas fa-times me-1"></i>
                     مسح الكل
                 </button>
@@ -20,8 +19,9 @@
             <i class="fas fa-chevron-down toggle-icon"></i>
         </div>
     </div>
-    
-    <div class="filter-content" id="filterContent" style="display: {% if has_active_filters %}block{% else %}none{% endif %};">
+    <div class="filter-content"
+         id="filterContent"
+         style="display: {% if has_active_filters %}block{% else %}none{% endif %}">
         <form method="get" id="filterForm" class="compact-filter-form">
             <!-- Monthly Filter Row -->
             <div class="filter-row">
@@ -30,13 +30,13 @@
                     <select name="year" class="filter-select">
                         <option value="">كل السنوات</option>
                         {% for year in available_years %}
-                            <option value="{{ year }}" {% if selected_year == year|stringformat:'s' %}selected{% endif %}>
+                            <option value="{{ year }}"
+                                    {% if selected_year == year|stringformat:'s' %}selected{% endif %}>
                                 {{ year }}
                             </option>
                         {% endfor %}
                     </select>
                 </div>
-
                 <div class="filter-group">
                     <label class="filter-label">الشهر</label>
                     <select name="month" class="filter-select">
@@ -55,12 +55,15 @@
                         <option value="12" {% if selected_month == '12' %}selected{% endif %}>ديسمبر</option>
                     </select>
                 </div>
-
                 <div class="filter-group search-group">
                     <label class="filter-label">البحث</label>
-                    <input type="text" name="search" class="filter-input" placeholder="البحث في جميع الحقول..." value="{{ search_query }}" title="البحث في: رقم الطلب، العميل، الهاتف، العنوان، المكان، البائع، رقم العقد، رقم الفاتورة">
+                    <input type="text"
+                           name="search"
+                           class="filter-input"
+                           placeholder="البحث في جميع الحقول..."
+                           value="{{ search_query }}"
+                           title="البحث في: رقم الطلب، العميل، الهاتف، العنوان، المكان، البائع، رقم العقد، رقم الفاتورة">
                 </div>
-
                 <div class="filter-group">
                     <button type="submit" class="search-btn-main">
                         <i class="fas fa-search me-1"></i>
@@ -68,55 +71,51 @@
                     </button>
                 </div>
             </div>
-            
             <!-- Additional Filters Row -->
             <div class="filter-row">
-                {% block additional_filters %}
-                <!-- يتم إضافة فلاتر إضافية هنا حسب الصفحة -->
-                {% endblock %}
-                
+                {% block additional_filters %}<!-- يتم إضافة فلاتر إضافية هنا حسب الصفحة -->{% endblock %}
                 <div class="filter-group">
                     <label class="filter-label">عدد النتائج</label>
                     <select name="page_size" class="filter-select">
                         <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
-                        <option value="25" {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>25</option>
+                        <option value="25"
+                                {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>
+                            25
+                        </option>
                         <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
-                        <option value="100" {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
+                        <option value="100"
+                                {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
                     </select>
                 </div>
             </div>
-            
             <!-- Active Filters Display -->
             {% if has_active_filters %}
-            <div class="active-filters-display">
-                <span class="active-filters-label">الفلاتر النشطة:</span>
-                {% if selected_year %}
-                    <span class="filter-tag">
-                        سنة {{ selected_year }}
-                        <button type="button" onclick="removeFilter('year')" class="remove-filter">×</button>
-                    </span>
-                {% endif %}
-                {% if selected_month %}
-                    <span class="filter-tag">
-                        شهر {{ selected_month }}
-                        <button type="button" onclick="removeFilter('month')" class="remove-filter">×</button>
-                    </span>
-                {% endif %}
-                {% if search_query %}
-                    <span class="filter-tag">
-                        بحث: "{{ search_query }}"
-                        <button type="button" onclick="removeFilter('search')" class="remove-filter">×</button>
-                    </span>
-                {% endif %}
-                {% block active_filter_tags %}
-                <!-- يتم إضافة تاجات الفلاتر النشطة هنا -->
-                {% endblock %}
-            </div>
+                <div class="active-filters-display">
+                    <span class="active-filters-label">الفلاتر النشطة:</span>
+                    {% if selected_year %}
+                        <span class="filter-tag">
+                            سنة {{ selected_year }}
+                            <button type="button" onclick="removeFilter('year')" class="remove-filter">×</button>
+                        </span>
+                    {% endif %}
+                    {% if selected_month %}
+                        <span class="filter-tag">
+                            شهر {{ selected_month }}
+                            <button type="button" onclick="removeFilter('month')" class="remove-filter">×</button>
+                        </span>
+                    {% endif %}
+                    {% if search_query %}
+                        <span class="filter-tag">
+                            بحث: "{{ search_query }}"
+                            <button type="button" onclick="removeFilter('search')" class="remove-filter">×</button>
+                        </span>
+                    {% endif %}
+                    {% block active_filter_tags %}<!-- يتم إضافة تاجات الفلاتر النشطة هنا -->{% endblock %}
+                </div>
             {% endif %}
         </form>
     </div>
 </div>
-
 <style>
 .compact-filter-component {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -335,7 +334,6 @@
     }
 }
 </style>
-
 <script>
 function toggleFilters() {
     const content = document.getElementById('filterContent');

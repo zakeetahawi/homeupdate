@@ -3,14 +3,17 @@
 توفر هذه الوحدة خدمات لإدارة الطلبات
 """
 
-from typing import Dict, List, Optional, Any
-from django.db.models import Q, Count, F, Sum, ExpressionWrapper, DecimalField
+from datetime import timedelta
+from typing import Any, Dict, List, Optional
+
+from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum
 from django.db.models.query import QuerySet
 from django.utils import timezone
-from datetime import timedelta
 
 from crm.services import BaseService
+
 from .models import Order, OrderItem, Payment
+
 
 class OrderService(BaseService[Order]):
     """
@@ -36,20 +39,24 @@ class OrderService(BaseService[Order]):
 
         if search_term:
             queryset = queryset.filter(
-                Q(order_number__icontains=search_term) |
-                Q(customer__name__icontains=search_term) |
-                Q(invoice_number__icontains=search_term) |
-                Q(invoice_number_2__icontains=search_term) |
-                Q(invoice_number_3__icontains=search_term) |
-                Q(contract_number__icontains=search_term) |
-                Q(contract_number_2__icontains=search_term) |
-                Q(contract_number_3__icontains=search_term)
+                Q(order_number__icontains=search_term)
+                | Q(customer__name__icontains=search_term)
+                | Q(invoice_number__icontains=search_term)
+                | Q(invoice_number_2__icontains=search_term)
+                | Q(invoice_number_3__icontains=search_term)
+                | Q(contract_number__icontains=search_term)
+                | Q(contract_number_2__icontains=search_term)
+                | Q(contract_number_3__icontains=search_term)
             )
 
-        return queryset.select_related('customer', 'salesperson', 'branch', 'created_by')
+        return queryset.select_related(
+            "customer", "salesperson", "branch", "created_by"
+        )
 
     @classmethod
-    def get_order_statistics(cls, branch_id: int = None, start_date: Any = None, end_date: Any = None) -> Dict[str, Any]:
+    def get_order_statistics(
+        cls, branch_id: int = None, start_date: Any = None, end_date: Any = None
+    ) -> Dict[str, Any]:
         """
         الحصول على إحصائيات الطلبات
 
@@ -74,36 +81,35 @@ class OrderService(BaseService[Order]):
 
         # إحصائيات عامة
         stats = queryset.aggregate(
-            total_count=Count('id'),
-            total_amount=Sum('final_price'),
-            paid_amount=Sum('paid_amount'),
-            pending_count=Count('id', filter=Q(tracking_status='pending')),
-            processing_count=Count('id', filter=Q(tracking_status='processing')),
-            delivered_count=Count('id', filter=Q(tracking_status='delivered'))
+            total_count=Count("id"),
+            total_amount=Sum("final_price"),
+            paid_amount=Sum("paid_amount"),
+            pending_count=Count("id", filter=Q(tracking_status="pending")),
+            processing_count=Count("id", filter=Q(tracking_status="processing")),
+            delivered_count=Count("id", filter=Q(tracking_status="delivered")),
         )
 
         # إحصائيات حسب نوع الطلب
-        order_types = queryset.values('order_type').annotate(
-            count=Count('id'),
-            amount=Sum('final_price')
+        order_types = queryset.values("order_type").annotate(
+            count=Count("id"), amount=Sum("final_price")
         )
 
         # إحصائيات حسب الشهر (آخر 6 أشهر)
         from django.db.models.functions import ExtractMonth
+
         six_months_ago = timezone.now() - timedelta(days=180)
-        monthly_stats = queryset.filter(
-            created_at__gte=six_months_ago
-        ).annotate(
-            month=ExtractMonth('created_at')
-        ).values('month').annotate(
-            count=Count('id'),
-            amount=Sum('final_price')
-        ).order_by('month')
+        monthly_stats = (
+            queryset.filter(created_at__gte=six_months_ago)
+            .annotate(month=ExtractMonth("created_at"))
+            .values("month")
+            .annotate(count=Count("id"), amount=Sum("final_price"))
+            .order_by("month")
+        )
 
         return {
-            'general': stats,
-            'by_type': list(order_types),
-            'monthly': list(monthly_stats)
+            "general": stats,
+            "by_type": list(order_types),
+            "monthly": list(monthly_stats),
         }
 
     @classmethod
@@ -118,11 +124,13 @@ class OrderService(BaseService[Order]):
             الطلب مع البيانات المرتبطة إذا تم العثور عليه، وإلا None
         """
         try:
-            return Order.objects.select_related(
-                'customer', 'salesperson', 'branch', 'created_by'
-            ).prefetch_related(
-                'items', 'payments'
-            ).get(id=order_id)
+            return (
+                Order.objects.select_related(
+                    "customer", "salesperson", "branch", "created_by"
+                )
+                .prefetch_related("items", "payments")
+                .get(id=order_id)
+            )
         except Order.DoesNotExist:
             return None
 
@@ -143,19 +151,28 @@ class OrderService(BaseService[Order]):
             return 0
 
         # استخدام استعلام مُحسّن لحساب إجمالي الطلب
-        total = order.items.aggregate(
-            total=Sum(
-                ExpressionWrapper(
-                    F('quantity') * F('unit_price'),
-                    output_field=DecimalField()
+        total = (
+            order.items.aggregate(
+                total=Sum(
+                    ExpressionWrapper(
+                        F("quantity") * F("unit_price"), output_field=DecimalField()
+                    )
                 )
-            )
-        )['total'] or 0
+            )["total"]
+            or 0
+        )
 
         return float(total)
 
     @classmethod
-    def add_payment(cls, order_id: int, amount: float, payment_method: str, reference_number: str = None, created_by_id: int = None) -> Optional[Payment]:
+    def add_payment(
+        cls,
+        order_id: int,
+        amount: float,
+        payment_method: str,
+        reference_number: str = None,
+        created_by_id: int = None,
+    ) -> Optional[Payment]:
         """
         إضافة دفعة للطلب
 
@@ -178,20 +195,26 @@ class OrderService(BaseService[Order]):
             order=order,
             amount=amount,
             payment_method=payment_method,
-            reference_number=reference_number or '',
-            created_by_id=created_by_id
+            reference_number=reference_number or "",
+            created_by_id=created_by_id,
         )
 
         payment.save()
 
         # تحديث المبلغ المدفوع في الطلب
         order.paid_amount = order.paid_amount + amount
-        order.save(update_fields=['paid_amount'])
+        order.save(update_fields=["paid_amount"])
 
         return payment
 
     @classmethod
-    def update_order_status(cls, order_id: int, new_status: str, changed_by_id: int = None, notes: str = None) -> bool:
+    def update_order_status(
+        cls,
+        order_id: int,
+        new_status: str,
+        changed_by_id: int = None,
+        notes: str = None,
+    ) -> bool:
         """
         تحديث حالة الطلب
 
@@ -211,16 +234,17 @@ class OrderService(BaseService[Order]):
 
         old_status = order.tracking_status
         order.tracking_status = new_status
-        order.save(update_fields=['tracking_status'])
+        order.save(update_fields=["tracking_status"])
 
         # إنشاء سجل لتغيير الحالة
         from .models import OrderStatusLog
+
         OrderStatusLog.objects.create(
             order=order,
             old_status=old_status,
             new_status=new_status,
             changed_by_id=changed_by_id,
-            notes=notes or ''
+            notes=notes or "",
         )
 
         # إرسال إشعار بتغيير الحالة

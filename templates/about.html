@@ -1,89 +1,92 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-<div class="row">
-    <div class="col-md-8 mx-auto">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">{{ title|default:"عن النظام" }}</h5>
-            </div>
-            <div class="card-body">
-                <div class="text-center mb-4">
-                    {% if company_info and company_info.logo %}
-                        <img src="{{ company_info.logo.url }}?v={{ company_info.logo.url|length }}" alt="شعار الشركة" class="img-fluid" style="max-width: 150px;" id="about-logo">
-                    {% else %}
-                        <img src="{% static 'img/logo.png' %}" alt="شعار الشركة" class="img-fluid" style="max-width: 150px;" id="about-logo">
-                    {% endif %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">{{ title|default:"عن النظام" }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-4">
+                            {% if company_info and company_info.logo %}
+                                <img src="{{ company_info.logo.url }}?v={{ company_info.logo.url|length }}"
+                                     alt="شعار الشركة"
+                                     class="img-fluid"
+                                     style="max-width: 150px"
+                                     id="about-logo">
+                            {% else %}
+                                <img src="{% static 'img/logo.png' %}"
+                                     alt="شعار الشركة"
+                                     class="img-fluid"
+                                     style="max-width: 150px"
+                                     id="about-logo">
+                            {% endif %}
+                        </div>
+                        <h4 class="text-center mb-4">{{ subtitle|default:"نظام إدارة المصنع والعملاء" }}</h4>
+                        <div class="mb-4">
+                            <h5>مميزات النظام</h5>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                    <i class="fas fa-users text-primary"></i>
+                                    إدارة العملاء وتصنيفهم
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-industry text-primary"></i>
+                                    إدارة خطوط الإنتاج والمراحل
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-box text-primary"></i>
+                                    إدارة المخزون والمنتجات
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-file-invoice text-primary"></i>
+                                    إدارة الطلبات والمدفوعات
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-chart-bar text-primary"></i>
+                                    التقارير والإحصائيات
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-check-circle text-primary"></i>
+                                    فحص الجودة والتفتيش
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="mb-4">
+                            <h5>معلومات النظام</h5>
+                            <table class="table">
+                                <tr>
+                                    <th>إصدار النظام:</th>
+                                    <td>{{ system_version|default:'1.0.0' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>تاريخ الإطلاق:</th>
+                                    <td>{{ system_release_date|default:'2025' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>المطور:</th>
+                                    <td>{{ system_developer|default:'zakee tahawi' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>عن النظام:</th>
+                                    <td>{{ system_description|default:'نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{% url 'contact' %}" class="btn btn-primary">
+                            <i class="fas fa-envelope"></i> اتصل بنا
+                        </a>
+                        <a href="{% url 'home' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right"></i> العودة للرئيسية
+                        </a>
+                    </div>
                 </div>
-                
-                <h4 class="text-center mb-4">{{ subtitle|default:"نظام إدارة المصنع والعملاء" }}</h4>
-                
-                <div class="mb-4">
-                    <h5>مميزات النظام</h5>
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item">
-                            <i class="fas fa-users text-primary"></i>
-                            إدارة العملاء وتصنيفهم
-                        </li>
-                        <li class="list-group-item">
-                            <i class="fas fa-industry text-primary"></i>
-                            إدارة خطوط الإنتاج والمراحل
-                        </li>
-                        <li class="list-group-item">
-                            <i class="fas fa-box text-primary"></i>
-                            إدارة المخزون والمنتجات
-                        </li>
-                        <li class="list-group-item">
-                            <i class="fas fa-file-invoice text-primary"></i>
-                            إدارة الطلبات والمدفوعات
-                        </li>
-                        <li class="list-group-item">
-                            <i class="fas fa-chart-bar text-primary"></i>
-                            التقارير والإحصائيات
-                        </li>
-                        <li class="list-group-item">
-                            <i class="fas fa-check-circle text-primary"></i>
-                            فحص الجودة والتفتيش
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="mb-4">
-                    <h5>معلومات النظام</h5>
-                    <table class="table">
-                        <tr>
-                            <th>إصدار النظام:</th>
-                            <td>{{ system_version|default:'1.0.0' }}</td>
-                        </tr>
-                        <tr>
-                            <th>تاريخ الإطلاق:</th>
-                            <td>{{ system_release_date|default:'2025' }}</td>
-                        </tr>
-                        <tr>
-                            <th>المطور:</th>
-                            <td>{{ system_developer|default:'zakee tahawi' }}</td>
-                        </tr>
-                        <tr>
-                            <th>عن النظام:</th>
-                            <td>{{ system_description|default:'نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون' }}</td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-            <div class="card-footer">
-                <a href="{% url 'contact' %}" class="btn btn-primary">
-                    <i class="fas fa-envelope"></i> اتصل بنا
-                </a>
-                <a href="{% url 'home' %}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-right"></i> العودة للرئيسية
-                </a>
             </div>
         </div>
     </div>
-</div>
-</div>
 {% endblock %}

@@ -6,23 +6,54 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('orders', '0001_initial'),
+        ("orders", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='order',
-            name='inspection_status',
-            field=models.CharField(choices=[('not_scheduled', 'غير مجدولة'), ('pending', 'في الانتظار'), ('scheduled', 'مجدولة'), ('in_progress', 'قيد التنفيذ'), ('completed', 'مكتملة'), ('cancelled', 'ملغية')], default='not_scheduled', max_length=30, verbose_name='حالة المعاينة'),
+            model_name="order",
+            name="inspection_status",
+            field=models.CharField(
+                choices=[
+                    ("not_scheduled", "غير مجدولة"),
+                    ("pending", "في الانتظار"),
+                    ("scheduled", "مجدولة"),
+                    ("in_progress", "قيد التنفيذ"),
+                    ("completed", "مكتملة"),
+                    ("cancelled", "ملغية"),
+                ],
+                default="not_scheduled",
+                max_length=30,
+                verbose_name="حالة المعاينة",
+            ),
         ),
         migrations.AddField(
-            model_name='order',
-            name='installation_status',
-            field=models.CharField(choices=[('not_scheduled', 'غير مجدول'), ('pending', 'في الانتظار'), ('scheduled', 'مجدول'), ('in_progress', 'قيد التنفيذ'), ('completed', 'مكتمل'), ('cancelled', 'ملغي'), ('modification_required', 'يحتاج تعديل'), ('modification_in_progress', 'التعديل قيد التنفيذ'), ('modification_completed', 'التعديل مكتمل')], default='not_scheduled', max_length=30, verbose_name='حالة التركيب'),
+            model_name="order",
+            name="installation_status",
+            field=models.CharField(
+                choices=[
+                    ("not_scheduled", "غير مجدول"),
+                    ("pending", "في الانتظار"),
+                    ("scheduled", "مجدول"),
+                    ("in_progress", "قيد التنفيذ"),
+                    ("completed", "مكتمل"),
+                    ("cancelled", "ملغي"),
+                    ("modification_required", "يحتاج تعديل"),
+                    ("modification_in_progress", "التعديل قيد التنفيذ"),
+                    ("modification_completed", "التعديل مكتمل"),
+                ],
+                default="not_scheduled",
+                max_length=30,
+                verbose_name="حالة التركيب",
+            ),
         ),
         migrations.AddField(
-            model_name='order',
-            name='is_fully_completed',
-            field=models.BooleanField(default=False, help_text='إشارة خضراء عند اكتمال جميع مراحل الطلب', verbose_name='مكتمل بالكامل'),
+            model_name="order",
+            name="is_fully_completed",
+            field=models.BooleanField(
+                default=False,
+                help_text="إشارة خضراء عند اكتمال جميع مراحل الطلب",
+                verbose_name="مكتمل بالكامل",
+            ),
         ),
     ]

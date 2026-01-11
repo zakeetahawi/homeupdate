@@ -1,249 +1,201 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}{{ title }} - نظام الخواجه{% endblock %}
-
 {% block content %}
-<div class="container mt-4">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">الرئيسية</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'accounts:form_field_list' %}">إدارة حقول النماذج</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
-        </ol>
-    </nav>
-
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">{{ title }}</h4>
-        </div>
-        <div class="card-body">
-            <form method="post">
-                {% csrf_token %}
-                
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <h5 class="border-bottom pb-2 mb-3">معلومات الحقل الأساسية</h5>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.form_type.id_for_label }}" class="form-label">{{ form.form_type.label }}</label>
-                            {{ form.form_type }}
-                            {% if form.form_type.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.form_type.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">اختر نوع النموذج الذي سيظهر فيه هذا الحقل</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.field_name.id_for_label }}" class="form-label">{{ form.field_name.label }}</label>
-                            {{ form.field_name }}
-                            {% if form.field_name.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.field_name.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">اسم الحقل البرمجي (بالإنجليزية، بدون مسافات أو رموز خاصة)</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.field_label.id_for_label }}" class="form-label">{{ form.field_label.label }}</label>
-                            {{ form.field_label }}
-                            {% if form.field_label.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.field_label.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">العنوان الذي سيظهر للمستخدم</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.field_type.id_for_label }}" class="form-label">{{ form.field_type.label }}</label>
-                            {{ form.field_type }}
-                            {% if form.field_type.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.field_type.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">نوع الحقل (نص، رقم، تاريخ، إلخ)</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.order.id_for_label }}" class="form-label">{{ form.order.label }}</label>
-                            {{ form.order }}
-                            {% if form.order.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.order.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">ترتيب ظهور الحقل في النموذج</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check">
-                                {{ form.required }}
-                                <label class="form-check-label" for="{{ form.required.id_for_label }}">
-                                    {{ form.required.label }}
-                                </label>
+    <div class="container mt-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'home' %}">الرئيسية</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'accounts:form_field_list' %}">إدارة حقول النماذج</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+            </ol>
+        </nav>
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">{{ title }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2 mb-3">معلومات الحقل الأساسية</h5>
+                            <div class="mb-3">
+                                <label for="{{ form.form_type.id_for_label }}" class="form-label">{{ form.form_type.label }}</label>
+                                {{ form.form_type }}
+                                {% if form.form_type.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.form_type.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">اختر نوع النموذج الذي سيظهر فيه هذا الحقل</div>
                             </div>
-                            {% if form.required.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.required.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">هل الحقل مطلوب تعبئته؟</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check">
-                                {{ form.enabled }}
-                                <label class="form-check-label" for="{{ form.enabled.id_for_label }}">
-                                    {{ form.enabled.label }}
-                                </label>
+                            <div class="mb-3">
+                                <label for="{{ form.field_name.id_for_label }}" class="form-label">{{ form.field_name.label }}</label>
+                                {{ form.field_name }}
+                                {% if form.field_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.field_name.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">اسم الحقل البرمجي (بالإنجليزية، بدون مسافات أو رموز خاصة)</div>
                             </div>
-                            {% if form.enabled.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.enabled.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">هل الحقل مفعل ويظهر في النموذج؟</div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <h5 class="border-bottom pb-2 mb-3">خيارات الحقل</h5>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.help_text.id_for_label }}" class="form-label">{{ form.help_text.label }}</label>
-                            {{ form.help_text }}
-                            {% if form.help_text.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.help_text.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">نص المساعدة الذي سيظهر تحت الحقل</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.default_value.id_for_label }}" class="form-label">{{ form.default_value.label }}</label>
-                            {{ form.default_value }}
-                            {% if form.default_value.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.default_value.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">القيمة الافتراضية للحقل</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.choices.id_for_label }}" class="form-label">{{ form.choices.label }}</label>
-                            {{ form.choices }}
-                            {% if form.choices.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.choices.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">الخيارات المتاحة للحقل (مفصولة بفاصلة). مثال: خيار1,خيار2,خيار3</div>
-                        </div>
-                        
-                        <h5 class="border-bottom pb-2 mb-3 mt-4">قيود التحقق</h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.min_length.id_for_label }}" class="form-label">{{ form.min_length.label }}</label>
-                                    {{ form.min_length }}
-                                    {% if form.min_length.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.min_length.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
+                            <div class="mb-3">
+                                <label for="{{ form.field_label.id_for_label }}" class="form-label">{{ form.field_label.label }}</label>
+                                {{ form.field_label }}
+                                {% if form.field_label.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.field_label.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">العنوان الذي سيظهر للمستخدم</div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.max_length.id_for_label }}" class="form-label">{{ form.max_length.label }}</label>
-                                    {{ form.max_length }}
-                                    {% if form.max_length.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.max_length.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
+                            <div class="mb-3">
+                                <label for="{{ form.field_type.id_for_label }}" class="form-label">{{ form.field_type.label }}</label>
+                                {{ form.field_type }}
+                                {% if form.field_type.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.field_type.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">نوع الحقل (نص، رقم، تاريخ، إلخ)</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ form.order.id_for_label }}" class="form-label">{{ form.order.label }}</label>
+                                {{ form.order }}
+                                {% if form.order.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.order.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">ترتيب ظهور الحقل في النموذج</div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    {{ form.required }}
+                                    <label class="form-check-label" for="{{ form.required.id_for_label }}">{{ form.required.label }}</label>
                                 </div>
+                                {% if form.required.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.required.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">هل الحقل مطلوب تعبئته؟</div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    {{ form.enabled }}
+                                    <label class="form-check-label" for="{{ form.enabled.id_for_label }}">{{ form.enabled.label }}</label>
+                                </div>
+                                {% if form.enabled.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.enabled.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">هل الحقل مفعل ويظهر في النموذج؟</div>
                             </div>
                         </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.min_value.id_for_label }}" class="form-label">{{ form.min_value.label }}</label>
-                                    {{ form.min_value }}
-                                    {% if form.min_value.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.min_value.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2 mb-3">خيارات الحقل</h5>
+                            <div class="mb-3">
+                                <label for="{{ form.help_text.id_for_label }}" class="form-label">{{ form.help_text.label }}</label>
+                                {{ form.help_text }}
+                                {% if form.help_text.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.help_text.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">نص المساعدة الذي سيظهر تحت الحقل</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ form.default_value.id_for_label }}" class="form-label">{{ form.default_value.label }}</label>
+                                {{ form.default_value }}
+                                {% if form.default_value.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.default_value.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">القيمة الافتراضية للحقل</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ form.choices.id_for_label }}" class="form-label">{{ form.choices.label }}</label>
+                                {{ form.choices }}
+                                {% if form.choices.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.choices.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">الخيارات المتاحة للحقل (مفصولة بفاصلة). مثال: خيار1,خيار2,خيار3</div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3 mt-4">قيود التحقق</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.min_length.id_for_label }}" class="form-label">{{ form.min_length.label }}</label>
+                                        {{ form.min_length }}
+                                        {% if form.min_length.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.min_length.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.max_length.id_for_label }}" class="form-label">{{ form.max_length.label }}</label>
+                                        {{ form.max_length }}
+                                        {% if form.max_length.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.max_length.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.max_value.id_for_label }}" class="form-label">{{ form.max_value.label }}</label>
-                                    {{ form.max_value }}
-                                    {% if form.max_value.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.max_value.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.min_value.id_for_label }}" class="form-label">{{ form.min_value.label }}</label>
+                                        {{ form.min_value }}
+                                        {% if form.min_value.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.min_value.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.max_value.id_for_label }}" class="form-label">{{ form.max_value.label }}</label>
+                                        {{ form.max_value }}
+                                        {% if form.max_value.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.max_value.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="text-center mt-4">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> حفظ
-                    </button>
-                    <a href="{% url 'accounts:form_field_list' %}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> إلغاء
-                    </a>
-                </div>
-            </form>
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> حفظ
+                        </button>
+                        <a href="{% url 'accounts:form_field_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
-
-{% block extra_js %}
-<script>
+    {% block extra_js %}
+        <script>
     document.addEventListener('DOMContentLoaded', function() {
         const fieldTypeSelect = document.getElementById('{{ form.field_type.id_for_label }}');
         const choicesField = document.getElementById('{{ form.choices.id_for_label }}').closest('.mb-3');
@@ -292,6 +244,6 @@
         // Add event listener for field type change
         fieldTypeSelect.addEventListener('change', toggleFields);
     });
-</script>
-{% endblock %}
+        </script>
+    {% endblock %}
 {% endblock %}

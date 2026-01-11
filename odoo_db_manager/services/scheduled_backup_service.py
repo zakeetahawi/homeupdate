@@ -2,22 +2,24 @@
 خدمة النسخ الاحتياطي المجدولة (محسنة ومصححة)
 """
 
-import os
 import logging
+import os
 from datetime import datetime, timedelta
-from django.utils import timezone
+
+from apscheduler.schedulers.background import BackgroundScheduler
 from django.conf import settings
 from django.db.models import Q
-from apscheduler.schedulers.background import BackgroundScheduler
+from django.utils import timezone
 from django_apscheduler.jobstores import DjangoJobStore
 from django_apscheduler.models import DjangoJobExecution
 
-from odoo_db_manager.models import Database, BackupSchedule
+from odoo_db_manager.models import BackupSchedule, Database
 
 logger = logging.getLogger(__name__)
 
 # متغير عام للمجدول لتجنب مشاكل التسلسل
 _scheduler = None
+
 
 def get_scheduler():
     """الحصول على المجدول أو إنشاؤه"""
@@ -26,6 +28,7 @@ def get_scheduler():
         _scheduler = BackgroundScheduler()
         _scheduler.add_jobstore(DjangoJobStore(), "default")
     return _scheduler
+
 
 def create_backup_job(schedule_id):
     """دالة منفصلة لإنشاء النسخ الاحتياطية (لتجنب مشاكل التسلسل)"""
@@ -37,10 +40,14 @@ def create_backup_job(schedule_id):
 
         # التحقق من أن الجدولة نشطة
         if not schedule.is_active:
-            logger.info(f"تم تخطي النسخة الاحتياطية {schedule.name} (ID: {schedule.id}) لأنها غير نشطة")
+            logger.info(
+                f"تم تخطي النسخة الاحتياطية {schedule.name} (ID: {schedule.id}) لأنها غير نشطة"
+            )
             return
 
-        logger.info(f"بدء إنشاء النسخة الاحتياطية المجدولة {schedule.name} (ID: {schedule.id})")
+        logger.info(
+            f"بدء إنشاء النسخة الاحتياطية المجدولة {schedule.name} (ID: {schedule.id})"
+        )
 
         # إنشاء خدمة النسخ الاحتياطي
         backup_service = BackupService()
@@ -50,7 +57,7 @@ def create_backup_job(schedule_id):
             database_id=schedule.database.id,
             name=f"{schedule.name}_{timezone.now().strftime('%Y%m%d_%H%M%S')}",
             user=schedule.created_by,
-            backup_type='full'  # دائماً نسخة كاملة للجدولة
+            backup_type="full",  # دائماً نسخة كاملة للجدولة
         )
 
         # تحديث النسخة الاحتياطية لتكون مجدولة
@@ -67,12 +74,15 @@ def create_backup_job(schedule_id):
         # حذف النسخ الاحتياطية القديمة إذا تجاوزت الحد الأقصى
         cleanup_old_backups(schedule)
 
-        logger.info(f"تم إنشاء النسخة الاحتياطية المجدولة {schedule.name} (ID: {schedule.id}) بنجاح")
+        logger.info(
+            f"تم إنشاء النسخة الاحتياطية المجدولة {schedule.name} (ID: {schedule.id}) بنجاح"
+        )
 
         return backup
     except Exception as e:
         logger.error(f"حدث خطأ أثناء إنشاء النسخة الاحتياطية المجدولة: {str(e)}")
         return None
+
 
 def cleanup_old_backups(schedule):
     """دالة منفصلة لحذف النسخ الاحتياطية القديمة"""
@@ -81,15 +91,17 @@ def cleanup_old_backups(schedule):
         backups = Backup.objects.filter(
             database=schedule.database,
             backup_type=schedule.backup_type,
-            is_scheduled=True
-        ).order_by('-created_at')
+            is_scheduled=True,
+        ).order_by("-created_at")
 
         # التحقق من عدد النسخ الاحتياطية
         if backups.count() > schedule.max_backups:
             # الحصول على النسخ الاحتياطية التي سيتم حذفها
-            to_delete = backups[schedule.max_backups:]
+            to_delete = backups[schedule.max_backups :]
 
-            logger.info(f"حذف {to_delete.count()} نسخة احتياطية قديمة لجدولة {schedule.name} (ID: {schedule.id})")
+            logger.info(
+                f"حذف {to_delete.count()} نسخة احتياطية قديمة لجدولة {schedule.name} (ID: {schedule.id})"
+            )
 
             # حذف النسخ الاحتياطية
             for backup in to_delete:
@@ -103,6 +115,7 @@ def cleanup_old_backups(schedule):
             logger.info(f"تم حذف {to_delete.count()} نسخة احتياطية قديمة بنجاح")
     except Exception as e:
         logger.error(f"حدث خطأ أثناء حذف النسخ الاحتياطية القديمة: {str(e)}")
+
 
 class ScheduledBackupService:
     """خدمة النسخ الاحتياطي المجدولة (محسنة)"""
@@ -173,23 +186,23 @@ class ScheduledBackupService:
         # تحديد معاملات التكرار
         trigger_args = {}
 
-        if schedule.frequency == 'hourly':
-            trigger = 'interval'
-            trigger_args['hours'] = 1
-        elif schedule.frequency == 'daily':
-            trigger = 'cron'
-            trigger_args['hour'] = schedule.hour
-            trigger_args['minute'] = schedule.minute
-        elif schedule.frequency == 'weekly':
-            trigger = 'cron'
-            trigger_args['day_of_week'] = schedule.day_of_week
-            trigger_args['hour'] = schedule.hour
-            trigger_args['minute'] = schedule.minute
-        elif schedule.frequency == 'monthly':
-            trigger = 'cron'
-            trigger_args['day'] = schedule.day_of_month
-            trigger_args['hour'] = schedule.hour
-            trigger_args['minute'] = schedule.minute
+        if schedule.frequency == "hourly":
+            trigger = "interval"
+            trigger_args["hours"] = 1
+        elif schedule.frequency == "daily":
+            trigger = "cron"
+            trigger_args["hour"] = schedule.hour
+            trigger_args["minute"] = schedule.minute
+        elif schedule.frequency == "weekly":
+            trigger = "cron"
+            trigger_args["day_of_week"] = schedule.day_of_week
+            trigger_args["hour"] = schedule.hour
+            trigger_args["minute"] = schedule.minute
+        elif schedule.frequency == "monthly":
+            trigger = "cron"
+            trigger_args["day"] = schedule.day_of_month
+            trigger_args["hour"] = schedule.hour
+            trigger_args["minute"] = schedule.minute
         else:
             logger.error(f"تكرار غير معروف: {schedule.frequency}")
             return
@@ -200,13 +213,13 @@ class ScheduledBackupService:
             trigger=trigger,
             id=job_id,
             replace_existing=True,
-            kwargs={
-                'schedule_id': schedule.id
-            },
-            **trigger_args
+            kwargs={"schedule_id": schedule.id},
+            **trigger_args,
         )
 
-        logger.info(f"تمت جدولة النسخة الاحتياطية {schedule.name} (ID: {schedule.id}) بتكرار {schedule.get_frequency_display()}")
+        logger.info(
+            f"تمت جدولة النسخة الاحتياطية {schedule.name} (ID: {schedule.id}) بتكرار {schedule.get_frequency_display()}"
+        )
 
     def remove_job(self, job_id):
         """حذف مهمة من المجدول"""
@@ -237,6 +250,7 @@ class ScheduledBackupService:
             return None
 
     # تم نقل دوال إنشاء النسخ الاحتياطية إلى دوال منفصلة لتجنب مشاكل التسلسل
+
 
 # إنشاء نسخة واحدة من الخدمة
 scheduled_backup_service = ScheduledBackupService()

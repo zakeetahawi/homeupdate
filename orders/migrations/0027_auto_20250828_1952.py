@@ -11,19 +11,19 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AlterField(
-            model_name='order',
-            name='order_type',
+            model_name="order",
+            name="order_type",
             field=models.CharField(
                 choices=[
-                    ('accessory', 'إكسسوار'),
-                    ('installation', 'تركيب'),
-                    ('inspection', 'معاينة'),
-                    ('tailoring', 'تسليم'),
-                    ('products', 'منتجات'),
+                    ("accessory", "إكسسوار"),
+                    ("installation", "تركيب"),
+                    ("inspection", "معاينة"),
+                    ("tailoring", "تسليم"),
+                    ("products", "منتجات"),
                 ],
-                default='accessory',
+                default="accessory",
                 max_length=20,
-                verbose_name='نوع الطلب'
+                verbose_name="نوع الطلب",
             ),
         ),
     ]

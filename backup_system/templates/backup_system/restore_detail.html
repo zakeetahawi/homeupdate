@@ -1,260 +1,247 @@
 {% extends 'backup_system/base.html' %}
-
 {% block page_actions %}
-<div class="btn-group" role="group">
-    <a href="{% url 'backup_system:restore_list' %}" class="btn btn-secondary">
-        <i class="fas fa-list me-1"></i>
-        قائمة الاستعادة
-    </a>
-    {% if restore.status == 'completed' %}
-        <a href="{% url 'backup_system:restore_upload' %}" class="btn btn-success">
-            <i class="fas fa-upload me-1"></i>
-            استعادة جديدة
+    <div class="btn-group" role="group">
+        <a href="{% url 'backup_system:restore_list' %}"
+           class="btn btn-secondary">
+            <i class="fas fa-list me-1"></i>
+            قائمة الاستعادة
         </a>
-    {% endif %}
-</div>
+        {% if restore.status == 'completed' %}
+            <a href="{% url 'backup_system:restore_upload' %}"
+               class="btn btn-success">
+                <i class="fas fa-upload me-1"></i>
+                استعادة جديدة
+            </a>
+        {% endif %}
+    </div>
 {% endblock %}
-
 {% block backup_content %}
-<div class="row">
-    <div class="col-md-8">
-        <!-- معلومات عملية الاستعادة -->
-        <div class="backup-card mb-4">
-            <div class="backup-card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-undo me-2"></i>
-                    معلومات عملية الاستعادة
-                </h5>
-            </div>
-            <div class="backup-card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <strong>الاسم:</strong>
-                        <p>{{ restore.name }}</p>
+    <div class="row">
+        <div class="col-md-8">
+            <!-- معلومات عملية الاستعادة -->
+            <div class="backup-card mb-4">
+                <div class="backup-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-undo me-2"></i>
+                        معلومات عملية الاستعادة
+                    </h5>
+                </div>
+                <div class="backup-card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>الاسم:</strong>
+                            <p>{{ restore.name }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>الحالة:</strong>
+                            <p>
+                                {% if restore.status == 'completed' %}
+                                    <span class="badge bg-success">مكتمل</span>
+                                {% elif restore.status == 'running' %}
+                                    <span class="badge bg-warning">قيد التنفيذ</span>
+                                {% elif restore.status == 'failed' %}
+                                    <span class="badge bg-danger">فاشل</span>
+                                {% elif restore.status == 'pending' %}
+                                    <span class="badge bg-secondary">في الانتظار</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ restore.get_status_display }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <strong>الحالة:</strong>
-                        <p>
-                            {% if restore.status == 'completed' %}
-                                <span class="badge bg-success">مكتمل</span>
-                            {% elif restore.status == 'running' %}
-                                <span class="badge bg-warning">قيد التنفيذ</span>
-                            {% elif restore.status == 'failed' %}
-                                <span class="badge bg-danger">فاشل</span>
-                            {% elif restore.status == 'pending' %}
-                                <span class="badge bg-secondary">في الانتظار</span>
-                            {% else %}
-                                <span class="badge bg-secondary">{{ restore.get_status_display }}</span>
+                    {% if restore.description %}
+                        <div class="row">
+                            <div class="col-12">
+                                <strong>الوصف:</strong>
+                                <p>{{ restore.description }}</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>تاريخ الإنشاء:</strong>
+                            <p>{{ restore.created_at|date:"Y-m-d H:i:s" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>المنشئ:</strong>
+                            <p>{{ restore.created_by.get_full_name|default:restore.created_by.username }}</p>
+                        </div>
+                    </div>
+                    {% if restore.started_at %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>تاريخ البدء:</strong>
+                                <p>{{ restore.started_at|date:"Y-m-d H:i:s" }}</p>
+                            </div>
+                            {% if restore.completed_at %}
+                                <div class="col-md-6">
+                                    <strong>تاريخ الانتهاء:</strong>
+                                    <p>{{ restore.completed_at|date:"Y-m-d H:i:s" }}</p>
+                                </div>
                             {% endif %}
+                        </div>
+                    {% endif %}
+                    {% if restore.duration %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>المدة:</strong>
+                                <p>{{ restore.duration }}</p>
+                            </div>
+                            {% if restore.file_size %}
+                                <div class="col-md-6">
+                                    <strong>حجم الملف:</strong>
+                                    <p class="file-size">{{ restore.file_size_display }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- تقدم العملية -->
+            {% if restore.status == 'running' or restore.status == 'completed' %}
+                <div class="backup-card mb-4">
+                    <div class="backup-card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            تقدم العملية
+                        </h5>
+                    </div>
+                    <div class="backup-card-body">
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div class="progress-bar {% if restore.status == 'completed' %}bg-success{% elif restore.status == 'failed' %}bg-danger{% else %}bg-primary{% endif %}"
+                                 role="progressbar"
+                                 style="width: {{ restore.progress_percentage }}%"
+                                 id="progressBar"></div>
+                            <div class="progress-text">{{ restore.progress_percentage|floatformat:1 }}%</div>
+                        </div>
+                        {% if restore.current_step %}
+                            <p class="mb-2">
+                                <strong>الخطوة الحالية:</strong>
+                                <span id="currentStep">{{ restore.current_step }}</span>
+                            </p>
+                        {% endif %}
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <div class="border rounded p-2">
+                                    <h6 class="text-muted mb-1">إجمالي السجلات</h6>
+                                    <h4 class="mb-0" id="totalRecords">{{ restore.total_records|default:"-" }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-2">
+                                    <h6 class="text-muted mb-1">تم المعالجة</h6>
+                                    <h4 class="mb-0" id="processedRecords">{{ restore.processed_records|default:"-" }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-2">
+                                    <h6 class="text-success mb-1">نجح</h6>
+                                    <h4 class="mb-0 text-success" id="successRecords">{{ restore.success_records|default:"-" }}</h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-2">
+                                    <h6 class="text-danger mb-1">فشل</h6>
+                                    <h4 class="mb-0 text-danger" id="failedRecords">{{ restore.failed_records|default:"-" }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        {% if restore.success_rate %}
+                            <div class="mt-3">
+                                <strong>معدل النجاح:</strong> {{ restore.success_rate|floatformat:1 }}%
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+            <!-- رسالة الخطأ -->
+            {% if restore.error_message %}
+                <div class="backup-card mb-4">
+                    <div class="backup-card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            رسالة الخطأ
+                        </h5>
+                    </div>
+                    <div class="backup-card-body">
+                        <pre class="text-danger">{{ restore.error_message }}</pre>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-md-4">
+            <!-- معلومات الملف المصدر -->
+            <div class="backup-card mb-4">
+                <div class="backup-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file me-2"></i>
+                        معلومات الملف المصدر
+                    </h5>
+                </div>
+                <div class="backup-card-body">
+                    {% if restore.source_file %}
+                        <p>
+                            <strong>مسار الملف:</strong>
+                            <br>
+                            <small class="text-muted">{{ restore.source_file }}</small>
                         </p>
-                    </div>
-                </div>
-                
-                {% if restore.description %}
-                <div class="row">
-                    <div class="col-12">
-                        <strong>الوصف:</strong>
-                        <p>{{ restore.description }}</p>
-                    </div>
-                </div>
-                {% endif %}
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <strong>تاريخ الإنشاء:</strong>
-                        <p>{{ restore.created_at|date:"Y-m-d H:i:s" }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>المنشئ:</strong>
-                        <p>{{ restore.created_by.get_full_name|default:restore.created_by.username }}</p>
-                    </div>
-                </div>
-                
-                {% if restore.started_at %}
-                <div class="row">
-                    <div class="col-md-6">
-                        <strong>تاريخ البدء:</strong>
-                        <p>{{ restore.started_at|date:"Y-m-d H:i:s" }}</p>
-                    </div>
-                    {% if restore.completed_at %}
-                    <div class="col-md-6">
-                        <strong>تاريخ الانتهاء:</strong>
-                        <p>{{ restore.completed_at|date:"Y-m-d H:i:s" }}</p>
-                    </div>
                     {% endif %}
-                </div>
-                {% endif %}
-                
-                {% if restore.duration %}
-                <div class="row">
-                    <div class="col-md-6">
-                        <strong>المدة:</strong>
-                        <p>{{ restore.duration }}</p>
-                    </div>
                     {% if restore.file_size %}
-                    <div class="col-md-6">
-                        <strong>حجم الملف:</strong>
-                        <p class="file-size">{{ restore.file_size_display }}</p>
-                    </div>
+                        <p>
+                            <strong>حجم الملف:</strong>
+                            <br>
+                            <span class="file-size">{{ restore.file_size_display }}</span>
+                        </p>
                     {% endif %}
+                    <p>
+                        <strong>حذف البيانات الموجودة:</strong>
+                        <br>
+                        {% if restore.clear_existing_data %}
+                            <span class="badge bg-warning">نعم</span>
+                        {% else %}
+                            <span class="badge bg-info">لا</span>
+                        {% endif %}
+                    </p>
                 </div>
-                {% endif %}
             </div>
-        </div>
-        
-        <!-- تقدم العملية -->
-        {% if restore.status == 'running' or restore.status == 'completed' %}
-        <div class="backup-card mb-4">
-            <div class="backup-card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-chart-line me-2"></i>
-                    تقدم العملية
-                </h5>
-            </div>
-            <div class="backup-card-body">
-                <div class="progress mb-3" style="height: 25px;">
-                    <div class="progress-bar {% if restore.status == 'completed' %}bg-success{% elif restore.status == 'failed' %}bg-danger{% else %}bg-primary{% endif %}" 
-                         role="progressbar" 
-                         style="width: {{ restore.progress_percentage }}%"
-                         id="progressBar">
-                    </div>
-                    <div class="progress-text">
-                        {{ restore.progress_percentage|floatformat:1 }}%
-                    </div>
+            <!-- إجراءات سريعة -->
+            <div class="backup-card">
+                <div class="backup-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tools me-2"></i>
+                        إجراءات سريعة
+                    </h5>
                 </div>
-                
-                {% if restore.current_step %}
-                <p class="mb-2">
-                    <strong>الخطوة الحالية:</strong> 
-                    <span id="currentStep">{{ restore.current_step }}</span>
-                </p>
-                {% endif %}
-                
-                <div class="row text-center">
-                    <div class="col-md-3">
-                        <div class="border rounded p-2">
-                            <h6 class="text-muted mb-1">إجمالي السجلات</h6>
-                            <h4 class="mb-0" id="totalRecords">{{ restore.total_records|default:"-" }}</h4>
-                        </div>
+                <div class="backup-card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'backup_system:restore_list' %}"
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-list me-1"></i>
+                            قائمة جميع عمليات الاستعادة
+                        </a>
+                        <a href="{% url 'backup_system:restore_upload' %}"
+                           class="btn btn-outline-success">
+                            <i class="fas fa-upload me-1"></i>
+                            استعادة جديدة
+                        </a>
+                        <a href="{% url 'backup_system:backup_create' %}"
+                           class="btn btn-outline-info">
+                            <i class="fas fa-save me-1"></i>
+                            إنشاء نسخة احتياطية
+                        </a>
+                        <a href="{% url 'backup_system:dashboard' %}"
+                           class="btn btn-outline-secondary">
+                            <i class="fas fa-tachometer-alt me-1"></i>
+                            لوحة التحكم
+                        </a>
                     </div>
-                    <div class="col-md-3">
-                        <div class="border rounded p-2">
-                            <h6 class="text-muted mb-1">تم المعالجة</h6>
-                            <h4 class="mb-0" id="processedRecords">{{ restore.processed_records|default:"-" }}</h4>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="border rounded p-2">
-                            <h6 class="text-success mb-1">نجح</h6>
-                            <h4 class="mb-0 text-success" id="successRecords">{{ restore.success_records|default:"-" }}</h4>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="border rounded p-2">
-                            <h6 class="text-danger mb-1">فشل</h6>
-                            <h4 class="mb-0 text-danger" id="failedRecords">{{ restore.failed_records|default:"-" }}</h4>
-                        </div>
-                    </div>
-                </div>
-                
-                {% if restore.success_rate %}
-                <div class="mt-3">
-                    <strong>معدل النجاح:</strong> {{ restore.success_rate|floatformat:1 }}%
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-        
-        <!-- رسالة الخطأ -->
-        {% if restore.error_message %}
-        <div class="backup-card mb-4">
-            <div class="backup-card-header bg-danger text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    رسالة الخطأ
-                </h5>
-            </div>
-            <div class="backup-card-body">
-                <pre class="text-danger">{{ restore.error_message }}</pre>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-    
-    <div class="col-md-4">
-        <!-- معلومات الملف المصدر -->
-        <div class="backup-card mb-4">
-            <div class="backup-card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-file me-2"></i>
-                    معلومات الملف المصدر
-                </h5>
-            </div>
-            <div class="backup-card-body">
-                {% if restore.source_file %}
-                <p>
-                    <strong>مسار الملف:</strong><br>
-                    <small class="text-muted">{{ restore.source_file }}</small>
-                </p>
-                {% endif %}
-                
-                {% if restore.file_size %}
-                <p>
-                    <strong>حجم الملف:</strong><br>
-                    <span class="file-size">{{ restore.file_size_display }}</span>
-                </p>
-                {% endif %}
-                
-                <p>
-                    <strong>حذف البيانات الموجودة:</strong><br>
-                    {% if restore.clear_existing_data %}
-                        <span class="badge bg-warning">نعم</span>
-                    {% else %}
-                        <span class="badge bg-info">لا</span>
-                    {% endif %}
-                </p>
-            </div>
-        </div>
-        
-        <!-- إجراءات سريعة -->
-        <div class="backup-card">
-            <div class="backup-card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-tools me-2"></i>
-                    إجراءات سريعة
-                </h5>
-            </div>
-            <div class="backup-card-body">
-                <div class="d-grid gap-2">
-                    <a href="{% url 'backup_system:restore_list' %}" class="btn btn-outline-primary">
-                        <i class="fas fa-list me-1"></i>
-                        قائمة جميع عمليات الاستعادة
-                    </a>
-                    
-                    <a href="{% url 'backup_system:restore_upload' %}" class="btn btn-outline-success">
-                        <i class="fas fa-upload me-1"></i>
-                        استعادة جديدة
-                    </a>
-                    
-                    <a href="{% url 'backup_system:backup_create' %}" class="btn btn-outline-info">
-                        <i class="fas fa-save me-1"></i>
-                        إنشاء نسخة احتياطية
-                    </a>
-                    
-                    <a href="{% url 'backup_system:dashboard' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-tachometer-alt me-1"></i>
-                        لوحة التحكم
-                    </a>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 // تحديث حالة الاستعادة كل 5 ثوان إذا كانت قيد التنفيذ
 {% if restore.status == 'running' %}
 function updateRestoreStatus() {
@@ -320,5 +307,5 @@ setInterval(updateRestoreStatus, 5000);
 // تحديث فوري عند تحميل الصفحة
 updateRestoreStatus();
 {% endif %}
-</script>
+    </script>
 {% endblock %}

@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('orders', '0016_remove_payment_exception_fields'),
+        ("orders", "0016_remove_payment_exception_fields"),
     ]
 
     operations = [
         # إضافة حقل reference_number إلى جدول orders_payment
         migrations.RunSQL(
             "ALTER TABLE orders_payment ADD COLUMN IF NOT EXISTS reference_number VARCHAR(100) DEFAULT '';",
-            reverse_sql="ALTER TABLE orders_payment DROP COLUMN IF EXISTS reference_number;"
+            reverse_sql="ALTER TABLE orders_payment DROP COLUMN IF EXISTS reference_number;",
         ),
     ]

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }} - طباعة</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ title }} - طباعة</title>
+        <style>
         @media print {
             .no-print {
                 display: none;
@@ -130,64 +130,60 @@
         .back-button:hover {
             background: #757575;
         }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔐 QR Master - مفتاح التسجيل الرئيسي</h1>
-            <div class="version-badge">
-                الإصدار v{{ qr_master.version }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🔐 QR Master - مفتاح التسجيل الرئيسي</h1>
+                <div class="version-badge">الإصدار v{{ qr_master.version }}</div>
             </div>
-        </div>
-        
-        <div class="qr-container">
-            <img src="data:image/png;base64,{{ qr_image }}" alt="QR Master Code">
-            <div class="code-text">
-                {{ qr_master.code }}
+            <div class="qr-container">
+                <img src="data:image/png;base64,{{ qr_image }}" alt="QR Master Code">
+                <div class="code-text">{{ qr_master.code }}</div>
             </div>
-        </div>
-        
-        <div class="info-box">
-            <p><strong>📅 تاريخ التوليد:</strong> {{ qr_master.created_at|date:"Y-m-d H:i" }}</p>
-            <p><strong>👤 تم التوليد بواسطة:</strong> {{ qr_master.created_by.username|default:"النظام" }}</p>
-            <p><strong>📊 عدد الأجهزة المسجلة:</strong> {{ qr_master.usage_count }}</p>
-            {% if qr_master.last_used_at %}
-            <p><strong>⏰ آخر استخدام:</strong> {{ qr_master.last_used_at|date:"Y-m-d H:i" }}</p>
+            <div class="info-box">
+                <p>
+                    <strong>📅 تاريخ التوليد:</strong> {{ qr_master.created_at|date:"Y-m-d H:i" }}
+                </p>
+                <p>
+                    <strong>👤 تم التوليد بواسطة:</strong> {{ qr_master.created_by.username|default:"النظام" }}
+                </p>
+                <p>
+                    <strong>📊 عدد الأجهزة المسجلة:</strong> {{ qr_master.usage_count }}
+                </p>
+                {% if qr_master.last_used_at %}
+                    <p>
+                        <strong>⏰ آخر استخدام:</strong> {{ qr_master.last_used_at|date:"Y-m-d H:i" }}
+                    </p>
+                {% endif %}
+            </div>
+            <div class="warning-box">
+                <h3>⚠️ تعليمات مهمة:</h3>
+                <ul>
+                    <li>احتفظ بهذا QR في مكان آمن (خزنة/درج مقفل)</li>
+                    <li>لا تشاركه إلا مع مدراء موثوقين</li>
+                    <li>استخدمه فقط لتسجيل أجهزة جديدة</li>
+                    <li>في حال الشك بتسريبه، ولّد QR جديد فوراً</li>
+                    <li>راجع سجل الاستخدام دورياً</li>
+                </ul>
+            </div>
+            {% if qr_master.notes %}
+                <div class="info-box">
+                    <p>
+                        <strong>📝 ملاحظات:</strong>
+                    </p>
+                    <p>{{ qr_master.notes }}</p>
+                </div>
             {% endif %}
+            <div class="no-print">
+                <button onclick="window.print()" class="print-button">🖨️ طباعة</button>
+                <button onclick="window.close()" class="print-button back-button">↩️ إغلاق</button>
+            </div>
         </div>
-        
-        <div class="warning-box">
-            <h3>⚠️ تعليمات مهمة:</h3>
-            <ul>
-                <li>احتفظ بهذا QR في مكان آمن (خزنة/درج مقفل)</li>
-                <li>لا تشاركه إلا مع مدراء موثوقين</li>
-                <li>استخدمه فقط لتسجيل أجهزة جديدة</li>
-                <li>في حال الشك بتسريبه، ولّد QR جديد فوراً</li>
-                <li>راجع سجل الاستخدام دورياً</li>
-            </ul>
-        </div>
-        
-        {% if qr_master.notes %}
-        <div class="info-box">
-            <p><strong>📝 ملاحظات:</strong></p>
-            <p>{{ qr_master.notes }}</p>
-        </div>
-        {% endif %}
-        
-        <div class="no-print">
-            <button onclick="window.print()" class="print-button">
-                🖨️ طباعة
-            </button>
-            <button onclick="window.close()" class="print-button back-button">
-                ↩️ إغلاق
-            </button>
-        </div>
-    </div>
-    
-    <script>
+        <script>
         // طباعة تلقائية عند التحميل (اختياري)
         // window.onload = function() { window.print(); };
-    </script>
-</body>
+        </script>
+    </body>
 </html>

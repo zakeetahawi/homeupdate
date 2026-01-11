@@ -1,168 +1,178 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
-
 {% block title %}{{ schedule.name }} | {{ block.super }}{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header pb-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6>{{ schedule.name }}</h6>
-                        <div class="btn-group">
-                            <a href="{% url 'odoo_db_manager:schedule_update' pk=schedule.pk %}" class="btn btn-sm btn-warning">
-                                <i class="fas fa-edit"></i> {% trans "تعديل" %}
-                            </a>
-                            <a href="{% url 'odoo_db_manager:schedule_toggle' pk=schedule.pk %}" class="btn btn-sm {% if schedule.is_active %}btn-secondary{% else %}btn-success{% endif %}">
-                                <i class="fas {% if schedule.is_active %}fa-pause{% else %}fa-play{% endif %}"></i> 
-                                {% if schedule.is_active %}{% trans "إيقاف" %}{% else %}{% trans "تنشيط" %}{% endif %}
-                            </a>
-                            <a href="{% url 'odoo_db_manager:schedule_run_now' pk=schedule.pk %}" class="btn btn-sm btn-primary">
-                                <i class="fas fa-play-circle"></i> {% trans "تشغيل الآن" %}
-                            </a>
-                            <a href="{% url 'odoo_db_manager:schedule_delete' pk=schedule.pk %}" class="btn btn-sm btn-danger">
-                                <i class="fas fa-trash"></i> {% trans "حذف" %}
-                            </a>
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card mb-4">
+                    <div class="card-header pb-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6>{{ schedule.name }}</h6>
+                            <div class="btn-group">
+                                <a href="{% url 'odoo_db_manager:schedule_update' pk=schedule.pk %}"
+                                   class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i> {% trans "تعديل" %}
+                                </a>
+                                <a href="{% url 'odoo_db_manager:schedule_toggle' pk=schedule.pk %}"
+                                   class="btn btn-sm {% if schedule.is_active %}btn-secondary{% else %}btn-success{% endif %}">
+                                    <i class="fas {% if schedule.is_active %}fa-pause{% else %}fa-play{% endif %}"></i>
+                                    {% if schedule.is_active %}
+                                        {% trans "إيقاف" %}
+                                    {% else %}
+                                        {% trans "تنشيط" %}
+                                    {% endif %}
+                                </a>
+                                <a href="{% url 'odoo_db_manager:schedule_run_now' pk=schedule.pk %}"
+                                   class="btn btn-sm btn-primary">
+                                    <i class="fas fa-play-circle"></i> {% trans "تشغيل الآن" %}
+                                </a>
+                                <a href="{% url 'odoo_db_manager:schedule_delete' pk=schedule.pk %}"
+                                   class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i> {% trans "حذف" %}
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-uppercase text-body text-xs font-weight-bolder">{% trans "معلومات الجدولة" %}</h6>
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{% trans "الاسم" %}</span>
-                                    <span class="badge bg-primary">{{ schedule.name }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{% trans "قاعدة البيانات" %}</span>
-                                    <span class="badge bg-info">{{ schedule.database.name }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{% trans "نوع النسخة الاحتياطية" %}</span>
-                                    <span class="badge bg-secondary">{{ schedule.get_backup_type_display }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{% trans "الحالة" %}</span>
-                                    <span class="badge {% if schedule.is_active %}bg-success{% else %}bg-danger{% endif %}">
-                                        {% if schedule.is_active %}{% trans "نشط" %}{% else %}{% trans "غير نشط" %}{% endif %}
-                                    </span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{% trans "الحد الأقصى لعدد النسخ" %}</span>
-                                    <span class="badge bg-warning text-dark">{{ schedule.max_backups }}</span>
-                                </li>
-                            </ul>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-uppercase text-body text-xs font-weight-bolder">{% trans "معلومات الجدولة" %}</h6>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{% trans "الاسم" %}</span>
+                                        <span class="badge bg-primary">{{ schedule.name }}</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{% trans "قاعدة البيانات" %}</span>
+                                        <span class="badge bg-info">{{ schedule.database.name }}</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{% trans "نوع النسخة الاحتياطية" %}</span>
+                                        <span class="badge bg-secondary">{{ schedule.get_backup_type_display }}</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{% trans "الحالة" %}</span>
+                                        <span class="badge {% if schedule.is_active %}bg-success{% else %}bg-danger{% endif %}">
+                                            {% if schedule.is_active %}
+                                                {% trans "نشط" %}
+                                            {% else %}
+                                                {% trans "غير نشط" %}
+                                            {% endif %}
+                                        </span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{% trans "الحد الأقصى لعدد النسخ" %}</span>
+                                        <span class="badge bg-warning text-dark">{{ schedule.max_backups }}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-uppercase text-body text-xs font-weight-bolder">{% trans "معلومات التوقيت" %}</h6>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{% trans "التكرار" %}</span>
+                                        <span class="badge bg-primary">{{ schedule.get_frequency_display }}</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{% trans "الوقت" %}</span>
+                                        <span class="badge bg-info">{{ schedule.hour }}:{{ schedule.minute|stringformat:"02d" }}</span>
+                                    </li>
+                                    {% if schedule.frequency == 'weekly' %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>{% trans "يوم الأسبوع" %}</span>
+                                            <span class="badge bg-secondary">{{ schedule.get_day_of_week_display }}</span>
+                                        </li>
+                                    {% elif schedule.frequency == 'monthly' %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>{% trans "يوم الشهر" %}</span>
+                                            <span class="badge bg-secondary">{{ schedule.day_of_month }}</span>
+                                        </li>
+                                    {% endif %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{% trans "آخر تشغيل" %}</span>
+                                        <span class="badge bg-secondary">
+                                            {% if schedule.last_run %}
+                                                {{ schedule.last_run|date:"Y-m-d H:i" }}
+                                            {% else %}
+                                                {% trans "لم يتم التشغيل بعد" %}
+                                            {% endif %}
+                                        </span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{% trans "التشغيل القادم" %}</span>
+                                        <span class="badge bg-success">
+                                            {% if schedule.next_run %}
+                                                {{ schedule.next_run|date:"Y-m-d H:i" }}
+                                            {% else %}
+                                                {% trans "غير محدد" %}
+                                            {% endif %}
+                                        </span>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <h6 class="text-uppercase text-body text-xs font-weight-bolder">{% trans "معلومات التوقيت" %}</h6>
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{% trans "التكرار" %}</span>
-                                    <span class="badge bg-primary">{{ schedule.get_frequency_display }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{% trans "الوقت" %}</span>
-                                    <span class="badge bg-info">{{ schedule.hour }}:{{ schedule.minute|stringformat:"02d" }}</span>
-                                </li>
-                                {% if schedule.frequency == 'weekly' %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{% trans "يوم الأسبوع" %}</span>
-                                    <span class="badge bg-secondary">{{ schedule.get_day_of_week_display }}</span>
-                                </li>
-                                {% elif schedule.frequency == 'monthly' %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{% trans "يوم الشهر" %}</span>
-                                    <span class="badge bg-secondary">{{ schedule.day_of_month }}</span>
-                                </li>
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6 class="text-uppercase text-body text-xs font-weight-bolder">{% trans "النسخ الاحتياطية المرتبطة" %}</h6>
+                                {% if backups %}
+                                    <div class="table-responsive">
+                                        <table class="table align-items-center mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">{% trans "الاسم" %}</th>
+                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">{% trans "الحجم" %}</th>
+                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">{% trans "تاريخ الإنشاء" %}</th>
+                                                    <th class="text-secondary opacity-7"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for backup in backups %}
+                                                    <tr>
+                                                        <td>
+                                                            <div class="d-flex px-2 py-1">
+                                                                <div class="d-flex flex-column justify-content-center">
+                                                                    <h6 class="mb-0 text-sm">{{ backup.name }}</h6>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <p class="text-xs font-weight-bold mb-0">{{ backup.size_display }}</p>
+                                                        </td>
+                                                        <td>
+                                                            <p class="text-xs font-weight-bold mb-0">{{ backup.created_at|date:"Y-m-d" }}</p>
+                                                            <p class="text-xs text-secondary mb-0">{{ backup.created_at|time:"H:i" }}</p>
+                                                        </td>
+                                                        <td class="align-middle">
+                                                            <div class="btn-group">
+                                                                <a href="{% url 'odoo_db_manager:backup_detail' pk=backup.pk %}"
+                                                                   class="btn btn-sm btn-info">
+                                                                    <i class="fas fa-eye"></i>
+                                                                </a>
+                                                                <a href="{% url 'odoo_db_manager:backup_download' pk=backup.pk %}"
+                                                                   class="btn btn-sm btn-primary">
+                                                                    <i class="fas fa-download"></i>
+                                                                </a>
+                                                                <a href="{% url 'odoo_db_manager:backup_restore' pk=backup.pk %}"
+                                                                   class="btn btn-sm btn-warning">
+                                                                    <i class="fas fa-undo"></i>
+                                                                </a>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-info">{% trans "لا توجد نسخ احتياطية مرتبطة بهذه الجدولة حتى الآن." %}</div>
                                 {% endif %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{% trans "آخر تشغيل" %}</span>
-                                    <span class="badge bg-secondary">
-                                        {% if schedule.last_run %}
-                                        {{ schedule.last_run|date:"Y-m-d H:i" }}
-                                        {% else %}
-                                        {% trans "لم يتم التشغيل بعد" %}
-                                        {% endif %}
-                                    </span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>{% trans "التشغيل القادم" %}</span>
-                                    <span class="badge bg-success">
-                                        {% if schedule.next_run %}
-                                        {{ schedule.next_run|date:"Y-m-d H:i" }}
-                                        {% else %}
-                                        {% trans "غير محدد" %}
-                                        {% endif %}
-                                    </span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <h6 class="text-uppercase text-body text-xs font-weight-bolder">{% trans "النسخ الاحتياطية المرتبطة" %}</h6>
-                            {% if backups %}
-                            <div class="table-responsive">
-                                <table class="table align-items-center mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">{% trans "الاسم" %}</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">{% trans "الحجم" %}</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">{% trans "تاريخ الإنشاء" %}</th>
-                                            <th class="text-secondary opacity-7"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for backup in backups %}
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex px-2 py-1">
-                                                    <div class="d-flex flex-column justify-content-center">
-                                                        <h6 class="mb-0 text-sm">{{ backup.name }}</h6>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <p class="text-xs font-weight-bold mb-0">{{ backup.size_display }}</p>
-                                            </td>
-                                            <td>
-                                                <p class="text-xs font-weight-bold mb-0">{{ backup.created_at|date:"Y-m-d" }}</p>
-                                                <p class="text-xs text-secondary mb-0">{{ backup.created_at|time:"H:i" }}</p>
-                                            </td>
-                                            <td class="align-middle">
-                                                <div class="btn-group">
-                                                    <a href="{% url 'odoo_db_manager:backup_detail' pk=backup.pk %}" class="btn btn-sm btn-info">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a href="{% url 'odoo_db_manager:backup_download' pk=backup.pk %}" class="btn btn-sm btn-primary">
-                                                        <i class="fas fa-download"></i>
-                                                    </a>
-                                                    <a href="{% url 'odoo_db_manager:backup_restore' pk=backup.pk %}" class="btn btn-sm btn-warning">
-                                                        <i class="fas fa-undo"></i>
-                                                    </a>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
                             </div>
-                            {% else %}
-                            <div class="alert alert-info">
-                                {% trans "لا توجد نسخ احتياطية مرتبطة بهذه الجدولة حتى الآن." %}
-                            </div>
-                            {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

@@ -2,169 +2,194 @@
 {% load i18n %}
 {% load static %}
 {% load unified_status_tags %}
-
-{% block title %}{% trans 'المعاينات' %}{% endblock %}
-
+{% block title %}
+    {% trans 'المعاينات' %}
+{% endblock %}
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>{% trans 'المعاينات' %}</h2>
-        <div class="d-flex gap-2">
-            <a href="{% url 'inspections:inspection_schedule' %}" class="btn btn-info">
-                <i class="fas fa-calendar-alt"></i> البرنامج اليومي
-            </a>
-            <a href="{% url 'inspections:inspection_report_create' %}" class="btn btn-success">
-                <i class="fas fa-file-alt"></i> تقرير جديد
-            </a>
-            <a href="{% url 'inspections:inspection_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> {% trans 'إضافة معاينة' %}
-            </a>
+    <div class="container-fluid mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>{% trans 'المعاينات' %}</h2>
+            <div class="d-flex gap-2">
+                <a href="{% url 'inspections:inspection_schedule' %}"
+                   class="btn btn-info">
+                    <i class="fas fa-calendar-alt"></i> البرنامج اليومي
+                </a>
+                <a href="{% url 'inspections:inspection_report_create' %}"
+                   class="btn btn-success">
+                    <i class="fas fa-file-alt"></i> تقرير جديد
+                </a>
+                <a href="{% url 'inspections:inspection_create' %}"
+                   class="btn btn-primary">
+                    <i class="fas fa-plus"></i> {% trans 'إضافة معاينة' %}
+                </a>
+            </div>
         </div>
-    </div>
-
-    <!-- Dashboard -->
-    <div class="row mb-4">
-        <div class="col">
-            <a href="{% url 'inspections:inspection_list' %}" class="text-decoration-none">
-                <div class="card text-center shadow-sm border-primary dashboard-card-hover">
-                    <div class="card-body">
-                        <i class="fas fa-list-alt fa-2x text-primary mb-2"></i>
-                        <h5 class="card-title">{% trans 'إجمالي المعاينات' %}</h5>
-                        <span class="display-6 fw-bold">{{ dashboard.total_inspections|default:0 }}</span>
+        <!-- Dashboard -->
+        <div class="row mb-4">
+            <div class="col">
+                <a href="{% url 'inspections:inspection_list' %}"
+                   class="text-decoration-none">
+                    <div class="card text-center shadow-sm border-primary dashboard-card-hover">
+                        <div class="card-body">
+                            <i class="fas fa-list-alt fa-2x text-primary mb-2"></i>
+                            <h5 class="card-title">{% trans 'إجمالي المعاينات' %}</h5>
+                            <span class="display-6 fw-bold">{{ dashboard.total_inspections|default:0 }}</span>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-        <div class="col">
-            <a href="{% url 'inspections:inspection_list' %}?status=pending&from_orders=1" class="text-decoration-none">
-                <div class="card text-center shadow-sm border-warning dashboard-card-hover">
-                    <div class="card-body">
-                        <i class="fas fa-file-alt fa-2x text-warning mb-2"></i>
-                        <h5 class="card-title">{% trans 'المعاينات الجديدة' %}</h5>
-                        <span class="display-6 fw-bold">{{ dashboard.new_inspections|default:0 }}</span>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{% url 'inspections:inspection_list' %}?status=pending&from_orders=1"
+                   class="text-decoration-none">
+                    <div class="card text-center shadow-sm border-warning dashboard-card-hover">
+                        <div class="card-body">
+                            <i class="fas fa-file-alt fa-2x text-warning mb-2"></i>
+                            <h5 class="card-title">{% trans 'المعاينات الجديدة' %}</h5>
+                            <span class="display-6 fw-bold">{{ dashboard.new_inspections|default:0 }}</span>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-        <div class="col">
-            <a href="{% url 'inspections:inspection_list' %}?status=scheduled" class="text-decoration-none">
-                <div class="card text-center shadow-sm border-info dashboard-card-hover">
-                    <div class="card-body">
-                        <i class="fas fa-calendar-check fa-2x text-info mb-2"></i>
-                        <h5 class="card-title">{% trans 'المعاينات المجدولة' %}</h5>
-                        <span class="display-6 fw-bold">{{ dashboard.scheduled_inspections|default:0 }}</span>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{% url 'inspections:inspection_list' %}?status=scheduled"
+                   class="text-decoration-none">
+                    <div class="card text-center shadow-sm border-info dashboard-card-hover">
+                        <div class="card-body">
+                            <i class="fas fa-calendar-check fa-2x text-info mb-2"></i>
+                            <h5 class="card-title">{% trans 'المعاينات المجدولة' %}</h5>
+                            <span class="display-6 fw-bold">{{ dashboard.scheduled_inspections|default:0 }}</span>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-        <div class="col">
-            <a href="{% url 'inspections:completed_details' %}" class="text-decoration-none">
-                <div class="card text-center shadow-sm border-success dashboard-card-hover">
-                    <div class="card-body">
-                        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                        <h5 class="card-title">{% trans 'الناجحة' %}</h5>
-                        <span class="display-6 fw-bold">{{ dashboard.successful_inspections|default:0 }}</span>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{% url 'inspections:completed_details' %}"
+                   class="text-decoration-none">
+                    <div class="card text-center shadow-sm border-success dashboard-card-hover">
+                        <div class="card-body">
+                            <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                            <h5 class="card-title">{% trans 'الناجحة' %}</h5>
+                            <span class="display-6 fw-bold">{{ dashboard.successful_inspections|default:0 }}</span>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-        <div class="col">
-            <a href="{% url 'inspections:cancelled_details' %}" class="text-decoration-none">
-                <div class="card text-center shadow-sm border-danger dashboard-card-hover">
-                    <div class="card-body">
-                        <i class="fas fa-times-circle fa-2x text-danger mb-2"></i>
-                        <h5 class="card-title">{% trans 'الملغاة' %}</h5>
-                        <span class="display-6 fw-bold">{{ dashboard.cancelled_inspections|default:0 }}</span>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{% url 'inspections:cancelled_details' %}"
+                   class="text-decoration-none">
+                    <div class="card text-center shadow-sm border-danger dashboard-card-hover">
+                        <div class="card-body">
+                            <i class="fas fa-times-circle fa-2x text-danger mb-2"></i>
+                            <h5 class="card-title">{% trans 'الملغاة' %}</h5>
+                            <span class="display-6 fw-bold">{{ dashboard.cancelled_inspections|default:0 }}</span>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-        <div class="col">
-            <a href="{% url 'inspections:inspection_list' %}?status=postponed_by_customer" class="text-decoration-none">
-                <div class="card text-center shadow-sm border-secondary dashboard-card-hover">
-                    <div class="card-body">
-                        <i class="fas fa-pause-circle fa-2x text-secondary mb-2"></i>
-                        <h5 class="card-title">مؤجل من طرف العميل</h5>
-                        <span class="display-6 fw-bold">{{ dashboard.postponed_by_customer_inspections|default:0 }}</span>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{% url 'inspections:inspection_list' %}?status=postponed_by_customer"
+                   class="text-decoration-none">
+                    <div class="card text-center shadow-sm border-secondary dashboard-card-hover">
+                        <div class="card-body">
+                            <i class="fas fa-pause-circle fa-2x text-secondary mb-2"></i>
+                            <h5 class="card-title">مؤجل من طرف العميل</h5>
+                            <span class="display-6 fw-bold">{{ dashboard.postponed_by_customer_inspections|default:0 }}</span>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
-        <div class="col">
-            <a href="{% url 'inspections:inspection_list' %}?is_duplicated=1" class="text-decoration-none">
-                <div class="card text-center shadow-sm border-secondary dashboard-card-hover">
-                    <div class="card-body">
-                        <i class="fas fa-copy fa-2x text-secondary mb-2"></i>
-                        <h5 class="card-title">{% trans 'المعاينات المكررة' %}</h5>
-                        <span class="display-6 fw-bold">{{ dashboard.duplicated_inspections|default:0 }}</span>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{% url 'inspections:inspection_list' %}?is_duplicated=1"
+                   class="text-decoration-none">
+                    <div class="card text-center shadow-sm border-secondary dashboard-card-hover">
+                        <div class="card-body">
+                            <i class="fas fa-copy fa-2x text-secondary mb-2"></i>
+                            <h5 class="card-title">{% trans 'المعاينات المكررة' %}</h5>
+                            <span class="display-6 fw-bold">{{ dashboard.duplicated_inspections|default:0 }}</span>
+                        </div>
                     </div>
-                </div>
-            </a>
+                </a>
+            </div>
         </div>
-    </div>
-    <style>
+        <style>
     .dashboard-card-hover:hover {
         box-shadow: 0 0 0 0.2rem #0d6efd33;
         transform: scale(1.03);
         transition: 0.2s;
     }
-    </style>
-
-    <!-- Search and Filter Form -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
-                <div class="col-md-2">
-                    <input type="text" name="q" class="form-control" placeholder="بحث بكود العميل أو اسم العميل أو رقم الطلب..." value="{{ request.GET.q }}">
-                </div>
-                <div class="col-md-2">
-                    <select name="branch" class="form-select">
-                        <option value="">كل الفروع</option>
-                        {% for branch in branches %}
-                        <option value="{{ branch.id }}" {% if branch.id|stringformat:'s' == request.GET.branch|stringformat:'s' %}selected{% endif %}>{{ branch.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select name="status" class="form-select">
-                        <option value="">كل الحالات</option>
-                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>قيد الانتظار</option>
-                        <option value="scheduled" {% if request.GET.status == 'scheduled' %}selected{% endif %}>مجدول</option>
-                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>مكتمل</option>
-                        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغي</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="page_size" class="form-label">عدد الصفوف:</label>
-                    <select name="page_size" id="page_size" class="form-select">
-                        <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
-                        <option value="25" {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>25</option>
-                        <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
-                        <option value="100" {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-secondary w-100">
-                        <i class="fas fa-search"></i> بحث
-                    </button>
-                    <a href="{% url 'inspections:inspection_list' %}" class="btn btn-light ms-2">
-                        <i class="fas fa-times"></i> إعادة تعيين
-                    </a>
-                </div>
-                {% if request.GET.is_duplicated == '1' %}
-                <div class="col-md-12">
-                    <div class="alert alert-info">
-                        <i class="fas fa-filter"></i> {% trans 'تصفية: المعاينات المكررة فقط' %}
-                        <a href="{% url 'inspections:inspection_list' %}" class="btn btn-sm btn-outline-info float-end">
-                            <i class="fas fa-times"></i> {% trans 'إلغاء التصفية' %}
+        </style>
+        <!-- Search and Filter Form -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-2">
+                        <input type="text"
+                               name="q"
+                               class="form-control"
+                               placeholder="بحث بكود العميل أو اسم العميل أو رقم الطلب..."
+                               value="{{ request.GET.q }}">
+                    </div>
+                    <div class="col-md-2">
+                        <select name="branch" class="form-select">
+                            <option value="">كل الفروع</option>
+                            {% for branch in branches %}
+                                <option value="{{ branch.id }}"
+                                        {% if branch.id|stringformat:'s' == request.GET.branch|stringformat:'s' %}selected{% endif %}>
+                                    {{ branch.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="status" class="form-select">
+                            <option value="">كل الحالات</option>
+                            <option value="pending"
+                                    {% if request.GET.status == 'pending' %}selected{% endif %}>قيد الانتظار</option>
+                            <option value="scheduled"
+                                    {% if request.GET.status == 'scheduled' %}selected{% endif %}>مجدول</option>
+                            <option value="completed"
+                                    {% if request.GET.status == 'completed' %}selected{% endif %}>مكتمل</option>
+                            <option value="cancelled"
+                                    {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغي</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="page_size" class="form-label">عدد الصفوف:</label>
+                        <select name="page_size" id="page_size" class="form-select">
+                            <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
+                            <option value="25"
+                                    {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>
+                                25
+                            </option>
+                            <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
+                            <option value="100"
+                                    {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-secondary w-100">
+                            <i class="fas fa-search"></i> بحث
+                        </button>
+                        <a href="{% url 'inspections:inspection_list' %}"
+                           class="btn btn-light ms-2">
+                            <i class="fas fa-times"></i> إعادة تعيين
                         </a>
                     </div>
-                </div>
-                {% endif %}
-            </form>
+                    {% if request.GET.is_duplicated == '1' %}
+                        <div class="col-md-12">
+                            <div class="alert alert-info">
+                                <i class="fas fa-filter"></i> {% trans 'تصفية: المعاينات المكررة فقط' %}
+                                <a href="{% url 'inspections:inspection_list' %}"
+                                   class="btn btn-sm btn-outline-info float-end">
+                                    <i class="fas fa-times"></i> {% trans 'إلغاء التصفية' %}
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </form>
+            </div>
         </div>
-    </div>
-    <style>
+        <style>
     .card-body .form-label {
         font-weight: 600;
         color: #3c2415;
@@ -187,232 +212,282 @@
         justify-content: center;
         align-items: center;
     }
-</style>
-
-    <!-- Inspections Table -->
-    {% if inspections %}
-    <div class="card" style="border-color: var(--neutral);">
-        <div class="card-header" style="background-color: var(--primary); color: white;">
-            <h5 class="mb-0"><i class="fas fa-list"></i> قائمة المعاينات</h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover inspections-table">
-                    <thead>
-                        <tr>
-                            <th>{% trans 'رقم الطلب' %}</th>
-                            <th>{% trans 'العميل' %}</th>
-                            <th>{% trans 'تاريخ الطلب' %}</th>
-                            <th>{% trans 'تاريخ التنفيذ' %}</th>
-                            <th>{% trans 'تاريخ التسليم المتوقع' %}</th>
-                            <th>{% trans 'عدد الشبابيك' %}</th>
-                            <th>{% trans 'فني المعاينة' %}</th>
-                            <th>{% trans 'البائع' %}</th>
-                            <th>{% trans 'الفرع' %}</th>
-                            <th>{% trans 'ملف المعاينة' %}</th>
-                            <th>{% trans 'الحالة' %}</th>
-                            <th>{% trans 'النتيجة' %}</th>
-                            <th>{% trans 'الإجراءات' %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for inspection in inspections %}
-                        <tr>
-                            <td>
-                                {% if inspection.order %}
-                                    <a href="{% url 'orders:order_detail' inspection.order.pk %}" style="font-weight: bold; color: var(--primary); text-decoration: none;">
-                                        {% if inspection.order.order_number %}
-                                            {{ inspection.order.order_number }}
-                                        {% else %}
-                                            {{ inspection.order.pk }}
-                                        {% endif %}
-                                    </a>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if inspection.customer %}
-                                    <a href="{% url 'customers:customer_detail' inspection.customer.pk %}" style="font-weight: bold; color: var(--primary); text-decoration: none;">
-                                        <strong>{{ inspection.customer.name }}</strong>
-                                    </a>
-                                {% else %}
-                                    <span>عميل جديد</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ inspection.request_date|date:"Y-m-d" }}</td>
-                            <td>{{ inspection.scheduled_date|date:"Y-m-d" }}</td>
-                            <td>{{ inspection.expected_delivery_date|date:"Y-m-d" }}</td>
-                            <td>{{ inspection.windows_count|default:"-" }}</td>
-                            <td>
-                                {% if inspection.inspector %}
-                                    {% if inspection.inspector.get_full_name %}
-                                        {{ inspection.inspector.get_full_name }}
-                                    {% else %}
-                                        {{ inspection.inspector.username }}
-                                    {% endif %}
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td>{% if inspection.responsible_employee %}{{ inspection.responsible_employee }}{% else %}-{% endif %}</td>
-                            <td>{% if inspection.order and inspection.order.customer and inspection.order.customer.branch %}{{ inspection.order.customer.branch.name }}{% else %}-{% endif %}</td>
-                            <td>
-                                {% if inspection.inspection_file %}
-                                    <div class="d-flex flex-column gap-1">
-                                        <!-- الملف المحلي -->
-                                        <a href="{{ inspection.inspection_file.url }}" target="_blank"
-                                           class="btn btn-sm btn-outline-primary"
-                                           title="عرض ملف المعاينة محلياً">
-                                            <i class="fas fa-file-pdf me-1"></i>
-                                            محلي
+        </style>
+        <!-- Inspections Table -->
+        {% if inspections %}
+            <div class="card" style="border-color: var(--neutral);">
+                <div class="card-header"
+                     style="background-color: var(--primary);
+                            color: white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list"></i> قائمة المعاينات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover inspections-table">
+                            <thead>
+                                <tr>
+                                    <th>{% trans 'رقم الطلب' %}</th>
+                                    <th>{% trans 'العميل' %}</th>
+                                    <th>{% trans 'تاريخ الطلب' %}</th>
+                                    <th>{% trans 'تاريخ التنفيذ' %}</th>
+                                    <th>{% trans 'تاريخ التسليم المتوقع' %}</th>
+                                    <th>{% trans 'عدد الشبابيك' %}</th>
+                                    <th>{% trans 'فني المعاينة' %}</th>
+                                    <th>{% trans 'البائع' %}</th>
+                                    <th>{% trans 'الفرع' %}</th>
+                                    <th>{% trans 'ملف المعاينة' %}</th>
+                                    <th>{% trans 'الحالة' %}</th>
+                                    <th>{% trans 'النتيجة' %}</th>
+                                    <th>{% trans 'الإجراءات' %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inspection in inspections %}
+                                    <tr>
+                                        <td>
+                                            {% if inspection.order %}
+                                                <a href="{% url 'orders:order_detail' inspection.order.pk %}"
+                                                   style="font-weight: bold;
+                                                          color: var(--primary);
+                                                          text-decoration: none">
+                                                    {% if inspection.order.order_number %}
+                                                        {{ inspection.order.order_number }}
+                                                    {% else %}
+                                                        {{ inspection.order.pk }}
+                                                    {% endif %}
+                                                </a>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if inspection.customer %}
+                                                <a href="{% url 'customers:customer_detail' inspection.customer.pk %}"
+                                                   style="font-weight: bold;
+                                                          color: var(--primary);
+                                                          text-decoration: none">
+                                                    <strong>{{ inspection.customer.name }}</strong>
+                                                </a>
+                                            {% else %}
+                                                <span>عميل جديد</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ inspection.request_date|date:"Y-m-d" }}</td>
+                                        <td>{{ inspection.scheduled_date|date:"Y-m-d" }}</td>
+                                        <td>{{ inspection.expected_delivery_date|date:"Y-m-d" }}</td>
+                                        <td>{{ inspection.windows_count|default:"-" }}</td>
+                                        <td>
+                                            {% if inspection.inspector %}
+                                                {% if inspection.inspector.get_full_name %}
+                                                    {{ inspection.inspector.get_full_name }}
+                                                {% else %}
+                                                    {{ inspection.inspector.username }}
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if inspection.responsible_employee %}
+                                                {{ inspection.responsible_employee }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if inspection.order and inspection.order.customer and inspection.order.customer.branch %}
+                                                {{ inspection.order.customer.branch.name }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if inspection.inspection_file %}
+                                                <div class="d-flex flex-column gap-1">
+                                                    <!-- الملف المحلي -->
+                                                    <a href="{{ inspection.inspection_file.url }}"
+                                                       target="_blank"
+                                                       class="btn btn-sm btn-outline-primary"
+                                                       title="عرض ملف المعاينة محلياً">
+                                                        <i class="fas fa-file-pdf me-1"></i>
+                                                        محلي
+                                                    </a>
+                                                    {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                                                        <!-- رابط Google Drive -->
+                                                        <a href="{{ inspection.google_drive_file_url }}"
+                                                           target="_blank"
+                                                           class="btn btn-sm btn-success"
+                                                           title="عرض ملف المعاينة في Google Drive"
+                                                           data-inspection-id="{{ inspection.inspection_code }}">
+                                                            <i class="fas fa-cloud me-1"></i>
+                                                            Drive
+                                                        </a>
+                                                    {% else %}
+                                                        <!-- جاري الرفع -->
+                                                        <span class="badge bg-warning text-dark"
+                                                              title="جاري رفع الملف إلى Google Drive"
+                                                              data-inspection-id="{{ inspection.inspection_code }}"
+                                                              data-upload-pending="true">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            جاري الرفع
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">
+                                                    <i class="fas fa-file-slash me-1"></i>
+                                                    لا يوجد ملف
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{% get_status_badge inspection.status "inspection" %}</td>
+                                        <td>
+                                            {% if inspection.result %}
+                                                {% if inspection.result == 'passed' %}
+                                                    {% get_completion_indicator True %}
+                                                {% else %}
+                                                    {% get_completion_indicator False %}
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm action-buttons">
+                                                <a href="{% url 'inspections:inspection_detail' inspection.pk %}"
+                                                   class="btn btn-info"
+                                                   title="عرض"
+                                                   style="font-size: 0.7em;
+                                                          padding: 0.15rem 0.3rem">
+                                                    <i class="fas fa-eye" style="font-size: 0.7em;"></i>
+                                                </a>
+                                                {% if perms.inspections.change_inspection %}
+                                                    <a href="{% url 'inspections:inspection_update' inspection.pk %}"
+                                                       class="btn btn-primary"
+                                                       title="تعديل"
+                                                       style="font-size: 0.7em;
+                                                              padding: 0.15rem 0.3rem">
+                                                        <i class="fas fa-edit" style="font-size: 0.7em;"></i>
+                                                    </a>
+                                                {% endif %}
+                                                {% if perms.inspections.delete_inspection %}
+                                                    <a href="{% url 'inspections:inspection_delete' inspection.pk %}"
+                                                       class="btn btn-danger"
+                                                       title="حذف"
+                                                       style="font-size: 0.7em;
+                                                              padding: 0.15rem 0.3rem">
+                                                        <i class="fas fa-trash" style="font-size: 0.7em;"></i>
+                                                    </a>
+                                                {% endif %}
+                                                <button type="button"
+                                                        class="btn btn-secondary"
+                                                        title="تكرار المعاينة"
+                                                        style="font-size: 0.7em;
+                                                               padding: 0.15rem 0.3rem"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#duplicateInspectionModal"
+                                                        data-inspection-id="{{ inspection.pk }}"
+                                                        data-contract="{{ inspection.contract_number }}"
+                                                        data-customer="{{ inspection.customer.name }}">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% if page_obj.has_other_pages %}
+                    <div class="card-footer">
+                        <nav>
+                            <ul class="pagination justify-content-center mb-0">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                            <i class="fas fa-angle-double-right"></i>
                                         </a>
-
-                                        {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
-                                            <!-- رابط Google Drive -->
-                                            <a href="{{ inspection.google_drive_file_url }}" target="_blank"
-                                               class="btn btn-sm btn-success"
-                                               title="عرض ملف المعاينة في Google Drive"
-                                               data-inspection-id="{{ inspection.inspection_code }}">
-                                                <i class="fas fa-cloud me-1"></i>
-                                                Drive
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                            <i class="fas fa-angle-right"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link"
+                                               href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                                {{ num }}
                                             </a>
-                                        {% else %}
-                                            <!-- جاري الرفع -->
-                                            <span class="badge bg-warning text-dark"
-                                                  title="جاري رفع الملف إلى Google Drive"
-                                                  data-inspection-id="{{ inspection.inspection_code }}"
-                                                  data-upload-pending="true">
-                                                <i class="fas fa-clock me-1"></i>
-                                                جاري الرفع
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                {% else %}
-                                    <span class="text-muted">
-                                        <i class="fas fa-file-slash me-1"></i>
-                                        لا يوجد ملف
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% get_status_badge inspection.status "inspection" %}
-                            </td>
-                            <td>
-                                {% if inspection.result %}
-                                    {% if inspection.result == 'passed' %}
-                                        {% get_completion_indicator True %}
-                                    {% else %}
-                                        {% get_completion_indicator False %}
+                                        </li>
                                     {% endif %}
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="btn-group btn-group-sm action-buttons">
-                                    <a href="{% url 'inspections:inspection_detail' inspection.pk %}" class="btn btn-info" title="عرض" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
-                                        <i class="fas fa-eye" style="font-size: 0.7em;"></i>
-                                    </a>
-                                    {% if perms.inspections.change_inspection %}
-                                        <a href="{% url 'inspections:inspection_update' inspection.pk %}" class="btn btn-primary" title="تعديل" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
-                                            <i class="fas fa-edit" style="font-size: 0.7em;"></i>
+                                {% endfor %}
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                            <i class="fas fa-angle-left"></i>
                                         </a>
-                                    {% endif %}
-                                    {% if perms.inspections.delete_inspection %}
-                                        <a href="{% url 'inspections:inspection_delete' inspection.pk %}" class="btn btn-danger" title="حذف" style="font-size: 0.7em; padding: 0.15rem 0.3rem;">
-                                            <i class="fas fa-trash" style="font-size: 0.7em;"></i>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
+                                            <i class="fas fa-angle-double-left"></i>
                                         </a>
-                                    {% endif %}
-                                    <button type="button" class="btn btn-secondary" title="تكرار المعاينة" style="font-size: 0.7em; padding: 0.15rem 0.3rem;" data-bs-toggle="modal" data-bs-target="#duplicateInspectionModal" data-inspection-id="{{ inspection.pk }}" data-contract="{{ inspection.contract_number }}" data-customer="{{ inspection.customer.name }}">
-                                        <i class="fas fa-copy"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                {% endif %}
             </div>
-
-            </div>
-        {% if page_obj.has_other_pages %}
-        <div class="card-footer">
-            <nav>
-                <ul class="pagination justify-content-center mb-0">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
-                            <i class="fas fa-angle-double-right"></i>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
-                            <i class="fas fa-angle-right"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ num }}</span>
-                        </li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
-                                {{ num }}
-                            </a>
-                        </li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
-                            <i class="fas fa-angle-left"></i>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.branch %}&branch={{ request.GET.branch }}{% endif %}{% if request.GET.page_size %}&page_size={{ request.GET.page_size }}{% endif %}">
-                            <i class="fas fa-angle-double-left"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
         </div>
-        {% endif %}
-        </div>
-    </div>
-
     {% else %}
-    <div class="alert alert-info">
-        {% trans 'لا توجد معاينات متاحة.' %}
-    </div>
+        <div class="alert alert-info">{% trans 'لا توجد معاينات متاحة.' %}</div>
     {% endif %}
 </div>
-
 <!-- Modal for Duplicate Inspection -->
-<div class="modal fade" id="duplicateInspectionModal" tabindex="-1" aria-labelledby="duplicateInspectionModalLabel" aria-hidden="true">
+<div class="modal fade"
+     id="duplicateInspectionModal"
+     tabindex="-1"
+     aria-labelledby="duplicateInspectionModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="duplicateInspectionModalLabel">{% trans 'تكرار معاينة' %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p id="duplicate-inspection-message">{% trans 'هل تريد تكرار المعاينة' %} <span id="inspection-contract"></span> للعميل <span id="inspection-customer"></span>؟</p>
+                <p id="duplicate-inspection-message">
+                    {% trans 'هل تريد تكرار المعاينة' %} <span id="inspection-contract"></span> للعميل <span id="inspection-customer"></span>؟
+                </p>
                 <p>{% trans 'سيتم إنشاء معاينة جديدة بنفس بيانات المعاينة المكتملة مع تاريخ تنفيذ جديد.' %}</p>
                 <div class="form-group mb-3">
                     <label for="scheduled_date" class="form-label">{% trans 'تاريخ التنفيذ الجديد' %}</label>
-                    <input type="date" class="form-control" id="scheduled_date" name="scheduled_date" required>
+                    <input type="date"
+                           class="form-control"
+                           id="scheduled_date"
+                           name="scheduled_date"
+                           required>
                 </div>
                 <div class="form-group mb-3">
                     <label for="duplicate-notes" class="form-label">{% trans 'ملاحظات إضافية' %}</label>
                     <textarea class="form-control" id="duplicate-notes" rows="3"></textarea>
                 </div>
-                <div class="alert alert-info">
-                    {% trans 'سيتم نقل جميع بيانات المعاينة الأصلية إلى المعاينة الجديدة.' %}
-                </div>
+                <div class="alert alert-info">{% trans 'سيتم نقل جميع بيانات المعاينة الأصلية إلى المعاينة الجديدة.' %}</div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans 'إلغاء' %}</button>
@@ -427,36 +502,49 @@
         </div>
     </div>
 </div>
-
 <!-- تنبيه النجاح -->
-<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999">
-    <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+<div class="toast-container position-fixed top-0 end-0 p-3"
+     style="z-index: 9999">
+    <div id="successToast"
+         class="toast align-items-center text-white bg-success border-0"
+         role="alert"
+         aria-live="assertive"
+         aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
                 <i class="fas fa-check-circle me-2"></i>
                 <span id="successToastMessage">{% trans 'تم تكرار المعاينة بنجاح' %}</span>
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="إغلاق"></button>
+            <button type="button"
+                    class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast"
+                    aria-label="إغلاق"></button>
         </div>
     </div>
 </div>
-
 <!-- تنبيه الخطأ -->
-<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999">
-    <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+<div class="toast-container position-fixed top-0 end-0 p-3"
+     style="z-index: 9999">
+    <div id="errorToast"
+         class="toast align-items-center text-white bg-danger border-0"
+         role="alert"
+         aria-live="assertive"
+         aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
                 <i class="fas fa-exclamation-circle me-2"></i>
                 <span id="errorToastMessage">{% trans 'حدث خطأ أثناء تكرار المعاينة' %}</span>
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="إغلاق"></button>
+            <button type="button"
+                    class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast"
+                    aria-label="إغلاق"></button>
         </div>
     </div>
 </div>
 {% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
 /* تنسيق الجدول ليكون بنفس مقاس جدول الطلبات */
 .container-fluid {
     max-width: 100%;
@@ -658,12 +746,11 @@
     transform: scale(1.03);
     transition: 0.2s;
 }
-</style>
+    </style>
 {% endblock %}
-
 {% block extra_js %}
-<script src="{% static 'inspections/js/upload_status_checker.js' %}"></script>
-<script>
+    <script src="{% static 'inspections/js/upload_status_checker.js' %}"></script>
+    <script>
     $(document).ready(function() {
         // Enable Bootstrap tooltips
         $('[data-toggle="tooltip"]').tooltip();
@@ -763,5 +850,5 @@
             toast.show();
         }
     });
-</script>
+    </script>
 {% endblock %}

@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
-
-{% block title %}{% trans "تأكيد حذف رمز الإعداد" %}{% endblock %}
-
+{% block title %}
+    {% trans "تأكيد حذف رمز الإعداد" %}
+{% endblock %}
 {% block extra_css %}
-<style>
+    <style>
     .confirm-container {
         max-width: 600px;
         margin: 0 auto;
@@ -47,54 +47,59 @@
         font-family: monospace;
         word-break: break-all;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container mt-5">
-    <div class="confirm-container">
-        <div class="confirm-header">
-            <i class="fas fa-trash-alt"></i>
-            <h1>{% trans "تأكيد حذف رمز الإعداد" %}</h1>
-        </div>
-        
-        <div class="confirm-content">
-            <div class="alert alert-danger">
-                <p>{% trans "هل أنت متأكد من أنك تريد حذف رمز الإعداد هذا؟" %}</p>
-                <p><strong>{% trans "تحذير:" %}</strong> {% trans "هذه العملية لا يمكن التراجع عنها!" %}</p>
+    <div class="container mt-5">
+        <div class="confirm-container">
+            <div class="confirm-header">
+                <i class="fas fa-trash-alt"></i>
+                <h1>{% trans "تأكيد حذف رمز الإعداد" %}</h1>
             </div>
-            
-            <div class="token-info">
-                <h5>{% trans "معلومات رمز الإعداد:" %}</h5>
-                <p><strong>{% trans "الرمز:" %}</strong></p>
-                <div class="token-value">{{ token.token }}</div>
-                
-                <p class="mt-3"><strong>{% trans "تاريخ الإنشاء:" %}</strong> {{ token.created_at|date:"Y-m-d H:i" }}</p>
-                <p><strong>{% trans "تاريخ انتهاء الصلاحية:" %}</strong> {{ token.expires_at|date:"Y-m-d H:i" }}</p>
-                
-                <p><strong>{% trans "الحالة:" %}</strong> 
-                    {% if token.is_valid %}
-                        <span class="text-success">{% trans "صالح" %}</span>
-                    {% elif token.is_used %}
-                        <span class="text-danger">{% trans "مستخدم" %}</span>
-                    {% elif token.is_expired %}
-                        <span class="text-warning">{% trans "منتهي" %}</span>
+            <div class="confirm-content">
+                <div class="alert alert-danger">
+                    <p>{% trans "هل أنت متأكد من أنك تريد حذف رمز الإعداد هذا؟" %}</p>
+                    <p>
+                        <strong>{% trans "تحذير:" %}</strong> {% trans "هذه العملية لا يمكن التراجع عنها!" %}
+                    </p>
+                </div>
+                <div class="token-info">
+                    <h5>{% trans "معلومات رمز الإعداد:" %}</h5>
+                    <p>
+                        <strong>{% trans "الرمز:" %}</strong>
+                    </p>
+                    <div class="token-value">{{ token.token }}</div>
+                    <p class="mt-3">
+                        <strong>{% trans "تاريخ الإنشاء:" %}</strong> {{ token.created_at|date:"Y-m-d H:i" }}
+                    </p>
+                    <p>
+                        <strong>{% trans "تاريخ انتهاء الصلاحية:" %}</strong> {{ token.expires_at|date:"Y-m-d H:i" }}
+                    </p>
+                    <p>
+                        <strong>{% trans "الحالة:" %}</strong>
+                        {% if token.is_valid %}
+                            <span class="text-success">{% trans "صالح" %}</span>
+                        {% elif token.is_used %}
+                            <span class="text-danger">{% trans "مستخدم" %}</span>
+                        {% elif token.is_expired %}
+                            <span class="text-warning">{% trans "منتهي" %}</span>
+                        {% endif %}
+                    </p>
+                    {% if token.is_used %}
+                        <p>
+                            <strong>{% trans "تاريخ الاستخدام:" %}</strong> {{ token.used_at|date:"Y-m-d H:i" }}
+                        </p>
                     {% endif %}
-                </p>
-                
-                {% if token.is_used %}
-                    <p><strong>{% trans "تاريخ الاستخدام:" %}</strong> {{ token.used_at|date:"Y-m-d H:i" }}</p>
-                {% endif %}
+                </div>
             </div>
-        </div>
-        
-        <div class="confirm-footer">
-            <form method="post">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger btn-lg">{% trans "نعم، حذف رمز الإعداد" %}</button>
-                <a href="{% url 'db_manager:token_list' %}" class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
-            </form>
+            <div class="confirm-footer">
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-lg">{% trans "نعم، حذف رمز الإعداد" %}</button>
+                    <a href="{% url 'db_manager:token_list' %}"
+                       class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}

@@ -1,1 +1,1 @@
-# Template tags for inspections app 
+# Template tags for inspections app

@@ -6,13 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('customers', '0002_add_location_type_to_customer'),
+        ("customers", "0002_add_location_type_to_customer"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customer',
-            name='birth_date',
-            field=models.DateField(blank=True, help_text='أدخل الشهر واليوم فقط (مثال: 15-03)', null=True, verbose_name='تاريخ الميلاد'),
+            model_name="customer",
+            name="birth_date",
+            field=models.DateField(
+                blank=True,
+                help_text="أدخل الشهر واليوم فقط (مثال: 15-03)",
+                null=True,
+                verbose_name="تاريخ الميلاد",
+            ),
         ),
     ]

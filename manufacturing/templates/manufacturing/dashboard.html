@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
-
 {% block title %}لوحة تحكم المصنع{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'manufacturing/css/dashboard.css' %}">
-<link rel="stylesheet" href="{% static 'manufacturing/css/dropdown-fix.css' %}">
-<style>
+    <link rel="stylesheet"
+          href="{% static 'manufacturing/css/dashboard.css' %}">
+    <link rel="stylesheet"
+          href="{% static 'manufacturing/css/dropdown-fix.css' %}">
+    <style>
 /* تحسينات لوحة التحكم */
 .dashboard-card {
     border: none;
@@ -255,417 +255,455 @@
         padding: 1rem;
     }
 }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0" style="color: var(--primary); font-weight: bold;">
-            <i class="fas fa-industry me-2"></i>لوحة تحكم المصنع
-        </h1>
-        <div class="btn-group">
-            <a href="{% url 'manufacturing:order_list' %}" class="btn btn-primary">
-                <i class="fas fa-list me-2"></i>عرض كل الطلبات
-            </a>
-            <a href="{% url 'manufacturing:vip_orders' %}" class="btn btn-warning">
-                <i class="fas fa-crown me-2"></i>طلبات VIP
-            </a>
-            <a href="{% url 'manufacturing:fabric_receipt' %}" class="btn btn-info">
-                <i class="fas fa-industry me-2"></i>استلام من المصنع
-            </a>
-            <a href="{% url 'manufacturing:product_receipt' %}" class="btn btn-success">
-                <i class="fas fa-warehouse me-2"></i>استلام من المخازن
-            </a>
-            <a href="{% url 'manufacturing:order_create' %}" class="btn btn-secondary">
-                <i class="fas fa-plus me-2"></i>طلب جديد
-            </a>
-            {% if user.is_superuser %}
-            <a href="/admin/manufacturing/manufacturingdisplaysettings/" class="btn btn-outline-secondary">
-                <i class="fas fa-cog me-2"></i>إعدادات العرض
-            </a>
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-0" style="color: var(--primary); font-weight: bold;">
+                <i class="fas fa-industry me-2"></i>لوحة تحكم المصنع
+            </h1>
+            <div class="btn-group">
+                <a href="{% url 'manufacturing:order_list' %}" class="btn btn-primary">
+                    <i class="fas fa-list me-2"></i>عرض كل الطلبات
+                </a>
+                <a href="{% url 'manufacturing:vip_orders' %}" class="btn btn-warning">
+                    <i class="fas fa-crown me-2"></i>طلبات VIP
+                </a>
+                <a href="{% url 'manufacturing:fabric_receipt' %}" class="btn btn-info">
+                    <i class="fas fa-industry me-2"></i>استلام من المصنع
+                </a>
+                <a href="{% url 'manufacturing:product_receipt' %}"
+                   class="btn btn-success">
+                    <i class="fas fa-warehouse me-2"></i>استلام من المخازن
+                </a>
+                <a href="{% url 'manufacturing:order_create' %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-plus me-2"></i>طلب جديد
+                </a>
+                {% if user.is_superuser %}
+                    <a href="/admin/manufacturing/manufacturingdisplaysettings/"
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-cog me-2"></i>إعدادات العرض
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <!-- Alert Cards -->
+        <div class="row mb-4">
+            {% if pending_approval_count > 0 %}
+                <div class="col-md-6">
+                    <div class="alert-card">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                            <div>
+                                <h5 class="mb-1">{{ pending_approval_count }} طلب يحتاج موافقة</h5>
+                                <small>يرجى مراجعة الطلبات المعلقة</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            {% if overdue_orders > 0 %}
+                <div class="col-md-6">
+                    <a href="{% url 'manufacturing:overdue_orders' %}"
+                       class="text-decoration-none">
+                        <div class="alert-card clickable-card">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-clock fa-2x me-3"></i>
+                                <div>
+                                    <h5 class="mb-1">{{ overdue_orders }} طلب متأخر</h5>
+                                    <small>تجاوز موعد التسليم المتوقع (لا يشمل الطلبات الجاهزة للتركيب)</small>
+                                </div>
+                                <div class="ms-auto">
+                                    <i class="fas fa-arrow-left fa-lg"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
             {% endif %}
         </div>
-    </div>
-
-
-
-    <!-- Alert Cards -->
-    <div class="row mb-4">
-        {% if pending_approval_count > 0 %}
-        <div class="col-md-6">
-            <div class="alert-card">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
-                    <div>
-                        <h5 class="mb-1">{{ pending_approval_count }} طلب يحتاج موافقة</h5>
-                        <small>يرجى مراجعة الطلبات المعلقة</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        
-        {% if overdue_orders > 0 %}
-            <div class="col-md-6">
-                <a href="{% url 'manufacturing:overdue_orders' %}" class="text-decoration-none">
-                    <div class="alert-card clickable-card">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-clock fa-2x me-3"></i>
-                            <div>
-                                <h5 class="mb-1">{{ overdue_orders }} طلب متأخر</h5>
-                                <small>تجاوز موعد التسليم المتوقع (لا يشمل الطلبات الجاهزة للتركيب)</small>
+        <!-- Main Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="icon">
+                                <i class="fas fa-clipboard-list"></i>
                             </div>
-                            <div class="ms-auto">
-                                <i class="fas fa-arrow-left fa-lg"></i>
+                            <div class="number">{{ total_orders|intcomma }}</div>
+                            <div class="label">إجمالي الطلبات</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="icon">
+                                <i class="fas fa-check-circle"></i>
                             </div>
+                            <div class="number">{{ delivered_orders|intcomma }}</div>
+                            <div class="label">تم التسليم</div>
                         </div>
                     </div>
-                </a>
+                </div>
             </div>
-        {% endif %}
-    </div>
-
-    <!-- Main Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="icon">
-                            <i class="fas fa-clipboard-list"></i>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="icon">
+                                <i class="fas fa-cog fa-spin"></i>
+                            </div>
+                            <div class="number">{{ in_progress_orders|intcomma }}</div>
+                            <div class="label">قيد التنفيذ</div>
                         </div>
-                        <div class="number">{{ total_orders|intcomma }}</div>
-                        <div class="label">إجمالي الطلبات</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="icon">
+                                <i class="fas fa-hourglass-half"></i>
+                            </div>
+                            <div class="number">{{ pending_orders|intcomma }}</div>
+                            <div class="label">قيد الانتظار</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <div class="col-xl-3 col-md-6">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="icon">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div class="number">{{ delivered_orders|intcomma }}</div>
-                        <div class="label">تم التسليم</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="icon">
-                            <i class="fas fa-cog fa-spin"></i>
-                        </div>
-                        <div class="number">{{ in_progress_orders|intcomma }}</div>
-                        <div class="label">قيد التنفيذ</div>
+        <!-- Additional Metrics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-number">{{ this_month_orders }}</div>
+                    <div class="metric-label">طلبات هذا الشهر</div>
+                    <div class="change-indicator {% if month_change_percent >= 0 %}change-positive{% else %}change-negative{% endif %}">
+                        <i class="fas fa-arrow-{% if month_change_percent >= 0 %}up{% else %}down{% endif %}"></i>
+                        {{ month_change_percent|floatformat:1 }}% عن الشهر الماضي
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="icon">
-                            <i class="fas fa-hourglass-half"></i>
-                        </div>
-                        <div class="number">{{ pending_orders|intcomma }}</div>
-                        <div class="label">قيد الانتظار</div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-number">{{ completed_orders }}</div>
+                    <div class="metric-label">طلبات مكتملة</div>
+                    <div class="change-indicator" style="color: #28a745;">
+                        <i class="fas fa-check"></i>
+                        جاهزة للتسليم
+                    </div>
+                </div>
+            </div>
+            <!-- بطاقة طلبات VIP -->
+            <div class="col-md-3">
+                <div class="metric-card vip-card"
+                     onclick="window.location.href='{% url 'manufacturing:vip_orders' %}'"
+                     style="cursor: pointer;
+                            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+                            color: white;
+                            border: 2px solid #ff6b6b;
+                            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3)">
+                    <div class="metric-number" style="color: white; font-weight: bold;">{{ vip_orders_count }}</div>
+                    <div class="metric-label" style="color: white; font-weight: 600;">
+                        <i class="fas fa-crown me-2" style="color: #ffd700;"></i>طلبات VIP
+                    </div>
+                    <div class="change-indicator" style="color: rgba(255, 255, 255, 0.9);">
+                        <i class="fas fa-star"></i>
+                        {{ vip_pending_count }} قيد التنفيذ
+                    </div>
+                    <div class="vip-hover-effect"
+                         style="position: absolute;
+                                top: 10px;
+                                right: 10px;
+                                opacity: 0.7">
+                        <i class="fas fa-external-link-alt"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-number">{{ ready_install_orders }}</div>
+                    <div class="metric-label">جاهز للتركيب</div>
+                    <div class="change-indicator" style="color: #6f42c1;">
+                        <i class="fas fa-tools"></i>
+                        يحتاج تركيب
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-number">{{ avg_completion_days }}</div>
+                    <div class="metric-label">متوسط أيام الإنجاز</div>
+                    <div class="change-indicator" style="color: #17a2b8;">
+                        <i class="fas fa-calendar-alt"></i>
+                        يوم
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Additional Metrics -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="metric-card">
-                <div class="metric-number">{{ this_month_orders }}</div>
-                <div class="metric-label">طلبات هذا الشهر</div>
-                <div class="change-indicator {% if month_change_percent >= 0 %}change-positive{% else %}change-negative{% endif %}">
-                    <i class="fas fa-arrow-{% if month_change_percent >= 0 %}up{% else %}down{% endif %}"></i>
-                    {{ month_change_percent|floatformat:1 }}% عن الشهر الماضي
+        <!-- Production Lines Section -->
+        {% if production_lines_stats %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h4 class="mb-3" style="color: var(--primary); font-weight: bold;">
+                        <i class="fas fa-industry me-2"></i>خطوط الإنتاج
+                    </h4>
                 </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="metric-card">
-                <div class="metric-number">{{ completed_orders }}</div>
-                <div class="metric-label">طلبات مكتملة</div>
-                <div class="change-indicator" style="color: #28a745;">
-                    <i class="fas fa-check"></i>
-                    جاهزة للتسليم
-                </div>
-            </div>
-        </div>
-
-        <!-- بطاقة طلبات VIP -->
-        <div class="col-md-3">
-            <div class="metric-card vip-card" onclick="window.location.href='{% url 'manufacturing:vip_orders' %}'" style="cursor: pointer; background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); color: white; border: 2px solid #ff6b6b; box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);">
-                <div class="metric-number" style="color: white; font-weight: bold;">{{ vip_orders_count }}</div>
-                <div class="metric-label" style="color: white; font-weight: 600;">
-                    <i class="fas fa-crown me-2" style="color: #ffd700;"></i>طلبات VIP
-                </div>
-                <div class="change-indicator" style="color: rgba(255, 255, 255, 0.9);">
-                    <i class="fas fa-star"></i>
-                    {{ vip_pending_count }} قيد التنفيذ
-                </div>
-                <div class="vip-hover-effect" style="position: absolute; top: 10px; right: 10px; opacity: 0.7;">
-                    <i class="fas fa-external-link-alt"></i>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="metric-card">
-                <div class="metric-number">{{ ready_install_orders }}</div>
-                <div class="metric-label">جاهز للتركيب</div>
-                <div class="change-indicator" style="color: #6f42c1;">
-                    <i class="fas fa-tools"></i>
-                    يحتاج تركيب
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="metric-card">
-                <div class="metric-number">{{ avg_completion_days }}</div>
-                <div class="metric-label">متوسط أيام الإنجاز</div>
-                <div class="change-indicator" style="color: #17a2b8;">
-                    <i class="fas fa-calendar-alt"></i>
-                    يوم
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Production Lines Section -->
-    {% if production_lines_stats %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <h4 class="mb-3" style="color: var(--primary); font-weight: bold;">
-                <i class="fas fa-industry me-2"></i>خطوط الإنتاج
-            </h4>
-        </div>
-        {% for line_stat in production_lines_stats %}
-        <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
-            <div class="card production-line-card h-100" style="border-left: 4px solid #007bff; transition: all 0.3s ease; cursor: pointer;"
-                 onclick="window.location.href='{% url 'manufacturing:order_list' %}?production_line={{ line_stat.id }}'">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="card-title mb-0" style="color: #007bff; font-weight: bold;">
-                            <i class="fas fa-cogs me-2"></i>{{ line_stat.name }}
-                        </h6>
-                        <div class="d-flex align-items-center gap-2">
-                            {% if line_stat.overdue_orders > 0 %}
-                            <span class="badge bg-danger" onclick="event.stopPropagation();">{{ line_stat.overdue_orders }} متأخر</span>
-                            {% endif %}
-                            <div class="position-relative" onclick="event.stopPropagation();">
-                                <button class="btn btn-sm btn-outline-primary" type="button" id="productionLineBtn_{{ line_stat.id }}">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                                <div id="productionLineMenu_{{ line_stat.id }}" style="display:none; position:absolute; z-index:1050; min-width:200px; max-width:95vw; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18); border:1px solid #eee; top:100%; left:0;">
-                                    <div class="dropdown-header fw-bold py-2 px-3 border-bottom">خيارات خط الإنتاج</div>
-                                    <a class="dropdown-item" href="{% url 'manufacturing:production_line_print' line_stat.id %}" style="padding:0.5rem 1rem; cursor:pointer; display:flex; align-items:center; border:none; background:none; width:100%; text-align:right; color:#333; text-decoration:none;">
-                                        <i class="fas fa-print me-2"></i>طباعة الطلبات
-                                    </a>
-                                    <a class="dropdown-item" href="{% url 'manufacturing:production_line_print' line_stat.id %}?format=pdf" style="padding:0.5rem 1rem; cursor:pointer; display:flex; align-items:center; border:none; background:none; width:100%; text-align:right; color:#333; text-decoration:none;">
-                                        <i class="fas fa-file-pdf me-2"></i>تحميل PDF
-                                    </a>
-                                    <hr class="my-1">
-                                    <a class="dropdown-item" href="{% url 'manufacturing:order_list' %}?production_line={{ line_stat.id }}" style="padding:0.5rem 1rem; cursor:pointer; display:flex; align-items:center; border:none; background:none; width:100%; text-align:right; color:#333; text-decoration:none;">
-                                        <i class="fas fa-list me-2"></i>عرض الطلبات
-                                    </a>
+                {% for line_stat in production_lines_stats %}
+                    <div class="col-xl-3 col-lg-4 col-md-6 mb-3">
+                        <div class="card production-line-card h-100"
+                             style="border-left: 4px solid #007bff;
+                                    transition: all 0.3s ease;
+                                    cursor: pointer"
+                             onclick="window.location.href='{% url 'manufacturing:order_list' %}?production_line={{ line_stat.id }}'">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title mb-0" style="color: #007bff; font-weight: bold;">
+                                        <i class="fas fa-cogs me-2"></i>{{ line_stat.name }}
+                                    </h6>
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if line_stat.overdue_orders > 0 %}
+                                            <span class="badge bg-danger" onclick="event.stopPropagation();">{{ line_stat.overdue_orders }} متأخر</span>
+                                        {% endif %}
+                                        <div class="position-relative" onclick="event.stopPropagation();">
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                    type="button"
+                                                    id="productionLineBtn_{{ line_stat.id }}">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <div id="productionLineMenu_{{ line_stat.id }}"
+                                                 style="display:none;
+                                                        position:absolute;
+                                                        z-index:1050;
+                                                        min-width:200px;
+                                                        max-width:95vw;
+                                                        background:#fff;
+                                                        border-radius:12px;
+                                                        box-shadow:0 8px 32px rgba(0,0,0,0.18);
+                                                        border:1px solid #eee;
+                                                        top:100%;
+                                                        left:0">
+                                                <div class="dropdown-header fw-bold py-2 px-3 border-bottom">خيارات خط الإنتاج</div>
+                                                <a class="dropdown-item"
+                                                   href="{% url 'manufacturing:production_line_print' line_stat.id %}"
+                                                   style="padding:0.5rem 1rem;
+                                                          cursor:pointer;
+                                                          display:flex;
+                                                          align-items:center;
+                                                          border:none;
+                                                          background:none;
+                                                          width:100%;
+                                                          text-align:right;
+                                                          color:#333;
+                                                          text-decoration:none">
+                                                    <i class="fas fa-print me-2"></i>طباعة الطلبات
+                                                </a>
+                                                <a class="dropdown-item"
+                                                   href="{% url 'manufacturing:production_line_print' line_stat.id %}?format=pdf"
+                                                   style="padding:0.5rem 1rem;
+                                                          cursor:pointer;
+                                                          display:flex;
+                                                          align-items:center;
+                                                          border:none;
+                                                          background:none;
+                                                          width:100%;
+                                                          text-align:right;
+                                                          color:#333;
+                                                          text-decoration:none">
+                                                    <i class="fas fa-file-pdf me-2"></i>تحميل PDF
+                                                </a>
+                                                <hr class="my-1">
+                                                <a class="dropdown-item"
+                                                   href="{% url 'manufacturing:order_list' %}?production_line={{ line_stat.id }}"
+                                                   style="padding:0.5rem 1rem;
+                                                          cursor:pointer;
+                                                          display:flex;
+                                                          align-items:center;
+                                                          border:none;
+                                                          background:none;
+                                                          width:100%;
+                                                          text-align:right;
+                                                          color:#333;
+                                                          text-decoration:none">
+                                                    <i class="fas fa-list me-2"></i>عرض الطلبات
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% if line_stat.description %}
+                                    <p class="card-text text-muted small mb-3">{{ line_stat.description|truncatechars:60 }}</p>
+                                {% endif %}
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <div class="metric-small">
+                                            <div class="metric-number-small text-primary">{{ line_stat.total_orders }}</div>
+                                            <div class="metric-label-small">إجمالي</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="metric-small">
+                                            <div class="metric-number-small text-warning">{{ line_stat.active_orders }}</div>
+                                            <div class="metric-label-small">نشط</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="metric-small">
+                                            <div class="metric-number-small text-success">{{ line_stat.completed_orders }}</div>
+                                            <div class="metric-label-small">مكتمل</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% if line_stat.capacity_per_day %}
+                                    <div class="mt-3 pt-2 border-top">
+                                        <small class="text-muted">
+                                            <i class="fas fa-tachometer-alt me-1"></i>
+                                            الطاقة: {{ line_stat.capacity_per_day }} طلب/يوم
+                                        </small>
+                                    </div>
+                                {% endif %}
+                                <div class="mt-2">
+                                    <div class="progress" style="height: 6px;">
+                                        {% if line_stat.total_orders > 0 %}
+                                            {% widthratio line_stat.completed_orders line_stat.total_orders 100 as completion_percentage %}
+                                            <div class="progress-bar bg-success"
+                                                 style="width: {{ completion_percentage }}%"></div>
+                                        {% else %}
+                                            <div class="progress-bar bg-secondary" style="width: 100%"></div>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted">
+                                        {% if line_stat.total_orders > 0 %}
+                                            {% widthratio line_stat.completed_orders line_stat.total_orders 100 as completion_percentage %}
+                                            {{ completion_percentage }}% مكتمل
+                                        {% else %}
+                                            لا توجد طلبات
+                                        {% endif %}
+                                    </small>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    {% if line_stat.description %}
-                    <p class="card-text text-muted small mb-3">{{ line_stat.description|truncatechars:60 }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <!-- Status Distribution Chart -->
+            <div class="col-xl-4 col-lg-5">
+                <div class="chart-container">
+                    <h5 class="mb-3" style="color: var(--primary); font-weight: bold;">
+                        <i class="fas fa-chart-pie me-2"></i>توزيع الطلبات حسب الحالة
+                    </h5>
+                    <div class="chart-pie">
+                        <canvas id="statusPieChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+            <!-- Monthly Trend Chart -->
+            <div class="col-xl-8 col-lg-7">
+                <div class="chart-container">
+                    <h5 class="mb-3" style="color: var(--primary); font-weight: bold;">
+                        <i class="fas fa-chart-line me-2"></i>اتجاه الطلبات الشهرية ({{ chart_period }})
+                    </h5>
+                    <div class="chart-area">
+                        <canvas id="monthlyOrdersChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Recent Orders and Order Types -->
+        <div class="row">
+            <!-- Recent Orders -->
+            <div class="col-lg-8">
+                <div class="recent-orders-card">
+                    <h5 class="mb-3" style="color: var(--primary); font-weight: bold;">
+                        <i class="fas fa-history me-2"></i>أحدث الطلبات
+                    </h5>
+                    {% if recent_orders %}
+                        {% for order in recent_orders %}
+                            <div class="order-item">
+                                <div class="row align-items-center">
+                                    <div class="col-md-3">
+                                        <strong>طلب #{{ order.id }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ order.created_at|date:"Y-m-d H:i" }}</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        {% if order.order.customer %}
+                                            {{ order.order.customer.name }}
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span>
+                                    </div>
+                                    <div class="col-md-3 text-end">
+                                        <a href="{% url 'manufacturing:order_detail' order.id %}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> عرض
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">لا توجد طلبات حديثة</p>
+                        </div>
                     {% endif %}
-
-                    <div class="row text-center">
-                        <div class="col-4">
-                            <div class="metric-small">
-                                <div class="metric-number-small text-primary">{{ line_stat.total_orders }}</div>
-                                <div class="metric-label-small">إجمالي</div>
+                </div>
+            </div>
+            <!-- Order Types Summary -->
+            <div class="col-lg-4">
+                <div class="recent-orders-card">
+                    <h5 class="mb-3" style="color: var(--primary); font-weight: bold;">
+                        <i class="fas fa-tags me-2"></i>أنواع الطلبات
+                    </h5>
+                    {% if orders_by_type %}
+                        {% for type_data in orders_by_type %}
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <strong>
+                                        {% if type_data.order_type == 'installation' %}
+                                            <i class="fas fa-tools me-2"></i>تركيب
+                                        {% elif type_data.order_type == 'custom' %}
+                                            <i class="fas fa-cut me-2"></i>تفصيل
+                                        {% elif type_data.order_type == 'accessory' %}
+                                            <i class="fas fa-puzzle-piece me-2"></i>اكسسوار
+                                        {% else %}
+                                            <i class="fas fa-cog me-2"></i>{{ type_data.order_type }}
+                                        {% endif %}
+                                    </strong>
+                                </div>
+                                <span class="badge bg-primary">{{ type_data.count }}</span>
                             </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">لا توجد بيانات</p>
                         </div>
-                        <div class="col-4">
-                            <div class="metric-small">
-                                <div class="metric-number-small text-warning">{{ line_stat.active_orders }}</div>
-                                <div class="metric-label-small">نشط</div>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="metric-small">
-                                <div class="metric-number-small text-success">{{ line_stat.completed_orders }}</div>
-                                <div class="metric-label-small">مكتمل</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {% if line_stat.capacity_per_day %}
-                    <div class="mt-3 pt-2 border-top">
-                        <small class="text-muted">
-                            <i class="fas fa-tachometer-alt me-1"></i>
-                            الطاقة: {{ line_stat.capacity_per_day }} طلب/يوم
-                        </small>
-                    </div>
                     {% endif %}
-
-                    <div class="mt-2">
-                        <div class="progress" style="height: 6px;">
-                            {% if line_stat.total_orders > 0 %}
-                                {% widthratio line_stat.completed_orders line_stat.total_orders 100 as completion_percentage %}
-                                <div class="progress-bar bg-success" style="width: {{ completion_percentage }}%"></div>
-                            {% else %}
-                                <div class="progress-bar bg-secondary" style="width: 100%"></div>
-                            {% endif %}
-                        </div>
-                        <small class="text-muted">
-                            {% if line_stat.total_orders > 0 %}
-                                {% widthratio line_stat.completed_orders line_stat.total_orders 100 as completion_percentage %}
-                                {{ completion_percentage }}% مكتمل
-                            {% else %}
-                                لا توجد طلبات
-                            {% endif %}
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Charts Row -->
-    <div class="row mb-4">
-        <!-- Status Distribution Chart -->
-        <div class="col-xl-4 col-lg-5">
-            <div class="chart-container">
-                <h5 class="mb-3" style="color: var(--primary); font-weight: bold;">
-                    <i class="fas fa-chart-pie me-2"></i>توزيع الطلبات حسب الحالة
-                </h5>
-                <div class="chart-pie">
-                    <canvas id="statusPieChart" style="max-height: 300px;"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Monthly Trend Chart -->
-        <div class="col-xl-8 col-lg-7">
-            <div class="chart-container">
-                <h5 class="mb-3" style="color: var(--primary); font-weight: bold;">
-                    <i class="fas fa-chart-line me-2"></i>اتجاه الطلبات الشهرية ({{ chart_period }})
-                </h5>
-                <div class="chart-area">
-                    <canvas id="monthlyOrdersChart" style="max-height: 300px;"></canvas>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Recent Orders and Order Types -->
-    <div class="row">
-        <!-- Recent Orders -->
-        <div class="col-lg-8">
-            <div class="recent-orders-card">
-                <h5 class="mb-3" style="color: var(--primary); font-weight: bold;">
-                    <i class="fas fa-history me-2"></i>أحدث الطلبات
-                </h5>
-                {% if recent_orders %}
-                    {% for order in recent_orders %}
-                    <div class="order-item">
-                        <div class="row align-items-center">
-                            <div class="col-md-3">
-                                <strong>طلب #{{ order.id }}</strong>
-                                <br>
-                                <small class="text-muted">{{ order.created_at|date:"Y-m-d H:i" }}</small>
-                            </div>
-                            <div class="col-md-3">
-                                {% if order.order.customer %}
-                                    {{ order.order.customer.name }}
-                                {% else %}
-                                    <span class="text-muted">غير محدد</span>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-3">
-                                <span class="status-badge status-{{ order.status }}">
-                                    {{ order.get_status_display }}
-                                </span>
-                            </div>
-                            <div class="col-md-3 text-end">
-                                <a href="{% url 'manufacturing:order_detail' order.id %}" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-eye"></i> عرض
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">لا توجد طلبات حديثة</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Order Types Summary -->
-        <div class="col-lg-4">
-            <div class="recent-orders-card">
-                <h5 class="mb-3" style="color: var(--primary); font-weight: bold;">
-                    <i class="fas fa-tags me-2"></i>أنواع الطلبات
-                </h5>
-                {% if orders_by_type %}
-                    {% for type_data in orders_by_type %}
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <strong>
-                                {% if type_data.order_type == 'installation' %}
-                                    <i class="fas fa-tools me-2"></i>تركيب
-                                {% elif type_data.order_type == 'custom' %}
-                                    <i class="fas fa-cut me-2"></i>تفصيل
-                                {% elif type_data.order_type == 'accessory' %}
-                                    <i class="fas fa-puzzle-piece me-2"></i>اكسسوار
-                                {% else %}
-                                    <i class="fas fa-cog me-2"></i>{{ type_data.order_type }}
-                                {% endif %}
-                            </strong>
-                        </div>
-                        <span class="badge bg-primary">{{ type_data.count }}</span>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">لا توجد بيانات</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
 document.addEventListener("DOMContentLoaded", function() {
     // Status Pie Chart
     const statusData = {{ status_data|safe }};
@@ -768,9 +806,9 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
-</script>
-<!-- إضافة ملفات JavaScript المطلوبة -->
-<script src="{% static 'manufacturing/js/production-line-dropdowns.js' %}"></script>
-<script src="{% static 'manufacturing/js/bootstrap-dropdown-fix.js' %}"></script>
-<!-- <script src="{% static 'manufacturing/js/universal-dropdown-fix.js' %}"></script> -->
+    </script>
+    <!-- إضافة ملفات JavaScript المطلوبة -->
+    <script src="{% static 'manufacturing/js/production-line-dropdowns.js' %}"></script>
+    <script src="{% static 'manufacturing/js/bootstrap-dropdown-fix.js' %}"></script>
+    <!-- <script src="{% static 'manufacturing/js/universal-dropdown-fix.js' %}"></script> -->
 {% endblock %}

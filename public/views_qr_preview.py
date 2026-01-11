@@ -2,8 +2,10 @@
 QR Design Preview Views
 معاينة تصميم صفحات QR محلياً قبل المزامنة
 """
-from django.shortcuts import render
+
 from django.http import HttpResponse
+from django.shortcuts import render
+
 from public.models import QRDesignSettings
 
 
@@ -13,48 +15,49 @@ def qr_design_preview(request):
     """
     # الحصول على الإعدادات (مباشرة من DB بدون cache للمعاينة)
     from django.core.cache import cache
-    cache.delete('qr_design_settings')  # مسح cache لضمان قراءة آخر التحديثات
+
+    cache.delete("qr_design_settings")  # مسح cache لضمان قراءة آخر التحديثات
     settings = QRDesignSettings.get_settings()
-    
+
     # بيانات تجريبية للمنتج
     sample_product = {
-        'code': 'DEMO001',
-        'name': 'منتج تجريبي',
-        'name_en': 'Demo Product',
-        'price': 1500.00,
-        'unit': 'متر',
-        'category': 'قماش'
+        "code": "DEMO001",
+        "name": "منتج تجريبي",
+        "name_en": "Demo Product",
+        "price": 1500.00,
+        "unit": "متر",
+        "category": "قماش",
     }
-    
+
     # بيانات تجريبية للبنك
     sample_bank = {
-        'code': 'CIB002',
-        'bank_name': 'بنك CIB شركات',
-        'bank_name_en': 'CIB Companies',
-        'account_number': '100054913731',
-        'account_holder': 'شركات',
-        'account_holder_en': 'Companies',
-        'currency': 'EGP'
+        "code": "CIB002",
+        "bank_name": "بنك CIB شركات",
+        "bank_name_en": "CIB Companies",
+        "account_number": "100054913731",
+        "account_holder": "شركات",
+        "account_holder_en": "Companies",
+        "currency": "EGP",
     }
-    
+
     # HTML template
     html_template = generate_preview_html(settings, sample_product, sample_bank)
-    
+
     return HttpResponse(html_template)
 
 
 def generate_preview_html(settings, product, bank):
     """توليد HTML للمعاينة - مطابق 100% لقالب Cloudflare Worker"""
-    
+
     # Format price with English numbers
-    formatted_price = f"{product['price']:,.0f}".replace(',', ',')
-    
+    formatted_price = f"{product['price']:,.0f}".replace(",", ",")
+
     # Background image style
-    bg_image_style = ''
+    bg_image_style = ""
     if settings.background_image:
-        bg_image_style = f'background-image: url({settings.background_image.url});background-size: cover;background-position: center;background-blend-mode: overlay;'
-    
-    html = f'''<!DOCTYPE html>
+        bg_image_style = f"background-image: url({settings.background_image.url});background-size: cover;background-position: center;background-blend-mode: overlay;"
+
+    html = f"""<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
@@ -394,6 +397,6 @@ def generate_preview_html(settings, product, bank):
     </div>
   </div>
 </body>
-</html>'''
-    
+</html>"""
+
     return html

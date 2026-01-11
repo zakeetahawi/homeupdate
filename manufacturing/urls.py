@@ -1,231 +1,190 @@
 from django.urls import path
+
 from . import views
 from .dashboard_view import ImprovedDashboardView
 
-app_name = 'manufacturing'
+app_name = "manufacturing"
 
 urlpatterns = [
-    path('', ImprovedDashboardView.as_view(), name='dashboard'),
+    path("", ImprovedDashboardView.as_view(), name="dashboard"),
+    path("orders/", views.ManufacturingOrderListView.as_view(), name="order_list"),
     path(
-        'orders/',
-        views.ManufacturingOrderListView.as_view(),
-        name='order_list'
+        "orders/overdue/", views.OverdueOrdersListView.as_view(), name="overdue_orders"
     ),
+    path("orders/vip/", views.VIPOrdersListView.as_view(), name="vip_orders"),
     path(
-        'orders/overdue/',
-        views.OverdueOrdersListView.as_view(),
-        name='overdue_orders'
-    ),
-    path(
-        'orders/vip/',
-        views.VIPOrdersListView.as_view(),
-        name='vip_orders'
-    ),
-    path(
-        'orders/item-status-report/',
+        "orders/item-status-report/",
         views.ManufacturingItemStatusReportView.as_view(),
-        name='item_status_report'
+        name="item_status_report",
     ),
     path(
-        'orders/create/',
+        "orders/create/",
         views.ManufacturingOrderCreateView.as_view(),
-        name='order_create'
+        name="order_create",
     ),
+    path("fabric-receipt/", views.FabricReceiptView.as_view(), name="fabric_receipt"),
     path(
-        'fabric-receipt/',
-        views.FabricReceiptView.as_view(),
-        name='fabric_receipt'
-    ),
-    path(
-        'receive-item/<int:item_id>/',
+        "receive-item/<int:item_id>/",
         views.receive_fabric_item,
-        name='receive_fabric_item'
+        name="receive_fabric_item",
     ),
+    path("get-bag-number-data/", views.get_bag_number_data, name="get_bag_number_data"),
     path(
-        'get-bag-number-data/',
-        views.get_bag_number_data,
-        name='get_bag_number_data'
-    ),
-    path(
-        'receive-all-items/<int:order_id>/',
+        "receive-all-items/<int:order_id>/",
         views.receive_all_fabric_items,
-        name='receive_all_fabric_items'
+        name="receive_all_fabric_items",
     ),
     path(
-        'recent-receipts/',
-        views.recent_fabric_receipts,
-        name='recent_fabric_receipts'
+        "recent-receipts/", views.recent_fabric_receipts, name="recent_fabric_receipts"
     ),
-    
     # URLs باستخدام كود التصنيع
     path(
-        'order/<str:manufacturing_code>/',
+        "order/<str:manufacturing_code>/",
         views.manufacturing_order_detail_by_code,
-        name='order_detail_by_code'
+        name="order_detail_by_code",
     ),
-    
     # URLs القديمة مع إعادة توجيه
     path(
-        'orders/<int:pk>/',
+        "orders/<int:pk>/",
         views.manufacturing_order_detail_redirect,
-        name='order_detail'
+        name="order_detail",
     ),
-
     path(
-        'orders/<int:pk>/delete/',
+        "orders/<int:pk>/delete/",
         views.ManufacturingOrderDeleteView.as_view(),
-        name='order_delete'
+        name="order_delete",
     ),
+    path("orders/<int:pk>/print/", views.print_manufacturing_order, name="order_print"),
     path(
-        'orders/<int:pk>/print/',
-        views.print_manufacturing_order,
-        name='order_print'
-    ),
-    path(
-        'api/update_status/<int:pk>/',
+        "api/update_status/<int:pk>/",
         views.update_order_status,
-        name='update_order_status_api'
+        name="update_order_status_api",
     ),
     path(
-        'api/update_exit_permit/<int:pk>/',
+        "api/update_exit_permit/<int:pk>/",
         views.update_exit_permit,
-        name='update_exit_permit_api'
+        name="update_exit_permit_api",
     ),
     path(
-        'approval/<int:pk>/',
+        "approval/<int:pk>/",
         views.update_approval_status,
-        name='update_approval_status'
+        name="update_approval_status",
     ),
+    path("send_reply/<int:pk>/", views.send_reply, name="send_reply"),
     path(
-        'send_reply/<int:pk>/',
-        views.send_reply,
-        name='send_reply'
-    ),
-    path(
-        'send_reply_to_rejection_log/<int:log_id>/',
+        "send_reply_to_rejection_log/<int:log_id>/",
         views.send_reply_to_rejection_log,
-        name='send_reply_to_rejection_log'
+        name="send_reply_to_rejection_log",
     ),
+    path("order/<int:pk>/details/", views.get_order_details, name="get_order_details"),
     path(
-        'order/<int:pk>/details/',
-        views.get_order_details,
-        name='get_order_details'
-    ),
-    path(
-        're_approve/<int:pk>/',
+        "re_approve/<int:pk>/",
         views.re_approve_after_reply,
-        name='re_approve_after_reply'
+        name="re_approve_after_reply",
     ),
     path(
-        'production-line/<int:line_id>/print/',
+        "production-line/<int:line_id>/print/",
         views.ProductionLinePrintView.as_view(),
-        name='production_line_print'
+        name="production_line_print",
     ),
     path(
-        'production-line/<int:line_id>/print-template/',
+        "production-line/<int:line_id>/print-template/",
         views.ProductionLinePrintTemplateView.as_view(),
-        name='production_line_print_template'
+        name="production_line_print_template",
     ),
     path(
-        'production-line/<int:line_id>/pdf/',
+        "production-line/<int:line_id>/pdf/",
         views.ProductionLinePDFView.as_view(),
-        name='production_line_pdf'
+        name="production_line_pdf",
     ),
     path(
-        'api/change-production-line/<int:pk>/',
+        "api/change-production-line/<int:pk>/",
         views.ChangeProductionLineView.as_view(),
-        name='change_production_line_api'
+        name="change_production_line_api",
     ),
     path(
-        'api/production-lines/',
+        "api/production-lines/",
         views.get_production_lines_api,
-        name='production_lines_api'
+        name="production_lines_api",
     ),
-
     # نظام استلام الأقمشة
+    path("fabric-receipt/", views.FabricReceiptView.as_view(), name="fabric_receipt"),
     path(
-        'fabric-receipt/',
-        views.FabricReceiptView.as_view(),
-        name='fabric_receipt'
-    ),
-    path(
-        'fabric-receipt/item/<int:item_id>/receive/',
+        "fabric-receipt/item/<int:item_id>/receive/",
         views.receive_fabric_item,
-        name='receive_fabric_item'
+        name="receive_fabric_item",
     ),
     path(
-        'fabric-receipt/order/<int:order_id>/bulk-receive/',
+        "fabric-receipt/order/<int:order_id>/bulk-receive/",
         views.bulk_receive_fabric,
-        name='bulk_receive_fabric'
+        name="bulk_receive_fabric",
     ),
     path(
-        'api/fabric-receipt/order/<int:order_id>/status/',
+        "api/fabric-receipt/order/<int:order_id>/status/",
         views.fabric_receipt_status_api,
-        name='fabric_receipt_status_api'
+        name="fabric_receipt_status_api",
     ),
     path(
-        'cutting-orders/<int:cutting_order_id>/receive/',
+        "cutting-orders/<int:cutting_order_id>/receive/",
         views.receive_cutting_order,
-        name='receive_cutting_order'
+        name="receive_cutting_order",
     ),
     path(
-        'fabric-receipt/<int:receipt_id>/detail/',
+        "fabric-receipt/<int:receipt_id>/detail/",
         views.FabricReceiptDetailView.as_view(),
-        name='fabric_receipt_detail'
+        name="fabric_receipt_detail",
     ),
     path(
-        'fabric-receipts/',
+        "fabric-receipts/",
         views.FabricReceiptListView.as_view(),
-        name='fabric_receipt_list'
+        name="fabric_receipt_list",
     ),
     path(
-        'deliver-to-production-line/',
+        "deliver-to-production-line/",
         views.deliver_to_production_line,
-        name='deliver_to_production_line'
+        name="deliver_to_production_line",
     ),
     path(
-        'fix-manufacturing-items/',
+        "fix-manufacturing-items/",
         views.fix_manufacturing_order_items,
-        name='fix_manufacturing_items'
+        name="fix_manufacturing_items",
     ),
     path(
-        'cleanup-products-manufacturing/',
+        "cleanup-products-manufacturing/",
         views.cleanup_products_manufacturing_orders,
-        name='cleanup_products_manufacturing'
+        name="cleanup_products_manufacturing",
     ),
     path(
-        'product-receipt/',
-        views.ProductReceiptView.as_view(),
-        name='product_receipt'
+        "product-receipt/", views.ProductReceiptView.as_view(), name="product_receipt"
     ),
     path(
-        'create-product-receipt/',
+        "create-product-receipt/",
         views.create_product_receipt,
-        name='create_product_receipt'
+        name="create_product_receipt",
     ),
     path(
-        'product-receipts-list/',
+        "product-receipts-list/",
         views.ProductReceiptsListView.as_view(),
-        name='product_receipts_list'
+        name="product_receipts_list",
     ),
     path(
-        'create-manufacturing-receipt/',
+        "create-manufacturing-receipt/",
         views.create_manufacturing_receipt,
-        name='create_manufacturing_receipt'
+        name="create_manufacturing_receipt",
     ),
     path(
-        'get-cutting-data/<int:manufacturing_order_id>/',
+        "get-cutting-data/<int:manufacturing_order_id>/",
         views.get_cutting_data,
-        name='get_cutting_data'
+        name="get_cutting_data",
     ),
     path(
-        'receive-cutting-order/<int:cutting_order_id>/',
+        "receive-cutting-order/<int:cutting_order_id>/",
         views.receive_cutting_order_for_manufacturing,
-        name='receive_cutting_order_for_manufacturing'
+        name="receive_cutting_order_for_manufacturing",
     ),
     path(
-        'get-cutting-order-data/<int:cutting_order_id>/',
+        "get-cutting-order-data/<int:cutting_order_id>/",
         views.get_cutting_order_data,
-        name='get_cutting_order_data'
+        name="get_cutting_order_data",
     ),
 ]

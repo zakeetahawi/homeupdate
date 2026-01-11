@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}{{ title }} - نظام الخواجه{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .form-container {
         max-width: 900px;
         margin: 0 auto;
@@ -250,354 +248,363 @@
     .step-connector.completed {
         background: var(--success);
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Breadcrumb -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'home' %}" style="color: var(--primary);">الرئيسية</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'customers:customer_list' %}" style="color: var(--primary);">العملاء</a></li>
-                    {% if customer %}
-                    <li class="breadcrumb-item"><a href="{% url 'customers:customer_detail' customer.pk %}" style="color: var(--primary);">{{ customer.name }}</a></li>
-                    {% endif %}
-                    <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
-
-    <!-- Form Container -->
-    <div class="form-container">
-        <!-- Header -->
-        <div class="text-center mb-4">
-            <h2 class="mb-2">
-                {% if customer %}
-                <i class="fas fa-user-edit text-primary"></i> تعديل بيانات العميل
-                {% else %}
-                <i class="fas fa-user-plus text-primary"></i> إضافة عميل جديد
-                {% endif %}
-            </h2>
-            <p class="text-muted">يرجى تعبئة جميع الحقول المطلوبة بدقة</p>
-        </div>
-
-        <!-- Step Indicator -->
-        <div class="step-indicator">
-            <div class="step active" id="step-1">1</div>
-            <div class="step-connector" id="connector-1"></div>
-            <div class="step" id="step-2">2</div>
-            <div class="step-connector" id="connector-2"></div>
-            <div class="step" id="step-3">3</div>
-        </div>
-
-        <!-- Navigation Tabs -->
-        <ul class="nav nav-pills justify-content-center mb-0" id="customerTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="basic-tab" data-bs-toggle="pill" data-bs-target="#basic" type="button" role="tab">
-                    <i class="fas fa-user me-2"></i>المعلومات الأساسية
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="contact-tab" data-bs-toggle="pill" data-bs-target="#contact" type="button" role="tab">
-                    <i class="fas fa-phone me-2"></i>معلومات الاتصال
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="additional-tab" data-bs-toggle="pill" data-bs-target="#additional" type="button" role="tab">
-                    <i class="fas fa-cog me-2"></i>معلومات إضافية
-                </button>
-            </li>
-        </ul>
-
-        <!-- Form Content -->
-        <form method="post" enctype="multipart/form-data" id="customerForm">
-            {% csrf_token %}
-            {% if form.instance.pk %}
-            <input type="hidden" name="customer_id" value="{{ form.instance.pk }}">
-            {% endif %}
-            
-            {% if form.non_field_errors %}
-            <div class="alert alert-danger mt-3">
-                {% for error in form.non_field_errors %}
-                {{ error }}
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- بطاقة العميل الموجود عند تكرار رقم الهاتف -->
-            {% if show_duplicate_alert and existing_customer %}
-            <div class="alert alert-warning mt-3" id="duplicateCustomerAlert">
-                <div class="d-flex align-items-start">
-                    <i class="fas fa-exclamation-triangle text-warning me-3 mt-1"></i>
-                    <div class="flex-grow-1">
-                        <h6 class="alert-heading mb-2">
-                            <i class="fas fa-user-check text-primary"></i>
-                            العميل مسجل بالفعل
-                        </h6>
-                        <p class="mb-3">
-                            <strong>الاسم:</strong> {{ existing_customer.name }}<br>
-                            <strong>رقم الهاتف:</strong> {{ existing_customer.phone }}<br>
-                            <strong>الفرع:</strong> {{ existing_customer.branch.name|default:"غير محدد" }}
-                        </p>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <a href="{{ existing_customer.get_absolute_url }}" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-eye me-1"></i>
-                                عرض بيانات العميل
-                            </a>
-                            <a href="{% url 'orders:wizard_start_new' %}?customer_id={{ existing_customer.pk }}" class="btn btn-success btn-sm">
-                                <i class="fas fa-magic me-1"></i>
-                                إنشاء طلب إلكتروني
-                            </a>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="hideDuplicateAlert()">
-                                <i class="fas fa-times me-1"></i>
-                                إغلاق
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="tab-content" id="customerTabContent">
-                <!-- Basic Information Tab -->
-                <div class="tab-pane fade show active" id="basic" role="tabpanel">
-                    <div class="row">
-                        <!-- Image Upload -->
-                        <div class="col-md-4 text-center">
-                            <div class="form-group">
-                                <label class="form-label">صورة العميل</label>
-                                <div class="image-preview" id="imagePreview">
-                                    {% if customer and customer.image %}
-                                    <img src="{{ customer.image.url }}" alt="صورة العميل">
-                                    {% else %}
-                                    <i class="fas fa-camera"></i>
-                                    {% endif %}
-                                </div>
-                                {{ form.image }}
-                                {% if form.image.errors %}
-                                <span class="error-text">{{ form.image.errors.0 }}</span>
-                                {% endif %}
-                                <small class="text-muted d-block mt-2">JPG, PNG - حد أقصى 5MB</small>
-                            </div>
-                        </div>
-
-                        <!-- Basic Fields -->
-                        <div class="col-md-8">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="{{ form.name.id_for_label }}" class="form-label required-field">{{ form.name.label }}</label>
-                                        {{ form.name }}
-                                        {% if form.name.errors %}
-                                        <span class="error-text">{{ form.name.errors.0 }}</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="{{ form.customer_type.id_for_label }}" class="form-label required-field">{{ form.customer_type.label }}</label>
-                                        <select name="customer_type" class="form-select" id="{{ form.customer_type.id_for_label }}" onchange="toggleResponsibleFields()">
-                                            {% for choice in form.customer_type.field.choices %}
-                                            <option value="{{ choice.0 }}"{% if form.customer_type.value == choice.0 %} selected{% endif %}>{{ choice.1 }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        {% if form.customer_type.errors %}
-                                        <span class="error-text">{{ form.customer_type.errors.0 }}</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="{{ form.category.id_for_label }}" class="form-label">{{ form.category.label }}</label>
-                                        {{ form.category }}
-                                        {% if form.category.errors %}
-                                        <span class="error-text">{{ form.category.errors.0 }}</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
-                                        {{ form.status }}
-                                        {% if form.status.errors %}
-                                        <span class="error-text">{{ form.status.errors.0 }}</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="text-end mt-4">
-                        <button type="button" class="btn btn-primary" onclick="nextTab('contact-tab')">
-                            التالي <i class="fas fa-arrow-left ms-2"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Contact Information Tab -->
-                <div class="tab-pane fade" id="contact" role="tabpanel">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="{{ form.phone.id_for_label }}" class="form-label required-field">{{ form.phone.label }}</label>
-                                {{ form.phone }}
-                                {% if form.phone.errors %}
-                                <span class="error-text">{{ form.phone.errors.0 }}</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="{{ form.phone2.id_for_label }}" class="form-label">{{ form.phone2.label }}</label>
-                                {{ form.phone2 }}
-                                {% if form.phone2.errors %}
-                                <span class="error-text">{{ form.phone2.errors.0 }}</span>
-                                {% endif %}
-                                <small class="text-muted">اختياري</small>
-                            </div>
-                        </div>
-                        {% if user.branch.is_main_branch %}
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="{{ form.branch.id_for_label }}" class="form-label required-field">{{ form.branch.label }}</label>
-                                {{ form.branch }}
-                                {% if form.branch.errors %}
-                                <span class="error-text">{{ form.branch.errors.0 }}</span>
-                                {% endif %}
-                            </div>
-                        </div>
+    <div class="container-fluid py-4">
+        <!-- Breadcrumb -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'home' %}" style="color: var(--primary);">الرئيسية</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'customers:customer_list' %}"
+                               style="color: var(--primary)">العملاء</a>
+                        </li>
+                        {% if customer %}
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'customers:customer_detail' customer.pk %}"
+                                   style="color: var(--primary)">{{ customer.name }}</a>
+                            </li>
                         {% endif %}
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
-                                {{ form.email }}
-                                {% if form.email.errors %}
-                                <span class="error-text">{{ form.email.errors.0 }}</span>
-                                {% endif %}
-                                <small class="text-muted">اختياري</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="{{ form.birth_date.id_for_label }}" class="form-label">{{ form.birth_date.label }}</label>
-                                {{ form.birth_date }}
-                                {% if form.birth_date.errors %}
-                                <span class="error-text">{{ form.birth_date.errors.0 }}</span>
-                                {% endif %}
-                                <small class="text-muted">اختياري - أدخل الشهر واليوم فقط</small>
-                            </div>
-                        </div>
-                        <div class="col-md-12">
-                            <div class="form-group">
-                                <label for="{{ form.address.id_for_label }}" class="form-label required-field">{{ form.address.label }}</label>
-                                {{ form.address }}
-                                {% if form.address.errors %}
-                                <span class="error-text">{{ form.address.errors.0 }}</span>
-                                {% endif %}
-                            </div>
-                        </div>
+                        <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        <!-- Form Container -->
+        <div class="form-container">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h2 class="mb-2">
+                    {% if customer %}
+                        <i class="fas fa-user-edit text-primary"></i> تعديل بيانات العميل
+                    {% else %}
+                        <i class="fas fa-user-plus text-primary"></i> إضافة عميل جديد
+                    {% endif %}
+                </h2>
+                <p class="text-muted">يرجى تعبئة جميع الحقول المطلوبة بدقة</p>
+            </div>
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step active" id="step-1">1</div>
+                <div class="step-connector" id="connector-1"></div>
+                <div class="step" id="step-2">2</div>
+                <div class="step-connector" id="connector-2"></div>
+                <div class="step" id="step-3">3</div>
+            </div>
+            <!-- Navigation Tabs -->
+            <ul class="nav nav-pills justify-content-center mb-0"
+                id="customerTabs"
+                role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active"
+                            id="basic-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#basic"
+                            type="button"
+                            role="tab">
+                        <i class="fas fa-user me-2"></i>المعلومات الأساسية
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link"
+                            id="contact-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#contact"
+                            type="button"
+                            role="tab">
+                        <i class="fas fa-phone me-2"></i>معلومات الاتصال
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link"
+                            id="additional-tab"
+                            data-bs-toggle="pill"
+                            data-bs-target="#additional"
+                            type="button"
+                            role="tab">
+                        <i class="fas fa-cog me-2"></i>معلومات إضافية
+                    </button>
+                </li>
+            </ul>
+            <!-- Form Content -->
+            <form method="post" enctype="multipart/form-data" id="customerForm">
+                {% csrf_token %}
+                {% if form.instance.pk %}<input type="hidden" name="customer_id" value="{{ form.instance.pk }}">{% endif %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mt-3">
+                        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
                     </div>
-                    
-                    <div class="d-flex justify-content-between mt-4">
-                        <button type="button" class="btn btn-secondary" onclick="prevTab('basic-tab')">
-                            <i class="fas fa-arrow-right me-2"></i> السابق
-                        </button>
-                        <button type="button" class="btn btn-primary" onclick="nextTab('additional-tab')">
-                            التالي <i class="fas fa-arrow-left ms-2"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Additional Information Tab -->
-                <div class="tab-pane fade" id="additional" role="tabpanel">
-                    <!-- حقل نوع الخصم -->
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="{{ form.discount_type.id_for_label }}" class="form-label">
-                                    <i class="fas fa-percentage me-2 text-success"></i>{{ form.discount_type.label }}
-                                </label>
-                                {{ form.discount_type }}
-                                {% if form.discount_type.errors %}
-                                <span class="error-text">{{ form.discount_type.errors.0 }}</span>
-                                {% endif %}
-                                <small class="text-muted">اختر نوع الخصم المطبق على هذا العميل (اختياري)</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- حقول المسؤولين (للشركات والجهات الحكومية) -->
-                    <div id="responsibleSection" style="display: none;">
-                        <div class="card mt-3">
-                            <div class="card-header bg-primary text-white">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-users me-2"></i>مسؤولي العميل
-                                    <small class="ms-2">(مطلوب للشركات والجهات الحكومية)</small>
+                {% endif %}
+                <!-- بطاقة العميل الموجود عند تكرار رقم الهاتف -->
+                {% if show_duplicate_alert and existing_customer %}
+                    <div class="alert alert-warning mt-3" id="duplicateCustomerAlert">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-exclamation-triangle text-warning me-3 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="alert-heading mb-2">
+                                    <i class="fas fa-user-check text-primary"></i>
+                                    العميل مسجل بالفعل
                                 </h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="responsibleFields">
-                                    <!-- سيتم إضافة حقول المسؤولين هنا ديناميكياً -->
+                                <p class="mb-3">
+                                    <strong>الاسم:</strong> {{ existing_customer.name }}
+                                    <br>
+                                    <strong>رقم الهاتف:</strong> {{ existing_customer.phone }}
+                                    <br>
+                                    <strong>الفرع:</strong> {{ existing_customer.branch.name|default:"غير محدد" }}
+                                </p>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <a href="{{ existing_customer.get_absolute_url }}"
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>
+                                        عرض بيانات العميل
+                                    </a>
+                                    <a href="{% url 'orders:wizard_start_new' %}?customer_id={{ existing_customer.pk }}"
+                                       class="btn btn-success btn-sm">
+                                        <i class="fas fa-magic me-1"></i>
+                                        إنشاء طلب إلكتروني
+                                    </a>
+                                    <button type="button"
+                                            class="btn btn-secondary btn-sm"
+                                            onclick="hideDuplicateAlert()">
+                                        <i class="fas fa-times me-1"></i>
+                                        إغلاق
+                                    </button>
                                 </div>
-                                <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addResponsibleBtn" onclick="addResponsibleField()">
-                                    <i class="fas fa-plus me-1"></i>إضافة مسؤول آخر
-                                </button>
-                                <small class="text-muted d-block mt-2">يمكن إضافة حتى 3 مسؤولين كحد أقصى</small>
                             </div>
                         </div>
                     </div>
-
-                    <div class="row mt-3">
-                        <div class="col-md-12">
-                            <div class="form-group">
-                                <label for="{{ form.interests.id_for_label }}" class="form-label">{{ form.interests.label }}</label>
-                                {{ form.interests }}
-                                {% if form.interests.errors %}
-                                <span class="error-text">{{ form.interests.errors.0 }}</span>
-                                {% endif %}
-                                <small class="text-muted">اكتب اهتمامات العميل وتفضيلاته</small>
+                {% endif %}
+                <div class="tab-content" id="customerTabContent">
+                    <!-- Basic Information Tab -->
+                    <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                        <div class="row">
+                            <!-- Image Upload -->
+                            <div class="col-md-4 text-center">
+                                <div class="form-group">
+                                    <label class="form-label">صورة العميل</label>
+                                    <div class="image-preview" id="imagePreview">
+                                        {% if customer and customer.image %}
+                                            <img src="{{ customer.image.url }}" alt="صورة العميل">
+                                        {% else %}
+                                            <i class="fas fa-camera"></i>
+                                        {% endif %}
+                                    </div>
+                                    {{ form.image }}
+                                    {% if form.image.errors %}<span class="error-text">{{ form.image.errors.0 }}</span>{% endif %}
+                                    <small class="text-muted d-block mt-2">JPG, PNG - حد أقصى 5MB</small>
+                                </div>
+                            </div>
+                            <!-- Basic Fields -->
+                            <div class="col-md-8">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="{{ form.name.id_for_label }}" class="form-label required-field">{{ form.name.label }}</label>
+                                            {{ form.name }}
+                                            {% if form.name.errors %}<span class="error-text">{{ form.name.errors.0 }}</span>{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="{{ form.customer_type.id_for_label }}"
+                                                   class="form-label required-field">
+                                                {{ form.customer_type.label }}
+                                            </label>
+                                            <select name="customer_type"
+                                                    class="form-select"
+                                                    id="{{ form.customer_type.id_for_label }}"
+                                                    onchange="toggleResponsibleFields()">
+                                                {% for choice in form.customer_type.field.choices %}
+                                                    <option value="{{ choice.0 }}"
+                                                            {% if form.customer_type.value == choice.0 %}selected{% endif %}>
+                                                        {{ choice.1 }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                            {% if form.customer_type.errors %}<span class="error-text">{{ form.customer_type.errors.0 }}</span>{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="{{ form.category.id_for_label }}" class="form-label">{{ form.category.label }}</label>
+                                            {{ form.category }}
+                                            {% if form.category.errors %}<span class="error-text">{{ form.category.errors.0 }}</span>{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
+                                            {{ form.status }}
+                                            {% if form.status.errors %}<span class="error-text">{{ form.status.errors.0 }}</span>{% endif %}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-12">
-                            <div class="form-group">
-                                <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
-                                {{ form.notes }}
-                                {% if form.notes.errors %}
-                                <span class="error-text">{{ form.notes.errors.0 }}</span>
-                                {% endif %}
-                                <small class="text-muted">ملاحظات إضافية عن العميل</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between mt-4">
-                        <button type="button" class="btn btn-secondary" onclick="prevTab('contact-tab')">
-                            <i class="fas fa-arrow-right me-2"></i> السابق
-                        </button>
-                        <div>
-                            <a href="{% url 'customers:customer_list' %}" class="btn btn-cancel me-3">
-                                <i class="fas fa-times me-2"></i>إلغاء
-                            </a>
-                            <button type="submit" class="btn btn-save">
-                                <i class="fas fa-save me-2"></i>
-                                {% if customer %}تحديث{% else %}حفظ{% endif %}
+                        <div class="text-end mt-4">
+                            <button type="button"
+                                    class="btn btn-primary"
+                                    onclick="nextTab('contact-tab')">
+                                التالي <i class="fas fa-arrow-left ms-2"></i>
                             </button>
                         </div>
                     </div>
+                    <!-- Contact Information Tab -->
+                    <div class="tab-pane fade" id="contact" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.phone.id_for_label }}" class="form-label required-field">{{ form.phone.label }}</label>
+                                    {{ form.phone }}
+                                    {% if form.phone.errors %}<span class="error-text">{{ form.phone.errors.0 }}</span>{% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.phone2.id_for_label }}" class="form-label">{{ form.phone2.label }}</label>
+                                    {{ form.phone2 }}
+                                    {% if form.phone2.errors %}<span class="error-text">{{ form.phone2.errors.0 }}</span>{% endif %}
+                                    <small class="text-muted">اختياري</small>
+                                </div>
+                            </div>
+                            {% if user.branch.is_main_branch %}
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.branch.id_for_label }}"
+                                               class="form-label required-field">{{ form.branch.label }}</label>
+                                        {{ form.branch }}
+                                        {% if form.branch.errors %}<span class="error-text">{{ form.branch.errors.0 }}</span>{% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}<span class="error-text">{{ form.email.errors.0 }}</span>{% endif %}
+                                    <small class="text-muted">اختياري</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.birth_date.id_for_label }}" class="form-label">{{ form.birth_date.label }}</label>
+                                    {{ form.birth_date }}
+                                    {% if form.birth_date.errors %}<span class="error-text">{{ form.birth_date.errors.0 }}</span>{% endif %}
+                                    <small class="text-muted">اختياري - أدخل الشهر واليوم فقط</small>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="{{ form.address.id_for_label }}"
+                                           class="form-label required-field">{{ form.address.label }}</label>
+                                    {{ form.address }}
+                                    {% if form.address.errors %}<span class="error-text">{{ form.address.errors.0 }}</span>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    onclick="prevTab('basic-tab')">
+                                <i class="fas fa-arrow-right me-2"></i> السابق
+                            </button>
+                            <button type="button"
+                                    class="btn btn-primary"
+                                    onclick="nextTab('additional-tab')">
+                                التالي <i class="fas fa-arrow-left ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Additional Information Tab -->
+                    <div class="tab-pane fade" id="additional" role="tabpanel">
+                        <!-- حقل نوع الخصم -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.discount_type.id_for_label }}" class="form-label">
+                                        <i class="fas fa-percentage me-2 text-success"></i>{{ form.discount_type.label }}
+                                    </label>
+                                    {{ form.discount_type }}
+                                    {% if form.discount_type.errors %}<span class="error-text">{{ form.discount_type.errors.0 }}</span>{% endif %}
+                                    <small class="text-muted">اختر نوع الخصم المطبق على هذا العميل (اختياري)</small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- حقول المسؤولين (للشركات والجهات الحكومية) -->
+                        <div id="responsibleSection" style="display: none;">
+                            <div class="card mt-3">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-users me-2"></i>مسؤولي العميل
+                                        <small class="ms-2">(مطلوب للشركات والجهات الحكومية)</small>
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="responsibleFields">
+                                        <!-- سيتم إضافة حقول المسؤولين هنا ديناميكياً -->
+                                    </div>
+                                    <button type="button"
+                                            class="btn btn-outline-primary btn-sm mt-2"
+                                            id="addResponsibleBtn"
+                                            onclick="addResponsibleField()">
+                                        <i class="fas fa-plus me-1"></i>إضافة مسؤول آخر
+                                    </button>
+                                    <small class="text-muted d-block mt-2">يمكن إضافة حتى 3 مسؤولين كحد أقصى</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="{{ form.interests.id_for_label }}" class="form-label">{{ form.interests.label }}</label>
+                                    {{ form.interests }}
+                                    {% if form.interests.errors %}<span class="error-text">{{ form.interests.errors.0 }}</span>{% endif %}
+                                    <small class="text-muted">اكتب اهتمامات العميل وتفضيلاته</small>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
+                                    {{ form.notes }}
+                                    {% if form.notes.errors %}<span class="error-text">{{ form.notes.errors.0 }}</span>{% endif %}
+                                    <small class="text-muted">ملاحظات إضافية عن العميل</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    onclick="prevTab('contact-tab')">
+                                <i class="fas fa-arrow-right me-2"></i> السابق
+                            </button>
+                            <div>
+                                <a href="{% url 'customers:customer_list' %}"
+                                   class="btn btn-cancel me-3">
+                                    <i class="fas fa-times me-2"></i>إلغاء
+                                </a>
+                                <button type="submit" class="btn btn-save">
+                                    <i class="fas fa-save me-2"></i>
+                                    {% if customer %}
+                                        تحديث
+                                    {% else %}
+                                        حفظ
+                                    {% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 // متغيرات لتتبع حالة validation
 let phoneValidationState = {
     phone: { valid: false, checked: false },
@@ -1165,15 +1172,13 @@ function addResponsibleField() {
                 <div class="col-md-6">
                     <div class="form-group">
                         <label class="form-label required-field">اسم المسؤول</label>
-                        <input type="text" name="responsible_${responsibleCount}_name" class="form-control"
-                               placeholder="اسم المسؤول" required>
+                        <input type="text" name="responsible_${responsibleCount}_name" class="form-control" placeholder="اسم المسؤول" required>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
                         <label class="form-label">المنصب</label>
-                        <input type="text" name="responsible_${responsibleCount}_position" class="form-control"
-                               placeholder="المنصب (اختياري)">
+                        <input type="text" name="responsible_${responsibleCount}_position" class="form-control" placeholder="المنصب (اختياري)">
                     </div>
                 </div>
             </div>
@@ -1182,24 +1187,19 @@ function addResponsibleField() {
                 <div class="col-md-6">
                     <div class="form-group">
                         <label class="form-label">رقم الهاتف</label>
-                        <input type="text" name="responsible_${responsibleCount}_phone" class="form-control"
-                               placeholder="01234567890" pattern="^01[0-9]{9}$" dir="ltr">
+                        <input type="text" name="responsible_${responsibleCount}_phone" class="form-control" placeholder="01234567890" pattern="^01[0-9]{9}$" dir="ltr">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
                         <label class="form-label">البريد الإلكتروني</label>
-                        <input type="email" name="responsible_${responsibleCount}_email" class="form-control"
-                               placeholder="البريد الإلكتروني (اختياري)" dir="ltr">
+                        <input type="email" name="responsible_${responsibleCount}_email" class="form-control" placeholder="البريد الإلكتروني (اختياري)" dir="ltr">
                     </div>
                 </div>
             </div>
 
             <div class="form-check mt-2">
-                <input type="checkbox" name="responsible_${responsibleCount}_is_primary"
-                       class="form-check-input primary-responsible-checkbox"
-                       id="responsible_${responsibleCount}_primary"
-                       onchange="handlePrimaryResponsible(${responsibleCount})">
+                <input type="checkbox" name="responsible_${responsibleCount}_is_primary" class="form-check-input primary-responsible-checkbox" id="responsible_${responsibleCount}_primary" onchange="handlePrimaryResponsible(${responsibleCount})">
                 <label class="form-check-label" for="responsible_${responsibleCount}_primary">
                     المسؤول الرئيسي
                 </label>
@@ -1357,11 +1357,10 @@ document.querySelectorAll('textarea').forEach(function(textarea) {
         this.style.height = (this.scrollHeight) + 'px';
     });
 });
-</script>
-
-<!-- تحميل المسؤولين الموجودين في حالة التعديل -->
-{% if customer and customer.responsibles.exists %}
-<script>
+    </script>
+    <!-- تحميل المسؤولين الموجودين في حالة التعديل -->
+    {% if customer and customer.responsibles.exists %}
+        <script>
 document.addEventListener('DOMContentLoaded', function() {
     // انتظار حتى يتم تحميل جميع الدوال
     setTimeout(function() {
@@ -1390,7 +1389,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, 100);
 });
-</script>
-{% endif %}
-
+        </script>
+    {% endif %}
 {% endblock %}

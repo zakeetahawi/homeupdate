@@ -1,47 +1,49 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}خطأ في التحقق - CSRF{% endblock %}
-
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm border-warning">
-                <div class="card-header bg-warning text-dark">
-                    <h4 class="mb-0">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        خطأ في التحقق من الأمان
-                    </h4>
-                </div>
-                <div class="card-body text-center py-5">
-                    <i class="fas fa-shield-alt fa-4x text-warning mb-4"></i>
-                    <h5 class="mb-3">انتهت صلاحية الجلسة أو تم رفض الطلب</h5>
-                    <p class="text-muted mb-4">
-                        هذا الخطأ يحدث عادةً عندما:
-                    </p>
-                    <ul class="list-unstyled text-muted text-end mb-4">
-                        <li><i class="fas fa-clock me-2"></i> انتهت صلاحية الصفحة (بقيت مفتوحة لفترة طويلة)</li>
-                        <li><i class="fas fa-sync me-2"></i> تم تحديث الصفحة أثناء إرسال النموذج</li>
-                        <li><i class="fas fa-cookie me-2"></i> تم حذف ملفات الكوكيز من المتصفح</li>
-                    </ul>
-                    <div class="d-flex justify-content-center gap-3">
-                        <a href="javascript:history.back()" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-right me-2"></i>
-                            العودة للصفحة السابقة
-                        </a>
-                        <a href="javascript:location.reload()" class="btn btn-warning">
-                            <i class="fas fa-sync me-2"></i>
-                            تحديث الصفحة
-                        </a>
-                        <a href="{% url 'home' %}" class="btn btn-primary">
-                            <i class="fas fa-home me-2"></i>
-                            الصفحة الرئيسية
-                        </a>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow-sm border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            خطأ في التحقق من الأمان
+                        </h4>
+                    </div>
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-shield-alt fa-4x text-warning mb-4"></i>
+                        <h5 class="mb-3">انتهت صلاحية الجلسة أو تم رفض الطلب</h5>
+                        <p class="text-muted mb-4">هذا الخطأ يحدث عادةً عندما:</p>
+                        <ul class="list-unstyled text-muted text-end mb-4">
+                            <li>
+                                <i class="fas fa-clock me-2"></i> انتهت صلاحية الصفحة (بقيت مفتوحة لفترة طويلة)
+                            </li>
+                            <li>
+                                <i class="fas fa-sync me-2"></i> تم تحديث الصفحة أثناء إرسال النموذج
+                            </li>
+                            <li>
+                                <i class="fas fa-cookie me-2"></i> تم حذف ملفات الكوكيز من المتصفح
+                            </li>
+                        </ul>
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-right me-2"></i>
+                                العودة للصفحة السابقة
+                            </a>
+                            <a href="javascript:location.reload()" class="btn btn-warning">
+                                <i class="fas fa-sync me-2"></i>
+                                تحديث الصفحة
+                            </a>
+                            <a href="{% url 'home' %}" class="btn btn-primary">
+                                <i class="fas fa-home me-2"></i>
+                                الصفحة الرئيسية
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

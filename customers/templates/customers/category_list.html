@@ -1,99 +1,103 @@
 {% extends 'base.html' %}
 {% load i18n %}
-
-{% block title %}{% trans 'تصنيفات العملاء' %}{% endblock %}
-
-{% block content %}
-<div class="container mt-4">
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <h2>{% trans 'تصنيفات العملاء' %}</h2>
-        </div>
-        <div class="col-md-6 text-end">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-                <i class="fas fa-plus"></i> {% trans 'إضافة تصنيف' %}
-            </button>
-        </div>
-    </div>
-
-    {% if categories %}
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>{% trans 'التصنيف' %}</th>
-                    <th>{% trans 'الوصف' %}</th>
-                    <th>{% trans 'عدد العملاء' %}</th>
-                    <th>{% trans 'تاريخ الإنشاء' %}</th>
-                    <th>{% trans 'الإجراءات' %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for category in categories %}
-                <tr>
-                    <td>{{ category.name }}</td>
-                    <td>{{ category.description|default:"-" }}</td>
-                    <td>{{ category.customers.count }}</td>
-                    <td>{{ category.created_at|date:"Y/m/d" }}</td>
-                    <td>
-                        <a href="{% url 'customers:customer_list' %}?category={{ category.id }}" 
-                           class="btn btn-sm btn-info" title="{% trans 'عرض العملاء' %}">
-                            <i class="fas fa-users"></i>
-                        </a>
-                        <button type="button" class="btn btn-sm btn-danger delete-category" 
-                                data-id="{{ category.id }}" title="{% trans 'حذف' %}"
-                                {% if category.customers.exists %}disabled{% endif %}>
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="alert alert-info">
-        {% trans 'لا توجد تصنيفات مضافة حتى الآن.' %}
-    </div>
-    {% endif %}
-</div>
-
-<!-- Add Category Modal -->
-<div class="modal fade" id="addCategoryModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{% trans 'إضافة تصنيف جديد' %}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="addCategoryForm">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="categoryName" class="form-label">{% trans 'اسم التصنيف' %}</label>
-                        <input type="text" class="form-control" id="categoryName" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="categoryDescription" class="form-label">{% trans 'وصف التصنيف' %}</label>
-                        <textarea class="form-control" id="categoryDescription" name="description" rows="3"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    {% trans 'إغلاق' %}
-                </button>
-                <button type="button" class="btn btn-primary" id="saveCategory">
-                    {% trans 'حفظ' %}
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+{% block title %}
+    {% trans 'تصنيفات العملاء' %}
 {% endblock %}
-
+{% block content %}
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h2>{% trans 'تصنيفات العملاء' %}</h2>
+            </div>
+            <div class="col-md-6 text-end">
+                <button type="button"
+                        class="btn btn-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#addCategoryModal">
+                    <i class="fas fa-plus"></i> {% trans 'إضافة تصنيف' %}
+                </button>
+            </div>
+        </div>
+        {% if categories %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>{% trans 'التصنيف' %}</th>
+                            <th>{% trans 'الوصف' %}</th>
+                            <th>{% trans 'عدد العملاء' %}</th>
+                            <th>{% trans 'تاريخ الإنشاء' %}</th>
+                            <th>{% trans 'الإجراءات' %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in categories %}
+                            <tr>
+                                <td>{{ category.name }}</td>
+                                <td>{{ category.description|default:"-" }}</td>
+                                <td>{{ category.customers.count }}</td>
+                                <td>{{ category.created_at|date:"Y/m/d" }}</td>
+                                <td>
+                                    <a href="{% url 'customers:customer_list' %}?category={{ category.id }}"
+                                       class="btn btn-sm btn-info"
+                                       title="{% trans 'عرض العملاء' %}">
+                                        <i class="fas fa-users"></i>
+                                    </a>
+                                    <button type="button"
+                                            class="btn btn-sm btn-danger delete-category"
+                                            data-id="{{ category.id }}"
+                                            title="{% trans 'حذف' %}"
+                                            {% if category.customers.exists %}disabled{% endif %}>
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">{% trans 'لا توجد تصنيفات مضافة حتى الآن.' %}</div>
+        {% endif %}
+    </div>
+    <!-- Add Category Modal -->
+    <div class="modal fade" id="addCategoryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{% trans 'إضافة تصنيف جديد' %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addCategoryForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="categoryName" class="form-label">{% trans 'اسم التصنيف' %}</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="categoryName"
+                                   name="name"
+                                   required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="categoryDescription" class="form-label">{% trans 'وصف التصنيف' %}</label>
+                            <textarea class="form-control"
+                                      id="categoryDescription"
+                                      name="description"
+                                      rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans 'إغلاق' %}</button>
+                    <button type="button" class="btn btn-primary" id="saveCategory">{% trans 'حفظ' %}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
 {% block extra_js %}
-<script>
+    <script>
 $(document).ready(function() {
     // Save new category
     $('#saveCategory').click(function() {
@@ -139,5 +143,5 @@ $(document).ready(function() {
         }
     });
 });
-</script>
+    </script>
 {% endblock %}

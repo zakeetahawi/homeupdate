@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
-
-{% block title %}{% trans "إدارة قواعد البيانات" %}{% endblock %}
-
+{% block title %}
+    {% trans "إدارة قواعد البيانات" %}
+{% endblock %}
 {% block extra_css %}
-<style>
+    <style>
     .db-card {
         margin-bottom: 20px;
         border-radius: 10px;
@@ -70,151 +70,169 @@
         color: #adb5bd;
         margin-bottom: 20px;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1>{% trans "إدارة قواعد البيانات" %}</h1>
-            {% for db in databases %}
-                {% if db.is_default %}
-                    <p class="lead">
-                        <i class="fas fa-database text-primary"></i>
-                        {% trans "قاعدة البيانات الحالية:" %} <strong>{{ db.name }}</strong>
-                        <span class="badge badge-primary">PostgreSQL</span>
-                    </p>
-                {% endif %}
-            {% endfor %}
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1>{% trans "إدارة قواعد البيانات" %}</h1>
+                {% for db in databases %}
+                    {% if db.is_default %}
+                        <p class="lead">
+                            <i class="fas fa-database text-primary"></i>
+                            {% trans "قاعدة البيانات الحالية:" %} <strong>{{ db.name }}</strong>
+                            <span class="badge badge-primary">PostgreSQL</span>
+                        </p>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <a href="{% url 'db_manager:database_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> {% trans "إضافة قاعدة بيانات جديدة" %}
+            </a>
         </div>
-        <a href="{% url 'db_manager:database_create' %}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> {% trans "إضافة قاعدة بيانات جديدة" %}
-        </a>
-    </div>
-
-    <div class="row">
-        <div class="col-md-8">
-            {% if databases %}
-                <div class="row">
-                    {% for db in databases %}
-                        <div class="col-md-6">
-                            <div class="db-card">
-                                <div class="db-card-header d-flex justify-content-between align-items-center">
-                                    <h5>
-                                        {% if db.db_type == 'postgresql' %}
-                                            <i class="fas fa-database db-type-icon text-primary"></i>
-                                        {% elif db.db_type == 'mysql' %}
-                                            <i class="fas fa-database db-type-icon text-warning"></i>
-                                        {% elif db.db_type == 'sqlite' %}
-                                            <i class="fas fa-file-alt db-type-icon text-success"></i>
+        <div class="row">
+            <div class="col-md-8">
+                {% if databases %}
+                    <div class="row">
+                        {% for db in databases %}
+                            <div class="col-md-6">
+                                <div class="db-card">
+                                    <div class="db-card-header d-flex justify-content-between align-items-center">
+                                        <h5>
+                                            {% if db.db_type == 'postgresql' %}
+                                                <i class="fas fa-database db-type-icon text-primary"></i>
+                                            {% elif db.db_type == 'mysql' %}
+                                                <i class="fas fa-database db-type-icon text-warning"></i>
+                                            {% elif db.db_type == 'sqlite' %}
+                                                <i class="fas fa-file-alt db-type-icon text-success"></i>
+                                            {% endif %}
+                                            {{ db.name }}
+                                            {% if db.is_default %}
+                                                <span class="db-default-badge">{% trans "افتراضي" %}</span>
+                                            {% endif %}
+                                        </h5>
+                                        <span class="db-status {% if db.is_active %}active{% else %}inactive{% endif %}"
+                                              title="{% if db.is_active %}{% trans 'نشط' %}{% else %}{% trans 'غير نشط' %}{% endif %}"></span>
+                                    </div>
+                                    <div class="db-card-body">
+                                        <p>
+                                            <strong>{% trans "النوع:" %}</strong> {{ db.get_db_type_display }}
+                                        </p>
+                                        {% if db.db_type != 'sqlite' %}
+                                            <p>
+                                                <strong>{% trans "المضيف:" %}</strong> {{ db.host }}
+                                            </p>
+                                            <p>
+                                                <strong>{% trans "اسم قاعدة البيانات:" %}</strong> {{ db.database_name }}
+                                            </p>
+                                        {% else %}
+                                            <p>
+                                                <strong>{% trans "مسار الملف:" %}</strong> {{ db.connection_string|slice:"10:" }}
+                                            </p>
                                         {% endif %}
-                                        {{ db.name }}
-                                        {% if db.is_default %}
-                                            <span class="db-default-badge">{% trans "افتراضي" %}</span>
-                                        {% endif %}
-                                    </h5>
-                                    <span class="db-status {% if db.is_active %}active{% else %}inactive{% endif %}"
-                                          title="{% if db.is_active %}{% trans 'نشط' %}{% else %}{% trans 'غير نشط' %}{% endif %}"></span>
-                                </div>
-                                <div class="db-card-body">
-                                    <p><strong>{% trans "النوع:" %}</strong> {{ db.get_db_type_display }}</p>
-                                    {% if db.db_type != 'sqlite' %}
-                                        <p><strong>{% trans "المضيف:" %}</strong> {{ db.host }}</p>
-                                        <p><strong>{% trans "اسم قاعدة البيانات:" %}</strong> {{ db.database_name }}</p>
-                                    {% else %}
-                                        <p><strong>{% trans "مسار الملف:" %}</strong> {{ db.connection_string|slice:"10:" }}</p>
-                                    {% endif %}
-                                    <p><strong>{% trans "تاريخ الإنشاء:" %}</strong> {{ db.created_at|date:"Y-m-d H:i" }}</p>
-                                </div>
-                                <div class="db-card-footer">
-                                    <div class="db-actions">
-                                        <a href="{% url 'db_manager:database_edit' db.id %}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-edit"></i> {% trans "تعديل" %}
-                                        </a>
-                                        <a href="{% url 'db_manager:database_test_connection' db.id %}" class="btn btn-sm btn-outline-info test-connection" data-id="{{ db.id }}">
-                                            <i class="fas fa-plug"></i> {% trans "اختبار الاتصال" %}
-                                        </a>
-                                        {% if not db.is_default %}
-                                            <form method="post" action="{% url 'db_manager:database_set_default' db.id %}" class="d-inline">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-outline-success">
-                                                    <i class="fas fa-check-circle"></i> {% trans "تعيين كافتراضي" %}
-                                                </button>
-                                            </form>
-                                            <a href="{% url 'db_manager:database_delete' db.id %}" class="btn btn-sm btn-outline-danger">
-                                                <i class="fas fa-trash"></i> {% trans "حذف" %}
+                                        <p>
+                                            <strong>{% trans "تاريخ الإنشاء:" %}</strong> {{ db.created_at|date:"Y-m-d H:i" }}
+                                        </p>
+                                    </div>
+                                    <div class="db-card-footer">
+                                        <div class="db-actions">
+                                            <a href="{% url 'db_manager:database_edit' db.id %}"
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i> {% trans "تعديل" %}
                                             </a>
-                                        {% endif %}
+                                            <a href="{% url 'db_manager:database_test_connection' db.id %}"
+                                               class="btn btn-sm btn-outline-info test-connection"
+                                               data-id="{{ db.id }}">
+                                                <i class="fas fa-plug"></i> {% trans "اختبار الاتصال" %}
+                                            </a>
+                                            {% if not db.is_default %}
+                                                <form method="post"
+                                                      action="{% url 'db_manager:database_set_default' db.id %}"
+                                                      class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                                        <i class="fas fa-check-circle"></i> {% trans "تعيين كافتراضي" %}
+                                                    </button>
+                                                </form>
+                                                <a href="{% url 'db_manager:database_delete' db.id %}"
+                                                   class="btn btn-sm btn-outline-danger">
+                                                    <i class="fas fa-trash"></i> {% trans "حذف" %}
+                                                </a>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="db-empty">
+                        <i class="fas fa-database"></i>
+                        <h3>{% trans "لا توجد قواعد بيانات" %}</h3>
+                        <p>{% trans "لم يتم إضافة أي قواعد بيانات بعد. انقر على زر 'إضافة قاعدة بيانات جديدة' لإضافة واحدة." %}</p>
+                        <a href="{% url 'db_manager:database_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> {% trans "إضافة قاعدة بيانات جديدة" %}
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>{% trans "الأدوات" %}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            <a href="{% url 'db_manager:backup_list' %}"
+                               class="list-group-item list-group-item-action">
+                                <i class="fas fa-save"></i> {% trans "النسخ الاحتياطية" %}
+                            </a>
+                            <a href="{% url 'db_manager:database_import' %}"
+                               class="list-group-item list-group-item-action">
+                                <i class="fas fa-file-import"></i> {% trans "استيراد قاعدة بيانات" %}
+                            </a>
+                            <a href="{% url 'db_manager:database_export' %}"
+                               class="list-group-item list-group-item-action">
+                                <i class="fas fa-file-export"></i> {% trans "تصدير قاعدة بيانات" %}
+                            </a>
+                            <a href="{% url 'db_manager:token_list' %}"
+                               class="list-group-item list-group-item-action">
+                                <i class="fas fa-key"></i> {% trans "رموز الإعداد" %}
+                            </a>
                         </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="db-empty">
-                    <i class="fas fa-database"></i>
-                    <h3>{% trans "لا توجد قواعد بيانات" %}</h3>
-                    <p>{% trans "لم يتم إضافة أي قواعد بيانات بعد. انقر على زر 'إضافة قاعدة بيانات جديدة' لإضافة واحدة." %}</p>
-                    <a href="{% url 'db_manager:database_create' %}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> {% trans "إضافة قاعدة بيانات جديدة" %}
-                    </a>
-                </div>
-            {% endif %}
-        </div>
-
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5>{% trans "الأدوات" %}</h5>
-                </div>
-                <div class="card-body">
-                    <div class="list-group">
-                        <a href="{% url 'db_manager:backup_list' %}" class="list-group-item list-group-item-action">
-                            <i class="fas fa-save"></i> {% trans "النسخ الاحتياطية" %}
-                        </a>
-                        <a href="{% url 'db_manager:database_import' %}" class="list-group-item list-group-item-action">
-                            <i class="fas fa-file-import"></i> {% trans "استيراد قاعدة بيانات" %}
-                        </a>
-                        <a href="{% url 'db_manager:database_export' %}" class="list-group-item list-group-item-action">
-                            <i class="fas fa-file-export"></i> {% trans "تصدير قاعدة بيانات" %}
-                        </a>
-                        <a href="{% url 'db_manager:token_list' %}" class="list-group-item list-group-item-action">
-                            <i class="fas fa-key"></i> {% trans "رموز الإعداد" %}
-                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<!-- نافذة منبثقة لنتيجة اختبار الاتصال -->
-<div class="modal fade" id="connectionTestModal" tabindex="-1" role="dialog" aria-labelledby="connectionTestModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="connectionTestModalLabel">{% trans "نتيجة اختبار الاتصال" %}</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="connectionTestResult"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">{% trans "إغلاق" %}</button>
+    <!-- نافذة منبثقة لنتيجة اختبار الاتصال -->
+    <div class="modal fade"
+         id="connectionTestModal"
+         tabindex="-1"
+         role="dialog"
+         aria-labelledby="connectionTestModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="connectionTestModalLabel">{% trans "نتيجة اختبار الاتصال" %}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="connectionTestResult"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">{% trans "إغلاق" %}</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
-
-
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     $(document).ready(function() {
         // اختبار الاتصال بقاعدة البيانات
         $('.test-connection').click(function(e) {
@@ -247,5 +265,5 @@
 
 
     });
-</script>
+    </script>
 {% endblock %}

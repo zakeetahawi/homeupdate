@@ -1,161 +1,174 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}كشف حساب - {{ account.name }}{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">المحاسبة</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'accounting:account_list' %}">الحسابات</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'accounting:account_detail' account.pk %}">{{ account.code }}</a></li>
-                    <li class="breadcrumb-item active">كشف حساب</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2 class="mb-0">
-                    <i class="fas fa-file-alt me-2"></i>
-                    كشف حساب: {{ account.name }}
-                </h2>
-                <button onclick="window.print()" class="btn btn-outline-secondary">
-                    <i class="fas fa-print me-1"></i> طباعة
-                </button>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'accounting:dashboard' %}">المحاسبة</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'accounting:account_list' %}">الحسابات</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'accounting:account_detail' account.pk %}">{{ account.code }}</a>
+                        </li>
+                        <li class="breadcrumb-item active">كشف حساب</li>
+                    </ol>
+                </nav>
             </div>
         </div>
-    </div>
-
-    <!-- فلترة التاريخ -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <form method="get" class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">من تاريخ</label>
-                            <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">إلى تاريخ</label>
-                            <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
-                        </div>
-                        <div class="col-md-4 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary me-2">
-                                <i class="fas fa-filter me-1"></i> تصفية
-                            </button>
-                            <a href="{% url 'accounting:account_statement' account.pk %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times me-1"></i> إلغاء
-                            </a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- معلومات الحساب -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
-                    <h6 class="text-muted mb-2">معلومات الحساب</h6>
-                    <p class="mb-1"><strong>الكود:</strong> {{ account.code }}</p>
-                    <p class="mb-1"><strong>الاسم:</strong> {{ account.name }}</p>
-                    <p class="mb-0"><strong>النوع:</strong> {{ account.account_type.name }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card bg-light">
-                <div class="card-body text-center">
-                    <h6 class="text-muted mb-2">الرصيد الحالي</h6>
-                    <h2 class="{% if account.current_balance > 0 %}text-success{% elif account.current_balance < 0 %}text-danger{% endif %} mb-0">
-                        {{ account.current_balance|floatformat:2 }} {{ currency_symbol }}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>
+                        كشف حساب: {{ account.name }}
                     </h2>
+                    <button onclick="window.print()" class="btn btn-outline-secondary">
+                        <i class="fas fa-print me-1"></i> طباعة
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- كشف الحساب -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover mb-0">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>التاريخ</th>
-                                    <th>رقم القيد</th>
-                                    <th>البيان</th>
-                                    <th class="text-success">مدين</th>
-                                    <th class="text-danger">دائن</th>
-                                    <th>الرصيد</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- الرصيد الافتتاحي -->
-                                <tr class="table-info">
-                                    <td>-</td>
-                                    <td>-</td>
-                                    <td><strong>رصيد افتتاحي</strong></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td><strong>{{ account.opening_balance|floatformat:2 }}</strong></td>
-                                </tr>
-                                
-                                {% for item in statement_lines %}
-                                <tr>
-                                    <td>{{ item.line.transaction.date }}</td>
-                                    <td>
-                                        <a href="{% url 'accounting:transaction_detail' item.line.transaction.pk %}">
-                                            {{ item.line.transaction.transaction_number }}
-                                        </a>
-                                    </td>
-                                    <td>{{ item.line.description|default:item.line.transaction.description }}</td>
-                                    <td class="text-success">
-                                        {% if item.line.debit > 0 %}{{ item.line.debit|floatformat:2 }}{% endif %}
-                                    </td>
-                                    <td class="text-danger">
-                                        {% if item.line.credit > 0 %}{{ item.line.credit|floatformat:2 }}{% endif %}
-                                    </td>
-                                    <td class="{% if item.balance > 0 %}text-success{% elif item.balance < 0 %}text-danger{% endif %} fw-bold">
-                                        {{ item.balance|floatformat:2 }}
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">
-                                        لا توجد حركات في الفترة المحددة
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot class="table-dark">
-                                <tr>
-                                    <th colspan="3">الرصيد الختامي</th>
-                                    <th></th>
-                                    <th></th>
-                                    <th>{{ account.current_balance|floatformat:2 }}</th>
-                                </tr>
-                            </tfoot>
-                        </table>
+        <!-- فلترة التاريخ -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="get" class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">من تاريخ</label>
+                                <input type="date"
+                                       name="start_date"
+                                       class="form-control"
+                                       value="{{ start_date|date:'Y-m-d' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">إلى تاريخ</label>
+                                <input type="date"
+                                       name="end_date"
+                                       class="form-control"
+                                       value="{{ end_date|date:'Y-m-d' }}">
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary me-2">
+                                    <i class="fas fa-filter me-1"></i> تصفية
+                                </button>
+                                <a href="{% url 'accounting:account_statement' account.pk %}"
+                                   class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i> إلغاء
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- معلومات الحساب -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="text-muted mb-2">معلومات الحساب</h6>
+                        <p class="mb-1">
+                            <strong>الكود:</strong> {{ account.code }}
+                        </p>
+                        <p class="mb-1">
+                            <strong>الاسم:</strong> {{ account.name }}
+                        </p>
+                        <p class="mb-0">
+                            <strong>النوع:</strong> {{ account.account_type.name }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">الرصيد الحالي</h6>
+                        <h2 class="{% if account.current_balance > 0 %}text-success{% elif account.current_balance < 0 %}text-danger{% endif %} mb-0">
+                            {{ account.current_balance|floatformat:2 }} {{ currency_symbol }}
+                        </h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- كشف الحساب -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>رقم القيد</th>
+                                        <th>البيان</th>
+                                        <th class="text-success">مدين</th>
+                                        <th class="text-danger">دائن</th>
+                                        <th>الرصيد</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- الرصيد الافتتاحي -->
+                                    <tr class="table-info">
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td>
+                                            <strong>رصيد افتتاحي</strong>
+                                        </td>
+                                        <td></td>
+                                        <td></td>
+                                        <td>
+                                            <strong>{{ account.opening_balance|floatformat:2 }}</strong>
+                                        </td>
+                                    </tr>
+                                    {% for item in statement_lines %}
+                                        <tr>
+                                            <td>{{ item.line.transaction.date }}</td>
+                                            <td>
+                                                <a href="{% url 'accounting:transaction_detail' item.line.transaction.pk %}">
+                                                    {{ item.line.transaction.transaction_number }}
+                                                </a>
+                                            </td>
+                                            <td>{{ item.line.description|default:item.line.transaction.description }}</td>
+                                            <td class="text-success">
+                                                {% if item.line.debit > 0 %}{{ item.line.debit|floatformat:2 }}{% endif %}
+                                            </td>
+                                            <td class="text-danger">
+                                                {% if item.line.credit > 0 %}{{ item.line.credit|floatformat:2 }}{% endif %}
+                                            </td>
+                                            <td class="{% if item.balance > 0 %}text-success{% elif item.balance < 0 %}text-danger{% endif %} fw-bold">
+                                                {{ item.balance|floatformat:2 }}
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="6" class="text-center py-4 text-muted">لا توجد حركات في الفترة المحددة</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-dark">
+                                    <tr>
+                                        <th colspan="3">الرصيد الختامي</th>
+                                        <th></th>
+                                        <th></th>
+                                        <th>{{ account.current_balance|floatformat:2 }}</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<style>
+    <style>
 @media print {
     .navbar, .breadcrumb, form, .btn {
         display: none !important;
@@ -164,5 +177,5 @@
         border: 1px solid #ddd !important;
     }
 }
-</style>
+    </style>
 {% endblock %}

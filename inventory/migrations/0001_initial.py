@@ -11,813 +11,813 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('accounts', '0001_initial'),
+        ("accounts", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Supplier',
+            name="Supplier",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('name', models.CharField(max_length=200, verbose_name='اسم المورد')),
+                ("name", models.CharField(max_length=200, verbose_name="اسم المورد")),
                 (
-                    'contact_person',
+                    "contact_person",
                     models.CharField(
-                        blank=True, max_length=100, verbose_name='جهة الاتصال'
+                        blank=True, max_length=100, verbose_name="جهة الاتصال"
                     ),
                 ),
                 (
-                    'phone',
+                    "phone",
                     models.CharField(
-                        blank=True, max_length=20, verbose_name='رقم الهاتف'
+                        blank=True, max_length=20, verbose_name="رقم الهاتف"
                     ),
                 ),
                 (
-                    'email',
+                    "email",
                     models.EmailField(
-                        blank=True, max_length=254, verbose_name='البريد الإلكتروني'
+                        blank=True, max_length=254, verbose_name="البريد الإلكتروني"
                     ),
                 ),
-                ('address', models.TextField(blank=True, verbose_name='العنوان')),
+                ("address", models.TextField(blank=True, verbose_name="العنوان")),
                 (
-                    'tax_number',
+                    "tax_number",
                     models.CharField(
-                        blank=True, max_length=50, verbose_name='الرقم الضريبي'
+                        blank=True, max_length=50, verbose_name="الرقم الضريبي"
                     ),
                 ),
-                ('notes', models.TextField(blank=True, verbose_name='ملاحظات')),
+                ("notes", models.TextField(blank=True, verbose_name="ملاحظات")),
             ],
             options={
-                'verbose_name': 'مورد',
-                'verbose_name_plural': 'الموردين',
-                'ordering': ['name'],
+                "verbose_name": "مورد",
+                "verbose_name_plural": "الموردين",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Category',
+            name="Category",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('name', models.CharField(max_length=100, verbose_name='اسم الفئة')),
-                ('description', models.TextField(blank=True, verbose_name='الوصف')),
+                ("name", models.CharField(max_length=100, verbose_name="اسم الفئة")),
+                ("description", models.TextField(blank=True, verbose_name="الوصف")),
                 (
-                    'parent',
+                    "parent",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='children',
-                        to='inventory.category',
-                        verbose_name='الفئة الأب',
+                        related_name="children",
+                        to="inventory.category",
+                        verbose_name="الفئة الأب",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'فئة',
-                'verbose_name_plural': 'الفئات',
-                'ordering': ['name'],
+                "verbose_name": "فئة",
+                "verbose_name_plural": "الفئات",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Product',
+            name="Product",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('name', models.CharField(max_length=255)),
+                ("name", models.CharField(max_length=255)),
                 (
-                    'code',
+                    "code",
                     models.CharField(blank=True, max_length=50, null=True, unique=True),
                 ),
-                ('price', models.DecimalField(decimal_places=2, max_digits=10)),
+                ("price", models.DecimalField(decimal_places=2, max_digits=10)),
                 (
-                    'currency',
+                    "currency",
                     models.CharField(
-                        default='EGP', max_length=3, verbose_name='العملة'
+                        default="EGP", max_length=3, verbose_name="العملة"
                     ),
                 ),
-                ('description', models.TextField(blank=True, verbose_name='الوصف')),
+                ("description", models.TextField(blank=True, verbose_name="الوصف")),
                 (
-                    'minimum_stock',
+                    "minimum_stock",
                     models.PositiveIntegerField(
-                        default=0, verbose_name='الحد الأدنى للمخزون'
+                        default=0, verbose_name="الحد الأدنى للمخزون"
                     ),
                 ),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'updated_at',
-                    models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث'),
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث"),
                 ),
                 (
-                    'category',
+                    "category",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='products',
-                        to='inventory.category',
-                        verbose_name='الفئة',
+                        related_name="products",
+                        to="inventory.category",
+                        verbose_name="الفئة",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'منتج',
-                'verbose_name_plural': 'منتجات',
-                'ordering': ['-created_at'],
+                "verbose_name": "منتج",
+                "verbose_name_plural": "منتجات",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='ProductBatch',
+            name="ProductBatch",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'batch_number',
-                    models.CharField(max_length=50, verbose_name='رقم الدفعة'),
+                    "batch_number",
+                    models.CharField(max_length=50, verbose_name="رقم الدفعة"),
                 ),
-                ('quantity', models.PositiveIntegerField(verbose_name='الكمية')),
+                ("quantity", models.PositiveIntegerField(verbose_name="الكمية")),
                 (
-                    'manufacturing_date',
+                    "manufacturing_date",
                     models.DateField(
-                        blank=True, null=True, verbose_name='تاريخ التصنيع'
+                        blank=True, null=True, verbose_name="تاريخ التصنيع"
                     ),
                 ),
                 (
-                    'expiry_date',
+                    "expiry_date",
                     models.DateField(
-                        blank=True, null=True, verbose_name='تاريخ الصلاحية'
+                        blank=True, null=True, verbose_name="تاريخ الصلاحية"
                     ),
                 ),
                 (
-                    'barcode',
+                    "barcode",
                     models.CharField(
-                        blank=True, max_length=100, verbose_name='الباركود'
+                        blank=True, max_length=100, verbose_name="الباركود"
                     ),
                 ),
                 (
-                    'cost_price',
+                    "cost_price",
                     models.DecimalField(
                         decimal_places=2,
                         default=0,
                         max_digits=10,
-                        verbose_name='سعر التكلفة',
+                        verbose_name="سعر التكلفة",
                     ),
                 ),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'product',
+                    "product",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='batches',
-                        to='inventory.product',
-                        verbose_name='المنتج',
+                        related_name="batches",
+                        to="inventory.product",
+                        verbose_name="المنتج",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'دفعة منتج',
-                'verbose_name_plural': 'دفعات المنتجات',
-                'ordering': ['-created_at'],
+                "verbose_name": "دفعة منتج",
+                "verbose_name_plural": "دفعات المنتجات",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='InventoryAdjustment',
+            name="InventoryAdjustment",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'adjustment_type',
+                    "adjustment_type",
                     models.CharField(
-                        choices=[('increase', 'زيادة'), ('decrease', 'نقص')],
+                        choices=[("increase", "زيادة"), ("decrease", "نقص")],
                         max_length=10,
-                        verbose_name='نوع التسوية',
+                        verbose_name="نوع التسوية",
                     ),
                 ),
                 (
-                    'quantity_before',
+                    "quantity_before",
                     models.DecimalField(
-                        decimal_places=2, max_digits=10, verbose_name='الكمية قبل'
+                        decimal_places=2, max_digits=10, verbose_name="الكمية قبل"
                     ),
                 ),
                 (
-                    'quantity_after',
+                    "quantity_after",
                     models.DecimalField(
-                        decimal_places=2, max_digits=10, verbose_name='الكمية بعد'
+                        decimal_places=2, max_digits=10, verbose_name="الكمية بعد"
                     ),
                 ),
-                ('reason', models.TextField(verbose_name='سبب التسوية')),
+                ("reason", models.TextField(verbose_name="سبب التسوية")),
                 (
-                    'date',
+                    "date",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ التسوية'
+                        auto_now_add=True, verbose_name="تاريخ التسوية"
                     ),
                 ),
                 (
-                    'created_by',
+                    "created_by",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='inventory_adjustments',
+                        related_name="inventory_adjustments",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تم بواسطة',
+                        verbose_name="تم بواسطة",
                     ),
                 ),
                 (
-                    'product',
+                    "product",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='adjustments',
-                        to='inventory.product',
-                        verbose_name='المنتج',
+                        related_name="adjustments",
+                        to="inventory.product",
+                        verbose_name="المنتج",
                     ),
                 ),
                 (
-                    'batch',
+                    "batch",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='adjustments',
-                        to='inventory.productbatch',
-                        verbose_name='الدفعة',
+                        related_name="adjustments",
+                        to="inventory.productbatch",
+                        verbose_name="الدفعة",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'تسوية مخزون',
-                'verbose_name_plural': 'تسويات المخزون',
-                'ordering': ['-date'],
+                "verbose_name": "تسوية مخزون",
+                "verbose_name_plural": "تسويات المخزون",
+                "ordering": ["-date"],
             },
         ),
         migrations.CreateModel(
-            name='PurchaseOrder',
+            name="PurchaseOrder",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'order_number',
+                    "order_number",
                     models.CharField(
-                        max_length=50, unique=True, verbose_name='رقم الطلب'
+                        max_length=50, unique=True, verbose_name="رقم الطلب"
                     ),
                 ),
                 (
-                    'status',
+                    "status",
                     models.CharField(
                         choices=[
-                            ('draft', 'مسودة'),
-                            ('pending', 'قيد الانتظار'),
-                            ('approved', 'تمت الموافقة'),
-                            ('partial', 'استلام جزئي'),
-                            ('received', 'تم الاستلام'),
-                            ('cancelled', 'ملغي'),
+                            ("draft", "مسودة"),
+                            ("pending", "قيد الانتظار"),
+                            ("approved", "تمت الموافقة"),
+                            ("partial", "استلام جزئي"),
+                            ("received", "تم الاستلام"),
+                            ("cancelled", "ملغي"),
                         ],
-                        default='draft',
+                        default="draft",
                         max_length=10,
-                        verbose_name='الحالة',
+                        verbose_name="الحالة",
                     ),
                 ),
                 (
-                    'order_date',
-                    models.DateField(auto_now_add=True, verbose_name='تاريخ الطلب'),
+                    "order_date",
+                    models.DateField(auto_now_add=True, verbose_name="تاريخ الطلب"),
                 ),
                 (
-                    'expected_date',
+                    "expected_date",
                     models.DateField(
-                        blank=True, null=True, verbose_name='تاريخ التسليم المتوقع'
+                        blank=True, null=True, verbose_name="تاريخ التسليم المتوقع"
                     ),
                 ),
                 (
-                    'total_amount',
+                    "total_amount",
                     models.DecimalField(
                         decimal_places=2,
                         default=0,
                         max_digits=12,
-                        verbose_name='إجمالي المبلغ',
+                        verbose_name="إجمالي المبلغ",
                     ),
                 ),
-                ('notes', models.TextField(blank=True, verbose_name='ملاحظات')),
+                ("notes", models.TextField(blank=True, verbose_name="ملاحظات")),
                 (
-                    'created_by',
+                    "created_by",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='created_purchase_orders',
+                        related_name="created_purchase_orders",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تم بواسطة',
+                        verbose_name="تم بواسطة",
                     ),
                 ),
                 (
-                    'supplier',
+                    "supplier",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='purchase_orders',
-                        to='inventory.supplier',
-                        verbose_name='المورد',
+                        related_name="purchase_orders",
+                        to="inventory.supplier",
+                        verbose_name="المورد",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'طلب شراء',
-                'verbose_name_plural': 'طلبات الشراء',
-                'ordering': ['-order_date'],
+                "verbose_name": "طلب شراء",
+                "verbose_name_plural": "طلبات الشراء",
+                "ordering": ["-order_date"],
             },
         ),
         migrations.CreateModel(
-            name='PurchaseOrderItem',
+            name="PurchaseOrderItem",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('quantity', models.PositiveIntegerField(verbose_name='الكمية')),
+                ("quantity", models.PositiveIntegerField(verbose_name="الكمية")),
                 (
-                    'unit_price',
+                    "unit_price",
                     models.DecimalField(
-                        decimal_places=2, max_digits=10, verbose_name='سعر الوحدة'
+                        decimal_places=2, max_digits=10, verbose_name="سعر الوحدة"
                     ),
                 ),
                 (
-                    'received_quantity',
+                    "received_quantity",
                     models.PositiveIntegerField(
-                        default=0, verbose_name='الكمية المستلمة'
+                        default=0, verbose_name="الكمية المستلمة"
                     ),
                 ),
-                ('notes', models.TextField(blank=True, verbose_name='ملاحظات')),
+                ("notes", models.TextField(blank=True, verbose_name="ملاحظات")),
                 (
-                    'product',
+                    "product",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='purchase_order_items',
-                        to='inventory.product',
-                        verbose_name='المنتج',
+                        related_name="purchase_order_items",
+                        to="inventory.product",
+                        verbose_name="المنتج",
                     ),
                 ),
                 (
-                    'purchase_order',
+                    "purchase_order",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='items',
-                        to='inventory.purchaseorder',
-                        verbose_name='طلب الشراء',
+                        related_name="items",
+                        to="inventory.purchaseorder",
+                        verbose_name="طلب الشراء",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'عنصر طلب الشراء',
-                'verbose_name_plural': 'عناصر طلب الشراء',
-                'ordering': ['purchase_order', 'product'],
+                "verbose_name": "عنصر طلب الشراء",
+                "verbose_name_plural": "عناصر طلب الشراء",
+                "ordering": ["purchase_order", "product"],
             },
         ),
         migrations.CreateModel(
-            name='StockAlert',
+            name="StockAlert",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'alert_type',
+                    "alert_type",
                     models.CharField(
                         choices=[
-                            ('low_stock', 'مخزون منخفض'),
-                            ('expiry', 'قرب انتهاء الصلاحية'),
-                            ('out_of_stock', 'نفاد المخزون'),
-                            ('overstock', 'فائض في المخزون'),
-                            ('price_change', 'تغير في السعر'),
+                            ("low_stock", "مخزون منخفض"),
+                            ("expiry", "قرب انتهاء الصلاحية"),
+                            ("out_of_stock", "نفاد المخزون"),
+                            ("overstock", "فائض في المخزون"),
+                            ("price_change", "تغير في السعر"),
                         ],
                         max_length=15,
-                        verbose_name='نوع التنبيه',
+                        verbose_name="نوع التنبيه",
                     ),
                 ),
-                ('message', models.TextField(verbose_name='رسالة التنبيه')),
-                ('description', models.TextField(blank=True, verbose_name='الوصف')),
+                ("message", models.TextField(verbose_name="رسالة التنبيه")),
+                ("description", models.TextField(blank=True, verbose_name="الوصف")),
                 (
-                    'priority',
+                    "priority",
                     models.CharField(
                         choices=[
-                            ('high', 'عالية'),
-                            ('medium', 'متوسطة'),
-                            ('low', 'منخفضة'),
+                            ("high", "عالية"),
+                            ("medium", "متوسطة"),
+                            ("low", "منخفضة"),
                         ],
-                        default='medium',
+                        default="medium",
                         max_length=10,
-                        verbose_name='الأولوية',
+                        verbose_name="الأولوية",
                     ),
                 ),
                 (
-                    'status',
+                    "status",
                     models.CharField(
                         choices=[
-                            ('active', 'نشط'),
-                            ('resolved', 'تمت المعالجة'),
-                            ('ignored', 'تم تجاهله'),
+                            ("active", "نشط"),
+                            ("resolved", "تمت المعالجة"),
+                            ("ignored", "تم تجاهله"),
                         ],
-                        default='active',
+                        default="active",
                         max_length=10,
-                        verbose_name='الحالة',
+                        verbose_name="الحالة",
                     ),
                 ),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'resolved_at',
+                    "resolved_at",
                     models.DateTimeField(
-                        blank=True, null=True, verbose_name='تاريخ المعالجة'
+                        blank=True, null=True, verbose_name="تاريخ المعالجة"
                     ),
                 ),
                 (
-                    'product',
+                    "product",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='stock_alerts',
-                        to='inventory.product',
-                        verbose_name='المنتج',
+                        related_name="stock_alerts",
+                        to="inventory.product",
+                        verbose_name="المنتج",
                     ),
                 ),
                 (
-                    'resolved_by',
+                    "resolved_by",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='resolved_stock_alerts',
+                        related_name="resolved_stock_alerts",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تمت المعالجة بواسطة',
+                        verbose_name="تمت المعالجة بواسطة",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'تنبيه مخزون',
-                'verbose_name_plural': 'تنبيهات المخزون',
-                'ordering': ['-created_at'],
+                "verbose_name": "تنبيه مخزون",
+                "verbose_name_plural": "تنبيهات المخزون",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='StockTransaction',
+            name="StockTransaction",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'transaction_type',
+                    "transaction_type",
                     models.CharField(
                         choices=[
-                            ('in', 'وارد'),
-                            ('out', 'صادر'),
-                            ('transfer', 'نقل'),
-                            ('adjustment', 'تسوية'),
+                            ("in", "وارد"),
+                            ("out", "صادر"),
+                            ("transfer", "نقل"),
+                            ("adjustment", "تسوية"),
                         ],
                         max_length=10,
-                        verbose_name='نوع الحركة',
+                        verbose_name="نوع الحركة",
                     ),
                 ),
                 (
-                    'reason',
+                    "reason",
                     models.CharField(
                         choices=[
-                            ('purchase', 'شراء'),
-                            ('sale', 'بيع'),
-                            ('return', 'مرتجع'),
-                            ('transfer', 'نقل'),
-                            ('inventory_check', 'جرد'),
-                            ('damage', 'تلف'),
-                            ('production', 'إنتاج'),
-                            ('other', 'أخرى'),
+                            ("purchase", "شراء"),
+                            ("sale", "بيع"),
+                            ("return", "مرتجع"),
+                            ("transfer", "نقل"),
+                            ("inventory_check", "جرد"),
+                            ("damage", "تلف"),
+                            ("production", "إنتاج"),
+                            ("other", "أخرى"),
                         ],
-                        default='other',
+                        default="other",
                         max_length=20,
-                        verbose_name='السبب',
+                        verbose_name="السبب",
                     ),
                 ),
                 (
-                    'quantity',
+                    "quantity",
                     models.DecimalField(
-                        decimal_places=2, max_digits=10, verbose_name='الكمية'
+                        decimal_places=2, max_digits=10, verbose_name="الكمية"
                     ),
                 ),
                 (
-                    'reference',
-                    models.CharField(blank=True, max_length=100, verbose_name='المرجع'),
+                    "reference",
+                    models.CharField(blank=True, max_length=100, verbose_name="المرجع"),
                 ),
                 (
-                    'transaction_date',
+                    "transaction_date",
                     models.DateTimeField(
-                        default=django.utils.timezone.now, verbose_name='تاريخ العملية'
+                        default=django.utils.timezone.now, verbose_name="تاريخ العملية"
                     ),
                 ),
                 (
-                    'date',
+                    "date",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ التسجيل'
+                        auto_now_add=True, verbose_name="تاريخ التسجيل"
                     ),
                 ),
-                ('notes', models.TextField(blank=True, verbose_name='ملاحظات')),
+                ("notes", models.TextField(blank=True, verbose_name="ملاحظات")),
                 (
-                    'running_balance',
+                    "running_balance",
                     models.DecimalField(
                         decimal_places=2,
                         default=0,
                         max_digits=10,
-                        verbose_name='الرصيد المتحرك',
+                        verbose_name="الرصيد المتحرك",
                     ),
                 ),
                 (
-                    'created_by',
+                    "created_by",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='stock_transactions',
+                        related_name="stock_transactions",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تم بواسطة',
+                        verbose_name="تم بواسطة",
                     ),
                 ),
                 (
-                    'product',
+                    "product",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='transactions',
-                        to='inventory.product',
-                        verbose_name='المنتج',
+                        related_name="transactions",
+                        to="inventory.product",
+                        verbose_name="المنتج",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'حركة مخزون',
-                'verbose_name_plural': 'حركات المخزون',
-                'ordering': ['-transaction_date', '-date'],
+                "verbose_name": "حركة مخزون",
+                "verbose_name_plural": "حركات المخزون",
+                "ordering": ["-transaction_date", "-date"],
             },
         ),
         migrations.CreateModel(
-            name='Warehouse',
+            name="Warehouse",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('name', models.CharField(max_length=100, verbose_name='اسم المستودع')),
+                ("name", models.CharField(max_length=100, verbose_name="اسم المستودع")),
                 (
-                    'code',
+                    "code",
                     models.CharField(
-                        max_length=20, unique=True, verbose_name='رمز المستودع'
+                        max_length=20, unique=True, verbose_name="رمز المستودع"
                     ),
                 ),
-                ('address', models.TextField(blank=True, verbose_name='العنوان')),
-                ('is_active', models.BooleanField(default=True, verbose_name='نشط')),
-                ('notes', models.TextField(blank=True, verbose_name='ملاحظات')),
+                ("address", models.TextField(blank=True, verbose_name="العنوان")),
+                ("is_active", models.BooleanField(default=True, verbose_name="نشط")),
+                ("notes", models.TextField(blank=True, verbose_name="ملاحظات")),
                 (
-                    'branch',
+                    "branch",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='warehouses',
-                        to='accounts.branch',
-                        verbose_name='الفرع',
+                        related_name="warehouses",
+                        to="accounts.branch",
+                        verbose_name="الفرع",
                     ),
                 ),
                 (
-                    'manager',
+                    "manager",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='managed_warehouses',
+                        related_name="managed_warehouses",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='المدير',
+                        verbose_name="المدير",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'مستودع',
-                'verbose_name_plural': 'المستودعات',
-                'ordering': ['name'],
+                "verbose_name": "مستودع",
+                "verbose_name_plural": "المستودعات",
+                "ordering": ["name"],
             },
         ),
         migrations.AddField(
-            model_name='purchaseorder',
-            name='warehouse',
+            model_name="purchaseorder",
+            name="warehouse",
             field=models.ForeignKey(
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
-                related_name='purchase_orders',
-                to='inventory.warehouse',
-                verbose_name='المستودع',
+                related_name="purchase_orders",
+                to="inventory.warehouse",
+                verbose_name="المستودع",
             ),
         ),
         migrations.CreateModel(
-            name='WarehouseLocation',
+            name="WarehouseLocation",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('name', models.CharField(max_length=100, verbose_name='اسم الموقع')),
-                ('code', models.CharField(max_length=30, verbose_name='رمز الموقع')),
-                ('description', models.TextField(blank=True, verbose_name='الوصف')),
+                ("name", models.CharField(max_length=100, verbose_name="اسم الموقع")),
+                ("code", models.CharField(max_length=30, verbose_name="رمز الموقع")),
+                ("description", models.TextField(blank=True, verbose_name="الوصف")),
                 (
-                    'warehouse',
+                    "warehouse",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='locations',
-                        to='inventory.warehouse',
-                        verbose_name='المستودع',
+                        related_name="locations",
+                        to="inventory.warehouse",
+                        verbose_name="المستودع",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'موقع مستودع',
-                'verbose_name_plural': 'مواقع المستودعات',
-                'ordering': ['warehouse', 'name'],
+                "verbose_name": "موقع مستودع",
+                "verbose_name_plural": "مواقع المستودعات",
+                "ordering": ["warehouse", "name"],
             },
         ),
         migrations.AddField(
-            model_name='productbatch',
-            name='location',
+            model_name="productbatch",
+            name="location",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
-                related_name='product_batches',
-                to='inventory.warehouselocation',
-                verbose_name='الموقع',
+                related_name="product_batches",
+                to="inventory.warehouselocation",
+                verbose_name="الموقع",
             ),
         ),
         migrations.AddIndex(
-            model_name='product',
+            model_name="product",
             index=models.Index(
-                fields=['name', 'code'], name='inventory_p_name_af55cc_idx'
+                fields=["name", "code"], name="inventory_p_name_af55cc_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='product',
+            model_name="product",
             index=models.Index(
-                fields=['category'], name='inventory_p_categor_607069_idx'
+                fields=["category"], name="inventory_p_categor_607069_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='product',
+            model_name="product",
             index=models.Index(
-                fields=['created_at'], name='inventory_p_created_081871_idx'
+                fields=["created_at"], name="inventory_p_created_081871_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='inventoryadjustment',
-            index=models.Index(fields=['product'], name='adjustment_product_idx'),
+            model_name="inventoryadjustment",
+            index=models.Index(fields=["product"], name="adjustment_product_idx"),
         ),
         migrations.AddIndex(
-            model_name='inventoryadjustment',
-            index=models.Index(fields=['adjustment_type'], name='adjustment_type_idx'),
+            model_name="inventoryadjustment",
+            index=models.Index(fields=["adjustment_type"], name="adjustment_type_idx"),
         ),
         migrations.AddIndex(
-            model_name='inventoryadjustment',
-            index=models.Index(fields=['date'], name='adjustment_date_idx'),
+            model_name="inventoryadjustment",
+            index=models.Index(fields=["date"], name="adjustment_date_idx"),
         ),
         migrations.AddIndex(
-            model_name='stockalert',
-            index=models.Index(fields=['product'], name='alert_product_idx'),
+            model_name="stockalert",
+            index=models.Index(fields=["product"], name="alert_product_idx"),
         ),
         migrations.AddIndex(
-            model_name='stockalert',
-            index=models.Index(fields=['alert_type'], name='alert_type_idx'),
+            model_name="stockalert",
+            index=models.Index(fields=["alert_type"], name="alert_type_idx"),
         ),
         migrations.AddIndex(
-            model_name='stockalert',
-            index=models.Index(fields=['status'], name='alert_status_idx'),
+            model_name="stockalert",
+            index=models.Index(fields=["status"], name="alert_status_idx"),
         ),
         migrations.AddIndex(
-            model_name='stockalert',
-            index=models.Index(fields=['priority'], name='alert_priority_idx'),
+            model_name="stockalert",
+            index=models.Index(fields=["priority"], name="alert_priority_idx"),
         ),
         migrations.AddIndex(
-            model_name='stockalert',
-            index=models.Index(fields=['created_at'], name='alert_created_at_idx'),
+            model_name="stockalert",
+            index=models.Index(fields=["created_at"], name="alert_created_at_idx"),
         ),
         migrations.AddIndex(
-            model_name='stocktransaction',
-            index=models.Index(fields=['product'], name='transaction_product_idx'),
+            model_name="stocktransaction",
+            index=models.Index(fields=["product"], name="transaction_product_idx"),
         ),
         migrations.AddIndex(
-            model_name='stocktransaction',
+            model_name="stocktransaction",
             index=models.Index(
-                fields=['transaction_type'], name='transaction_type_idx'
+                fields=["transaction_type"], name="transaction_type_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='stocktransaction',
+            model_name="stocktransaction",
             index=models.Index(
-                fields=['transaction_date'], name='transaction_date_idx'
+                fields=["transaction_date"], name="transaction_date_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='purchaseorder',
-            index=models.Index(fields=['order_number'], name='po_number_idx'),
+            model_name="purchaseorder",
+            index=models.Index(fields=["order_number"], name="po_number_idx"),
         ),
         migrations.AddIndex(
-            model_name='purchaseorder',
-            index=models.Index(fields=['supplier'], name='po_supplier_idx'),
+            model_name="purchaseorder",
+            index=models.Index(fields=["supplier"], name="po_supplier_idx"),
         ),
         migrations.AddIndex(
-            model_name='purchaseorder',
-            index=models.Index(fields=['status'], name='po_status_idx'),
+            model_name="purchaseorder",
+            index=models.Index(fields=["status"], name="po_status_idx"),
         ),
         migrations.AddIndex(
-            model_name='purchaseorder',
-            index=models.Index(fields=['order_date'], name='po_date_idx'),
+            model_name="purchaseorder",
+            index=models.Index(fields=["order_date"], name="po_date_idx"),
         ),
         migrations.AlterUniqueTogether(
-            name='warehouselocation',
-            unique_together={('warehouse', 'code')},
+            name="warehouselocation",
+            unique_together={("warehouse", "code")},
         ),
         migrations.AddIndex(
-            model_name='productbatch',
-            index=models.Index(fields=['product'], name='batch_product_idx'),
+            model_name="productbatch",
+            index=models.Index(fields=["product"], name="batch_product_idx"),
         ),
         migrations.AddIndex(
-            model_name='productbatch',
-            index=models.Index(fields=['batch_number'], name='batch_number_idx'),
+            model_name="productbatch",
+            index=models.Index(fields=["batch_number"], name="batch_number_idx"),
         ),
         migrations.AddIndex(
-            model_name='productbatch',
-            index=models.Index(fields=['expiry_date'], name='batch_expiry_idx'),
+            model_name="productbatch",
+            index=models.Index(fields=["expiry_date"], name="batch_expiry_idx"),
         ),
     ]

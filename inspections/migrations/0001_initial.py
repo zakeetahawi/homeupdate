@@ -10,549 +10,549 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('accounts', '0001_initial'),
-        ('customers', '0001_initial'),
-        ('orders', '0001_initial'),
+        ("accounts", "0001_initial"),
+        ("customers", "0001_initial"),
+        ("orders", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Inspection',
+            name="Inspection",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'contract_number',
+                    "contract_number",
                     models.CharField(
                         blank=True,
                         max_length=50,
                         null=True,
                         unique=True,
-                        verbose_name='رقم العقد',
+                        verbose_name="رقم العقد",
                     ),
                 ),
                 (
-                    'is_from_orders',
-                    models.BooleanField(default=False, verbose_name='من قسم الطلبات'),
+                    "is_from_orders",
+                    models.BooleanField(default=False, verbose_name="من قسم الطلبات"),
                 ),
                 (
-                    'windows_count',
+                    "windows_count",
                     models.IntegerField(
-                        blank=True, null=True, verbose_name='عدد الشبابيك'
+                        blank=True, null=True, verbose_name="عدد الشبابيك"
                     ),
                 ),
                 (
-                    'inspection_file',
+                    "inspection_file",
                     models.FileField(
                         blank=True,
                         null=True,
-                        upload_to='inspections/files/',
-                        verbose_name='ملف المعاينة',
+                        upload_to="inspections/files/",
+                        verbose_name="ملف المعاينة",
                     ),
                 ),
                 (
-                    'google_drive_file_id',
+                    "google_drive_file_id",
                     models.CharField(
                         blank=True,
                         max_length=255,
                         null=True,
-                        verbose_name='معرف ملف Google Drive',
+                        verbose_name="معرف ملف Google Drive",
                     ),
                 ),
                 (
-                    'google_drive_file_url',
+                    "google_drive_file_url",
                     models.URLField(
-                        blank=True, null=True, verbose_name='رابط ملف Google Drive'
+                        blank=True, null=True, verbose_name="رابط ملف Google Drive"
                     ),
                 ),
                 (
-                    'google_drive_file_name',
+                    "google_drive_file_name",
                     models.CharField(
                         blank=True,
                         max_length=500,
                         null=True,
-                        verbose_name='اسم الملف في Google Drive',
+                        verbose_name="اسم الملف في Google Drive",
                     ),
                 ),
                 (
-                    'is_uploaded_to_drive',
+                    "is_uploaded_to_drive",
                     models.BooleanField(
-                        default=False, verbose_name='تم الرفع إلى Google Drive'
+                        default=False, verbose_name="تم الرفع إلى Google Drive"
                     ),
                 ),
-                ('request_date', models.DateField(verbose_name='تاريخ طلب المعاينة')),
+                ("request_date", models.DateField(verbose_name="تاريخ طلب المعاينة")),
                 (
-                    'scheduled_date',
-                    models.DateField(verbose_name='تاريخ تنفيذ المعاينة'),
+                    "scheduled_date",
+                    models.DateField(verbose_name="تاريخ تنفيذ المعاينة"),
                 ),
                 (
-                    'status',
+                    "status",
                     models.CharField(
                         choices=[
-                            ('pending', 'قيد الانتظار'),
-                            ('scheduled', 'مجدول'),
-                            ('completed', 'مكتملة'),
-                            ('cancelled', 'ملغية'),
+                            ("pending", "قيد الانتظار"),
+                            ("scheduled", "مجدول"),
+                            ("completed", "مكتملة"),
+                            ("cancelled", "ملغية"),
                         ],
-                        default='pending',
+                        default="pending",
                         max_length=10,
-                        verbose_name='الحالة',
+                        verbose_name="الحالة",
                     ),
                 ),
                 (
-                    'result',
+                    "result",
                     models.CharField(
                         blank=True,
-                        choices=[('passed', 'ناجحة'), ('failed', 'غير مجدية')],
+                        choices=[("passed", "ناجحة"), ("failed", "غير مجدية")],
                         max_length=10,
                         null=True,
-                        verbose_name='النتيجة',
+                        verbose_name="النتيجة",
                     ),
                 ),
-                ('notes', models.TextField(blank=True, verbose_name='ملاحظات')),
+                ("notes", models.TextField(blank=True, verbose_name="ملاحظات")),
                 (
-                    'order_notes',
+                    "order_notes",
                     models.TextField(
                         blank=True,
-                        help_text='نسخة ثابتة من ملاحظات الطلب',
-                        verbose_name='ملاحظات الطلب',
+                        help_text="نسخة ثابتة من ملاحظات الطلب",
+                        verbose_name="ملاحظات الطلب",
                     ),
                 ),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'updated_at',
-                    models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث'),
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث"),
                 ),
                 (
-                    'completed_at',
+                    "completed_at",
                     models.DateTimeField(
-                        blank=True, null=True, verbose_name='تاريخ الإكتمال'
+                        blank=True, null=True, verbose_name="تاريخ الإكتمال"
                     ),
                 ),
                 (
-                    'expected_delivery_date',
+                    "expected_delivery_date",
                     models.DateField(
                         blank=True,
-                        help_text='يتم حسابه تلقائياً بناءً على نوع الطلب',
+                        help_text="يتم حسابه تلقائياً بناءً على نوع الطلب",
                         null=True,
-                        verbose_name='تاريخ التسليم المتوقع',
+                        verbose_name="تاريخ التسليم المتوقع",
                     ),
                 ),
                 (
-                    'branch',
+                    "branch",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.PROTECT,
-                        related_name='inspections',
-                        to='accounts.branch',
-                        verbose_name='الفرع',
+                        related_name="inspections",
+                        to="accounts.branch",
+                        verbose_name="الفرع",
                     ),
                 ),
                 (
-                    'created_by',
+                    "created_by",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='created_inspections',
+                        related_name="created_inspections",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تم الإنشاء بواسطة',
+                        verbose_name="تم الإنشاء بواسطة",
                     ),
                 ),
                 (
-                    'customer',
+                    "customer",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.PROTECT,
-                        related_name='inspections',
-                        to='customers.customer',
-                        verbose_name='العميل',
+                        related_name="inspections",
+                        to="customers.customer",
+                        verbose_name="العميل",
                     ),
                 ),
                 (
-                    'inspector',
+                    "inspector",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='assigned_inspections',
+                        related_name="assigned_inspections",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='المعاين',
+                        verbose_name="المعاين",
                     ),
                 ),
                 (
-                    'order',
+                    "order",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='inspections',
-                        to='orders.order',
-                        verbose_name='الطلب المرتبط',
+                        related_name="inspections",
+                        to="orders.order",
+                        verbose_name="الطلب المرتبط",
                     ),
                 ),
                 (
-                    'responsible_employee',
+                    "responsible_employee",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='inspections',
-                        to='accounts.salesperson',
-                        verbose_name='البائع',
+                        related_name="inspections",
+                        to="accounts.salesperson",
+                        verbose_name="البائع",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'معاينة',
-                'verbose_name_plural': 'المعاينات',
-                'ordering': ['-request_date'],
+                "verbose_name": "معاينة",
+                "verbose_name_plural": "المعاينات",
+                "ordering": ["-request_date"],
             },
         ),
         migrations.CreateModel(
-            name='InspectionEvaluation',
+            name="InspectionEvaluation",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'criteria',
+                    "criteria",
                     models.CharField(
                         choices=[
-                            ('location', 'الموقع'),
-                            ('condition', 'الحالة'),
-                            ('suitability', 'الملاءمة'),
-                            ('safety', 'السلامة'),
-                            ('accessibility', 'سهولة الوصول'),
+                            ("location", "الموقع"),
+                            ("condition", "الحالة"),
+                            ("suitability", "الملاءمة"),
+                            ("safety", "السلامة"),
+                            ("accessibility", "سهولة الوصول"),
                         ],
                         max_length=20,
-                        verbose_name='معيار التقييم',
+                        verbose_name="معيار التقييم",
                     ),
                 ),
                 (
-                    'rating',
+                    "rating",
                     models.IntegerField(
                         choices=[
-                            (1, 'ضعيف'),
-                            (2, 'مقبول'),
-                            (3, 'جيد'),
-                            (4, 'جيد جداً'),
-                            (5, 'ممتاز'),
+                            (1, "ضعيف"),
+                            (2, "مقبول"),
+                            (3, "جيد"),
+                            (4, "جيد جداً"),
+                            (5, "ممتاز"),
                         ],
-                        verbose_name='التقييم',
+                        verbose_name="التقييم",
                     ),
                 ),
-                ('notes', models.TextField(blank=True, verbose_name='ملاحظات التقييم')),
+                ("notes", models.TextField(blank=True, verbose_name="ملاحظات التقييم")),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ التقييم'
+                        auto_now_add=True, verbose_name="تاريخ التقييم"
                     ),
                 ),
                 (
-                    'created_by',
+                    "created_by",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='evaluations_created',
+                        related_name="evaluations_created",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تم التقييم بواسطة',
+                        verbose_name="تم التقييم بواسطة",
                     ),
                 ),
                 (
-                    'inspection',
+                    "inspection",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='evaluations',
-                        to='inspections.inspection',
-                        verbose_name='المعاينة',
+                        related_name="evaluations",
+                        to="inspections.inspection",
+                        verbose_name="المعاينة",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'تقييم المعاينة',
-                'verbose_name_plural': 'تقييمات المعاينات',
+                "verbose_name": "تقييم المعاينة",
+                "verbose_name_plural": "تقييمات المعاينات",
             },
         ),
         migrations.CreateModel(
-            name='InspectionNotification',
+            name="InspectionNotification",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'type',
+                    "type",
                     models.CharField(
                         choices=[
-                            ('scheduled', 'موعد معاينة'),
-                            ('reminder', 'تذكير'),
-                            ('status_change', 'تغيير الحالة'),
-                            ('evaluation', 'تقييم جديد'),
+                            ("scheduled", "موعد معاينة"),
+                            ("reminder", "تذكير"),
+                            ("status_change", "تغيير الحالة"),
+                            ("evaluation", "تقييم جديد"),
                         ],
                         max_length=20,
-                        verbose_name='نوع التنبيه',
+                        verbose_name="نوع التنبيه",
                     ),
                 ),
-                ('message', models.TextField(verbose_name='نص التنبيه')),
+                ("message", models.TextField(verbose_name="نص التنبيه")),
                 (
-                    'is_read',
-                    models.BooleanField(default=False, verbose_name='تم القراءة'),
+                    "is_read",
+                    models.BooleanField(default=False, verbose_name="تم القراءة"),
                 ),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ التنبيه'
+                        auto_now_add=True, verbose_name="تاريخ التنبيه"
                     ),
                 ),
                 (
-                    'scheduled_for',
+                    "scheduled_for",
                     models.DateTimeField(
-                        blank=True, null=True, verbose_name='موعد التنبيه'
+                        blank=True, null=True, verbose_name="موعد التنبيه"
                     ),
                 ),
                 (
-                    'inspection',
+                    "inspection",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='notifications',
-                        to='inspections.inspection',
-                        verbose_name='المعاينة',
+                        related_name="notifications",
+                        to="inspections.inspection",
+                        verbose_name="المعاينة",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'تنبيه معاينة',
-                'verbose_name_plural': 'تنبيهات المعاينات',
-                'ordering': ['-created_at'],
+                "verbose_name": "تنبيه معاينة",
+                "verbose_name_plural": "تنبيهات المعاينات",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='InspectionReport',
+            name="InspectionReport",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'title',
-                    models.CharField(max_length=200, verbose_name='عنوان التقرير'),
+                    "title",
+                    models.CharField(max_length=200, verbose_name="عنوان التقرير"),
                 ),
                 (
-                    'report_type',
+                    "report_type",
                     models.CharField(
                         choices=[
-                            ('daily', 'يومي'),
-                            ('weekly', 'أسبوعي'),
-                            ('monthly', 'شهري'),
-                            ('custom', 'مخصص'),
+                            ("daily", "يومي"),
+                            ("weekly", "أسبوعي"),
+                            ("monthly", "شهري"),
+                            ("custom", "مخصص"),
                         ],
                         max_length=10,
-                        verbose_name='نوع التقرير',
+                        verbose_name="نوع التقرير",
                     ),
                 ),
-                ('date_from', models.DateField(verbose_name='من تاريخ')),
-                ('date_to', models.DateField(verbose_name='إلى تاريخ')),
+                ("date_from", models.DateField(verbose_name="من تاريخ")),
+                ("date_to", models.DateField(verbose_name="إلى تاريخ")),
                 (
-                    'total_inspections',
-                    models.IntegerField(default=0, verbose_name='إجمالي المعاينات'),
+                    "total_inspections",
+                    models.IntegerField(default=0, verbose_name="إجمالي المعاينات"),
                 ),
                 (
-                    'successful_inspections',
-                    models.IntegerField(default=0, verbose_name='المعاينات الناجحة'),
+                    "successful_inspections",
+                    models.IntegerField(default=0, verbose_name="المعاينات الناجحة"),
                 ),
                 (
-                    'pending_inspections',
-                    models.IntegerField(default=0, verbose_name='المعاينات المعلقة'),
+                    "pending_inspections",
+                    models.IntegerField(default=0, verbose_name="المعاينات المعلقة"),
                 ),
                 (
-                    'cancelled_inspections',
-                    models.IntegerField(default=0, verbose_name='المعاينات الملغاة'),
+                    "cancelled_inspections",
+                    models.IntegerField(default=0, verbose_name="المعاينات الملغاة"),
                 ),
-                ('notes', models.TextField(blank=True, verbose_name='ملاحظات')),
+                ("notes", models.TextField(blank=True, verbose_name="ملاحظات")),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ إنشاء التقرير'
+                        auto_now_add=True, verbose_name="تاريخ إنشاء التقرير"
                     ),
                 ),
                 (
-                    'branch',
+                    "branch",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='inspection_reports',
-                        to='accounts.branch',
-                        verbose_name='الفرع',
+                        related_name="inspection_reports",
+                        to="accounts.branch",
+                        verbose_name="الفرع",
                     ),
                 ),
                 (
-                    'created_by',
+                    "created_by",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='inspection_reports_created',
+                        related_name="inspection_reports_created",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تم الإنشاء بواسطة',
+                        verbose_name="تم الإنشاء بواسطة",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'تقرير معاينات',
-                'verbose_name_plural': 'تقارير المعاينات',
-                'ordering': ['-created_at'],
+                "verbose_name": "تقرير معاينات",
+                "verbose_name_plural": "تقارير المعاينات",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.AddIndex(
-            model_name='inspection',
+            model_name="inspection",
             index=models.Index(
-                fields=['contract_number'], name='inspection_contract_idx'
+                fields=["contract_number"], name="inspection_contract_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='inspection',
-            index=models.Index(fields=['customer'], name='inspection_customer_idx'),
+            model_name="inspection",
+            index=models.Index(fields=["customer"], name="inspection_customer_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspection',
-            index=models.Index(fields=['branch'], name='inspection_branch_idx'),
+            model_name="inspection",
+            index=models.Index(fields=["branch"], name="inspection_branch_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspection',
-            index=models.Index(fields=['inspector'], name='inspection_inspector_idx'),
+            model_name="inspection",
+            index=models.Index(fields=["inspector"], name="inspection_inspector_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspection',
-            index=models.Index(fields=['status'], name='inspection_status_idx'),
+            model_name="inspection",
+            index=models.Index(fields=["status"], name="inspection_status_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspection',
-            index=models.Index(fields=['result'], name='inspection_result_idx'),
+            model_name="inspection",
+            index=models.Index(fields=["result"], name="inspection_result_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspection',
-            index=models.Index(fields=['request_date'], name='inspection_req_date_idx'),
+            model_name="inspection",
+            index=models.Index(fields=["request_date"], name="inspection_req_date_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspection',
+            model_name="inspection",
             index=models.Index(
-                fields=['scheduled_date'], name='inspection_sched_date_idx'
+                fields=["scheduled_date"], name="inspection_sched_date_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='inspection',
-            index=models.Index(fields=['order'], name='inspection_order_idx'),
+            model_name="inspection",
+            index=models.Index(fields=["order"], name="inspection_order_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspection',
-            index=models.Index(fields=['created_at'], name='inspection_created_idx'),
+            model_name="inspection",
+            index=models.Index(fields=["created_at"], name="inspection_created_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspectionevaluation',
-            index=models.Index(fields=['inspection'], name='inspection_eval_insp_idx'),
+            model_name="inspectionevaluation",
+            index=models.Index(fields=["inspection"], name="inspection_eval_insp_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspectionevaluation',
+            model_name="inspectionevaluation",
             index=models.Index(
-                fields=['criteria'], name='inspection_eval_criteria_idx'
+                fields=["criteria"], name="inspection_eval_criteria_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='inspectionevaluation',
-            index=models.Index(fields=['rating'], name='inspection_eval_rating_idx'),
+            model_name="inspectionevaluation",
+            index=models.Index(fields=["rating"], name="inspection_eval_rating_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspectionevaluation',
+            model_name="inspectionevaluation",
             index=models.Index(
-                fields=['created_by'], name='inspection_eval_creator_idx'
+                fields=["created_by"], name="inspection_eval_creator_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='inspectionevaluation',
+            model_name="inspectionevaluation",
             index=models.Index(
-                fields=['created_at'], name='inspection_eval_created_idx'
+                fields=["created_at"], name="inspection_eval_created_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='inspectionnotification',
-            index=models.Index(fields=['inspection'], name='inspection_notif_insp_idx'),
+            model_name="inspectionnotification",
+            index=models.Index(fields=["inspection"], name="inspection_notif_insp_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspectionnotification',
-            index=models.Index(fields=['type'], name='inspection_notif_type_idx'),
+            model_name="inspectionnotification",
+            index=models.Index(fields=["type"], name="inspection_notif_type_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspectionnotification',
-            index=models.Index(fields=['is_read'], name='inspection_notif_read_idx'),
+            model_name="inspectionnotification",
+            index=models.Index(fields=["is_read"], name="inspection_notif_read_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspectionnotification',
+            model_name="inspectionnotification",
             index=models.Index(
-                fields=['created_at'], name='inspection_notif_created_idx'
+                fields=["created_at"], name="inspection_notif_created_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='inspectionnotification',
+            model_name="inspectionnotification",
             index=models.Index(
-                fields=['scheduled_for'], name='inspection_notif_scheduled_idx'
+                fields=["scheduled_for"], name="inspection_notif_scheduled_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='inspectionreport',
+            model_name="inspectionreport",
             index=models.Index(
-                fields=['report_type'], name='inspection_report_type_idx'
+                fields=["report_type"], name="inspection_report_type_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='inspectionreport',
-            index=models.Index(fields=['branch'], name='inspection_report_branch_idx'),
+            model_name="inspectionreport",
+            index=models.Index(fields=["branch"], name="inspection_report_branch_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspectionreport',
-            index=models.Index(fields=['date_from'], name='inspection_report_from_idx'),
+            model_name="inspectionreport",
+            index=models.Index(fields=["date_from"], name="inspection_report_from_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspectionreport',
-            index=models.Index(fields=['date_to'], name='inspection_report_to_idx'),
+            model_name="inspectionreport",
+            index=models.Index(fields=["date_to"], name="inspection_report_to_idx"),
         ),
         migrations.AddIndex(
-            model_name='inspectionreport',
+            model_name="inspectionreport",
             index=models.Index(
-                fields=['created_at'], name='inspection_report_created_idx'
+                fields=["created_at"], name="inspection_report_created_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='inspectionreport',
+            model_name="inspectionreport",
             index=models.Index(
-                fields=['created_by'], name='inspection_report_creator_idx'
+                fields=["created_by"], name="inspection_report_creator_idx"
             ),
         ),
     ]

@@ -8,7 +8,7 @@ from django.utils.html import format_html
 
 class UserActivityAdminConfig:
     """إعدادات تخصيص لوحة إدارة نشاط المستخدمين"""
-    
+
     @staticmethod
     def customize_admin_site():
         """تخصيص موقع الإدارة الرئيسي"""
@@ -16,10 +16,10 @@ class UserActivityAdminConfig:
         admin.site.site_header = "📊 نظام إدارة الخواجة - لوحة التحكم"
         admin.site.site_title = "إدارة النظام"
         admin.site.index_title = "مرحباً بك في لوحة التحكم"
-        
+
         # إضافة CSS مخصص
         admin.site.enable_nav_sidebar = True
-    
+
     @staticmethod
     def get_admin_css():
         """CSS مخصص للوحة الإدارة"""
@@ -174,40 +174,41 @@ class UserActivityAdminConfig:
 
 class UserActivityAdminMixin:
     """Mixin لتحسين عرض نماذج نشاط المستخدمين"""
-    
+
     def changelist_view(self, request, extra_context=None):
         """تخصيص عرض قائمة التغييرات"""
         extra_context = extra_context or {}
-        extra_context['custom_css'] = UserActivityAdminConfig.get_admin_css()
-        extra_context['title'] = f"📊 {self.model._meta.verbose_name_plural}"
+        extra_context["custom_css"] = UserActivityAdminConfig.get_admin_css()
+        extra_context["title"] = f"📊 {self.model._meta.verbose_name_plural}"
         return super().changelist_view(request, extra_context)
-    
-    def change_view(self, request, object_id, form_url='', extra_context=None):
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
         """تخصيص عرض التفاصيل"""
         extra_context = extra_context or {}
-        extra_context['custom_css'] = UserActivityAdminConfig.get_admin_css()
+        extra_context["custom_css"] = UserActivityAdminConfig.get_admin_css()
         return super().change_view(request, object_id, form_url, extra_context)
-    
-    def add_view(self, request, form_url='', extra_context=None):
+
+    def add_view(self, request, form_url="", extra_context=None):
         """تخصيص عرض الإضافة"""
         extra_context = extra_context or {}
-        extra_context['custom_css'] = UserActivityAdminConfig.get_admin_css()
+        extra_context["custom_css"] = UserActivityAdminConfig.get_admin_css()
         return super().add_view(request, form_url, extra_context)
 
 
 def get_activity_summary_html():
     """إنشاء ملخص HTML لنشاط المستخدمين"""
     try:
-        from user_activity.models import OnlineUser, UserActivityLog, UserLoginHistory
         from django.utils import timezone
-        
+
+        from user_activity.models import OnlineUser, UserActivityLog, UserLoginHistory
+
         today = timezone.now().date()
-        
+
         # إحصائيات سريعة
         online_count = OnlineUser.get_online_users().count()
         today_logins = UserLoginHistory.objects.filter(login_time__date=today).count()
         today_activities = UserActivityLog.objects.filter(timestamp__date=today).count()
-        
+
         return format_html(
             """
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -236,7 +237,9 @@ def get_activity_summary_html():
                 </div>
             </div>
             """,
-            online_count, today_logins, today_activities
+            online_count,
+            today_logins,
+            today_activities,
         )
     except Exception:
         return format_html(

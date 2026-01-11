@@ -6,13 +6,29 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('inventory', '0001_initial'),
+        ("inventory", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='product',
-            name='unit',
-            field=models.CharField(choices=[('piece', 'قطعة'), ('kg', 'كيلوجرام'), ('gram', 'جرام'), ('liter', 'لتر'), ('meter', 'متر'), ('box', 'علبة'), ('pack', 'عبوة'), ('dozen', 'دستة'), ('roll', 'لفة'), ('sheet', 'ورقة')], default='piece', max_length=10, verbose_name='الوحدة'),
+            model_name="product",
+            name="unit",
+            field=models.CharField(
+                choices=[
+                    ("piece", "قطعة"),
+                    ("kg", "كيلوجرام"),
+                    ("gram", "جرام"),
+                    ("liter", "لتر"),
+                    ("meter", "متر"),
+                    ("box", "علبة"),
+                    ("pack", "عبوة"),
+                    ("dozen", "دستة"),
+                    ("roll", "لفة"),
+                    ("sheet", "ورقة"),
+                ],
+                default="piece",
+                max_length=10,
+                verbose_name="الوحدة",
+            ),
         ),
     ]

@@ -1,12 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
-
 {% block title %}أوامر التقطيع{% endblock %}
-
 {% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
-<style>
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css"
+          rel="stylesheet">
+    <style>
     .cutting-card {
         border-radius: 10px;
         transition: all 0.3s ease;
@@ -60,326 +59,335 @@
     .badge-danger {
         background-color: #dc3545 !important;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- عنوان الصفحة -->
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-cut text-primary"></i>
-            أوامر التقطيع
-            {% if current_warehouse %}
-                {% for warehouse in warehouses %}
-                    {% if warehouse.id == current_warehouse %}
-                        - {{ warehouse.name }}
-                    {% endif %}
-                {% endfor %}
-            {% endif %}
-        </h1>
-        <div class="btn-group" role="group">
-            <a href="{% url 'cutting:dashboard' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> العودة للوحة التحكم
-            </a>
-            <a href="{% url 'cutting:reports' %}" class="btn btn-info">
-                <i class="fas fa-chart-bar"></i> التقارير
-            </a>
+    <div class="container-fluid">
+        <!-- عنوان الصفحة -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-cut text-primary"></i>
+                أوامر التقطيع
+                {% if current_warehouse %}
+                    {% for warehouse in warehouses %}
+                        {% if warehouse.id == current_warehouse %}- {{ warehouse.name }}{% endif %}
+                    {% endfor %}
+                {% endif %}
+            </h1>
+            <div class="btn-group" role="group">
+                <a href="{% url 'cutting:dashboard' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> العودة للوحة التحكم
+                </a>
+                <a href="{% url 'cutting:reports' %}" class="btn btn-info">
+                    <i class="fas fa-chart-bar"></i> التقارير
+                </a>
+            </div>
         </div>
-    </div>
-
-    <!-- فلاتر البحث المضغوطة -->
-    <div class="card filter-card shadow mb-3">
-        <div class="card-body p-2">
-            <form method="GET" id="filterForm" class="row align-items-center g-2">
-                <!-- الصف الأول من الفلاتر -->
-                <div class="col-lg-8 col-md-7">
-                    <div class="row g-2">
-                        <div class="col-sm-6 col-md-6 col-lg-3">
-                            <label class="form-label text-white small mb-1">المستودع</label>
-                            <select name="warehouse" class="form-select form-select-sm">
-                                <option value="">جميع المستودعات</option>
-                                {% for warehouse in warehouses %}
-                                    <option value="{{ warehouse.id }}" 
-                                            {% if warehouse.id|stringformat:"s" == current_warehouse|stringformat:"s" %}selected{% endif %}>
-                                        {{ warehouse.name }}
+        <!-- فلاتر البحث المضغوطة -->
+        <div class="card filter-card shadow mb-3">
+            <div class="card-body p-2">
+                <form method="GET" id="filterForm" class="row align-items-center g-2">
+                    <!-- الصف الأول من الفلاتر -->
+                    <div class="col-lg-8 col-md-7">
+                        <div class="row g-2">
+                            <div class="col-sm-6 col-md-6 col-lg-3">
+                                <label class="form-label text-white small mb-1">المستودع</label>
+                                <select name="warehouse" class="form-select form-select-sm">
+                                    <option value="">جميع المستودعات</option>
+                                    {% for warehouse in warehouses %}
+                                        <option value="{{ warehouse.id }}"
+                                                {% if warehouse.id|stringformat:"s" == current_warehouse|stringformat:"s" %}selected{% endif %}>
+                                            {{ warehouse.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-sm-6 col-md-6 col-lg-3">
+                                <label class="form-label text-white small mb-1">الحالة</label>
+                                <select name="status" class="form-select form-select-sm">
+                                    <option value="">جميع الحالات</option>
+                                    {% for status_code, status_name in status_choices %}
+                                        <option value="{{ status_code }}"
+                                                {% if status_code == current_status %}selected{% endif %}>
+                                            {{ status_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-sm-6 col-md-6 col-lg-3">
+                                <label class="form-label text-white small mb-1">التاريخ</label>
+                                <select name="date_filter" class="form-select form-select-sm">
+                                    <option value="">جميع التواريخ</option>
+                                    <option value="today"
+                                            {% if current_date_filter == 'today' %}selected{% endif %}>اليوم</option>
+                                    <option value="yesterday"
+                                            {% if current_date_filter == 'yesterday' %}selected{% endif %}>
+                                        الأمس
                                     </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-sm-6 col-md-6 col-lg-3">
-                            <label class="form-label text-white small mb-1">الحالة</label>
-                            <select name="status" class="form-select form-select-sm">
-                                <option value="">جميع الحالات</option>
-                                {% for status_code, status_name in status_choices %}
-                                    <option value="{{ status_code }}" 
-                                            {% if status_code == current_status %}selected{% endif %}>
-                                        {{ status_name }}
+                                    <option value="this_week"
+                                            {% if current_date_filter == 'this_week' %}selected{% endif %}>
+                                        هذا الأسبوع
                                     </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-sm-6 col-md-6 col-lg-3">
-                            <label class="form-label text-white small mb-1">التاريخ</label>
-                            <select name="date_filter" class="form-select form-select-sm">
-                                <option value="">جميع التواريخ</option>
-                                <option value="today" {% if current_date_filter == 'today' %}selected{% endif %}>اليوم</option>
-                                <option value="yesterday" {% if current_date_filter == 'yesterday' %}selected{% endif %}>الأمس</option>
-                                <option value="this_week" {% if current_date_filter == 'this_week' %}selected{% endif %}>هذا الأسبوع</option>
-                                <option value="this_month" {% if current_date_filter == 'this_month' %}selected{% endif %}>هذا الشهر</option>
-                            </select>
-                        </div>
-                        <div class="col-sm-6 col-md-6 col-lg-3">
-                            <label class="form-label text-white small mb-1">نوع الطلب</label>
-                            <select name="order_type" class="form-select form-select-sm">
-                                <option value="">جميع الأنواع</option>
-                                <option value="factory" {% if current_order_type == 'factory' %}selected{% endif %}>
-                                    تسليم المصنع
-                                </option>
-                                <option value="branch" {% if current_order_type == 'branch' %}selected{% endif %}>
-                                    تسليم الفرع
-                                </option>
-                            </select>
+                                    <option value="this_month"
+                                            {% if current_date_filter == 'this_month' %}selected{% endif %}>
+                                        هذا الشهر
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-sm-6 col-md-6 col-lg-3">
+                                <label class="form-label text-white small mb-1">نوع الطلب</label>
+                                <select name="order_type" class="form-select form-select-sm">
+                                    <option value="">جميع الأنواع</option>
+                                    <option value="factory"
+                                            {% if current_order_type == 'factory' %}selected{% endif %}>
+                                        تسليم المصنع
+                                    </option>
+                                    <option value="branch"
+                                            {% if current_order_type == 'branch' %}selected{% endif %}>
+                                        تسليم الفرع
+                                    </option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <!-- البحث والأزرار -->
-                <div class="col-lg-4 col-md-5">
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label class="form-label text-white small mb-1">البحث الشامل</label>
-                            <input type="text" name="search" class="form-control form-control-sm" 
-                                   placeholder="ابحث برقم الفاتورة، كود التقطيع..."
-                                   value="{{ search_query }}">
-                        </div>
-                        <div class="col-6">
-                            <button type="submit" class="btn btn-light btn-sm w-100" name="submit_search" value="1">
-                                <i class="fas fa-search"></i> بحث
-                            </button>
-                        </div>
-                        <div class="col-6">
-                            <a href="{% url 'cutting:order_list' %}" class="btn btn-outline-light btn-sm w-100">
-                                <i class="fas fa-times"></i> مسح
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- إحصائيات سريعة - بطاقات أصغر -->
-    <div class="row mb-3">
-        <div class="col-md-2">
-            <div class="card bg-primary text-white">
-                <div class="card-body text-center py-2">
-                    <i class="fas fa-list-alt opacity-75 mb-1"></i>
-                    <h6 class="card-title mb-1">إجمالي</h6>
-                    <h4 class="mb-0 fw-bold">{{ page_obj.paginator.count|intcomma }}</h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-warning text-dark">
-                <div class="card-body text-center py-2">
-                    <i class="fas fa-clock opacity-75 mb-1"></i>
-                    <h6 class="card-title mb-1">قيد الانتظار</h6>
-                    <h4 class="mb-0 fw-bold">{{ pending_count|intcomma }}</h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-info text-white">
-                <div class="card-body text-center py-2">
-                    <i class="fas fa-cut opacity-75 mb-1"></i>
-                    <h6 class="card-title mb-1">قيد التقطيع</h6>
-                    <h4 class="mb-0 fw-bold">{{ in_progress_count|intcomma }}</h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-success text-white">
-                <div class="card-body text-center py-2">
-                    <i class="fas fa-check-circle opacity-75 mb-1"></i>
-                    <h6 class="card-title mb-1">مكتمل</h6>
-                    <h4 class="mb-0 fw-bold">{{ completed_count|intcomma }}</h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-danger text-white">
-                <div class="card-body text-center py-2">
-                    <i class="fas fa-times-circle opacity-75 mb-1"></i>
-                    <h6 class="card-title mb-1">مرفوض</h6>
-                    <h4 class="mb-0 fw-bold">{{ rejected_count|intcomma }}</h4>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- قائمة أوامر التقطيع - بطاقات مصغرة -->
-    {% if cutting_orders %}
-        <div class="row">
-            {% for cutting_order in cutting_orders %}
-            <div class="col-lg-4 col-md-4 mb-3">
-                <div class="card cutting-card shadow-sm h-100">
-                    <div class="card-body p-2">
-                        <div class="row align-items-center">
-                            <!-- القسم الأيمن: المعلومات الأساسية -->
-                            <div class="col-md-8">
-                                <div class="d-flex align-items-center mb-1">
-                                    <small class="mb-0 me-2">
-                                        <a href="{% url 'cutting:order_detail' cutting_order.id %}" class="text-primary font-weight-bold">
-                                            <i class="fas fa-cut"></i> {{ cutting_order.cutting_code }}
-                                        </a>
-                                    </small>
-                                    {% if cutting_order.status == 'pending' %}
-                                        <span class="badge badge-warning text-dark" style="font-size: 0.65rem;"><i class="fas fa-clock"></i> انتظار</span>
-                                    {% elif cutting_order.status == 'in_progress' %}
-                                        <span class="badge badge-info text-white" style="font-size: 0.65rem;"><i class="fas fa-cut"></i> تقطيع</span>
-                                    {% elif cutting_order.status == 'completed' %}
-                                        <span class="badge badge-success text-white" style="font-size: 0.65rem;"><i class="fas fa-check-circle"></i> مكتمل</span>
-                                    {% elif cutting_order.status == 'partially_completed' %}
-                                        <span class="badge badge-primary text-white" style="font-size: 0.65rem;"><i class="fas fa-tasks"></i> جزئي</span>
-                                    {% else %}
-                                        <span class="badge badge-danger text-white" style="font-size: 0.65rem;"><i class="fas fa-times-circle"></i> ملغي</span>
-                                    {% endif %}
-                                </div>
-
-                                <div class="row text-muted" style="font-size: 0.75rem;">
-                                    <div class="col-12">
-                                        <div class="mb-1"><i class="fas fa-user"></i> {{ cutting_order.order.customer.name|truncatechars:20 }}</div>
-                                        <div class="mb-1">
-                                            <i class="fas fa-receipt"></i>
-                                            {% with all_invoices=cutting_order.order.get_all_invoice_numbers %}
-                                                {% if all_invoices %}
-                                                    {% for invoice in all_invoices %}
-                                                        <span class="badge badge-warning text-dark" style="font-size: 0.6rem;">{{ invoice }}</span>
-                                                    {% endfor %}
-                                                {% else %}
-                                                    <span class="text-muted" style="font-size: 0.6rem;">غير محدد</span>
-                                                {% endif %}
-                                            {% endwith %}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- نوع الطلب -->
-                                <div class="mt-1">
-                                    {% with selected_types=cutting_order.order.get_selected_types_list %}
-                                        {% if 'installation' in selected_types or 'tailoring' in selected_types %}
-                                            <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">
-                                                <i class="fas fa-industry"></i> المصنع
-                                            </span>
-                                        {% elif 'products' in selected_types or 'accessory' in selected_types %}
-                                            <span class="badge bg-info text-white" style="font-size: 0.6rem;">
-                                                <i class="fas fa-store"></i> الفرع
-                                            </span>
-                                        {% endif %}
-                                    {% endwith %}
-                                </div>
+                    <!-- البحث والأزرار -->
+                    <div class="col-lg-4 col-md-5">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label text-white small mb-1">البحث الشامل</label>
+                                <input type="text"
+                                       name="search"
+                                       class="form-control form-control-sm"
+                                       placeholder="ابحث برقم الفاتورة، كود التقطيع..."
+                                       value="{{ search_query }}">
                             </div>
-
-                            <!-- القسم الأيسر: الإحصائيات والتقدم -->
-                            <div class="col-md-4 text-center border-start">
-                                <div class="mb-1">
-                                    <div class="progress-circle mx-auto
-                                                {% if cutting_order.completion_percentage == 100 %}bg-success text-white
-                                                {% elif cutting_order.completion_percentage > 50 %}bg-info text-white
-                                                {% else %}bg-warning text-dark{% endif %}">
-                                        {{ cutting_order.completion_percentage|floatformat:0 }}%
-                                    </div>
-                                </div>
-                                <div class="row" style="font-size: 0.7rem;">
-                                    <div class="col-4">
-                                        <div class="text-primary fw-bold">{{ cutting_order.total_items }}</div>
-                                        <small class="text-muted" style="font-size: 0.6rem;">إجمالي</small>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="text-success fw-bold">{{ cutting_order.completed_items }}</div>
-                                        <small class="text-muted" style="font-size: 0.6rem;">مكتمل</small>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="text-warning fw-bold">{{ cutting_order.pending_items }}</div>
-                                        <small class="text-muted" style="font-size: 0.6rem;">معلق</small>
-                                    </div>
-                                </div>
+                            <div class="col-6">
+                                <button type="submit"
+                                        class="btn btn-light btn-sm w-100"
+                                        name="submit_search"
+                                        value="1">
+                                    <i class="fas fa-search"></i> بحث
+                                </button>
                             </div>
-                        </div>
-
-                        <!-- معلومات إضافية وأزرار -->
-                        <div class="row mt-1 pt-1 border-top align-items-center">
-                            <div class="col-md-7 text-muted" style="font-size: 0.65rem;">
-                                <span><i class="fas fa-calendar"></i> {{ cutting_order.created_at|date:"d/m/Y" }}</span>
-                            </div>
-                            <div class="col-md-5 text-end">
-                                <a href="{% url 'cutting:order_detail' cutting_order.pk %}" class="btn btn-primary btn-sm" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">
-                                    <i class="fas fa-eye"></i> تفاصيل
+                            <div class="col-6">
+                                <a href="{% url 'cutting:order_list' %}"
+                                   class="btn btn-outline-light btn-sm w-100">
+                                    <i class="fas fa-times"></i> مسح
                                 </a>
                             </div>
                         </div>
                     </div>
+                </form>
+            </div>
+        </div>
+        <!-- إحصائيات سريعة - بطاقات أصغر -->
+        <div class="row mb-3">
+            <div class="col-md-2">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center py-2">
+                        <i class="fas fa-list-alt opacity-75 mb-1"></i>
+                        <h6 class="card-title mb-1">إجمالي</h6>
+                        <h4 class="mb-0 fw-bold">{{ page_obj.paginator.count|intcomma }}</h4>
+                    </div>
                 </div>
             </div>
-            {% endfor %}
-        </div>
-
-        <!-- ترقيم الصفحات -->
-        {% if is_paginated %}
-        <nav aria-label="ترقيم الصفحات">
-            <ul class="pagination justify-content-center">
-                {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_warehouse %}&warehouse={{ current_warehouse }}{% endif %}">
-                            السابق
-                        </a>
-                    </li>
-                {% endif %}
-                
-                {% for num in page_obj.paginator.page_range %}
-                    {% if page_obj.number == num %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ num }}</span>
-                        </li>
-                    {% else %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_warehouse %}&warehouse={{ current_warehouse }}{% endif %}">
-                                {{ num }}
-                            </a>
-                        </li>
-                    {% endif %}
-                {% endfor %}
-                
-                {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_warehouse %}&warehouse={{ current_warehouse }}{% endif %}">
-                            التالي
-                        </a>
-                    </li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
-
-    {% else %}
-        <!-- لا توجد أوامر -->
-        <div class="card shadow">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-cut fa-4x text-muted mb-4"></i>
-                <h4 class="text-muted">لا توجد أوامر تقطيع</h4>
-                <p class="text-muted">لم يتم العثور على أوامر تقطيع تطابق معايير البحث</p>
-                <a href="{% url 'cutting:dashboard' %}" class="btn btn-primary">
-                    <i class="fas fa-arrow-left"></i> العودة للوحة التحكم
-                </a>
+            <div class="col-md-2">
+                <div class="card bg-warning text-dark">
+                    <div class="card-body text-center py-2">
+                        <i class="fas fa-clock opacity-75 mb-1"></i>
+                        <h6 class="card-title mb-1">قيد الانتظار</h6>
+                        <h4 class="mb-0 fw-bold">{{ pending_count|intcomma }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center py-2">
+                        <i class="fas fa-cut opacity-75 mb-1"></i>
+                        <h6 class="card-title mb-1">قيد التقطيع</h6>
+                        <h4 class="mb-0 fw-bold">{{ in_progress_count|intcomma }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center py-2">
+                        <i class="fas fa-check-circle opacity-75 mb-1"></i>
+                        <h6 class="card-title mb-1">مكتمل</h6>
+                        <h4 class="mb-0 fw-bold">{{ completed_count|intcomma }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-danger text-white">
+                    <div class="card-body text-center py-2">
+                        <i class="fas fa-times-circle opacity-75 mb-1"></i>
+                        <h6 class="card-title mb-1">مرفوض</h6>
+                        <h4 class="mb-0 fw-bold">{{ rejected_count|intcomma }}</h4>
+                    </div>
+                </div>
             </div>
         </div>
-    {% endif %}
-</div>
+        <!-- قائمة أوامر التقطيع - بطاقات مصغرة -->
+        {% if cutting_orders %}
+            <div class="row">
+                {% for cutting_order in cutting_orders %}
+                    <div class="col-lg-4 col-md-4 mb-3">
+                        <div class="card cutting-card shadow-sm h-100">
+                            <div class="card-body p-2">
+                                <div class="row align-items-center">
+                                    <!-- القسم الأيمن: المعلومات الأساسية -->
+                                    <div class="col-md-8">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <small class="mb-0 me-2">
+                                                <a href="{% url 'cutting:order_detail' cutting_order.id %}"
+                                                   class="text-primary font-weight-bold">
+                                                    <i class="fas fa-cut"></i> {{ cutting_order.cutting_code }}
+                                                </a>
+                                            </small>
+                                            {% if cutting_order.status == 'pending' %}
+                                                <span class="badge badge-warning text-dark" style="font-size: 0.65rem;"><i class="fas fa-clock"></i> انتظار</span>
+                                            {% elif cutting_order.status == 'in_progress' %}
+                                                <span class="badge badge-info text-white" style="font-size: 0.65rem;"><i class="fas fa-cut"></i> تقطيع</span>
+                                            {% elif cutting_order.status == 'completed' %}
+                                                <span class="badge badge-success text-white" style="font-size: 0.65rem;"><i class="fas fa-check-circle"></i> مكتمل</span>
+                                            {% elif cutting_order.status == 'partially_completed' %}
+                                                <span class="badge badge-primary text-white" style="font-size: 0.65rem;"><i class="fas fa-tasks"></i> جزئي</span>
+                                            {% else %}
+                                                <span class="badge badge-danger text-white" style="font-size: 0.65rem;"><i class="fas fa-times-circle"></i> ملغي</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="row text-muted" style="font-size: 0.75rem;">
+                                            <div class="col-12">
+                                                <div class="mb-1">
+                                                    <i class="fas fa-user"></i> {{ cutting_order.order.customer.name|truncatechars:20 }}
+                                                </div>
+                                                <div class="mb-1">
+                                                    <i class="fas fa-receipt"></i>
+                                                    {% with all_invoices=cutting_order.order.get_all_invoice_numbers %}
+                                                        {% if all_invoices %}
+                                                            {% for invoice in all_invoices %}
+                                                                <span class="badge badge-warning text-dark" style="font-size: 0.6rem;">{{ invoice }}</span>
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            <span class="text-muted" style="font-size: 0.6rem;">غير محدد</span>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- نوع الطلب -->
+                                        <div class="mt-1">
+                                            {% with selected_types=cutting_order.order.get_selected_types_list %}
+                                                {% if 'installation' in selected_types or 'tailoring' in selected_types %}
+                                                    <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">
+                                                        <i class="fas fa-industry"></i> المصنع
+                                                    </span>
+                                                {% elif 'products' in selected_types or 'accessory' in selected_types %}
+                                                    <span class="badge bg-info text-white" style="font-size: 0.6rem;">
+                                                        <i class="fas fa-store"></i> الفرع
+                                                    </span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </div>
+                                    </div>
+                                    <!-- القسم الأيسر: الإحصائيات والتقدم -->
+                                    <div class="col-md-4 text-center border-start">
+                                        <div class="mb-1">
+                                            <div class="progress-circle mx-auto {% if cutting_order.completion_percentage == 100 %}bg-success text-white {% elif cutting_order.completion_percentage > 50 %}bg-info text-white {% else %}bg-warning text-dark{% endif %}">
+                                                {{ cutting_order.completion_percentage|floatformat:0 }}%
+                                            </div>
+                                        </div>
+                                        <div class="row" style="font-size: 0.7rem;">
+                                            <div class="col-4">
+                                                <div class="text-primary fw-bold">{{ cutting_order.total_items }}</div>
+                                                <small class="text-muted" style="font-size: 0.6rem;">إجمالي</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="text-success fw-bold">{{ cutting_order.completed_items }}</div>
+                                                <small class="text-muted" style="font-size: 0.6rem;">مكتمل</small>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="text-warning fw-bold">{{ cutting_order.pending_items }}</div>
+                                                <small class="text-muted" style="font-size: 0.6rem;">معلق</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- معلومات إضافية وأزرار -->
+                                <div class="row mt-1 pt-1 border-top align-items-center">
+                                    <div class="col-md-7 text-muted" style="font-size: 0.65rem;">
+                                        <span><i class="fas fa-calendar"></i> {{ cutting_order.created_at|date:"d/m/Y" }}</span>
+                                    </div>
+                                    <div class="col-md-5 text-end">
+                                        <a href="{% url 'cutting:order_detail' cutting_order.pk %}"
+                                           class="btn btn-primary btn-sm"
+                                           style="font-size: 0.7rem;
+                                                  padding: 0.2rem 0.5rem">
+                                            <i class="fas fa-eye"></i> تفاصيل
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            <!-- ترقيم الصفحات -->
+            {% if is_paginated %}
+                <nav aria-label="ترقيم الصفحات">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_warehouse %}&warehouse={{ current_warehouse }}{% endif %}">
+                                    السابق
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_warehouse %}&warehouse={{ current_warehouse }}{% endif %}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_warehouse %}&warehouse={{ current_warehouse }}{% endif %}">
+                                    التالي
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}
+            <!-- لا توجد أوامر -->
+            <div class="card shadow">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-cut fa-4x text-muted mb-4"></i>
+                    <h4 class="text-muted">لا توجد أوامر تقطيع</h4>
+                    <p class="text-muted">لم يتم العثور على أوامر تقطيع تطابق معايير البحث</p>
+                    <a href="{% url 'cutting:dashboard' %}" class="btn btn-primary">
+                        <i class="fas fa-arrow-left"></i> العودة للوحة التحكم
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
-<script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+    <script>
 function startCutting(orderId) {
     Swal.fire({
         title: 'بدء التقطيع',
@@ -465,5 +473,5 @@ document.addEventListener('DOMContentLoaded', function() {
         // لا يتم تفعيل أي تحديث تلقائي
     });
 });
-</script>
+    </script>
 {% endblock %}

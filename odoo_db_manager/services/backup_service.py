@@ -3,33 +3,38 @@
 تحسين النظام ليشمل جميع البيانات وإمكانية التحميل والاستعادة من ملف
 """
 
-import os
-import subprocess
 import datetime
-import json
 import gzip
+import json
+import os
 import shutil
+import subprocess
 import tempfile
+
 from django.conf import settings
-from django.core.management import call_command
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
-from django.db import connection
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+from django.core.management import call_command
+from django.db import connection
+
 from odoo_db_manager.models import Database
+
 
 class BackupService:
     """خدمة النسخ الاحتياطي المحسنة"""
 
     # أنواع النسخ الاحتياطي
     BACKUP_TYPES = {
-        'customers': 'بيانات العملاء',
-        'users': 'بيانات المستخدمين',
-        'settings': 'إعدادات النظام',
-        'full': 'كل البيانات',
+        "customers": "بيانات العملاء",
+        "users": "بيانات المستخدمين",
+        "settings": "إعدادات النظام",
+        "full": "كل البيانات",
     }
 
-    def create_backup(self, database_id, name=None, user=None, backup_type='full', is_scheduled=False):
+    def create_backup(
+        self, database_id, name=None, user=None, backup_type="full", is_scheduled=False
+    ):
         """
         إنشاء نسخة احتياطية
 
@@ -48,11 +53,11 @@ class BackupService:
 
         # إنشاء اسم النسخة الاحتياطية إذا لم يتم توفيره
         if not name:
-            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             name = f"{database.name}_{backup_type}_{timestamp}"
 
         # إنشاء مجلد النسخ الاحتياطي إذا لم يكن موجود
-        backup_dir = os.path.join(settings.MEDIA_ROOT, 'backups')
+        backup_dir = os.path.join(settings.MEDIA_ROOT, "backups")
         os.makedirs(backup_dir, exist_ok=True)
 
         # طباعة معلومات تشخيصية
@@ -61,9 +66,11 @@ class BackupService:
         print(f"معلومات الاتصال: {database.connection_info}")
 
         # تحديد نوع النسخة الاحتياطية ومسار الملف
-        if database.db_type == 'sqlite3' or settings.DATABASES['default']['ENGINE'].endswith('sqlite3'):
+        if database.db_type == "sqlite3" or settings.DATABASES["default"][
+            "ENGINE"
+        ].endswith("sqlite3"):
             # استخدام نسخة مباشرة من ملف SQLite
-            db_file = settings.DATABASES['default']['NAME']
+            db_file = settings.DATABASES["default"]["NAME"]
             print(f"استخدام نسخة مباشرة من ملف SQLite: {db_file}")
 
             # إنشاء مسار ملف النسخة الاحتياطية
@@ -85,9 +92,7 @@ class BackupService:
             # استخدام Django dumpdata للنسخ الاحتياطي
             print("استخدام Django dumpdata لإنشاء النسخة الاحتياطية")
             self._create_django_backup(
-                database=database,
-                file_path=file_path,
-                backup_type=backup_type
+                database=database, file_path=file_path, backup_type=backup_type
             )
 
         # الحصول على حجم الملف
@@ -101,12 +106,12 @@ class BackupService:
             size=size,
             created_by=user,
             backup_type=backup_type,
-            is_scheduled=is_scheduled
+            is_scheduled=is_scheduled,
         )
 
         return backup
 
-    def _create_django_backup(self, database, file_path, backup_type='full'):
+    def _create_django_backup(self, database, file_path, backup_type="full"):
         """
         إنشاء نسخة احتياطية باستخدام Django dumpdata أو pg_dump
 
@@ -116,19 +121,21 @@ class BackupService:
             backup_type: نوع النسخة الاحتياطية
         """
         # التحقق من نوع قاعدة البيانات
-        db_settings = settings.DATABASES['default']
-        is_postgresql = 'postgresql' in db_settings['ENGINE']
+        db_settings = settings.DATABASES["default"]
+        is_postgresql = "postgresql" in db_settings["ENGINE"]
 
         # إذا كانت قاعدة البيانات PostgreSQL، نحاول استخدام pg_dump أولاً
         if is_postgresql:
-            print("محاولة استخدام pg_dump لإنشاء نسخة احتياطية من قاعدة بيانات PostgreSQL...")
+            print(
+                "محاولة استخدام pg_dump لإنشاء نسخة احتياطية من قاعدة بيانات PostgreSQL..."
+            )
 
             # استخراج معلومات الاتصال من الإعدادات
-            db_name = db_settings['NAME']
-            db_user = db_settings['USER']
-            db_password = db_settings['PASSWORD']
-            db_host = db_settings['HOST'] or 'localhost'
-            db_port = db_settings['PORT'] or '5432'
+            db_name = db_settings["NAME"]
+            db_user = db_settings["USER"]
+            db_password = db_settings["PASSWORD"]
+            db_host = db_settings["HOST"] or "localhost"
+            db_port = db_settings["PORT"] or "5432"
 
             try:
                 # محاولة إنشاء النسخة الاحتياطية باستخدام pg_dump
@@ -138,7 +145,7 @@ class BackupService:
                     password=db_password,
                     host=db_host,
                     port=db_port,
-                    file_path=file_path
+                    file_path=file_path,
                 )
 
                 if success:
@@ -154,31 +161,35 @@ class BackupService:
         # تحديد التطبيقات والنماذج المطلوبة حسب نوع النسخة الاحتياطية
         include_models = []
 
-        if backup_type == 'customers':
-            include_models = ['customers.Customer', 'customers.CustomerContact', 'customers.CustomerAddress']
-        elif backup_type == 'users':
-            include_models = ['auth.User', 'auth.Group', 'accounts.UserProfile']
-        elif backup_type == 'settings':
-            include_models = ['sites.Site', 'auth.Permission']
+        if backup_type == "customers":
+            include_models = [
+                "customers.Customer",
+                "customers.CustomerContact",
+                "customers.CustomerAddress",
+            ]
+        elif backup_type == "users":
+            include_models = ["auth.User", "auth.Group", "accounts.UserProfile"]
+        elif backup_type == "settings":
+            include_models = ["sites.Site", "auth.Permission"]
             # يمكن إضافة المزيد من نماذج الإعدادات حسب الحاجة
-        elif backup_type == 'full':
+        elif backup_type == "full":
             # للنسخة الكاملة، نشمل جميع التطبيقات الأساسية
             include_models = [
-                'accounts',
-                'customers',
-                'orders',
-                'inspections',
-                'inventory',
-                'installations',
-                'manufacturing',
-                'reports',
-                'odoo_db_manager'
+                "accounts",
+                "customers",
+                "orders",
+                "inspections",
+                "inventory",
+                "installations",
+                "manufacturing",
+                "reports",
+                "odoo_db_manager",
             ]
             print(f"نسخة كاملة - سيتم تضمين {len(include_models)} تطبيق")
 
         # استخدام ملف مؤقت للبيانات
         temp_dir = tempfile.mkdtemp()
-        temp_path = os.path.join(temp_dir, 'backup.json')
+        temp_path = os.path.join(temp_dir, "backup.json")
 
         try:
             # طباعة معلومات تشخيصية
@@ -193,18 +204,22 @@ class BackupService:
 
                 # استخدام Python لتنفيذ الأمر وحفظ المخرجات مباشرة
                 import json
+
                 from django.core.serializers import serialize
 
                 # تحديد النماذج المطلوبة
-                if backup_type == 'full':
+                if backup_type == "full":
                     # الحصول على جميع النماذج المسجلة
                     from django.apps import apps
+
                     all_models = []
                     for app_config in apps.get_app_configs():
                         for model in app_config.get_models():
                             # استثناء النماذج المحددة
-                            if (app_config.label != 'contenttypes' and
-                                not (app_config.label == 'admin' and model.__name__ == 'LogEntry')):
+                            if app_config.label != "contenttypes" and not (
+                                app_config.label == "admin"
+                                and model.__name__ == "LogEntry"
+                            ):
                                 all_models.append(model)
 
                     # تسلسل كل نموذج على حدة
@@ -212,9 +227,14 @@ class BackupService:
                     for model in all_models:
                         try:
                             # الحصول على جميع الكائنات
-                            queryset = model.objects.using('default').all()
+                            queryset = model.objects.using("default").all()
                             # تسلسل الكائنات
-                            model_data = serialize('python', queryset, use_natural_foreign_keys=True, use_natural_primary_keys=True)
+                            model_data = serialize(
+                                "python",
+                                queryset,
+                                use_natural_foreign_keys=True,
+                                use_natural_primary_keys=True,
+                            )
                             all_data.extend(model_data)
                         except Exception as model_error:
                             print(f"تخطي نموذج {model.__name__}: {str(model_error)}")
@@ -223,10 +243,15 @@ class BackupService:
                     all_data = []
                     for model_name in include_models:
                         try:
-                            app_label, model_name = model_name.split('.')
+                            app_label, model_name = model_name.split(".")
                             model = apps.get_model(app_label, model_name)
-                            queryset = model.objects.using('default').all()
-                            model_data = serialize('python', queryset, use_natural_foreign_keys=True, use_natural_primary_keys=True)
+                            queryset = model.objects.using("default").all()
+                            model_data = serialize(
+                                "python",
+                                queryset,
+                                use_natural_foreign_keys=True,
+                                use_natural_primary_keys=True,
+                            )
                             all_data.extend(model_data)
                         except Exception as model_error:
                             print(f"تخطي نموذج {model_name}: {str(model_error)}")
@@ -235,6 +260,7 @@ class BackupService:
                 def json_serial(obj):
                     """تحويل كائنات Python إلى JSON"""
                     import decimal
+
                     if isinstance(obj, (datetime.datetime, datetime.date)):
                         return obj.isoformat()
                     elif isinstance(obj, decimal.Decimal):
@@ -242,8 +268,10 @@ class BackupService:
                     raise TypeError(f"النوع {type(obj)} غير قابل للتحويل إلى JSON")
 
                 # كتابة البيانات إلى الملف المؤقت
-                with open(temp_path, 'w', encoding='utf-8') as f:
-                    json.dump(all_data, f, ensure_ascii=False, indent=2, default=json_serial)
+                with open(temp_path, "w", encoding="utf-8") as f:
+                    json.dump(
+                        all_data, f, ensure_ascii=False, indent=2, default=json_serial
+                    )
 
                 print(f"تم كتابة البيانات إلى الملف المؤقت: {temp_path}")
 
@@ -253,7 +281,9 @@ class BackupService:
 
             # التحقق من وجود الملف المؤقت
             if not os.path.exists(temp_path):
-                raise FileNotFoundError(f"لم يتم إنشاء ملف النسخة الاحتياطية المؤقت: {temp_path}")
+                raise FileNotFoundError(
+                    f"لم يتم إنشاء ملف النسخة الاحتياطية المؤقت: {temp_path}"
+                )
 
             # التحقق من حجم الملف المؤقت
             temp_size = os.path.getsize(temp_path)
@@ -264,13 +294,15 @@ class BackupService:
 
             # ضغط الملف مع مراعاة الترميز
             print("ضغط الملف...")
-            with open(temp_path, 'rb') as f_in:
-                with gzip.open(file_path, 'wb') as f_out:
+            with open(temp_path, "rb") as f_in:
+                with gzip.open(file_path, "wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
 
             # التحقق من وجود الملف النهائي
             if not os.path.exists(file_path):
-                raise FileNotFoundError(f"لم يتم إنشاء ملف النسخة الاحتياطية النهائي: {file_path}")
+                raise FileNotFoundError(
+                    f"لم يتم إنشاء ملف النسخة الاحتياطية النهائي: {file_path}"
+                )
 
             # التحقق من حجم الملف النهائي
             final_size = os.path.getsize(file_path)
@@ -293,11 +325,13 @@ class BackupService:
                 shutil.rmtree(temp_dir)
                 print(f"تم حذف المجلد المؤقت: {temp_dir}")
 
-    def _create_postgresql_backup(self, database_name, user, password, host, port, file_path):
+    def _create_postgresql_backup(
+        self, database_name, user, password, host, port, file_path
+    ):
         """إنشاء نسخة احتياطية لقاعدة بيانات PostgreSQL"""
         # إنشاء النسخة الاحتياطية باستخدام pg_dump
         env = os.environ.copy()
-        env['PGPASSWORD'] = password
+        env["PGPASSWORD"] = password
 
         # طباعة معلومات تشخيصية
         print(f"إنشاء نسخة احتياطية لقاعدة بيانات PostgreSQL: {database_name}")
@@ -307,7 +341,9 @@ class BackupService:
         print(f"مسار الملف: {file_path}")
 
         # فحص حجم قاعدة البيانات قبل النسخ
-        db_size = self._get_postgresql_database_size(database_name, user, password, host, port)
+        db_size = self._get_postgresql_database_size(
+            database_name, user, password, host, port
+        )
         print(f"حجم قاعدة البيانات: {db_size:,} بايت ({db_size/1024/1024:.2f} MB)")
 
         # تأكد من أن جميع المعلمات هي سلاسل نصية
@@ -320,20 +356,23 @@ class BackupService:
 
             # إنشاء أمر لتصدير البيانات بتنسيق SQL (نسخة كاملة محسنة)
             dump_cmd = [
-                'pg_dump',
-                '-h', str(host),
-                '-p', port_str,
-                '-U', str(user),
-                '--format=plain',           # تنسيق SQL نصي
-                '--inserts',                # استخدام INSERT بدلاً من COPY لضمان قابلية القراءة
-                '--column-inserts',         # تضمين أسماء الأعمدة في INSERT
-                '--no-owner',               # بدون معلومات المالك
-                '--no-privileges',          # بدون صلاحيات
-                '--create',                 # تضمين أوامر CREATE للجداول
-                '--clean',                  # تضمين أوامر DROP قبل CREATE
-                '--if-exists',              # استخدام IF EXISTS مع DROP
-                '--verbose',                # إظهار تفاصيل العملية
-                str(database_name)
+                "pg_dump",
+                "-h",
+                str(host),
+                "-p",
+                port_str,
+                "-U",
+                str(user),
+                "--format=plain",  # تنسيق SQL نصي
+                "--inserts",  # استخدام INSERT بدلاً من COPY لضمان قابلية القراءة
+                "--column-inserts",  # تضمين أسماء الأعمدة في INSERT
+                "--no-owner",  # بدون معلومات المالك
+                "--no-privileges",  # بدون صلاحيات
+                "--create",  # تضمين أوامر CREATE للجداول
+                "--clean",  # تضمين أوامر DROP قبل CREATE
+                "--if-exists",  # استخدام IF EXISTS مع DROP
+                "--verbose",  # إظهار تفاصيل العملية
+                str(database_name),
             ]
 
             print(f"الأمر: {' '.join(dump_cmd)}")
@@ -347,17 +386,19 @@ class BackupService:
                 stderr=subprocess.PIPE,
                 check=False,  # لا نريد رفع استثناء فوراً
                 text=True,
-                encoding='utf-8'
+                encoding="utf-8",
             )
 
             # التحقق من نجاح العملية
             if result.returncode != 0:
                 error_msg = result.stderr
                 print(f"خطأ في pg_dump: {error_msg}")
-                raise subprocess.CalledProcessError(result.returncode, dump_cmd, stderr=error_msg)
+                raise subprocess.CalledProcessError(
+                    result.returncode, dump_cmd, stderr=error_msg
+                )
 
             # كتابة المخرجات إلى الملف المؤقت
-            with open(temp_sql_file, 'w', encoding='utf-8') as f:
+            with open(temp_sql_file, "w", encoding="utf-8") as f:
                 f.write(result.stdout)
 
             # التحقق من حجم الملف المؤقت
@@ -367,14 +408,14 @@ class BackupService:
             if temp_size < 1000:  # أقل من 1KB يعتبر صغير جداً
                 print("تحذير: حجم النسخة الاحتياطية صغير جداً! قد تكون هناك مشكلة.")
                 # عرض محتوى الملف للتشخيص
-                with open(temp_sql_file, 'r', encoding='utf-8') as f:
+                with open(temp_sql_file, "r", encoding="utf-8") as f:
                     content = f.read()
                     print(f"محتوى الملف: {content[:500]}...")
 
             # ضغط الملف
             print("ضغط الملف...")
-            with open(temp_sql_file, 'rb') as f_in:
-                with gzip.open(file_path, 'wb') as f_out:
+            with open(temp_sql_file, "rb") as f_in:
+                with gzip.open(file_path, "wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
 
             # التحقق من حجم الملف المضغوط
@@ -390,12 +431,14 @@ class BackupService:
             return True
 
         except subprocess.CalledProcessError as e:
-            error_msg = e.stderr.decode() if hasattr(e, 'stderr') else str(e)
+            error_msg = e.stderr.decode() if hasattr(e, "stderr") else str(e)
             print(f"فشل إنشاء النسخة الاحتياطية: {error_msg}")
 
             # إذا كان الخطأ بسبب عدم تطابق الإصدارات، نستخدم طريقة Django
             if "server version mismatch" in error_msg:
-                print("تم اكتشاف عدم تطابق إصدارات PostgreSQL. استخدام طريقة Django بدلاً من ذلك.")
+                print(
+                    "تم اكتشاف عدم تطابق إصدارات PostgreSQL. استخدام طريقة Django بدلاً من ذلك."
+                )
                 return False
 
             raise RuntimeError(f"فشل إنشاء النسخة الاحتياطية: {error_msg}")
@@ -404,21 +447,32 @@ class BackupService:
         """الحصول على حجم قاعدة البيانات PostgreSQL"""
         try:
             env = os.environ.copy()
-            env['PGPASSWORD'] = password
+            env["PGPASSWORD"] = password
 
             # استعلام لحساب حجم قاعدة البيانات
             size_query = f"SELECT pg_database_size('{database_name}');"
 
             # تنفيذ الاستعلام
-            result = subprocess.run([
-                'psql',
-                '-h', str(host),
-                '-p', str(port),
-                '-U', str(user),
-                '-d', str(database_name),
-                '-t',  # بدون رؤوس
-                '-c', size_query
-            ], env=env, capture_output=True, text=True, check=True)
+            result = subprocess.run(
+                [
+                    "psql",
+                    "-h",
+                    str(host),
+                    "-p",
+                    str(port),
+                    "-U",
+                    str(user),
+                    "-d",
+                    str(database_name),
+                    "-t",  # بدون رؤوس
+                    "-c",
+                    size_query,
+                ],
+                env=env,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
 
             # استخراج الحجم من النتيجة
             size_str = result.stdout.strip()
@@ -428,7 +482,7 @@ class BackupService:
             print(f"فشل في الحصول على حجم قاعدة البيانات: {str(e)}")
             return 0
 
-    def _create_sqlite_backup(self, database, file_path, backup_type='full'):
+    def _create_sqlite_backup(self, database, file_path, backup_type="full"):
         """
         إنشاء نسخة احتياطية لقاعدة بيانات SQLite
 
@@ -465,34 +519,42 @@ class BackupService:
 
             # التحقق من وجود الملف
             if not os.path.exists(backup.file_path):
-                raise FileNotFoundError(f"ملف النسخة الاحتياطية '{backup.file_path}' غير موجود")
+                raise FileNotFoundError(
+                    f"ملف النسخة الاحتياطية '{backup.file_path}' غير موجود"
+                )
 
             # التحقق من نوع الملف
             file_info = self._check_file_type(backup.file_path)
 
             # إذا كان امتداد الملف .sqlite3، نضبط النوع على sqlite3 بغض النظر عن ما تم اكتشافه
-            if backup.file_path.endswith('.sqlite3'):
-                file_info['type'] = 'sqlite3'
+            if backup.file_path.endswith(".sqlite3"):
+                file_info["type"] = "sqlite3"
 
             print(f"معلومات الملف: {file_info}")
 
             # التعامل مع ملفات pg_dump الثنائية
-            if file_info['type'] == 'pg_dump' and file_info['is_binary']:
+            if file_info["type"] == "pg_dump" and file_info["is_binary"]:
                 print("تم اكتشاف ملف pg_dump ثنائي")
-                if database.db_type == 'postgresql':
+                if database.db_type == "postgresql":
                     # تحويل الملف الثنائي إلى SQL نصي
                     try:
-                        converted_file_path = self._convert_binary_pg_dump_to_sql(backup.file_path)
-                        print(f"تم تحويل الملف الثنائي إلى SQL نصي: {converted_file_path}")
+                        converted_file_path = self._convert_binary_pg_dump_to_sql(
+                            backup.file_path
+                        )
+                        print(
+                            f"تم تحويل الملف الثنائي إلى SQL نصي: {converted_file_path}"
+                        )
 
                         # استعادة من الملف المحول
                         self._restore_postgresql_backup(
-                            database_name=database.connection_info.get('NAME', database.name),
-                            user=database.connection_info.get('USER', ''),
-                            password=database.connection_info.get('PASSWORD', ''),
-                            host=database.connection_info.get('HOST', 'localhost'),
-                            port=database.connection_info.get('PORT', '5432'),
-                            file_path=converted_file_path
+                            database_name=database.connection_info.get(
+                                "NAME", database.name
+                            ),
+                            user=database.connection_info.get("USER", ""),
+                            password=database.connection_info.get("PASSWORD", ""),
+                            host=database.connection_info.get("HOST", "localhost"),
+                            port=database.connection_info.get("PORT", "5432"),
+                            file_path=converted_file_path,
                         )
 
                         # حذف الملف المحول بعد الانتهاء
@@ -509,32 +571,38 @@ class BackupService:
                         f"يرجى استخدام ملفات JSON.gz بدلاً من ذلك."
                     )
             # استعادة النسخة الاحتياطية حسب نوع الملف
-            elif file_info['type'] == 'sqlite3':
+            elif file_info["type"] == "sqlite3":
                 # استعادة من ملف SQLite3
                 print("استعادة من ملف SQLite3")
 
                 # التحقق من وجود الملف
                 if not os.path.exists(backup.file_path):
-                    raise FileNotFoundError(f"ملف النسخة الاحتياطية '{backup.file_path}' غير موجود")
+                    raise FileNotFoundError(
+                        f"ملف النسخة الاحتياطية '{backup.file_path}' غير موجود"
+                    )
 
                 # الحصول على مسار ملف قاعدة البيانات الحالية
-                db_file = settings.DATABASES['default']['NAME']
+                db_file = settings.DATABASES["default"]["NAME"]
                 print(f"مسار ملف قاعدة البيانات الحالية: {db_file}")
 
                 # حفظ معلومات النسخة الاحتياطية قبل استعادتها
                 backup_info = {
-                    'id': backup.id,
-                    'name': backup.name,
-                    'database_id': backup.database.id,
-                    'backup_type': backup.backup_type,
-                    'file_path': backup.file_path,
-                    'created_at': backup.created_at,
-                    'created_by_id': backup.created_by.id if backup.created_by else None
+                    "id": backup.id,
+                    "name": backup.name,
+                    "database_id": backup.database.id,
+                    "backup_type": backup.backup_type,
+                    "file_path": backup.file_path,
+                    "created_at": backup.created_at,
+                    "created_by_id": (
+                        backup.created_by.id if backup.created_by else None
+                    ),
                 }
 
                 # إنشاء نسخة احتياطية من قاعدة البيانات الحالية قبل الاستبدال
                 backup_current_db = f"{db_file}.bak"
-                print(f"إنشاء نسخة احتياطية من قاعدة البيانات الحالية: {backup_current_db}")
+                print(
+                    f"إنشاء نسخة احتياطية من قاعدة البيانات الحالية: {backup_current_db}"
+                )
                 shutil.copy2(db_file, backup_current_db)
 
                 try:
@@ -547,7 +615,7 @@ class BackupService:
 
                     # الحصول على قاعدة البيانات
                     try:
-                        db = Database.objects.get(id=backup_info['database_id'])
+                        db = Database.objects.get(id=backup_info["database_id"])
                     except Database.DoesNotExist:
                         # إذا لم تكن قاعدة البيانات موجودة، نستخدم أول قاعدة بيانات متاحة
                         db = Database.objects.first()
@@ -556,11 +624,11 @@ class BackupService:
                             db = Database.objects.create(
                                 name="Default Database",
                                 db_type="sqlite3",
-                                connection_info={}
+                                connection_info={},
                             )
 
                     # الحصول على المستخدم
-                    user_id = backup_info['created_by_id']
+                    user_id = backup_info["created_by_id"]
                     user = None
                     if user_id:
                         try:
@@ -571,18 +639,20 @@ class BackupService:
 
                     # إعادة إنشاء سجل النسخة الاحتياطية
                     try:
-                        Backup.objects.get(id=backup_info['id'])
-                        print(f"سجل النسخة الاحتياطية موجود بالفعل: {backup_info['id']}")
+                        Backup.objects.get(id=backup_info["id"])
+                        print(
+                            f"سجل النسخة الاحتياطية موجود بالفعل: {backup_info['id']}"
+                        )
                     except Backup.DoesNotExist:
                         print(f"إعادة إنشاء سجل النسخة الاحتياطية: {backup_info['id']}")
                         Backup.objects.create(
-                            id=backup_info['id'],
-                            name=backup_info['name'],
+                            id=backup_info["id"],
+                            name=backup_info["name"],
                             database=db,
-                            backup_type=backup_info['backup_type'],
-                            file_path=backup_info['file_path'],
-                            created_at=backup_info['created_at'],
-                            created_by=user
+                            backup_type=backup_info["backup_type"],
+                            file_path=backup_info["file_path"],
+                            created_at=backup_info["created_at"],
+                            created_by=user,
                         )
                 except Exception as e:
                     # استعادة النسخة الاحتياطية في حالة حدوث خطأ
@@ -596,23 +666,25 @@ class BackupService:
                         os.unlink(backup_current_db)
                         print(f"تم حذف النسخة الاحتياطية المؤقتة: {backup_current_db}")
 
-            elif file_info['type'] == 'json_gz':
+            elif file_info["type"] == "json_gz":
                 # استعادة من ملف JSON مضغوط
                 print("استعادة من ملف JSON مضغوط")
                 self._restore_from_json(backup, clear_data)
-            elif file_info['type'] == 'sql':
+            elif file_info["type"] == "sql":
                 # استعادة من ملف SQL
                 print("استعادة من ملف SQL")
-                if database.db_type == 'postgresql':
+                if database.db_type == "postgresql":
                     # استعادة من ملف SQL لقاعدة بيانات PostgreSQL
                     print("استخدام PostgreSQL لاستعادة ملف SQL")
                     self._restore_postgresql_backup(
-                        database_name=database.connection_info.get('NAME', database.name),
-                        user=database.connection_info.get('USER', ''),
-                        password=database.connection_info.get('PASSWORD', ''),
-                        host=database.connection_info.get('HOST', 'localhost'),
-                        port=database.connection_info.get('PORT', '5432'),
-                        file_path=backup.file_path
+                        database_name=database.connection_info.get(
+                            "NAME", database.name
+                        ),
+                        user=database.connection_info.get("USER", ""),
+                        password=database.connection_info.get("PASSWORD", ""),
+                        host=database.connection_info.get("HOST", "localhost"),
+                        port=database.connection_info.get("PORT", "5432"),
+                        file_path=backup.file_path,
                     )
                 else:
                     # ملفات SQL غير مدعومة لقواعد بيانات غير PostgreSQL
@@ -620,18 +692,22 @@ class BackupService:
                         f"لا يمكن استعادة ملفات SQL لقواعد بيانات من نوع {database.db_type}. "
                         f"يرجى استخدام ملفات JSON.gz بدلاً من ذلك."
                     )
-            elif file_info['type'] == 'django_fixture':
+            elif file_info["type"] == "django_fixture":
                 # محاولة استعادة الملف باستخدام Django loaddata مباشرة
-                print(f"محاولة استعادة الملف باستخدام Django loaddata مباشرة: {backup.file_path}")
+                print(
+                    f"محاولة استعادة الملف باستخدام Django loaddata مباشرة: {backup.file_path}"
+                )
                 try:
                     # التحقق من صحة ملف JSON قبل الاستعادة
                     self._validate_json_file(backup.file_path)
 
                     # تجاهل حذف البيانات القديمة لتجنب مشاكل flush
                     if clear_data:
-                        print("تم تجاهل حذف البيانات القديمة لتجنب مشاكل قاعدة البيانات")
+                        print(
+                            "تم تجاهل حذف البيانات القديمة لتجنب مشاكل قاعدة البيانات"
+                        )
 
-                    call_command('loaddata', backup.file_path, database='default')
+                    call_command("loaddata", backup.file_path, database="default")
                 except Exception as e:
                     error_msg = str(e)
                     print(f"خطأ في استعادة الملف: {error_msg}")
@@ -648,16 +724,18 @@ class BackupService:
                         )
                     else:
                         raise
-            elif file_info['type'] == 'gzip':
+            elif file_info["type"] == "gzip":
                 # محاولة فك ضغط الملف واستعادته
                 print("محاولة فك ضغط الملف واستعادته")
-                with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as temp_file:
+                with tempfile.NamedTemporaryFile(
+                    suffix=".json", delete=False
+                ) as temp_file:
                     temp_path = temp_file.name
 
                 try:
                     # فك ضغط الملف
-                    with gzip.open(backup.file_path, 'rb') as f_in:
-                        with open(temp_path, 'wb') as f_out:
+                    with gzip.open(backup.file_path, "rb") as f_in:
+                        with open(temp_path, "wb") as f_out:
                             shutil.copyfileobj(f_in, f_out)
 
                     # التحقق من صحة ملف JSON المفكوك
@@ -665,10 +743,12 @@ class BackupService:
 
                     # تجاهل حذف البيانات القديمة لتجنب مشاكل flush
                     if clear_data:
-                        print("تم تجاهل حذف البيانات القديمة لتجنب مشاكل قاعدة البيانات")
+                        print(
+                            "تم تجاهل حذف البيانات القديمة لتجنب مشاكل قاعدة البيانات"
+                        )
 
                     # استعادة الملف المفكوك
-                    call_command('loaddata', temp_path, database='default')
+                    call_command("loaddata", temp_path, database="default")
                 except Exception as e:
                     error_msg = str(e)
                     print(f"خطأ في استعادة الملف المضغوط: {error_msg}")
@@ -708,21 +788,23 @@ class BackupService:
             clear_data: هل يتم حذف البيانات القديمة قبل الاستعادة
         """
         # استخدام ملف مؤقت للبيانات
-        with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
             temp_path = temp_file.name
 
         try:
             # فك ضغط الملف
-            with gzip.open(backup.file_path, 'rb') as f_in:
-                with open(temp_path, 'wb') as f_out:
+            with gzip.open(backup.file_path, "rb") as f_in:
+                with open(temp_path, "wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
 
             # تحديد قاعدة البيانات المستهدفة
             # استخدام 'default' كاسم للاتصال، وليس اسم قاعدة البيانات
-            database_connection = 'default'
+            database_connection = "default"
 
             # طباعة معلومات تشخيصية
-            print(f"استعادة النسخة الاحتياطية باستخدام اتصال قاعدة البيانات: {database_connection}")
+            print(
+                f"استعادة النسخة الاحتياطية باستخدام اتصال قاعدة البيانات: {database_connection}"
+            )
             print(f"نوع النسخة الاحتياطية: {backup.backup_type}")
             print(f"مسار الملف: {temp_path}")
 
@@ -731,7 +813,7 @@ class BackupService:
                 print("تم تجاهل حذف البيانات القديمة لتجنب مشاكل قاعدة البيانات")
 
             # استعادة البيانات
-            call_command('loaddata', temp_path, database=database_connection)
+            call_command("loaddata", temp_path, database=database_connection)
 
         finally:
             # حذف الملف المؤقت
@@ -757,53 +839,57 @@ class BackupService:
 
         # تحديد نوع الملف
         file_info = {
-            'path': file_path,
-            'extension': file_ext,
-            'size': os.path.getsize(file_path),
-            'type': 'unknown',
-            'is_binary': False
+            "path": file_path,
+            "extension": file_ext,
+            "size": os.path.getsize(file_path),
+            "type": "unknown",
+            "is_binary": False,
         }
 
         # تحديد نوع الملف بناءً على الامتداد
-        if file_path.endswith('.json.gz'):
-            file_info['type'] = 'json_gz'
-        elif file_ext == '.sql':
-            file_info['type'] = 'sql'
-        elif file_ext == '.sqlite3':
-            file_info['type'] = 'sqlite3'
-        elif file_ext in ['.json', '.xml', '.yaml', '.yml']:
-            file_info['type'] = 'django_fixture'
-        elif file_ext == '.dump':
-            file_info['type'] = 'pg_dump'
-            file_info['is_binary'] = True
+        if file_path.endswith(".json.gz"):
+            file_info["type"] = "json_gz"
+        elif file_ext == ".sql":
+            file_info["type"] = "sql"
+        elif file_ext == ".sqlite3":
+            file_info["type"] = "sqlite3"
+        elif file_ext in [".json", ".xml", ".yaml", ".yml"]:
+            file_info["type"] = "django_fixture"
+        elif file_ext == ".dump":
+            file_info["type"] = "pg_dump"
+            file_info["is_binary"] = True
 
         # التحقق من محتوى الملف إذا كان الامتداد غير واضح
-        if file_info['size'] > 0:
+        if file_info["size"] > 0:
             try:
                 # قراءة أول 1024 بايت من الملف
-                with open(file_path, 'rb') as f:
+                with open(file_path, "rb") as f:
                     header = f.read(1024)
 
                 # التحقق مما إذا كان الملف مضغوطًا
-                if header.startswith(b'\x1f\x8b'):  # بداية ملفات GZIP
-                    file_info['type'] = 'gzip'
+                if header.startswith(b"\x1f\x8b"):  # بداية ملفات GZIP
+                    file_info["type"] = "gzip"
                 # التحقق مما إذا كان الملف JSON
-                elif header.strip().startswith(b'{') or header.strip().startswith(b'['):
-                    file_info['type'] = 'django_fixture'
+                elif header.strip().startswith(b"{") or header.strip().startswith(b"["):
+                    file_info["type"] = "django_fixture"
                 # التحقق مما إذا كان الملف SQL نصي
-                elif b'CREATE TABLE' in header or b'INSERT INTO' in header or b'SELECT' in header:
-                    file_info['type'] = 'sql'
+                elif (
+                    b"CREATE TABLE" in header
+                    or b"INSERT INTO" in header
+                    or b"SELECT" in header
+                ):
+                    file_info["type"] = "sql"
                 # التحقق مما إذا كان الملف pg_dump بتنسيق مخصص
-                elif header.startswith(b'PGDMP') or b'PGCOPY' in header:
-                    file_info['type'] = 'pg_dump'
-                    file_info['is_binary'] = True
+                elif header.startswith(b"PGDMP") or b"PGCOPY" in header:
+                    file_info["type"] = "pg_dump"
+                    file_info["is_binary"] = True
                     # إذا كان امتداد الملف .sql ولكنه ملف ثنائي، نغير النوع
-                    if file_ext == '.sql':
+                    if file_ext == ".sql":
                         print(f"تم اكتشاف ملف SQL ثنائي: {file_path}")
                 # التحقق من وجود أحرف غير مقروءة (قد يكون ملف ثنائي)
-                elif file_ext == '.sql' and any(b > 127 for b in header[:100]):
-                    file_info['type'] = 'pg_dump'
-                    file_info['is_binary'] = True
+                elif file_ext == ".sql" and any(b > 127 for b in header[:100]):
+                    file_info["type"] = "pg_dump"
+                    file_info["is_binary"] = True
                     print(f"تم اكتشاف ملف SQL ثنائي: {file_path}")
             except Exception as e:
                 print(f"حدث خطأ أثناء فحص محتوى الملف: {str(e)}")
@@ -838,32 +924,32 @@ class BackupService:
             str: مسار ملف SQL النصي الجديد
         """
         # التحقق من وجود أداة pg_restore
-        if not self._check_command_exists('pg_restore'):
+        if not self._check_command_exists("pg_restore"):
             raise RuntimeError(
                 "أداة pg_restore غير موجودة. يرجى التأكد من تثبيت PostgreSQL وإضافته إلى مسار النظام."
             )
 
         # إنشاء مسار الملف الجديد
-        new_file_path = file_path + '.converted.sql'
+        new_file_path = file_path + ".converted.sql"
 
         # تحويل الملف باستخدام pg_restore
         convert_cmd = [
-            'pg_restore',
-            '--no-owner',
-            '--no-privileges',
-            '--no-tablespaces',
-            '--format=c',
-            '--file=' + new_file_path,
-            file_path
+            "pg_restore",
+            "--no-owner",
+            "--no-privileges",
+            "--no-tablespaces",
+            "--format=c",
+            "--file=" + new_file_path,
+            file_path,
         ]
 
         try:
             print(f"تحويل ملف pg_dump الثنائي إلى SQL نصي: {file_path}")
             print(f"الأمر: {' '.join(convert_cmd)}")
 
-            result = subprocess.run(convert_cmd,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
+            result = subprocess.run(
+                convert_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
 
             # التحقق من نجاح العملية
             if result.returncode != 0:
@@ -880,23 +966,25 @@ class BackupService:
 
                 # استخدام pg_restore مع إخراج إلى ملف مباشرة
                 convert_cmd2 = [
-                    'pg_restore',
-                    '--no-owner',
-                    '--no-privileges',
-                    '--no-tablespaces',
-                    '--schema-only',
-                    file_path
+                    "pg_restore",
+                    "--no-owner",
+                    "--no-privileges",
+                    "--no-tablespaces",
+                    "--schema-only",
+                    file_path,
                 ]
 
-                with open(new_file_path, 'w') as f:
-                    result2 = subprocess.run(convert_cmd2,
-                                           stdout=f,
-                                           stderr=subprocess.PIPE)
+                with open(new_file_path, "w") as f:
+                    result2 = subprocess.run(
+                        convert_cmd2, stdout=f, stderr=subprocess.PIPE
+                    )
 
                 if result2.returncode != 0:
                     stderr_output2 = result2.stderr.decode()
                     print(f"فشل التحويل باستخدام الطريقة الثانية: {stderr_output2}")
-                    raise RuntimeError(f"فشل تحويل ملف pg_dump الثنائي: {stderr_output}")
+                    raise RuntimeError(
+                        f"فشل تحويل ملف pg_dump الثنائي: {stderr_output}"
+                    )
 
             print(f"تم تحويل الملف بنجاح إلى: {new_file_path}")
             return new_file_path
@@ -907,22 +995,28 @@ class BackupService:
     def _check_command_exists(self, command):
         """التحقق من وجود أمر في النظام"""
         try:
-            subprocess.run(['where', command] if os.name == 'nt' else ['which', command],
-                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            subprocess.run(
+                ["where", command] if os.name == "nt" else ["which", command],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
             return True
         except subprocess.CalledProcessError:
             return False
 
-    def _restore_postgresql_backup(self, database_name, user, password, host, port, file_path):
+    def _restore_postgresql_backup(
+        self, database_name, user, password, host, port, file_path
+    ):
         """استعادة نسخة احتياطية لقاعدة بيانات PostgreSQL"""
         # التحقق من وجود الأدوات المطلوبة
-        if not self._check_command_exists('psql'):
+        if not self._check_command_exists("psql"):
             raise RuntimeError(
                 "أداة psql غير موجودة. يرجى التأكد من تثبيت PostgreSQL وإضافته إلى مسار النظام."
             )
 
         # التحقق من نوع الملف
-        if not file_path.endswith('.sql'):
+        if not file_path.endswith(".sql"):
             raise ValueError(
                 f"الملف '{file_path}' ليس ملف SQL. يجب أن ينتهي الملف بامتداد .sql"
             )
@@ -933,10 +1027,10 @@ class BackupService:
 
         # استخدام معلومات الاتصال من ملف .env إذا كانت فارغة
         if not user:
-            user = os.environ.get('DB_USER', 'postgres')
+            user = os.environ.get("DB_USER", "postgres")
 
         if not password:
-            password = os.environ.get('DB_PASSWORD', '5525')
+            password = os.environ.get("DB_PASSWORD", "5525")
 
         # طباعة معلومات تشخيصية
         print(f"استعادة قاعدة بيانات PostgreSQL: {database_name}")
@@ -946,23 +1040,29 @@ class BackupService:
 
         # استعادة النسخة الاحتياطية باستخدام psql
         env = os.environ.copy()
-        env['PGPASSWORD'] = password
+        env["PGPASSWORD"] = password
 
         # استخدام psql لاستعادة ملف SQL
         restore_cmd = [
-            'psql',
-            '-h', host,
-            '-p', port,
-            '-U', user,
-            '-d', database_name,
-            '-f', file_path
+            "psql",
+            "-h",
+            host,
+            "-p",
+            port,
+            "-U",
+            user,
+            "-d",
+            database_name,
+            "-f",
+            file_path,
         ]
 
         try:
             # محاولة استعادة النسخة الاحتياطية
             print(f"تنفيذ الأمر: {' '.join(restore_cmd)}")
-            result = subprocess.run(restore_cmd, env=env,
-                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subprocess.run(
+                restore_cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
 
             # التحقق من نجاح العملية
             if result.returncode != 0:
@@ -975,14 +1075,21 @@ class BackupService:
                 print(f"المخرجات: {stdout_output}")
 
                 # إذا كان الخطأ يتعلق بتنسيق الملف، نحاول استخدام Django loaddata
-                if "syntax error" in stderr_output or "not a known serialization format" in stderr_output:
-                    print("يبدو أن الملف ليس ملف SQL صالح. محاولة معالجته كملف بيانات Django...")
+                if (
+                    "syntax error" in stderr_output
+                    or "not a known serialization format" in stderr_output
+                ):
+                    print(
+                        "يبدو أن الملف ليس ملف SQL صالح. محاولة معالجته كملف بيانات Django..."
+                    )
 
                     # التحقق من امتداد الملف
                     file_ext = os.path.splitext(file_path)[1].lower()
-                    if file_ext in ['.json', '.xml', '.yaml', '.yml']:
-                        print(f"محاولة استعادة الملف باستخدام Django loaddata: {file_path}")
-                        call_command('loaddata', file_path, database='default')
+                    if file_ext in [".json", ".xml", ".yaml", ".yml"]:
+                        print(
+                            f"محاولة استعادة الملف باستخدام Django loaddata: {file_path}"
+                        )
+                        call_command("loaddata", file_path, database="default")
                         return True
                     else:
                         raise ValueError(
@@ -998,12 +1105,18 @@ class BackupService:
             print("تمت استعادة النسخة الاحتياطية بنجاح باستخدام PostgreSQL")
             return True
         except subprocess.CalledProcessError as e:
-            stderr_output = e.stderr.decode() if hasattr(e, 'stderr') else str(e)
-            raise RuntimeError(f"فشل تنفيذ أمر استعادة النسخة الاحتياطية: {stderr_output}")
+            stderr_output = e.stderr.decode() if hasattr(e, "stderr") else str(e)
+            raise RuntimeError(
+                f"فشل تنفيذ أمر استعادة النسخة الاحتياطية: {stderr_output}"
+            )
         except Exception as e:
-            raise RuntimeError(f"حدث خطأ غير متوقع أثناء استعادة النسخة الاحتياطية: {str(e)}")
+            raise RuntimeError(
+                f"حدث خطأ غير متوقع أثناء استعادة النسخة الاحتياطية: {str(e)}"
+            )
 
-    def restore_from_file(self, database_id, uploaded_file, backup_type='full', clear_data=False):
+    def restore_from_file(
+        self, database_id, uploaded_file, backup_type="full", clear_data=False
+    ):
         """
         استعادة من ملف تم تحميله
 
@@ -1020,11 +1133,11 @@ class BackupService:
         database = Database.objects.get(id=database_id)
 
         # إنشاء اسم للنسخة الاحتياطية
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         name = f"{database.name}_uploaded_{timestamp}"
 
         # إنشاء مجلد النسخ الاحتياطي إذا لم يكن موجود
-        backup_dir = os.path.join(settings.MEDIA_ROOT, 'backups')
+        backup_dir = os.path.join(settings.MEDIA_ROOT, "backups")
         os.makedirs(backup_dir, exist_ok=True)
 
         # حفظ الملف المحمل مع تسجيل تفصيلي
@@ -1033,7 +1146,7 @@ class BackupService:
         print(f"حجم الملف المرفوع: {uploaded_file.size} بايت")
 
         try:
-            with open(file_path, 'wb+') as destination:
+            with open(file_path, "wb+") as destination:
                 total_written = 0
                 for chunk in uploaded_file.chunks():
                     destination.write(chunk)
@@ -1053,7 +1166,7 @@ class BackupService:
 
         # قراءة أول 100 بايت للتحقق
         try:
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 first_bytes = f.read(100)
             print(f"أول 100 بايت من الملف: {first_bytes[:50]}...")
         except Exception as e:
@@ -1065,7 +1178,7 @@ class BackupService:
             name=name,
             file_path=file_path,
             size=size,
-            backup_type=backup_type
+            backup_type=backup_type,
         )
 
         # استعادة النسخة الاحتياطية
@@ -1080,22 +1193,28 @@ class BackupService:
             print(f"معلومات الملف: {file_info}")
 
             # التعامل مع ملفات pg_dump الثنائية
-            if file_info['type'] == 'pg_dump' and file_info['is_binary']:
+            if file_info["type"] == "pg_dump" and file_info["is_binary"]:
                 print("تم اكتشاف ملف pg_dump ثنائي")
-                if database.db_type == 'postgresql':
+                if database.db_type == "postgresql":
                     # تحويل الملف الثنائي إلى SQL نصي
                     try:
-                        converted_file_path = self._convert_binary_pg_dump_to_sql(file_path)
-                        print(f"تم تحويل الملف الثنائي إلى SQL نصي: {converted_file_path}")
+                        converted_file_path = self._convert_binary_pg_dump_to_sql(
+                            file_path
+                        )
+                        print(
+                            f"تم تحويل الملف الثنائي إلى SQL نصي: {converted_file_path}"
+                        )
 
                         # استعادة من الملف المحول
                         self._restore_postgresql_backup(
-                            database_name=database.connection_info.get('NAME', database.name),
-                            user=database.connection_info.get('USER', ''),
-                            password=database.connection_info.get('PASSWORD', ''),
-                            host=database.connection_info.get('HOST', 'localhost'),
-                            port=database.connection_info.get('PORT', '5432'),
-                            file_path=converted_file_path
+                            database_name=database.connection_info.get(
+                                "NAME", database.name
+                            ),
+                            user=database.connection_info.get("USER", ""),
+                            password=database.connection_info.get("PASSWORD", ""),
+                            host=database.connection_info.get("HOST", "localhost"),
+                            port=database.connection_info.get("PORT", "5432"),
+                            file_path=converted_file_path,
                         )
 
                         # حذف الملف المحول بعد الانتهاء
@@ -1112,23 +1231,25 @@ class BackupService:
                         f"يرجى استخدام ملفات JSON.gz بدلاً من ذلك."
                     )
             # استعادة النسخة الاحتياطية حسب نوع الملف
-            elif file_info['type'] == 'json_gz':
+            elif file_info["type"] == "json_gz":
                 # استعادة من ملف JSON مضغوط
                 print("استعادة من ملف JSON مضغوط")
                 self._restore_from_json(backup, clear_data)
-            elif file_info['type'] == 'sql':
+            elif file_info["type"] == "sql":
                 # استعادة من ملف SQL
                 print("استعادة من ملف SQL")
-                if database.db_type == 'postgresql':
+                if database.db_type == "postgresql":
                     # استعادة من ملف SQL لقاعدة بيانات PostgreSQL
                     print("استخدام PostgreSQL لاستعادة ملف SQL")
                     self._restore_postgresql_backup(
-                        database_name=database.connection_info.get('NAME', database.name),
-                        user=database.connection_info.get('USER', ''),
-                        password=database.connection_info.get('PASSWORD', ''),
-                        host=database.connection_info.get('HOST', 'localhost'),
-                        port=database.connection_info.get('PORT', '5432'),
-                        file_path=file_path
+                        database_name=database.connection_info.get(
+                            "NAME", database.name
+                        ),
+                        user=database.connection_info.get("USER", ""),
+                        password=database.connection_info.get("PASSWORD", ""),
+                        host=database.connection_info.get("HOST", "localhost"),
+                        port=database.connection_info.get("PORT", "5432"),
+                        file_path=file_path,
                     )
                 else:
                     # ملفات SQL غير مدعومة لقواعد بيانات غير PostgreSQL
@@ -1136,16 +1257,18 @@ class BackupService:
                         f"لا يمكن استعادة ملفات SQL لقواعد بيانات من نوع {database.db_type}. "
                         f"يرجى استخدام ملفات JSON.gz بدلاً من ذلك."
                     )
-            elif file_info['type'] == 'django_fixture':
+            elif file_info["type"] == "django_fixture":
                 # استعادة مباشرة باستخدام Django loaddata
                 print(f"استعادة ملف JSON: {file_path}")
                 try:
                     # تجاهل حذف البيانات القديمة لتجنب مشاكل flush
                     if clear_data:
-                        print("تم تجاهل حذف البيانات القديمة لتجنب مشاكل قاعدة البيانات")
+                        print(
+                            "تم تجاهل حذف البيانات القديمة لتجنب مشاكل قاعدة البيانات"
+                        )
 
                     # استعادة مباشرة بدون فحص إضافي
-                    call_command('loaddata', file_path, database='default', verbosity=2)
+                    call_command("loaddata", file_path, database="default", verbosity=2)
                     print("تمت الاستعادة بنجاح")
 
                 except Exception as e:
@@ -1155,35 +1278,47 @@ class BackupService:
                     # إعادة المحاولة مع تجاهل الأخطاء
                     try:
                         print("محاولة الاستعادة مع تجاهل الأخطاء...")
-                        call_command('loaddata', file_path, database='default', verbosity=2, ignore=True)
+                        call_command(
+                            "loaddata",
+                            file_path,
+                            database="default",
+                            verbosity=2,
+                            ignore=True,
+                        )
                         print("تمت الاستعادة مع تجاهل بعض الأخطاء")
                     except Exception as e2:
                         print(f"فشل في الاستعادة نهائياً: {str(e2)}")
-                        raise ValueError(f"فشل في استعادة النسخة الاحتياطية: {error_msg}")
-            elif file_info['type'] == 'gzip':
+                        raise ValueError(
+                            f"فشل في استعادة النسخة الاحتياطية: {error_msg}"
+                        )
+            elif file_info["type"] == "gzip":
                 # محاولة فك ضغط الملف واستعادته
                 print("محاولة فك ضغط الملف واستعادته")
-                with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as temp_file:
+                with tempfile.NamedTemporaryFile(
+                    suffix=".json", delete=False
+                ) as temp_file:
                     temp_path = temp_file.name
 
                 try:
                     # فك ضغط الملف مع معالجة أفضل للأخطاء
                     try:
-                        with gzip.open(file_path, 'rt', encoding='utf-8') as f_in:
+                        with gzip.open(file_path, "rt", encoding="utf-8") as f_in:
                             content = f_in.read()
 
                         # التحقق من أن المحتوى ليس فارغاً
                         if not content.strip():
-                            raise ValueError("الملف المضغوط فارغ أو لا يحتوي على بيانات")
+                            raise ValueError(
+                                "الملف المضغوط فارغ أو لا يحتوي على بيانات"
+                            )
 
                         # كتابة المحتوى إلى الملف المؤقت
-                        with open(temp_path, 'w', encoding='utf-8') as f_out:
+                        with open(temp_path, "w", encoding="utf-8") as f_out:
                             f_out.write(content)
 
                     except UnicodeDecodeError:
                         # محاولة فك الضغط بالطريقة التقليدية
-                        with gzip.open(file_path, 'rb') as f_in:
-                            with open(temp_path, 'wb') as f_out:
+                        with gzip.open(file_path, "rb") as f_in:
+                            with open(temp_path, "wb") as f_out:
                                 shutil.copyfileobj(f_in, f_out)
 
                     # التحقق من صحة ملف JSON المفكوك
@@ -1191,10 +1326,12 @@ class BackupService:
 
                     # تجاهل حذف البيانات القديمة لتجنب مشاكل flush
                     if clear_data:
-                        print("تم تجاهل حذف البيانات القديمة لتجنب مشاكل قاعدة البيانات")
+                        print(
+                            "تم تجاهل حذف البيانات القديمة لتجنب مشاكل قاعدة البيانات"
+                        )
 
                     # استعادة الملف المفكوك
-                    call_command('loaddata', temp_path, database='default')
+                    call_command("loaddata", temp_path, database="default")
                 except Exception as e:
                     error_msg = str(e)
                     print(f"خطأ في استعادة الملف المضغوط: {error_msg}")

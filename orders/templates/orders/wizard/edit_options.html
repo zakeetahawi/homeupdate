@@ -1,11 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
 {% load i18n %}
-
 {% block title %}خيارات تعديل الطلب - {{ order.order_number }}{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .edit-options-container {
         max-width: 900px;
         margin: 50px auto;
@@ -188,100 +186,89 @@
         font-size: 13px;
         margin-top: 10px;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="edit-options-container">
-    <div class="order-info-card">
-        <h2>
-            <i class="fas fa-edit"></i>
-            تعديل الطلب: {{ order.order_number }}
-        </h2>
-        <div class="info-row">
-            <span><i class="fas fa-user"></i> العميل: <strong>{{ order.customer.name }}</strong></span>
-            <span><i class="fas fa-calendar"></i> التاريخ: <strong>{{ order.created_at|date:"Y-m-d" }}</strong></span>
-        </div>
-        <div class="info-row">
-            <span><i class="fas fa-tag"></i> النوع: <strong>{{ order.get_selected_types_display }}</strong></span>
-            <span><i class="fas fa-money-bill-wave"></i> المبلغ: <strong>{{ order.final_price|floatformat:2 }} {{ currency_symbol|default:"ج.م" }}</strong></span>
-        </div>
-    </div>
-
-    <h3 style="text-align: center; margin-bottom: 30px; color: #333; font-size: 24px;">
-        اختر نوع التعديل المطلوب
-    </h3>
-
-    <div class="edit-options-grid">
-        <!-- خيار 1: تعديل النوع -->
-        <div class="edit-option-card type-edit">
-            <span class="option-icon">
-                <i class="fas fa-exchange-alt"></i>
-            </span>
-            <h3 class="option-title">تعديل نوع الطلب</h3>
-            <p class="option-description">
-                تبديل نوع الطلب بين (تركيب، تفصيل، تسليم، غسيل، إكسسوار) مع الحفاظ على جميع التفاصيل
-            </p>
-            <a href="{% url 'orders:wizard_edit_type' order.pk %}" class="option-btn">
-                <i class="fas fa-edit"></i> تعديل النوع
-            </a>
-        </div>
-
-        <!-- خيار 2: تعديل العناصر -->
-        <div class="edit-option-card items-edit">
-            <span class="option-icon">
-                <i class="fas fa-boxes"></i>
-            </span>
-            <h3 class="option-title">تعديل العناصر</h3>
-            <p class="option-description">
-                إضافة أو حذف أو تعديل عناصر الطلب (المنتجات والكميات والخصومات)
-            </p>
-            <a href="{% url 'orders:wizard_edit_items' order.pk %}" class="option-btn">
-                <i class="fas fa-boxes"></i> تعديل العناصر
-            </a>
-        </div>
-
-        <!-- خيار 3: تعديل العقد -->
-        {% if order.has_contract %}
-        <div class="edit-option-card contract-edit">
-            <span class="option-icon">
-                <i class="fas fa-file-contract"></i>
-            </span>
-            <h3 class="option-title">تعديل العقد</h3>
-            <p class="option-description">
-                تعديل تفاصيل العقد، الستائر، الأقمشة، والإكسسوارات
-            </p>
-            <a href="{% url 'orders:wizard_edit_contract' order.pk %}" class="option-btn">
-                <i class="fas fa-file-contract"></i> تعديل العقد
-            </a>
-        </div>
-        {% else %}
-        <div class="edit-option-card contract-edit disabled-option">
-            <span class="option-icon">
-                <i class="fas fa-file-contract"></i>
-            </span>
-            <h3 class="option-title">تعديل العقد</h3>
-            <p class="option-description">
-                تعديل تفاصيل العقد، الستائر، الأقمشة، والإكسسوارات
-            </p>
-            <div class="disabled-reason">
-                <i class="fas fa-info-circle"></i>
-                هذا الطلب لا يحتوي على عقد
+    <div class="edit-options-container">
+        <div class="order-info-card">
+            <h2>
+                <i class="fas fa-edit"></i>
+                تعديل الطلب: {{ order.order_number }}
+            </h2>
+            <div class="info-row">
+                <span><i class="fas fa-user"></i> العميل: <strong>{{ order.customer.name }}</strong></span>
+                <span><i class="fas fa-calendar"></i> التاريخ: <strong>{{ order.created_at|date:"Y-m-d" }}</strong></span>
+            </div>
+            <div class="info-row">
+                <span><i class="fas fa-tag"></i> النوع: <strong>{{ order.get_selected_types_display }}</strong></span>
+                <span><i class="fas fa-money-bill-wave"></i> المبلغ: <strong>{{ order.final_price|floatformat:2 }} {{ currency_symbol|default:"ج.م" }}</strong></span>
             </div>
         </div>
-        {% endif %}
+        <h3 style="text-align: center;
+                   margin-bottom: 30px;
+                   color: #333;
+                   font-size: 24px">اختر نوع التعديل المطلوب</h3>
+        <div class="edit-options-grid">
+            <!-- خيار 1: تعديل النوع -->
+            <div class="edit-option-card type-edit">
+                <span class="option-icon">
+                    <i class="fas fa-exchange-alt"></i>
+                </span>
+                <h3 class="option-title">تعديل نوع الطلب</h3>
+                <p class="option-description">تبديل نوع الطلب بين (تركيب، تفصيل، تسليم، غسيل، إكسسوار) مع الحفاظ على جميع التفاصيل</p>
+                <a href="{% url 'orders:wizard_edit_type' order.pk %}"
+                   class="option-btn">
+                    <i class="fas fa-edit"></i> تعديل النوع
+                </a>
+            </div>
+            <!-- خيار 2: تعديل العناصر -->
+            <div class="edit-option-card items-edit">
+                <span class="option-icon">
+                    <i class="fas fa-boxes"></i>
+                </span>
+                <h3 class="option-title">تعديل العناصر</h3>
+                <p class="option-description">إضافة أو حذف أو تعديل عناصر الطلب (المنتجات والكميات والخصومات)</p>
+                <a href="{% url 'orders:wizard_edit_items' order.pk %}"
+                   class="option-btn">
+                    <i class="fas fa-boxes"></i> تعديل العناصر
+                </a>
+            </div>
+            <!-- خيار 3: تعديل العقد -->
+            {% if order.has_contract %}
+                <div class="edit-option-card contract-edit">
+                    <span class="option-icon">
+                        <i class="fas fa-file-contract"></i>
+                    </span>
+                    <h3 class="option-title">تعديل العقد</h3>
+                    <p class="option-description">تعديل تفاصيل العقد، الستائر، الأقمشة، والإكسسوارات</p>
+                    <a href="{% url 'orders:wizard_edit_contract' order.pk %}"
+                       class="option-btn">
+                        <i class="fas fa-file-contract"></i> تعديل العقد
+                    </a>
+                </div>
+            {% else %}
+                <div class="edit-option-card contract-edit disabled-option">
+                    <span class="option-icon">
+                        <i class="fas fa-file-contract"></i>
+                    </span>
+                    <h3 class="option-title">تعديل العقد</h3>
+                    <p class="option-description">تعديل تفاصيل العقد، الستائر، الأقمشة، والإكسسوارات</p>
+                    <div class="disabled-reason">
+                        <i class="fas fa-info-circle"></i>
+                        هذا الطلب لا يحتوي على عقد
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        <div class="back-link">
+            <a href="{% url 'orders:order_detail_by_number' order.order_number %}">
+                <i class="fas fa-arrow-right"></i> العودة لتفاصيل الطلب
+            </a>
+        </div>
     </div>
-
-    <div class="back-link">
-        <a href="{% url 'orders:order_detail_by_number' order.order_number %}">
-            <i class="fas fa-arrow-right"></i> العودة لتفاصيل الطلب
-        </a>
-    </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     // إضافة تأثيرات عند التحميل
     const cards = document.querySelectorAll('.edit-option-card:not(.disabled-option)');
@@ -297,5 +284,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }, index * 100);
     });
 });
-</script>
+    </script>
 {% endblock %}

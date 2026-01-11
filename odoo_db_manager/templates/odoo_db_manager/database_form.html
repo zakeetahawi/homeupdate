@@ -1,167 +1,153 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load widget_tweaks %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
 {% endblock %}
-
 {% block content %}
-<div class="odoo-dashboard">
-    <!-- شريط الأدوات العلوي -->
-    <div class="odoo-toolbar">
-        <div class="odoo-toolbar-left">
-            <h1>{{ title }}</h1>
-        </div>
-        <div class="odoo-toolbar-right">
-            <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> العودة
-            </a>
-        </div>
-    </div>
-
-    <!-- نموذج إنشاء قاعدة البيانات -->
-    <div class="odoo-form">
-        <form method="post">
-            {% csrf_token %}
-
-            <!-- معلومات أساسية -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>المعلومات الأساسية</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
-                                {{ form.name }}
-                                <small class="form-text text-muted">اسم قاعدة البيانات في النظام</small>
-                                {% if form.name.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="{{ form.db_type.id_for_label }}">{{ form.db_type.label }}</label>
-                                {{ form.db_type }}
-                                {% if form.db_type.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.db_type.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="odoo-dashboard">
+        <!-- شريط الأدوات العلوي -->
+        <div class="odoo-toolbar">
+            <div class="odoo-toolbar-left">
+                <h1>{{ title }}</h1>
             </div>
-
-            <!-- إعدادات الاتصال -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>إعدادات الاتصال</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="{{ form.host.id_for_label }}">{{ form.host.label }}</label>
-                                {{ form.host }}
-                                {% if form.host.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.host.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="{{ form.port.id_for_label }}">{{ form.port.label }}</label>
-                                {{ form.port }}
-                                <small class="form-text text-muted">منفذ الاتصال (افتراضي: 5432)</small>
-                                {% if form.port.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.port.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="form-group mb-3">
-                                <label for="{{ form.database_name.id_for_label }}">{{ form.database_name.label }}</label>
-                                {{ form.database_name }}
-                                <small class="form-text text-muted">اسم قاعدة البيانات في الخادم</small>
-                                {% if form.database_name.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.database_name.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
-                                {{ form.username }}
-                                {% if form.username.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.username.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
-                                {{ form.password }}
-                                {% if form.password.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.password.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>                    </div>
-                </div>
-            </div>
-
-            <!-- خيارات متقدمة -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>خيارات متقدمة</h5>
-                </div>                <div class="card-body">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="create_actual_db" name="create_actual_db" checked>
-                        <label class="form-check-label" for="create_actual_db">
-                            إنشاء قاعدة البيانات الفعلية في PostgreSQL
-                        </label>
-                        <small class="form-text text-muted">إذا تم تحديد هذا الخيار، سيتم إنشاء قاعدة البيانات فعلياً في PostgreSQL</small>
-                    </div>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="force_create" name="force_create">
-                        <label class="form-check-label" for="force_create">
-                            إجبار إنشاء قاعدة البيانات (تجاوز التحقق من الوجود)
-                        </label>
-                        <small class="form-text text-muted">استخدم هذا الخيار إذا كنت تريد إعادة إنشاء قاعدة بيانات موجودة</small>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="ignore_db_errors" name="ignore_db_errors">
-                        <label class="form-check-label" for="ignore_db_errors">
-                            تجاهل أخطاء إنشاء قاعدة البيانات (إنشاء السجل فقط)
-                        </label>
-                        <small class="form-text text-muted">استخدم هذا الخيار إذا كنت تريد إنشاء السجل دون إنشاء قاعدة البيانات أو اختبار الاتصال</small>
-                    </div>
-                </div>
-            </div>
-
-            <!-- أزرار التحكم -->
-            <div class="form-group mt-4">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> إنشاء قاعدة البيانات
-                </button>
-                <a href="{% url 'odoo_db_manager:dashboard' %}" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> إلغاء
+            <div class="odoo-toolbar-right">
+                <a href="{% url 'odoo_db_manager:dashboard' %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> العودة
                 </a>
-            </div>        </form>
+            </div>
+        </div>
+        <!-- نموذج إنشاء قاعدة البيانات -->
+        <div class="odoo-form">
+            <form method="post">
+                {% csrf_token %}
+                <!-- معلومات أساسية -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>المعلومات الأساسية</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                                    {{ form.name }}
+                                    <small class="form-text text-muted">اسم قاعدة البيانات في النظام</small>
+                                    {% if form.name.errors %}<div class="invalid-feedback d-block">{{ form.name.errors }}</div>{% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.db_type.id_for_label }}">{{ form.db_type.label }}</label>
+                                    {{ form.db_type }}
+                                    {% if form.db_type.errors %}<div class="invalid-feedback d-block">{{ form.db_type.errors }}</div>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- إعدادات الاتصال -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>إعدادات الاتصال</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.host.id_for_label }}">{{ form.host.label }}</label>
+                                    {{ form.host }}
+                                    {% if form.host.errors %}<div class="invalid-feedback d-block">{{ form.host.errors }}</div>{% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.port.id_for_label }}">{{ form.port.label }}</label>
+                                    {{ form.port }}
+                                    <small class="form-text text-muted">منفذ الاتصال (افتراضي: 5432)</small>
+                                    {% if form.port.errors %}<div class="invalid-feedback d-block">{{ form.port.errors }}</div>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.database_name.id_for_label }}">{{ form.database_name.label }}</label>
+                                    {{ form.database_name }}
+                                    <small class="form-text text-muted">اسم قاعدة البيانات في الخادم</small>
+                                    {% if form.database_name.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.database_name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                                    {{ form.username }}
+                                    {% if form.username.errors %}<div class="invalid-feedback d-block">{{ form.username.errors }}</div>{% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                                    {{ form.password }}
+                                    {% if form.password.errors %}<div class="invalid-feedback d-block">{{ form.password.errors }}</div>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- خيارات متقدمة -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>خيارات متقدمة</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="create_actual_db"
+                                   name="create_actual_db"
+                                   checked>
+                            <label class="form-check-label" for="create_actual_db">إنشاء قاعدة البيانات الفعلية في PostgreSQL</label>
+                            <small class="form-text text-muted">إذا تم تحديد هذا الخيار، سيتم إنشاء قاعدة البيانات فعلياً في PostgreSQL</small>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="force_create"
+                                   name="force_create">
+                            <label class="form-check-label" for="force_create">إجبار إنشاء قاعدة البيانات (تجاوز التحقق من الوجود)</label>
+                            <small class="form-text text-muted">استخدم هذا الخيار إذا كنت تريد إعادة إنشاء قاعدة بيانات موجودة</small>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="ignore_db_errors"
+                                   name="ignore_db_errors">
+                            <label class="form-check-label" for="ignore_db_errors">تجاهل أخطاء إنشاء قاعدة البيانات (إنشاء السجل فقط)</label>
+                            <small class="form-text text-muted">استخدم هذا الخيار إذا كنت تريد إنشاء السجل دون إنشاء قاعدة البيانات أو اختبار الاتصال</small>
+                        </div>
+                    </div>
+                </div>
+                <!-- أزرار التحكم -->
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> إنشاء قاعدة البيانات
+                    </button>
+                    <a href="{% url 'odoo_db_manager:dashboard' %}"
+                       class="btn btn-secondary">
+                        <i class="fas fa-times"></i> إلغاء
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
-
-<script>
+    <script>
 $(document).ready(function() {
     // منطق تفاعل الخيارات
     $('#ignore_db_errors').change(function() {
@@ -196,5 +182,5 @@ $(document).ready(function() {
         }
     });
 });
-</script>
+    </script>
 {% endblock %}

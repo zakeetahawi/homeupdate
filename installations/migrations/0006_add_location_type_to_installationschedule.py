@@ -6,13 +6,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('installations', '0005_alter_installationschedule_scheduled_date_and_more'),
+        ("installations", "0005_alter_installationschedule_scheduled_date_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='installationschedule',
-            name='location_type',
-            field=models.CharField(blank=True, choices=[('open', 'مفتوح'), ('compound', 'كومبوند')], help_text='نوع المكان (مفتوح أو كومبوند)', max_length=20, null=True, verbose_name='نوع المكان'),
+            model_name="installationschedule",
+            name="location_type",
+            field=models.CharField(
+                blank=True,
+                choices=[("open", "مفتوح"), ("compound", "كومبوند")],
+                help_text="نوع المكان (مفتوح أو كومبوند)",
+                max_length=20,
+                null=True,
+                verbose_name="نوع المكان",
+            ),
         ),
     ]

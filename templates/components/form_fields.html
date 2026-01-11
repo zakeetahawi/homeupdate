@@ -21,271 +21,238 @@ Component Library - Form Fields
 {% include 'components/form_fields.html' with type='select_field' field=form.status options=status_choices %}
 ===========================================
 {% endcomment %}
-
 {% comment %}=== TEXT FIELD - حقل نصي ==={% endcomment %}
 {% if type == 'text_field' or type == 'field' %}
-<div class="form-group mb-3 {{ wrapper_class }}">
-    {% if label or field.label %}
-    <label for="{{ field.id_for_label|default:id }}" class="form-label" style="font-weight: var(--font-weight-medium);">
-        {{ label|default:field.label }}
-        {% if required or field.field.required %}
-        <span class="text-danger">*</span>
+    <div class="form-group mb-3 {{ wrapper_class }}">
+        {% if label or field.label %}
+            <label for="{{ field.id_for_label|default:id }}"
+                   class="form-label"
+                   style="font-weight: var(--font-weight-medium)">
+                {{ label|default:field.label }}
+                {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
         {% endif %}
-    </label>
-    {% endif %}
-    
-    <input type="text" 
-           class="form-control {% if field.errors %}is-invalid{% endif %} {{ class }}"
-           id="{{ field.id_for_label|default:id }}"
-           name="{{ field.name|default:name }}"
-           value="{{ field.value|default:value|default:'' }}"
-           {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
-           {% if required or field.field.required %}required{% endif %}
-           {% if readonly %}readonly{% endif %}
-           {% if disabled %}disabled{% endif %}
-           {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
-           {% if pattern %}pattern="{{ pattern }}"{% endif %}
-           {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
-           {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
-           style="border-radius: var(--border-radius-sm); transition: border-color var(--transition-fast), box-shadow var(--transition-fast);">
-    
-    {% if help_text or field.help_text %}
-    <small class="form-text text-muted">{{ help_text|default:field.help_text }}</small>
-    {% endif %}
-    
-    {% if field.errors %}
-    <div class="invalid-feedback d-block">
-        {{ field.errors|striptags }}
+        <input type="text"
+               class="form-control {% if field.errors %}is-invalid{% endif %} {{ class }}"
+               id="{{ field.id_for_label|default:id }}"
+               name="{{ field.name|default:name }}"
+               value="{{ field.value|default:value|default:'' }}"
+               {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+               {% if required or field.field.required %}required{% endif %}
+               {% if readonly %}readonly{% endif %}
+               {% if disabled %}disabled{% endif %}
+               {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
+               {% if pattern %}pattern="{{ pattern }}"{% endif %}
+               {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+               {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+               style="border-radius: var(--border-radius-sm);
+                      transition: border-color var(--transition-fast), box-shadow var(--transition-fast)">
+        {% if help_text or field.help_text %}
+            <small class="form-text text-muted">{{ help_text|default:field.help_text }}</small>
+        {% endif %}
+        {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>{% endif %}
     </div>
-    {% endif %}
-</div>
 {% endif %}
-
 {% comment %}=== EMAIL FIELD - حقل بريد إلكتروني ==={% endcomment %}
 {% if type == 'email_field' %}
-<div class="form-group mb-3 {{ wrapper_class }}">
-    {% if label or field.label %}
-    <label for="{{ field.id_for_label|default:id }}" class="form-label" style="font-weight: var(--font-weight-medium);">
-        {{ label|default:field.label }}
-        {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
-    </label>
-    {% endif %}
-    
-    <input type="email" 
-           class="form-control {% if field.errors %}is-invalid{% endif %} {{ class }}"
-           id="{{ field.id_for_label|default:id }}"
-           name="{{ field.name|default:name }}"
-           value="{{ field.value|default:value|default:'' }}"
-           placeholder="{{ placeholder|default:'example@domain.com' }}"
-           {% if required or field.field.required %}required{% endif %}
-           style="border-radius: var(--border-radius-sm);">
-    
-    {% if field.errors %}
-    <div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>
-    {% endif %}
-</div>
+    <div class="form-group mb-3 {{ wrapper_class }}">
+        {% if label or field.label %}
+            <label for="{{ field.id_for_label|default:id }}"
+                   class="form-label"
+                   style="font-weight: var(--font-weight-medium)">
+                {{ label|default:field.label }}
+                {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+        {% endif %}
+        <input type="email"
+               class="form-control {% if field.errors %}is-invalid{% endif %} {{ class }}"
+               id="{{ field.id_for_label|default:id }}"
+               name="{{ field.name|default:name }}"
+               value="{{ field.value|default:value|default:'' }}"
+               placeholder="{{ placeholder|default:'example@domain.com' }}"
+               {% if required or field.field.required %}required{% endif %}
+               style="border-radius: var(--border-radius-sm)">
+        {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>{% endif %}
+    </div>
 {% endif %}
-
 {% comment %}=== NUMBER FIELD - حقل رقمي ==={% endcomment %}
 {% if type == 'number_field' %}
-<div class="form-group mb-3 {{ wrapper_class }}">
-    {% if label or field.label %}
-    <label for="{{ field.id_for_label|default:id }}" class="form-label" style="font-weight: var(--font-weight-medium);">
-        {{ label|default:field.label }}
-        {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
-    </label>
-    {% endif %}
-    
-    <input type="number" 
-           class="form-control {% if field.errors %}is-invalid{% endif %} {{ class }}"
-           id="{{ field.id_for_label|default:id }}"
-           name="{{ field.name|default:name }}"
-           value="{{ field.value|default:value|default:'' }}"
-           {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
-           {% if min %}min="{{ min }}"{% endif %}
-           {% if max %}max="{{ max }}"{% endif %}
-           {% if step %}step="{{ step }}"{% endif %}
-           {% if required or field.field.required %}required{% endif %}
-           style="border-radius: var(--border-radius-sm);">
-    
-    {% if field.errors %}
-    <div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>
-    {% endif %}
-</div>
+    <div class="form-group mb-3 {{ wrapper_class }}">
+        {% if label or field.label %}
+            <label for="{{ field.id_for_label|default:id }}"
+                   class="form-label"
+                   style="font-weight: var(--font-weight-medium)">
+                {{ label|default:field.label }}
+                {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+        {% endif %}
+        <input type="number"
+               class="form-control {% if field.errors %}is-invalid{% endif %} {{ class }}"
+               id="{{ field.id_for_label|default:id }}"
+               name="{{ field.name|default:name }}"
+               value="{{ field.value|default:value|default:'' }}"
+               {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+               {% if min %}min="{{ min }}"{% endif %}
+               {% if max %}max="{{ max }}"{% endif %}
+               {% if step %}step="{{ step }}"{% endif %}
+               {% if required or field.field.required %}required{% endif %}
+               style="border-radius: var(--border-radius-sm)">
+        {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>{% endif %}
+    </div>
 {% endif %}
-
 {% comment %}=== DATE FIELD - حقل تاريخ ==={% endcomment %}
 {% if type == 'date_field' %}
-<div class="form-group mb-3 {{ wrapper_class }}">
-    {% if label or field.label %}
-    <label for="{{ field.id_for_label|default:id }}" class="form-label" style="font-weight: var(--font-weight-medium);">
-        {{ label|default:field.label }}
-        {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
-    </label>
-    {% endif %}
-    
-    <input type="date" 
-           class="form-control {% if field.errors %}is-invalid{% endif %} {{ class }}"
-           id="{{ field.id_for_label|default:id }}"
-           name="{{ field.name|default:name }}"
-           value="{{ field.value|default:value|default:'' }}"
-           {% if min_date %}min="{{ min_date }}"{% endif %}
-           {% if max_date %}max="{{ max_date }}"{% endif %}
-           {% if required or field.field.required %}required{% endif %}
-           style="border-radius: var(--border-radius-sm);">
-    
-    {% if field.errors %}
-    <div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>
-    {% endif %}
-</div>
+    <div class="form-group mb-3 {{ wrapper_class }}">
+        {% if label or field.label %}
+            <label for="{{ field.id_for_label|default:id }}"
+                   class="form-label"
+                   style="font-weight: var(--font-weight-medium)">
+                {{ label|default:field.label }}
+                {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+        {% endif %}
+        <input type="date"
+               class="form-control {% if field.errors %}is-invalid{% endif %} {{ class }}"
+               id="{{ field.id_for_label|default:id }}"
+               name="{{ field.name|default:name }}"
+               value="{{ field.value|default:value|default:'' }}"
+               {% if min_date %}min="{{ min_date }}"{% endif %}
+               {% if max_date %}max="{{ max_date }}"{% endif %}
+               {% if required or field.field.required %}required{% endif %}
+               style="border-radius: var(--border-radius-sm)">
+        {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>{% endif %}
+    </div>
 {% endif %}
-
 {% comment %}=== SELECT FIELD - قائمة منسدلة ==={% endcomment %}
 {% if type == 'select_field' %}
-<div class="form-group mb-3 {{ wrapper_class }}">
-    {% if label or field.label %}
-    <label for="{{ field.id_for_label|default:id }}" class="form-label" style="font-weight: var(--font-weight-medium);">
-        {{ label|default:field.label }}
-        {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
-    </label>
-    {% endif %}
-    
-    <select class="form-select {% if field.errors %}is-invalid{% endif %} {{ class }}"
-            id="{{ field.id_for_label|default:id }}"
-            name="{{ field.name|default:name }}"
-            {% if required or field.field.required %}required{% endif %}
-            {% if disabled %}disabled{% endif %}
-            {% if multiple %}multiple{% endif %}
-            {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
-            style="border-radius: var(--border-radius-sm);">
-        {% if empty_label %}
-        <option value="">{{ empty_label|default:'اختر...' }}</option>
+    <div class="form-group mb-3 {{ wrapper_class }}">
+        {% if label or field.label %}
+            <label for="{{ field.id_for_label|default:id }}"
+                   class="form-label"
+                   style="font-weight: var(--font-weight-medium)">
+                {{ label|default:field.label }}
+                {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
         {% endif %}
-        
-        {% if options %}
-            {% for option in options %}
-            <option value="{{ option.0 }}" {% if option.0 == value or option.0 == field.value %}selected{% endif %}>
-                {{ option.1 }}
-            </option>
-            {% endfor %}
-        {% else %}
-            {{ field }}
-        {% endif %}
-    </select>
-    
-    {% if field.errors %}
-    <div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>
-    {% endif %}
-</div>
+        <select class="form-select {% if field.errors %}is-invalid{% endif %} {{ class }}"
+                id="{{ field.id_for_label|default:id }}"
+                name="{{ field.name|default:name }}"
+                {% if required or field.field.required %}required{% endif %}
+                {% if disabled %}disabled{% endif %}
+                {% if multiple %}multiple{% endif %}
+                {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+                style="border-radius: var(--border-radius-sm)">
+            {% if empty_label %}<option value="">{{ empty_label|default:'اختر...' }}</option>{% endif %}
+            {% if options %}
+                {% for option in options %}
+                    <option value="{{ option.0 }}"
+                            {% if option.0 == value or option.0 == field.value %}selected{% endif %}>
+                        {{ option.1 }}
+                    </option>
+                {% endfor %}
+            {% else %}
+                {{ field }}
+            {% endif %}
+        </select>
+        {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>{% endif %}
+    </div>
 {% endif %}
-
 {% comment %}=== TEXTAREA FIELD - منطقة نص ==={% endcomment %}
 {% if type == 'textarea_field' %}
-<div class="form-group mb-3 {{ wrapper_class }}">
-    {% if label or field.label %}
-    <label for="{{ field.id_for_label|default:id }}" class="form-label" style="font-weight: var(--font-weight-medium);">
-        {{ label|default:field.label }}
-        {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
-    </label>
-    {% endif %}
-    
-    <textarea class="form-control {% if field.errors %}is-invalid{% endif %} {{ class }}"
-              id="{{ field.id_for_label|default:id }}"
-              name="{{ field.name|default:name }}"
-              rows="{{ rows|default:3 }}"
-              {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
-              {% if required or field.field.required %}required{% endif %}
-              {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
-              style="border-radius: var(--border-radius-sm);">{{ field.value|default:value|default:'' }}</textarea>
-    
-    {% if help_text or field.help_text %}
-    <small class="form-text text-muted">{{ help_text|default:field.help_text }}</small>
-    {% endif %}
-    
-    {% if field.errors %}
-    <div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>
-    {% endif %}
-</div>
+    <div class="form-group mb-3 {{ wrapper_class }}">
+        {% if label or field.label %}
+            <label for="{{ field.id_for_label|default:id }}"
+                   class="form-label"
+                   style="font-weight: var(--font-weight-medium)">
+                {{ label|default:field.label }}
+                {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+        {% endif %}
+        <textarea class="form-control {% if field.errors %}is-invalid{% endif %} {{ class }}"
+                  id="{{ field.id_for_label|default:id }}"
+                  name="{{ field.name|default:name }}"
+                  rows="{{ rows|default:3 }}"
+                  {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+                  {% if required or field.field.required %}required{% endif %}
+                  {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
+                  style="border-radius: var(--border-radius-sm)">{{ field.value|default:value|default:'' }}</textarea>
+        {% if help_text or field.help_text %}
+            <small class="form-text text-muted">{{ help_text|default:field.help_text }}</small>
+        {% endif %}
+        {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>{% endif %}
+    </div>
 {% endif %}
-
 {% comment %}=== CHECKBOX FIELD - خانة اختيار ==={% endcomment %}
 {% if type == 'checkbox_field' %}
-<div class="form-check mb-3 {{ wrapper_class }}">
-    <input class="form-check-input {% if field.errors %}is-invalid{% endif %}"
-           type="checkbox"
-           id="{{ field.id_for_label|default:id }}"
-           name="{{ field.name|default:name }}"
-           value="{{ checkbox_value|default:'1' }}"
-           {% if checked or field.value %}checked{% endif %}
-           {% if required %}required{% endif %}
-           {% if disabled %}disabled{% endif %}
-           style="min-width: 20px; min-height: 20px; border-radius: var(--border-radius-sm);">
-    
-    <label class="form-check-label" for="{{ field.id_for_label|default:id }}" style="font-weight: var(--font-weight-medium);">
-        {{ label|default:field.label }}
-        {% if required %}<span class="text-danger">*</span>{% endif %}
-    </label>
-    
-    {% if field.errors %}
-    <div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>
-    {% endif %}
-</div>
+    <div class="form-check mb-3 {{ wrapper_class }}">
+        <input class="form-check-input {% if field.errors %}is-invalid{% endif %}"
+               type="checkbox"
+               id="{{ field.id_for_label|default:id }}"
+               name="{{ field.name|default:name }}"
+               value="{{ checkbox_value|default:'1' }}"
+               {% if checked or field.value %}checked{% endif %}
+               {% if required %}required{% endif %}
+               {% if disabled %}disabled{% endif %}
+               style="min-width: 20px;
+                      min-height: 20px;
+                      border-radius: var(--border-radius-sm)">
+        <label class="form-check-label"
+               for="{{ field.id_for_label|default:id }}"
+               style="font-weight: var(--font-weight-medium)">
+            {{ label|default:field.label }}
+            {% if required %}<span class="text-danger">*</span>{% endif %}
+        </label>
+        {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>{% endif %}
+    </div>
 {% endif %}
-
 {% comment %}=== RADIO FIELD - زر راديو ==={% endcomment %}
 {% if type == 'radio_field' %}
-<div class="form-group mb-3 {{ wrapper_class }}">
-    {% if label %}
-    <label class="form-label d-block" style="font-weight: var(--font-weight-medium);">
-        {{ label }}
-        {% if required %}<span class="text-danger">*</span>{% endif %}
-    </label>
-    {% endif %}
-    
-    {% for option in options %}
-    <div class="form-check {% if inline %}form-check-inline{% endif %}">
-        <input class="form-check-input"
-               type="radio"
-               id="{{ id }}_{{ forloop.counter }}"
-               name="{{ name }}"
-               value="{{ option.0 }}"
-               {% if option.0 == value %}checked{% endif %}
-               {% if required %}required{% endif %}
-               style="min-width: 20px; min-height: 20px;">
-        
-        <label class="form-check-label" for="{{ id }}_{{ forloop.counter }}">
-            {{ option.1 }}
-        </label>
+    <div class="form-group mb-3 {{ wrapper_class }}">
+        {% if label %}
+            <label class="form-label d-block"
+                   style="font-weight: var(--font-weight-medium)">
+                {{ label }}
+                {% if required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+        {% endif %}
+        {% for option in options %}
+            <div class="form-check {% if inline %}form-check-inline{% endif %}">
+                <input class="form-check-input"
+                       type="radio"
+                       id="{{ id }}_{{ forloop.counter }}"
+                       name="{{ name }}"
+                       value="{{ option.0 }}"
+                       {% if option.0 == value %}checked{% endif %}
+                       {% if required %}required{% endif %}
+                       style="min-width: 20px;
+                              min-height: 20px">
+                <label class="form-check-label" for="{{ id }}_{{ forloop.counter }}">{{ option.1 }}</label>
+            </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-</div>
 {% endif %}
-
 {% comment %}=== FILE FIELD - رفع ملف ==={% endcomment %}
 {% if type == 'file_field' %}
-<div class="form-group mb-3 {{ wrapper_class }}">
-    {% if label or field.label %}
-    <label for="{{ field.id_for_label|default:id }}" class="form-label" style="font-weight: var(--font-weight-medium);">
-        {{ label|default:field.label }}
-        {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
-    </label>
-    {% endif %}
-    
-    <input type="file" 
-           class="form-control {% if field.errors %}is-invalid{% endif %} {{ class }}"
-           id="{{ field.id_for_label|default:id }}"
-           name="{{ field.name|default:name }}"
-           {% if accept %}accept="{{ accept }}"{% endif %}
-           {% if multiple %}multiple{% endif %}
-           {% if required or field.field.required %}required{% endif %}
-           style="border-radius: var(--border-radius-sm);">
-    
-    {% if help_text or field.help_text %}
-    <small class="form-text text-muted">{{ help_text|default:field.help_text }}</small>
-    {% endif %}
-    
-    {% if field.errors %}
-    <div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>
-    {% endif %}
-</div>
+    <div class="form-group mb-3 {{ wrapper_class }}">
+        {% if label or field.label %}
+            <label for="{{ field.id_for_label|default:id }}"
+                   class="form-label"
+                   style="font-weight: var(--font-weight-medium)">
+                {{ label|default:field.label }}
+                {% if required or field.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+        {% endif %}
+        <input type="file"
+               class="form-control {% if field.errors %}is-invalid{% endif %} {{ class }}"
+               id="{{ field.id_for_label|default:id }}"
+               name="{{ field.name|default:name }}"
+               {% if accept %}accept="{{ accept }}"{% endif %}
+               {% if multiple %}multiple{% endif %}
+               {% if required or field.field.required %}required{% endif %}
+               style="border-radius: var(--border-radius-sm)">
+        {% if help_text or field.help_text %}
+            <small class="form-text text-muted">{{ help_text|default:field.help_text }}</small>
+        {% endif %}
+        {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>{% endif %}
+    </div>
 {% endif %}

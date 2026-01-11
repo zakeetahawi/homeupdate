@@ -1,79 +1,62 @@
 {% extends "admin/base_site.html" %}
 {% load static %}
-
 {% block content %}
-<div class="module" style="max-width: 600px; margin: 20px auto;">
-    <h1>{{ title }}</h1>
-    
-    <div class="module" style="background: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
-        <h3 style="margin-top: 0;">ℹ️ معلومات مهمة</h3>
-        <ul style="margin: 0;">
-            <li>هذه الميزة للاختبار فقط</li>
-            <li>تعمل حتى لو كان النظام معطل</li>
-            <li>تستخدم Access Token الحالي</li>
-            <li>القوالب يجب أن تكون معتمدة في Meta</li>
-        </ul>
-    </div>
-    
-    <form method="post" class="module">
-        {% csrf_token %}
-        
-        {% if messages %}
-            {% for message in messages %}
-                <div class="messagelist">
-                    <div class="{% if message.tags %}{{ message.tags }}{% endif %}">
-                        {{ message }}
+    <div class="module" style="max-width: 600px; margin: 20px auto;">
+        <h1>{{ title }}</h1>
+        <div class="module"
+             style="background: #f8f9fa;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    border-radius: 5px">
+            <h3 style="margin-top: 0;">ℹ️ معلومات مهمة</h3>
+            <ul style="margin: 0;">
+                <li>هذه الميزة للاختبار فقط</li>
+                <li>تعمل حتى لو كان النظام معطل</li>
+                <li>تستخدم Access Token الحالي</li>
+                <li>القوالب يجب أن تكون معتمدة في Meta</li>
+            </ul>
+        </div>
+        <form method="post" class="module">
+            {% csrf_token %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="messagelist">
+                        <div class="{% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</div>
                     </div>
+                {% endfor %}
+            {% endif %}
+            <div class="form-row">
+                <div>
+                    <label for="{{ form.phone_number.id_for_label }}" class="required">{{ form.phone_number.label }}:</label>
+                    {{ form.phone_number }}
+                    {% if form.phone_number.help_text %}<p class="help">{{ form.phone_number.help_text }}</p>{% endif %}
+                    {% if form.phone_number.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.phone_number.errors %}<li>{{ error }}</li>{% endfor %}
+                        </ul>
+                    {% endif %}
                 </div>
-            {% endfor %}
-        {% endif %}
-        
-        <div class="form-row">
-            <div>
-                <label for="{{ form.phone_number.id_for_label }}" class="required">
-                    {{ form.phone_number.label }}:
-                </label>
-                {{ form.phone_number }}
-                {% if form.phone_number.help_text %}
-                    <p class="help">{{ form.phone_number.help_text }}</p>
-                {% endif %}
-                {% if form.phone_number.errors %}
-                    <ul class="errorlist">
-                        {% for error in form.phone_number.errors %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
             </div>
-        </div>
-        
-        <div class="form-row">
-            <div>
-                <label for="{{ form.template_name.id_for_label }}" class="required">
-                    {{ form.template_name.label }}:
-                </label>
-                {{ form.template_name }}
-                {% if form.template_name.help_text %}
-                    <p class="help">{{ form.template_name.help_text }}</p>
-                {% endif %}
-                {% if form.template_name.errors %}
-                    <ul class="errorlist">
-                        {% for error in form.template_name.errors %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
+            <div class="form-row">
+                <div>
+                    <label for="{{ form.template_name.id_for_label }}" class="required">{{ form.template_name.label }}:</label>
+                    {{ form.template_name }}
+                    {% if form.template_name.help_text %}<p class="help">{{ form.template_name.help_text }}</p>{% endif %}
+                    {% if form.template_name.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.template_name.errors %}<li>{{ error }}</li>{% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
             </div>
-        </div>
-        
-        <div class="submit-row">
-            <input type="submit" value="📤 إرسال رسالة اختبار" class="default" />
-            <a href="{% url 'admin:whatsapp_whatsappsettings_changelist' %}" class="button cancel-link">إلغاء</a>
-        </div>
-    </form>
-</div>
-
-<style>
+            <div class="submit-row">
+                <input type="submit" value="📤 إرسال رسالة اختبار" class="default" />
+                <a href="{% url 'admin:whatsapp_whatsappsettings_changelist' %}"
+                   class="button cancel-link">إلغاء</a>
+            </div>
+        </form>
+    </div>
+    <style>
     .module {
         background: white;
         padding: 20px;
@@ -132,5 +115,5 @@
         padding: 10px;
         border-radius: 4px;
     }
-</style>
+    </style>
 {% endblock %}

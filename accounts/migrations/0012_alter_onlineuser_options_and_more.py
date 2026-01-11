@@ -6,24 +6,40 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0011_usersession_userloginhistory_useractivitylog_and_more'),
+        ("accounts", "0011_usersession_userloginhistory_useractivitylog_and_more"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='onlineuser',
-            options={'ordering': ['-last_seen'], 'verbose_name': '🟢 مستخدم نشط', 'verbose_name_plural': '📊 نشاط المستخدمين - المستخدمون النشطون'},
+            name="onlineuser",
+            options={
+                "ordering": ["-last_seen"],
+                "verbose_name": "🟢 مستخدم نشط",
+                "verbose_name_plural": "📊 نشاط المستخدمين - المستخدمون النشطون",
+            },
         ),
         migrations.AlterModelOptions(
-            name='useractivitylog',
-            options={'ordering': ['-timestamp'], 'verbose_name': '📋 سجل نشاط', 'verbose_name_plural': '📊 نشاط المستخدمين - سجلات النشاط'},
+            name="useractivitylog",
+            options={
+                "ordering": ["-timestamp"],
+                "verbose_name": "📋 سجل نشاط",
+                "verbose_name_plural": "📊 نشاط المستخدمين - سجلات النشاط",
+            },
         ),
         migrations.AlterModelOptions(
-            name='userloginhistory',
-            options={'ordering': ['-login_time'], 'verbose_name': '🔐 سجل دخول', 'verbose_name_plural': '📊 نشاط المستخدمين - سجلات الدخول'},
+            name="userloginhistory",
+            options={
+                "ordering": ["-login_time"],
+                "verbose_name": "🔐 سجل دخول",
+                "verbose_name_plural": "📊 نشاط المستخدمين - سجلات الدخول",
+            },
         ),
         migrations.AlterModelOptions(
-            name='usersession',
-            options={'ordering': ['-last_activity'], 'verbose_name': '💻 جلسة مستخدم', 'verbose_name_plural': '📊 نشاط المستخدمين - الجلسات'},
+            name="usersession",
+            options={
+                "ordering": ["-last_activity"],
+                "verbose_name": "💻 جلسة مستخدم",
+                "verbose_name_plural": "📊 نشاط المستخدمين - الجلسات",
+            },
         ),
     ]

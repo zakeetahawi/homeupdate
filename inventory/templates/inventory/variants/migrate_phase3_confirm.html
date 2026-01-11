@@ -1,128 +1,125 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block title %}المرحلة 3: مزامنة Cloudflare{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-1">
-                <i class="fas fa-cloud text-info me-2"></i>
-                المرحلة 3: مزامنة Cloudflare
-            </h2>
-            <p class="text-muted mb-0">الخطوة الأخيرة: مزامنة المنتجات مع Cloudflare</p>
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="mb-1">
+                    <i class="fas fa-cloud text-info me-2"></i>
+                    المرحلة 3: مزامنة Cloudflare
+                </h2>
+                <p class="text-muted mb-0">الخطوة الأخيرة: مزامنة المنتجات مع Cloudflare</p>
+            </div>
         </div>
-    </div>
-
-    {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    {% endfor %}
-    {% endif %}
-
-    <div class="row">
-        <div class="col-lg-10 mx-auto">
-            <!-- Previous Results -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card shadow">
-                        <div class="card-header bg-success text-white">
-                            <h6 class="mb-0">
-                                <i class="fas fa-check me-2"></i>
-                                المرحلة 1: الترحيل
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row text-center">
-                                <div class="col-6">
-                                    <h4 class="text-success mb-0">{{ phase1_stats.migrated }}</h4>
-                                    <small class="text-muted">تم ترحيلها</small>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <!-- Previous Results -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card shadow">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-check me-2"></i>
+                                    المرحلة 1: الترحيل
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <h4 class="text-success mb-0">{{ phase1_stats.migrated }}</h4>
+                                        <small class="text-muted">تم ترحيلها</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <h4 class="text-warning mb-0">{{ phase1_stats.skipped }}</h4>
+                                        <small class="text-muted">تم تخطيها</small>
+                                    </div>
                                 </div>
-                                <div class="col-6">
-                                    <h4 class="text-warning mb-0">{{ phase1_stats.skipped }}</h4>
-                                    <small class="text-muted">تم تخطيها</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card shadow">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-check me-2"></i>
+                                    المرحلة 2: QR
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <h4 class="text-success mb-0">{{ phase2_stats.generated }}</h4>
+                                        <small class="text-muted">تم توليدها</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <h4 class="text-danger mb-0">{{ phase2_stats.failed }}</h4>
+                                        <small class="text-muted">فشل</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="card shadow">
-                        <div class="card-header bg-success text-white">
-                            <h6 class="mb-0">
-                                <i class="fas fa-check me-2"></i>
-                                المرحلة 2: QR
+                <!-- Phase 3 Confirmation -->
+                <div class="card shadow-lg">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cloud me-2"></i>
+                            المرحلة 3: مزامنة Cloudflare
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info mb-4">
+                            <h6>
+                                <i class="fas fa-lightbulb me-2"></i>ماذا سيحدث في هذه المرحلة؟
                             </h6>
+                            <ul class="mb-0">
+                                <li>
+                                    سيتم مزامنة <strong>{{ phase1_stats.migrated }}</strong> منتج مع Cloudflare
+                                </li>
+                                <li>سيتم تحديث بيانات المنتجات في Cloudflare KV</li>
+                                <li>العملية قد تستغرق بضع دقائق</li>
+                                <li>إذا كان Cloudflare غير مُعد، سيتم تخطي هذه المرحلة</li>
+                            </ul>
                         </div>
-                        <div class="card-body">
-                            <div class="row text-center">
-                                <div class="col-6">
-                                    <h4 class="text-success mb-0">{{ phase2_stats.generated }}</h4>
-                                    <small class="text-muted">تم توليدها</small>
-                                </div>
-                                <div class="col-6">
-                                    <h4 class="text-danger mb-0">{{ phase2_stats.failed }}</h4>
-                                    <small class="text-muted">فشل</small>
-                                </div>
+                        <div class="text-center mb-4">
+                            <div class="display-1 text-info mb-3">
+                                <i class="fas fa-cloud-upload-alt"></i>
                             </div>
+                            <h3 class="text-info">{{ phase1_stats.migrated }}</h3>
+                            <p class="text-muted">منتج جاهز للمزامنة</p>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Phase 3 Confirmation -->
-            <div class="card shadow-lg">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-cloud me-2"></i>
-                        المرحلة 3: مزامنة Cloudflare
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info mb-4">
-                        <h6><i class="fas fa-lightbulb me-2"></i>ماذا سيحدث في هذه المرحلة؟</h6>
-                        <ul class="mb-0">
-                            <li>سيتم مزامنة <strong>{{ phase1_stats.migrated }}</strong> منتج مع Cloudflare</li>
-                            <li>سيتم تحديث بيانات المنتجات في Cloudflare KV</li>
-                            <li>العملية قد تستغرق بضع دقائق</li>
-                            <li>إذا كان Cloudflare غير مُعد، سيتم تخطي هذه المرحلة</li>
-                        </ul>
-                    </div>
-
-                    <div class="text-center mb-4">
-                        <div class="display-1 text-info mb-3">
-                            <i class="fas fa-cloud-upload-alt"></i>
+                        <form method="post" action="{% url 'inventory:migrate_phase3' %}">
+                            {% csrf_token %}
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-info btn-lg text-white">
+                                    <i class="fas fa-cloud-upload-alt me-2"></i>
+                                    المتابعة: مزامنة Cloudflare
+                                </button>
+                                <a href="{% url 'inventory:migrate_products' %}"
+                                   class="btn btn-outline-danger">
+                                    <i class="fas fa-times me-1"></i>
+                                    إلغاء وإنهاء العملية
+                                </a>
+                            </div>
+                        </form>
+                        <div class="alert alert-success mt-4 mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>ملاحظة:</strong> هذه هي المرحلة الأخيرة. بعد اكتمالها، ستكون عملية الترحيل قد اكتملت
+                            بنجاح!
                         </div>
-                        <h3 class="text-info">{{ phase1_stats.migrated }}</h3>
-                        <p class="text-muted">منتج جاهز للمزامنة</p>
-                    </div>
-
-                    <form method="post" action="{% url 'inventory:migrate_phase3' %}">
-                        {% csrf_token %}
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-info btn-lg text-white">
-                                <i class="fas fa-cloud-upload-alt me-2"></i>
-                                المتابعة: مزامنة Cloudflare
-                            </button>
-                            <a href="{% url 'inventory:migrate_products' %}" class="btn btn-outline-danger">
-                                <i class="fas fa-times me-1"></i>
-                                إلغاء وإنهاء العملية
-                            </a>
-                        </div>
-                    </form>
-
-                    <div class="alert alert-success mt-4 mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>ملاحظة:</strong> هذه هي المرحلة الأخيرة. بعد اكتمالها، ستكون عملية الترحيل قد اكتملت
-                        بنجاح!
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

@@ -1,56 +1,50 @@
 {% extends "admin/base_site.html" %}
 {% load i18n admin_urls static admin_list %}
-
-{% block extrahead %}
-    {{ block.super }}
-
-{% endblock %}
-
+{% block extrahead %}{{ block.super }}{% endblock %}
 {% block content %}
-<div id="content-main">
-    
-    <!-- قائمة التطبيقات -->
-    {% if app_list %}
-        <div class="app-list">
-            {% for app in app_list %}
-                <div class="module">
-                    <h2>
-                        <a href="{{ app.app_url }}" class="section" title="{% blocktranslate with name=app.name %}Models in the {{ name }} application{% endblocktranslate %}">
-                            {{ app.name }}
-                        </a>
-                    </h2>
-                    
-                    {% if app.models %}
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>النموذج</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for model in app.models %}
+    <div id="content-main">
+        <!-- قائمة التطبيقات -->
+        {% if app_list %}
+            <div class="app-list">
+                {% for app in app_list %}
+                    <div class="module">
+                        <h2>
+                            <a href="{{ app.app_url }}"
+                               class="section"
+                               title="{% blocktranslate with name=app.name %}Models in the {{ name }} application{% endblocktranslate %}">
+                                {{ app.name }}
+                            </a>
+                        </h2>
+                        {% if app.models %}
+                            <table>
+                                <thead>
                                     <tr>
-                                        <td>{{ model.name }}</td>
-                                        <td>
-                                            {% if model.admin_url %}
-                                                <a href="{{ model.admin_url }}" class="changelink">{% translate 'Change' %}</a>
-                                            {% endif %}
-                                            {% if model.add_url %}
-                                                <a href="{{ model.add_url }}" class="addlink">{% translate 'Add' %}</a>
-                                            {% endif %}
-                                        </td>
+                                        <th>النموذج</th>
+                                        <th>الإجراءات</th>
                                     </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% endif %}
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p>{% translate "You don't have permission to view or edit anything." %}</p>
-    {% endif %}
-</div>
-
+                                </thead>
+                                <tbody>
+                                    {% for model in app.models %}
+                                        <tr>
+                                            <td>{{ model.name }}</td>
+                                            <td>
+                                                {% if model.admin_url %}
+                                                    <a href="{{ model.admin_url }}" class="changelink">{% translate 'Change' %}</a>
+                                                {% endif %}
+                                                {% if model.add_url %}
+                                                    <a href="{{ model.add_url }}" class="addlink">{% translate 'Add' %}</a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>{% translate "You don't have permission to view or edit anything." %}</p>
+        {% endif %}
+    </div>
 {% endblock %}

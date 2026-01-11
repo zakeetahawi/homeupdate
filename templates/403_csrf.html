@@ -1,10 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block title %}خطأ في الحماية - CSRF{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .csrf-error-container {
         min-height: 80vh;
         display: flex;
@@ -131,56 +129,59 @@
         font-size: 14px;
         color: #856404;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="csrf-error-container">
-    <div class="csrf-error-card">
-        <div class="csrf-error-icon">
-            <i class="fas fa-shield-alt"></i>
-        </div>
-        
-        <h1 class="csrf-error-title">خطأ في نظام الحماية</h1>
-        
-        <p class="csrf-error-message">
-            عذراً، لم يتم التحقق من صحة طلبك بسبب انتهاء صلاحية رمز الحماية (CSRF Token).
-            هذا يحدث عادة عندما تبقى الصفحة مفتوحة لفترة طويلة.
-        </p>
-        
-        <div class="csrf-solutions">
-            <h5><i class="fas fa-lightbulb"></i> الحلول المقترحة:</h5>
-            <ul>
-                <li><i class="fas fa-check"></i> إعادة تحميل الصفحة والمحاولة مرة أخرى</li>
-                <li><i class="fas fa-check"></i> تسجيل الخروج ثم تسجيل الدخول مرة أخرى</li>
-                <li><i class="fas fa-check"></i> مسح ذاكرة التخزين المؤقت للمتصفح</li>
-                <li><i class="fas fa-check"></i> التأكد من تفعيل الكوكيز في المتصفح</li>
-            </ul>
-        </div>
-        
-        <div class="csrf-action-buttons">
-            <button onclick="window.location.reload()" class="csrf-btn csrf-btn-primary">
-                <i class="fas fa-redo"></i> إعادة تحميل الصفحة
-            </button>
-            
-            <a href="{% url 'accounts:login' %}" class="csrf-btn csrf-btn-secondary">
-                <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
-            </a>
-            
-            <a href="{% url 'home' %}" class="csrf-btn csrf-btn-secondary">
-                <i class="fas fa-home"></i> الصفحة الرئيسية
-            </a>
-        </div>
-        
-        <div class="csrf-technical-info">
-            <strong>معلومات تقنية:</strong><br>
-            CSRF verification failed. Request aborted.<br>
-            <small>إذا استمرت المشكلة، يرجى التواصل مع مسؤول النظام.</small>
+    <div class="csrf-error-container">
+        <div class="csrf-error-card">
+            <div class="csrf-error-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h1 class="csrf-error-title">خطأ في نظام الحماية</h1>
+            <p class="csrf-error-message">
+                عذراً، لم يتم التحقق من صحة طلبك بسبب انتهاء صلاحية رمز الحماية (CSRF Token).
+                هذا يحدث عادة عندما تبقى الصفحة مفتوحة لفترة طويلة.
+            </p>
+            <div class="csrf-solutions">
+                <h5>
+                    <i class="fas fa-lightbulb"></i> الحلول المقترحة:
+                </h5>
+                <ul>
+                    <li>
+                        <i class="fas fa-check"></i> إعادة تحميل الصفحة والمحاولة مرة أخرى
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i> تسجيل الخروج ثم تسجيل الدخول مرة أخرى
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i> مسح ذاكرة التخزين المؤقت للمتصفح
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i> التأكد من تفعيل الكوكيز في المتصفح
+                    </li>
+                </ul>
+            </div>
+            <div class="csrf-action-buttons">
+                <button onclick="window.location.reload()" class="csrf-btn csrf-btn-primary">
+                    <i class="fas fa-redo"></i> إعادة تحميل الصفحة
+                </button>
+                <a href="{% url 'accounts:login' %}" class="csrf-btn csrf-btn-secondary">
+                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                </a>
+                <a href="{% url 'home' %}" class="csrf-btn csrf-btn-secondary">
+                    <i class="fas fa-home"></i> الصفحة الرئيسية
+                </a>
+            </div>
+            <div class="csrf-technical-info">
+                <strong>معلومات تقنية:</strong>
+                <br>
+                CSRF verification failed. Request aborted.
+                <br>
+                <small>إذا استمرت المشكلة، يرجى التواصل مع مسؤول النظام.</small>
+            </div>
         </div>
     </div>
-</div>
-
-<script>
+    <script>
 // إعادة تحميل تلقائية بعد 30 ثانية
 setTimeout(function() {
     if (confirm('هل تريد إعادة تحميل الصفحة تلقائياً؟')) {
@@ -210,5 +211,5 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.querySelector('.csrf-action-buttons').appendChild(clearCacheBtn);
 });
-</script>
+    </script>
 {% endblock %}

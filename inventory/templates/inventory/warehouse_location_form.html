@@ -1,94 +1,127 @@
 {% extends 'inventory/inventory_base_custom.html' %}
 {% load static %}
-
 {% block inventory_title %}نموذج موقع التخزين{% endblock %}
-
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
-<li class="breadcrumb-item"><a href="{% url 'inventory:warehouse_location_list' %}">مواقع التخزين</a></li>
-<li class="breadcrumb-item active">{% if location %}تعديل{% else %}إضافة{% endif %} موقع</li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a>
+    </li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:warehouse_location_list' %}">مواقع التخزين</a>
+    </li>
+    <li class="breadcrumb-item active">
+        {% if location %}
+            تعديل
+        {% else %}
+            إضافة
+        {% endif %}
+        موقع
+    </li>
 {% endblock %}
-
 {% block inventory_content %}
-<div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-map-marker-alt"></i>
-                        {% if location %}تعديل موقع التخزين{% else %}إضافة موقع تخزين جديد{% endif %}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="name" class="form-label">اسم الموقع <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="name" name="name" 
-                                       value="{{ location.name|default:'' }}" required>
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-map-marker-alt"></i>
+                            {% if location %}
+                                تعديل موقع التخزين
+                            {% else %}
+                                إضافة موقع تخزين جديد
+                            {% endif %}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="name" class="form-label">
+                                        اسم الموقع <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="name"
+                                           name="name"
+                                           value="{{ location.name|default:'' }}"
+                                           required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="code" class="form-label">
+                                        رمز الموقع <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="code"
+                                           name="code"
+                                           value="{{ location.code|default:'' }}"
+                                           required>
+                                    <small class="text-muted">مثال: A-01, RACK-1, SHELF-A</small>
+                                </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="code" class="form-label">رمز الموقع <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="code" name="code" 
-                                       value="{{ location.code|default:'' }}" required>
-                                <small class="text-muted">مثال: A-01, RACK-1, SHELF-A</small>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="warehouse" class="form-label">
+                                        المستودع <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="warehouse" name="warehouse" required>
+                                        <option value="">-- اختر المستودع --</option>
+                                        {% for warehouse in warehouses %}
+                                            <option value="{{ warehouse.id }}"
+                                                    {% if location and location.warehouse.id == warehouse.id %}selected{% endif %}>
+                                                {{ warehouse.name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="capacity" class="form-label">
+                                        السعة <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="number"
+                                           class="form-control"
+                                           id="capacity"
+                                           name="capacity"
+                                           value="{{ location.capacity|default:'1000' }}"
+                                           min="1"
+                                           required>
+                                    <small class="text-muted">السعة القصوى للموقع بالوحدات</small>
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="warehouse" class="form-label">المستودع <span class="text-danger">*</span></label>
-                                <select class="form-select" id="warehouse" name="warehouse" required>
-                                    <option value="">-- اختر المستودع --</option>
-                                    {% for warehouse in warehouses %}
-                                    <option value="{{ warehouse.id }}" 
-                                            {% if location and location.warehouse.id == warehouse.id %}selected{% endif %}>
-                                        {{ warehouse.name }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">الوصف</label>
+                                <textarea class="form-control" id="description" name="description" rows="3">{{ location.description|default:'' }}</textarea>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="capacity" class="form-label">السعة <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="capacity" name="capacity" 
-                                       value="{{ location.capacity|default:'1000' }}" min="1" required>
-                                <small class="text-muted">السعة القصوى للموقع بالوحدات</small>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           id="is_active"
+                                           name="is_active"
+                                           {% if not location or location.is_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_active">موقع نشط</label>
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="description" class="form-label">الوصف</label>
-                            <textarea class="form-control" id="description" name="description" rows="3">{{ location.description|default:'' }}</textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
-                                       {% if not location or location.is_active %}checked{% endif %}>
-                                <label class="form-check-label" for="is_active">
-                                    موقع نشط
-                                </label>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'inventory:warehouse_location_list' %}"
+                                   class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> إلغاء
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i>
+                                    {% if location %}
+                                        حفظ التعديلات
+                                    {% else %}
+                                        إضافة الموقع
+                                    {% endif %}
+                                </button>
                             </div>
-                        </div>
-
-                        <hr>
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'inventory:warehouse_location_list' %}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> إلغاء
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i>
-                                {% if location %}حفظ التعديلات{% else %}إضافة الموقع{% endif %}
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

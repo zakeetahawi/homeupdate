@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
-
 {% block title %}استلام الأقمشة - المصنع{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .fabric-header {
         background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
         color: white;
@@ -645,360 +643,376 @@
         border-radius: 0 0 15px 15px;
         padding: 1.5rem;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- عنوان الصفحة -->
-    <div class="fabric-header p-4 mb-4 shadow">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="h3 mb-2">
-                    <i class="fas fa-cut"></i>
-                    استلام أوامر التقطيع - المصنع
-                </h1>
-                <p class="mb-0">إدارة استلام أوامر التقطيع الجاهزة للتصنيع</p>
-            </div>
-            <div class="col-md-4 text-center">
-                <div class="d-flex justify-content-center gap-3 mb-3">
-                    <div class="text-center">
-                        <div class="h4 mb-0">{{ total_available_items }}</div>
-                        <small>عنصر جاهز للاستلام</small>
-                    </div>
-                    <div class="text-center">
-                        <div class="h4 mb-0">{{ total_available_orders }}</div>
-                        <small>أمر تقطيع</small>
-                    </div>
+    <div class="container-fluid">
+        <!-- عنوان الصفحة -->
+        <div class="fabric-header p-4 mb-4 shadow">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="h3 mb-2">
+                        <i class="fas fa-cut"></i>
+                        استلام أوامر التقطيع - المصنع
+                    </h1>
+                    <p class="mb-0">إدارة استلام أوامر التقطيع الجاهزة للتصنيع</p>
                 </div>
-                <div class="d-flex justify-content-center gap-2">
-                    <a href="{% url 'manufacturing:fabric_receipt_list' %}" class="btn btn-info btn-sm">
-                        <i class="fas fa-list"></i> قائمة الاستلامات
-                    </a>
-                    <a href="{% url 'manufacturing:dashboard' %}" class="btn btn-secondary btn-sm">
-                        <i class="fas fa-arrow-left"></i> العودة
-                    </a>
-
+                <div class="col-md-4 text-center">
+                    <div class="d-flex justify-content-center gap-3 mb-3">
+                        <div class="text-center">
+                            <div class="h4 mb-0">{{ total_available_items }}</div>
+                            <small>عنصر جاهز للاستلام</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="h4 mb-0">{{ total_available_orders }}</div>
+                            <small>أمر تقطيع</small>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{% url 'manufacturing:fabric_receipt_list' %}"
+                           class="btn btn-info btn-sm">
+                            <i class="fas fa-list"></i> قائمة الاستلامات
+                        </a>
+                        <a href="{% url 'manufacturing:dashboard' %}"
+                           class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> العودة
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- فلتر البحث -->
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <form method="GET" class="row align-items-end">
-                <div class="col-md-6">
-                    <label class="form-label">البحث</label>
-                    <input type="text" name="search" class="form-control"
-                        placeholder="رقم الإذن، كود التقطيع، رقم العقد، اسم العميل، اسم المستلم..."
-                        value="{{ request.GET.search }}">
-                </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search"></i> بحث
-                    </button>
-                    <a href="{% url 'manufacturing:fabric_receipt' %}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> مسح
-                    </a>
-                </div>
-                <div class="col-md-3 text-end">
-                    <button type="button" class="btn btn-success" onclick="refreshPage()">
-                        <i class="fas fa-sync"></i> تحديث
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-
-
-    <!-- قائمة العناصر المقطوعة الجاهزة للاستلام -->
-    {% if cutting_orders_with_items %}
-    {% for order_data in cutting_orders_with_items %}
-    <div class="card order-card shadow mb-4">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-            <div>
-                <h6 class="mb-1 font-weight-bold">
-                    <i class="fas fa-cut me-2"></i>
-                    {% if perms.cutting.view_cuttingorder %}
-                    <a href="{% url 'cutting:order_detail' order_data.cutting_order.id %}"
-                        class="text-white text-decoration-none">
-                        {{ order_data.cutting_order.cutting_code }}
-                    </a>
-                    {% else %}
-                    <span class="text-white text-decoration-none">
-                        {{ order_data.cutting_order.cutting_code }}
-                    </span>
-                    {% endif %}
-                </h6>
-                <small>
-                    <i class="fas fa-user me-1"></i>{{ order_data.cutting_order.order.customer.name }}
-                    | <i class="fas fa-file-contract me-1"></i>{{ order_data.cutting_order.order.contract_number|default:"غير محدد" }}
-                    | <i class="fas fa-warehouse me-1"></i>{{ order_data.cutting_order.warehouse.name }}
-                </small>
-            </div>
-            <div>
-                <span class="badge bg-light text-dark">
-                    {{ order_data.items|length }} عنصر جاهز
-                </span>
+        <!-- فلتر البحث -->
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <form method="GET" class="row align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label">البحث</label>
+                        <input type="text"
+                               name="search"
+                               class="form-control"
+                               placeholder="رقم الإذن، كود التقطيع، رقم العقد، اسم العميل، اسم المستلم..."
+                               value="{{ request.GET.search }}">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> بحث
+                        </button>
+                        <a href="{% url 'manufacturing:fabric_receipt' %}"
+                           class="btn btn-secondary">
+                            <i class="fas fa-times"></i> مسح
+                        </a>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <button type="button" class="btn btn-success" onclick="refreshPage()">
+                            <i class="fas fa-sync"></i> تحديث
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-sm table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>المنتج</th>
-                            <th class="text-center">الكمية</th>
-                            <th class="text-center">تاريخ التقطيع</th>
-                            <th class="text-center">المستلم</th>
-                            <th class="text-center">رقم الإذن</th>
-                            <th class="text-center">الحالة</th>
-                            <th class="text-center">الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in order_data.items %}
-                        <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td>
-                                <strong>{{ item.order_item.product.name|default:"منتج غير محدد" }}</strong>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-primary">
-                                    {{ item.order_item.quantity|add:item.additional_quantity }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                {{ item.cutting_date|date:"Y-m-d"|default:"-" }}
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-info">{{ item.receiver_name }}</span>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-warning text-dark">{{ item.permit_number }}</span>
-                            </td>
-                            <td class="text-center">
-                                {% if item.manufacturing_items.exists %}
-                                {% with mfg_item=item.manufacturing_items.first %}
-                                {% if mfg_item.fabric_received %}
-                                <span class="badge bg-success">
-                                    <i class="fas fa-check-circle me-1"></i>تم الاستلام
-                                </span>
+        <!-- قائمة العناصر المقطوعة الجاهزة للاستلام -->
+        {% if cutting_orders_with_items %}
+            {% for order_data in cutting_orders_with_items %}
+                <div class="card order-card shadow mb-4">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 font-weight-bold">
+                                <i class="fas fa-cut me-2"></i>
+                                {% if perms.cutting.view_cuttingorder %}
+                                    <a href="{% url 'cutting:order_detail' order_data.cutting_order.id %}"
+                                       class="text-white text-decoration-none">
+                                        {{ order_data.cutting_order.cutting_code }}
+                                    </a>
                                 {% else %}
-                                <span class="badge bg-warning text-dark">
-                                    <i class="fas fa-clock me-1"></i>جاهز للاستلام
-                                </span>
+                                    <span class="text-white text-decoration-none">{{ order_data.cutting_order.cutting_code }}</span>
                                 {% endif %}
-                                {% endwith %}
-                                {% else %}
-                                <span class="badge bg-warning text-dark">
-                                    <i class="fas fa-clock me-1"></i>جاهز للاستلام
-                                </span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                {% if item.manufacturing_items.exists %}
-                                {% with mfg_item=item.manufacturing_items.first %}
-                                {% if not mfg_item.fabric_received %}
-                                <button class="btn btn-success btn-sm"
-                                    onclick="openItemReceiptModal({{ mfg_item.id }}, '{{ item.order_item.product.name|default:"منتج"|escapejs }}', '{{ order_data.cutting_order.cutting_code|escapejs }}', '{{ item.receiver_name|default:""|escapejs }}', '{{ item.permit_number|default:""|escapejs }}')">
-                                    <i class="fas fa-download"></i> استلام
-                                </button>
-                                {% else %}
-                                <span class="text-success">
-                                    <i class="fas fa-check-circle"></i>
-                                </span>
-                                {% endif %}
-                                {% endwith %}
-                                {% else %}
-                                <span class="text-muted">
-                                    <i class="fas fa-hourglass-half"></i> قيد المعالجة
-                                </span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-    {% else %}
-    <div class="alert alert-info text-center">
-        <i class="fas fa-info-circle fa-2x mb-3"></i>
-        <h5>لا توجد عناصر جاهزة للاستلام حالياً</h5>
-        <p class="mb-0">جميع العناصر المقطوعة تم استلامها أو لا توجد عناصر مكتملة بعد</p>
-    </div>
-    {% endif %}
-
-
-</div>
-
-<!-- Modal استلام أوامر التقطيع - تصميم محسّن -->
-<div class="modal fade" id="cuttingReceiptModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content modern-modal-content">
-            <!-- Header بتصميم عصري -->
-            <div class="modal-header modern-modal-header">
-                <div class="d-flex align-items-center">
-                    <div class="modal-icon-wrapper">
-                        <i class="fas fa-box-open"></i>
-                    </div>
-                    <div class="me-3">
-                        <h5 class="modal-title mb-0 fw-bold">استلام عنصر من التقطيع</h5>
-                        <small class="opacity-90">قم بتأكيد البيانات وإتمام الاستلام</small>
-                    </div>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
-            </div>
-
-            <form id="cuttingReceiptForm">
-                {% csrf_token %}
-                <div class="modal-body modern-modal-body">
-                    <input type="hidden" id="cutting_order_id" name="cutting_order_id">
-                    <input type="hidden" id="cutting_item_receiver_name" name="cutting_item_receiver_name">
-                    <input type="hidden" id="cutting_item_permit_number" name="cutting_item_permit_number">
-
-                    <!-- معلومات العنصر - بتصميم بطاقة -->
-                    <div class="info-box mb-4">
-                        <div class="info-box-header">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <span>معلومات العنصر</span>
-                        </div>
-                        <div class="info-box-body">
-                            <div class="row g-3">
-                                <div class="col-6">
-                                    <div class="info-item">
-                                        <i class="fas fa-barcode text-primary"></i>
-                                        <div>
-                                            <label class="info-label">كود التقطيع</label>
-                                            <input type="text" id="cutting_code_display"
-                                                class="form-control modern-input" readonly>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="info-item">
-                                        <i class="fas fa-box text-success"></i>
-                                        <div>
-                                            <label class="info-label">المنتج</label>
-                                            <input type="text" id="customer_name_display"
-                                                class="form-control modern-input" readonly>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="info-item">
-                                        <i class="fas fa-file-alt text-info"></i>
-                                        <div>
-                                            <label class="info-label">رقم الإذن</label>
-                                            <div class="info-value" id="cutting_permit_number_display">-</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="info-item">
-                                        <i class="fas fa-user text-warning"></i>
-                                        <div>
-                                            <label class="info-label">المستلم</label>
-                                            <div class="info-value" id="cutting_receiver_name_display">-</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- رقم الشنطة - بتصميم مميز -->
-                    <div class="bag-section mb-4">
-                        <div class="bag-section-header">
-                            <i class="fas fa-shopping-bag me-2"></i>
-                            <span>رقم الشنطة</span>
-                        </div>
-
-                        <div class="bag-option-card active" id="new_bag_card" onclick="selectBagOption('new')">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="bag_option" id="use_new_bag"
-                                    value="new" checked onchange="toggleBagNumberInput()">
-                                <label class="form-check-label" for="use_new_bag">
-                                    <i class="fas fa-plus-circle"></i>
-                                    <span class="fw-semibold">شنطة جديدة</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div id="new_bag_section" class="bag-number-display">
-                            <div class="bag-number-wrapper">
-                                <span class="bag-number-label">رقم الشنطة</span>
-                                <div class="bag-number-box">
-                                    <i class="fas fa-hashtag"></i>
-                                    <input type="text" class="bag-number-input" id="bag_number" name="bag_number"
-                                        readonly>
-                                </div>
-                            </div>
-                            <div class="bag-hint">
-                                <i class="fas fa-lightbulb me-2"></i>
-                                اكتب هذا الرقم على الشنطة الفعلية في المستودع
-                            </div>
-                        </div>
-
-                        <div class="bag-option-card mt-3" id="existing_bag_card" onclick="selectBagOption('existing')">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="bag_option" id="use_existing_bag"
-                                    value="existing" onchange="toggleBagNumberInput()">
-                                <label class="form-check-label" for="use_existing_bag">
-                                    <i class="fas fa-recycle"></i>
-                                    <span class="fw-semibold">استخدام رقم موجود</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div id="existing_bag_section" style="display: none;" class="mt-3">
-                            <label class="form-label fw-semibold">
-                                <i class="fas fa-keyboard me-2"></i>أدخل رقم الشنطة
-                            </label>
-                            <input type="number" class="form-control modern-input text-center" id="existing_bag_number"
-                                name="existing_bag_number" placeholder="اكتب الرقم هنا..." min="1">
-                            <small class="d-block mt-2 text-muted" id="available_bags_hint" style="display: none;">
-                                <i class="fas fa-info-circle me-1"></i>الأرقام المتاحة: <span
-                                    id="available_bags_list"></span>
+                            </h6>
+                            <small>
+                                <i class="fas fa-user me-1"></i>{{ order_data.cutting_order.order.customer.name }}
+                                | <i class="fas fa-file-contract me-1"></i>{{ order_data.cutting_order.order.contract_number|default:"غير محدد" }}
+                                | <i class="fas fa-warehouse me-1"></i>{{ order_data.cutting_order.warehouse.name }}
                             </small>
                         </div>
+                        <div>
+                            <span class="badge bg-light text-dark">{{ order_data.items|length }} عنصر جاهز</span>
+                        </div>
                     </div>
-
-                    <!-- ملاحظات -->
-                    <div class="notes-section">
-                        <label for="notes" class="form-label fw-semibold">
-                            <i class="fas fa-sticky-note me-2"></i>ملاحظات إضافية (اختياري)
-                        </label>
-                        <textarea class="form-control modern-input" id="notes" name="notes" rows="3"
-                            placeholder="أضف أي ملاحظات تراها مناسبة..."></textarea>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>المنتج</th>
+                                        <th class="text-center">الكمية</th>
+                                        <th class="text-center">تاريخ التقطيع</th>
+                                        <th class="text-center">المستلم</th>
+                                        <th class="text-center">رقم الإذن</th>
+                                        <th class="text-center">الحالة</th>
+                                        <th class="text-center">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in order_data.items %}
+                                        <tr>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>
+                                                <strong>{{ item.order_item.product.name|default:"منتج غير محدد" }}</strong>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-primary">{{ item.order_item.quantity|add:item.additional_quantity }}</span>
+                                            </td>
+                                            <td class="text-center">{{ item.cutting_date|date:"Y-m-d"|default:"-" }}</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-info">{{ item.receiver_name }}</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-warning text-dark">{{ item.permit_number }}</span>
+                                            </td>
+                                            <td class="text-center">
+                                                {% if item.manufacturing_items.exists %}
+                                                    {% with mfg_item=item.manufacturing_items.first %}
+                                                        {% if mfg_item.fabric_received %}
+                                                            <span class="badge bg-success">
+                                                                <i class="fas fa-check-circle me-1"></i>تم الاستلام
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning text-dark">
+                                                                <i class="fas fa-clock me-1"></i>جاهز للاستلام
+                                                            </span>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                {% else %}
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="fas fa-clock me-1"></i>جاهز للاستلام
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                {% if item.manufacturing_items.exists %}
+                                                    {% with mfg_item=item.manufacturing_items.first %}
+                                                        {% if not mfg_item.fabric_received %}
+                                                            <button class="btn btn-success btn-sm"
+                                                                    onclick="openItemReceiptModal({{ mfg_item.id }}, '{{ item.order_item.product.name|default:"منتج"|escapejs }}', '{{ order_data.cutting_order.cutting_code|escapejs }}', '{{ item.receiver_name|default:""|escapejs }}', '{{ item.permit_number|default:""|escapejs }}')">
+                                                                <i class="fas fa-download"></i> استلام
+                                                            </button>
+                                                        {% else %}
+                                                            <span class="text-success">
+                                                                <i class="fas fa-check-circle"></i>
+                                                            </span>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                {% else %}
+                                                    <span class="text-muted">
+                                                        <i class="fas fa-hourglass-half"></i> قيد المعالجة
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-
-                <div class="modal-footer modern-modal-footer">
-                    <button type="button" class="btn btn-light btn-cancel" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>
-                        <span>إلغاء</span>
-                    </button>
-                    <button type="button" class="btn btn-success btn-confirm" onclick="submitCuttingReceipt()">
-                        <i class="fas fa-check-circle me-2"></i>
-                        <span>تأكيد الاستلام</span>
-                    </button>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle fa-2x mb-3"></i>
+                <h5>لا توجد عناصر جاهزة للاستلام حالياً</h5>
+                <p class="mb-0">جميع العناصر المقطوعة تم استلامها أو لا توجد عناصر مكتملة بعد</p>
+            </div>
+        {% endif %}
+    </div>
+    <!-- Modal استلام أوامر التقطيع - تصميم محسّن -->
+    <div class="modal fade" id="cuttingReceiptModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modern-modal-content">
+                <!-- Header بتصميم عصري -->
+                <div class="modal-header modern-modal-header">
+                    <div class="d-flex align-items-center">
+                        <div class="modal-icon-wrapper">
+                            <i class="fas fa-box-open"></i>
+                        </div>
+                        <div class="me-3">
+                            <h5 class="modal-title mb-0 fw-bold">استلام عنصر من التقطيع</h5>
+                            <small class="opacity-90">قم بتأكيد البيانات وإتمام الاستلام</small>
+                        </div>
+                    </div>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
                 </div>
-            </form>
+                <form id="cuttingReceiptForm">
+                    {% csrf_token %}
+                    <div class="modal-body modern-modal-body">
+                        <input type="hidden" id="cutting_order_id" name="cutting_order_id">
+                        <input type="hidden"
+                               id="cutting_item_receiver_name"
+                               name="cutting_item_receiver_name">
+                        <input type="hidden"
+                               id="cutting_item_permit_number"
+                               name="cutting_item_permit_number">
+                        <!-- معلومات العنصر - بتصميم بطاقة -->
+                        <div class="info-box mb-4">
+                            <div class="info-box-header">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <span>معلومات العنصر</span>
+                            </div>
+                            <div class="info-box-body">
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="info-item">
+                                            <i class="fas fa-barcode text-primary"></i>
+                                            <div>
+                                                <label class="info-label">كود التقطيع</label>
+                                                <input type="text"
+                                                       id="cutting_code_display"
+                                                       class="form-control modern-input"
+                                                       readonly>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="info-item">
+                                            <i class="fas fa-box text-success"></i>
+                                            <div>
+                                                <label class="info-label">المنتج</label>
+                                                <input type="text"
+                                                       id="customer_name_display"
+                                                       class="form-control modern-input"
+                                                       readonly>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="info-item">
+                                            <i class="fas fa-file-alt text-info"></i>
+                                            <div>
+                                                <label class="info-label">رقم الإذن</label>
+                                                <div class="info-value" id="cutting_permit_number_display">-</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="info-item">
+                                            <i class="fas fa-user text-warning"></i>
+                                            <div>
+                                                <label class="info-label">المستلم</label>
+                                                <div class="info-value" id="cutting_receiver_name_display">-</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- رقم الشنطة - بتصميم مميز -->
+                        <div class="bag-section mb-4">
+                            <div class="bag-section-header">
+                                <i class="fas fa-shopping-bag me-2"></i>
+                                <span>رقم الشنطة</span>
+                            </div>
+                            <div class="bag-option-card active"
+                                 id="new_bag_card"
+                                 onclick="selectBagOption('new')">
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           name="bag_option"
+                                           id="use_new_bag"
+                                           value="new"
+                                           checked
+                                           onchange="toggleBagNumberInput()">
+                                    <label class="form-check-label" for="use_new_bag">
+                                        <i class="fas fa-plus-circle"></i>
+                                        <span class="fw-semibold">شنطة جديدة</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="new_bag_section" class="bag-number-display">
+                                <div class="bag-number-wrapper">
+                                    <span class="bag-number-label">رقم الشنطة</span>
+                                    <div class="bag-number-box">
+                                        <i class="fas fa-hashtag"></i>
+                                        <input type="text"
+                                               class="bag-number-input"
+                                               id="bag_number"
+                                               name="bag_number"
+                                               readonly>
+                                    </div>
+                                </div>
+                                <div class="bag-hint">
+                                    <i class="fas fa-lightbulb me-2"></i>
+                                    اكتب هذا الرقم على الشنطة الفعلية في المستودع
+                                </div>
+                            </div>
+                            <div class="bag-option-card mt-3"
+                                 id="existing_bag_card"
+                                 onclick="selectBagOption('existing')">
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="radio"
+                                           name="bag_option"
+                                           id="use_existing_bag"
+                                           value="existing"
+                                           onchange="toggleBagNumberInput()">
+                                    <label class="form-check-label" for="use_existing_bag">
+                                        <i class="fas fa-recycle"></i>
+                                        <span class="fw-semibold">استخدام رقم موجود</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="existing_bag_section" style="display: none;" class="mt-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-keyboard me-2"></i>أدخل رقم الشنطة
+                                </label>
+                                <input type="number"
+                                       class="form-control modern-input text-center"
+                                       id="existing_bag_number"
+                                       name="existing_bag_number"
+                                       placeholder="اكتب الرقم هنا..."
+                                       min="1">
+                                <small class="d-block mt-2 text-muted"
+                                       id="available_bags_hint"
+                                       style="display: none">
+                                    <i class="fas fa-info-circle me-1"></i>الأرقام المتاحة: <span id="available_bags_list"></span>
+                                </small>
+                            </div>
+                        </div>
+                        <!-- ملاحظات -->
+                        <div class="notes-section">
+                            <label for="notes" class="form-label fw-semibold">
+                                <i class="fas fa-sticky-note me-2"></i>ملاحظات إضافية (اختياري)
+                            </label>
+                            <textarea class="form-control modern-input"
+                                      id="notes"
+                                      name="notes"
+                                      rows="3"
+                                      placeholder="أضف أي ملاحظات تراها مناسبة..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer modern-modal-footer">
+                        <button type="button"
+                                class="btn btn-light btn-cancel"
+                                data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>
+                            <span>إلغاء</span>
+                        </button>
+                        <button type="button"
+                                class="btn btn-success btn-confirm"
+                                onclick="submitCuttingReceipt()">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <span>تأكيد الاستلام</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     // التحقق من تحميل المكتبات بعد تحميل الصفحة بالكامل
     document.addEventListener('DOMContentLoaded', function() {
         // التحقق من وجود jQuery
@@ -1372,5 +1386,5 @@
             });
         }
     });
-</script>
+    </script>
 {% endblock %}

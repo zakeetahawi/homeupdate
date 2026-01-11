@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ title }}</title>
+        <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
@@ -131,90 +131,70 @@
         .priority-medium { background: #ffc107; color: #333; }
         .priority-high { background: #fd7e14; color: white; }
         .priority-urgent { background: #dc3545; color: white; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>{{ title }}</h1>
-        </div>
-        
-        <div class="content">
-            <p>مرحباً {{ recipient.get_full_name|default:recipient.username }}،</p>
-            
-            <p>{{ message }}</p>
-            
-            <div class="complaint-info">
-                <h3>تفاصيل الشكوى</h3>
-                
-                <div class="info-row">
-                    <span class="label">رقم الشكوى:</span>
-                    <span class="value">{{ complaint.complaint_number }}</span>
-                </div>
-                
-                <div class="info-row">
-                    <span class="label">العميل:</span>
-                    <span class="value">{{ complaint.customer.name }}</span>
-                </div>
-                
-                <div class="info-row">
-                    <span class="label">نوع الشكوى:</span>
-                    <span class="value">{{ complaint.complaint_type.name }}</span>
-                </div>
-                
-                <div class="info-row">
-                    <span class="label">الحالة:</span>
-                    <span class="value">
-                        <span class="status-badge status-{{ complaint.status }}">
-                            {{ complaint.get_status_display }}
-                        </span>
-                    </span>
-                </div>
-                
-                <div class="info-row">
-                    <span class="label">الأولوية:</span>
-                    <span class="value">
-                        <span class="priority-badge priority-{{ complaint.priority }}">
-                            {{ complaint.get_priority_display }}
-                        </span>
-                    </span>
-                </div>
-                
-                <div class="info-row">
-                    <span class="label">تاريخ الإنشاء:</span>
-                    <span class="value">{{ complaint.created_at|date:"d/m/Y H:i" }}</span>
-                </div>
-                
-                {% if complaint.deadline %}
-                <div class="info-row">
-                    <span class="label">الموعد النهائي:</span>
-                    <span class="value">{{ complaint.deadline|date:"d/m/Y H:i" }}</span>
-                </div>
-                {% endif %}
-                
-                {% if complaint.assigned_to %}
-                <div class="info-row">
-                    <span class="label">المسؤول:</span>
-                    <span class="value">{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}</span>
-                </div>
-                {% endif %}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>{{ title }}</h1>
             </div>
-            
-            <div style="text-align: center;">
-                <a href="{{ complaint_url }}" class="action-button">
-                    عرض تفاصيل الشكوى
-                </a>
+            <div class="content">
+                <p>مرحباً {{ recipient.get_full_name|default:recipient.username }}،</p>
+                <p>{{ message }}</p>
+                <div class="complaint-info">
+                    <h3>تفاصيل الشكوى</h3>
+                    <div class="info-row">
+                        <span class="label">رقم الشكوى:</span>
+                        <span class="value">{{ complaint.complaint_number }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">العميل:</span>
+                        <span class="value">{{ complaint.customer.name }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">نوع الشكوى:</span>
+                        <span class="value">{{ complaint.complaint_type.name }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">الحالة:</span>
+                        <span class="value">
+                            <span class="status-badge status-{{ complaint.status }}">{{ complaint.get_status_display }}</span>
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">الأولوية:</span>
+                        <span class="value">
+                            <span class="priority-badge priority-{{ complaint.priority }}">{{ complaint.get_priority_display }}</span>
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">تاريخ الإنشاء:</span>
+                        <span class="value">{{ complaint.created_at|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    {% if complaint.deadline %}
+                        <div class="info-row">
+                            <span class="label">الموعد النهائي:</span>
+                            <span class="value">{{ complaint.deadline|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    {% endif %}
+                    {% if complaint.assigned_to %}
+                        <div class="info-row">
+                            <span class="label">المسؤول:</span>
+                            <span class="value">{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <div style="text-align: center;">
+                    <a href="{{ complaint_url }}" class="action-button">عرض تفاصيل الشكوى</a>
+                </div>
+                <p style="margin-top: 30px; color: #666; font-size: 14px;">
+                    يمكنك الوصول إلى النظام في أي وقت لمتابعة الشكاوى وإدارتها.
+                </p>
             </div>
-            
-            <p style="margin-top: 30px; color: #666; font-size: 14px;">
-                يمكنك الوصول إلى النظام في أي وقت لمتابعة الشكاوى وإدارتها.
-            </p>
+            <div class="footer">
+                <p>هذا إشعار تلقائي من نظام إدارة الشكاوى</p>
+                <p>© {{ "now"|date:"Y" }} نظام الخواجه - جميع الحقوق محفوظة</p>
+            </div>
         </div>
-        
-        <div class="footer">
-            <p>هذا إشعار تلقائي من نظام إدارة الشكاوى</p>
-            <p>© {{ "now"|date:"Y" }} نظام الخواجه - جميع الحقوق محفوظة</p>
-        </div>
-    </div>
-</body>
+    </body>
 </html>

@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0005_auto_20250729_1808'),
+        ("accounts", "0005_auto_20250729_1808"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='is_factory_manager',
-            field=models.BooleanField(default=False, verbose_name='مسؤول مصنع'),
+            model_name="user",
+            name="is_factory_manager",
+            field=models.BooleanField(default=False, verbose_name="مسؤول مصنع"),
         ),
         migrations.AddField(
-            model_name='user',
-            name='is_inspection_manager',
-            field=models.BooleanField(default=False, verbose_name='مسؤول معاينات'),
+            model_name="user",
+            name="is_inspection_manager",
+            field=models.BooleanField(default=False, verbose_name="مسؤول معاينات"),
         ),
         migrations.AddField(
-            model_name='user',
-            name='is_installation_manager',
-            field=models.BooleanField(default=False, verbose_name='مسؤول تركيبات'),
+            model_name="user",
+            name="is_installation_manager",
+            field=models.BooleanField(default=False, verbose_name="مسؤول تركيبات"),
         ),
     ]

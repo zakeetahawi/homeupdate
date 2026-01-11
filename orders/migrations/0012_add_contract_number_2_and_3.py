@@ -6,18 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('orders', '0011_order_invoice_number_2_order_invoice_number_3'),
+        ("orders", "0011_order_invoice_number_2_order_invoice_number_3"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='order',
-            name='contract_number_2',
-            field=models.CharField(blank=True, max_length=50, null=True, verbose_name='رقم العقد الإضافي 2'),
+            model_name="order",
+            name="contract_number_2",
+            field=models.CharField(
+                blank=True, max_length=50, null=True, verbose_name="رقم العقد الإضافي 2"
+            ),
         ),
         migrations.AddField(
-            model_name='order',
-            name='contract_number_3',
-            field=models.CharField(blank=True, max_length=50, null=True, verbose_name='رقم العقد الإضافي 3'),
+            model_name="order",
+            name="contract_number_3",
+            field=models.CharField(
+                blank=True, max_length=50, null=True, verbose_name="رقم العقد الإضافي 3"
+            ),
         ),
     ]

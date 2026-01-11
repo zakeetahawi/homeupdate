@@ -1,135 +1,125 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}إضافة تحليل خطأ{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- عنوان الصفحة -->
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">إضافة تحليل خطأ</h1>
-        <div>
-            <a href="{% url 'installations:modification_error_analysis' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-right"></i> العودة لتحليل الأخطاء
-            </a>
+    <div class="container-fluid">
+        <!-- عنوان الصفحة -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-0 text-gray-800">إضافة تحليل خطأ</h1>
+            <div>
+                <a href="{% url 'installations:modification_error_analysis' %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-arrow-right"></i> العودة لتحليل الأخطاء
+                </a>
+            </div>
         </div>
-    </div>
-
-    <!-- معلومات طلب التعديل -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">معلومات طلب التعديل</h6>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>رقم الطلب:</strong> {{ modification_request.installation.order.order_number }}</p>
-                    <p><strong>العميل:</strong> {{ modification_request.installation.order.customer.name }}</p>
-                    <p><strong>تاريخ الطلب:</strong> {{ modification_request.created_at|date:"Y-m-d" }}</p>
-                </div>
-                <div class="col-md-6">
-                    <p><strong>نوع التعديل:</strong> {{ modification_request.get_modification_type_display }}</p>
-                    <p><strong>الوصف:</strong> {{ modification_request.description|truncatechars:100 }}</p>
-                    <p><strong>الحالة:</strong> {{ modification_request.installation.get_status_display }}</p>
+        <!-- معلومات طلب التعديل -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">معلومات طلب التعديل</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p>
+                            <strong>رقم الطلب:</strong> {{ modification_request.installation.order.order_number }}
+                        </p>
+                        <p>
+                            <strong>العميل:</strong> {{ modification_request.installation.order.customer.name }}
+                        </p>
+                        <p>
+                            <strong>تاريخ الطلب:</strong> {{ modification_request.created_at|date:"Y-m-d" }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p>
+                            <strong>نوع التعديل:</strong> {{ modification_request.get_modification_type_display }}
+                        </p>
+                        <p>
+                            <strong>الوصف:</strong> {{ modification_request.description|truncatechars:100 }}
+                        </p>
+                        <p>
+                            <strong>الحالة:</strong> {{ modification_request.installation.get_status_display }}
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- نموذج تحليل الخطأ -->
-    <div class="card shadow">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">تحليل الخطأ</h6>
-        </div>
-        <div class="card-body">
-            <form method="post">
-                {% csrf_token %}
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="{{ form.error_type.id_for_label }}">نوع الخطأ *</label>
-                            {{ form.error_type }}
-                            {% if form.error_type.errors %}
-                                <div class="text-danger">{{ form.error_type.errors }}</div>
-                            {% endif %}
+        <!-- نموذج تحليل الخطأ -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">تحليل الخطأ</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.error_type.id_for_label }}">نوع الخطأ *</label>
+                                {{ form.error_type }}
+                                {% if form.error_type.errors %}<div class="text-danger">{{ form.error_type.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.cost_impact.id_for_label }}">التأثير المالي (جنيه)</label>
+                                {{ form.cost_impact }}
+                                {% if form.cost_impact.errors %}<div class="text-danger">{{ form.cost_impact.errors }}</div>{% endif %}
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="{{ form.cost_impact.id_for_label }}">التأثير المالي (جنيه)</label>
-                            {{ form.cost_impact }}
-                            {% if form.cost_impact.errors %}
-                                <div class="text-danger">{{ form.cost_impact.errors }}</div>
-                            {% endif %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.time_impact_hours.id_for_label }}">التأثير الزمني (ساعات)</label>
+                                {{ form.time_impact_hours }}
+                                {% if form.time_impact_hours.errors %}<div class="text-danger">{{ form.time_impact_hours.errors }}</div>{% endif %}
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="{{ form.time_impact_hours.id_for_label }}">التأثير الزمني (ساعات)</label>
-                            {{ form.time_impact_hours }}
-                            {% if form.time_impact_hours.errors %}
-                                <div class="text-danger">{{ form.time_impact_hours.errors }}</div>
-                            {% endif %}
-                        </div>
+                    <div class="form-group">
+                        <label for="{{ form.error_description.id_for_label }}">وصف الخطأ *</label>
+                        {{ form.error_description }}
+                        {% if form.error_description.errors %}<div class="text-danger">{{ form.error_description.errors }}</div>{% endif %}
+                        <small class="form-text text-muted">وصف مفصل للخطأ الذي حدث</small>
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.error_description.id_for_label }}">وصف الخطأ *</label>
-                    {{ form.error_description }}
-                    {% if form.error_description.errors %}
-                        <div class="text-danger">{{ form.error_description.errors }}</div>
-                    {% endif %}
-                    <small class="form-text text-muted">وصف مفصل للخطأ الذي حدث</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.root_cause.id_for_label }}">السبب الجذري *</label>
-                    {{ form.root_cause }}
-                    {% if form.root_cause.errors %}
-                        <div class="text-danger">{{ form.root_cause.errors }}</div>
-                    {% endif %}
-                    <small class="form-text text-muted">السبب الأساسي الذي أدى إلى حدوث الخطأ</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.solution_applied.id_for_label }}">الحل المطبق *</label>
-                    {{ form.solution_applied }}
-                    {% if form.solution_applied.errors %}
-                        <div class="text-danger">{{ form.solution_applied.errors }}</div>
-                    {% endif %}
-                    <small class="form-text text-muted">الخطوات التي تم اتخاذها لحل المشكلة</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.prevention_measures.id_for_label }}">إجراءات الوقاية</label>
-                    {{ form.prevention_measures }}
-                    {% if form.prevention_measures.errors %}
-                        <div class="text-danger">{{ form.prevention_measures.errors }}</div>
-                    {% endif %}
-                    <small class="form-text text-muted">الإجراءات التي يمكن اتخاذها لمنع تكرار هذا الخطأ</small>
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> حفظ تحليل الخطأ
-                    </button>
-                    <a href="{% url 'installations:modification_error_analysis' %}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> إلغاء
-                    </a>
-                </div>
-            </form>
+                    <div class="form-group">
+                        <label for="{{ form.root_cause.id_for_label }}">السبب الجذري *</label>
+                        {{ form.root_cause }}
+                        {% if form.root_cause.errors %}<div class="text-danger">{{ form.root_cause.errors }}</div>{% endif %}
+                        <small class="form-text text-muted">السبب الأساسي الذي أدى إلى حدوث الخطأ</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.solution_applied.id_for_label }}">الحل المطبق *</label>
+                        {{ form.solution_applied }}
+                        {% if form.solution_applied.errors %}<div class="text-danger">{{ form.solution_applied.errors }}</div>{% endif %}
+                        <small class="form-text text-muted">الخطوات التي تم اتخاذها لحل المشكلة</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.prevention_measures.id_for_label }}">إجراءات الوقاية</label>
+                        {{ form.prevention_measures }}
+                        {% if form.prevention_measures.errors %}
+                            <div class="text-danger">{{ form.prevention_measures.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">الإجراءات التي يمكن اتخاذها لمنع تكرار هذا الخطأ</small>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> حفظ تحليل الخطأ
+                        </button>
+                        <a href="{% url 'installations:modification_error_analysis' %}"
+                           class="btn btn-secondary">
+                            <i class="fas fa-times"></i> إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     // تحسين تجربة المستخدم
     const errorTypeSelect = document.getElementById('{{ form.error_type.id_for_label }}');
@@ -166,5 +156,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-</script>
-{% endblock %} 
+    </script>
+{% endblock %}

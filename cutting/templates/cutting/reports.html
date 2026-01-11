@@ -1,12 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
-
 {% block title %}تقارير التقطيع{% endblock %}
-
 {% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
-<style>
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css"
+          rel="stylesheet">
+    <style>
     .reports-header {
         background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
         color: white;
@@ -35,308 +34,286 @@
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 1rem;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- عنوان الصفحة -->
-    <div class="reports-header p-4 mb-4 shadow">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="h3 mb-2">
-                    <i class="fas fa-chart-bar"></i>
-                    تقارير التقطيع
-                </h1>
-                <p class="mb-0">إنشاء وعرض تقارير مفصلة عن عمليات التقطيع</p>
-            </div>
-            <div class="col-md-4 text-center">
-                <div class="d-flex justify-content-center gap-3">
-                    <div class="text-center">
-                        <div class="h4 mb-0">{{ recent_reports.count }}</div>
-                        <small>تقارير حديثة</small>
-                    </div>
+    <div class="container-fluid">
+        <!-- عنوان الصفحة -->
+        <div class="reports-header p-4 mb-4 shadow">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="h3 mb-2">
+                        <i class="fas fa-chart-bar"></i>
+                        تقارير التقطيع
+                    </h1>
+                    <p class="mb-0">إنشاء وعرض تقارير مفصلة عن عمليات التقطيع</p>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- نموذج إنشاء تقرير جديد -->
-        <div class="col-lg-4 mb-4">
-            <div class="card report-form shadow">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0 font-weight-bold">
-                        <i class="fas fa-plus-circle"></i>
-                        إنشاء تقرير جديد
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <form id="reportForm" method="post">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label class="form-label">نوع التقرير</label>
-                            <select id="reportType" class="form-select" required>
-                                <option value="">اختر نوع التقرير</option>
-                                {% for type_code, type_name in report_types %}
-                                    <option value="{{ type_code }}">{{ type_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">المستودع</label>
-                            <select id="warehouseId" class="form-select" required>
-                                <option value="">اختر المستودع</option>
-                                {% for warehouse in warehouses %}
-                                    <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-6">
-                                <div class="mb-3">
-                                    <label class="form-label">من تاريخ</label>
-                                    <input type="date" id="startDate" class="form-control" required>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="mb-3">
-                                    <label class="form-label">إلى تاريخ</label>
-                                    <input type="date" id="endDate" class="form-control" required>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-chart-line"></i> إنشاء التقرير
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- التقارير الحديثة -->
-        <div class="col-lg-8 mb-4">
-            <div class="card shadow">
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-history"></i>
-                        التقارير الحديثة
-                    </h6>
-                    <button class="btn btn-sm btn-secondary" onclick="refreshReports()">
-                        <i class="fas fa-sync"></i> تحديث
-                    </button>
-                </div>
-                <div class="card-body">
-                    {% if recent_reports %}
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>نوع التقرير</th>
-                                        <th>المستودع</th>
-                                        <th>الفترة</th>
-                                        <th>الإحصائيات</th>
-                                        <th>تاريخ الإنشاء</th>
-                                        <th>الإجراءات</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for report in recent_reports %}
-                                    <tr>
-                                        <td>
-                                            <span class="badge badge-primary">
-                                                {{ report.get_report_type_display }}
-                                            </span>
-                                        </td>
-                                        <td>{{ report.warehouse.name }}</td>
-                                        <td class="small">
-                                            {{ report.start_date|date:"d/m/Y" }} - 
-                                            {{ report.end_date|date:"d/m/Y" }}
-                                        </td>
-                                        <td>
-                                            <div class="small">
-                                                <div class="text-success">
-                                                    <i class="fas fa-check"></i> {{ report.completed_items }} مكتمل
-                                                </div>
-                                                <div class="text-danger">
-                                                    <i class="fas fa-times"></i> {{ report.rejected_items }} مرفوض
-                                                </div>
-                                                <div class="text-warning">
-                                                    <i class="fas fa-clock"></i> {{ report.pending_items }} معلق
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="small text-muted">
-                                            {{ report.generated_at|date:"d/m/Y H:i" }}
-                                        </td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-info" 
-                                                        onclick="viewReport({{ report.id }})">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-secondary" 
-                                                        onclick="printReport({{ report.id }})">
-                                                    <i class="fas fa-print"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-success" 
-                                                        onclick="exportReport({{ report.id }})">
-                                                    <i class="fas fa-download"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <div class="text-center py-4">
-                            <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">لا توجد تقارير</h5>
-                            <p class="text-muted">ابدأ بإنشاء تقرير جديد من النموذج المجاور</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- إحصائيات سريعة -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-tachometer-alt"></i>
-                        إحصائيات سريعة - اليوم
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="stats-grid" id="quickStats">
-                        <!-- سيتم تحميل الإحصائيات هنا عبر JavaScript -->
+                <div class="col-md-4 text-center">
+                    <div class="d-flex justify-content-center gap-3">
                         <div class="text-center">
-                            <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
-                            <p class="text-muted mt-2">جاري تحميل الإحصائيات...</p>
+                            <div class="h4 mb-0">{{ recent_reports.count }}</div>
+                            <small>تقارير حديثة</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- تقارير سريعة -->
-    <div class="row">
-        <div class="col-md-4 mb-4">
-            <div class="card report-card shadow">
-                <div class="card-body text-center">
-                    <i class="fas fa-calendar-day fa-3x text-primary mb-3"></i>
-                    <h5>تقرير يومي</h5>
-                    <p class="text-muted">تقرير مفصل عن عمليات التقطيع اليوم</p>
-                    <button class="btn btn-primary" onclick="generateDailyReport()">
-                        <i class="fas fa-chart-line"></i> إنشاء تقرير يومي
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4 mb-4">
-            <div class="card report-card shadow">
-                <div class="card-body text-center">
-                    <i class="fas fa-calendar-week fa-3x text-info mb-3"></i>
-                    <h5>تقرير أسبوعي</h5>
-                    <p class="text-muted">تقرير عن عمليات التقطيع هذا الأسبوع</p>
-                    <button class="btn btn-info" onclick="generateWeeklyReport()">
-                        <i class="fas fa-chart-bar"></i> إنشاء تقرير أسبوعي
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4 mb-4">
-            <div class="card report-card shadow">
-                <div class="card-body text-center">
-                    <i class="fas fa-calendar-alt fa-3x text-success mb-3"></i>
-                    <h5>تقرير شهري</h5>
-                    <p class="text-muted">تقرير شامل عن عمليات التقطيع هذا الشهر</p>
-                    <button class="btn btn-success" onclick="generateMonthlyReport()">
-                        <i class="fas fa-chart-pie"></i> إنشاء تقرير شهري
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- تقارير خاصة -->
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-user-tie"></i>
-                        تقرير حسب المستلم
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <form id="receiverReportForm" method="post">
-                        {% csrf_token %}
-                        <div class="row">
-                            <div class="col-md-6">
-                                <input type="text" id="receiverName" class="form-control" 
-                                       placeholder="اسم المستلم">
-                            </div>
-                            <div class="col-md-6">
-                                <input type="date" id="receiverDate" class="form-control">
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary mt-3">
-                            <i class="fas fa-search"></i> إنشاء تقرير المستلم
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6 mb-4">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-warehouse"></i>
-                        تقرير حسب المستودع
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <form id="warehouseReportForm" method="post">
-                        {% csrf_token %}
-                        <div class="row">
-                            <div class="col-md-12">
-                                <select id="warehouseReportId" class="form-select mb-3">
-                                    <option value="">اختر المستودع</option>
-                                    {% for warehouse in warehouses %}
-                                        <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
-                                    {% endfor %}
+        <div class="row">
+            <!-- نموذج إنشاء تقرير جديد -->
+            <div class="col-lg-4 mb-4">
+                <div class="card report-form shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0 font-weight-bold">
+                            <i class="fas fa-plus-circle"></i>
+                            إنشاء تقرير جديد
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="reportForm" method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label">نوع التقرير</label>
+                                <select id="reportType" class="form-select" required>
+                                    <option value="">اختر نوع التقرير</option>
+                                    {% for type_code, type_name in report_types %}<option value="{{ type_code }}">{{ type_name }}</option>{% endfor %}
                                 </select>
                             </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-chart-area"></i> إنشاء تقرير المستودع
+                            <div class="mb-3">
+                                <label class="form-label">المستودع</label>
+                                <select id="warehouseId" class="form-select" required>
+                                    <option value="">اختر المستودع</option>
+                                    {% for warehouse in warehouses %}<option value="{{ warehouse.id }}">{{ warehouse.name }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">من تاريخ</label>
+                                        <input type="date" id="startDate" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">إلى تاريخ</label>
+                                        <input type="date" id="endDate" class="form-control" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-chart-line"></i> إنشاء التقرير
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- التقارير الحديثة -->
+            <div class="col-lg-8 mb-4">
+                <div class="card shadow">
+                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-history"></i>
+                            التقارير الحديثة
+                        </h6>
+                        <button class="btn btn-sm btn-secondary" onclick="refreshReports()">
+                            <i class="fas fa-sync"></i> تحديث
                         </button>
-                    </form>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_reports %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>نوع التقرير</th>
+                                            <th>المستودع</th>
+                                            <th>الفترة</th>
+                                            <th>الإحصائيات</th>
+                                            <th>تاريخ الإنشاء</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for report in recent_reports %}
+                                            <tr>
+                                                <td>
+                                                    <span class="badge badge-primary">{{ report.get_report_type_display }}</span>
+                                                </td>
+                                                <td>{{ report.warehouse.name }}</td>
+                                                <td class="small">
+                                                    {{ report.start_date|date:"d/m/Y" }} -
+                                                    {{ report.end_date|date:"d/m/Y" }}
+                                                </td>
+                                                <td>
+                                                    <div class="small">
+                                                        <div class="text-success">
+                                                            <i class="fas fa-check"></i> {{ report.completed_items }} مكتمل
+                                                        </div>
+                                                        <div class="text-danger">
+                                                            <i class="fas fa-times"></i> {{ report.rejected_items }} مرفوض
+                                                        </div>
+                                                        <div class="text-warning">
+                                                            <i class="fas fa-clock"></i> {{ report.pending_items }} معلق
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="small text-muted">{{ report.generated_at|date:"d/m/Y H:i" }}</td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <button class="btn btn-sm btn-info" onclick="viewReport({{ report.id }})">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-secondary"
+                                                                onclick="printReport({{ report.id }})">
+                                                            <i class="fas fa-print"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-success"
+                                                                onclick="exportReport({{ report.id }})">
+                                                            <i class="fas fa-download"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">لا توجد تقارير</h5>
+                                <p class="text-muted">ابدأ بإنشاء تقرير جديد من النموذج المجاور</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- إحصائيات سريعة -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-tachometer-alt"></i>
+                            إحصائيات سريعة - اليوم
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="stats-grid" id="quickStats">
+                            <!-- سيتم تحميل الإحصائيات هنا عبر JavaScript -->
+                            <div class="text-center">
+                                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                                <p class="text-muted mt-2">جاري تحميل الإحصائيات...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- تقارير سريعة -->
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card report-card shadow">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-day fa-3x text-primary mb-3"></i>
+                        <h5>تقرير يومي</h5>
+                        <p class="text-muted">تقرير مفصل عن عمليات التقطيع اليوم</p>
+                        <button class="btn btn-primary" onclick="generateDailyReport()">
+                            <i class="fas fa-chart-line"></i> إنشاء تقرير يومي
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card report-card shadow">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-week fa-3x text-info mb-3"></i>
+                        <h5>تقرير أسبوعي</h5>
+                        <p class="text-muted">تقرير عن عمليات التقطيع هذا الأسبوع</p>
+                        <button class="btn btn-info" onclick="generateWeeklyReport()">
+                            <i class="fas fa-chart-bar"></i> إنشاء تقرير أسبوعي
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card report-card shadow">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-alt fa-3x text-success mb-3"></i>
+                        <h5>تقرير شهري</h5>
+                        <p class="text-muted">تقرير شامل عن عمليات التقطيع هذا الشهر</p>
+                        <button class="btn btn-success" onclick="generateMonthlyReport()">
+                            <i class="fas fa-chart-pie"></i> إنشاء تقرير شهري
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- تقارير خاصة -->
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-user-tie"></i>
+                            تقرير حسب المستلم
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="receiverReportForm" method="post">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <input type="text"
+                                           id="receiverName"
+                                           class="form-control"
+                                           placeholder="اسم المستلم">
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="date" id="receiverDate" class="form-control">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-3">
+                                <i class="fas fa-search"></i> إنشاء تقرير المستلم
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-warehouse"></i>
+                            تقرير حسب المستودع
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="warehouseReportForm" method="post">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <select id="warehouseReportId" class="form-select mb-3">
+                                        <option value="">اختر المستودع</option>
+                                        {% for warehouse in warehouses %}<option value="{{ warehouse.id }}">{{ warehouse.name }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-chart-area"></i> إنشاء تقرير المستودع
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
-{% load static %}
-<script src="{% static 'vendor/chartjs/chart.min.js' %}"></script>
-<script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+    {% load static %}
+    <script src="{% static 'vendor/chartjs/chart.min.js' %}"></script>
+    <script>
 $(document).ready(function() {
     // تحميل الإحصائيات السريعة
     loadQuickStats();
@@ -632,5 +609,5 @@ function refreshReports() {
 
 // تحديث تلقائي للإحصائيات كل دقيقة
 setInterval(loadQuickStats, 60000);
-</script>
+    </script>
 {% endblock %}

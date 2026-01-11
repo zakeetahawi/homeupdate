@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}إحصائيات الشكاوى - نظام الخواجه{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .stat-card {
         background: white;
         border-radius: 15px;
@@ -34,65 +32,60 @@
         padding: 2rem;
         box-shadow: 0 5px 15px rgba(0,0,0,0.05);
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">إحصائيات الشكاوى</h1>
+    <div class="container-fluid">
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-0 text-gray-800">إحصائيات الشكاوى</h1>
+        </div>
+        <!-- Stat Cards -->
+        <div class="row">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="stat-card border-left-primary">
+                    <h3>{{ stats.total }}</h3>
+                    <p>إجمالي الشكاوى</p>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="stat-card border-left-info">
+                    <h3>{{ stats.new }}</h3>
+                    <p>شكاوى جديدة</p>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="stat-card border-left-warning">
+                    <h3>{{ stats.in_progress }}</h3>
+                    <p>قيد المعالجة</p>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="stat-card border-left-success">
+                    <h3>{{ stats.resolved }}</h3>
+                    <p>تم حلها</p>
+                </div>
+            </div>
+        </div>
+        <!-- Charts -->
+        <div class="row">
+            <div class="col-lg-7 mb-4">
+                <div class="chart-container">
+                    <h5 class="mb-4 text-center">الشكاوى حسب الشهر</h5>
+                    <canvas id="complaintsByMonthChart"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-5 mb-4">
+                <div class="chart-container">
+                    <h5 class="mb-4 text-center">الشكاوى حسب النوع</h5>
+                    <canvas id="complaintsByTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <!-- Stat Cards -->
-    <div class="row">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="stat-card border-left-primary">
-                <h3>{{ stats.total }}</h3>
-                <p>إجمالي الشكاوى</p>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="stat-card border-left-info">
-                <h3>{{ stats.new }}</h3>
-                <p>شكاوى جديدة</p>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="stat-card border-left-warning">
-                <h3>{{ stats.in_progress }}</h3>
-                <p>قيد المعالجة</p>
-            </div>
-        </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="stat-card border-left-success">
-                <h3>{{ stats.resolved }}</h3>
-                <p>تم حلها</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts -->
-    <div class="row">
-        <div class="col-lg-7 mb-4">
-            <div class="chart-container">
-                <h5 class="mb-4 text-center">الشكاوى حسب الشهر</h5>
-                <canvas id="complaintsByMonthChart"></canvas>
-            </div>
-        </div>
-        <div class="col-lg-5 mb-4">
-            <div class="chart-container">
-                <h5 class="mb-4 text-center">الشكاوى حسب النوع</h5>
-                <canvas id="complaintsByTypeChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
     // Data from Django
     const byTypeData = {{ by_type|safe }};
     const byMonthData = {{ by_month|safe }};
@@ -154,5 +147,5 @@
             }
         }
     });
-</script>
+    </script>
 {% endblock %}

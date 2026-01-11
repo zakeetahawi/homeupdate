@@ -5,12 +5,13 @@ delete_url: رابط صفحة الحذف
 item_branch: فرع العنصر (customer.branch, order.branch, etc)
 delete_message: رسالة تأكيد الحذف
 {% endcomment %}
-
 {% if delete_perm and perms|get_perm:delete_perm %}
-{% if request.user.is_superuser or item_branch == request.user.branch %}
-<a href="{{ delete_url }}" class="btn btn-outline-danger btn-sm w-100" title="حذف"
-   onclick="return confirm('{{ delete_message|default:'هل أنت متأكد من الحذف؟' }}');">
-    <i class="fas fa-trash"></i> حذف
-</a>
-{% endif %}
+    {% if request.user.is_superuser or item_branch == request.user.branch %}
+        <a href="{{ delete_url }}"
+           class="btn btn-outline-danger btn-sm w-100"
+           title="حذف"
+           onclick="return confirm('{{ delete_message|default:'هل أنت متأكد من الحذف؟' }}');">
+            <i class="fas fa-trash"></i> حذف
+        </a>
+    {% endif %}
 {% endif %}

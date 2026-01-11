@@ -2,635 +2,679 @@
 {% load decimal_filters %}
 {% load unified_status_tags %}
 {% load static %}
-
 {% block title %}تفاصيل الطلب #{{ order.order_number }} - نظام الخواجه{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/detail-pages-premium.css' %}">
+    <link rel="stylesheet" href="{% static 'css/detail-pages-premium.css' %}">
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    
-    <div class="detail-hero animate-fade-in">
-        <div class="detail-hero-content">
-            <div class="detail-hero-avatar">
-                <i class="fas fa-shopping-cart"></i>
-            </div>
-            
-            <div class="detail-hero-info">
-                <h1 class="detail-hero-title">
-                    <span>طلب #{{ order.order_number }}</span>
-                    <span class="status-badge lg {% if order.order_status == 'completed' %}completed{% elif order.order_status == 'pending' %}pending{% elif order.order_status == 'in_progress' %}in-progress{% else %}pending{% endif %}">
-                        <i class="{{ order.get_display_status_icon }}"></i>
-                        {{ order.get_display_status_text }}
-                    </span>
-                </h1>
-                
-                <p class="detail-hero-subtitle">
-                    <i class="fas fa-user"></i>
-                    <a href="{% url 'customers:customer_detail' order.customer.pk %}" style="color: inherit; text-decoration: none;">
-                        {{ order.customer.name }}
-                    </a>
-                </p>
-                
-                <div class="detail-hero-meta">
-                    <div class="detail-hero-meta-item">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>{{ order.order_date|date:"d M Y" }}</span>
-                    </div>
-                    <div class="detail-hero-meta-item">
-                        <i class="fas fa-building"></i>
-                        <span>{{ order.branch.name }}</span>
-                    </div>
-                    {% if order.salesperson %}
-                    <div class="detail-hero-meta-item">
-                        <i class="fas fa-user-tie"></i>
-                        <span>{{ order.salesperson.name }}</span>
-                    </div>
-                    {% endif %}
-                    <div class="detail-hero-meta-item">
-                        <i class="fas fa-tag"></i>
-                        {% with types_list=order.get_selected_types_list %}
-                            {% for type in types_list %}
-                                <span class="badge" style="background: rgba(255,255,255,0.2); margin-left: 4px;">{{ type }}</span>
-                            {% endfor %}
-                        {% endwith %}
+    <div class="container-fluid py-4">
+        <div class="detail-hero animate-fade-in">
+            <div class="detail-hero-content">
+                <div class="detail-hero-avatar">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <div class="detail-hero-info">
+                    <h1 class="detail-hero-title">
+                        <span>طلب #{{ order.order_number }}</span>
+                        <span class="status-badge lg {% if order.order_status == 'completed' %}completed{% elif order.order_status == 'pending' %}pending{% elif order.order_status == 'in_progress' %}in-progress{% else %}pending{% endif %}">
+                            <i class="{{ order.get_display_status_icon }}"></i>
+                            {{ order.get_display_status_text }}
+                        </span>
+                    </h1>
+                    <p class="detail-hero-subtitle">
+                        <i class="fas fa-user"></i>
+                        <a href="{% url 'customers:customer_detail' order.customer.pk %}"
+                           style="color: inherit;
+                                  text-decoration: none">{{ order.customer.name }}</a>
+                    </p>
+                    <div class="detail-hero-meta">
+                        <div class="detail-hero-meta-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>{{ order.order_date|date:"d M Y" }}</span>
+                        </div>
+                        <div class="detail-hero-meta-item">
+                            <i class="fas fa-building"></i>
+                            <span>{{ order.branch.name }}</span>
+                        </div>
+                        {% if order.salesperson %}
+                            <div class="detail-hero-meta-item">
+                                <i class="fas fa-user-tie"></i>
+                                <span>{{ order.salesperson.name }}</span>
+                            </div>
+                        {% endif %}
+                        <div class="detail-hero-meta-item">
+                            <i class="fas fa-tag"></i>
+                            {% with types_list=order.get_selected_types_list %}
+                                {% for type in types_list %}
+                                    <span class="badge"
+                                          style="background: rgba(255,255,255,0.2);
+                                                 margin-left: 4px">{{ type }}</span>
+                                {% endfor %}
+                            {% endwith %}
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="detail-hero-actions">
-                <a href="{% url 'orders:order_list' %}" class="btn-premium secondary">
-                    <i class="fas fa-arrow-right"></i>
-                    العودة للقائمة
-                </a>
-                {% if perms.orders.change_order and not user.is_salesperson %}
-                <a href="{% url 'orders:wizard_edit_options' order.pk %}" class="btn-premium primary">
-                    <i class="fas fa-edit"></i>
-                    تعديل الطلب
-                </a>
-                {% endif %}
-                <button type="button" class="btn-premium success" onclick="printInvoice('{{ order.order_number }}')">
-                    <i class="fas fa-print"></i>
-                    طباعة الفاتورة
-                </button>
+                <div class="detail-hero-actions">
+                    <a href="{% url 'orders:order_list' %}" class="btn-premium secondary">
+                        <i class="fas fa-arrow-right"></i>
+                        العودة للقائمة
+                    </a>
+                    {% if perms.orders.change_order and not user.is_salesperson %}
+                        <a href="{% url 'orders:wizard_edit_options' order.pk %}"
+                           class="btn-premium primary">
+                            <i class="fas fa-edit"></i>
+                            تعديل الطلب
+                        </a>
+                    {% endif %}
+                    <button type="button"
+                            class="btn-premium success"
+                            onclick="printInvoice('{{ order.order_number }}')">
+                        <i class="fas fa-print"></i>
+                        طباعة الفاتورة
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-
-    <div class="stats-grid stagger-children">
-        <div class="stat-card-premium">
-            <div class="stat-card-premium-icon">
-                <i class="fas fa-coins"></i>
+        <div class="stats-grid stagger-children">
+            <div class="stat-card-premium">
+                <div class="stat-card-premium-icon">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div class="stat-card-premium-value">
+                    {% if computed_total_amount is not None %}
+                        {{ computed_total_amount|clean_decimal_currency:currency_symbol }}
+                    {% else %}
+                        {{ order.total_amount|clean_decimal_currency:currency_symbol }}
+                    {% endif %}
+                </div>
+                <div class="stat-card-premium-label">المبلغ الإجمالي</div>
             </div>
-            <div class="stat-card-premium-value">
-                {% if computed_total_amount is not None %}
-                    {{ computed_total_amount|clean_decimal_currency:currency_symbol }}
-                {% else %}
-                    {{ order.total_amount|clean_decimal_currency:currency_symbol }}
+            <div class="stat-card-premium success">
+                <div class="stat-card-premium-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-card-premium-value">{{ order.paid_amount|clean_decimal_currency:currency_symbol }}</div>
+                <div class="stat-card-premium-label">المبلغ المدفوع</div>
+                {% if order.total_amount > 0 %}
+                    <div class="stat-card-premium-trend up">
+                        <i class="fas fa-chart-pie"></i>
+                        {% widthratio order.paid_amount order.total_amount 100 as paid_percent %}
+                        {{ paid_percent|default:0 }}% مدفوع
+                    </div>
                 {% endif %}
             </div>
-            <div class="stat-card-premium-label">المبلغ الإجمالي</div>
+            <div class="stat-card-premium {% if order.remaining_amount > 0 %}warning{% else %}success{% endif %}">
+                <div class="stat-card-premium-icon">
+                    <i class="fas fa-hourglass-half"></i>
+                </div>
+                <div class="stat-card-premium-value">
+                    {% if computed_remaining_amount is not None %}
+                        {{ computed_remaining_amount|clean_decimal_currency:currency_symbol }}
+                    {% else %}
+                        {{ order.remaining_amount|clean_decimal_currency:currency_symbol }}
+                    {% endif %}
+                </div>
+                <div class="stat-card-premium-label">المبلغ المتبقي</div>
+            </div>
+            <div class="stat-card-premium info">
+                <div class="stat-card-premium-icon">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <div class="stat-card-premium-value">{{ order_items|length }}</div>
+                <div class="stat-card-premium-label">عناصر الطلب</div>
+            </div>
         </div>
-        
-        <div class="stat-card-premium success">
-            <div class="stat-card-premium-icon">
-                <i class="fas fa-check-circle"></i>
-            </div>
-            <div class="stat-card-premium-value">
-                {{ order.paid_amount|clean_decimal_currency:currency_symbol }}
-            </div>
-            <div class="stat-card-premium-label">المبلغ المدفوع</div>
-            {% if order.total_amount > 0 %}
-            <div class="stat-card-premium-trend up">
-                <i class="fas fa-chart-pie"></i>
-                {% widthratio order.paid_amount order.total_amount 100 as paid_percent %}
-                {{ paid_percent|default:0 }}% مدفوع
-            </div>
+        <div class="quick-actions mb-4">
+            <a href="{% url 'orders:payment_create' order.pk %}"
+               class="quick-action-btn">
+                <i class="fas fa-plus-circle"></i>
+                <span>تسجيل دفعة</span>
+            </a>
+            <a href="{% url 'orders:status_history' order.id %}"
+               class="quick-action-btn">
+                <i class="fas fa-history"></i>
+                <span>سجل الحالة</span>
+            </a>
+            {% if order.contract_file %}
+                <a href="{{ order.contract_file.url }}"
+                   target="_blank"
+                   class="quick-action-btn">
+                    <i class="fas fa-file-contract"></i>
+                    <span>ملف العقد</span>
+                </a>
+            {% endif %}
+            {% if order.related_inspection %}
+                <a href="{% url 'inspections:inspection_detail' order.related_inspection.pk %}"
+                   class="quick-action-btn">
+                    <i class="fas fa-search"></i>
+                    <span>المعاينة</span>
+                </a>
+            {% endif %}
+            {% if order.manufacturing_order %}
+                <a href="#" class="quick-action-btn">
+                    <i class="fas fa-industry"></i>
+                    <span>التصنيع</span>
+                </a>
             {% endif %}
         </div>
-        
-        <div class="stat-card-premium {% if order.remaining_amount > 0 %}warning{% else %}success{% endif %}">
-            <div class="stat-card-premium-icon">
-                <i class="fas fa-hourglass-half"></i>
-            </div>
-            <div class="stat-card-premium-value">
-                {% if computed_remaining_amount is not None %}
-                    {{ computed_remaining_amount|clean_decimal_currency:currency_symbol }}
-                {% else %}
-                    {{ order.remaining_amount|clean_decimal_currency:currency_symbol }}
-                {% endif %}
-            </div>
-            <div class="stat-card-premium-label">المبلغ المتبقي</div>
-        </div>
-        
-        <div class="stat-card-premium info">
-            <div class="stat-card-premium-icon">
-                <i class="fas fa-boxes"></i>
-            </div>
-            <div class="stat-card-premium-value">{{ order_items|length }}</div>
-            <div class="stat-card-premium-label">عناصر الطلب</div>
-        </div>
-    </div>
-
-    <div class="quick-actions mb-4">
-        <a href="{% url 'orders:payment_create' order.pk %}" class="quick-action-btn">
-            <i class="fas fa-plus-circle"></i>
-            <span>تسجيل دفعة</span>
-        </a>
-        <a href="{% url 'orders:status_history' order.id %}" class="quick-action-btn">
-            <i class="fas fa-history"></i>
-            <span>سجل الحالة</span>
-        </a>
-        {% if order.contract_file %}
-        <a href="{{ order.contract_file.url }}" target="_blank" class="quick-action-btn">
-            <i class="fas fa-file-contract"></i>
-            <span>ملف العقد</span>
-        </a>
-        {% endif %}
-        {% if order.related_inspection %}
-        <a href="{% url 'inspections:inspection_detail' order.related_inspection.pk %}" class="quick-action-btn">
-            <i class="fas fa-search"></i>
-            <span>المعاينة</span>
-        </a>
-        {% endif %}
-        {% if order.manufacturing_order %}
-        <a href="#" class="quick-action-btn">
-            <i class="fas fa-industry"></i>
-            <span>التصنيع</span>
-        </a>
-        {% endif %}
-    </div>
-
-    <div class="row g-4">
-        <div class="col-lg-8">
-            <div class="info-card animate-slide-up">
-                <div class="info-card-header gradient">
-                    <h3 class="info-card-header-title">
-                        <i class="fas fa-info-circle"></i>
-                        معلومات الطلب
-                    </h3>
-                </div>
-                <div class="info-card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="kv-list">
-                                <div class="kv-item">
-                                    <div class="kv-label">
-                                        <i class="fas fa-hashtag"></i>
-                                        رقم الطلب
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="info-card animate-slide-up">
+                    <div class="info-card-header gradient">
+                        <h3 class="info-card-header-title">
+                            <i class="fas fa-info-circle"></i>
+                            معلومات الطلب
+                        </h3>
+                    </div>
+                    <div class="info-card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="kv-list">
+                                    <div class="kv-item">
+                                        <div class="kv-label">
+                                            <i class="fas fa-hashtag"></i>
+                                            رقم الطلب
+                                        </div>
+                                        <div class="kv-value highlight">{{ order.order_number }}</div>
                                     </div>
-                                    <div class="kv-value highlight">{{ order.order_number }}</div>
+                                    <div class="kv-item">
+                                        <div class="kv-label">
+                                            <i class="fas fa-user"></i>
+                                            العميل
+                                        </div>
+                                        <div class="kv-value">
+                                            <a href="{% url 'customers:customer_detail' order.customer.pk %}"
+                                               class="text-decoration-none">{{ order.customer.name }}</a>
+                                        </div>
+                                    </div>
+                                    <div class="kv-item">
+                                        <div class="kv-label">
+                                            <i class="fas fa-calendar"></i>
+                                            تاريخ الطلب
+                                        </div>
+                                        <div class="kv-value">{{ order.order_date|date:"Y-m-d H:i" }}</div>
+                                    </div>
+                                    <div class="kv-item">
+                                        <div class="kv-label">
+                                            <i class="fas fa-truck"></i>
+                                            تاريخ التسليم المتوقع
+                                        </div>
+                                        <div class="kv-value">
+                                            {% if order.get_smart_delivery_date %}
+                                                {{ order.get_smart_delivery_date|date:"Y-m-d" }}
+                                            {% else %}
+                                                <span class="text-muted">غير محدد</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                 </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="kv-list">
+                                    <div class="kv-item">
+                                        <div class="kv-label">
+                                            <i class="fas fa-user-tie"></i>
+                                            البائع
+                                        </div>
+                                        <div class="kv-value">
+                                            {% if order.salesperson %}
+                                                {{ order.salesperson.name }}
+                                            {% else %}
+                                                <span class="text-muted">غير محدد</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="kv-item">
+                                        <div class="kv-label">
+                                            <i class="fas fa-building"></i>
+                                            الفرع
+                                        </div>
+                                        <div class="kv-value">{{ order.branch.name }}</div>
+                                    </div>
+                                    <div class="kv-item">
+                                        <div class="kv-label">
+                                            <i class="fas fa-user-plus"></i>
+                                            تم الإنشاء بواسطة
+                                        </div>
+                                        <div class="kv-value">
+                                            {% if order.created_by %}
+                                                {{ order.created_by.get_full_name|default:order.created_by.username }}
+                                            {% else %}
+                                                <span class="text-muted">غير محدد</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="kv-item">
+                                        <div class="kv-label">
+                                            <i class="fas fa-check-double"></i>
+                                            التحقق من الدفع
+                                        </div>
+                                        <div class="kv-value">
+                                            {% if order.payment_verified %}
+                                                <span class="status-badge completed" style="padding: 4px 12px;">
+                                                    <i class="fas fa-check"></i> تم التحقق
+                                                </span>
+                                            {% else %}
+                                                <span class="status-badge pending" style="padding: 4px 12px;">
+                                                    <i class="fas fa-clock"></i> قيد الانتظار
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% if order_items|length > 0 %}
+                    <div class="info-card mt-4 animate-slide-up" style="animation-delay: 0.1s">
+                        <div class="info-card-header">
+                            <h3 class="info-card-header-title">
+                                <i class="fas fa-boxes"></i>
+                                عناصر الطلب
+                            </h3>
+                            <span class="badge"
+                                  style="background: var(--gradient-copper);
+                                         color: white;
+                                         padding: 8px 16px">{{ order_items|length }} عنصر</span>
+                        </div>
+                        <div class="info-card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead style="background: var(--slate-50);">
+                                        <tr>
+                                            <th style="padding: 16px; font-weight: 600; color: var(--slate-600);">#</th>
+                                            <th style="padding: 16px; font-weight: 600; color: var(--slate-600);">المنتج</th>
+                                            <th style="padding: 16px;
+                                                       font-weight: 600;
+                                                       color: var(--slate-600);
+                                                       text-align: center">الكمية</th>
+                                            <th style="padding: 16px;
+                                                       font-weight: 600;
+                                                       color: var(--slate-600);
+                                                       text-align: center">سعر الوحدة</th>
+                                            <th style="padding: 16px;
+                                                       font-weight: 600;
+                                                       color: var(--slate-600);
+                                                       text-align: center">الخصم</th>
+                                            <th style="padding: 16px;
+                                                       font-weight: 600;
+                                                       color: var(--slate-600);
+                                                       text-align: center">الإجمالي</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in order_items %}
+                                            <tr style="transition: background 0.2s;">
+                                                <td style="padding: 16px; vertical-align: middle;">
+                                                    <span style="display: inline-flex;
+                                                                 align-items: center;
+                                                                 justify-content: center;
+                                                                 width: 28px;
+                                                                 height: 28px;
+                                                                 background: var(--copper-100);
+                                                                 color: var(--copper-600);
+                                                                 border-radius: 50%;
+                                                                 font-weight: 600;
+                                                                 font-size: 0.875rem">{{ forloop.counter }}</span>
+                                                </td>
+                                                <td style="padding: 16px; vertical-align: middle;">
+                                                    <div style="font-weight: 600; color: var(--slate-800);">{{ item.product.name }}</div>
+                                                    {% if item.notes %}<small style="color: var(--slate-500);">{{ item.notes }}</small>{% endif %}
+                                                </td>
+                                                <td style="padding: 16px; vertical-align: middle; text-align: center;">
+                                                    <span style="font-weight: 600;">{{ item.quantity|clean_decimal }}</span>
+                                                </td>
+                                                <td style="padding: 16px; vertical-align: middle; text-align: center;">
+                                                    {{ item.unit_price|clean_decimal_currency:currency_symbol }}
+                                                </td>
+                                                <td style="padding: 16px; vertical-align: middle; text-align: center;">
+                                                    {% if item.discount_percentage and item.discount_percentage > 0 %}
+                                                        <span style="display: inline-flex;
+                                                                     align-items: center;
+                                                                     gap: 4px;
+                                                                     padding: 4px 10px;
+                                                                     background: var(--warning-light);
+                                                                     color: var(--warning-dark);
+                                                                     border-radius: 20px;
+                                                                     font-size: 0.875rem;
+                                                                     font-weight: 600">
+                                                            <i class="fas fa-percent" style="font-size: 0.75rem;"></i>
+                                                            {{ item.get_clean_discount_display }}%
+                                                        </span>
+                                                    {% else %}
+                                                        <span style="color: var(--slate-400);">—</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td style="padding: 16px; vertical-align: middle; text-align: center;">
+                                                    <span style="font-weight: 700; color: var(--copper-600);">
+                                                        {{ item.total_after_discount|clean_decimal_currency:currency_symbol }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style="background: var(--slate-50);">
+                                            <td colspan="5" style="padding: 16px; font-weight: 600; text-align: left">الإجمالي النهائي</td>
+                                            <td style="padding: 16px; text-align: center;">
+                                                <span style="font-size: 1.25rem;
+                                                             font-weight: 700;
+                                                             color: var(--copper-600)">
+                                                    {% if computed_final_price_after_discount is not None %}
+                                                        {{ computed_final_price_after_discount|clean_decimal_currency:currency_symbol }}
+                                                    {% else %}
+                                                        {{ order.final_price_after_discount|clean_decimal_currency:currency_symbol }}
+                                                    {% endif %}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                <div class="info-card mt-4 animate-slide-up" style="animation-delay: 0.2s">
+                    <div class="info-card-header success">
+                        <h3 class="info-card-header-title">
+                            <i class="fas fa-credit-card"></i>
+                            سجل الدفعات
+                        </h3>
+                        <a href="{% url 'orders:payment_create' order.pk %}"
+                           class="btn-premium sm"
+                           style="background: rgba(255,255,255,0.2);
+                                  color: white">
+                            <i class="fas fa-plus"></i>
+                            إضافة دفعة
+                        </a>
+                    </div>
+                    <div class="info-card-body">
+                        {% if payments %}
+                            <div class="table-responsive">
+                                <table class="table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th style="color: var(--slate-600); font-weight: 600;">التاريخ</th>
+                                            <th style="color: var(--slate-600); font-weight: 600;">المبلغ</th>
+                                            <th style="color: var(--slate-600); font-weight: 600;">طريقة الدفع</th>
+                                            <th style="color: var(--slate-600); font-weight: 600;">رقم المرجع</th>
+                                            <th style="color: var(--slate-600); font-weight: 600;">بواسطة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for payment in payments %}
+                                            <tr>
+                                                <td>{{ payment.payment_date|date:"Y-m-d" }}</td>
+                                                <td style="font-weight: 700; color: var(--success-main);">
+                                                    {{ payment.amount|clean_decimal_currency:currency_symbol }}
+                                                </td>
+                                                <td>
+                                                    <span style="display: inline-flex; align-items: center; gap: 6px;">
+                                                        {% if payment.payment_method == 'cash' %}
+                                                            <i class="fas fa-money-bill-wave" style="color: var(--success-main);"></i>
+                                                        {% elif payment.payment_method == 'bank_transfer' %}
+                                                            <i class="fas fa-university" style="color: var(--info-main);"></i>
+                                                        {% elif payment.payment_method == 'card' %}
+                                                            <i class="fas fa-credit-card" style="color: var(--copper-500);"></i>
+                                                        {% else %}
+                                                            <i class="fas fa-receipt" style="color: var(--slate-500);"></i>
+                                                        {% endif %}
+                                                        {{ payment.get_payment_method_display }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ payment.reference_number|default:"—" }}</td>
+                                                <td style="color: var(--slate-500); font-size: 0.875rem;">
+                                                    {{ payment.created_by.get_full_name|default:payment.created_by.username|default:"—" }}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="margin-top: 20px;
+                                        padding: 16px;
+                                        background: var(--slate-50);
+                                        border-radius: var(--radius-lg)">
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <div style="font-size: 0.875rem; color: var(--slate-500);">المجموع المدفوع</div>
+                                        <div style="font-size: 1.25rem;
+                                                    font-weight: 700;
+                                                    color: var(--success-main)">
+                                            {{ order.paid_amount|clean_decimal_currency:currency_symbol }}
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div style="font-size: 0.875rem; color: var(--slate-500);">المتبقي</div>
+                                        <div style="font-size: 1.25rem;
+                                                    font-weight: 700;
+                                                    color: {% if order.remaining_amount > 0 %}var(--warning-main){% else %}var(--success-main){% endif %}">
+                                            {{ order.remaining_amount|clean_decimal_currency:currency_symbol }}
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div style="font-size: 0.875rem; color: var(--slate-500);">نسبة السداد</div>
+                                        <div class="progress-wrapper mt-2">
+                                            <div class="progress-premium" style="height: 10px;">
+                                                {% widthratio order.paid_amount order.total_amount 100 as paid_percentage %}
+                                                <div class="progress-premium-bar success"
+                                                     style="width: {{ paid_percentage|default:0 }}%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <div class="empty-state-icon">
+                                    <i class="fas fa-credit-card"></i>
+                                </div>
+                                <h4 class="empty-state-title">لا توجد دفعات</h4>
+                                <p class="empty-state-description">لم يتم تسجيل أي دفعات لهذا الطلب بعد</p>
+                                <a href="{% url 'orders:payment_create' order.pk %}"
+                                   class="btn-premium primary">
+                                    <i class="fas fa-plus"></i>
+                                    تسجيل أول دفعة
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="info-card animate-slide-up" style="animation-delay: 0.15s;">
+                    <div class="info-card-header info">
+                        <h3 class="info-card-header-title">
+                            <i class="fas fa-user"></i>
+                            معلومات العميل
+                        </h3>
+                    </div>
+                    <div class="info-card-body">
+                        <div style="display: flex;
+                                    align-items: center;
+                                    gap: 16px;
+                                    margin-bottom: 20px;
+                                    padding-bottom: 20px;
+                                    border-bottom: 1px solid var(--slate-100)">
+                            <div style="width: 64px;
+                                        height: 64px;
+                                        border-radius: var(--radius-lg);
+                                        background: var(--gradient-info);
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center">
+                                <i class="fas fa-user" style="font-size: 1.5rem; color: white;"></i>
+                            </div>
+                            <div>
+                                <div style="font-size: 1.125rem;
+                                            font-weight: 700;
+                                            color: var(--slate-800)">{{ order.customer.name }}</div>
+                                <div style="font-size: 0.875rem; color: var(--slate-500);">{{ order.customer.code }}</div>
+                            </div>
+                        </div>
+                        <div class="kv-list">
+                            <div class="kv-item">
+                                <div class="kv-label">
+                                    <i class="fas fa-phone"></i>
+                                    الهاتف
+                                </div>
+                                <div class="kv-value">
+                                    <a href="tel:{{ order.customer.phone }}"
+                                       style="color: var(--info-main);
+                                              text-decoration: none">{{ order.customer.phone }}</a>
+                                </div>
+                            </div>
+                            {% if order.customer.email %}
                                 <div class="kv-item">
                                     <div class="kv-label">
-                                        <i class="fas fa-user"></i>
-                                        العميل
+                                        <i class="fas fa-envelope"></i>
+                                        البريد
                                     </div>
                                     <div class="kv-value">
-                                        <a href="{% url 'customers:customer_detail' order.customer.pk %}" class="text-decoration-none">
-                                            {{ order.customer.name }}
+                                        <a href="mailto:{{ order.customer.email }}"
+                                           style="color: var(--info-main);
+                                                  text-decoration: none">{{ order.customer.email }}</a>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            <div class="kv-item">
+                                <div class="kv-label">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    العنوان
+                                </div>
+                                <div class="kv-value">{{ order.customer.address|default:"غير متوفر" }}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <a href="{% url 'customers:customer_detail' order.customer.pk %}"
+                               class="btn-premium outline w-100">
+                                <i class="fas fa-external-link-alt"></i>
+                                عرض ملف العميل
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% if order.notes %}
+                    <div class="info-card mt-4 animate-slide-up" style="animation-delay: 0.2s">
+                        <div class="info-card-header warning">
+                            <h3 class="info-card-header-title">
+                                <i class="fas fa-sticky-note"></i>
+                                ملاحظات الطلب
+                            </h3>
+                        </div>
+                        <div class="info-card-body">
+                            <div style="padding: 16px;
+                                        background: var(--warning-light);
+                                        border-radius: var(--radius-md);
+                                        border-right: 4px solid var(--warning-main)">{{ order.notes|linebreaks }}</div>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if order.contract_file or order.related_inspection %}
+                    <div class="info-card mt-4 animate-slide-up"
+                         style="animation-delay: 0.25s">
+                        <div class="info-card-header">
+                            <h3 class="info-card-header-title">
+                                <i class="fas fa-paperclip"></i>
+                                المرفقات والروابط
+                            </h3>
+                        </div>
+                        <div class="info-card-body">
+                            {% if order.contract_file %}
+                                <div class="file-card mb-3">
+                                    <div class="file-card-icon pdf">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </div>
+                                    <div class="file-card-info">
+                                        <div class="file-card-name">ملف العقد</div>
+                                        <div class="file-card-meta">PDF Document</div>
+                                    </div>
+                                    <div class="file-card-actions">
+                                        <a href="{{ order.contract_file.url }}"
+                                           target="_blank"
+                                           class="btn-premium sm primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ order.contract_file.url }}"
+                                           download
+                                           class="btn-premium sm secondary">
+                                            <i class="fas fa-download"></i>
                                         </a>
                                     </div>
                                 </div>
-                                <div class="kv-item">
-                                    <div class="kv-label">
-                                        <i class="fas fa-calendar"></i>
-                                        تاريخ الطلب
+                            {% endif %}
+                            {% if order.invoice_image %}
+                                <div class="file-card mb-3">
+                                    <div class="file-card-icon image">
+                                        <i class="fas fa-image"></i>
                                     </div>
-                                    <div class="kv-value">{{ order.order_date|date:"Y-m-d H:i" }}</div>
-                                </div>
-                                <div class="kv-item">
-                                    <div class="kv-label">
-                                        <i class="fas fa-truck"></i>
-                                        تاريخ التسليم المتوقع
+                                    <div class="file-card-info">
+                                        <div class="file-card-name">صورة الفاتورة</div>
+                                        <div class="file-card-meta">Image File</div>
                                     </div>
-                                    <div class="kv-value">
-                                        {% if order.get_smart_delivery_date %}
-                                            {{ order.get_smart_delivery_date|date:"Y-m-d" }}
-                                        {% else %}
-                                            <span class="text-muted">غير محدد</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="kv-list">
-                                <div class="kv-item">
-                                    <div class="kv-label">
-                                        <i class="fas fa-user-tie"></i>
-                                        البائع
-                                    </div>
-                                    <div class="kv-value">
-                                        {% if order.salesperson %}
-                                            {{ order.salesperson.name }}
-                                        {% else %}
-                                            <span class="text-muted">غير محدد</span>
-                                        {% endif %}
+                                    <div class="file-card-actions">
+                                        <button type="button"
+                                                class="btn-premium sm primary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#invoiceImageModal">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="kv-item">
-                                    <div class="kv-label">
-                                        <i class="fas fa-building"></i>
-                                        الفرع
+                            {% endif %}
+                            {% if order.related_inspection %}
+                                <div class="file-card">
+                                    <div class="file-card-icon" style="background: var(--gradient-info);">
+                                        <i class="fas fa-search"></i>
                                     </div>
-                                    <div class="kv-value">{{ order.branch.name }}</div>
-                                </div>
-                                <div class="kv-item">
-                                    <div class="kv-label">
-                                        <i class="fas fa-user-plus"></i>
-                                        تم الإنشاء بواسطة
+                                    <div class="file-card-info">
+                                        <div class="file-card-name">المعاينة المرتبطة</div>
+                                        <div class="file-card-meta">{{ order.related_inspection.inspection_code }}</div>
                                     </div>
-                                    <div class="kv-value">
-                                        {% if order.created_by %}
-                                            {{ order.created_by.get_full_name|default:order.created_by.username }}
-                                        {% else %}
-                                            <span class="text-muted">غير محدد</span>
-                                        {% endif %}
+                                    <div class="file-card-actions">
+                                        <a href="{% url 'inspections:inspection_detail' order.related_inspection.pk %}"
+                                           class="btn-premium sm primary">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </a>
                                     </div>
                                 </div>
-                                <div class="kv-item">
-                                    <div class="kv-label">
-                                        <i class="fas fa-check-double"></i>
-                                        التحقق من الدفع
-                                    </div>
-                                    <div class="kv-value">
-                                        {% if order.payment_verified %}
-                                            <span class="status-badge completed" style="padding: 4px 12px;">
-                                                <i class="fas fa-check"></i> تم التحقق
-                                            </span>
-                                        {% else %}
-                                            <span class="status-badge pending" style="padding: 4px 12px;">
-                                                <i class="fas fa-clock"></i> قيد الانتظار
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
+                            {% endif %}
                         </div>
                     </div>
-                </div>
+                {% endif %}
+                {% if order.manufacturing_order %}
+                    <div class="info-card mt-4 animate-slide-up" style="animation-delay: 0.3s">
+                        <div class="info-card-header" style="background: var(--gradient-slate);">
+                            <h3 class="info-card-header-title" style="color: white;">
+                                <i class="fas fa-industry" style="color: var(--copper-400);"></i>
+                                حالة التصنيع
+                            </h3>
+                        </div>
+                        <div class="info-card-body">
+                            {% with mo=order.manufacturing_order %}
+                                <div style="text-align: center; padding: 20px 0;">
+                                    <div style="width: 80px;
+                                                height: 80px;
+                                                margin: 0 auto 16px;
+                                                border-radius: 50%;
+                                                background: var(--gradient-copper);
+                                                display: flex;
+                                                align-items: center;
+                                                justify-content: center">
+                                        <i class="fas fa-cogs" style="font-size: 2rem; color: white;"></i>
+                                    </div>
+                                    <div class="status-badge lg {% if mo.status == 'completed' %}completed{% elif mo.status == 'in_progress' %}in-progress{% else %}pending{% endif %}"
+                                         style="margin-bottom: 16px">{{ mo.get_status_display }}</div>
+                                    {% if mo.updated_at %}
+                                        <div style="font-size: 0.875rem; color: var(--slate-500);">آخر تحديث: {{ mo.updated_at|date:"Y-m-d H:i" }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endwith %}
+                        </div>
+                    </div>
+                {% endif %}
             </div>
-
-            {% if order_items|length > 0 %}
-            <div class="info-card mt-4 animate-slide-up" style="animation-delay: 0.1s;">
-                <div class="info-card-header">
-                    <h3 class="info-card-header-title">
-                        <i class="fas fa-boxes"></i>
-                        عناصر الطلب
-                    </h3>
-                    <span class="badge" style="background: var(--gradient-copper); color: white; padding: 8px 16px;">
-                        {{ order_items|length }} عنصر
-                    </span>
-                </div>
-                <div class="info-card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead style="background: var(--slate-50);">
-                                <tr>
-                                    <th style="padding: 16px; font-weight: 600; color: var(--slate-600);">#</th>
-                                    <th style="padding: 16px; font-weight: 600; color: var(--slate-600);">المنتج</th>
-                                    <th style="padding: 16px; font-weight: 600; color: var(--slate-600); text-align: center;">الكمية</th>
-                                    <th style="padding: 16px; font-weight: 600; color: var(--slate-600); text-align: center;">سعر الوحدة</th>
-                                    <th style="padding: 16px; font-weight: 600; color: var(--slate-600); text-align: center;">الخصم</th>
-                                    <th style="padding: 16px; font-weight: 600; color: var(--slate-600); text-align: center;">الإجمالي</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in order_items %}
-                                <tr style="transition: background 0.2s;">
-                                    <td style="padding: 16px; vertical-align: middle;">
-                                        <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--copper-100); color: var(--copper-600); border-radius: 50%; font-weight: 600; font-size: 0.875rem;">
-                                            {{ forloop.counter }}
-                                        </span>
-                                    </td>
-                                    <td style="padding: 16px; vertical-align: middle;">
-                                        <div style="font-weight: 600; color: var(--slate-800);">{{ item.product.name }}</div>
-                                        {% if item.notes %}
-                                        <small style="color: var(--slate-500);">{{ item.notes }}</small>
-                                        {% endif %}
-                                    </td>
-                                    <td style="padding: 16px; vertical-align: middle; text-align: center;">
-                                        <span style="font-weight: 600;">{{ item.quantity|clean_decimal }}</span>
-                                    </td>
-                                    <td style="padding: 16px; vertical-align: middle; text-align: center;">
-                                        {{ item.unit_price|clean_decimal_currency:currency_symbol }}
-                                    </td>
-                                    <td style="padding: 16px; vertical-align: middle; text-align: center;">
-                                        {% if item.discount_percentage and item.discount_percentage > 0 %}
-                                            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--warning-light); color: var(--warning-dark); border-radius: 20px; font-size: 0.875rem; font-weight: 600;">
-                                                <i class="fas fa-percent" style="font-size: 0.75rem;"></i>
-                                                {{ item.get_clean_discount_display }}%
-                                            </span>
-                                        {% else %}
-                                            <span style="color: var(--slate-400);">—</span>
-                                        {% endif %}
-                                    </td>
-                                    <td style="padding: 16px; vertical-align: middle; text-align: center;">
-                                        <span style="font-weight: 700; color: var(--copper-600);">
-                                            {{ item.total_after_discount|clean_decimal_currency:currency_symbol }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot>
-                                <tr style="background: var(--slate-50);">
-                                    <td colspan="5" style="padding: 16px; font-weight: 600; text-align: left;">
-                                        الإجمالي النهائي
-                                    </td>
-                                    <td style="padding: 16px; text-align: center;">
-                                        <span style="font-size: 1.25rem; font-weight: 700; color: var(--copper-600);">
-                                            {% if computed_final_price_after_discount is not None %}
-                                                {{ computed_final_price_after_discount|clean_decimal_currency:currency_symbol }}
-                                            {% else %}
-                                                {{ order.final_price_after_discount|clean_decimal_currency:currency_symbol }}
-                                            {% endif %}
-                                        </span>
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="info-card mt-4 animate-slide-up" style="animation-delay: 0.2s;">
-                <div class="info-card-header success">
-                    <h3 class="info-card-header-title">
-                        <i class="fas fa-credit-card"></i>
-                        سجل الدفعات
-                    </h3>
-                    <a href="{% url 'orders:payment_create' order.pk %}" class="btn-premium sm" style="background: rgba(255,255,255,0.2); color: white;">
-                        <i class="fas fa-plus"></i>
-                        إضافة دفعة
-                    </a>
-                </div>
-                <div class="info-card-body">
-                    {% if payments %}
-                    <div class="table-responsive">
-                        <table class="table mb-0">
-                            <thead>
-                                <tr>
-                                    <th style="color: var(--slate-600); font-weight: 600;">التاريخ</th>
-                                    <th style="color: var(--slate-600); font-weight: 600;">المبلغ</th>
-                                    <th style="color: var(--slate-600); font-weight: 600;">طريقة الدفع</th>
-                                    <th style="color: var(--slate-600); font-weight: 600;">رقم المرجع</th>
-                                    <th style="color: var(--slate-600); font-weight: 600;">بواسطة</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for payment in payments %}
-                                <tr>
-                                    <td>{{ payment.payment_date|date:"Y-m-d" }}</td>
-                                    <td style="font-weight: 700; color: var(--success-main);">
-                                        {{ payment.amount|clean_decimal_currency:currency_symbol }}
-                                    </td>
-                                    <td>
-                                        <span style="display: inline-flex; align-items: center; gap: 6px;">
-                                            {% if payment.payment_method == 'cash' %}
-                                                <i class="fas fa-money-bill-wave" style="color: var(--success-main);"></i>
-                                            {% elif payment.payment_method == 'bank_transfer' %}
-                                                <i class="fas fa-university" style="color: var(--info-main);"></i>
-                                            {% elif payment.payment_method == 'card' %}
-                                                <i class="fas fa-credit-card" style="color: var(--copper-500);"></i>
-                                            {% else %}
-                                                <i class="fas fa-receipt" style="color: var(--slate-500);"></i>
-                                            {% endif %}
-                                            {{ payment.get_payment_method_display }}
-                                        </span>
-                                    </td>
-                                    <td>{{ payment.reference_number|default:"—" }}</td>
-                                    <td style="color: var(--slate-500); font-size: 0.875rem;">
-                                        {{ payment.created_by.get_full_name|default:payment.created_by.username|default:"—" }}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div style="margin-top: 20px; padding: 16px; background: var(--slate-50); border-radius: var(--radius-lg);">
-                        <div class="row text-center">
-                            <div class="col-4">
-                                <div style="font-size: 0.875rem; color: var(--slate-500);">المجموع المدفوع</div>
-                                <div style="font-size: 1.25rem; font-weight: 700; color: var(--success-main);">
-                                    {{ order.paid_amount|clean_decimal_currency:currency_symbol }}
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div style="font-size: 0.875rem; color: var(--slate-500);">المتبقي</div>
-                                <div style="font-size: 1.25rem; font-weight: 700; color: {% if order.remaining_amount > 0 %}var(--warning-main){% else %}var(--success-main){% endif %};">
-                                    {{ order.remaining_amount|clean_decimal_currency:currency_symbol }}
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div style="font-size: 0.875rem; color: var(--slate-500);">نسبة السداد</div>
-                                <div class="progress-wrapper mt-2">
-                                    <div class="progress-premium" style="height: 10px;">
-                                        {% widthratio order.paid_amount order.total_amount 100 as paid_percentage %}
-                                        <div class="progress-premium-bar success" style="width: {{ paid_percentage|default:0 }}%;"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% else %}
-                    <div class="empty-state">
-                        <div class="empty-state-icon">
-                            <i class="fas fa-credit-card"></i>
-                        </div>
-                        <h4 class="empty-state-title">لا توجد دفعات</h4>
-                        <p class="empty-state-description">لم يتم تسجيل أي دفعات لهذا الطلب بعد</p>
-                        <a href="{% url 'orders:payment_create' order.pk %}" class="btn-premium primary">
-                            <i class="fas fa-plus"></i>
-                            تسجيل أول دفعة
-                        </a>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="info-card animate-slide-up" style="animation-delay: 0.15s;">
-                <div class="info-card-header info">
-                    <h3 class="info-card-header-title">
-                        <i class="fas fa-user"></i>
-                        معلومات العميل
-                    </h3>
-                </div>
-                <div class="info-card-body">
-                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--slate-100);">
-                        <div style="width: 64px; height: 64px; border-radius: var(--radius-lg); background: var(--gradient-info); display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-user" style="font-size: 1.5rem; color: white;"></i>
-                        </div>
-                        <div>
-                            <div style="font-size: 1.125rem; font-weight: 700; color: var(--slate-800);">
-                                {{ order.customer.name }}
-                            </div>
-                            <div style="font-size: 0.875rem; color: var(--slate-500);">
-                                {{ order.customer.code }}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="kv-list">
-                        <div class="kv-item">
-                            <div class="kv-label">
-                                <i class="fas fa-phone"></i>
-                                الهاتف
-                            </div>
-                            <div class="kv-value">
-                                <a href="tel:{{ order.customer.phone }}" style="color: var(--info-main); text-decoration: none;">
-                                    {{ order.customer.phone }}
-                                </a>
-                            </div>
-                        </div>
-                        {% if order.customer.email %}
-                        <div class="kv-item">
-                            <div class="kv-label">
-                                <i class="fas fa-envelope"></i>
-                                البريد
-                            </div>
-                            <div class="kv-value">
-                                <a href="mailto:{{ order.customer.email }}" style="color: var(--info-main); text-decoration: none;">
-                                    {{ order.customer.email }}
-                                </a>
-                            </div>
-                        </div>
-                        {% endif %}
-                        <div class="kv-item">
-                            <div class="kv-label">
-                                <i class="fas fa-map-marker-alt"></i>
-                                العنوان
-                            </div>
-                            <div class="kv-value">{{ order.customer.address|default:"غير متوفر" }}</div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-top: 20px;">
-                        <a href="{% url 'customers:customer_detail' order.customer.pk %}" class="btn-premium outline w-100">
-                            <i class="fas fa-external-link-alt"></i>
-                            عرض ملف العميل
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            {% if order.notes %}
-            <div class="info-card mt-4 animate-slide-up" style="animation-delay: 0.2s;">
-                <div class="info-card-header warning">
-                    <h3 class="info-card-header-title">
-                        <i class="fas fa-sticky-note"></i>
-                        ملاحظات الطلب
-                    </h3>
-                </div>
-                <div class="info-card-body">
-                    <div style="padding: 16px; background: var(--warning-light); border-radius: var(--radius-md); border-right: 4px solid var(--warning-main);">
-                        {{ order.notes|linebreaks }}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            {% if order.contract_file or order.related_inspection %}
-            <div class="info-card mt-4 animate-slide-up" style="animation-delay: 0.25s;">
-                <div class="info-card-header">
-                    <h3 class="info-card-header-title">
-                        <i class="fas fa-paperclip"></i>
-                        المرفقات والروابط
-                    </h3>
-                </div>
-                <div class="info-card-body">
-                    {% if order.contract_file %}
-                    <div class="file-card mb-3">
-                        <div class="file-card-icon pdf">
-                            <i class="fas fa-file-pdf"></i>
-                        </div>
-                        <div class="file-card-info">
-                            <div class="file-card-name">ملف العقد</div>
-                            <div class="file-card-meta">PDF Document</div>
-                        </div>
-                        <div class="file-card-actions">
-                            <a href="{{ order.contract_file.url }}" target="_blank" class="btn-premium sm primary">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="{{ order.contract_file.url }}" download class="btn-premium sm secondary">
-                                <i class="fas fa-download"></i>
-                            </a>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if order.invoice_image %}
-                    <div class="file-card mb-3">
-                        <div class="file-card-icon image">
-                            <i class="fas fa-image"></i>
-                        </div>
-                        <div class="file-card-info">
-                            <div class="file-card-name">صورة الفاتورة</div>
-                            <div class="file-card-meta">Image File</div>
-                        </div>
-                        <div class="file-card-actions">
-                            <button type="button" class="btn-premium sm primary" data-bs-toggle="modal" data-bs-target="#invoiceImageModal">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if order.related_inspection %}
-                    <div class="file-card">
-                        <div class="file-card-icon" style="background: var(--gradient-info);">
-                            <i class="fas fa-search"></i>
-                        </div>
-                        <div class="file-card-info">
-                            <div class="file-card-name">المعاينة المرتبطة</div>
-                            <div class="file-card-meta">{{ order.related_inspection.inspection_code }}</div>
-                        </div>
-                        <div class="file-card-actions">
-                            <a href="{% url 'inspections:inspection_detail' order.related_inspection.pk %}" class="btn-premium sm primary">
-                                <i class="fas fa-external-link-alt"></i>
-                            </a>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
-            {% if order.manufacturing_order %}
-            <div class="info-card mt-4 animate-slide-up" style="animation-delay: 0.3s;">
-                <div class="info-card-header" style="background: var(--gradient-slate);">
-                    <h3 class="info-card-header-title" style="color: white;">
-                        <i class="fas fa-industry" style="color: var(--copper-400);"></i>
-                        حالة التصنيع
-                    </h3>
-                </div>
-                <div class="info-card-body">
-                    {% with mo=order.manufacturing_order %}
-                    <div style="text-align: center; padding: 20px 0;">
-                        <div style="width: 80px; height: 80px; margin: 0 auto 16px; border-radius: 50%; background: var(--gradient-copper); display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-cogs" style="font-size: 2rem; color: white;"></i>
-                        </div>
-                        <div class="status-badge lg {% if mo.status == 'completed' %}completed{% elif mo.status == 'in_progress' %}in-progress{% else %}pending{% endif %}" style="margin-bottom: 16px;">
-                            {{ mo.get_status_display }}
-                        </div>
-                        {% if mo.updated_at %}
-                        <div style="font-size: 0.875rem; color: var(--slate-500);">
-                            آخر تحديث: {{ mo.updated_at|date:"Y-m-d H:i" }}
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endwith %}
-                </div>
-            </div>
-            {% endif %}
         </div>
     </div>
-</div>
 {% endblock %}

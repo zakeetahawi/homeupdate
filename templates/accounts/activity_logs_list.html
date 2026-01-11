@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
-
 {% block title %}سجلات النشاط - نظام الخواجة{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .header-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -142,258 +140,265 @@
         background: #667eea;
         border-color: #667eea;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="header-card">
-        <div class="row align-items-center">
-            <div class="col">
-                <h1 class="h3 mb-2">
-                    <i class="fas fa-history me-3"></i>
-                    سجلات النشاط
-                </h1>
-                <p class="mb-0">عرض وتتبع جميع أنشطة المستخدمين في النظام</p>
-            </div>
-            <div class="col-auto">
-                <a href="{% url 'accounts:activity_dashboard' %}" class="btn btn-light">
-                    <i class="fas fa-chart-line me-2"></i>
-                    لوحة التحكم
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="filter-card">
-        <h5 class="mb-3">
-            <i class="fas fa-filter me-2"></i>
-            فلاتر البحث والتصفية
-        </h5>
-        <form method="GET" class="row g-3">
-            <div class="col-md-3">
-                <label class="form-label">البحث:</label>
-                <input type="text" name="search" class="search-input form-control" 
-                       placeholder="اسم المستخدم، الوصف، أو المسار..." 
-                       value="{{ current_filters.search }}">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">المستخدم:</label>
-                <select name="user" class="filter-select form-select">
-                    <option value="">جميع المستخدمين</option>
-                    {% for user in users %}
-                        <option value="{{ user.id }}" {% if current_filters.user == user.id|stringformat:"s" %}selected{% endif %}>
-                            {{ user.get_full_name|default:user.username }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">نوع النشاط:</label>
-                <select name="action" class="filter-select form-select">
-                    <option value="">جميع الأنواع</option>
-                    {% for action_code, action_name in action_types %}
-                        <option value="{{ action_code }}" {% if current_filters.action == action_code %}selected{% endif %}>
-                            {{ action_name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">الفترة:</label>
-                <select name="date" class="filter-select form-select">
-                    <option value="today" {% if current_filters.date == 'today' %}selected{% endif %}>اليوم</option>
-                    <option value="week" {% if current_filters.date == 'week' %}selected{% endif %}>هذا الأسبوع</option>
-                    <option value="month" {% if current_filters.date == 'month' %}selected{% endif %}>هذا الشهر</option>
-                    <option value="all" {% if current_filters.date == 'all' %}selected{% endif %}>جميع الفترات</option>
-                </select>
-            </div>
-            <div class="col-md-3 d-flex align-items-end gap-2">
-                <button type="submit" class="apply-filters-btn">
-                    <i class="fas fa-search me-2"></i>
-                    بحث
-                </button>
-                <a href="{% url 'accounts:activity_logs_list' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-times me-2"></i>
-                    إزالة الفلاتر
-                </a>
-            </div>
-        </form>
-        
-        <!-- عرض الفلاتر المطبقة -->
-        {% if current_filters.search or current_filters.user or current_filters.action or current_filters.date != 'today' %}
-        <div class="mt-3 p-3 bg-light rounded">
-            <small class="text-muted">
-                <i class="fas fa-info-circle me-1"></i>
-                الفلاتر المطبقة: 
-                {% if current_filters.search %}
-                    <strong>البحث:</strong> "{{ current_filters.search }}" |
-                {% endif %}
-                {% if current_filters.user %}
-                    <strong>المستخدم:</strong> 
-                    {% for user in users %}
-                        {% if user.id|stringformat:"s" == current_filters.user %}
-                            {{ user.get_full_name|default:user.username }} |
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
-                {% if current_filters.action %}
-                    <strong>النوع:</strong> 
-                    {% for action_code, action_name in action_types %}
-                        {% if action_code == current_filters.action %}
-                            {{ action_name }} |
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
-                <strong>الفترة:</strong> 
-                {% if current_filters.date == 'today' %}اليوم
-                {% elif current_filters.date == 'week' %}هذا الأسبوع
-                {% elif current_filters.date == 'month' %}هذا الشهر
-                {% else %}جميع الفترات{% endif %}
-            </small>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Activities Table -->
-    <div class="activity-table">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>المستخدم</th>
-                        <th>النشاط</th>
-                        <th>التفاصيل</th>
-                        <th>الوقت</th>
-                        <th>الحالة</th>
-                        <th>الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for activity in activities %}
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                {% if activity.user.image %}
-                                    <img src="{{ activity.user.image.url }}" alt="{{ activity.user.username }}" class="user-avatar-small me-2">
-                                {% else %}
-                                    <div class="user-avatar-small bg-primary d-flex align-items-center justify-content-center text-white me-2" style="font-size: 0.8rem;">
-                                        {{ activity.user.username|first|upper }}
-                                    </div>
-                                {% endif %}
-                                <div>
-                                    <div class="fw-bold">{{ activity.user.get_full_name|default:activity.user.username }}</div>
-                                    <div class="text-muted small">{{ activity.user.username }}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <span class="activity-icon">{{ activity.get_icon }}</span>
-                                <div>
-                                    <div class="fw-bold">{{ activity.get_action_type_display }}</div>
-                                    <div class="text-muted small">{{ activity.get_entity_type_display }}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div>{{ activity.description }}</div>
-                            {% if activity.url_path %}
-                            <div class="text-muted small">
-                                <i class="fas fa-link me-1"></i>
-                                {{ activity.url_path|truncatechars:50 }}
-                            </div>
-                            {% endif %}
-                            {% if activity.error_message %}
-                            <div class="text-danger small">
-                                <i class="fas fa-exclamation-triangle me-1"></i>
-                                {{ activity.error_message|truncatechars:30 }}
-                            </div>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div>{{ activity.timestamp|date:"Y-m-d" }}</div>
-                            <div class="text-muted small">{{ activity.timestamp|date:"H:i:s" }}</div>
-                            <div class="text-muted small">{{ activity.timestamp|timesince }} مضت</div>
-                        </td>
-                        <td>
-                            {% if activity.success %}
-                                <span class="status-badge status-success">
-                                    <i class="fas fa-check me-1"></i>
-                                    نجح
-                                </span>
-                            {% else %}
-                                <span class="status-badge status-error">
-                                    <i class="fas fa-times me-1"></i>
-                                    فشل
-                                </span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{% url 'accounts:user_activity_detail' activity.user.id %}" 
-                               class="btn btn-sm btn-outline-primary" title="عرض تفاصيل المستخدم">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center py-5">
-                            <i class="fas fa-history fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">لا توجد سجلات نشاط</h5>
-                            <p class="text-muted">لم يتم العثور على أنشطة تطابق معايير البحث المحددة</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        {% if activities.has_other_pages %}
-        <div class="p-3 border-top">
-            <nav aria-label="تنقل الصفحات">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="text-muted small">
-                        عرض {{ activities.start_index }} - {{ activities.end_index }} من {{ activities.paginator.count }} سجل
-                    </div>
-                    <ul class="pagination mb-0">
-                        {% if activities.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ activities.previous_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.user %}&user={{ current_filters.user }}{% endif %}{% if current_filters.action %}&action={{ current_filters.action }}{% endif %}{% if current_filters.date %}&date={{ current_filters.date }}{% endif %}">
-                                    <i class="fas fa-chevron-right"></i>
-                                </a>
-                            </li>
-                        {% endif %}
-
-                        {% for num in activities.paginator.page_range %}
-                            {% if activities.number == num %}
-                                <li class="page-item active">
-                                    <span class="page-link">{{ num }}</span>
-                                </li>
-                            {% elif num > activities.number|add:'-3' and num < activities.number|add:'3' %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ num }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.user %}&user={{ current_filters.user }}{% endif %}{% if current_filters.action %}&action={{ current_filters.action }}{% endif %}{% if current_filters.date %}&date={{ current_filters.date }}{% endif %}">
-                                        {{ num }}
-                                    </a>
-                                </li>
-                            {% endif %}
-                        {% endfor %}
-
-                        {% if activities.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ activities.next_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.user %}&user={{ current_filters.user }}{% endif %}{% if current_filters.action %}&action={{ current_filters.action }}{% endif %}{% if current_filters.date %}&date={{ current_filters.date }}{% endif %}">
-                                    <i class="fas fa-chevron-left"></i>
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="header-card">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="h3 mb-2">
+                        <i class="fas fa-history me-3"></i>
+                        سجلات النشاط
+                    </h1>
+                    <p class="mb-0">عرض وتتبع جميع أنشطة المستخدمين في النظام</p>
                 </div>
-            </nav>
+                <div class="col-auto">
+                    <a href="{% url 'accounts:activity_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-chart-line me-2"></i>
+                        لوحة التحكم
+                    </a>
+                </div>
+            </div>
         </div>
-        {% endif %}
+        <!-- Filters -->
+        <div class="filter-card">
+            <h5 class="mb-3">
+                <i class="fas fa-filter me-2"></i>
+                فلاتر البحث والتصفية
+            </h5>
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">البحث:</label>
+                    <input type="text"
+                           name="search"
+                           class="search-input form-control"
+                           placeholder="اسم المستخدم، الوصف، أو المسار..."
+                           value="{{ current_filters.search }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">المستخدم:</label>
+                    <select name="user" class="filter-select form-select">
+                        <option value="">جميع المستخدمين</option>
+                        {% for user in users %}
+                            <option value="{{ user.id }}"
+                                    {% if current_filters.user == user.id|stringformat:"s" %}selected{% endif %}>
+                                {{ user.get_full_name|default:user.username }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">نوع النشاط:</label>
+                    <select name="action" class="filter-select form-select">
+                        <option value="">جميع الأنواع</option>
+                        {% for action_code, action_name in action_types %}
+                            <option value="{{ action_code }}"
+                                    {% if current_filters.action == action_code %}selected{% endif %}>
+                                {{ action_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">الفترة:</label>
+                    <select name="date" class="filter-select form-select">
+                        <option value="today"
+                                {% if current_filters.date == 'today' %}selected{% endif %}>اليوم</option>
+                        <option value="week"
+                                {% if current_filters.date == 'week' %}selected{% endif %}>هذا الأسبوع</option>
+                        <option value="month"
+                                {% if current_filters.date == 'month' %}selected{% endif %}>هذا الشهر</option>
+                        <option value="all" {% if current_filters.date == 'all' %}selected{% endif %}>جميع الفترات</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                    <button type="submit" class="apply-filters-btn">
+                        <i class="fas fa-search me-2"></i>
+                        بحث
+                    </button>
+                    <a href="{% url 'accounts:activity_logs_list' %}"
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-2"></i>
+                        إزالة الفلاتر
+                    </a>
+                </div>
+            </form>
+            <!-- عرض الفلاتر المطبقة -->
+            {% if current_filters.search or current_filters.user or current_filters.action or current_filters.date != 'today' %}
+                <div class="mt-3 p-3 bg-light rounded">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        الفلاتر المطبقة:
+                        {% if current_filters.search %}<strong>البحث:</strong> "{{ current_filters.search }}" |{% endif %}
+                        {% if current_filters.user %}
+                            <strong>المستخدم:</strong>
+                            {% for user in users %}
+                                {% if user.id|stringformat:"s" == current_filters.user %}{{ user.get_full_name|default:user.username }} |{% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        {% if current_filters.action %}
+                            <strong>النوع:</strong>
+                            {% for action_code, action_name in action_types %}
+                                {% if action_code == current_filters.action %}{{ action_name }} |{% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        <strong>الفترة:</strong>
+                        {% if current_filters.date == 'today' %}
+                            اليوم
+                        {% elif current_filters.date == 'week' %}
+                            هذا الأسبوع
+                        {% elif current_filters.date == 'month' %}
+                            هذا الشهر
+                        {% else %}
+                            جميع الفترات
+                        {% endif %}
+                    </small>
+                </div>
+            {% endif %}
+        </div>
+        <!-- Activities Table -->
+        <div class="activity-table">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>المستخدم</th>
+                            <th>النشاط</th>
+                            <th>التفاصيل</th>
+                            <th>الوقت</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for activity in activities %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if activity.user.image %}
+                                            <img src="{{ activity.user.image.url }}"
+                                                 alt="{{ activity.user.username }}"
+                                                 class="user-avatar-small me-2">
+                                        {% else %}
+                                            <div class="user-avatar-small bg-primary d-flex align-items-center justify-content-center text-white me-2"
+                                                 style="font-size: 0.8rem">
+                                                {{ activity.user.username|first|upper }}
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold">{{ activity.user.get_full_name|default:activity.user.username }}</div>
+                                            <div class="text-muted small">{{ activity.user.username }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="activity-icon">{{ activity.get_icon }}</span>
+                                        <div>
+                                            <div class="fw-bold">{{ activity.get_action_type_display }}</div>
+                                            <div class="text-muted small">{{ activity.get_entity_type_display }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>{{ activity.description }}</div>
+                                    {% if activity.url_path %}
+                                        <div class="text-muted small">
+                                            <i class="fas fa-link me-1"></i>
+                                            {{ activity.url_path|truncatechars:50 }}
+                                        </div>
+                                    {% endif %}
+                                    {% if activity.error_message %}
+                                        <div class="text-danger small">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            {{ activity.error_message|truncatechars:30 }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div>{{ activity.timestamp|date:"Y-m-d" }}</div>
+                                    <div class="text-muted small">{{ activity.timestamp|date:"H:i:s" }}</div>
+                                    <div class="text-muted small">{{ activity.timestamp|timesince }} مضت</div>
+                                </td>
+                                <td>
+                                    {% if activity.success %}
+                                        <span class="status-badge status-success">
+                                            <i class="fas fa-check me-1"></i>
+                                            نجح
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge status-error">
+                                            <i class="fas fa-times me-1"></i>
+                                            فشل
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'accounts:user_activity_detail' activity.user.id %}"
+                                       class="btn btn-sm btn-outline-primary"
+                                       title="عرض تفاصيل المستخدم">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">لا توجد سجلات نشاط</h5>
+                                    <p class="text-muted">لم يتم العثور على أنشطة تطابق معايير البحث المحددة</p>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <!-- Pagination -->
+            {% if activities.has_other_pages %}
+                <div class="p-3 border-top">
+                    <nav aria-label="تنقل الصفحات">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">
+                                عرض {{ activities.start_index }} - {{ activities.end_index }} من {{ activities.paginator.count }} سجل
+                            </div>
+                            <ul class="pagination mb-0">
+                                {% if activities.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ activities.previous_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.user %}&user={{ current_filters.user }}{% endif %}{% if current_filters.action %}&action={{ current_filters.action }}{% endif %}{% if current_filters.date %}&date={{ current_filters.date }}{% endif %}">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% for num in activities.paginator.page_range %}
+                                    {% if activities.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% elif num > activities.number|add:'-3' and num < activities.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link"
+                                               href="?page={{ num }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.user %}&user={{ current_filters.user }}{% endif %}{% if current_filters.action %}&action={{ current_filters.action }}{% endif %}{% if current_filters.date %}&date={{ current_filters.date }}{% endif %}">
+                                                {{ num }}
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                {% if activities.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ activities.next_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.user %}&user={{ current_filters.user }}{% endif %}{% if current_filters.action %}&action={{ current_filters.action }}{% endif %}{% if current_filters.date %}&date={{ current_filters.date }}{% endif %}">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </nav>
+                </div>
+            {% endif %}
+        </div>
     </div>
-</div>
 {% endblock %}

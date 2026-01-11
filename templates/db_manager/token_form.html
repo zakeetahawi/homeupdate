@@ -2,11 +2,11 @@
 {% load i18n %}
 {% load static %}
 {% load widget_tweaks %}
-
-{% block title %}{% trans "إنشاء رمز إعداد جديد" %}{% endblock %}
-
+{% block title %}
+    {% trans "إنشاء رمز إعداد جديد" %}
+{% endblock %}
 {% block extra_css %}
-<style>
+    <style>
     .form-container {
         max-width: 600px;
         margin: 0 auto;
@@ -35,41 +35,37 @@
         border-top: 1px solid #eee;
         text-align: center;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container mt-5">
-    <div class="form-container">
-        <div class="form-header">
-            <i class="fas fa-key"></i>
-            <h1>{% trans "إنشاء رمز إعداد جديد" %}</h1>
-            <p class="lead">{% trans "قم بإنشاء رمز إعداد جديد للسماح بإعداد النظام" %}</p>
-        </div>
-        
-        <div class="form-content">
-            <div class="alert alert-info">
-                <p>{% trans "رموز الإعداد تسمح للمستخدمين بإعداد النظام لأول مرة. يمكن استخدام كل رمز مرة واحدة فقط وينتهي بعد فترة محددة." %}</p>
+    <div class="container mt-5">
+        <div class="form-container">
+            <div class="form-header">
+                <i class="fas fa-key"></i>
+                <h1>{% trans "إنشاء رمز إعداد جديد" %}</h1>
+                <p class="lead">{% trans "قم بإنشاء رمز إعداد جديد للسماح بإعداد النظام" %}</p>
             </div>
-            
-            <form method="post">
-                {% csrf_token %}
-                
-                <div class="form-group">
-                    <label for="{{ form.expiry_hours.id_for_label }}">{% trans "مدة صلاحية الرمز (بالساعات)" %}</label>
-                    {{ form.expiry_hours|add_class:"form-control" }}
-                    <small class="form-text text-muted">{{ form.expiry_hours.help_text }}</small>
-                    {% if form.expiry_hours.errors %}
-                        <div class="invalid-feedback d-block">{{ form.expiry_hours.errors }}</div>
-                    {% endif %}
+            <div class="form-content">
+                <div class="alert alert-info">
+                    <p>
+                        {% trans "رموز الإعداد تسمح للمستخدمين بإعداد النظام لأول مرة. يمكن استخدام كل رمز مرة واحدة فقط وينتهي بعد فترة محددة." %}
+                    </p>
                 </div>
-                
-                <div class="form-footer">
-                    <button type="submit" class="btn btn-primary btn-lg">{% trans "إنشاء رمز" %}</button>
-                    <a href="{% url 'db_manager:token_list' %}" class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
-                </div>
-            </form>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="{{ form.expiry_hours.id_for_label }}">{% trans "مدة صلاحية الرمز (بالساعات)" %}</label>
+                        {{ form.expiry_hours|add_class:"form-control" }}
+                        <small class="form-text text-muted">{{ form.expiry_hours.help_text }}</small>
+                        {% if form.expiry_hours.errors %}<div class="invalid-feedback d-block">{{ form.expiry_hours.errors }}</div>{% endif %}
+                    </div>
+                    <div class="form-footer">
+                        <button type="submit" class="btn btn-primary btn-lg">{% trans "إنشاء رمز" %}</button>
+                        <a href="{% url 'db_manager:token_list' %}"
+                           class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}

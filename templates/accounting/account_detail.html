@@ -1,238 +1,230 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}{{ account.name }} - تفاصيل الحساب{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">المحاسبة</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'accounting:account_list' %}">الحسابات</a></li>
-                    <li class="breadcrumb-item active">{{ account.code }}</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2 class="mb-0">
-                    <span class="badge bg-primary me-2">{{ account.code }}</span>
-                    {{ account.name }}
-                </h2>
-                <div>
-                    <a href="{% url 'accounting:account_statement' account.pk %}" class="btn btn-info">
-                        <i class="fas fa-file-alt me-1"></i> كشف حساب
-                    </a>
-                    <a href="{% url 'admin:accounting_account_change' account.pk %}" class="btn btn-warning">
-                        <i class="fas fa-edit me-1"></i> تعديل
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- معلومات الحساب -->
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        معلومات الحساب
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <table class="table table-borderless mb-0">
-                        <tr>
-                            <th width="40%">الكود:</th>
-                            <td><span class="badge bg-primary">{{ account.code }}</span></td>
-                        </tr>
-                        <tr>
-                            <th>الاسم:</th>
-                            <td>{{ account.name }}</td>
-                        </tr>
-                        <tr>
-                            <th>النوع:</th>
-                            <td>{{ account.account_type.name }}</td>
-                        </tr>
-                        <tr>
-                            <th>الطبيعة:</th>
-                            <td>
-                                {% if account.account_type.nature == 'debit' %}
-                                <span class="badge bg-success">مدين</span>
-                                {% else %}
-                                <span class="badge bg-danger">دائن</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>المستوى:</th>
-                            <td>{{ account.level }}</td>
-                        </tr>
-                        {% if account.parent %}
-                        <tr>
-                            <th>الحساب الرئيسي:</th>
-                            <td>
-                                <a href="{% url 'accounting:account_detail' account.parent.pk %}">
-                                    {{ account.parent.name }}
-                                </a>
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% if account.customer %}
-                        <tr>
-                            <th>العميل:</th>
-                            <td>
-                                <a href="{% url 'customers:customer_detail' account.customer.pk %}">
-                                    {{ account.customer.name }}
-                                </a>
-                            </td>
-                        </tr>
-                        {% endif %}
-                        <tr>
-                            <th>الحالة:</th>
-                            <td>
-                                {% if account.is_active %}
-                                <span class="badge bg-success">نشط</span>
-                                {% else %}
-                                <span class="badge bg-secondary">غير نشط</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- الرصيد -->
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-calculator me-2"></i>
-                        الرصيد
-                    </h5>
-                </div>
-                <div class="card-body text-center">
-                    <div class="mb-3">
-                        <small class="text-muted">الرصيد الافتتاحي</small>
-                        <h4 class="mb-0">{{ account.opening_balance|floatformat:2 }}</h4>
-                    </div>
-                    <hr>
-                    <div class="mb-0">
-                        <small class="text-muted">الرصيد الحالي</small>
-                        <h2 class="{% if account.current_balance > 0 %}text-success{% elif account.current_balance < 0 %}text-danger{% else %}text-muted{% endif %} mb-0">
-                            {{ account.current_balance|floatformat:2 }}
-                        </h2>
-                        <small>
-                            {% if account.current_balance > 0 %}
-                            مدين
-                            {% elif account.current_balance < 0 %}
-                            دائن
-                            {% else %}
-                            صفر
-                            {% endif %}
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- الحسابات الفرعية -->
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-sitemap me-2"></i>
-                        الحسابات الفرعية
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if children %}
-                    <ul class="list-group list-group-flush">
-                        {% for child in children %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <a href="{% url 'accounting:account_detail' child.pk %}">
-                                <span class="badge bg-secondary me-2">{{ child.code }}</span>
-                                {{ child.name }}
-                            </a>
-                            <span class="{% if child.current_balance > 0 %}text-success{% elif child.current_balance < 0 %}text-danger{% endif %}">
-                                {{ child.current_balance|floatformat:2 }}
-                            </span>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'accounting:dashboard' %}">المحاسبة</a>
                         </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-folder-open fa-2x mb-2"></i>
-                        <p class="mb-0">لا توجد حسابات فرعية</p>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'accounting:account_list' %}">الحسابات</a>
+                        </li>
+                        <li class="breadcrumb-item active">{{ account.code }}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">
+                        <span class="badge bg-primary me-2">{{ account.code }}</span>
+                        {{ account.name }}
+                    </h2>
+                    <div>
+                        <a href="{% url 'accounting:account_statement' account.pk %}"
+                           class="btn btn-info">
+                            <i class="fas fa-file-alt me-1"></i> كشف حساب
+                        </a>
+                        <a href="{% url 'admin:accounting_account_change' account.pk %}"
+                           class="btn btn-warning">
+                            <i class="fas fa-edit me-1"></i> تعديل
+                        </a>
                     </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- آخر الحركات -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-history me-2"></i>
-                        آخر الحركات
-                    </h5>
-                    <a href="{% url 'accounting:account_statement' account.pk %}" class="btn btn-sm btn-outline-primary">
-                        عرض كشف الحساب الكامل
-                    </a>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
+        <div class="row">
+            <!-- معلومات الحساب -->
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            معلومات الحساب
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless mb-0">
+                            <tr>
+                                <th width="40%">الكود:</th>
+                                <td>
+                                    <span class="badge bg-primary">{{ account.code }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>الاسم:</th>
+                                <td>{{ account.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>النوع:</th>
+                                <td>{{ account.account_type.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>الطبيعة:</th>
+                                <td>
+                                    {% if account.account_type.nature == 'debit' %}
+                                        <span class="badge bg-success">مدين</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">دائن</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>المستوى:</th>
+                                <td>{{ account.level }}</td>
+                            </tr>
+                            {% if account.parent %}
                                 <tr>
-                                    <th>التاريخ</th>
-                                    <th>رقم القيد</th>
-                                    <th>البيان</th>
-                                    <th>مدين</th>
-                                    <th>دائن</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for line in transactions %}
-                                <tr>
-                                    <td>{{ line.transaction.transaction_date }}</td>
+                                    <th>الحساب الرئيسي:</th>
                                     <td>
-                                        <a href="{% url 'accounting:transaction_detail' line.transaction.pk %}">
-                                            {{ line.transaction.reference_number }}
-                                        </a>
-                                    </td>
-                                    <td>{{ line.description|default:line.transaction.description }}</td>
-                                    <td class="text-success">
-                                        {% if line.debit_amount > 0 %}{{ line.debit_amount|floatformat:2 }}{% endif %}
-                                    </td>
-                                    <td class="text-danger">
-                                        {% if line.credit_amount > 0 %}{{ line.credit_amount|floatformat:2 }}{% endif %}
+                                        <a href="{% url 'accounting:account_detail' account.parent.pk %}">{{ account.parent.name }}</a>
                                     </td>
                                 </tr>
-                                {% empty %}
+                            {% endif %}
+                            {% if account.customer %}
                                 <tr>
-                                    <td colspan="5" class="text-center py-4 text-muted">
-                                        لا توجد حركات على هذا الحساب
+                                    <th>العميل:</th>
+                                    <td>
+                                        <a href="{% url 'customers:customer_detail' account.customer.pk %}">{{ account.customer.name }}</a>
                                     </td>
                                 </tr>
-                                {% endfor %}
-                            </tbody>
+                            {% endif %}
+                            <tr>
+                                <th>الحالة:</th>
+                                <td>
+                                    {% if account.is_active %}
+                                        <span class="badge bg-success">نشط</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">غير نشط</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
                         </table>
                     </div>
                 </div>
             </div>
+            <!-- الرصيد -->
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calculator me-2"></i>
+                            الرصيد
+                        </h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <small class="text-muted">الرصيد الافتتاحي</small>
+                            <h4 class="mb-0">{{ account.opening_balance|floatformat:2 }}</h4>
+                        </div>
+                        <hr>
+                        <div class="mb-0">
+                            <small class="text-muted">الرصيد الحالي</small>
+                            <h2 class="{% if account.current_balance > 0 %}text-success{% elif account.current_balance < 0 %}text-danger{% else %}text-muted{% endif %} mb-0">
+                                {{ account.current_balance|floatformat:2 }}
+                            </h2>
+                            <small>
+                                {% if account.current_balance > 0 %}
+                                    مدين
+                                {% elif account.current_balance < 0 %}
+                                    دائن
+                                {% else %}
+                                    صفر
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- الحسابات الفرعية -->
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-sitemap me-2"></i>
+                            الحسابات الفرعية
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if children %}
+                            <ul class="list-group list-group-flush">
+                                {% for child in children %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <a href="{% url 'accounting:account_detail' child.pk %}">
+                                            <span class="badge bg-secondary me-2">{{ child.code }}</span>
+                                            {{ child.name }}
+                                        </a>
+                                        <span class="{% if child.current_balance > 0 %}text-success{% elif child.current_balance < 0 %}text-danger{% endif %}">
+                                            {{ child.current_balance|floatformat:2 }}
+                                        </span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-folder-open fa-2x mb-2"></i>
+                                <p class="mb-0">لا توجد حسابات فرعية</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- آخر الحركات -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>
+                            آخر الحركات
+                        </h5>
+                        <a href="{% url 'accounting:account_statement' account.pk %}"
+                           class="btn btn-sm btn-outline-primary">عرض كشف الحساب الكامل</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>رقم القيد</th>
+                                        <th>البيان</th>
+                                        <th>مدين</th>
+                                        <th>دائن</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for line in transactions %}
+                                        <tr>
+                                            <td>{{ line.transaction.transaction_date }}</td>
+                                            <td>
+                                                <a href="{% url 'accounting:transaction_detail' line.transaction.pk %}">{{ line.transaction.reference_number }}</a>
+                                            </td>
+                                            <td>{{ line.description|default:line.transaction.description }}</td>
+                                            <td class="text-success">
+                                                {% if line.debit_amount > 0 %}{{ line.debit_amount|floatformat:2 }}{% endif %}
+                                            </td>
+                                            <td class="text-danger">
+                                                {% if line.credit_amount > 0 %}{{ line.credit_amount|floatformat:2 }}{% endif %}
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4 text-muted">لا توجد حركات على هذا الحساب</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}

@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}{{ title }} - نظام الخواجه{% endblock %}
-
 {% block extra_css %}
-<!-- Select2 CSS -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css" rel="stylesheet" />
-<!-- تحسينات نموذج إضافة عناصر الطلب -->
-<link href="{% static 'css/order-form-enhanced.css' %}" rel="stylesheet" />
-<!-- تحسينات الهواتف المحمولة -->
-<link href="{% static 'css/mobile-optimizations.css' %}" rel="stylesheet" />
-<style>
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+          rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css"
+          rel="stylesheet" />
+    <!-- تحسينات نموذج إضافة عناصر الطلب -->
+    <link href="{% static 'css/order-form-enhanced.css' %}" rel="stylesheet" />
+    <!-- تحسينات الهواتف المحمولة -->
+    <link href="{% static 'css/mobile-optimizations.css' %}" rel="stylesheet" />
+    <style>
     .notes-field {
         min-height: 150px;
     }
@@ -308,502 +308,523 @@
         color: #dc3545;
         font-weight: bold;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container" style="margin-top: 100px;">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-shopping-cart"></i> {{ title }}</h2>
-        <a href="{% url 'orders:order_list' %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-right"></i> العودة للقائمة
-        </a>
-    </div>
-
-    <form method="post" id="orderForm" novalidate enctype="multipart/form-data">
-    {{ formset.management_form }}
-    <div style="display:none;">
-        {% for form in formset %}
-            {{ form.as_p }}
-        {% endfor %}
-    </div>
-        {% csrf_token %}
-        
-        <!-- Display form errors -->
-        {% if form.errors or formset.errors %}
-            <div class="alert alert-danger mb-4">
-                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> يوجد أخطاء في النموذج</h5>
-                {% if form.non_field_errors %}
-                    <ul class="mb-0">
-                        {% for error in form.non_field_errors %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="mb-0">يرجى التحقق من الحقول المطلوبة أدناه.</p>
-                {% endif %}
-                {% if formset.errors %}
-                    <ul class="mb-0">
-                    {% for error in formset.non_form_errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                    {% for f in formset.forms %}
-                        {% for field in f.visible_fields %}
-                            {% for error in field.errors %}
-                                <li>{{ field.label }}: {{ error }}</li>
-                            {% endfor %}
-                        {% endfor %}
-                    {% endfor %}
-                    </ul>
-                {% endif %}
+    <div class="container" style="margin-top: 100px;">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-shopping-cart"></i> {{ title }}
+            </h2>
+            <a href="{% url 'orders:order_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-right"></i> العودة للقائمة
+            </a>
+        </div>
+        <form method="post" id="orderForm" novalidate enctype="multipart/form-data">
+            {{ formset.management_form }}
+            <div style="display:none;">
+                {% for form in formset %}{{ form.as_p }}{% endfor %}
             </div>
-        {% endif %}
-        
-        <!-- Hidden fields for form submission -->
-        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-        <input type="hidden" name="order_items" id="order_items" value="">
-        <input type="hidden" name="selected_products" id="selected_products" value="">
-        <input type="hidden" name="paid_amount" id="paid_amount" value="0">
-        <input type="hidden" name="payment_verified" id="payment_verified" value="0">
-        <input type="hidden" name="payment_notes" id="payment_notes" value="">
-        <input type="hidden" name="payment_method" id="payment_method" value="cash">
-        <input type="hidden" name="invoice_number" id="invoice_number" value="">
-        <input type="hidden" name="invoice_number_2" id="invoice_number_2" value="">
-        <input type="hidden" name="invoice_number_3" id="invoice_number_3" value="">
-        <input type="hidden" name="tracking_status" value="pending">
-        
-        <div class="row">
-            <!-- Order Information -->
-            <div class="col-md-12">
-                <div class="card mb-4 shadow-sm">
-                    <div class="card-header bg-gradient-primary text-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-shopping-cart me-2"></i>
-                            معلومات الطلب
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <!-- Customer Selection -->
-                                <div class="mb-4">
-                                    <label for="{{ form.customer.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-user me-1"></i>العميل *
-                                    </label>
-                                    {% if customer %}
-                                    <!-- العميل محدد مسبقاً من رابط -->
-                                    <div class="input-group">
-                                        <input type="text" class="form-control bg-light border-success"
-                                               value="{{ customer.name }} - {{ customer.phone }}"
-                                               readonly>
-                                        <span class="input-group-text bg-success text-white">
-                                            <i class="fas fa-user-check"></i>
-                                        </span>
-                                    </div>
-                                    <div class="form-text text-success">
-                                        <i class="fas fa-info-circle"></i>
-                                        العميل مُحدد مسبقاً من بطاقة العميل
-                                        {% if customer.branch and user.branch and customer.branch != user.branch %}
-                                        <span class="badge bg-warning text-dark ms-2">
-                                            <i class="fas fa-exclamation-triangle"></i>
-                                            عميل من فرع آخر ({{ customer.branch.name }})
-                                        </span>
-                                        {% endif %}
-                                    </div>
-                                    <!-- الحقل الأصلي مخفي مع القيمة المحددة -->
-                                    <div style="display: none;">
-                                        {{ form.customer }}
-                                    </div>
-                                    <!-- حقل مخفي إضافي للتأكد من إرسال القيمة -->
-                                    <input type="hidden" name="customer" value="{{ customer.id }}" id="hidden_customer_backup">
-                                    {% else %}
-                                    <!-- البحث عن عميل -->
-                                    <select id="customer_search_select" class="form-select border-primary" style="width: 100%;">
-                                        <option value="">ابحث عن العميل بالاسم أو الهاتف...</option>
-                                    </select>
-                                    <!-- الحقل الأصلي مخفي -->
-                                    <div class="customer-original-field" style="display: none;">
-                                        {{ form.customer }}
-                                    </div>
-                                    <div class="form-text text-muted">
-                                        <i class="fas fa-search me-1"></i>
-                                        ابحث عن العميل بالاسم أو الهاتف
-                                    </div>
-                                    {% endif %}
-                                    {% if form.customer.errors %}
-                                    <div class="alert alert-danger mt-2">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        {{ form.customer.errors }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                
-                                <!-- Salesperson - تحت العميل مباشرة -->
-                                <div class="mb-4">
-                                    <label for="{{ form.salesperson.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-user-tie me-1"></i>البائع
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form.salesperson }}
-                                    {% if form.salesperson.errors %}
-                                    <div class="alert alert-danger mt-2">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        {% for error in form.salesperson.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                
-                                <!-- Branch Selection -->
-                                <div class="mb-4">
-                                    <label for="{{ form.branch.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-building me-1"></i>الفرع *
-                                    </label>
-                                    {{ form.branch }}
-                                    {% if form.branch.errors %}
-                                    <div class="alert alert-danger mt-2">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        {{ form.branch.errors }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-
-                                <!-- Customer Status (VIP/Normal) -->
-                                <div class="mb-4">
-                                    <label for="{{ form.status.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-crown me-1"></i>وضع العميل
-                                    </label>
-                                    {{ form.status }}
-                                    <div class="form-text">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        حدد ما إذا كان العميل VIP أم عادي (يؤثر على أولوية التسليم)
-                                    </div>
-                                    {% if form.status.errors %}
-                                    <div class="alert alert-danger mt-2">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        {{ form.status.errors }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                
-                                <!-- Notes - تم نقله من الجانب الأيمن -->
-                                <div class="mb-4">
-                                    <label for="{{ form.notes.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-sticky-note me-1"></i>ملاحظات
-                                    </label>
-                                    <textarea name="notes" id="{{ form.notes.id_for_label }}" class="form-control notes-field" rows="6">{{ form.notes.value|default:'' }}</textarea>
-                                    <div class="form-text">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        يمكنك إضافة معلومات العميل وتفاصيل الطلب هنا
-                                    </div>
-                                    <!-- Debug Information -->
-                                    {% if debug %}
-                                    <div class="alert alert-info mt-2">
-                                        <strong>معلومات التصحيح:</strong><br>
-                                        {{ form.errors }}<br>
-                                        {{ form.non_field_errors }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <!-- Order Types -->
-                                <div class="mb-4 {% if form.selected_types.errors %}border border-danger rounded p-3{% endif %}">
-                                    <h6 class="fw-bold mb-3">
-                                        <i class="fas fa-tags me-1"></i>نوع الطلب *
-                                    </h6>
-                                    {% if form.selected_types.errors %}
-                                    <div class="alert alert-danger">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        {% for error in form.selected_types.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    <div class="d-flex flex-wrap gap-3 mb-3">
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input styled-radio" type="radio" name="order_type_selector" id="order_type_accessory" value="accessory">
-                                            <label class="form-check-label" for="order_type_accessory">
-                                                <i class="fas fa-gem me-2"></i> إكسسوار
-                                            </label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input styled-radio" type="radio" name="order_type_selector" id="order_type_installation" value="installation">
-                                            <label class="form-check-label" for="order_type_installation">
-                                                <i class="fas fa-tools me-2"></i> تركيب
-                                            </label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input styled-radio" type="radio" name="order_type_selector" id="order_type_inspection" value="inspection">
-                                            <label class="form-check-label" for="order_type_inspection">
-                                                <i class="fas fa-eye me-2"></i> معاينة
-                                            </label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input styled-radio" type="radio" name="order_type_selector" id="order_type_tailoring" value="tailoring">
-                                            <label class="form-check-label" for="order_type_tailoring">
-                                                <i class="fas fa-cut me-2"></i> تسليم
-                                            </label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input styled-radio" type="radio" name="order_type_selector" id="order_type_products" value="products">
-                                            <label class="form-check-label" for="order_type_products">
-                                                <i class="fas fa-boxes me-2"></i> منتجات
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div style="display:none;">
-                                        {{ form.selected_types }}
-                                    </div>
-                                    
-                                    <div class="form-text text-muted">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        <strong>ملاحظة:</strong> يجب اختيار نوع واحد فقط للطلب
-                                    </div>
-                                </div>
-
-                                <!-- تم إزالة زر العقد الإلكتروني - يرجى استخدام نظام الويزارد -->
-
-                                <!-- Contract File Upload (shown only when contract_type is 'uploaded') -->
-                                <div class="mb-4 contract-file-field" style="display: none;">
-                                    <label for="{{ form.contract_file.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-file-pdf me-1"></i>ملف العقد (PDF)
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form.contract_file }}
-                                    <div class="form-text text-muted">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        يجب أن يكون الملف من نوع PDF وأقل من 10 ميجابايت
-                                        <br><strong>سيتم رفع الملف تلقائياً إلى Google Drive عند الحفظ</strong>
-                                    </div>
-                                    {% if form.contract_file.errors %}
-                                    <div class="alert alert-danger mt-2">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        {% for error in form.contract_file.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-
-                                    <!-- Google Drive Status -->
-                                    {% if form.instance.is_contract_uploaded_to_drive %}
-                                    <div class="alert alert-success mt-2">
-                                        <i class="fas fa-cloud-upload-alt me-2"></i>
-                                        تم رفع الملف إلى Google Drive بنجاح
-                                        {% if form.instance.contract_google_drive_file_url %}
-                                        <br>
-                                        <a href="{{ form.instance.contract_google_drive_file_url }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
-                                            <i class="fas fa-external-link-alt me-1"></i>
-                                            عرض الملف في Google Drive
-                                        </a>
-                                        {% endif %}
-                                    </div>
-                                    {% elif form.instance.contract_file and form.instance.pk %}
-                                    <!-- زر رفع يدوي للعقد -->
-                                    <div class="mt-2">
-                                        <button type="button" class="btn btn-primary btn-sm" onclick="uploadContractToGoogleDrive()">
-                                            <i class="fas fa-cloud-upload-alt me-1"></i>
-                                            رفع العقد إلى Google Drive
-                                        </button>
-                                        <div class="contract-upload-status mt-2" data-order-id="{{ form.instance.pk }}"></div>
-                                    </div>
-                                    {% endif %}
-                                </div>
-
-                                <!-- Contract Fields - في الجانب الأيمن فقط -->
-                                <div class="mb-4 contract-field" style="display: none;">
-                                    <label for="{{ form.contract_number.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-file-contract me-1"></i>رقم العقد الرئيسي
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form.contract_number }}
-                                    <div class="form-text text-danger">
-                                        <i class="fas fa-exclamation-circle me-1"></i>
-                                        مطلوب عند اختيار التركيب أو التفصيل أو الإكسسوار (غير مطلوب للمنتجات)
-                                    </div>
-                                    {% if form.contract_number.errors %}
-                                    <div class="alert alert-danger mt-2">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        {% for error in form.contract_number.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="mb-4 contract-field" style="display: none;">
-                                    <label for="{{ form.contract_number_2.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-file-contract me-1"></i>رقم عقد إضافي 1
-                                    </label>
-                                    {{ form.contract_number_2 }}
-                                    {% if form.contract_number_2.errors %}
-                                    <div class="alert alert-danger mt-2">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        {% for error in form.contract_number_2.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="mb-4 contract-field" style="display: none;">
-                                    <label for="{{ form.contract_number_3.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-file-contract me-1"></i>رقم عقد إضافي 2
-                                    </label>
-                                    {{ form.contract_number_3 }}
-                                    {% if form.contract_number_3.errors %}
-                                    <div class="alert alert-danger mt-2">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        {% for error in form.contract_number_3.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                
-                                <!-- Invoice Image Upload - صورة الفاتورة -->
-                                <div class="mb-4 invoice-image-field" id="invoice-image-container" style="display: none;">
-                                    <label for="id_invoice_image" class="form-label fw-bold">
-                                        <i class="fas fa-image me-1"></i>صورة الفاتورة الرئيسية
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="file" name="invoice_image" id="id_invoice_image" 
-                                           class="form-control" accept="image/*">
-                                    <div class="form-text text-muted">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        يجب إرفاق صورة الفاتورة (JPG, PNG, GIF, WEBP) - أقل من 10 ميجابايت
-                                    </div>
-                                    {% if form.invoice_image.errors %}
-                                    <div class="alert alert-danger mt-2">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        {% for error in form.invoice_image.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                    <!-- معاينة الصورة -->
-                                    <div id="invoice-image-preview" class="mt-2" style="display: none;">
-                                        <img src="" alt="معاينة صورة الفاتورة" class="img-thumbnail" style="max-height: 200px;">
-                                    </div>
-                                    
-                                    <!-- صور إضافية للفاتورة -->
-                                    <div class="mt-3">
-                                        <label class="form-label">
-                                            <i class="fas fa-images me-1"></i>صور إضافية للفاتورة (اختياري)
+            {% csrf_token %}
+            <!-- Display form errors -->
+            {% if form.errors or formset.errors %}
+                <div class="alert alert-danger mb-4">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle"></i> يوجد أخطاء في النموذج
+                    </h5>
+                    {% if form.non_field_errors %}
+                        <ul class="mb-0">
+                            {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="mb-0">يرجى التحقق من الحقول المطلوبة أدناه.</p>
+                    {% endif %}
+                    {% if formset.errors %}
+                        <ul class="mb-0">
+                            {% for error in formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}
+                            {% for f in formset.forms %}
+                                {% for field in f.visible_fields %}
+                                    {% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endif %}
+            <!-- Hidden fields for form submission -->
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <input type="hidden" name="order_items" id="order_items" value="">
+            <input type="hidden"
+                   name="selected_products"
+                   id="selected_products"
+                   value="">
+            <input type="hidden" name="paid_amount" id="paid_amount" value="0">
+            <input type="hidden" name="payment_verified" id="payment_verified" value="0">
+            <input type="hidden" name="payment_notes" id="payment_notes" value="">
+            <input type="hidden" name="payment_method" id="payment_method" value="cash">
+            <input type="hidden" name="invoice_number" id="invoice_number" value="">
+            <input type="hidden" name="invoice_number_2" id="invoice_number_2" value="">
+            <input type="hidden" name="invoice_number_3" id="invoice_number_3" value="">
+            <input type="hidden" name="tracking_status" value="pending">
+            <div class="row">
+                <!-- Order Information -->
+                <div class="col-md-12">
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-header bg-gradient-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-shopping-cart me-2"></i>
+                                معلومات الطلب
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <!-- Customer Selection -->
+                                    <div class="mb-4">
+                                        <label for="{{ form.customer.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-user me-1"></i>العميل *
                                         </label>
-                                        <div id="additional-images-container">
-                                            <!-- سيتم إضافة حقول الصور الإضافية هنا -->
+                                        {% if customer %}
+                                            <!-- العميل محدد مسبقاً من رابط -->
+                                            <div class="input-group">
+                                                <input type="text"
+                                                       class="form-control bg-light border-success"
+                                                       value="{{ customer.name }} - {{ customer.phone }}"
+                                                       readonly>
+                                                <span class="input-group-text bg-success text-white">
+                                                    <i class="fas fa-user-check"></i>
+                                                </span>
+                                            </div>
+                                            <div class="form-text text-success">
+                                                <i class="fas fa-info-circle"></i>
+                                                العميل مُحدد مسبقاً من بطاقة العميل
+                                                {% if customer.branch and user.branch and customer.branch != user.branch %}
+                                                    <span class="badge bg-warning text-dark ms-2">
+                                                        <i class="fas fa-exclamation-triangle"></i>
+                                                        عميل من فرع آخر ({{ customer.branch.name }})
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                            <!-- الحقل الأصلي مخفي مع القيمة المحددة -->
+                                            <div style="display: none;">{{ form.customer }}</div>
+                                            <!-- حقل مخفي إضافي للتأكد من إرسال القيمة -->
+                                            <input type="hidden"
+                                                   name="customer"
+                                                   value="{{ customer.id }}"
+                                                   id="hidden_customer_backup">
+                                        {% else %}
+                                            <!-- البحث عن عميل -->
+                                            <select id="customer_search_select"
+                                                    class="form-select border-primary"
+                                                    style="width: 100%">
+                                                <option value="">ابحث عن العميل بالاسم أو الهاتف...</option>
+                                            </select>
+                                            <!-- الحقل الأصلي مخفي -->
+                                            <div class="customer-original-field" style="display: none;">{{ form.customer }}</div>
+                                            <div class="form-text text-muted">
+                                                <i class="fas fa-search me-1"></i>
+                                                ابحث عن العميل بالاسم أو الهاتف
+                                            </div>
+                                        {% endif %}
+                                        {% if form.customer.errors %}
+                                            <div class="alert alert-danger mt-2">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {{ form.customer.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <!-- Salesperson - تحت العميل مباشرة -->
+                                    <div class="mb-4">
+                                        <label for="{{ form.salesperson.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-user-tie me-1"></i>البائع
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.salesperson }}
+                                        {% if form.salesperson.errors %}
+                                            <div class="alert alert-danger mt-2">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {% for error in form.salesperson.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <!-- Branch Selection -->
+                                    <div class="mb-4">
+                                        <label for="{{ form.branch.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-building me-1"></i>الفرع *
+                                        </label>
+                                        {{ form.branch }}
+                                        {% if form.branch.errors %}
+                                            <div class="alert alert-danger mt-2">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {{ form.branch.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <!-- Customer Status (VIP/Normal) -->
+                                    <div class="mb-4">
+                                        <label for="{{ form.status.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-crown me-1"></i>وضع العميل
+                                        </label>
+                                        {{ form.status }}
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            حدد ما إذا كان العميل VIP أم عادي (يؤثر على أولوية التسليم)
                                         </div>
-                                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-invoice-image-btn">
-                                            <i class="fas fa-plus me-1"></i>إضافة صورة أخرى
-                                        </button>
+                                        {% if form.status.errors %}
+                                            <div class="alert alert-danger mt-2">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {{ form.status.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <!-- Notes - تم نقله من الجانب الأيمن -->
+                                    <div class="mb-4">
+                                        <label for="{{ form.notes.id_for_label }}" class="form-label fw-bold">
+                                            <i class="fas fa-sticky-note me-1"></i>ملاحظات
+                                        </label>
+                                        <textarea name="notes"
+                                                  id="{{ form.notes.id_for_label }}"
+                                                  class="form-control notes-field"
+                                                  rows="6">{{ form.notes.value|default:'' }}</textarea>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            يمكنك إضافة معلومات العميل وتفاصيل الطلب هنا
+                                        </div>
+                                        <!-- Debug Information -->
+                                        {% if debug %}
+                                            <div class="alert alert-info mt-2">
+                                                <strong>معلومات التصحيح:</strong>
+                                                <br>
+                                                {{ form.errors }}
+                                                <br>
+                                                {{ form.non_field_errors }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <!-- Order Types -->
+                                    <div class="mb-4 {% if form.selected_types.errors %}border border-danger rounded p-3{% endif %}">
+                                        <h6 class="fw-bold mb-3">
+                                            <i class="fas fa-tags me-1"></i>نوع الطلب *
+                                        </h6>
+                                        {% if form.selected_types.errors %}
+                                            <div class="alert alert-danger">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {% for error in form.selected_types.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        <div class="d-flex flex-wrap gap-3 mb-3">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input styled-radio"
+                                                       type="radio"
+                                                       name="order_type_selector"
+                                                       id="order_type_accessory"
+                                                       value="accessory">
+                                                <label class="form-check-label" for="order_type_accessory">
+                                                    <i class="fas fa-gem me-2"></i> إكسسوار
+                                                </label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input styled-radio"
+                                                       type="radio"
+                                                       name="order_type_selector"
+                                                       id="order_type_installation"
+                                                       value="installation">
+                                                <label class="form-check-label" for="order_type_installation">
+                                                    <i class="fas fa-tools me-2"></i> تركيب
+                                                </label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input styled-radio"
+                                                       type="radio"
+                                                       name="order_type_selector"
+                                                       id="order_type_inspection"
+                                                       value="inspection">
+                                                <label class="form-check-label" for="order_type_inspection">
+                                                    <i class="fas fa-eye me-2"></i> معاينة
+                                                </label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input styled-radio"
+                                                       type="radio"
+                                                       name="order_type_selector"
+                                                       id="order_type_tailoring"
+                                                       value="tailoring">
+                                                <label class="form-check-label" for="order_type_tailoring">
+                                                    <i class="fas fa-cut me-2"></i> تسليم
+                                                </label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input styled-radio"
+                                                       type="radio"
+                                                       name="order_type_selector"
+                                                       id="order_type_products"
+                                                       value="products">
+                                                <label class="form-check-label" for="order_type_products">
+                                                    <i class="fas fa-boxes me-2"></i> منتجات
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div style="display:none;">{{ form.selected_types }}</div>
                                         <div class="form-text text-muted">
                                             <i class="fas fa-info-circle me-1"></i>
-                                            يمكنك إضافة حتى 4 صور إضافية للفاتورة
+                                            <strong>ملاحظة:</strong> يجب اختيار نوع واحد فقط للطلب
                                         </div>
                                     </div>
-                                </div>
-                                
-                                <!-- Related Inspection -->
-                                <div class="mb-4 related-inspection-field" style="display: none;">
-                                    <label for="{{ form.related_inspection.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-eye me-1"></i>معاينة مرتبطة
-                                    </label>
-                                    {{ form.related_inspection }}
-                                    <div class="form-text text-muted">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        اختر المعاينة المرتبطة بهذا الطلب (اختياري)
+                                    <!-- تم إزالة زر العقد الإلكتروني - يرجى استخدام نظام الويزارد -->
+                                    <!-- Contract File Upload (shown only when contract_type is 'uploaded') -->
+                                    <div class="mb-4 contract-file-field" style="display: none;">
+                                        <label for="{{ form.contract_file.id_for_label }}"
+                                               class="form-label fw-bold">
+                                            <i class="fas fa-file-pdf me-1"></i>ملف العقد (PDF)
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.contract_file }}
+                                        <div class="form-text text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            يجب أن يكون الملف من نوع PDF وأقل من 10 ميجابايت
+                                            <br>
+                                            <strong>سيتم رفع الملف تلقائياً إلى Google Drive عند الحفظ</strong>
+                                        </div>
+                                        {% if form.contract_file.errors %}
+                                            <div class="alert alert-danger mt-2">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {% for error in form.contract_file.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        <!-- Google Drive Status -->
+                                        {% if form.instance.is_contract_uploaded_to_drive %}
+                                            <div class="alert alert-success mt-2">
+                                                <i class="fas fa-cloud-upload-alt me-2"></i>
+                                                تم رفع الملف إلى Google Drive بنجاح
+                                                {% if form.instance.contract_google_drive_file_url %}
+                                                    <br>
+                                                    <a href="{{ form.instance.contract_google_drive_file_url }}"
+                                                       target="_blank"
+                                                       class="btn btn-sm btn-outline-primary mt-2">
+                                                        <i class="fas fa-external-link-alt me-1"></i>
+                                                        عرض الملف في Google Drive
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        {% elif form.instance.contract_file and form.instance.pk %}
+                                            <!-- زر رفع يدوي للعقد -->
+                                            <div class="mt-2">
+                                                <button type="button"
+                                                        class="btn btn-primary btn-sm"
+                                                        onclick="uploadContractToGoogleDrive()">
+                                                    <i class="fas fa-cloud-upload-alt me-1"></i>
+                                                    رفع العقد إلى Google Drive
+                                                </button>
+                                                <div class="contract-upload-status mt-2"
+                                                     data-order-id="{{ form.instance.pk }}"></div>
+                                            </div>
+                                        {% endif %}
                                     </div>
-                                    {% if form.related_inspection.errors %}
-                                    <div class="alert alert-danger mt-2">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        {% for error in form.related_inspection.errors %}
-                                            {{ error }}
-                                        {% endfor %}
+                                    <!-- Contract Fields - في الجانب الأيمن فقط -->
+                                    <div class="mb-4 contract-field" style="display: none;">
+                                        <label for="{{ form.contract_number.id_for_label }}"
+                                               class="form-label fw-bold">
+                                            <i class="fas fa-file-contract me-1"></i>رقم العقد الرئيسي
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.contract_number }}
+                                        <div class="form-text text-danger">
+                                            <i class="fas fa-exclamation-circle me-1"></i>
+                                            مطلوب عند اختيار التركيب أو التفصيل أو الإكسسوار (غير مطلوب للمنتجات)
+                                        </div>
+                                        {% if form.contract_number.errors %}
+                                            <div class="alert alert-danger mt-2">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {% for error in form.contract_number.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
-                                </div>
-
-                                
-                                <!-- Hidden Fields for Delivery - Set automatically by JavaScript -->
-                                <div style="display:none;">
-                                {{ form.delivery_type }}
-                                {{ form.delivery_address }}
+                                    <div class="mb-4 contract-field" style="display: none;">
+                                        <label for="{{ form.contract_number_2.id_for_label }}"
+                                               class="form-label fw-bold">
+                                            <i class="fas fa-file-contract me-1"></i>رقم عقد إضافي 1
+                                        </label>
+                                        {{ form.contract_number_2 }}
+                                        {% if form.contract_number_2.errors %}
+                                            <div class="alert alert-danger mt-2">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {% for error in form.contract_number_2.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mb-4 contract-field" style="display: none;">
+                                        <label for="{{ form.contract_number_3.id_for_label }}"
+                                               class="form-label fw-bold">
+                                            <i class="fas fa-file-contract me-1"></i>رقم عقد إضافي 2
+                                        </label>
+                                        {{ form.contract_number_3 }}
+                                        {% if form.contract_number_3.errors %}
+                                            <div class="alert alert-danger mt-2">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {% for error in form.contract_number_3.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <!-- Invoice Image Upload - صورة الفاتورة -->
+                                    <div class="mb-4 invoice-image-field"
+                                         id="invoice-image-container"
+                                         style="display: none">
+                                        <label for="id_invoice_image" class="form-label fw-bold">
+                                            <i class="fas fa-image me-1"></i>صورة الفاتورة الرئيسية
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="file"
+                                               name="invoice_image"
+                                               id="id_invoice_image"
+                                               class="form-control"
+                                               accept="image/*">
+                                        <div class="form-text text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            يجب إرفاق صورة الفاتورة (JPG, PNG, GIF, WEBP) - أقل من 10 ميجابايت
+                                        </div>
+                                        {% if form.invoice_image.errors %}
+                                            <div class="alert alert-danger mt-2">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {% for error in form.invoice_image.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        <!-- معاينة الصورة -->
+                                        <div id="invoice-image-preview" class="mt-2" style="display: none;">
+                                            <img src=""
+                                                 alt="معاينة صورة الفاتورة"
+                                                 class="img-thumbnail"
+                                                 style="max-height: 200px">
+                                        </div>
+                                        <!-- صور إضافية للفاتورة -->
+                                        <div class="mt-3">
+                                            <label class="form-label">
+                                                <i class="fas fa-images me-1"></i>صور إضافية للفاتورة (اختياري)
+                                            </label>
+                                            <div id="additional-images-container">
+                                                <!-- سيتم إضافة حقول الصور الإضافية هنا -->
+                                            </div>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary mt-2"
+                                                    id="add-invoice-image-btn">
+                                                <i class="fas fa-plus me-1"></i>إضافة صورة أخرى
+                                            </button>
+                                            <div class="form-text text-muted">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                يمكنك إضافة حتى 4 صور إضافية للفاتورة
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Related Inspection -->
+                                    <div class="mb-4 related-inspection-field" style="display: none;">
+                                        <label for="{{ form.related_inspection.id_for_label }}"
+                                               class="form-label fw-bold">
+                                            <i class="fas fa-eye me-1"></i>معاينة مرتبطة
+                                        </label>
+                                        {{ form.related_inspection }}
+                                        <div class="form-text text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            اختر المعاينة المرتبطة بهذا الطلب (اختياري)
+                                        </div>
+                                        {% if form.related_inspection.errors %}
+                                            <div class="alert alert-danger mt-2">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {% for error in form.related_inspection.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <!-- Hidden Fields for Delivery - Set automatically by JavaScript -->
+                                    <div style="display:none;">
+                                        {{ form.delivery_type }}
+                                        {{ form.delivery_address }}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        
-
-        
-        <!-- جدول العناصر المختارة ديناميكيًا -->
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header bg-gradient-success text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-list me-2"></i> 
-                    العناصر المختارة (قبل الحفظ)
-                </h5>
+            <!-- جدول العناصر المختارة ديناميكيًا -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-gradient-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        العناصر المختارة (قبل الحفظ)
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="live-order-items-table" class="table-responsive"></div>
+                </div>
             </div>
-            <div class="card-body p-0">
-                <div id="live-order-items-table" class="table-responsive"></div>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-3">
+                <button type="button"
+                        class="btn btn-outline-primary btn-lg"
+                        data-bs-toggle="modal"
+                        data-bs-target="#orderBarcodeScannerModal"
+                        style="border-radius: 8px;
+                               padding: 12px 24px;
+                               font-weight: 600;
+                               transition: all 0.3s ease;
+                               border: 2px solid #667eea;
+                               color: #667eea;
+                               background: white;
+                               box-shadow: 0 2px 4px rgba(102, 126, 234, 0.1)">
+                    <i class="fas fa-barcode me-2"></i> إضافة بالباركود
+                </button>
+                <button type="button"
+                        class="btn btn-outline-success btn-lg"
+                        id="add-order-item-btn-custom"
+                        style="border-radius: 8px;
+                               padding: 12px 24px;
+                               font-weight: 600;
+                               transition: all 0.3s ease;
+                               border: 2px solid #198754;
+                               color: #198754;
+                               background: white;
+                               box-shadow: 0 2px 4px rgba(25, 135, 84, 0.1)">
+                    <i class="fas fa-plus me-2"></i> إضافة يدوياً
+                </button>
             </div>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="button"
+                        class="btn btn-success btn-lg"
+                        id="save-order-btn-custom"
+                        style="border-radius: 8px;
+                               padding: 12px 24px;
+                               font-weight: 600;
+                               transition: all 0.3s ease;
+                               background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+                               border: none;
+                               box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
+                               color: white">
+                    <i class="fas fa-save me-2"></i> حفظ الطلب والدفع
+                </button>
+            </div>
+        </form>
+        <!-- مؤشر التحقق من النموذج -->
+        <div id="form-validation-indicator"
+             class="form-validation-indicator invalid"
+             style="display: none">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span id="validation-message">يرجى ملء جميع الحقول المطلوبة</span>
         </div>
-        
-
-
-        
-        <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-3">
-            <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#orderBarcodeScannerModal"
-                    style="border-radius: 8px; padding: 12px 24px; font-weight: 600; transition: all 0.3s ease; 
-                           border: 2px solid #667eea; color: #667eea; background: white; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.1);">
-                <i class="fas fa-barcode me-2"></i> إضافة بالباركود
-            </button>
-            <button type="button" class="btn btn-outline-success btn-lg" id="add-order-item-btn-custom" 
-                    style="border-radius: 8px; padding: 12px 24px; font-weight: 600; transition: all 0.3s ease; 
-                           border: 2px solid #198754; color: #198754; background: white; box-shadow: 0 2px 4px rgba(25, 135, 84, 0.1);">
-                <i class="fas fa-plus me-2"></i> إضافة يدوياً
-            </button>
-        </div>
-        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-            <button type="button" class="btn btn-success btn-lg" id="save-order-btn-custom"
-                    style="border-radius: 8px; padding: 12px 24px; font-weight: 600; transition: all 0.3s ease; 
-                           background: linear-gradient(135deg, #198754 0%, #146c43 100%); border: none; 
-                           box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3); color: white;">
-                <i class="fas fa-save me-2"></i> حفظ الطلب والدفع
-            </button>
-        </div>
-    </form>
-    
-    <!-- مؤشر التحقق من النموذج -->
-    <div id="form-validation-indicator" class="form-validation-indicator invalid" style="display: none;">
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        <span id="validation-message">يرجى ملء جميع الحقول المطلوبة</span>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<!-- jQuery (مطلوب قبل Select2) -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<!-- Select2 JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<!-- SweetAlert2 للنوافذ المنبثقة -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<!-- ملفات الجافاسكريبت المخصصة -->
-<script src="{% static 'js/order_items.js' %}"></script>
-<script src="{% static 'js/order_form_simplified.js' %}"></script>
-<!-- ملفات JavaScript لرفع العقود إلى Google Drive -->
-<script src="{% static 'js/contract_google_drive_upload.js' %}?v={{ timestamp|default:'20250811' }}"></script>
-<script src="{% static 'js/contract_upload_status_checker.js' %}"></script>
-
-<script>
+    <!-- jQuery (مطلوب قبل Select2) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Select2 JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- SweetAlert2 للنوافذ المنبثقة -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- ملفات الجافاسكريبت المخصصة -->
+    <script src="{% static 'js/order_items.js' %}"></script>
+    <script src="{% static 'js/order_form_simplified.js' %}"></script>
+    <!-- ملفات JavaScript لرفع العقود إلى Google Drive -->
+    <script src="{% static 'js/contract_google_drive_upload.js' %}?v={{ timestamp|default:'20250811' }}"></script>
+    <script src="{% static 'js/contract_upload_status_checker.js' %}"></script>
+    <script>
 // تعيين معرف الطلب للعقود إذا كان في وضع التعديل
 {% if order and order.pk %}
     // تعيين معرف الطلب الحالي لنظام رفع العقود
@@ -923,60 +944,68 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-});</script>
-
-<!-- إضافة Modal الباركود -->
-{% include 'includes/order_barcode_scanner_modal.html' %}
-
-
-<!-- قالب القماش -->
-<template id="fabric-modal-template">
-    <div class="fabric-item-modal mb-3 p-3 border rounded" data-fabric-index="">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <strong>قماش <span class="fabric-number"></span></strong>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removeFabricFromModal(this)">
-                <i class="fas fa-trash"></i>
-            </button>
+});
+    </script>
+    <!-- إضافة Modal الباركود -->
+    {% include 'includes/order_barcode_scanner_modal.html' %}
+    <!-- قالب القماش -->
+    <template id="fabric-modal-template">
+        <div class="fabric-item-modal mb-3 p-3 border rounded"
+             data-fabric-index="">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong>قماش <span class="fabric-number"></span></strong>
+                <button type="button"
+                        class="btn btn-sm btn-danger"
+                        onclick="removeFabricFromModal(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <label class="form-label">نوع القماش</label>
+                    <select class="form-select fabric-type-input">
+                        <option value="">-- اختر --</option>
+                        <option value="light">خفيف</option>
+                        <option value="heavy">ثقيل</option>
+                        <option value="blackout">بلاك أوت</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">اسم القماش</label>
+                    <select class="form-select fabric-name-input">
+                        <option value="">-- اختر --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">عدد القطع</label>
+                    <input type="number"
+                           class="form-control fabric-pieces-input"
+                           min="1"
+                           value="1">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">عدد الأمتار</label>
+                    <input type="number"
+                           step="0.01"
+                           class="form-control fabric-meters-input"
+                           placeholder="0">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">نوع التفصيل</label>
+                    <select class="form-select fabric-tailoring-input">
+                        <option value="">-- اختر --</option>
+                        <option value="rings">حلقات</option>
+                        <option value="tape">شريط</option>
+                        <option value="snap">كبس</option>
+                    </select>
+                </div>
+                <div class="col-12 mt-2">
+                    <label class="form-label">ملاحظات (اختياري)</label>
+                    <textarea class="form-control fabric-notes-input"
+                              rows="2"
+                              placeholder="أضف ملاحظات حول القماش..."></textarea>
+                </div>
+            </div>
         </div>
-        <div class="row g-2">
-            <div class="col-md-3">
-                <label class="form-label">نوع القماش</label>
-                <select class="form-select fabric-type-input">
-                    <option value="">-- اختر --</option>
-                    <option value="light">خفيف</option>
-                    <option value="heavy">ثقيل</option>
-                    <option value="blackout">بلاك أوت</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">اسم القماش</label>
-                <select class="form-select fabric-name-input">
-                    <option value="">-- اختر --</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">عدد القطع</label>
-                <input type="number" class="form-control fabric-pieces-input" min="1" value="1">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">عدد الأمتار</label>
-                <input type="number" step="0.01" class="form-control fabric-meters-input" placeholder="0">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">نوع التفصيل</label>
-                <select class="form-select fabric-tailoring-input">
-                    <option value="">-- اختر --</option>
-                    <option value="rings">حلقات</option>
-                    <option value="tape">شريط</option>
-                    <option value="snap">كبس</option>
-                </select>
-            </div>
-            <div class="col-12 mt-2">
-                <label class="form-label">ملاحظات (اختياري)</label>
-                <textarea class="form-control fabric-notes-input" rows="2" placeholder="أضف ملاحظات حول القماش..."></textarea>
-            </div>
-        </div>
-    </div>
-</template>
-
+    </template>
 {% endblock %}

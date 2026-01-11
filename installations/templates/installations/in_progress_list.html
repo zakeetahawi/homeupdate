@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}التركيبات قيد التنفيذ{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     /* بادج عدد الشبابيك */
     .badge-pill.windows-badge {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -26,156 +24,162 @@
     .badge-pill.windows-badge i {
         font-size: 1rem;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">{{ title }}</h3>
-                    <div class="card-tools">
-                        <a href="{% url 'installations:dashboard' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
-                        </a>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">{{ title }}</h3>
+                        <div class="card-tools">
+                            <a href="{% url 'installations:dashboard' %}"
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-right"></i> العودة للوحة التحكم
+                            </a>
+                        </div>
                     </div>
-                </div>
-                <div class="card-body">
-                    <!-- إحصائيات سريعة -->
-                    <div class="row mb-4">
-                        <div class="col-md-4">
-                            <div class="info-box">
-                                <span class="info-box-icon bg-info"><i class="fas fa-tools"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">إجمالي قيد التنفيذ</span>
-                                    <span class="info-box-number">{{ stats.total_in_progress }}</span>
+                    <div class="card-body">
+                        <!-- إحصائيات سريعة -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-info"><i class="fas fa-tools"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">إجمالي قيد التنفيذ</span>
+                                        <span class="info-box-number">{{ stats.total_in_progress }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-success"><i class="fas fa-calendar-day"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">اليوم</span>
+                                        <span class="info-box-number">{{ stats.today_in_progress }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-danger"><i class="fas fa-exclamation-triangle"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">متأخرة</span>
+                                        <span class="info-box-number">{{ stats.overdue }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="info-box">
-                                <span class="info-box-icon bg-success"><i class="fas fa-calendar-day"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">اليوم</span>
-                                    <span class="info-box-number">{{ stats.today_in_progress }}</span>
-                                </div>
+                        <!-- فلاتر البحث -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <form method="get" class="form-inline">
+                                    <div class="form-group mr-3">
+                                        <label for="team" class="mr-2">الفريق:</label>
+                                        <select name="team" id="team" class="form-control">
+                                            <option value="">جميع الفرق</option>
+                                            {% for team in teams %}
+                                                <option value="{{ team.id }}"
+                                                        {% if request.GET.team == team.id|stringformat:"s" %}selected{% endif %}>
+                                                    {{ team.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="form-group mr-3">
+                                        <label for="date" class="mr-2">التاريخ:</label>
+                                        <input type="date"
+                                               name="date"
+                                               id="date"
+                                               class="form-control"
+                                               value="{{ request.GET.date }}">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">بحث</button>
+                                    <a href="{% url 'installations:installation_in_progress_list' %}"
+                                       class="btn btn-outline-secondary ml-2">مسح الفلاتر</a>
+                                </form>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="info-box">
-                                <span class="info-box-icon bg-danger"><i class="fas fa-exclamation-triangle"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">متأخرة</span>
-                                    <span class="info-box-number">{{ stats.overdue }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- فلاتر البحث -->
-                    <div class="row mb-3">
-                        <div class="col-md-12">
-                            <form method="get" class="form-inline">
-                                <div class="form-group mr-3">
-                                    <label for="team" class="mr-2">الفريق:</label>
-                                    <select name="team" id="team" class="form-control">
-                                        <option value="">جميع الفرق</option>
-                                        {% for team in teams %}
-                                            <option value="{{ team.id }}" {% if request.GET.team == team.id|stringformat:"s" %}selected{% endif %}>
-                                                {{ team.name }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="form-group mr-3">
-                                    <label for="date" class="mr-2">التاريخ:</label>
-                                    <input type="date" name="date" id="date" class="form-control" value="{{ request.GET.date }}">
-                                </div>
-                                <button type="submit" class="btn btn-primary">بحث</button>
-                                <a href="{% url 'installations:installation_in_progress_list' %}" class="btn btn-outline-secondary ml-2">مسح الفلاتر</a>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- جدول التركيبات -->
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped">
-                            <thead>
-                                <tr>
-                                    <th>رقم الطلب</th>
-                                    <th>العميل</th>
-                                    <th>تاريخ التركيب</th>
-                                    <th>وقت التركيب</th>
-                                    <th>الفريق</th>
-                                    <th>عدد الشبابيك</th>
-                                    <th>الحالة</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for installation in installations %}
-                                    <tr {% if installation.scheduled_date < today %}class="table-danger"{% endif %}>
-                                        <td>
-                                            <a href="{% url 'installations:installation_detail' installation.id %}">
-                                                {{ installation.order.order_number }}
-                                            </a>
-                                        </td>
-                                        <td>{{ installation.order.customer.name }}</td>
-                                        <td>
-                                            {{ installation.scheduled_date|date:"Y-m-d" }}
-                                            {% if installation.scheduled_date < today %}
-                                                <span class="badge badge-danger">متأخر</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ installation.scheduled_time|time:"H:i" }}</td>
-                                        <td>
-                                            {% if installation.team %}
-                                                {{ installation.team.name }}
-                                            {% else %}
-                                                <span class="text-muted">غير محدد</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            {% if installation.windows_count %}
-                                                <span class="badge badge-pill" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 0.9rem; padding: 0.5rem 1rem;">
-                                                    <i class="fas fa-window-maximize"></i>
-                                                    {{ installation.windows_count }}
-                                                </span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <span class="badge badge-{% if installation.status == 'in_progress' %}warning{% elif installation.status == 'in_installation' %}info{% else %}secondary{% endif %}">
-                                                {{ installation.get_status_display }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <a href="{% url 'installations:installation_detail' installation.id %}"
-                                                   class="btn btn-sm btn-info" title="عرض التفاصيل">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="{% url 'installations:change_installation_status' installation.id %}"
-                                                   class="btn btn-sm btn-success" title="تغيير الحالة">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                {% empty %}
+                        <!-- جدول التركيبات -->
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped">
+                                <thead>
                                     <tr>
-                                        <td colspan="8" class="text-center">لا توجد تركيبات قيد التنفيذ</td>
+                                        <th>رقم الطلب</th>
+                                        <th>العميل</th>
+                                        <th>تاريخ التركيب</th>
+                                        <th>وقت التركيب</th>
+                                        <th>الفريق</th>
+                                        <th>عدد الشبابيك</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
                                     </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {% for installation in installations %}
+                                        <tr {% if installation.scheduled_date < today %}class="table-danger"{% endif %}>
+                                            <td>
+                                                <a href="{% url 'installations:installation_detail' installation.id %}">{{ installation.order.order_number }}</a>
+                                            </td>
+                                            <td>{{ installation.order.customer.name }}</td>
+                                            <td>
+                                                {{ installation.scheduled_date|date:"Y-m-d" }}
+                                                {% if installation.scheduled_date < today %}<span class="badge badge-danger">متأخر</span>{% endif %}
+                                            </td>
+                                            <td>{{ installation.scheduled_time|time:"H:i" }}</td>
+                                            <td>
+                                                {% if installation.team %}
+                                                    {{ installation.team.name }}
+                                                {% else %}
+                                                    <span class="text-muted">غير محدد</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                {% if installation.windows_count %}
+                                                    <span class="badge badge-pill"
+                                                          style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                                                 color: white;
+                                                                 font-size: 0.9rem;
+                                                                 padding: 0.5rem 1rem">
+                                                        <i class="fas fa-window-maximize"></i>
+                                                        {{ installation.windows_count }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-{% if installation.status == 'in_progress' %}warning{% elif installation.status == 'in_installation' %}info{% else %}secondary{% endif %}">
+                                                    {{ installation.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'installations:installation_detail' installation.id %}"
+                                                       class="btn btn-sm btn-info"
+                                                       title="عرض التفاصيل">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="{% url 'installations:change_installation_status' installation.id %}"
+                                                       class="btn btn-sm btn-success"
+                                                       title="تغيير الحالة">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="8" class="text-center">لا توجد تركيبات قيد التنفيذ</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

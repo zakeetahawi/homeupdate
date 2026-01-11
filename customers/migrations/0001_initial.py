@@ -10,345 +10,345 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('accounts', '0001_initial'),
+        ("accounts", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CustomerCategory',
+            name="CustomerCategory",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'name',
+                    "name",
                     models.CharField(
-                        db_index=True, max_length=50, verbose_name='اسم التصنيف'
+                        db_index=True, max_length=50, verbose_name="اسم التصنيف"
                     ),
                 ),
                 (
-                    'description',
-                    models.TextField(blank=True, verbose_name='وصف التصنيف'),
+                    "description",
+                    models.TextField(blank=True, verbose_name="وصف التصنيف"),
                 ),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'تصنيف العملاء',
-                'verbose_name_plural': 'تصنيفات العملاء',
-                'ordering': ['name'],
-                'indexes': [
-                    models.Index(fields=['name'], name='customer_cat_name_idx')
+                "verbose_name": "تصنيف العملاء",
+                "verbose_name_plural": "تصنيفات العملاء",
+                "ordering": ["name"],
+                "indexes": [
+                    models.Index(fields=["name"], name="customer_cat_name_idx")
                 ],
             },
         ),
         migrations.CreateModel(
-            name='Customer',
+            name="Customer",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'code',
+                    "code",
                     models.CharField(
                         blank=True,
                         max_length=10,
                         unique=True,
-                        verbose_name='كود العميل',
+                        verbose_name="كود العميل",
                     ),
                 ),
                 (
-                    'image',
+                    "image",
                     models.ImageField(
                         blank=True,
                         null=True,
-                        upload_to='customers/images/%Y/%m/',
-                        verbose_name='صورة العميل',
+                        upload_to="customers/images/%Y/%m/",
+                        verbose_name="صورة العميل",
                     ),
                 ),
                 (
-                    'customer_type',
+                    "customer_type",
                     models.CharField(
-                        default='retail', max_length=20, verbose_name='نوع العميل'
+                        default="retail", max_length=20, verbose_name="نوع العميل"
                     ),
                 ),
                 (
-                    'name',
+                    "name",
                     models.CharField(
-                        db_index=True, max_length=200, verbose_name='اسم العميل'
+                        db_index=True, max_length=200, verbose_name="اسم العميل"
                     ),
                 ),
                 (
-                    'phone',
+                    "phone",
                     models.CharField(
-                        db_index=True, max_length=20, verbose_name='رقم الهاتف'
+                        db_index=True, max_length=20, verbose_name="رقم الهاتف"
                     ),
                 ),
                 (
-                    'phone2',
+                    "phone2",
                     models.CharField(
                         blank=True,
-                        help_text='رقم هاتف إضافي اختياري',
+                        help_text="رقم هاتف إضافي اختياري",
                         max_length=20,
                         null=True,
-                        verbose_name='رقم الهاتف الثاني',
+                        verbose_name="رقم الهاتف الثاني",
                     ),
                 ),
                 (
-                    'email',
+                    "email",
                     models.EmailField(
                         blank=True,
                         max_length=254,
                         null=True,
-                        verbose_name='البريد الإلكتروني',
+                        verbose_name="البريد الإلكتروني",
                     ),
                 ),
-                ('address', models.TextField(verbose_name='العنوان')),
+                ("address", models.TextField(verbose_name="العنوان")),
                 (
-                    'interests',
+                    "interests",
                     models.TextField(
                         blank=True,
-                        help_text='اكتب اهتمامات العميل وتفضيلاته',
-                        verbose_name='اهتمامات العميل',
+                        help_text="اكتب اهتمامات العميل وتفضيلاته",
+                        verbose_name="اهتمامات العميل",
                     ),
                 ),
                 (
-                    'status',
+                    "status",
                     models.CharField(
                         choices=[
-                            ('active', 'نشط'),
-                            ('inactive', 'غير نشط'),
-                            ('blocked', 'محظور'),
+                            ("active", "نشط"),
+                            ("inactive", "غير نشط"),
+                            ("blocked", "محظور"),
                         ],
                         db_index=True,
-                        default='active',
+                        default="active",
                         max_length=10,
-                        verbose_name='الحالة',
+                        verbose_name="الحالة",
                     ),
                 ),
-                ('notes', models.TextField(blank=True, verbose_name='ملاحظات')),
+                ("notes", models.TextField(blank=True, verbose_name="ملاحظات")),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'updated_at',
-                    models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث'),
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث"),
                 ),
                 (
-                    'branch',
+                    "branch",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.PROTECT,
-                        related_name='customers',
-                        to='accounts.branch',
-                        verbose_name='الفرع',
+                        related_name="customers",
+                        to="accounts.branch",
+                        verbose_name="الفرع",
                     ),
                 ),
                 (
-                    'created_by',
+                    "created_by",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='customers_created',
+                        related_name="customers_created",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تم الإنشاء بواسطة',
+                        verbose_name="تم الإنشاء بواسطة",
                     ),
                 ),
                 (
-                    'category',
+                    "category",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='customers',
-                        to='customers.customercategory',
-                        verbose_name='تصنيف العميل',
+                        related_name="customers",
+                        to="customers.customercategory",
+                        verbose_name="تصنيف العميل",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'عميل',
-                'verbose_name_plural': 'سجل العملاء',
-                'ordering': ['-created_at'],
-                'permissions': [
-                    ('view_customer_reports', 'Can view customer reports'),
-                    ('export_customer_data', 'Can export customer data'),
+                "verbose_name": "عميل",
+                "verbose_name_plural": "سجل العملاء",
+                "ordering": ["-created_at"],
+                "permissions": [
+                    ("view_customer_reports", "Can view customer reports"),
+                    ("export_customer_data", "Can export customer data"),
                 ],
             },
         ),
         migrations.CreateModel(
-            name='CustomerNote',
+            name="CustomerNote",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('note', models.TextField(verbose_name='الملاحظة')),
+                ("note", models.TextField(verbose_name="الملاحظة")),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'created_by',
+                    "created_by",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='customer_notes_created',
+                        related_name="customer_notes_created",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تم الإنشاء بواسطة',
+                        verbose_name="تم الإنشاء بواسطة",
                     ),
                 ),
                 (
-                    'customer',
+                    "customer",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='notes_history',
-                        to='customers.customer',
-                        verbose_name='العميل',
+                        related_name="notes_history",
+                        to="customers.customer",
+                        verbose_name="العميل",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'ملاحظة العميل',
-                'verbose_name_plural': 'ملاحظات العملاء',
-                'ordering': ['-created_at'],
+                "verbose_name": "ملاحظة العميل",
+                "verbose_name_plural": "ملاحظات العملاء",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='CustomerType',
+            name="CustomerType",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'code',
-                    models.CharField(max_length=20, unique=True, verbose_name='الرمز'),
+                    "code",
+                    models.CharField(max_length=20, unique=True, verbose_name="الرمز"),
                 ),
                 (
-                    'name',
+                    "name",
                     models.CharField(
-                        db_index=True, max_length=50, verbose_name='اسم النوع'
+                        db_index=True, max_length=50, verbose_name="اسم النوع"
                     ),
                 ),
-                ('description', models.TextField(blank=True, verbose_name='وصف النوع')),
-                ('is_active', models.BooleanField(default=True, verbose_name='نشط')),
+                ("description", models.TextField(blank=True, verbose_name="وصف النوع")),
+                ("is_active", models.BooleanField(default=True, verbose_name="نشط")),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'نوع العميل',
-                'verbose_name_plural': 'أنواع العملاء',
-                'ordering': ['name'],
-                'indexes': [
-                    models.Index(fields=['code'], name='customer_type_code_idx'),
-                    models.Index(fields=['name'], name='customer_type_name_idx'),
+                "verbose_name": "نوع العميل",
+                "verbose_name_plural": "أنواع العملاء",
+                "ordering": ["name"],
+                "indexes": [
+                    models.Index(fields=["code"], name="customer_type_code_idx"),
+                    models.Index(fields=["name"], name="customer_type_name_idx"),
                 ],
             },
         ),
         migrations.AddIndex(
-            model_name='customer',
-            index=models.Index(fields=['code'], name='cust_code_idx'),
+            model_name="customer",
+            index=models.Index(fields=["code"], name="cust_code_idx"),
         ),
         migrations.AddIndex(
-            model_name='customer',
-            index=models.Index(fields=['name'], name='cust_name_idx'),
+            model_name="customer",
+            index=models.Index(fields=["name"], name="cust_name_idx"),
         ),
         migrations.AddIndex(
-            model_name='customer',
-            index=models.Index(fields=['phone', 'phone2'], name='cust_phones_idx'),
+            model_name="customer",
+            index=models.Index(fields=["phone", "phone2"], name="cust_phones_idx"),
         ),
         migrations.AddIndex(
-            model_name='customer',
-            index=models.Index(fields=['email'], name='cust_email_idx'),
+            model_name="customer",
+            index=models.Index(fields=["email"], name="cust_email_idx"),
         ),
         migrations.AddIndex(
-            model_name='customer',
-            index=models.Index(fields=['status'], name='cust_status_idx'),
+            model_name="customer",
+            index=models.Index(fields=["status"], name="cust_status_idx"),
         ),
         migrations.AddIndex(
-            model_name='customer',
-            index=models.Index(fields=['customer_type'], name='cust_type_idx'),
+            model_name="customer",
+            index=models.Index(fields=["customer_type"], name="cust_type_idx"),
         ),
         migrations.AddIndex(
-            model_name='customer',
-            index=models.Index(fields=['created_at'], name='cust_created_idx'),
+            model_name="customer",
+            index=models.Index(fields=["created_at"], name="cust_created_idx"),
         ),
         migrations.AddIndex(
-            model_name='customer',
-            index=models.Index(fields=['updated_at'], name='cust_updated_idx'),
+            model_name="customer",
+            index=models.Index(fields=["updated_at"], name="cust_updated_idx"),
         ),
         migrations.AddIndex(
-            model_name='customer',
+            model_name="customer",
             index=models.Index(
-                fields=['branch', 'status', 'customer_type'], name='cust_br_st_type_idx'
+                fields=["branch", "status", "customer_type"], name="cust_br_st_type_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='customer',
+            model_name="customer",
             index=models.Index(
-                fields=['name', 'phone', 'email'], name='cust_search_idx'
+                fields=["name", "phone", "email"], name="cust_search_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='customer',
+            model_name="customer",
             index=models.Index(
-                fields=['created_by', 'branch'], name='cust_creator_branch_idx'
+                fields=["created_by", "branch"], name="cust_creator_branch_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='customer',
+            model_name="customer",
             index=models.Index(
-                condition=models.Q(('status', 'active')),
-                fields=['name', 'phone'],
-                name='cust_active_idx',
+                condition=models.Q(("status", "active")),
+                fields=["name", "phone"],
+                name="cust_active_idx",
             ),
         ),
         migrations.AddIndex(
-            model_name='customernote',
+            model_name="customernote",
             index=models.Index(
-                fields=['customer', 'created_at'], name='customer_note_idx'
+                fields=["customer", "created_at"], name="customer_note_idx"
             ),
         ),
         migrations.AddIndex(
-            model_name='customernote',
-            index=models.Index(fields=['created_by'], name='customer_note_creator_idx'),
+            model_name="customernote",
+            index=models.Index(fields=["created_by"], name="customer_note_creator_idx"),
         ),
     ]

@@ -1,6 +1,5 @@
 {% load static %}
 {% load i18n %}
-
 <style>
     .production-dashboard {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -107,19 +106,20 @@
         .stat-card { break-inside: avoid; }
     }
 </style>
-
 <div class="production-dashboard">
     <!-- رأس التقرير -->
     <div class="d-flex justify-content-between align-items-center mb-4 no-print">
         <div>
-            <h3 class="mb-1"><i class="fas fa-industry me-2"></i>تقرير الإنتاج الشامل</h3>
+            <h3 class="mb-1">
+                <i class="fas fa-industry me-2"></i>تقرير الإنتاج الشامل
+            </h3>
             <small class="text-muted">
                 من {{ data.date_from|date:"Y/m/d" }} إلى {{ data.date_to|date:"Y/m/d" }}
                 {% if data.selected_warehouses %}
-                <span class="ms-2">
-                    <i class="fas fa-warehouse me-1"></i>
-                    {{ data.selected_warehouses|length }} مستودع
-                </span>
+                    <span class="ms-2">
+                        <i class="fas fa-warehouse me-1"></i>
+                        {{ data.selected_warehouses|length }} مستودع
+                    </span>
                 {% endif %}
             </small>
         </div>
@@ -132,7 +132,6 @@
             </button>
         </div>
     </div>
-
     <!-- نموذج الفلترة -->
     <div class="card filter-card mb-4 no-print">
         <div class="card-body">
@@ -140,30 +139,46 @@
                 <div class="row g-3 align-items-end">
                     <div class="col-md-2">
                         <label class="form-label fw-bold">من تاريخ</label>
-                        <input type="date" name="date_from" class="form-control" 
+                        <input type="date"
+                               name="date_from"
+                               class="form-control"
                                value="{{ data.date_from|date:'Y-m-d' }}">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-bold">إلى تاريخ</label>
-                        <input type="date" name="date_to" class="form-control" 
+                        <input type="date"
+                               name="date_to"
+                               class="form-control"
                                value="{{ data.date_to|date:'Y-m-d' }}">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-bold">العرض</label>
                         <select name="view_mode" class="form-select">
                             <option value="all" {% if data.view_mode == 'all' %}selected{% endif %}>الكل</option>
-                            <option value="incoming" {% if data.view_mode == 'incoming' %}selected{% endif %}>الوارد فقط</option>
-                            <option value="produced" {% if data.view_mode == 'produced' %}selected{% endif %}>المنتج فقط</option>
+                            <option value="incoming"
+                                    {% if data.view_mode == 'incoming' %}selected{% endif %}>الوارد فقط</option>
+                            <option value="produced"
+                                    {% if data.view_mode == 'produced' %}selected{% endif %}>المنتج فقط</option>
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-bold">نوع الطلب</label>
                         <select name="order_types" class="form-select" multiple size="1">
                             <option value="">الكل</option>
-                            <option value="installation" {% if 'installation' in data.selected_order_types %}selected{% endif %}>تركيب</option>
-                            <option value="custom" {% if 'custom' in data.selected_order_types %}selected{% endif %}>تفصيل</option>
-                            <option value="accessory" {% if 'accessory' in data.selected_order_types %}selected{% endif %}>اكسسوار</option>
-                            <option value="modification" {% if 'modification' in data.selected_order_types %}selected{% endif %}>تعديل</option>
+                            <option value="installation"
+                                    {% if 'installation' in data.selected_order_types %}selected{% endif %}>
+                                تركيب
+                            </option>
+                            <option value="custom"
+                                    {% if 'custom' in data.selected_order_types %}selected{% endif %}>تفصيل</option>
+                            <option value="accessory"
+                                    {% if 'accessory' in data.selected_order_types %}selected{% endif %}>
+                                اكسسوار
+                            </option>
+                            <option value="modification"
+                                    {% if 'modification' in data.selected_order_types %}selected{% endif %}>
+                                تعديل
+                            </option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -171,7 +186,10 @@
                         <select name="production_line" class="form-select">
                             <option value="">الكل</option>
                             {% for pl in data.production_lines %}
-                            <option value="{{ pl.id }}" {% if data.selected_production_line == pl.id|stringformat:"s" %}selected{% endif %}>{{ pl.name }}</option>
+                                <option value="{{ pl.id }}"
+                                        {% if data.selected_production_line == pl.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ pl.name }}
+                                </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -181,30 +199,30 @@
                         </button>
                     </div>
                 </div>
-                
                 <!-- صف ثاني: المستودعات -->
                 <div class="row g-3 mt-2">
                     <div class="col-md-12">
                         <label class="form-label fw-bold">
                             <i class="fas fa-warehouse me-1"></i>
-                            المستودعات لحساب الأمتار 
+                            المستودعات لحساب الأمتار
                             <small class="text-muted">(اتركها فارغة لاستخدام الإعدادات الافتراضية)</small>
                         </label>
                         <div class="d-flex flex-wrap gap-2 border rounded p-2 bg-light">
                             {% for wh in data.all_warehouses %}
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="warehouses" 
-                                       value="{{ wh.id }}" id="wh_{{ wh.id }}"
-                                       {% if wh.id in data.selected_warehouses %}checked{% endif %}>
-                                <label class="form-check-label" for="wh_{{ wh.id }}">
-                                    {{ wh.name }}
-                                    {% if wh.id in data.default_warehouses %}
-                                    <span class="badge bg-info" title="مستودع افتراضي">✓</span>
-                                    {% endif %}
-                                </label>
-                            </div>
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="warehouses"
+                                           value="{{ wh.id }}"
+                                           id="wh_{{ wh.id }}"
+                                           {% if wh.id in data.selected_warehouses %}checked{% endif %}>
+                                    <label class="form-check-label" for="wh_{{ wh.id }}">
+                                        {{ wh.name }}
+                                        {% if wh.id in data.default_warehouses %}<span class="badge bg-info" title="مستودع افتراضي">✓</span>{% endif %}
+                                    </label>
+                                </div>
                             {% empty %}
-                            <span class="text-muted">لا توجد مستودعات متاحة</span>
+                                <span class="text-muted">لا توجد مستودعات متاحة</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -212,7 +230,6 @@
             </form>
         </div>
     </div>
-
     <!-- بطاقات الإحصائيات الرئيسية -->
     <div class="row g-4 mb-4">
         <!-- الوارد -->
@@ -232,7 +249,6 @@
                 </div>
             </div>
         </div>
-        
         <!-- المنتج -->
         <div class="col-md-3">
             <div class="card stat-card bg-gradient-success text-white h-100">
@@ -250,7 +266,6 @@
                 </div>
             </div>
         </div>
-        
         <!-- قيد الانتظار -->
         <div class="col-md-3">
             <div class="card stat-card bg-gradient-warning text-white h-100">
@@ -268,7 +283,6 @@
                 </div>
             </div>
         </div>
-        
         <!-- نسبة الإنجاز -->
         <div class="col-md-3">
             <div class="card stat-card bg-gradient-info text-white h-100">
@@ -287,31 +301,38 @@
             </div>
         </div>
     </div>
-
     <!-- التبويبات -->
     <ul class="nav nav-pills mb-4 no-print" id="reportTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="incoming-tab" data-bs-toggle="pill" 
-                    data-bs-target="#incoming" type="button">
+            <button class="nav-link active"
+                    id="incoming-tab"
+                    data-bs-toggle="pill"
+                    data-bs-target="#incoming"
+                    type="button">
                 <i class="fas fa-inbox me-1"></i>الوارد للمصنع
                 <span class="badge bg-light text-dark ms-1">{{ data.incoming_total }}</span>
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="produced-tab" data-bs-toggle="pill" 
-                    data-bs-target="#produced" type="button">
+            <button class="nav-link"
+                    id="produced-tab"
+                    data-bs-toggle="pill"
+                    data-bs-target="#produced"
+                    type="button">
                 <i class="fas fa-check-circle me-1"></i>المنتج
                 <span class="badge bg-light text-dark ms-1">{{ data.produced_total }}</span>
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="stats-tab" data-bs-toggle="pill" 
-                    data-bs-target="#stats" type="button">
+            <button class="nav-link"
+                    id="stats-tab"
+                    data-bs-toggle="pill"
+                    data-bs-target="#stats"
+                    type="button">
                 <i class="fas fa-chart-bar me-1"></i>الإحصائيات
             </button>
         </li>
     </ul>
-
     <div class="tab-content" id="reportTabsContent">
         <!-- تبويب الوارد -->
         <div class="tab-pane fade show active" id="incoming" role="tabpanel">
@@ -341,63 +362,56 @@
                             </thead>
                             <tbody>
                                 {% for order in data.incoming_orders_data %}
-                                <tr>
-                                    <td>{{ forloop.counter }}</td>
-                                    <td>
-                                        <a href="{% url 'manufacturing:order_detail_by_code' order.manufacturing_code %}" 
-                                           target="_blank" class="fw-bold text-primary">
-                                            {{ order.manufacturing_code }}
-                                        </a>
-                                    </td>
-                                    <td>{{ order.order_number }}</td>
-                                    <td>{{ order.customer_name }}</td>
-                                    <td>
-                                        <span class="badge badge-type 
-                                            {% if order.order_type == 'installation' %}bg-info
-                                            {% elif order.order_type == 'custom' %}bg-success
-                                            {% elif order.order_type == 'accessory' %}bg-warning text-dark
-                                            {% else %}bg-secondary{% endif %}">
-                                            {{ order.order_type_display }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge 
-                                            {% if order.current_status == 'completed' or order.current_status == 'delivered' %}bg-success
-                                            {% elif order.current_status == 'ready_install' %}bg-primary
-                                            {% elif order.current_status == 'in_progress' %}bg-warning text-dark
-                                            {% elif order.current_status == 'pending' %}bg-info
-                                            {% else %}bg-secondary{% endif %}">
-                                            {{ order.current_status_display }}
-                                        </span>
-                                    </td>
-                                    <td><strong>{{ order.meters }}</strong> م</td>
-                                    <td>{{ order.received_date|date:"Y-m-d H:i" }}</td>
-                                    <td>{{ order.received_by }}</td>
-                                </tr>
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            <a href="{% url 'manufacturing:order_detail_by_code' order.manufacturing_code %}"
+                                               target="_blank"
+                                               class="fw-bold text-primary">{{ order.manufacturing_code }}</a>
+                                        </td>
+                                        <td>{{ order.order_number }}</td>
+                                        <td>{{ order.customer_name }}</td>
+                                        <td>
+                                            <span class="badge badge-type {% if order.order_type == 'installation' %}bg-info {% elif order.order_type == 'custom' %}bg-success {% elif order.order_type == 'accessory' %}bg-warning text-dark {% else %}bg-secondary{% endif %}">
+                                                {{ order.order_type_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if order.current_status == 'completed' or order.current_status == 'delivered' %}bg-success {% elif order.current_status == 'ready_install' %}bg-primary {% elif order.current_status == 'in_progress' %}bg-warning text-dark {% elif order.current_status == 'pending' %}bg-info {% else %}bg-secondary{% endif %}">
+                                                {{ order.current_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <strong>{{ order.meters }}</strong> م
+                                        </td>
+                                        <td>{{ order.received_date|date:"Y-m-d H:i" }}</td>
+                                        <td>{{ order.received_by }}</td>
+                                    </tr>
                                 {% empty %}
-                                <tr>
-                                    <td colspan="9" class="text-center py-5 text-muted">
-                                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-                                        لا توجد طلبات واردة في الفترة المحددة
-                                    </td>
-                                </tr>
+                                    <tr>
+                                        <td colspan="9" class="text-center py-5 text-muted">
+                                            <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                            لا توجد طلبات واردة في الفترة المحددة
+                                        </td>
+                                    </tr>
                                 {% endfor %}
                             </tbody>
                             {% if data.incoming_orders_data %}
-                            <tfoot class="table-light">
-                                <tr>
-                                    <th colspan="6" class="text-end">الإجمالي:</th>
-                                    <th><strong>{{ data.incoming_meters }}</strong> م</th>
-                                    <th colspan="2"></th>
-                                </tr>
-                            </tfoot>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <th colspan="6" class="text-end">الإجمالي:</th>
+                                        <th>
+                                            <strong>{{ data.incoming_meters }}</strong> م
+                                        </th>
+                                        <th colspan="2"></th>
+                                    </tr>
+                                </tfoot>
                             {% endif %}
                         </table>
                     </div>
                 </div>
             </div>
         </div>
-
         <!-- تبويب المنتج -->
         <div class="tab-pane fade" id="produced" role="tabpanel">
             <div class="card">
@@ -427,57 +441,55 @@
                             </thead>
                             <tbody>
                                 {% for order in data.produced_orders_data %}
-                                <tr>
-                                    <td>{{ forloop.counter }}</td>
-                                    <td>
-                                        <a href="{% url 'manufacturing:order_detail_by_code' order.manufacturing_code %}" 
-                                           target="_blank" class="fw-bold text-primary">
-                                            {{ order.manufacturing_code }}
-                                        </a>
-                                    </td>
-                                    <td>{{ order.order_number }}</td>
-                                    <td>{{ order.customer_name }}</td>
-                                    <td>
-                                        <span class="badge badge-type 
-                                            {% if order.order_type == 'installation' %}bg-info
-                                            {% elif order.order_type == 'custom' %}bg-success
-                                            {% elif order.order_type == 'accessory' %}bg-warning text-dark
-                                            {% else %}bg-secondary{% endif %}">
-                                            {{ order.order_type_display }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-success">{{ order.status_display }}</span>
-                                    </td>
-                                    <td><strong>{{ order.meters }}</strong> م</td>
-                                    <td>{{ order.production_date|date:"Y-m-d H:i" }}</td>
-                                    <td>{{ order.changed_by }}</td>
-                                    <td>{{ order.production_line }}</td>
-                                </tr>
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            <a href="{% url 'manufacturing:order_detail_by_code' order.manufacturing_code %}"
+                                               target="_blank"
+                                               class="fw-bold text-primary">{{ order.manufacturing_code }}</a>
+                                        </td>
+                                        <td>{{ order.order_number }}</td>
+                                        <td>{{ order.customer_name }}</td>
+                                        <td>
+                                            <span class="badge badge-type {% if order.order_type == 'installation' %}bg-info {% elif order.order_type == 'custom' %}bg-success {% elif order.order_type == 'accessory' %}bg-warning text-dark {% else %}bg-secondary{% endif %}">
+                                                {{ order.order_type_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">{{ order.status_display }}</span>
+                                        </td>
+                                        <td>
+                                            <strong>{{ order.meters }}</strong> م
+                                        </td>
+                                        <td>{{ order.production_date|date:"Y-m-d H:i" }}</td>
+                                        <td>{{ order.changed_by }}</td>
+                                        <td>{{ order.production_line }}</td>
+                                    </tr>
                                 {% empty %}
-                                <tr>
-                                    <td colspan="10" class="text-center py-5 text-muted">
-                                        <i class="fas fa-check-circle fa-3x mb-3 d-block"></i>
-                                        لا توجد طلبات منتجة في الفترة المحددة
-                                    </td>
-                                </tr>
+                                    <tr>
+                                        <td colspan="10" class="text-center py-5 text-muted">
+                                            <i class="fas fa-check-circle fa-3x mb-3 d-block"></i>
+                                            لا توجد طلبات منتجة في الفترة المحددة
+                                        </td>
+                                    </tr>
                                 {% endfor %}
                             </tbody>
                             {% if data.produced_orders_data %}
-                            <tfoot class="table-light">
-                                <tr>
-                                    <th colspan="6" class="text-end">الإجمالي:</th>
-                                    <th><strong>{{ data.produced_meters }}</strong> م</th>
-                                    <th colspan="3"></th>
-                                </tr>
-                            </tfoot>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <th colspan="6" class="text-end">الإجمالي:</th>
+                                        <th>
+                                            <strong>{{ data.produced_meters }}</strong> م
+                                        </th>
+                                        <th colspan="3"></th>
+                                    </tr>
+                                </tfoot>
                             {% endif %}
                         </table>
                     </div>
                 </div>
             </div>
         </div>
-
         <!-- تبويب الإحصائيات -->
         <div class="tab-pane fade" id="stats" role="tabpanel">
             <div class="row g-4">
@@ -485,7 +497,9 @@
                 <div class="col-md-6">
                     <div class="card h-100">
                         <div class="card-header bg-light">
-                            <h6 class="mb-0"><i class="fas fa-inbox me-2"></i>توزيع الوارد حسب النوع</h6>
+                            <h6 class="mb-0">
+                                <i class="fas fa-inbox me-2"></i>توزيع الوارد حسب النوع
+                            </h6>
                         </div>
                         <div class="card-body">
                             <table class="table table-sm">
@@ -499,33 +513,36 @@
                                 </thead>
                                 <tbody>
                                     {% for item in data.incoming_type_distribution %}
-                                    <tr>
-                                        <td>{{ item.type }}</td>
-                                        <td>{{ item.count }}</td>
-                                        <td>{{ item.meters }} م</td>
-                                        <td>
-                                            <div class="progress" style="height: 20px;">
-                                                <div class="progress-bar bg-primary" 
-                                                     style="width: {% widthratio item.count data.incoming_total 100 %}%">
-                                                    {% widthratio item.count data.incoming_total 100 %}%
+                                        <tr>
+                                            <td>{{ item.type }}</td>
+                                            <td>{{ item.count }}</td>
+                                            <td>{{ item.meters }} م</td>
+                                            <td>
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar bg-primary"
+                                                         style="width: {% widthratio item.count data.incoming_total 100 %}%">
+                                                        {% widthratio item.count data.incoming_total 100 %}%
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                            </td>
+                                        </tr>
                                     {% empty %}
-                                    <tr><td colspan="4" class="text-center text-muted">لا توجد بيانات</td></tr>
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">لا توجد بيانات</td>
+                                        </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-
                 <!-- توزيع المنتج حسب النوع -->
                 <div class="col-md-6">
                     <div class="card h-100">
                         <div class="card-header bg-light">
-                            <h6 class="mb-0"><i class="fas fa-check-circle me-2"></i>توزيع المنتج حسب النوع</h6>
+                            <h6 class="mb-0">
+                                <i class="fas fa-check-circle me-2"></i>توزيع المنتج حسب النوع
+                            </h6>
                         </div>
                         <div class="card-body">
                             <table class="table table-sm">
@@ -539,33 +556,36 @@
                                 </thead>
                                 <tbody>
                                     {% for item in data.produced_type_distribution %}
-                                    <tr>
-                                        <td>{{ item.type }}</td>
-                                        <td>{{ item.count }}</td>
-                                        <td>{{ item.meters }} م</td>
-                                        <td>
-                                            <div class="progress" style="height: 20px;">
-                                                <div class="progress-bar bg-success" 
-                                                     style="width: {% widthratio item.count data.produced_total 100 %}%">
-                                                    {% widthratio item.count data.produced_total 100 %}%
+                                        <tr>
+                                            <td>{{ item.type }}</td>
+                                            <td>{{ item.count }}</td>
+                                            <td>{{ item.meters }} م</td>
+                                            <td>
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar bg-success"
+                                                         style="width: {% widthratio item.count data.produced_total 100 %}%">
+                                                        {% widthratio item.count data.produced_total 100 %}%
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                            </td>
+                                        </tr>
                                     {% empty %}
-                                    <tr><td colspan="4" class="text-center text-muted">لا توجد بيانات</td></tr>
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">لا توجد بيانات</td>
+                                        </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-
                 <!-- أداء المستلمين -->
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header bg-light">
-                            <h6 class="mb-0"><i class="fas fa-users me-2"></i>أداء فريق الإنتاج</h6>
+                            <h6 class="mb-0">
+                                <i class="fas fa-users me-2"></i>أداء فريق الإنتاج
+                            </h6>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -582,25 +602,27 @@
                                     </thead>
                                     <tbody>
                                         {% for user in data.user_distribution|slice:":15" %}
-                                        <tr>
-                                            <td>{{ forloop.counter }}</td>
-                                            <td><strong>{{ user.user }}</strong></td>
-                                            <td>{{ user.count }}</td>
-                                            <td>{{ user.meters }} م</td>
-                                            <td>{% widthratio user.meters user.count 1 %} م</td>
-                                            <td>
-                                                <div class="progress" style="height: 25px; min-width: 100px;">
-                                                    <div class="progress-bar bg-info" 
-                                                         style="width: {% widthratio user.count data.produced_total 100 %}%">
-                                                        {% widthratio user.count data.produced_total 100 %}%
+                                            <tr>
+                                                <td>{{ forloop.counter }}</td>
+                                                <td>
+                                                    <strong>{{ user.user }}</strong>
+                                                </td>
+                                                <td>{{ user.count }}</td>
+                                                <td>{{ user.meters }} م</td>
+                                                <td>{% widthratio user.meters user.count 1 %} م</td>
+                                                <td>
+                                                    <div class="progress" style="height: 25px; min-width: 100px;">
+                                                        <div class="progress-bar bg-info"
+                                                             style="width: {% widthratio user.count data.produced_total 100 %}%">
+                                                            {% widthratio user.count data.produced_total 100 %}%
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                                </td>
+                                            </tr>
                                         {% empty %}
-                                        <tr>
-                                            <td colspan="6" class="text-center text-muted">لا توجد بيانات</td>
-                                        </tr>
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">لا توجد بيانات</td>
+                                            </tr>
                                         {% endfor %}
                                     </tbody>
                                 </table>
@@ -608,7 +630,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- ملخص -->
                 <div class="col-12">
                     <div class="card bg-light">
@@ -638,7 +659,6 @@
         </div>
     </div>
 </div>
-
 <script>
 // تصدير Excel
 function exportToExcel() {

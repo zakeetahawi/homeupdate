@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
-
 {% block title %}سجل حالة الطلب - {{ order.order_number }}{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .status-history-container {
         background: #fff;
         border-radius: 8px;
@@ -287,83 +285,109 @@
         line-height: 1.2;
         text-align: right;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="status-history-header">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h2><i class="fas fa-history"></i> سجل حالة الطلب</h2>
-                <p class="mb-0">رقم الطلب: <strong>{{ order.order_number }}</strong></p>
-                <p class="mb-0">العميل: <strong>{{ order.customer.name }}</strong></p>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="status-history-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2>
+                        <i class="fas fa-history"></i> سجل حالة الطلب
+                    </h2>
+                    <p class="mb-0">
+                        رقم الطلب: <strong>{{ order.order_number }}</strong>
+                    </p>
+                    <p class="mb-0">
+                        العميل: <strong>{{ order.customer.name }}</strong>
+                    </p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <a href="{% url 'orders:order_detail_by_number' order.order_number %}"
+                       class="btn btn-light">
+                        <i class="fas fa-arrow-left"></i> العودة للطلب
+                    </a>
+                </div>
             </div>
-            <div class="col-md-4 text-md-end">
-                <a href="{% url 'orders:order_detail_by_number' order.order_number %}" class="btn btn-light">
-                    <i class="fas fa-arrow-left"></i> العودة للطلب
-                </a>
+        </div>
+        <!-- Statistics Cards -->
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_logs }}</div>
+                <div class="stat-label">إجمالي التغييرات</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ order.status_logs.count }}</div>
+                <div class="stat-label">سجلات الحالة</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ users.count }}</div>
+                <div class="stat-label">مستخدمين قاموا بالتغيير</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ order.get_display_status_text }}</div>
+                <div class="stat-label">الحالة الحالية</div>
             </div>
         </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="stats-cards">
-        <div class="stat-card">
-            <div class="stat-number">{{ total_logs }}</div>
-            <div class="stat-label">إجمالي التغييرات</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{{ order.status_logs.count }}</div>
-            <div class="stat-label">سجلات الحالة</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{{ users.count }}</div>
-            <div class="stat-label">مستخدمين قاموا بالتغيير</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{{ order.get_display_status_text }}</div>
-            <div class="stat-label">الحالة الحالية</div>
-        </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="filters-section">
-        <form method="get" class="row g-3">
-            <div class="col-md-3">
-                <label for="search" class="form-label">البحث</label>
-                <input type="text" class="form-control" id="search" name="search"
-                       value="{{ search_query }}" placeholder="البحث في الملاحظات أو اسم المستخدم">
-            </div>
-            <div class="col-md-2">
-                <label for="change_type" class="form-label">نوع التغيير</label>
-                <select class="form-select" id="change_type" name="change_type">
-                    <option value="">جميع الأنواع</option>
-                    <option value="creation" {% if request.GET.change_type == 'creation' %}selected{% endif %}>إنشاء طلب</option>
-                    <option value="status" {% if request.GET.change_type == 'status' %}selected{% endif %}>تغيير حالة</option>
-                    <option value="customer" {% if request.GET.change_type == 'customer' %}selected{% endif %}>تغيير عميل</option>
-                    <option value="price" {% if request.GET.change_type == 'price' %}selected{% endif %}>تغيير سعر</option>
-                    <option value="date" {% if request.GET.change_type == 'date' %}selected{% endif %}>تغيير تاريخ</option>
-                    <option value="payment" {% if request.GET.change_type == 'payment' %}selected{% endif %}>تحديث دفع</option>
-                    <option value="general" {% if request.GET.change_type == 'general' %}selected{% endif %}>تحديثات عامة</option>
-                    <!-- فلاتر الأقسام -->
-                    <optgroup label="الأقسام">
-                        <option value="inspection" {% if request.GET.change_type == 'inspection' %}selected{% endif %}>🔍 المعاينات</option>
-                        <option value="installation" {% if request.GET.change_type == 'installation' %}selected{% endif %}>🔧 التركيب</option>
-                        <option value="manufacturing" {% if request.GET.change_type == 'manufacturing' %}selected{% endif %}>🏭 التصنيع</option>
-                        <option value="cutting" {% if request.GET.change_type == 'cutting' %}selected{% endif %}>✂️ التقطيع</option>
-                    </optgroup>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label for="status" class="form-label">الحالة</label>
-                <select class="form-select" id="status" name="status">
+        <!-- Filters -->
+        <div class="filters-section">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="search" class="form-label">البحث</label>
+                    <input type="text"
+                           class="form-control"
+                           id="search"
+                           name="search"
+                           value="{{ search_query }}"
+                           placeholder="البحث في الملاحظات أو اسم المستخدم">
+                </div>
+                <div class="col-md-2">
+                    <label for="change_type" class="form-label">نوع التغيير</label>
+                    <select class="form-select" id="change_type" name="change_type">
+                        <option value="">جميع الأنواع</option>
+                        <option value="creation"
+                                {% if request.GET.change_type == 'creation' %}selected{% endif %}>إنشاء طلب</option>
+                        <option value="status"
+                                {% if request.GET.change_type == 'status' %}selected{% endif %}>تغيير حالة</option>
+                        <option value="customer"
+                                {% if request.GET.change_type == 'customer' %}selected{% endif %}>تغيير عميل</option>
+                        <option value="price"
+                                {% if request.GET.change_type == 'price' %}selected{% endif %}>تغيير سعر</option>
+                        <option value="date"
+                                {% if request.GET.change_type == 'date' %}selected{% endif %}>تغيير تاريخ</option>
+                        <option value="payment"
+                                {% if request.GET.change_type == 'payment' %}selected{% endif %}>تحديث دفع</option>
+                        <option value="general"
+                                {% if request.GET.change_type == 'general' %}selected{% endif %}>تحديثات عامة</option>
+                        <!-- فلاتر الأقسام -->
+                        <optgroup label="الأقسام">
+                            <option value="inspection"
+                                    {% if request.GET.change_type == 'inspection' %}selected{% endif %}>
+                                🔍 المعاينات
+                            </option>
+                            <option value="installation"
+                                    {% if request.GET.change_type == 'installation' %}selected{% endif %}>
+                                🔧 التركيب
+                            </option>
+                            <option value="manufacturing"
+                                    {% if request.GET.change_type == 'manufacturing' %}selected{% endif %}>
+                                🏭 التصنيع
+                            </option>
+                            <option value="cutting"
+                                    {% if request.GET.change_type == 'cutting' %}selected{% endif %}>
+                                ✂️ التقطيع
+                            </option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">الحالة</label>
+                    <select class="form-select" id="status" name="status">
                         <option value="">جميع الحالات</option>
                         {% for status_code, status_name in status_choices %}
-                        <option value="{{ status_code }}" {% if status_filter == status_code %}selected{% endif %}>
-                            {{ status_name }}
-                        </option>
+                            <option value="{{ status_code }}"
+                                    {% if status_filter == status_code %}selected{% endif %}>{{ status_name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -374,9 +398,10 @@
                     <select class="form-select" id="user" name="user">
                         <option value="">جميع المستخدمين</option>
                         {% for user in users %}
-                        <option value="{{ user.id }}" {% if user_filter == user.id|stringformat:"s" %}selected{% endif %}>
-                            {{ user.get_full_name|default:user.username }}
-                        </option>
+                            <option value="{{ user.id }}"
+                                    {% if user_filter == user.id|stringformat:"s" %}selected{% endif %}>
+                                {{ user.get_full_name|default:user.username }}
+                            </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -388,7 +413,8 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-search"></i> بحث
                         </button>
-                        <a href="{% url 'orders:status_history' order.id %}" class="btn btn-secondary">
+                        <a href="{% url 'orders:status_history' order.id %}"
+                           class="btn btn-secondary">
                             <i class="fas fa-times"></i> مسح
                         </a>
                     </div>
@@ -396,184 +422,187 @@
             </div>
         </form>
     </div>
-
     <!-- Status Logs -->
     <div class="status-history-container">
         {% if page_obj %}
             {% for log in page_obj %}
                 {# Skip generic manufacturing-sync logs; prefer the explicit manufacturing log created in the manufacturing views #}
                 {% if not log.notes or "مزامنة حالة الطلب" not in log.notes %}
-                <div class="status-log-item" data-change-type="{{ log.change_type }}" data-order-type="{{ log.order.get_selected_types_display|default:'' }}">
-                    <div class="row">
-                        <div class="col-md-1 text-center">
-                            <div class="change-icon">
-                                <i class="{{ log.change_icon }} text-{{ log.change_color }}"></i>
-                            </div>
-                        </div>
-                        <div class="col-md-11">
-                            <div class="status-change">
-                                <strong>{{ log.get_detailed_description }}</strong>
-                                {% if log.change_type != 'creation' and log.change_type != 'status' %}
-                                    <span class="badge badge-{{ log.change_color }} ms-2">{{ log.change_type_display }}</span>
-                                {% endif %}
-                                {% if log.change_type == 'status' and log.order.get_selected_types_display %}
-                                    <span class="badge badge-outline-secondary ms-2">{{ log.order.get_selected_types_display }}</span>
-                                {% endif %}
-                            </div>
-
-                            {% if log.notes and log.change_type != 'creation' %}
-                            <div class="notes mt-2">
-                                <i class="fas fa-sticky-note text-muted"></i>
-                                <small class="text-muted">{{ log.notes }}</small>
-                            </div>
-                            {% endif %}
-
-                            <!-- عرض التفاصيل القديمة والجديدة مع badges -->
-                            {% if log.change_details %}
-                                <div class="change-details mt-3 p-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; border-left: 4px solid #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                                    <div class="row align-items-center">
-                                        {% if log.change_details.field_name %}
-                                        <div class="col-12 mb-3">
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-edit text-primary me-2"></i>
-                                                <small class="text-muted me-2">الحقل المعدل:</small>
-                                                <span class="badge bg-primary" style="font-size: 0.75em;">
-                                                    <i class="fas fa-tag me-1"></i>{{ log.change_details.field_name }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        {% endif %}
-
-                                        {% if log.change_details.old_value or log.change_details.new_value %}
-                                        <div class="col-md-6 mb-2">
-                                            <div class="d-flex flex-column">
-                                                <small class="text-muted mb-1">
-                                                    <i class="fas fa-history text-warning me-1"></i> القيمة السابقة:
-                                                </small>
-                                                <span class="badge bg-light text-dark border border-warning" style="font-size: 0.85em; padding: 8px 12px; word-break: break-all;">
-                                                    <i class="fas fa-minus-circle text-warning me-1"></i>
-                                                    {{ log.change_details.old_value|default:"غير محدد" }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6 mb-2">
-                                            <div class="d-flex flex-column">
-                                                <small class="text-muted mb-1">
-                                                    <i class="fas fa-check-circle text-success me-1"></i> القيمة الجديدة:
-                                                </small>
-                                                <span class="badge bg-success text-white" style="font-size: 0.85em; padding: 8px 12px; word-break: break-all;">
-                                                    <i class="fas fa-plus-circle me-1"></i>
-                                                    {{ log.change_details.new_value|default:"غير محدد" }}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <!-- سهم التغيير -->
-                                        <div class="col-12 text-center mt-2">
-                                            <div class="change-arrow" style="opacity: 0.7;">
-                                                <i class="fas fa-long-arrow-alt-right text-primary" style="font-size: 1.2em;"></i>
-                                                <small class="text-muted ms-2">تم التغيير</small>
-                                            </div>
-                                        </div>
-                                        {% endif %}
-                                    </div>
+                    <div class="status-log-item"
+                         data-change-type="{{ log.change_type }}"
+                         data-order-type="{{ log.order.get_selected_types_display|default:'' }}">
+                        <div class="row">
+                            <div class="col-md-1 text-center">
+                                <div class="change-icon">
+                                    <i class="{{ log.change_icon }} text-{{ log.change_color }}"></i>
                                 </div>
-                            {% endif %}
-
-                            <!-- إضافة badge للحالة الأساسية للطلب إذا كان التغيير في حالة فرعية -->
-                            {% if log.change_type == 'status' and log.order.order_status %}
-                            <div class="mt-2 mb-2">
-                                <small class="text-muted">حالة الطلب الأساسية:</small>
-                                <span class="badge bg-primary ms-1" style="font-size: 0.75em;">
-                                    {{ log.order.get_order_status_display }}
-                                </span>
                             </div>
-                            {% endif %}
-
-                            <div class="row mt-2">
-                                <div class="col-md-6">
-                                    <div class="user-info">
-                                        {% if log.changed_by %}
-                                            <span class="badge bg-primary" style="font-size: 0.85em;">
-                                                <i class="fas fa-user"></i>
-                                                {{ log.changed_by.get_full_name|default:log.changed_by.username }}
-                                            </span>
-                                            {% if not log.is_automatic %}
-                                                <span class="badge bg-success ms-1" style="font-size: 0.7em;">
-                                                    <i class="fas fa-hand-pointer"></i> يدوي
+                            <div class="col-md-11">
+                                <div class="status-change">
+                                    <strong>{{ log.get_detailed_description }}</strong>
+                                    {% if log.change_type != 'creation' and log.change_type != 'status' %}
+                                        <span class="badge badge-{{ log.change_color }} ms-2">{{ log.change_type_display }}</span>
+                                    {% endif %}
+                                    {% if log.change_type == 'status' and log.order.get_selected_types_display %}
+                                        <span class="badge badge-outline-secondary ms-2">{{ log.order.get_selected_types_display }}</span>
+                                    {% endif %}
+                                </div>
+                                {% if log.notes and log.change_type != 'creation' %}
+                                    <div class="notes mt-2">
+                                        <i class="fas fa-sticky-note text-muted"></i>
+                                        <small class="text-muted">{{ log.notes }}</small>
+                                    </div>
+                                {% endif %}
+                                <!-- عرض التفاصيل القديمة والجديدة مع badges -->
+                                {% if log.change_details %}
+                                    <div class="change-details mt-3 p-3"
+                                         style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                                                border-radius: 8px;
+                                                border-left: 4px solid #007bff;
+                                                box-shadow: 0 2px 4px rgba(0,0,0,0.05)">
+                                        <div class="row align-items-center">
+                                            {% if log.change_details.field_name %}
+                                                <div class="col-12 mb-3">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fas fa-edit text-primary me-2"></i>
+                                                        <small class="text-muted me-2">الحقل المعدل:</small>
+                                                        <span class="badge bg-primary" style="font-size: 0.75em;">
+                                                            <i class="fas fa-tag me-1"></i>{{ log.change_details.field_name }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                            {% if log.change_details.old_value or log.change_details.new_value %}
+                                                <div class="col-md-6 mb-2">
+                                                    <div class="d-flex flex-column">
+                                                        <small class="text-muted mb-1">
+                                                            <i class="fas fa-history text-warning me-1"></i> القيمة السابقة:
+                                                        </small>
+                                                        <span class="badge bg-light text-dark border border-warning"
+                                                              style="font-size: 0.85em;
+                                                                     padding: 8px 12px;
+                                                                     word-break: break-all">
+                                                            <i class="fas fa-minus-circle text-warning me-1"></i>
+                                                            {{ log.change_details.old_value|default:"غير محدد" }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6 mb-2">
+                                                    <div class="d-flex flex-column">
+                                                        <small class="text-muted mb-1">
+                                                            <i class="fas fa-check-circle text-success me-1"></i> القيمة الجديدة:
+                                                        </small>
+                                                        <span class="badge bg-success text-white"
+                                                              style="font-size: 0.85em;
+                                                                     padding: 8px 12px;
+                                                                     word-break: break-all">
+                                                            <i class="fas fa-plus-circle me-1"></i>
+                                                            {{ log.change_details.new_value|default:"غير محدد" }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <!-- سهم التغيير -->
+                                                <div class="col-12 text-center mt-2">
+                                                    <div class="change-arrow" style="opacity: 0.7;">
+                                                        <i class="fas fa-long-arrow-alt-right text-primary"
+                                                           style="font-size: 1.2em"></i>
+                                                        <small class="text-muted ms-2">تم التغيير</small>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                <!-- إضافة badge للحالة الأساسية للطلب إذا كان التغيير في حالة فرعية -->
+                                {% if log.change_type == 'status' and log.order.order_status %}
+                                    <div class="mt-2 mb-2">
+                                        <small class="text-muted">حالة الطلب الأساسية:</small>
+                                        <span class="badge bg-primary ms-1" style="font-size: 0.75em;">{{ log.order.get_order_status_display }}</span>
+                                    </div>
+                                {% endif %}
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <div class="user-info">
+                                            {% if log.changed_by %}
+                                                <span class="badge bg-primary" style="font-size: 0.85em;">
+                                                    <i class="fas fa-user"></i>
+                                                    {{ log.changed_by.get_full_name|default:log.changed_by.username }}
+                                                </span>
+                                                {% if not log.is_automatic %}
+                                                    <span class="badge bg-success ms-1" style="font-size: 0.7em;">
+                                                        <i class="fas fa-hand-pointer"></i> يدوي
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-info ms-1" style="font-size: 0.7em;">
+                                                        <i class="fas fa-cog"></i> تلقائي
+                                                    </span>
+                                                {% endif %}
+                                            {% elif log.is_automatic %}
+                                                <span class="badge bg-secondary" style="font-size: 0.85em;">
+                                                    <i class="fas fa-robot"></i> النظام (تلقائي)
                                                 </span>
                                             {% else %}
-                                                <span class="badge bg-info ms-1" style="font-size: 0.7em;">
-                                                    <i class="fas fa-cog"></i> تلقائي
+                                                <span class="badge bg-warning text-dark" style="font-size: 0.85em;">
+                                                    <i class="fas fa-question-circle"></i> مستخدم غير محدد
                                                 </span>
                                             {% endif %}
-                                        {% elif log.is_automatic %}
-                                            <span class="badge bg-secondary" style="font-size: 0.85em;">
-                                                <i class="fas fa-robot"></i> النظام (تلقائي)
-                                            </span>
-                                        {% else %}
-                                            <span class="badge bg-warning text-dark" style="font-size: 0.85em;">
-                                                <i class="fas fa-question-circle"></i> مستخدم غير محدد
-                                            </span>
-                                        {% endif %}
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-md-6 text-end">
-                                    <div class="timestamp">
-                                        <i class="fas fa-clock text-muted"></i>
-                                        <small class="text-muted" style="font-size: 0.85em;">
-                                            {{ log.created_at|date:"Y-m-d" }}
-                                            <br>
-                                            <strong>{{ log.created_at|date:"H:i:s" }}</strong>
-                                        </small>
+                                    <div class="col-md-6 text-end">
+                                        <div class="timestamp">
+                                            <i class="fas fa-clock text-muted"></i>
+                                            <small class="text-muted" style="font-size: 0.85em;">
+                                                {{ log.created_at|date:"Y-m-d" }}
+                                                <br>
+                                                <strong>{{ log.created_at|date:"H:i:s" }}</strong>
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
                 {% endif %}
             {% endfor %}
-            
             <!-- Pagination -->
             {% if page_obj.has_other_pages %}
-            <div class="d-flex justify-content-center mt-4">
-                <nav>
-                    <ul class="pagination">
-                        {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}">
-                                السابق
-                            </a>
-                        </li>
-                        {% endif %}
-                        
-                        {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ num }}</span>
-                        </li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}">
-                                {{ num }}
-                            </a>
-                        </li>
-                        {% endif %}
-                        {% endfor %}
-                        
-                        {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}">
-                                التالي
-                            </a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-            </div>
+                <div class="d-flex justify-content-center mt-4">
+                    <nav>
+                        <ul class="pagination">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}">
+                                        السابق
+                                    </a>
+                                </li>
+                            {% endif %}
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}">
+                                            {{ num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}">
+                                        التالي
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
             {% endif %}
-            
         {% else %}
             <div class="no-logs">
                 <i class="fas fa-history"></i>
@@ -584,9 +613,8 @@
     </div>
 </div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 $(document).ready(function() {
     // Auto-submit form when filters change
     $('#status, #user').change(function() {
@@ -598,5 +626,5 @@ $(document).ready(function() {
         $(this).find('button[type="submit"]').html('<i class="fas fa-spinner fa-spin"></i> جاري البحث...');
     });
 });
-</script>
+    </script>
 {% endblock %}

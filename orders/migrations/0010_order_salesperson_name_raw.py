@@ -6,13 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('orders', '0009_remove_manufacturingdeletionlog_order_and_more'),
+        ("orders", "0009_remove_manufacturingdeletionlog_order_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='order',
-            name='salesperson_name_raw',
-            field=models.CharField(blank=True, help_text='اسم البائع كما هو في الجدول إذا لم يوجد في النظام', max_length=100, null=True, verbose_name='اسم البائع من الجدول (إذا لم يوجد في النظام)'),
+            model_name="order",
+            name="salesperson_name_raw",
+            field=models.CharField(
+                blank=True,
+                help_text="اسم البائع كما هو في الجدول إذا لم يوجد في النظام",
+                max_length=100,
+                null=True,
+                verbose_name="اسم البائع من الجدول (إذا لم يوجد في النظام)",
+            ),
         ),
     ]

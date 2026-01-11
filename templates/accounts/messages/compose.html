@@ -1,9 +1,8 @@
 {% extends "accounts/messages/base_messages.html" %}
 {% load static %}
-
 {% block extra_css %}
-{{ block.super }}
-<style>
+    {{ block.super }}
+    <style>
     .compose-form {
         background: #f8f9fa;
         padding: 2rem;
@@ -52,76 +51,82 @@
         max-height: 300px;
         overflow-y: auto;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block messages_content %}
-{% include 'components/page_header.html' with title=page_title icon='fas fa-edit' %}
-
-<form method="post" class="compose-form">
-    {% csrf_token %}
-    
-    <!-- Recipient -->
-    <div class="mb-3">
-        <label for="recipient" class="form-label">
-            <i class="fas fa-user me-1"></i>
-            إلى:
-        </label>
-        <select class="form-select" id="recipient" name="recipient" required>
-            <option value="">اختر المستلم...</option>
-            {% for user in users %}
-            <option value="{{ user.id }}" {% if selected_recipient and selected_recipient.id == user.id %}selected{% endif %}>
-                {{ user.get_full_name|default:user.username }} 
-                ({{ user.get_user_role_display }})
-                {% if user.branch %} - {{ user.branch.name }}{% endif %}
-            </option>
-            {% endfor %}
-        </select>
-    </div>
-    
-    <!-- Subject -->
-    <div class="mb-3">
-        <label for="subject" class="form-label">
-            <i class="fas fa-tag me-1"></i>
-            الموضوع:
-        </label>
-        <input type="text" class="form-control" id="subject" name="subject" required placeholder="موضوع الرسالة">
-    </div>
-    
-    <!-- Body -->
-    <div class="mb-3">
-        <label for="body" class="form-label">
-            <i class="fas fa-align-right me-1"></i>
-            المحتوى:
-        </label>
-        <textarea class="form-control" id="body" name="body" rows="10" required placeholder="اكتب رسالتك هنا..."></textarea>
-    </div>
-    
-    <!-- Important -->
-    <div class="mb-4">
-        <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="is_important" name="is_important">
-            <label class="form-check-label" for="is_important">
-                <i class="fas fa-star text-warning me-1"></i>
-                تحديد كرسالة مهمة
+    {% include 'components/page_header.html' with title=page_title icon='fas fa-edit' %}
+    <form method="post" class="compose-form">
+        {% csrf_token %}
+        <!-- Recipient -->
+        <div class="mb-3">
+            <label for="recipient" class="form-label">
+                <i class="fas fa-user me-1"></i>
+                إلى:
             </label>
+            <select class="form-select" id="recipient" name="recipient" required>
+                <option value="">اختر المستلم...</option>
+                {% for user in users %}
+                    <option value="{{ user.id }}"
+                            {% if selected_recipient and selected_recipient.id == user.id %}selected{% endif %}>
+                        {{ user.get_full_name|default:user.username }}
+                        ({{ user.get_user_role_display }})
+                        {% if user.branch %}- {{ user.branch.name }}{% endif %}
+                    </option>
+                {% endfor %}
+            </select>
         </div>
-    </div>
-    
-    <!-- Buttons -->
-    <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-send">
-            <i class="fas fa-paper-plane me-1"></i>
-            إرسال الرسالة
-        </button>
-        <a href="{% url 'accounts:inbox' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-times me-1"></i>
-            إلغاء
-        </a>
-    </div>
-</form>
-
-<script>
+        <!-- Subject -->
+        <div class="mb-3">
+            <label for="subject" class="form-label">
+                <i class="fas fa-tag me-1"></i>
+                الموضوع:
+            </label>
+            <input type="text"
+                   class="form-control"
+                   id="subject"
+                   name="subject"
+                   required
+                   placeholder="موضوع الرسالة">
+        </div>
+        <!-- Body -->
+        <div class="mb-3">
+            <label for="body" class="form-label">
+                <i class="fas fa-align-right me-1"></i>
+                المحتوى:
+            </label>
+            <textarea class="form-control"
+                      id="body"
+                      name="body"
+                      rows="10"
+                      required
+                      placeholder="اكتب رسالتك هنا..."></textarea>
+        </div>
+        <!-- Important -->
+        <div class="mb-4">
+            <div class="form-check">
+                <input class="form-check-input"
+                       type="checkbox"
+                       id="is_important"
+                       name="is_important">
+                <label class="form-check-label" for="is_important">
+                    <i class="fas fa-star text-warning me-1"></i>
+                    تحديد كرسالة مهمة
+                </label>
+            </div>
+        </div>
+        <!-- Buttons -->
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-send">
+                <i class="fas fa-paper-plane me-1"></i>
+                إرسال الرسالة
+            </button>
+            <a href="{% url 'accounts:inbox' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-times me-1"></i>
+                إلغاء
+            </a>
+        </div>
+    </form>
+    <script>
 // تحسين تجربة المستخدم بإضافة Select2 إذا كان متوفراً
 document.addEventListener('DOMContentLoaded', function() {
     const recipientSelect = document.getElementById('recipient');
@@ -140,5 +145,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-</script>
+    </script>
 {% endblock %}

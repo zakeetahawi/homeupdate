@@ -39,7 +39,7 @@ echo -e "\033[0m"
 
 # تفعيل البيئة الافتراضية إذا وجدت
 if [ -f "venv/bin/activate" ]; then
-    source venv/bin/activate
+	source venv/bin/activate
 fi
 
 # تشغيل سكريبت التحسين
@@ -54,25 +54,25 @@ echo -e "\033[0m"
 
 # تشغيل ملف الفهارس إذا وجد
 if [ -f "ULTIMATE_DATABASE_INDEXES_SIMPLE.sql" ]; then
-    if [ -f "db_settings.json" ]; then
-        # قراءة إعدادات قاعدة البيانات (الهيكل الجديد)
-        ACTIVE_DB=$(python3 -c "import json; print(json.load(open('db_settings.json'))['active_db'])")
-        DB_NAME=$(python3 -c "import json; d=json.load(open('db_settings.json')); print(d['databases'][str(d['active_db'])]['NAME'])")
-        DB_USER=$(python3 -c "import json; d=json.load(open('db_settings.json')); print(d['databases'][str(d['active_db'])]['USER'])")
-        DB_HOST=$(python3 -c "import json; d=json.load(open('db_settings.json')); print(d['databases'][str(d['active_db'])].get('HOST', 'localhost'))")
-        DB_PASS=$(python3 -c "import json; d=json.load(open('db_settings.json')); print(d['databases'][str(d['active_db'])]['PASSWORD'])")
-        
-        echo "تطبيق الفهارس على قاعدة البيانات: $DB_NAME"
-        
-        # تطبيق الفهارس (مع تجاهل الأخطاء للفهارس الموجودة)
-        PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" -f ULTIMATE_DATABASE_INDEXES_SIMPLE.sql 2>/dev/null || true
-        
-        echo "✅ تم تطبيق الفهارس"
-    else
-        echo "⚠️ ملف إعدادات قاعدة البيانات غير موجود"
-    fi
+	if [ -f "db_settings.json" ]; then
+		# قراءة إعدادات قاعدة البيانات (الهيكل الجديد)
+		ACTIVE_DB=$(python3 -c "import json; print(json.load(open('db_settings.json'))['active_db'])")
+		DB_NAME=$(python3 -c "import json; d=json.load(open('db_settings.json')); print(d['databases'][str(d['active_db'])]['NAME'])")
+		DB_USER=$(python3 -c "import json; d=json.load(open('db_settings.json')); print(d['databases'][str(d['active_db'])]['USER'])")
+		DB_HOST=$(python3 -c "import json; d=json.load(open('db_settings.json')); print(d['databases'][str(d['active_db'])].get('HOST', 'localhost'))")
+		DB_PASS=$(python3 -c "import json; d=json.load(open('db_settings.json')); print(d['databases'][str(d['active_db'])]['PASSWORD'])")
+
+		echo "تطبيق الفهارس على قاعدة البيانات: $DB_NAME"
+
+		# تطبيق الفهارس (مع تجاهل الأخطاء للفهارس الموجودة)
+		PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" -f ULTIMATE_DATABASE_INDEXES_SIMPLE.sql 2>/dev/null || true
+
+		echo "✅ تم تطبيق الفهارس"
+	else
+		echo "⚠️ ملف إعدادات قاعدة البيانات غير موجود"
+	fi
 else
-    echo "⚠️ ملف الفهارس غير موجود"
+	echo "⚠️ ملف الفهارس غير موجود"
 fi
 
 # =============================================================================

@@ -1,153 +1,157 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}التقارير المحاسبية{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="mb-0">
-                <i class="fas fa-chart-bar me-2"></i>
-                التقارير المحاسبية
-            </h2>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    التقارير المحاسبية
+                </h2>
+            </div>
+        </div>
+        <div class="row">
+            <!-- التقارير المالية الرئيسية -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-file-alt me-2"></i>
+                            التقارير المالية
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <a href="{% url 'accounting:trial_balance' %}"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-balance-scale me-2 text-primary"></i>
+                                    ميزان المراجعة
+                                </div>
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
+                            <a href="{% url 'accounting:income_statement' %}"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-chart-line me-2 text-success"></i>
+                                    قائمة الدخل
+                                </div>
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
+                            <a href="{% url 'accounting:balance_sheet' %}"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-file-invoice-dollar me-2 text-info"></i>
+                                    الميزانية العمومية
+                                </div>
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- تقارير العملاء -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-users me-2"></i>
+                            تقارير العملاء
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <a href="{% url 'accounting:customer_balances' %}"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-wallet me-2 text-warning"></i>
+                                    أرصدة العملاء
+                                </div>
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
+                            <a href="{% url 'accounting:customer_balances' %}?status=debit"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-exclamation-triangle me-2 text-danger"></i>
+                                    العملاء المدينون
+                                </div>
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
+                            <a href="{% url 'accounting:advances_report' %}"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-hand-holding-usd me-2 text-info"></i>
+                                    تقرير العربونات
+                                </div>
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- تقارير الحركات -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exchange-alt me-2"></i>
+                            تقارير الحركات
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <a href="{% url 'accounting:daily_transactions' %}"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-calendar-day me-2 text-primary"></i>
+                                    الحركات اليومية
+                                </div>
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
+                            <a href="{% url 'accounting:transaction_list' %}"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-list me-2 text-secondary"></i>
+                                    جميع القيود
+                                </div>
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- تقارير الحسابات -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-sitemap me-2"></i>
+                            الحسابات
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <a href="{% url 'accounting:account_tree' %}"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-project-diagram me-2 text-primary"></i>
+                                    شجرة الحسابات
+                                </div>
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
+                            <a href="{% url 'accounting:account_list' %}"
+                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-list-alt me-2 text-secondary"></i>
+                                    قائمة الحسابات
+                                </div>
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
-    <div class="row">
-        <!-- التقارير المالية الرئيسية -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-file-alt me-2"></i>
-                        التقارير المالية
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="list-group list-group-flush">
-                        <a href="{% url 'accounting:trial_balance' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-balance-scale me-2 text-primary"></i>
-                                ميزان المراجعة
-                            </div>
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                        <a href="{% url 'accounting:income_statement' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-chart-line me-2 text-success"></i>
-                                قائمة الدخل
-                            </div>
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                        <a href="{% url 'accounting:balance_sheet' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-file-invoice-dollar me-2 text-info"></i>
-                                الميزانية العمومية
-                            </div>
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- تقارير العملاء -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-users me-2"></i>
-                        تقارير العملاء
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="list-group list-group-flush">
-                        <a href="{% url 'accounting:customer_balances' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-wallet me-2 text-warning"></i>
-                                أرصدة العملاء
-                            </div>
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                        <a href="{% url 'accounting:customer_balances' %}?status=debit" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-exclamation-triangle me-2 text-danger"></i>
-                                العملاء المدينون
-                            </div>
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                        <a href="{% url 'accounting:advances_report' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-hand-holding-usd me-2 text-info"></i>
-                                تقرير العربونات
-                            </div>
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- تقارير الحركات -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">
-                        <i class="fas fa-exchange-alt me-2"></i>
-                        تقارير الحركات
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="list-group list-group-flush">
-                        <a href="{% url 'accounting:daily_transactions' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-calendar-day me-2 text-primary"></i>
-                                الحركات اليومية
-                            </div>
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                        <a href="{% url 'accounting:transaction_list' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-list me-2 text-secondary"></i>
-                                جميع القيود
-                            </div>
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- تقارير الحسابات -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-sitemap me-2"></i>
-                        الحسابات
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="list-group list-group-flush">
-                        <a href="{% url 'accounting:account_tree' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-project-diagram me-2 text-primary"></i>
-                                شجرة الحسابات
-                            </div>
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                        <a href="{% url 'accounting:account_list' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-list-alt me-2 text-secondary"></i>
-                                قائمة الحسابات
-                            </div>
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}

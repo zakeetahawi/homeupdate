@@ -6,13 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('orders', '0003_order_related_inspection'),
+        ("orders", "0003_order_related_inspection"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='order',
-            name='delivery_recipient_name',
-            field=models.CharField(blank=True, help_text='اسم الشخص الذي استلم الطلب', max_length=100, null=True, verbose_name='اسم المستلم'),
+            model_name="order",
+            name="delivery_recipient_name",
+            field=models.CharField(
+                blank=True,
+                help_text="اسم الشخص الذي استلم الطلب",
+                max_length=100,
+                null=True,
+                verbose_name="اسم المستلم",
+            ),
         ),
     ]

@@ -2,11 +2,11 @@
 {% load i18n %}
 {% load static %}
 {% load widget_tweaks %}
-
-{% block title %}{% trans "استيراد قاعدة بيانات" %}{% endblock %}
-
+{% block title %}
+    {% trans "استيراد قاعدة بيانات" %}
+{% endblock %}
 {% block extra_css %}
-<style>
+    <style>
     /* تنسيق منطقة السحب والإفلات */
     .dropzone {
         border: 2px dashed #007bff;
@@ -131,119 +131,104 @@
         border-top: 1px solid #eee;
         text-align: center;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container mt-4 mb-5">
-    <div class="import-container">
-        <div class="import-header">
-            <h1>{% trans "استيراد قاعدة بيانات" %}</h1>
-            <p class="lead">{% trans "قم بتحميل ملف JSON أو SQL أو DUMP لاستيراده إلى قاعدة البيانات" %}</p>
-            {% if default_db %}
-                <div class="alert alert-info">
-                    <i class="fas fa-database"></i>
-                    {% trans "قاعدة البيانات الحالية:" %} <strong>{{ default_db.name }}</strong>
-                    <span class="badge badge-primary">PostgreSQL</span>
-                </div>
-            {% endif %}
-        </div>
-
-        <form method="post" enctype="multipart/form-data" id="importForm">
-            {% csrf_token %}
-
-            <div class="import-section">
-                <h4>{% trans "اختر قاعدة البيانات" %}</h4>
-
-                <div class="form-group">
-                    <label for="{{ form.database_config.id_for_label }}">{% trans "قاعدة البيانات" %}</label>
-                    {% if default_db %}
-                        <div class="alert alert-primary mb-2">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-database me-2"></i>
-                                <div>
-                                    <strong>{% trans "قاعدة البيانات الحالية:" %} {{ default_db.name }}</strong>
-                                    <div><small>{% trans "تم تحديد قاعدة البيانات الافتراضية تلقائيًا" %}</small></div>
+    <div class="container mt-4 mb-5">
+        <div class="import-container">
+            <div class="import-header">
+                <h1>{% trans "استيراد قاعدة بيانات" %}</h1>
+                <p class="lead">{% trans "قم بتحميل ملف JSON أو SQL أو DUMP لاستيراده إلى قاعدة البيانات" %}</p>
+                {% if default_db %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-database"></i>
+                        {% trans "قاعدة البيانات الحالية:" %} <strong>{{ default_db.name }}</strong>
+                        <span class="badge badge-primary">PostgreSQL</span>
+                    </div>
+                {% endif %}
+            </div>
+            <form method="post" enctype="multipart/form-data" id="importForm">
+                {% csrf_token %}
+                <div class="import-section">
+                    <h4>{% trans "اختر قاعدة البيانات" %}</h4>
+                    <div class="form-group">
+                        <label for="{{ form.database_config.id_for_label }}">{% trans "قاعدة البيانات" %}</label>
+                        {% if default_db %}
+                            <div class="alert alert-primary mb-2">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-database me-2"></i>
+                                    <div>
+                                        <strong>{% trans "قاعدة البيانات الحالية:" %} {{ default_db.name }}</strong>
+                                        <div>
+                                            <small>{% trans "تم تحديد قاعدة البيانات الافتراضية تلقائيًا" %}</small>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    {% endif %}
-                    {{ form.database_config|add_class:"form-control" }}
-                    <small class="form-text text-muted">{% trans "اختر قاعدة البيانات التي تريد استيراد البيانات إليها" %}</small>
-                    {% if form.database_config.errors %}
-                        <div class="invalid-feedback d-block">{{ form.database_config.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="import-section">
-                <h4>{% trans "ملف الاستيراد" %}</h4>
-
-                <!-- منطقة السحب والإفلات -->
-                <div id="dropzone" class="dropzone">
-                    <div class="icon">
-                        <i class="fas fa-cloud-upload-alt"></i>
+                        {% endif %}
+                        {{ form.database_config|add_class:"form-control" }}
+                        <small class="form-text text-muted">{% trans "اختر قاعدة البيانات التي تريد استيراد البيانات إليها" %}</small>
+                        {% if form.database_config.errors %}
+                            <div class="invalid-feedback d-block">{{ form.database_config.errors }}</div>
+                        {% endif %}
                     </div>
-                    <p>{% trans "اسحب وأفلت الملف هنا أو انقر للاختيار" %}</p>
-                    <p class="small text-muted mt-2">{% trans "الملفات المدعومة: JSON, DUMP, SQL" %}</p>
                 </div>
-
-                <!-- حقل الملف المخفي -->
-                {{ form.file|add_class:"file-input-hidden" }}
-
-                <!-- عرض معلومات الملف المختار -->
-                <div id="file-info" class="file-info">
-                    <i class="fas fa-file-alt file-icon"></i>
-                    <span class="file-name"></span>
-                    <span class="file-size"></span>
-                    <i class="fas fa-times remove-file" title="{% trans 'إزالة الملف' %}"></i>
+                <div class="import-section">
+                    <h4>{% trans "ملف الاستيراد" %}</h4>
+                    <!-- منطقة السحب والإفلات -->
+                    <div id="dropzone" class="dropzone">
+                        <div class="icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <p>{% trans "اسحب وأفلت الملف هنا أو انقر للاختيار" %}</p>
+                        <p class="small text-muted mt-2">{% trans "الملفات المدعومة: JSON, DUMP, SQL" %}</p>
+                    </div>
+                    <!-- حقل الملف المخفي -->
+                    {{ form.file|add_class:"file-input-hidden" }}
+                    <!-- عرض معلومات الملف المختار -->
+                    <div id="file-info" class="file-info">
+                        <i class="fas fa-file-alt file-icon"></i>
+                        <span class="file-name"></span>
+                        <span class="file-size"></span>
+                        <i class="fas fa-times remove-file" title="{% trans 'إزالة الملف' %}"></i>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i> {% trans "يمكنك استيراد ملفات بتنسيق JSON أو SQL أو DUMP. تأكد من أن الملف متوافق مع هيكل قاعدة البيانات الحالية." %}
+                    </div>
+                    <small class="form-text text-muted mt-2">{{ form.file.help_text }}</small>
+                    {% if form.file.errors %}<div class="invalid-feedback d-block">{{ form.file.errors }}</div>{% endif %}
+                    <div class="form-check mt-3">
+                        {{ form.clear_data|add_class:"form-check-input" }}
+                        <label class="form-check-label" for="{{ form.clear_data.id_for_label }}">{{ form.clear_data.label }}</label>
+                        <small class="form-text text-muted d-block">{{ form.clear_data.help_text }}</small>
+                        {% if form.clear_data.errors %}<div class="invalid-feedback d-block">{{ form.clear_data.errors }}</div>{% endif %}
+                    </div>
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle"></i> {% trans "تحذير: إذا قمت بتفعيل خيار حذف البيانات القديمة، سيتم حذف معظم البيانات الموجودة في قاعدة البيانات قبل استيراد البيانات الجديدة. لن يتم حذف بيانات المستخدمين والأدوار وإعدادات قواعد البيانات. هذه العملية لا يمكن التراجع عنها." %}
+                    </div>
                 </div>
-
-                <div class="alert alert-info mt-3">
-                    <i class="fas fa-info-circle"></i> {% trans "يمكنك استيراد ملفات بتنسيق JSON أو SQL أو DUMP. تأكد من أن الملف متوافق مع هيكل قاعدة البيانات الحالية." %}
+                <div class="import-footer">
+                    <button type="submit" class="btn btn-primary btn-lg">{% trans "استيراد" %}</button>
+                    <a href="{% url 'db_manager:database_list' %}"
+                       class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
+                    <hr class="my-4">
+                    <div class="text-center">
+                        <p class="text-muted mb-2">
+                            {% trans "إذا كنت تواجه مشكلة في تكرار المعرفات أو أخطاء أخرى في الاستيراد، يمكنك إعادة ضبط سجلات الاستيراد:" %}
+                        </p>
+                        <a href="{% url 'db_manager:database_import' %}?reset_imports=true"
+                           class="btn btn-danger"
+                           onclick="return confirm('{% trans "هل أنت متأكد من حذف جميع سجلات الاستيراد؟ هذه العملية لا يمكن التراجع عنها." %}');">
+                            <i class="fas fa-trash-alt me-2"></i> {% trans "حذف جميع سجلات الاستيراد وإعادة ضبط التسلسل" %}
+                        </a>
+                    </div>
                 </div>
-
-                <small class="form-text text-muted mt-2">{{ form.file.help_text }}</small>
-                {% if form.file.errors %}
-                    <div class="invalid-feedback d-block">{{ form.file.errors }}</div>
-                {% endif %}
-
-                <div class="form-check mt-3">
-                    {{ form.clear_data|add_class:"form-check-input" }}
-                    <label class="form-check-label" for="{{ form.clear_data.id_for_label }}">
-                        {{ form.clear_data.label }}
-                    </label>
-                    <small class="form-text text-muted d-block">{{ form.clear_data.help_text }}</small>
-                    {% if form.clear_data.errors %}
-                        <div class="invalid-feedback d-block">{{ form.clear_data.errors }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="alert alert-warning mt-3">
-                    <i class="fas fa-exclamation-triangle"></i> {% trans "تحذير: إذا قمت بتفعيل خيار حذف البيانات القديمة، سيتم حذف معظم البيانات الموجودة في قاعدة البيانات قبل استيراد البيانات الجديدة. لن يتم حذف بيانات المستخدمين والأدوار وإعدادات قواعد البيانات. هذه العملية لا يمكن التراجع عنها." %}
-                </div>
-            </div>
-
-            <div class="import-footer">
-                <button type="submit" class="btn btn-primary btn-lg">{% trans "استيراد" %}</button>
-                <a href="{% url 'db_manager:database_list' %}" class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
-
-                <hr class="my-4">
-
-                <div class="text-center">
-                    <p class="text-muted mb-2">{% trans "إذا كنت تواجه مشكلة في تكرار المعرفات أو أخطاء أخرى في الاستيراد، يمكنك إعادة ضبط سجلات الاستيراد:" %}</p>
-                    <a href="{% url 'db_manager:database_import' %}?reset_imports=true" class="btn btn-danger" onclick="return confirm('{% trans "هل أنت متأكد من حذف جميع سجلات الاستيراد؟ هذه العملية لا يمكن التراجع عنها." %}');">
-                        <i class="fas fa-trash-alt me-2"></i> {% trans "حذف جميع سجلات الاستيراد وإعادة ضبط التسلسل" %}
-                    </a>
-                </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     $(document).ready(function() {
         // الحصول على العناصر
         const dropzone = document.getElementById('dropzone');
@@ -378,5 +363,5 @@
             return true;
         });
     });
-</script>
+    </script>
 {% endblock %}

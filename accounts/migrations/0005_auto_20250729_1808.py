@@ -6,28 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0004_auto_20250729_1745'),
+        ("accounts", "0004_auto_20250729_1745"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='is_branch_manager',
-            field=models.BooleanField(default=False, verbose_name='مدير فرع'),
+            model_name="user",
+            name="is_branch_manager",
+            field=models.BooleanField(default=False, verbose_name="مدير فرع"),
         ),
         migrations.AddField(
-            model_name='user',
-            name='is_general_manager',
-            field=models.BooleanField(default=False, verbose_name='مدير عام'),
+            model_name="user",
+            name="is_general_manager",
+            field=models.BooleanField(default=False, verbose_name="مدير عام"),
         ),
         migrations.AddField(
-            model_name='user',
-            name='is_region_manager',
-            field=models.BooleanField(default=False, verbose_name='مدير منطقة'),
+            model_name="user",
+            name="is_region_manager",
+            field=models.BooleanField(default=False, verbose_name="مدير منطقة"),
         ),
         migrations.AddField(
-            model_name='user',
-            name='managed_branches',
-            field=models.ManyToManyField(blank=True, related_name='region_managers', to='accounts.branch', verbose_name='الفروع المُدارة'),
+            model_name="user",
+            name="managed_branches",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="region_managers",
+                to="accounts.branch",
+                verbose_name="الفروع المُدارة",
+            ),
         ),
     ]

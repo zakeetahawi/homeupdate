@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تقرير المديونيات</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>تقرير المديونيات</title>
+        <style>
         @media print {
             .no-print { display: none !important; }
             body { margin: 0; }
@@ -191,147 +191,134 @@
             margin: 1cm;
             size: A4;
         }
-    </style>
-</head>
-<body>
-    <div class="no-print">
-        <button class="print-btn" onclick="window.print()">
-            🖨️ طباعة التقرير
-        </button>
-    </div>
-
-    <div class="header">
-        <h1>تقرير المديونيات</h1>
-        <div class="subtitle">نظام إدارة الخواجة</div>
-    </div>
-
-    <div class="report-info">
-        <div>
-            <span class="label">تاريخ التقرير</span>
-            {{ report_date|date:"d/m/Y H:i" }}
+        </style>
+    </head>
+    <body>
+        <div class="no-print">
+            <button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير</button>
         </div>
-        <div>
-            <span class="label">تم الإنشاء بواسطة</span>
-            {{ generated_by }}
+        <div class="header">
+            <h1>تقرير المديونيات</h1>
+            <div class="subtitle">نظام إدارة الخواجة</div>
         </div>
-        <div>
-            <span class="label">عدد السجلات</span>
-            {{ debts|length }}
+        <div class="report-info">
+            <div>
+                <span class="label">تاريخ التقرير</span>
+                {{ report_date|date:"d/m/Y H:i" }}
+            </div>
+            <div>
+                <span class="label">تم الإنشاء بواسطة</span>
+                {{ generated_by }}
+            </div>
+            <div>
+                <span class="label">عدد السجلات</span>
+                {{ debts|length }}
+            </div>
         </div>
-    </div>
-
-    <div class="stats-grid">
-        <div class="stat-card">
-            <h3>{{ stats.total_debts }}</h3>
-            <p>إجمالي المديونيات</p>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>{{ stats.total_debts }}</h3>
+                <p>إجمالي المديونيات</p>
+            </div>
+            <div class="stat-card danger">
+                <h3>{{ stats.total_amount|floatformat:2 }}</h3>
+                <p>إجمالي المبلغ (ج.م)</p>
+            </div>
+            <div class="stat-card success">
+                <h3>{{ stats.paid_debts }}</h3>
+                <p>مديونيات مدفوعة</p>
+            </div>
+            <div class="stat-card warning">
+                <h3>{{ stats.unpaid_debts }}</h3>
+                <p>مديونيات غير مدفوعة</p>
+            </div>
+            <div class="stat-card danger">
+                <h3>{{ stats.overdue_debts }}</h3>
+                <p>مديونيات متأخرة</p>
+            </div>
         </div>
-        
-        <div class="stat-card danger">
-            <h3>{{ stats.total_amount|floatformat:2 }}</h3>
-            <p>إجمالي المبلغ (ج.م)</p>
-        </div>
-        
-        <div class="stat-card success">
-            <h3>{{ stats.paid_debts }}</h3>
-            <p>مديونيات مدفوعة</p>
-        </div>
-        
-        <div class="stat-card warning">
-            <h3>{{ stats.unpaid_debts }}</h3>
-            <p>مديونيات غير مدفوعة</p>
-        </div>
-        
-        <div class="stat-card danger">
-            <h3>{{ stats.overdue_debts }}</h3>
-            <p>مديونيات متأخرة</p>
-        </div>
-    </div>
-
-    <table class="debts-table">
-        <thead>
-            <tr>
-                <th>العميل</th>
-                <th>الهاتف</th>
-                <th>رقم الطلب</th>
-                <th>الفرع</th>
-                <th>البائع</th>
-                <th>المبلغ</th>
-                <th>الحالة</th>
-                <th>تاريخ الإنشاء</th>
-                <th>تاريخ الدفع</th>
-                <th>أيام التأخير</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for debt in debts %}
-            <tr>
-                <td>{{ debt.customer.name }}</td>
-                <td>{{ debt.customer.phone|default:"لا يوجد" }}</td>
-                <td>{{ debt.order.order_number }}</td>
-                <td>
-                    {% if debt.order.customer.branch %}
-                        {{ debt.order.customer.branch.name }}
-                    {% else %}
-                        غير محدد
-                    {% endif %}
-                </td>
-                <td>
-                    {% if debt.order.salesperson %}
-                        {{ debt.order.salesperson.name }}
-                    {% else %}
-                        غير محدد
-                    {% endif %}
-                </td>
-                <td class="amount">{{ debt.debt_amount|floatformat:2 }} ج.م</td>
-                <td>
-                    {% if debt.is_paid %}
-                        <span class="status-paid">مدفوع</span>
-                    {% else %}
-                        {% with days_overdue=debt.created_at|timesince %}
-                            {% if "30" in days_overdue or "month" in days_overdue or "year" in days_overdue %}
-                                <span class="status-overdue">متأخر</span>
+        <table class="debts-table">
+            <thead>
+                <tr>
+                    <th>العميل</th>
+                    <th>الهاتف</th>
+                    <th>رقم الطلب</th>
+                    <th>الفرع</th>
+                    <th>البائع</th>
+                    <th>المبلغ</th>
+                    <th>الحالة</th>
+                    <th>تاريخ الإنشاء</th>
+                    <th>تاريخ الدفع</th>
+                    <th>أيام التأخير</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for debt in debts %}
+                    <tr>
+                        <td>{{ debt.customer.name }}</td>
+                        <td>{{ debt.customer.phone|default:"لا يوجد" }}</td>
+                        <td>{{ debt.order.order_number }}</td>
+                        <td>
+                            {% if debt.order.customer.branch %}
+                                {{ debt.order.customer.branch.name }}
                             {% else %}
-                                <span class="status-unpaid">غير مدفوع</span>
+                                غير محدد
                             {% endif %}
-                        {% endwith %}
-                    {% endif %}
-                </td>
-                <td>{{ debt.created_at|date:"d/m/Y" }}</td>
-                <td>
-                    {% if debt.payment_date %}
-                        {{ debt.payment_date|date:"d/m/Y" }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if not debt.is_paid %}
-                        {% with days_diff=debt.created_at|timesince %}
-                            {{ days_diff|truncatewords:2 }}
-                        {% endwith %}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="10" style="text-align: center; padding: 20px; color: #7f8c8d;">
-                    لا توجد مديونيات للعرض
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <div class="footer">
-        <p>تم إنشاء هذا التقرير تلقائياً من نظام إدارة الخواجة</p>
-        <p>{{ report_date|date:"d/m/Y H:i" }} - {{ generated_by }}</p>
-    </div>
-
-    <script>
+                        </td>
+                        <td>
+                            {% if debt.order.salesperson %}
+                                {{ debt.order.salesperson.name }}
+                            {% else %}
+                                غير محدد
+                            {% endif %}
+                        </td>
+                        <td class="amount">{{ debt.debt_amount|floatformat:2 }} ج.م</td>
+                        <td>
+                            {% if debt.is_paid %}
+                                <span class="status-paid">مدفوع</span>
+                            {% else %}
+                                {% with days_overdue=debt.created_at|timesince %}
+                                    {% if "30" in days_overdue or "month" in days_overdue or "year" in days_overdue %}
+                                        <span class="status-overdue">متأخر</span>
+                                    {% else %}
+                                        <span class="status-unpaid">غير مدفوع</span>
+                                    {% endif %}
+                                {% endwith %}
+                            {% endif %}
+                        </td>
+                        <td>{{ debt.created_at|date:"d/m/Y" }}</td>
+                        <td>
+                            {% if debt.payment_date %}
+                                {{ debt.payment_date|date:"d/m/Y" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not debt.is_paid %}
+                                {% with days_diff=debt.created_at|timesince %}{{ days_diff|truncatewords:2 }}{% endwith %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="10"
+                            style="text-align: center;
+                                   padding: 20px;
+                                   color: #7f8c8d">لا توجد مديونيات للعرض</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="footer">
+            <p>تم إنشاء هذا التقرير تلقائياً من نظام إدارة الخواجة</p>
+            <p>{{ report_date|date:"d/m/Y H:i" }} - {{ generated_by }}</p>
+        </div>
+        <script>
         // طباعة تلقائية عند فتح الصفحة (اختياري)
         // window.onload = function() { window.print(); }
-    </script>
-</body>
+        </script>
+    </body>
 </html>

@@ -1,13 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load order_extras %}
-
 {% block title %}قائمة الطلبات التي عليها مديونية{% endblock %}
-
 {% block extra_css %}
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<style>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+          rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
     /* تطبيق نفس الهوية البصرية لقسم المعاينات */
     .status-badge {
         padding: 0.375rem 0.5rem;
@@ -241,229 +240,230 @@
     body, .table, .form-control, .btn {
         font-family: 'Arial', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- إحصائيات سريعة -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stats-card">
-                <h3>{{ total_count }}</h3>
-                <p class="mb-0">إجمالي الطلبات</p>
+    <div class="container-fluid">
+        <!-- إحصائيات سريعة -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <h3>{{ total_count }}</h3>
+                    <p class="mb-0">إجمالي الطلبات</p>
+                </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);">
-                <h3>{{ total_debt|currency_format }}</h3>
-                <p class="mb-0">إجمالي المديونية</p>
+            <div class="col-md-3">
+                <div class="stats-card"
+                     style="background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)">
+                    <h3>{{ total_debt|currency_format }}</h3>
+                    <p class="mb-0">إجمالي المديونية</p>
+                </div>
             </div>
-        </div>
-        <div class="col-md-6">
-            <div class="stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                <h5 class="mb-3">توزيع المديونية حسب الحالة</h5>
-                <div class="row">
-                    {% for stat in status_stats %}
-                    <div class="col-6 mb-2">
-                        <small>{{ stat.order_status|get_status_display }}: {{ stat.debt_sum|currency_format }}</small>
+            <div class="col-md-6">
+                <div class="stats-card"
+                     style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)">
+                    <h5 class="mb-3">توزيع المديونية حسب الحالة</h5>
+                    <div class="row">
+                        {% for stat in status_stats %}
+                            <div class="col-6 mb-2">
+                                <small>{{ stat.order_status|get_status_display }}: {{ stat.debt_sum|currency_format }}</small>
+                            </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- بطاقة الفلاتر -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="fas fa-search me-2"></i>
-                فلاتر البحث
-            </h5>
-        </div>
-        <div class="card-body">
-            <form method="get" class="filter-form">
-                <div class="row">
-                    <div class="col-md-2">
-                        <label class="form-label">حالة الطلب</label>
-                        <select name="order_status" class="form-select">
-                            {% for value, label in order_status_choices %}
-                            <option value="{{ value }}" {% if value == current_filters.order_status %}selected{% endif %}>
-                                {{ label }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">البحث</label>
-                        <input type="text" name="search" class="form-control"
-                               placeholder="رقم الطلب، اسم العميل، رقم الهاتف..."
-                               value="{{ current_filters.search }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">السنة</label>
-                        <select name="year" class="form-select">
-                            <option value="">جميع السنوات</option>
-                            {% for year in years %}
-                            <option value="{{ year }}" {% if year|stringformat:"s" == current_filters.year %}selected{% endif %}>
-                                {{ year }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">الشهر</label>
-                        <select name="month" class="form-select">
-                            <option value="">جميع الشهور</option>
-                            {% for month_num, month_name in months %}
-                            <option value="{{ month_num }}" {% if month_num|stringformat:"s" == current_filters.month %}selected{% endif %}>
-                                {{ month_name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-1">
-                        <label class="form-label">العدد</label>
-                        <select name="page_size" class="form-select">
-                            <option value="25" {% if current_filters.page_size == 25 %}selected{% endif %}>25</option>
-                            <option value="50" {% if current_filters.page_size == 50 %}selected{% endif %}>50</option>
-                            <option value="100" {% if current_filters.page_size == 100 %}selected{% endif %}>100</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-gradient me-2">
-                            <i class="fas fa-search"></i> بحث
-                        </button>
-                        {% if has_filters %}
-                        <a href="{% url 'installations:debt_orders_list' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i> مسح
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- جدول النتائج -->
-    <div class="card mt-4">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="fas fa-credit-card me-2"></i>
-                قائمة الطلبات التي عليها مديونية
-            </h5>
-        </div>
-        <div class="card-body p-0">
-            {% if debt_orders %}
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>رقم الطلب</th>
-                            <th>العميل</th>
-                            <th>الحالة</th>
-                            <th>المبلغ الإجمالي</th>
-                            <th>المبلغ المدفوع</th>
-                            <th>المبلغ المتبقي</th>
-                            <th>تاريخ الطلب</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in debt_orders %}
-                        <tr>
-                            <td>
-                                <strong class="text-primary">#{{ order.order_number }}</strong>
-                            </td>
-                            <td>
-                                <div>
-                                    <strong>{{ order.customer.name }}</strong><br>
-                                    <small class="text-muted">{{ order.customer.phone }}</small>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="status-badge status-{{ order.order_status }}">
-                                    {{ order.get_order_status_display }}
-                                </span>
-                            </td>
-                            <td>
-                                <strong>{{ order.total_amount|currency_format }}</strong>
-                            </td>
-                            <td>
-                                <span class="text-success">{{ order.paid_amount|currency_format }}</span>
-                            </td>
-                            <td>
-                                <span class="debt-amount">
-                                    {{ order.debt_amount|currency_format }}
-                                </span>
-                            </td>
-                            <td>
-                                <small class="text-muted">{{ order.created_at|date:"d/m/Y" }}</small>
-                            </td>
-                            <td>
-                                <button class="btn btn-debt-action btn-sm" 
-                                        onclick="showDebtWarning('{{ order.customer.name }}', '{{ order.debt_amount|currency_format }}', {{ order.id }})">
-                                    <i class="fas fa-exclamation-triangle"></i> إدارة المديونية
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <!-- بطاقة الفلاتر -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-search me-2"></i>
+                    فلاتر البحث
+                </h5>
             </div>
-
-            <!-- ترقيم الصفحات -->
-            {% if page_obj.has_other_pages %}
-            <div class="d-flex justify-content-center mt-4 mb-3">
-                <nav aria-label="Page navigation">
-                    <ul class="pagination">
-                        {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.year %}year={{ current_filters.year }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ page_obj.previous_page_number }}">
-                                <i class="fas fa-chevron-right"></i>
-                            </a>
-                        </li>
-                        {% endif %}
-                        
-                        {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ num }}</span>
-                        </li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <li class="page-item">
-                            <a class="page-link" href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.year %}year={{ current_filters.year }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ num }}">{{ num }}</a>
-                        </li>
-                        {% endif %}
-                        {% endfor %}
-                        
-                        {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.year %}year={{ current_filters.year }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ page_obj.next_page_number }}">
-                                <i class="fas fa-chevron-left"></i>
-                            </a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </nav>
+            <div class="card-body">
+                <form method="get" class="filter-form">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <label class="form-label">حالة الطلب</label>
+                            <select name="order_status" class="form-select">
+                                {% for value, label in order_status_choices %}
+                                    <option value="{{ value }}"
+                                            {% if value == current_filters.order_status %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">البحث</label>
+                            <input type="text"
+                                   name="search"
+                                   class="form-control"
+                                   placeholder="رقم الطلب، اسم العميل، رقم الهاتف..."
+                                   value="{{ current_filters.search }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">السنة</label>
+                            <select name="year" class="form-select">
+                                <option value="">جميع السنوات</option>
+                                {% for year in years %}
+                                    <option value="{{ year }}"
+                                            {% if year|stringformat:"s" == current_filters.year %}selected{% endif %}>
+                                        {{ year }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">الشهر</label>
+                            <select name="month" class="form-select">
+                                <option value="">جميع الشهور</option>
+                                {% for month_num, month_name in months %}
+                                    <option value="{{ month_num }}"
+                                            {% if month_num|stringformat:"s" == current_filters.month %}selected{% endif %}>
+                                        {{ month_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">العدد</label>
+                            <select name="page_size" class="form-select">
+                                <option value="25"
+                                        {% if current_filters.page_size == 25 %}selected{% endif %}>25</option>
+                                <option value="50"
+                                        {% if current_filters.page_size == 50 %}selected{% endif %}>50</option>
+                                <option value="100"
+                                        {% if current_filters.page_size == 100 %}selected{% endif %}>100</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-gradient me-2">
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                            {% if has_filters %}
+                                <a href="{% url 'installations:debt_orders_list' %}"
+                                   class="btn btn-outline-secondary">
+                                    <i class="fas fa-times"></i> مسح
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </form>
             </div>
-            {% endif %}
-
-            {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                <h5 class="text-muted">لا توجد طلبات عليها مديونية</h5>
-                {% if has_filters %}
-                <p class="text-muted">جرب تغيير المرشحات للعثور على نتائج</p>
+        </div>
+        <!-- جدول النتائج -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-credit-card me-2"></i>
+                    قائمة الطلبات التي عليها مديونية
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if debt_orders %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>رقم الطلب</th>
+                                    <th>العميل</th>
+                                    <th>الحالة</th>
+                                    <th>المبلغ الإجمالي</th>
+                                    <th>المبلغ المدفوع</th>
+                                    <th>المبلغ المتبقي</th>
+                                    <th>تاريخ الطلب</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in debt_orders %}
+                                    <tr>
+                                        <td>
+                                            <strong class="text-primary">#{{ order.order_number }}</strong>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <strong>{{ order.customer.name }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ order.customer.phone }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge status-{{ order.order_status }}">{{ order.get_order_status_display }}</span>
+                                        </td>
+                                        <td>
+                                            <strong>{{ order.total_amount|currency_format }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="text-success">{{ order.paid_amount|currency_format }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="debt-amount">{{ order.debt_amount|currency_format }}</span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ order.created_at|date:"d/m/Y" }}</small>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-debt-action btn-sm"
+                                                    onclick="showDebtWarning('{{ order.customer.name }}', '{{ order.debt_amount|currency_format }}', {{ order.id }})">
+                                                <i class="fas fa-exclamation-triangle"></i> إدارة المديونية
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- ترقيم الصفحات -->
+                    {% if page_obj.has_other_pages %}
+                        <div class="d-flex justify-content-center mt-4 mb-3">
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link"
+                                               href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.year %}year={{ current_filters.year }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ page_obj.previous_page_number }}">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link"
+                                                   href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.year %}year={{ current_filters.year }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ num }}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link"
+                                               href="?{% if current_filters.order_status %}order_status={{ current_filters.order_status }}&{% endif %}{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.year %}year={{ current_filters.year }}&{% endif %}{% if current_filters.month %}month={{ current_filters.month }}&{% endif %}page_size={{ current_filters.page_size }}&page={{ page_obj.next_page_number }}">
+                                                <i class="fas fa-chevron-left"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">لا توجد طلبات عليها مديونية</h5>
+                        {% if has_filters %}<p class="text-muted">جرب تغيير المرشحات للعثور على نتائج</p>{% endif %}
+                    </div>
                 {% endif %}
             </div>
-            {% endif %}
         </div>
     </div>
-</div>
-
-<script>
+    <script>
 function showDebtWarning(customerName, debtAmount, orderId) {
     Swal.fire({
         title: `تحذير مديونية`,
@@ -492,5 +492,5 @@ function showDebtWarning(customerName, debtAmount, orderId) {
         }
     });
 }
-</script>
+    </script>
 {% endblock %}

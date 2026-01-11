@@ -1,169 +1,182 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}{{ title }} - نظام الخواجه{% endblock %}
-
 {% block content %}
-<div class="container mt-4">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">الرئيسية</a></li>
-            <li class="breadcrumb-item active" aria-current="page">إدارة حقول النماذج</li>
-        </ol>
-    </nav>
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>إدارة حقول النماذج</h2>
-        <a href="{% url 'accounts:form_field_create' %}{% if form_type %}?form_type={{ form_type }}{% endif %}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> إضافة حقل جديد
-        </a>
-    </div>
-
-    <!-- Filter Form -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">تصفية الحقول</h5>
+    <div class="container mt-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'home' %}">الرئيسية</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">إدارة حقول النماذج</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>إدارة حقول النماذج</h2>
+            <a href="{% url 'accounts:form_field_create' %}{% if form_type %}?form_type={{ form_type }}{% endif %}"
+               class="btn btn-primary">
+                <i class="fas fa-plus"></i> إضافة حقل جديد
+            </a>
         </div>
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-6">
-                    <label for="form_type" class="form-label">نوع النموذج</label>
-                    <select class="form-select" id="form_type" name="form_type" onchange="this.form.submit()">
-                        <option value="">الكل</option>
-                        {% for code, name in form_types.items %}
-                            <option value="{{ code }}" {% if form_type == code %}selected{% endif %}>{{ name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-filter"></i> تصفية
-                    </button>
-                    {% if form_type %}
-                        <a href="{% url 'accounts:form_field_list' %}" class="btn btn-secondary ms-2">
-                            <i class="fas fa-times"></i> إلغاء التصفية
-                        </a>
-                    {% endif %}
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Form Fields Table -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">قائمة الحقول</h5>
-        </div>
-        <div class="card-body">
-            {% if page_obj %}
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>نوع النموذج</th>
-                                <th>اسم الحقل</th>
-                                <th>عنوان الحقل</th>
-                                <th>نوع الحقل</th>
-                                <th>مطلوب</th>
-                                <th>الحالة</th>
-                                <th>الترتيب</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for field in page_obj %}
-                                <tr>
-                                    <td>{{ forloop.counter }}</td>
-                                    <td>{{ field.get_form_type_display }}</td>
-                                    <td>{{ field.field_name }}</td>
-                                    <td>{{ field.field_label }}</td>
-                                    <td>{{ field.get_field_type_display }}</td>
-                                    <td>
-                                        {% if field.required %}
-                                            <span class="badge bg-success">نعم</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">لا</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input toggle-field" type="checkbox" role="switch" 
-                                                id="toggle-{{ field.id }}" 
-                                                data-field-id="{{ field.id }}" 
-                                                {% if field.enabled %}checked{% endif %}>
-                                        </div>
-                                    </td>
-                                    <td>{{ field.order }}</td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <a href="{% url 'accounts:form_field_update' field.id %}" class="btn btn-sm btn-primary" title="تعديل">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <a href="{% url 'accounts:form_field_delete' field.id %}" class="btn btn-sm btn-danger" title="حذف">
-                                                <i class="fas fa-trash"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
+        <!-- Filter Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">تصفية الحقول</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-6">
+                        <label for="form_type" class="form-label">نوع النموذج</label>
+                        <select class="form-select"
+                                id="form_type"
+                                name="form_type"
+                                onchange="this.form.submit()">
+                            <option value="">الكل</option>
+                            {% for code, name in form_types.items %}
+                                <option value="{{ code }}" {% if form_type == code %}selected{% endif %}>{{ name }}</option>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Pagination -->
-                {% if page_obj.has_other_pages %}
-                <nav aria-label="Page navigation" class="mt-4">
-                    <ul class="pagination justify-content-center">
-                        {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if form_type %}&form_type={{ form_type }}{% endif %}" aria-label="Previous">
-                                <span aria-hidden="true">&laquo;</span>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> تصفية
+                        </button>
+                        {% if form_type %}
+                            <a href="{% url 'accounts:form_field_list' %}"
+                               class="btn btn-secondary ms-2">
+                                <i class="fas fa-times"></i> إلغاء التصفية
                             </a>
-                        </li>
-                        {% else %}
-                        <li class="page-item disabled">
-                            <a class="page-link" href="#" aria-label="Previous">
-                                <span aria-hidden="true">&laquo;</span>
-                            </a>
-                        </li>
                         {% endif %}
-                        
-                        {% for i in page_obj.paginator.page_range %}
-                            {% if page_obj.number == i %}
-                                <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
-                            {% else %}
-                                <li class="page-item"><a class="page-link" href="?page={{ i }}{% if form_type %}&form_type={{ form_type }}{% endif %}">{{ i }}</a></li>
-                            {% endif %}
-                        {% endfor %}
-                        
-                        {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if form_type %}&form_type={{ form_type }}{% endif %}" aria-label="Next">
-                                <span aria-hidden="true">&raquo;</span>
-                            </a>
-                        </li>
-                        {% else %}
-                        <li class="page-item disabled">
-                            <a class="page-link" href="#" aria-label="Next">
-                                <span aria-hidden="true">&raquo;</span>
-                            </a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </nav>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- Form Fields Table -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">قائمة الحقول</h5>
+            </div>
+            <div class="card-body">
+                {% if page_obj %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>نوع النموذج</th>
+                                    <th>اسم الحقل</th>
+                                    <th>عنوان الحقل</th>
+                                    <th>نوع الحقل</th>
+                                    <th>مطلوب</th>
+                                    <th>الحالة</th>
+                                    <th>الترتيب</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for field in page_obj %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ field.get_form_type_display }}</td>
+                                        <td>{{ field.field_name }}</td>
+                                        <td>{{ field.field_label }}</td>
+                                        <td>{{ field.get_field_type_display }}</td>
+                                        <td>
+                                            {% if field.required %}
+                                                <span class="badge bg-success">نعم</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">لا</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input toggle-field"
+                                                       type="checkbox"
+                                                       role="switch"
+                                                       id="toggle-{{ field.id }}"
+                                                       data-field-id="{{ field.id }}"
+                                                       {% if field.enabled %}checked{% endif %}>
+                                            </div>
+                                        </td>
+                                        <td>{{ field.order }}</td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="{% url 'accounts:form_field_update' field.id %}"
+                                                   class="btn btn-sm btn-primary"
+                                                   title="تعديل">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="{% url 'accounts:form_field_delete' field.id %}"
+                                                   class="btn btn-sm btn-danger"
+                                                   title="حذف">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                        <nav aria-label="Page navigation" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ page_obj.previous_page_number }}{% if form_type %}&form_type={{ form_type }}{% endif %}"
+                                           aria-label="Previous">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <a class="page-link" href="#" aria-label="Previous">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% for i in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == i %}
+                                        <li class="page-item active">
+                                            <a class="page-link" href="#">{{ i }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item">
+                                            <a class="page-link"
+                                               href="?page={{ i }}{% if form_type %}&form_type={{ form_type }}{% endif %}">{{ i }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ page_obj.next_page_number }}{% if form_type %}&form_type={{ form_type }}{% endif %}"
+                                           aria-label="Next">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <a class="page-link" href="#" aria-label="Next">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> لا توجد حقول مطابقة لمعايير البحث.
+                    </div>
                 {% endif %}
-            {% else %}
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> لا توجد حقول مطابقة لمعايير البحث.
-                </div>
-            {% endif %}
+            </div>
         </div>
     </div>
-</div>
-
-{% block extra_js %}
-<script>
+    {% block extra_js %}
+        <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Toggle field enabled status
         const toggleSwitches = document.querySelectorAll('.toggle-field');
@@ -243,6 +256,6 @@
             }, 3000);
         }
     });
-</script>
-{% endblock %}
+        </script>
+    {% endblock %}
 {% endblock %}

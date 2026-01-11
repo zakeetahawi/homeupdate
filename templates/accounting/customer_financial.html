@@ -1,336 +1,337 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}الملف المالي - {{ customer.name }}{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'customers:customer_list' %}">العملاء</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'customers:customer_detail' customer.pk %}">{{ customer.name }}</a></li>
-                    <li class="breadcrumb-item active">الملف المالي</li>
-                </ol>
-            </nav>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'customers:customer_list' %}">العملاء</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'customers:customer_detail' customer.pk %}">{{ customer.name }}</a>
+                        </li>
+                        <li class="breadcrumb-item active">الملف المالي</li>
+                    </ol>
+                </nav>
+            </div>
         </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h2 class="mb-0">
-                    <i class="fas fa-wallet me-2"></i>
-                    الملف المالي: {{ customer.name }}
-                    {% if summary.total_debt > 0 %}
-                    <span class="badge bg-danger ms-2">مدين: {{ summary.total_debt|floatformat:2 }} {{ currency_symbol }}</span>
-                    {% elif summary.total_debt < 0 %}
-                    <span class="badge bg-success ms-2">دائن: {{ summary.total_debt|floatformat:2|slice:"1:" }} {{ currency_symbol }}</span>
-                    {% else %}
-                    <span class="badge bg-info ms-2">حساب صافي</span>
-                    {% endif %}
-                </h2>
-                <div>
-                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#paymentModal">
-                        <i class="fas fa-plus me-1"></i> تسجيل دفعة
-                    </button>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#advanceModal">
-                        <i class="fas fa-hand-holding-usd me-1"></i> تسجيل عربون
-                    </button>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h2 class="mb-0">
+                        <i class="fas fa-wallet me-2"></i>
+                        الملف المالي: {{ customer.name }}
+                        {% if summary.total_debt > 0 %}
+                            <span class="badge bg-danger ms-2">مدين: {{ summary.total_debt|floatformat:2 }} {{ currency_symbol }}</span>
+                        {% elif summary.total_debt < 0 %}
+                            <span class="badge bg-success ms-2">دائن: {{ summary.total_debt|floatformat:2|slice:"1:" }} {{ currency_symbol }}</span>
+                        {% else %}
+                            <span class="badge bg-info ms-2">حساب صافي</span>
+                        {% endif %}
+                    </h2>
+                    <div>
+                        <button class="btn btn-success"
+                                data-bs-toggle="modal"
+                                data-bs-target="#paymentModal">
+                            <i class="fas fa-plus me-1"></i> تسجيل دفعة
+                        </button>
+                        <button class="btn btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#advanceModal">
+                            <i class="fas fa-hand-holding-usd me-1"></i> تسجيل عربون
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- الملخص المالي -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card bg-primary text-white h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-white-50">إجمالي الطلبات</h6>
+                        <h3 class="mb-0">{{ summary.total_orders_amount|floatformat:2 }} {{ currency_symbol }}</h3>
+                        <small>{{ summary.total_orders_count }} طلب</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-success text-white h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-white-50">إجمالي المدفوعات</h6>
+                        <h3 class="mb-0">{{ summary.total_paid|floatformat:2 }} {{ currency_symbol }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card {% if summary.total_debt > 0 %}bg-danger{% elif summary.total_debt < 0 %}bg-info{% else %}bg-secondary{% endif %} text-white h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-white-50">الرصيد المتبقي</h6>
+                        <h3 class="mb-0">{{ summary.total_debt|floatformat:2 }} {{ currency_symbol }}</h3>
+                        <small>
+                            {% if summary.total_debt > 0 %}
+                                عليه
+                            {% elif summary.total_debt < 0 %}
+                                له
+                            {% else %}
+                                صافي
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-warning text-dark h-100">
+                    <div class="card-body text-center">
+                        <h6 class="text-dark-50">العربونات المتاحة</h6>
+                        <h3 class="mb-0">{{ summary.remaining_advances|floatformat:2 }} {{ currency_symbol }}</h3>
+                        <small>من {{ summary.total_advances|floatformat:2 }} {{ currency_symbol }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- العربونات النشط -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-hand-holding-usd me-2 text-warning"></i>
+                            العربونات النشط
+                        </h5>
+                        <a href="{% url 'accounting:customer_advances' customer.pk %}"
+                           class="btn btn-sm btn-outline-warning">عرض الكل</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>النوع</th>
+                                        <th>المبلغ</th>
+                                        <th>المتبقي</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for advance in active_advances %}
+                                        <tr>
+                                            <td>{{ advance.created_at|date:"Y-m-d" }}</td>
+                                            <td>{{ advance.get_payment_method_display }}</td>
+                                            <td>{{ advance.amount|floatformat:2 }} {{ currency_symbol }}</td>
+                                            <td class="text-success fw-bold">{{ advance.remaining_amount|floatformat:2 }} {{ currency_symbol }}</td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">لا توجد عربونات نشط</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- آخر المدفوعات -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-money-bill-wave me-2 text-success"></i>
+                            آخر المدفوعات
+                        </h5>
+                        <a href="{% url 'accounting:customer_payments' customer.pk %}"
+                           class="btn btn-sm btn-outline-success">عرض الكل</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>الطلب</th>
+                                        <th>المبلغ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payment in recent_payments %}
+                                        <tr>
+                                            <td>{{ payment.payment_date }}</td>
+                                            <td>
+                                                <a href="{% url 'orders:order_detail' payment.order.pk %}">{{ payment.order.order_number }}</a>
+                                            </td>
+                                            <td class="text-success">{{ payment.amount|floatformat:2 }} {{ currency_symbol }}</td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted py-3">لا توجد مدفوعات</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- آخر القيود -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-file-invoice me-2"></i>
+                            آخر القيود المحاسبية
+                        </h5>
+                        <a href="{% url 'accounting:customer_statement' customer.pk %}"
+                           class="btn btn-sm btn-outline-primary">كشف حساب كامل</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>رقم القيد</th>
+                                        <th>النوع</th>
+                                        <th>البيان</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for transaction in recent_transactions %}
+                                        <tr>
+                                            <td>{{ transaction.date }}</td>
+                                            <td>
+                                                <a href="{% url 'accounting:transaction_detail' transaction.pk %}">{{ transaction.transaction_number }}</a>
+                                            </td>
+                                            <td>{{ transaction.get_transaction_type_display }}</td>
+                                            <td>{{ transaction.description|truncatechars:50 }}</td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">لا توجد قيود</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- الملخص المالي -->
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="card bg-primary text-white h-100">
-                <div class="card-body text-center">
-                    <h6 class="text-white-50">إجمالي الطلبات</h6>
-                    <h3 class="mb-0">{{ summary.total_orders_amount|floatformat:2 }} {{ currency_symbol }}</h3>
-                    <small>{{ summary.total_orders_count }} طلب</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="card bg-success text-white h-100">
-                <div class="card-body text-center">
-                    <h6 class="text-white-50">إجمالي المدفوعات</h6>
-                    <h3 class="mb-0">{{ summary.total_paid|floatformat:2 }} {{ currency_symbol }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="card {% if summary.total_debt > 0 %}bg-danger{% elif summary.total_debt < 0 %}bg-info{% else %}bg-secondary{% endif %} text-white h-100">
-                <div class="card-body text-center">
-                    <h6 class="text-white-50">الرصيد المتبقي</h6>
-                    <h3 class="mb-0">{{ summary.total_debt|floatformat:2 }} {{ currency_symbol }}</h3>
-                    <small>
-                        {% if summary.total_debt > 0 %}عليه{% elif summary.total_debt < 0 %}له{% else %}صافي{% endif %}
-                    </small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="card bg-warning text-dark h-100">
-                <div class="card-body text-center">
-                    <h6 class="text-dark-50">العربونات المتاحة</h6>
-                    <h3 class="mb-0">{{ summary.remaining_advances|floatformat:2 }} {{ currency_symbol }}</h3>
-                    <small>من {{ summary.total_advances|floatformat:2 }} {{ currency_symbol }}</small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- العربونات النشط -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-hand-holding-usd me-2 text-warning"></i>
-                        العربونات النشط
-                    </h5>
-                    <a href="{% url 'accounting:customer_advances' customer.pk %}" class="btn btn-sm btn-outline-warning">
-                        عرض الكل
-                    </a>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>التاريخ</th>
-                                    <th>النوع</th>
-                                    <th>المبلغ</th>
-                                    <th>المتبقي</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for advance in active_advances %}
-                                <tr>
-                                    <td>{{ advance.created_at|date:"Y-m-d" }}</td>
-                                    <td>{{ advance.get_payment_method_display }}</td>
-                                    <td>{{ advance.amount|floatformat:2 }} {{ currency_symbol }}</td>
-                                    <td class="text-success fw-bold">{{ advance.remaining_amount|floatformat:2 }} {{ currency_symbol }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">
-                                        لا توجد عربونات نشط
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+    <!-- Modal تسجيل دفعة -->
+    <div class="modal fade" id="paymentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{% url 'accounting:register_payment' customer.pk %}"
+                      method="post">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            تسجيل دفعة جديدة
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- آخر المدفوعات -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-money-bill-wave me-2 text-success"></i>
-                        آخر المدفوعات
-                    </h5>
-                    <a href="{% url 'accounting:customer_payments' customer.pk %}" class="btn btn-sm btn-outline-success">
-                        عرض الكل
-                    </a>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>التاريخ</th>
-                                    <th>الطلب</th>
-                                    <th>المبلغ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for payment in recent_payments %}
-                                <tr>
-                                    <td>{{ payment.payment_date }}</td>
-                                    <td>
-                                        <a href="{% url 'orders:order_detail' payment.order.pk %}">
-                                            {{ payment.order.order_number }}
-                                        </a>
-                                    </td>
-                                    <td class="text-success">{{ payment.amount|floatformat:2 }} {{ currency_symbol }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted py-3">
-                                        لا توجد مدفوعات
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">الطلب</label>
+                            <select name="order" class="form-select">
+                                <option value="">بدون طلب محدد</option>
+                                <!-- سيتم ملؤها ديناميكياً -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">
+                                المبلغ <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" name="amount" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">طريقة الدفع</label>
+                            <select name="payment_method" class="form-select">
+                                <option value="cash">نقداً</option>
+                                <option value="bank_transfer">تحويل بنكي</option>
+                                <option value="card">بطاقة</option>
+                                <option value="cheque">شيك</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">تاريخ الدفع</label>
+                            <input type="date"
+                                   name="payment_date"
+                                   class="form-control"
+                                   value="{{ today }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">رقم الإيصال</label>
+                            <input type="text" name="receipt_number" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">ملاحظات</label>
+                            <textarea name="notes" class="form-control" rows="2"></textarea>
+                        </div>
                     </div>
-                </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check me-1"></i> تسجيل الدفعة
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-
-    <!-- آخر القيود -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-file-invoice me-2"></i>
-                        آخر القيود المحاسبية
-                    </h5>
-                    <a href="{% url 'accounting:customer_statement' customer.pk %}" class="btn btn-sm btn-outline-primary">
-                        كشف حساب كامل
-                    </a>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>التاريخ</th>
-                                    <th>رقم القيد</th>
-                                    <th>النوع</th>
-                                    <th>البيان</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for transaction in recent_transactions %}
-                                <tr>
-                                    <td>{{ transaction.date }}</td>
-                                    <td>
-                                        <a href="{% url 'accounting:transaction_detail' transaction.pk %}">
-                                            {{ transaction.transaction_number }}
-                                        </a>
-                                    </td>
-                                    <td>{{ transaction.get_transaction_type_display }}</td>
-                                    <td>{{ transaction.description|truncatechars:50 }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">
-                                        لا توجد قيود
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+    <!-- Modal تسجيل عربون -->
+    <div class="modal fade" id="advanceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{% url 'accounting:register_advance' customer.pk %}"
+                      method="post">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-hand-holding-usd me-2"></i>
+                            تسجيل عربون جديد
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                المبلغ <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" name="amount" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">طريقة الدفع</label>
+                            <select name="payment_method" class="form-select">
+                                <option value="cash">نقداً</option>
+                                <option value="bank_transfer">تحويل بنكي</option>
+                                <option value="check">شيك</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">رقم الإيصال</label>
+                            <input type="text" name="receipt_number" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">ملاحظات</label>
+                            <textarea name="notes" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check me-1"></i> تسجيل العربوناتة
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-</div>
-
-<!-- Modal تسجيل دفعة -->
-<div class="modal fade" id="paymentModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{% url 'accounting:register_payment' customer.pk %}" method="post">
-                {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-money-bill-wave me-2"></i>
-                        تسجيل دفعة جديدة
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">الطلب</label>
-                        <select name="order" class="form-select">
-                            <option value="">بدون طلب محدد</option>
-                            <!-- سيتم ملؤها ديناميكياً -->
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">المبلغ <span class="text-danger">*</span></label>
-                        <input type="number" name="amount" class="form-control" step="0.01" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">طريقة الدفع</label>
-                        <select name="payment_method" class="form-select">
-                            <option value="cash">نقداً</option>
-                            <option value="bank_transfer">تحويل بنكي</option>
-                            <option value="card">بطاقة</option>
-                            <option value="cheque">شيك</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">تاريخ الدفع</label>
-                        <input type="date" name="payment_date" class="form-control" value="{{ today }}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">رقم الإيصال</label>
-                        <input type="text" name="receipt_number" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">ملاحظات</label>
-                        <textarea name="notes" class="form-control" rows="2"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-check me-1"></i> تسجيل الدفعة
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal تسجيل عربون -->
-<div class="modal fade" id="advanceModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="{% url 'accounting:register_advance' customer.pk %}" method="post">
-                {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-hand-holding-usd me-2"></i>
-                        تسجيل عربون جديد
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">المبلغ <span class="text-danger">*</span></label>
-                        <input type="number" name="amount" class="form-control" step="0.01" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">طريقة الدفع</label>
-                        <select name="payment_method" class="form-select">
-                            <option value="cash">نقداً</option>
-                            <option value="bank_transfer">تحويل بنكي</option>
-                            <option value="check">شيك</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">رقم الإيصال</label>
-                        <input type="text" name="receipt_number" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">ملاحظات</label>
-                        <textarea name="notes" class="form-control" rows="2"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-check me-1"></i> تسجيل العربوناتة
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 {% endblock %}

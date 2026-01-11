@@ -6,13 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('installations', '0006_add_location_type_to_installationschedule'),
+        ("installations", "0006_add_location_type_to_installationschedule"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='installationschedule',
-            name='location_address',
-            field=models.TextField(blank=True, help_text='عنوان التركيب بالتفصيل', null=True, verbose_name='عنوان التركيب'),
+            model_name="installationschedule",
+            name="location_address",
+            field=models.TextField(
+                blank=True,
+                help_text="عنوان التركيب بالتفصيل",
+                null=True,
+                verbose_name="عنوان التركيب",
+            ),
         ),
     ]

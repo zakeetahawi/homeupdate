@@ -2,20 +2,32 @@
 دوال مساعدة محسنة لداشبورد الإدارة - مصححة
 """
 
-from django.utils import timezone
-from django.db.models import Count, Sum, Q, F, Max
-from django.db.models.functions import ExtractMonth, ExtractYear, TruncDate
 from datetime import datetime, timedelta
-from customers.models import Customer
-from orders.models import Order
-from inventory.models import Product
-from inspections.models import Inspection
-from manufacturing.models import ManufacturingOrder
-from installations.models import InstallationSchedule
+
+from django.contrib.auth.models import User
+from django.db.models import (
+    Avg,
+    Case,
+    Count,
+    DurationField,
+    F,
+    IntegerField,
+    Max,
+    Q,
+    Sum,
+    When,
+)
+from django.db.models.functions import ExtractMonth, ExtractYear, TruncDate
+from django.utils import timezone
+
 from accounts.models import Branch, DashboardYearSettings
 from complaints.models import Complaint, ComplaintType
-from django.contrib.auth.models import User
-from django.db.models import Avg, Case, When, IntegerField, DurationField
+from customers.models import Customer
+from inspections.models import Inspection
+from installations.models import InstallationSchedule
+from inventory.models import Product
+from manufacturing.models import ManufacturingOrder
+from orders.models import Order
 
 
 def get_customers_statistics(
@@ -200,9 +212,7 @@ def get_installation_orders_statistics(
 ):
     """إحصائيات طلبات التركيب المحسنة"""
     # البحث في الطلبات التي تحتوي على تركيب - محسن
-    orders = Order.objects.filter(
-        selected_types__icontains="installation"
-    )
+    orders = Order.objects.filter(selected_types__icontains="installation")
 
     # تطبيق فلتر التاريخ
     if not show_all_years and start_date and end_date:
@@ -276,12 +286,12 @@ def get_inventory_statistics(branch_filter):
 
     # إحصائيات مبسطة - بدون استخدام current_stock (property)
     total_products = Product.objects.filter(**products_filter).count()
-    
+
     # حساب المخزون المنخفض والمنتهي بطريقة مبسطة
     # يمكن تحسينها لاحقاً عند الحاجة
     low_stock_products = 0
     out_of_stock_products = 0
-    
+
     # حساب المخزون للمنتجات (يمكن تحسينها لاحقاً)
     for product in Product.objects.filter(**products_filter)[:100]:  # عينة من 100 منتج
         try:
@@ -939,11 +949,13 @@ def get_user_performance_analytics(branch_filter, start_date=None, end_date=None
 
 def get_user_activity_analytics(days=7):
     """تحليل نشاط المستخدمين خلال الأيام الماضية"""
+    from datetime import timedelta
+
     from django.contrib.auth import get_user_model
     from django.utils import timezone
-    from datetime import timedelta
-    from orders.models import Order
+
     from customers.models import Customer
+    from orders.models import Order
 
     User = get_user_model()
     end_date = timezone.now()

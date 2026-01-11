@@ -1,45 +1,36 @@
 {% extends 'base.html' %}
 {% load i18n %}
-
 {% block title %}تقرير نشاط البائعين - {{ report.title }}{% endblock %}
-
 {% block content %}
-<div class="container" style="margin-top: 100px;">
-    <h2>تقرير: {{ report.title }}</h2>
-    <p>نوع النشاط: {{ activity }} — الأيام: {{ days }}</p>
-    <div class="mb-3">
-        <a href="{% url 'reports:seller_customer_activity_csv' report.id %}" class="btn btn-sm btn-outline-primary">تحميل CSV</a>
-        <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">طباعة</button>
+    <div class="container" style="margin-top: 100px;">
+        <h2>تقرير: {{ report.title }}</h2>
+        <p>نوع النشاط: {{ activity }} — الأيام: {{ days }}</p>
+        <div class="mb-3">
+            <a href="{% url 'reports:seller_customer_activity_csv' report.id %}"
+               class="btn btn-sm btn-outline-primary">تحميل CSV</a>
+            <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">طباعة</button>
+        </div>
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>المستخدم</th>
+                    {% for d in date_list %}<th>{{ d|date:"Y-m-d" }}</th>{% endfor %}
+                    <th>المجموع</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for uid, data in results.items %}
+                    <tr>
+                        <td>{{ data.user.get_full_name|default:data.user.username }}</td>
+                        {% for count in data.daily_list %}<td>{{ count }}</td>{% endfor %}
+                        <td>{{ data.total }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <h4>المستخدمون الذين لم ينشئوا أي شيء</h4>
+        <ul>
+            {% for u in zero_users %}<li>{{ u.get_full_name|default:u.username }}</li>{% endfor %}
+        </ul>
     </div>
-
-    <table class="table table-striped table-bordered">
-        <thead>
-            <tr>
-                <th>المستخدم</th>
-                {% for d in date_list %}
-                <th>{{ d|date:"Y-m-d" }}</th>
-                {% endfor %}
-                <th>المجموع</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for uid, data in results.items %}
-            <tr>
-                <td>{{ data.user.get_full_name|default:data.user.username }}</td>
-                {% for count in data.daily_list %}
-                <td>{{ count }}</td>
-                {% endfor %}
-                <td>{{ data.total }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <h4>المستخدمون الذين لم ينشئوا أي شيء</h4>
-    <ul>
-        {% for u in zero_users %}
-        <li>{{ u.get_full_name|default:u.username }}</li>
-        {% endfor %}
-    </ul>
-</div>
 {% endblock %}

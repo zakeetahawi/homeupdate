@@ -6,23 +6,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('manufacturing', '0002_alter_manufacturingorder_created_at'),
+        ("manufacturing", "0002_alter_manufacturingorder_created_at"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='manufacturingorder',
-            name='has_rejection_reply',
-            field=models.BooleanField(default=False, verbose_name='يوجد رد على الرفض'),
+            model_name="manufacturingorder",
+            name="has_rejection_reply",
+            field=models.BooleanField(default=False, verbose_name="يوجد رد على الرفض"),
         ),
         migrations.AddField(
-            model_name='manufacturingorder',
-            name='rejection_reply',
-            field=models.TextField(blank=True, null=True, verbose_name='رد على الرفض'),
+            model_name="manufacturingorder",
+            name="rejection_reply",
+            field=models.TextField(blank=True, null=True, verbose_name="رد على الرفض"),
         ),
         migrations.AddField(
-            model_name='manufacturingorder',
-            name='rejection_reply_date',
-            field=models.DateTimeField(blank=True, null=True, verbose_name='تاريخ الرد على الرفض'),
+            model_name="manufacturingorder",
+            name="rejection_reply_date",
+            field=models.DateTimeField(
+                blank=True, null=True, verbose_name="تاريخ الرد على الرفض"
+            ),
         ),
     ]

@@ -1,217 +1,205 @@
 {% extends "base.html" %}
 {% load static %}
-
-{% block title %}{% if form.instance.pk %}تعديل{% else %}إنشاء{% endif %} متغير - {{ base_product.name }}{% endblock %}
-
+{% block title %}
+    {% if form.instance.pk %}
+        تعديل
+    {% else %}
+        إنشاء
+    {% endif %}
+    متغير - {{ base_product.name }}
+{% endblock %}
 {% block content %}
-<div class="container-fluid">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'inventory:base_product_list' %}">المنتجات الأساسية</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'inventory:base_product_detail' base_product.pk %}">{{ base_product.name }}</a></li>
-            <li class="breadcrumb-item active">{% if form.instance.pk %}تعديل متغير{% else %}متغير جديد{% endif %}</li>
-        </ol>
-    </nav>
-
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow">
-                <div class="card-header bg-success text-white">
-                    <h4 class="mb-0">
-                        <i class="fas fa-palette me-2"></i>
-                        {% if form.instance.pk %}تعديل متغير{% else %}إنشاء متغير جديد{% endif %}
-                        <small class="opacity-75">- {{ base_product.name }}</small>
-                    </h4>
-                </div>
-                
-                <div class="card-body">
-                    <!-- Parent Product Info -->
-                    <div class="alert alert-info mb-4">
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <strong>المنتج الأساسي:</strong> {{ base_product.name }}
-                                <br><small class="text-muted">الكود: {{ base_product.code }}</small>
-                            </div>
-                            <div class="col-md-6 text-md-end">
-                                <strong>السعر الأساسي:</strong>
-                                <span class="badge bg-success fs-6">{{ base_product.base_price|floatformat:2 }} {{ currency_symbol }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        {% endfor %}
+    <div class="container-fluid">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'inventory:base_product_list' %}">المنتجات الأساسية</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'inventory:base_product_detail' base_product.pk %}">{{ base_product.name }}</a>
+                </li>
+                <li class="breadcrumb-item active">
+                    {% if form.instance.pk %}
+                        تعديل متغير
+                    {% else %}
+                        متغير جديد
                     {% endif %}
-
-                    <form method="post" novalidate>
-                        {% csrf_token %}
-                        
-                        <!-- Variant Info Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h5 class="border-bottom pb-2 mb-3">
-                                    <i class="fas fa-tag text-primary me-2"></i>
-                                    معلومات المتغير
-                                </h5>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.variant_code.id_for_label }}" class="form-label">
-                                    {{ form.variant_code.label }} <span class="text-danger">*</span>
-                                </label>
-                                {{ form.variant_code }}
-                                {% if form.variant_code.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.variant_code.errors.0 }}</div>
-                                {% endif %}
-                                <div class="form-text">
-                                    الكود الكامل سيكون: <strong>{{ base_product.code }}/<span id="preview_code">...</span></strong>
+                </li>
+            </ol>
+        </nav>
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-palette me-2"></i>
+                            {% if form.instance.pk %}
+                                تعديل متغير
+                            {% else %}
+                                إنشاء متغير جديد
+                            {% endif %}
+                            <small class="opacity-75">- {{ base_product.name }}</small>
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Parent Product Info -->
+                        <div class="alert alert-info mb-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <strong>المنتج الأساسي:</strong> {{ base_product.name }}
+                                    <br>
+                                    <small class="text-muted">الكود: {{ base_product.code }}</small>
                                 </div>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.barcode.id_for_label }}" class="form-label">
-                                    {{ form.barcode.label }}
-                                </label>
-                                {{ form.barcode }}
-                                {% if form.barcode.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.barcode.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <!-- Color Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h5 class="border-bottom pb-2 mb-3">
-                                    <i class="fas fa-fill-drip text-info me-2"></i>
-                                    اللون
-                                </h5>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.color.id_for_label }}" class="form-label">
-                                    {{ form.color.label }}
-                                </label>
-                                {{ form.color }}
-                                {% if form.color.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.color.errors.0 }}</div>
-                                {% endif %}
-                                <div class="form-text">
-                                    <a href="{% url 'inventory:color_create' %}" target="_blank" class="text-decoration-none">
-                                        <i class="fas fa-plus me-1"></i>إضافة لون جديد
-                                    </a>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.color_code.id_for_label }}" class="form-label">
-                                    {{ form.color_code.label }}
-                                </label>
-                                {{ form.color_code }}
-                                {% if form.color_code.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.color_code.errors.0 }}</div>
-                                {% endif %}
-                                <div class="form-text">مثال: C1, C 004, RED</div>
-                            </div>
-                        </div>
-
-                        <!-- Pricing Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h5 class="border-bottom pb-2 mb-3">
-                                    <i class="fas fa-dollar-sign text-success me-2"></i>
-                                    التسعير
-                                </h5>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.price_override.id_for_label }}" class="form-label">
-                                    {{ form.price_override.label }}
-                                </label>
-                                <div class="input-group">
-                                    {{ form.price_override }}
-                                    <span class="input-group-text">{{ currency_symbol }}</span>
-                                </div>
-                                {% if form.price_override.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.price_override.errors.0 }}</div>
-                                {% endif %}
-                                <div class="form-text">
-                                    اتركه فارغاً لاستخدام السعر الأساسي ({{ base_product.base_price|floatformat:2 }} {{ currency_symbol }})
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">السعر الفعلي</label>
-                                <div class="form-control bg-light" id="effective_price_display">
-                                    {{ base_product.base_price|floatformat:2 }} {{ currency_symbol }}
+                                <div class="col-md-6 text-md-end">
+                                    <strong>السعر الأساسي:</strong>
+                                    <span class="badge bg-success fs-6">{{ base_product.base_price|floatformat:2 }} {{ currency_symbol }}</span>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Additional Info Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h5 class="border-bottom pb-2 mb-3">
-                                    <i class="fas fa-info-circle text-secondary me-2"></i>
-                                    معلومات إضافية
-                                </h5>
-                            </div>
-                            
-                            <div class="col-12 mb-3">
-                                <label for="{{ form.description.id_for_label }}" class="form-label">
-                                    {{ form.description.label }}
-                                </label>
-                                {{ form.description }}
-                                {% if form.description.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <div class="form-check">
-                                    {{ form.is_active }}
-                                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                                        {{ form.is_active.label }}
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+                            <!-- Variant Info Section -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2 mb-3">
+                                        <i class="fas fa-tag text-primary me-2"></i>
+                                        معلومات المتغير
+                                    </h5>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.variant_code.id_for_label }}" class="form-label">
+                                        {{ form.variant_code.label }} <span class="text-danger">*</span>
                                     </label>
+                                    {{ form.variant_code }}
+                                    {% if form.variant_code.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.variant_code.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        الكود الكامل سيكون: <strong>{{ base_product.code }}/<span id="preview_code">...</span></strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.barcode.id_for_label }}" class="form-label">{{ form.barcode.label }}</label>
+                                    {{ form.barcode }}
+                                    {% if form.barcode.errors %}<div class="invalid-feedback d-block">{{ form.barcode.errors.0 }}</div>{% endif %}
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Form Actions -->
-                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                            <a href="{% url 'inventory:base_product_detail' base_product.pk %}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-right me-1"></i>
-                                رجوع للمنتج
-                            </a>
-                            <div>
-                                <button type="submit" name="action" value="save" class="btn btn-success">
-                                    <i class="fas fa-save me-1"></i>
-                                    حفظ
-                                </button>
-                                {% if not form.instance.pk %}
-                                    <button type="submit" name="action" value="save_and_add" class="btn btn-primary">
-                                        <i class="fas fa-plus me-1"></i>
-                                        حفظ وإضافة آخر
-                                    </button>
-                                {% endif %}
+                            <!-- Color Section -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2 mb-3">
+                                        <i class="fas fa-fill-drip text-info me-2"></i>
+                                        اللون
+                                    </h5>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.color.id_for_label }}" class="form-label">{{ form.color.label }}</label>
+                                    {{ form.color }}
+                                    {% if form.color.errors %}<div class="invalid-feedback d-block">{{ form.color.errors.0 }}</div>{% endif %}
+                                    <div class="form-text">
+                                        <a href="{% url 'inventory:color_create' %}"
+                                           target="_blank"
+                                           class="text-decoration-none">
+                                            <i class="fas fa-plus me-1"></i>إضافة لون جديد
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.color_code.id_for_label }}" class="form-label">{{ form.color_code.label }}</label>
+                                    {{ form.color_code }}
+                                    {% if form.color_code.errors %}<div class="invalid-feedback d-block">{{ form.color_code.errors.0 }}</div>{% endif %}
+                                    <div class="form-text">مثال: C1, C 004, RED</div>
+                                </div>
                             </div>
-                        </div>
-                    </form>
+                            <!-- Pricing Section -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2 mb-3">
+                                        <i class="fas fa-dollar-sign text-success me-2"></i>
+                                        التسعير
+                                    </h5>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.price_override.id_for_label }}" class="form-label">{{ form.price_override.label }}</label>
+                                    <div class="input-group">
+                                        {{ form.price_override }}
+                                        <span class="input-group-text">{{ currency_symbol }}</span>
+                                    </div>
+                                    {% if form.price_override.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.price_override.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        اتركه فارغاً لاستخدام السعر الأساسي ({{ base_product.base_price|floatformat:2 }} {{ currency_symbol }})
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">السعر الفعلي</label>
+                                    <div class="form-control bg-light" id="effective_price_display">
+                                        {{ base_product.base_price|floatformat:2 }} {{ currency_symbol }}
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Additional Info Section -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2 mb-3">
+                                        <i class="fas fa-info-circle text-secondary me-2"></i>
+                                        معلومات إضافية
+                                    </h5>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                                    {{ form.description }}
+                                    {% if form.description.errors %}<div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>{% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check">
+                                        {{ form.is_active }}
+                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">{{ form.is_active.label }}</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Form Actions -->
+                            <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                                <a href="{% url 'inventory:base_product_detail' base_product.pk %}"
+                                   class="btn btn-secondary">
+                                    <i class="fas fa-arrow-right me-1"></i>
+                                    رجوع للمنتج
+                                </a>
+                                <div>
+                                    <button type="submit" name="action" value="save" class="btn btn-success">
+                                        <i class="fas fa-save me-1"></i>
+                                        حفظ
+                                    </button>
+                                    {% if not form.instance.pk %}
+                                        <button type="submit"
+                                                name="action"
+                                                value="save_and_add"
+                                                class="btn btn-primary">
+                                            <i class="fas fa-plus me-1"></i>
+                                            حفظ وإضافة آخر
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Add form-control class
         document.querySelectorAll('input, select, textarea').forEach(function(el) {
@@ -249,5 +237,5 @@
             });
         }
     });
-</script>
+    </script>
 {% endblock %}

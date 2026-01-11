@@ -1,38 +1,38 @@
 {% extends 'base.html' %}
 {% load i18n %}
-
-{% block title %}{% trans 'حذف التقرير' %}{% endblock %}
-
+{% block title %}
+    {% trans 'حذف التقرير' %}
+{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title mb-0">{% trans 'حذف التقرير' %}</h3>
-                </div>
-                <div class="card-body">
-                    <p class="alert alert-danger">
-                        {% blocktrans with title=report.title %}
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title mb-0">{% trans 'حذف التقرير' %}</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="alert alert-danger">
+                            {% blocktrans with title=report.title %}
                         هل أنت متأكد من حذف التقرير "{{ title }}"؟
                         سيتم حذف جميع النتائج المحفوظة والجدولات المرتبطة به.
                         {% endblocktrans %}
-                    </p>
-                    
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'reports:report_detail' report.pk %}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> {% trans 'إلغاء' %}
-                            </a>
-                            <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-trash"></i> {% trans 'حذف' %}
-                            </button>
-                        </div>
-                    </form>
+                        </p>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'reports:report_detail' report.pk %}"
+                                   class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> {% trans 'إلغاء' %}
+                                </a>
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash"></i> {% trans 'حذف' %}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

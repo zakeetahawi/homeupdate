@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load widget_tweaks %}
-
 {% block title %}
     {% if object %}
         {% trans 'تعديل جدولة التقرير' %}
@@ -9,140 +8,121 @@
         {% trans 'إنشاء جدولة تقرير' %}
     {% endif %}
 {% endblock %}
-
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title mb-0">
-                        {% if object %}
-                            {% trans 'تعديل جدولة التقرير' %} (#{{ object.pk }} - Report #{{ object.report.pk }})
-                        {% else %}
-                            {% trans 'إنشاء جدولة تقرير' %} (Report #{{ report.pk }})
-                        {% endif %}
-                    </h3>
-                </div>
-                {% if debug %}
-                <div class="alert alert-info">
-                    <strong>Debug Info:</strong><br>
-                    object: {{ object|default:"None" }}<br>
-                    object.report.pk: {{ object.report.pk|default:"None" }}<br>
-                    report: {{ report|default:"None" }}<br>
-                    report.pk: {{ report.pk|default:"None" }}
-                </div>
-                {% endif %}
-                <div class="card-body">
-                    <form method="post" novalidate>
-                        {% csrf_token %}
-                        
-                        {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {% for error in form.non_field_errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-
-                        <div class="form-group mb-3">
-                            <label for="{{ form.name.id_for_label }}" class="form-label">{% trans 'اسم الجدولة' %}</label>
-                            {% render_field form.name class="form-control" placeholder="أدخل اسم الجدولة" %}
-                            {% if form.name.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.name.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label for="{{ form.frequency.id_for_label }}" class="form-label">{% trans 'التكرار' %}</label>
-                            {% render_field form.frequency class="form-select" %}
-                            {% if form.frequency.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.frequency.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label for="{{ form.parameters.id_for_label }}" class="form-label">{% trans 'معلمات التقرير' %}</label>
-                            {% render_field form.parameters class="form-control" rows="4" placeholder="أدخل معلمات التقرير بتنسيق JSON" %}
-                            <small class="form-text text-muted">
-                                {% trans 'مثال: {"date_range": 30, "include_details": true}' %}
-                            </small>
-                            {% if form.parameters.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.parameters.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label for="{{ form.recipients.id_for_label }}" class="form-label">{% trans 'المستلمون' %}</label>
-                            {% render_field form.recipients class="form-select" multiple="multiple" %}
-                            {% if form.recipients.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.recipients.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        {% if object %}
-                        <div class="form-group mb-3">
-                            <div class="form-check">
-                                {% render_field form.is_active class="form-check-input" %}
-                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                                    {% trans 'نشط' %}
-                                </label>
-                            </div>
-                            {% if form.is_active.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.is_active.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-
-                        <div class="d-flex justify-content-between">
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title mb-0">
                             {% if object %}
-                                <a href="{% url 'reports:report_detail' object.report.pk %}" class="btn btn-secondary">
-                                    <i class="fas fa-times"></i> {% trans 'إلغاء' %}
-                                </a>
+                                {% trans 'تعديل جدولة التقرير' %} (#{{ object.pk }} - Report #{{ object.report.pk }})
                             {% else %}
-                                <a href="{% url 'reports:report_detail' report.pk %}" class="btn btn-secondary">
-                                    <i class="fas fa-times"></i> {% trans 'إلغاء' %}
-                                </a>
+                                {% trans 'إنشاء جدولة تقرير' %} (Report #{{ report.pk }})
                             {% endif %}
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> 
-                                {% if object %}
-                                    {% trans 'حفظ التغييرات' %}
-                                {% else %}
-                                    {% trans 'إنشاء الجدولة' %}
-                                {% endif %}
-                            </button>
+                        </h3>
+                    </div>
+                    {% if debug %}
+                        <div class="alert alert-info">
+                            <strong>Debug Info:</strong>
+                            <br>
+                            object: {{ object|default:"None" }}
+                            <br>
+                            object.report.pk: {{ object.report.pk|default:"None" }}
+                            <br>
+                            report: {{ report|default:"None" }}
+                            <br>
+                            report.pk: {{ report.pk|default:"None" }}
                         </div>
-                    </form>
+                    {% endif %}
+                    <div class="card-body">
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-group mb-3">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">{% trans 'اسم الجدولة' %}</label>
+                                {% render_field form.name class="form-control" placeholder="أدخل اسم الجدولة" %}
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.name.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="{{ form.frequency.id_for_label }}" class="form-label">{% trans 'التكرار' %}</label>
+                                {% render_field form.frequency class="form-select" %}
+                                {% if form.frequency.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.frequency.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="{{ form.parameters.id_for_label }}" class="form-label">{% trans 'معلمات التقرير' %}</label>
+                                {% render_field form.parameters class="form-control" rows="4" placeholder="أدخل معلمات التقرير بتنسيق JSON" %}
+                                <small class="form-text text-muted">{% trans 'مثال: {"date_range": 30, "include_details": true}' %}</small>
+                                {% if form.parameters.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.parameters.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="{{ form.recipients.id_for_label }}" class="form-label">{% trans 'المستلمون' %}</label>
+                                {% render_field form.recipients class="form-select" multiple="multiple" %}
+                                {% if form.recipients.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.recipients.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% if object %}
+                                <div class="form-group mb-3">
+                                    <div class="form-check">
+                                        {% render_field form.is_active class="form-check-input" %}
+                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">{% trans 'نشط' %}</label>
+                                    </div>
+                                    {% if form.is_active.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.is_active.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                            <div class="d-flex justify-content-between">
+                                {% if object %}
+                                    <a href="{% url 'reports:report_detail' object.report.pk %}"
+                                       class="btn btn-secondary">
+                                        <i class="fas fa-times"></i> {% trans 'إلغاء' %}
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'reports:report_detail' report.pk %}"
+                                       class="btn btn-secondary">
+                                        <i class="fas fa-times"></i> {% trans 'إلغاء' %}
+                                    </a>
+                                {% endif %}
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i>
+                                    {% if object %}
+                                        {% trans 'حفظ التغييرات' %}
+                                    {% else %}
+                                        {% trans 'إنشاء الجدولة' %}
+                                    {% endif %}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     $(document).ready(function() {
         // Initialize select2 for recipients
         $('#{{ form.recipients.id_for_label }}').select2({
@@ -163,5 +143,5 @@
             }
         });
     });
-</script>
+    </script>
 {% endblock %}

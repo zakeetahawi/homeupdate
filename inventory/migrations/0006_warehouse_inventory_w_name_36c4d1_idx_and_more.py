@@ -6,20 +6,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('inventory', '0005_add_warehouse_timestamps_and_creator'),
+        ("inventory", "0005_add_warehouse_timestamps_and_creator"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='warehouse',
-            index=models.Index(fields=['name', 'code'], name='inventory_w_name_36c4d1_idx'),
+            model_name="warehouse",
+            index=models.Index(
+                fields=["name", "code"], name="inventory_w_name_36c4d1_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='warehouse',
-            index=models.Index(fields=['created_at'], name='inventory_w_created_6e6d24_idx'),
+            model_name="warehouse",
+            index=models.Index(
+                fields=["created_at"], name="inventory_w_created_6e6d24_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='warehouse',
-            index=models.Index(fields=['is_active'], name='inventory_w_is_acti_3ddeac_idx'),
+            model_name="warehouse",
+            index=models.Index(
+                fields=["is_active"], name="inventory_w_is_acti_3ddeac_idx"
+            ),
         ),
     ]

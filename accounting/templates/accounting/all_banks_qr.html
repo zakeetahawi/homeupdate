@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>الحسابات البنكية - {{ site_name }}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>الحسابات البنكية - {{ site_name }}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap"
+              rel="stylesheet">
+        <link rel="stylesheet"
+              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <style>
     :root {
       --gold: #d4af37;
       --gold-light: #f4d03f;
@@ -163,92 +165,86 @@
       margin-bottom: 20px;
       color: rgba(212, 175, 55, 0.3);
     }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1><i class="fas fa-gem"></i> {{ site_name }}</h1>
-      <p>الحسابات البنكية ({{ count }})</p>
-    </div>
-    
-    {% if banks %}
-      {% for bank in banks %}
-        <div class="bank-card">
-          <div class="bank-card-header">
-            <i class="fas fa-university"></i>
-            <h3>
-              {% if bank.is_primary %}
-                <span class="primary-badge">⭐ رئيسي</span>
-              {% endif %}
-              {{ bank.bank_name }}
-            </h3>
-            <p>{{ bank.bank_name_en }}</p>
-          </div>
-          <div class="bank-card-body">
-            {% if bank.account_holder %}
-            <div class="info-row">
-              <span class="label">صاحب الحساب:</span>
-              <span class="value">{{ bank.account_holder }}</span>
-              <button onclick="copyText('{{ bank.account_holder }}', this)">
-                <i class="fas fa-copy"></i> نسخ
-              </button>
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>
+                    <i class="fas fa-gem"></i> {{ site_name }}
+                </h1>
+                <p>الحسابات البنكية ({{ count }})</p>
             </div>
+            {% if banks %}
+                {% for bank in banks %}
+                    <div class="bank-card">
+                        <div class="bank-card-header">
+                            <i class="fas fa-university"></i>
+                            <h3>
+                                {% if bank.is_primary %}<span class="primary-badge">⭐ رئيسي</span>{% endif %}
+                                {{ bank.bank_name }}
+                            </h3>
+                            <p>{{ bank.bank_name_en }}</p>
+                        </div>
+                        <div class="bank-card-body">
+                            {% if bank.account_holder %}
+                                <div class="info-row">
+                                    <span class="label">صاحب الحساب:</span>
+                                    <span class="value">{{ bank.account_holder }}</span>
+                                    <button onclick="copyText('{{ bank.account_holder }}', this)">
+                                        <i class="fas fa-copy"></i> نسخ
+                                    </button>
+                                </div>
+                            {% endif %}
+                            <div class="info-row">
+                                <span class="label">رقم الحساب:</span>
+                                <span class="value">{{ bank.account_number }}</span>
+                                <button onclick="copyText('{{ bank.account_number }}', this)">
+                                    <i class="fas fa-copy"></i> نسخ
+                                </button>
+                            </div>
+                            {% if bank.iban %}
+                                <div class="info-row">
+                                    <span class="label">IBAN:</span>
+                                    <span class="value">{{ bank.iban }}</span>
+                                    <button onclick="copyText('{{ bank.iban }}', this)">
+                                        <i class="fas fa-copy"></i> نسخ
+                                    </button>
+                                </div>
+                            {% endif %}
+                            {% if bank.swift_code %}
+                                <div class="info-row">
+                                    <span class="label">SWIFT:</span>
+                                    <span class="value">{{ bank.swift_code }}</span>
+                                    <button onclick="copyText('{{ bank.swift_code }}', this)">
+                                        <i class="fas fa-copy"></i> نسخ
+                                    </button>
+                                </div>
+                            {% endif %}
+                            {% if bank.branch %}
+                                <div class="info-row">
+                                    <span class="label">الفرع:</span>
+                                    <span class="value">{{ bank.branch }}</span>
+                                    <button onclick="copyText('{{ bank.branch }}', this)"
+                                            style="visibility:hidden">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>لا توجد حسابات بنكية نشطة</p>
+                </div>
             {% endif %}
-            
-            <div class="info-row">
-              <span class="label">رقم الحساب:</span>
-              <span class="value">{{ bank.account_number }}</span>
-              <button onclick="copyText('{{ bank.account_number }}', this)">
-                <i class="fas fa-copy"></i> نسخ
-              </button>
-            </div>
-            
-            {% if bank.iban %}
-            <div class="info-row">
-              <span class="label">IBAN:</span>
-              <span class="value">{{ bank.iban }}</span>
-              <button onclick="copyText('{{ bank.iban }}', this)">
-                <i class="fas fa-copy"></i> نسخ
-              </button>
-            </div>
-            {% endif %}
-            
-            {% if bank.swift_code %}
-            <div class="info-row">
-              <span class="label">SWIFT:</span>
-              <span class="value">{{ bank.swift_code }}</span>
-              <button onclick="copyText('{{ bank.swift_code }}', this)">
-                <i class="fas fa-copy"></i> نسخ
-              </button>
-            </div>
-            {% endif %}
-            
-            {% if bank.branch %}
-            <div class="info-row">
-              <span class="label">الفرع:</span>
-              <span class="value">{{ bank.branch }}</span>
-              <button onclick="copyText('{{ bank.branch }}', this)" style="visibility:hidden;">
-                <i class="fas fa-copy"></i>
-              </button>
-            </div>
-            {% endif %}
-          </div>
         </div>
-      {% endfor %}
-    {% else %}
-      <div class="empty-state">
-        <i class="fas fa-inbox"></i>
-        <p>لا توجد حسابات بنكية نشطة</p>
-      </div>
-    {% endif %}
-  </div>
-
-  <div class="toast" id="toast">
-    <i class="fas fa-check-circle"></i> تم النسخ بنجاح!
-  </div>
-
-  <script>
+        <div class="toast" id="toast">
+            <i class="fas fa-check-circle"></i> تم النسخ بنجاح!
+        </div>
+        <script>
     function copyText(text, button) {
       navigator.clipboard.writeText(text).then(() => {
         const toast = document.getElementById('toast');
@@ -265,6 +261,6 @@
         }, 2000);
       });
     }
-  </script>
-</body>
+        </script>
+    </body>
 </html>

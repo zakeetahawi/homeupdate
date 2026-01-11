@@ -1,175 +1,165 @@
 {% extends 'orders/wizard/base_wizard.html' %}
 {% load static %}
-
 {% block wizard_content %}
-
-<!-- Edit History Section -->
-{% include 'orders/wizard/partials/edit_history.html' with draft=draft %}
-
-<form method="post" id="step2-form" novalidate>
-    {% csrf_token %}
-    
-    <!-- عرض أخطاء النموذج العامة -->
-    {% if form.non_field_errors %}
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>خطأ:</strong>
-            {% for error in form.non_field_errors %}
-                {{ error }}
-            {% endfor %}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    {% endif %}
-    
-    <div class="mb-4">
-        <h5 class="mb-3">
-            <i class="fas fa-tags me-2"></i>اختر نوع الطلب
-            <span class="text-danger">*</span>
-        </h5>
-        
-        {% if form.selected_type.errors %}
-            <div class="alert alert-danger">
-                {{ form.selected_type.errors }}
+    <!-- Edit History Section -->
+    {% include 'orders/wizard/partials/edit_history.html' with draft=draft %}
+    <form method="post" id="step2-form" novalidate>
+        {% csrf_token %}
+        <!-- عرض أخطاء النموذج العامة -->
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>خطأ:</strong>
+                {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         {% endif %}
-        
-        <div class="row g-3">
-            {% for choice in form.selected_type.field.choices %}
-            <div class="col-md-4 col-sm-6">
-                <label for="type_{{ choice.0 }}" class="order-type-label">
-                    <div class="card h-100 order-type-card">
-                        <div class="card-body text-center">
-                            <input type="radio" name="{{ form.selected_type.name }}" 
-                                   value="{{ choice.0 }}" 
-                                   id="type_{{ choice.0 }}"
-                                   {% if form.selected_type.value == choice.0 %}checked{% endif %}
-                                   class="order-type-radio">
-                            <div class="order-type-icon mb-3">
-                                {% if choice.0 == 'accessory' %}
-                                    <i class="fas fa-gem fa-3x text-primary"></i>
-                                {% elif choice.0 == 'installation' %}
-                                    <i class="fas fa-tools fa-3x text-success"></i>
-                                {% elif choice.0 == 'inspection' %}
-                                    <i class="fas fa-eye fa-3x text-info"></i>
-                                {% elif choice.0 == 'tailoring' %}
-                                    <i class="fas fa-cut fa-3x text-warning"></i>
-                                {% elif choice.0 == 'products' %}
-                                    <i class="fas fa-boxes fa-3x text-secondary"></i>
-                                {% endif %}
+        <div class="mb-4">
+            <h5 class="mb-3">
+                <i class="fas fa-tags me-2"></i>اختر نوع الطلب
+                <span class="text-danger">*</span>
+            </h5>
+            {% if form.selected_type.errors %}<div class="alert alert-danger">{{ form.selected_type.errors }}</div>{% endif %}
+            <div class="row g-3">
+                {% for choice in form.selected_type.field.choices %}
+                    <div class="col-md-4 col-sm-6">
+                        <label for="type_{{ choice.0 }}" class="order-type-label">
+                            <div class="card h-100 order-type-card">
+                                <div class="card-body text-center">
+                                    <input type="radio"
+                                           name="{{ form.selected_type.name }}"
+                                           value="{{ choice.0 }}"
+                                           id="type_{{ choice.0 }}"
+                                           {% if form.selected_type.value == choice.0 %}checked{% endif %}
+                                           class="order-type-radio">
+                                    <div class="order-type-icon mb-3">
+                                        {% if choice.0 == 'accessory' %}
+                                            <i class="fas fa-gem fa-3x text-primary"></i>
+                                        {% elif choice.0 == 'installation' %}
+                                            <i class="fas fa-tools fa-3x text-success"></i>
+                                        {% elif choice.0 == 'inspection' %}
+                                            <i class="fas fa-eye fa-3x text-info"></i>
+                                        {% elif choice.0 == 'tailoring' %}
+                                            <i class="fas fa-cut fa-3x text-warning"></i>
+                                        {% elif choice.0 == 'products' %}
+                                            <i class="fas fa-boxes fa-3x text-secondary"></i>
+                                        {% endif %}
+                                    </div>
+                                    <h5>{{ choice.1 }}</h5>
+                                    <small class="text-muted d-block mt-2">
+                                        {% if choice.0 == 'accessory' %}
+                                            🔧 موجه إلى ورشة الإكسسوار
+                                        {% elif choice.0 == 'installation' %}
+                                            🏭 موجه إلى المصنع
+                                        {% elif choice.0 == 'tailoring' %}
+                                            📦 موجه إلى المصنع
+                                        {% elif choice.0 == 'inspection' %}
+                                            👁️ موجه لقسم المعاينات
+                                        {% elif choice.0 == 'products' %}
+                                            📦 موجه للمخازن
+                                        {% endif %}
+                                    </small>
+                                </div>
                             </div>
-                            <h5>{{ choice.1 }}</h5>
-                            <small class="text-muted d-block mt-2">
-                                {% if choice.0 == 'accessory' %}
-                                    🔧 موجه إلى ورشة الإكسسوار
-                                {% elif choice.0 == 'installation' %}
-                                    🏭 موجه إلى المصنع
-                                {% elif choice.0 == 'tailoring' %}
-                                    📦 موجه إلى المصنع
-                                {% elif choice.0 == 'inspection' %}
-                                    👁️ موجه لقسم المعاينات
-                                {% elif choice.0 == 'products' %}
-                                    📦 موجه للمخازن
-                                {% endif %}
-                            </small>
-                        </div>
-                    </div>
-                </label>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    
-    <!-- Related Inspection (shown conditionally) -->
-    <div id="related-inspection-section" style="display: none;">
-        <div class="card border-warning mb-4">
-            <div class="card-header bg-warning bg-opacity-10">
-                <h5 class="mb-0">
-                    <i class="fas fa-eye me-2"></i>المعاينة المرتبطة
-                    <span class="text-danger">*</span>
-                </h5>
-            </div>
-            <div class="card-body">
-                <!-- عرض أخطاء حقل المعاينة -->
-                {% if form.related_inspection.errors %}
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        {% for error in form.related_inspection.errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                {% endif %}
-                
-                <!-- خيار المعاينة الفعلية -->
-                <div class="mb-3">
-                    <div class="inspection-choice-card" onclick="selectInspectionType('existing')">
-                        <div class="choice-header">
-                            <input class="form-check-input inspection-checkbox" type="checkbox" 
-                                   id="use_existing_inspection" value="existing" 
-                                   onchange="toggleInspectionChoice(event)">
-                            <label class="form-check-label fw-bold" for="use_existing_inspection">
-                                <i class="fas fa-list me-2"></i>اختيار معاينة موجودة
-                            </label>
-                        </div>
-                    </div>
-                    <div id="inspection-select-wrapper" class="mt-2 inspection-details" style="display: none;">
-                        <label for="{{ form.related_inspection.id_for_label }}" class="form-label">
-                            المعاينة المرتبطة
                         </label>
-                        {{ form.related_inspection }}
-                        <div class="form-text">
-                            <i class="fas fa-info-circle me-1"></i>
-                            اختر المعاينة المرتبطة بهذا الطلب
-                        </div>
                     </div>
-                </div>
-                
-                <!-- خيار طرف العميل -->
-                <div class="mb-3">
-                    <div class="inspection-choice-card" onclick="selectInspectionType('customer_side')">
-                        <div class="choice-header">
-                            <input class="form-check-input inspection-checkbox" type="checkbox" 
-                                   id="use_customer_inspection" value="customer_side" 
-                                   onchange="toggleInspectionChoice(event)">
-                            <label class="form-check-label fw-bold" for="use_customer_inspection">
-                                <i class="fas fa-user-plus me-2"></i>إضافة معاينة طرف العميل
-                            </label>
-                        </div>
-                        <div class="form-text text-muted choice-description">
-                            <i class="fas fa-info-circle me-1"></i>
-                            سيتم إنشاء طلب بدون معاينة فعلية (طرف العميل)
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Hidden field for related_inspection_type -->
-                <input type="hidden" name="{{ form.related_inspection_type.name }}" 
-                       id="id_related_inspection_type" value="">
+                {% endfor %}
             </div>
         </div>
-    </div>
-    
-    <!-- Actions -->
-    <div class="wizard-actions">
-        <div>
-            <a href="{% url 'orders:wizard_cancel' %}" class="btn btn-wizard btn-wizard-danger me-2">
-                <i class="fas fa-times me-2"></i>إلغاء
-            </a>
-            <a href="{% url 'orders:wizard_step' step=1 %}" class="btn btn-wizard btn-wizard-secondary">
-                <i class="fas fa-arrow-right me-2"></i>السابق
-            </a>
+        <!-- Related Inspection (shown conditionally) -->
+        <div id="related-inspection-section" style="display: none;">
+            <div class="card border-warning mb-4">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h5 class="mb-0">
+                        <i class="fas fa-eye me-2"></i>المعاينة المرتبطة
+                        <span class="text-danger">*</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- عرض أخطاء حقل المعاينة -->
+                    {% if form.related_inspection.errors %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            {% for error in form.related_inspection.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                    <!-- خيار المعاينة الفعلية -->
+                    <div class="mb-3">
+                        <div class="inspection-choice-card"
+                             onclick="selectInspectionType('existing')">
+                            <div class="choice-header">
+                                <input class="form-check-input inspection-checkbox"
+                                       type="checkbox"
+                                       id="use_existing_inspection"
+                                       value="existing"
+                                       onchange="toggleInspectionChoice(event)">
+                                <label class="form-check-label fw-bold" for="use_existing_inspection">
+                                    <i class="fas fa-list me-2"></i>اختيار معاينة موجودة
+                                </label>
+                            </div>
+                        </div>
+                        <div id="inspection-select-wrapper"
+                             class="mt-2 inspection-details"
+                             style="display: none">
+                            <label for="{{ form.related_inspection.id_for_label }}" class="form-label">المعاينة المرتبطة</label>
+                            {{ form.related_inspection }}
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                اختر المعاينة المرتبطة بهذا الطلب
+                            </div>
+                        </div>
+                    </div>
+                    <!-- خيار طرف العميل -->
+                    <div class="mb-3">
+                        <div class="inspection-choice-card"
+                             onclick="selectInspectionType('customer_side')">
+                            <div class="choice-header">
+                                <input class="form-check-input inspection-checkbox"
+                                       type="checkbox"
+                                       id="use_customer_inspection"
+                                       value="customer_side"
+                                       onchange="toggleInspectionChoice(event)">
+                                <label class="form-check-label fw-bold" for="use_customer_inspection">
+                                    <i class="fas fa-user-plus me-2"></i>إضافة معاينة طرف العميل
+                                </label>
+                            </div>
+                            <div class="form-text text-muted choice-description">
+                                <i class="fas fa-info-circle me-1"></i>
+                                سيتم إنشاء طلب بدون معاينة فعلية (طرف العميل)
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Hidden field for related_inspection_type -->
+                    <input type="hidden"
+                           name="{{ form.related_inspection_type.name }}"
+                           id="id_related_inspection_type"
+                           value="">
+                </div>
+            </div>
         </div>
-        <div>
-            <button type="submit" class="btn btn-wizard btn-wizard-primary">
-                <i class="fas fa-arrow-left me-2"></i>التالي
-            </button>
+        <!-- Actions -->
+        <div class="wizard-actions">
+            <div>
+                <a href="{% url 'orders:wizard_cancel' %}"
+                   class="btn btn-wizard btn-wizard-danger me-2">
+                    <i class="fas fa-times me-2"></i>إلغاء
+                </a>
+                <a href="{% url 'orders:wizard_step' step=1 %}"
+                   class="btn btn-wizard btn-wizard-secondary">
+                    <i class="fas fa-arrow-right me-2"></i>السابق
+                </a>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-wizard btn-wizard-primary">
+                    <i class="fas fa-arrow-left me-2"></i>التالي
+                </button>
+            </div>
         </div>
-    </div>
-</form>
+    </form>
 {% endblock %}
-
 {% block extra_js %}
-{{ block.super }}
-<style>
+    {{ block.super }}
+    <style>
 /* تغليف البطاقة بـ label للنقر السهل */
 .order-type-label {
     display: block;
@@ -372,9 +362,8 @@
         z-index: 100;
     }
 }
-</style>
-
-<script>
+    </style>
+    <script>
 // اكتشاف الجهاز المحمول
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 const isMobile = window.innerWidth <= 768;
@@ -718,22 +707,10 @@ function showMobileAlert(title, message, type = 'info') {
                     transform: translate(-50%, -50%);
                 }
             }
-        </style>
+</style>
         <div style="font-size: 48px; margin-bottom: 15px;">${title}</div>
         <div style="font-size: 18px; margin-bottom: 20px; line-height: 1.5; color: #333;">${message}</div>
-        <button onclick="this.closest('div').remove(); document.getElementById('mobile-alert-overlay').remove();" 
-                style="
-                    background: ${colorMap[type] || '#17a2b8'};
-                    color: white;
-                    border: none;
-                    padding: 12px 30px;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    min-width: 120px;
-                    -webkit-tap-highlight-color: transparent;
-                ">
+        <button onclick="this.closest('div').remove(); document.getElementById('mobile-alert-overlay').remove();" style=" background: ${colorMap[type] || '#17a2b8'}; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; min-width: 120px; -webkit-tap-highlight-color: transparent; ">
             حسناً
         </button>
     `;
@@ -759,5 +736,5 @@ function showMobileAlert(title, message, type = 'info') {
     document.body.appendChild(overlay);
     document.body.appendChild(alertDiv);
 }
-</script>
+    </script>
 {% endblock %}

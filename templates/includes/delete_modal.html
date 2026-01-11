@@ -10,27 +10,33 @@ It requires the following context variables from the `include` tag:
 - object_name: A string representing the name of the object being deleted (e.g., "أمر التصنيع").
 - object_id: The unique ID of the object to create a unique modal ID.
 {% endcomment %}
-
-<div class="modal fade" id="deleteModal{{ object_id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ object_id }}" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title" id="deleteModalLabel{{ object_id }}">
-          <i class="fas fa-exclamation-triangle me-2"></i> تأكيد الحذف
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-      </div>
-      <div class="modal-body">
-        <p>هل أنت متأكد أنك تريد حذف "{{ object_name }}" رقم #{{ object_id }}؟</p>
-        <p class="text-danger fw-bold">لا يمكن التراجع عن هذا الإجراء.</p>
-      </div>
-      <div class="modal-footer">
-        <form method="post" action="{{ delete_url }}">
-          {% csrf_token %}
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-          <button type="submit" class="btn btn-danger">نعم، قم بالحذف</button>
-        </form>
-      </div>
+<div class="modal fade"
+     id="deleteModal{{ object_id }}"
+     tabindex="-1"
+     aria-labelledby="deleteModalLabel{{ object_id }}"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel{{ object_id }}">
+                    <i class="fas fa-exclamation-triangle me-2"></i> تأكيد الحذف
+                </h5>
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"
+                        aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد أنك تريد حذف "{{ object_name }}" رقم #{{ object_id }}؟</p>
+                <p class="text-danger fw-bold">لا يمكن التراجع عن هذا الإجراء.</p>
+            </div>
+            <div class="modal-footer">
+                <form method="post" action="{{ delete_url }}">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger">نعم، قم بالحذف</button>
+                </form>
+            </div>
+        </div>
     </div>
-  </div>
-</div> 
+</div>

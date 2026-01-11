@@ -6,9 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('installations', '0002_add_indexes'),
-        ('installations', '0007_add_location_address_to_installationschedule'),
+        ("installations", "0002_add_indexes"),
+        ("installations", "0007_add_location_address_to_installationschedule"),
     ]
 
-    operations = [
-    ]
+    operations = []

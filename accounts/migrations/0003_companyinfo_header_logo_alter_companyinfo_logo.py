@@ -6,18 +6,29 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0002_dashboardyearsettings'),
+        ("accounts", "0002_dashboardyearsettings"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='companyinfo',
-            name='header_logo',
-            field=models.ImageField(blank=True, help_text='لوغو خاص بالهيدر يمكن أن يكون مختلفاً عن لوغو النظام العام', null=True, upload_to='company_logos/header/', verbose_name='لوغو الهيدر'),
+            model_name="companyinfo",
+            name="header_logo",
+            field=models.ImageField(
+                blank=True,
+                help_text="لوغو خاص بالهيدر يمكن أن يكون مختلفاً عن لوغو النظام العام",
+                null=True,
+                upload_to="company_logos/header/",
+                verbose_name="لوغو الهيدر",
+            ),
         ),
         migrations.AlterField(
-            model_name='companyinfo',
-            name='logo',
-            field=models.ImageField(blank=True, null=True, upload_to='company_logos/', verbose_name='لوغو النظام'),
+            model_name="companyinfo",
+            name="logo",
+            field=models.ImageField(
+                blank=True,
+                null=True,
+                upload_to="company_logos/",
+                verbose_name="لوغو النظام",
+            ),
         ),
     ]

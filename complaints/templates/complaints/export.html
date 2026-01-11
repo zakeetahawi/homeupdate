@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}تصدير الشكاوى - نظام الخواجه{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .export-form {
         background: white;
         border-radius: 15px;
@@ -55,126 +53,101 @@
         border-color: #007bff;
         background-color: #f8f9fa;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-file-export me-2"></i>تصدير الشكاوى</h2>
-        <a href="{% url 'complaints:complaint_list' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-right me-1"></i>
-            العودة لقائمة الشكاوى
-        </a>
-    </div>
-
-    <div class="export-form">
-        <form method="post">
-            {% csrf_token %}
-            
-            <!-- صيغة التصدير -->
-            <div class="filter-section">
-                <h5 class="mb-3">صيغة التصدير</h5>
-                <div class="export-options">
-                    {% for value, label in form.export_format.field.choices %}
-                    <label class="export-option {% if form.export_format.value == value %}selected{% endif %}">
-                        <input type="radio" name="{{ form.export_format.name }}" value="{{ value }}" 
-                               class="d-none" {% if form.export_format.value == value %}checked{% endif %}>
-                        <i class="fas fa-file-{{ value }} me-2"></i>
-                        {{ label }}
-                    </label>
-                    {% endfor %}
-                </div>
-                {% if form.export_format.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.export_format.errors|join:", " }}
-                </div>
-                {% endif %}
-            </div>
-            
-            <!-- نطاق التاريخ -->
-            <div class="filter-section">
-                <h5 class="mb-3">نطاق التاريخ</h5>
-                <div class="row">
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.date_from.label }}</label>
-                        {{ form.date_from }}
-                        {% if form.date_from.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.date_from.errors|join:", " }}
-                        </div>
-                        {% endif %}
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-file-export me-2"></i>تصدير الشكاوى
+            </h2>
+            <a href="{% url 'complaints:complaint_list' %}"
+               class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-right me-1"></i>
+                العودة لقائمة الشكاوى
+            </a>
+        </div>
+        <div class="export-form">
+            <form method="post">
+                {% csrf_token %}
+                <!-- صيغة التصدير -->
+                <div class="filter-section">
+                    <h5 class="mb-3">صيغة التصدير</h5>
+                    <div class="export-options">
+                        {% for value, label in form.export_format.field.choices %}
+                            <label class="export-option {% if form.export_format.value == value %}selected{% endif %}">
+                                <input type="radio"
+                                       name="{{ form.export_format.name }}"
+                                       value="{{ value }}"
+                                       class="d-none"
+                                       {% if form.export_format.value == value %}checked{% endif %}>
+                                <i class="fas fa-file-{{ value }} me-2"></i>
+                                {{ label }}
+                            </label>
+                        {% endfor %}
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.date_to.label }}</label>
-                        {{ form.date_to }}
-                        {% if form.date_to.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ form.date_to.errors|join:", " }}
+                    {% if form.export_format.errors %}
+                        <div class="invalid-feedback d-block">{{ form.export_format.errors|join:", " }}</div>
+                    {% endif %}
+                </div>
+                <!-- نطاق التاريخ -->
+                <div class="filter-section">
+                    <h5 class="mb-3">نطاق التاريخ</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.date_from.label }}</label>
+                            {{ form.date_from }}
+                            {% if form.date_from.errors %}
+                                <div class="invalid-feedback d-block">{{ form.date_from.errors|join:", " }}</div>
+                            {% endif %}
                         </div>
-                        {% endif %}
+                        <div class="col-md-6">
+                            <label class="form-label">{{ form.date_to.label }}</label>
+                            {{ form.date_to }}
+                            {% if form.date_to.errors %}<div class="invalid-feedback d-block">{{ form.date_to.errors|join:", " }}</div>{% endif %}
+                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- الحالة -->
-            <div class="filter-section">
-                <h5 class="mb-3">{{ form.status.label }}</h5>
-                <div class="checkbox-group">
-                    {{ form.status }}
+                <!-- الحالة -->
+                <div class="filter-section">
+                    <h5 class="mb-3">{{ form.status.label }}</h5>
+                    <div class="checkbox-group">{{ form.status }}</div>
+                    {% if form.status.errors %}<div class="invalid-feedback d-block">{{ form.status.errors|join:", " }}</div>{% endif %}
                 </div>
-                {% if form.status.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.status.errors|join:", " }}
+                <!-- نوع الشكوى -->
+                <div class="filter-section">
+                    <h5 class="mb-3">{{ form.complaint_type.label }}</h5>
+                    <div class="checkbox-group">{{ form.complaint_type }}</div>
+                    {% if form.complaint_type.errors %}
+                        <div class="invalid-feedback d-block">{{ form.complaint_type.errors|join:", " }}</div>
+                    {% endif %}
                 </div>
-                {% endif %}
-            </div>
-            
-            <!-- نوع الشكوى -->
-            <div class="filter-section">
-                <h5 class="mb-3">{{ form.complaint_type.label }}</h5>
-                <div class="checkbox-group">
-                    {{ form.complaint_type }}
+                <!-- الأولوية -->
+                <div class="filter-section">
+                    <h5 class="mb-3">{{ form.priority.label }}</h5>
+                    <div class="checkbox-group">{{ form.priority }}</div>
+                    {% if form.priority.errors %}
+                        <div class="invalid-feedback d-block">{{ form.priority.errors|join:", " }}</div>
+                    {% endif %}
                 </div>
-                {% if form.complaint_type.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.complaint_type.errors|join:", " }}
+                <!-- أزرار التحكم -->
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <button type="reset" class="btn btn-outline-secondary">
+                        <i class="fas fa-undo me-1"></i>
+                        إعادة تعيين
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-file-export me-1"></i>
+                        تصدير
+                    </button>
                 </div>
-                {% endif %}
-            </div>
-            
-            <!-- الأولوية -->
-            <div class="filter-section">
-                <h5 class="mb-3">{{ form.priority.label }}</h5>
-                <div class="checkbox-group">
-                    {{ form.priority }}
-                </div>
-                {% if form.priority.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.priority.errors|join:", " }}
-                </div>
-                {% endif %}
-            </div>
-            
-            <!-- أزرار التحكم -->
-            <div class="d-flex justify-content-between align-items-center mt-4">
-                <button type="reset" class="btn btn-outline-secondary">
-                    <i class="fas fa-undo me-1"></i>
-                    إعادة تعيين
-                </button>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-file-export me-1"></i>
-                    تصدير
-                </button>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     document.addEventListener('DOMContentLoaded', function() {
         // تحديث تنسيق خيارات التصدير
         const exportOptions = document.querySelectorAll('.export-option');
@@ -194,5 +167,5 @@
             exportOptions[0].classList.add('selected');
         });
     });
-</script>
+    </script>
 {% endblock %}

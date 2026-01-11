@@ -1,62 +1,81 @@
 {% extends "admin/change_list.html" %}
 {% load i18n admin_urls static admin_list %}
-
 {% block content %}
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            color: white; padding: 20px; margin-bottom: 20px; 
-            border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-    <h2 style="margin: 0 0 15px 0; font-size: 24px;">
-        <i class="fas fa-shield-alt"></i> إحصائيات الأمان - آخر 24 ساعة
-    </h2>
-    
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
-        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center;">
-            <div style="font-size: 32px; font-weight: bold;">{{ security_stats.total_events|default:0 }}</div>
-            <div style="font-size: 14px; opacity: 0.9;">إجمالي الأحداث</div>
-        </div>
-        
-        <div style="background: rgba(220, 53, 69, 0.3); padding: 15px; border-radius: 8px; text-align: center;">
-            <div style="font-size: 32px; font-weight: bold;">{{ security_stats.blocked_attempts|default:0 }}</div>
-            <div style="font-size: 14px; opacity: 0.9;">محاولات محظورة</div>
-        </div>
-        
-        <div style="background: rgba(255, 0, 0, 0.3); padding: 15px; border-radius: 8px; text-align: center;">
-            <div style="font-size: 32px; font-weight: bold;">{{ security_stats.brute_force|default:0 }}</div>
-            <div style="font-size: 14px; opacity: 0.9;">Brute Force</div>
-        </div>
-        
-        <div style="background: rgba(255, 0, 0, 0.3); padding: 15px; border-radius: 8px; text-align: center;">
-            <div style="font-size: 32px; font-weight: bold;">{{ security_stats.sql_injection|default:0 }}</div>
-            <div style="font-size: 14px; opacity: 0.9;">SQL Injection</div>
-        </div>
-        
-        <div style="background: rgba(253, 126, 20, 0.3); padding: 15px; border-radius: 8px; text-align: center;">
-            <div style="font-size: 32px; font-weight: bold;">{{ security_stats.xss_attempts|default:0 }}</div>
-            <div style="font-size: 14px; opacity: 0.9;">XSS Attempts</div>
-        </div>
-        
-        <div style="background: rgba(255, 193, 7, 0.3); padding: 15px; border-radius: 8px; text-align: center;">
-            <div style="font-size: 32px; font-weight: bold;">{{ security_stats.failed_logins|default:0 }}</div>
-            <div style="font-size: 14px; opacity: 0.9;">فشل تسجيل دخول</div>
-        </div>
-    </div>
-    
-    {% if top_suspicious_ips %}
-    <div style="margin-top: 20px; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
-        <h3 style="margin: 0 0 10px 0; font-size: 16px;">
-            <i class="fas fa-exclamation-triangle"></i> أكثر عناوين IP نشاطاً مشبوهاً
-        </h3>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            {% for ip in top_suspicious_ips %}
-            <div style="background: rgba(255,255,255,0.2); padding: 8px 12px; border-radius: 4px;">
-                <span style="font-family: monospace; font-weight: bold;">{{ ip.ip_address }}</span>
-                <span style="opacity: 0.8;">({{ ip.count }} مرة)</span>
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 20px;
+                margin-bottom: 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1)">
+        <h2 style="margin: 0 0 15px 0; font-size: 24px;">
+            <i class="fas fa-shield-alt"></i> إحصائيات الأمان - آخر 24 ساعة
+        </h2>
+        <div style="display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 15px">
+            <div style="background: rgba(255,255,255,0.2);
+                        padding: 15px;
+                        border-radius: 8px;
+                        text-align: center">
+                <div style="font-size: 32px; font-weight: bold;">{{ security_stats.total_events|default:0 }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">إجمالي الأحداث</div>
             </div>
-            {% endfor %}
+            <div style="background: rgba(220, 53, 69, 0.3);
+                        padding: 15px;
+                        border-radius: 8px;
+                        text-align: center">
+                <div style="font-size: 32px; font-weight: bold;">{{ security_stats.blocked_attempts|default:0 }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">محاولات محظورة</div>
+            </div>
+            <div style="background: rgba(255, 0, 0, 0.3);
+                        padding: 15px;
+                        border-radius: 8px;
+                        text-align: center">
+                <div style="font-size: 32px; font-weight: bold;">{{ security_stats.brute_force|default:0 }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Brute Force</div>
+            </div>
+            <div style="background: rgba(255, 0, 0, 0.3);
+                        padding: 15px;
+                        border-radius: 8px;
+                        text-align: center">
+                <div style="font-size: 32px; font-weight: bold;">{{ security_stats.sql_injection|default:0 }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">SQL Injection</div>
+            </div>
+            <div style="background: rgba(253, 126, 20, 0.3);
+                        padding: 15px;
+                        border-radius: 8px;
+                        text-align: center">
+                <div style="font-size: 32px; font-weight: bold;">{{ security_stats.xss_attempts|default:0 }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">XSS Attempts</div>
+            </div>
+            <div style="background: rgba(255, 193, 7, 0.3);
+                        padding: 15px;
+                        border-radius: 8px;
+                        text-align: center">
+                <div style="font-size: 32px; font-weight: bold;">{{ security_stats.failed_logins|default:0 }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">فشل تسجيل دخول</div>
+            </div>
         </div>
+        {% if top_suspicious_ips %}
+            <div style="margin-top: 20px;
+                        background: rgba(255,255,255,0.1);
+                        padding: 15px;
+                        border-radius: 8px">
+                <h3 style="margin: 0 0 10px 0; font-size: 16px;">
+                    <i class="fas fa-exclamation-triangle"></i> أكثر عناوين IP نشاطاً مشبوهاً
+                </h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    {% for ip in top_suspicious_ips %}
+                        <div style="background: rgba(255,255,255,0.2);
+                                    padding: 8px 12px;
+                                    border-radius: 4px">
+                            <span style="font-family: monospace; font-weight: bold;">{{ ip.ip_address }}</span>
+                            <span style="opacity: 0.8;">({{ ip.count }} مرة)</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
     </div>
-    {% endif %}
-</div>
-
-{{ block.super }}
+    {{ block.super }}
 {% endblock %}

@@ -1,8 +1,10 @@
-from django.http import JsonResponse
-from django.db import connection
-from django.conf import settings
-import psutil
 import os
+
+import psutil
+from django.conf import settings
+from django.db import connection
+from django.http import JsonResponse
+
 
 def health_check(request):
     """
@@ -26,14 +28,18 @@ def health_check(request):
 
     # معلومات النظام
     memory = psutil.virtual_memory()
-    disk = psutil.disk_usage('/')
-    
+    disk = psutil.disk_usage("/")
+
     response_data = {
         "status": "healthy" if db_status == "healthy" else "unhealthy",
         "database": {
             "status": db_status,
             "error": db_error,
-            "engine": settings.DATABASES['default']['ENGINE'] if 'ENGINE' in settings.DATABASES['default'] else "dj_database_url (PostgreSQL)",
+            "engine": (
+                settings.DATABASES["default"]["ENGINE"]
+                if "ENGINE" in settings.DATABASES["default"]
+                else "dj_database_url (PostgreSQL)"
+            ),
         },
         "system": {
             "memory_usage_percent": memory.percent,
@@ -42,6 +48,6 @@ def health_check(request):
         },
         "environment": "production" if not settings.DEBUG else "development",
     }
-    
+
     status_code = 200 if response_data["status"] == "healthy" else 500
     return JsonResponse(response_data, status=status_code)

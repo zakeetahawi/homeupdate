@@ -1,146 +1,143 @@
 {% extends 'base.html' %}
 {% load i18n %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">
-                        <i class="fas fa-search"></i>
-                        {{ title }}
-                    </h3>
-                    <div>
-                        <a href="{% url 'odoo_db_manager:database_list' %}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i>
-                            {% trans "العودة إلى القائمة" %}
-                        </a>
-                    </div>
-                </div>
-                <div class="card-body">
-                    {% if discovered_dbs %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            {% trans "تم اكتشاف" %} {{ discovered_dbs|length }} {% trans "قاعدة بيانات في PostgreSQL" %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3 class="card-title">
+                            <i class="fas fa-search"></i>
+                            {{ title }}
+                        </h3>
+                        <div>
+                            <a href="{% url 'odoo_db_manager:database_list' %}"
+                               class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i>
+                                {% trans "العودة إلى القائمة" %}
+                            </a>
                         </div>
-
-                        {% if new_dbs %}
-                            <h4 class="text-success">
-                                <i class="fas fa-plus-circle"></i>
-                                {% trans "قواعد بيانات جديدة" %} ({{ new_dbs|length }})
-                            </h4>
-                            <div class="table-responsive mb-4">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>{% trans "اسم قاعدة البيانات" %}</th>
-                                            <th>{% trans "النوع" %}</th>
-                                            <th>{% trans "الخادم" %}</th>
-                                            <th>{% trans "المنفذ" %}</th>
-                                            <th>{% trans "المستخدم" %}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for db in new_dbs %}
-                                        <tr>
-                                            <td>
-                                                <strong class="text-success">{{ db.name }}</strong>
-                                                <span class="badge badge-success">{% trans "جديد" %}</span>
-                                            </td>
-                                            <td>
-                                                <i class="fas fa-database"></i>
-                                                {{ db.type|title }}
-                                            </td>
-                                            <td>{{ db.connection_info.HOST }}</td>
-                                            <td>{{ db.connection_info.PORT }}</td>
-                                            <td>{{ db.connection_info.USER }}</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                    </div>
+                    <div class="card-body">
+                        {% if discovered_dbs %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                {% trans "تم اكتشاف" %} {{ discovered_dbs|length }} {% trans "قاعدة بيانات في PostgreSQL" %}
                             </div>
-                        {% endif %}
-
-                        {% if existing_in_system %}
-                            <h4 class="text-primary">
-                                <i class="fas fa-check-circle"></i>
-                                {% trans "قواعد بيانات موجودة في النظام" %} ({{ existing_in_system|length }})
-                            </h4>
-                            <div class="table-responsive mb-4">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>{% trans "اسم قاعدة البيانات" %}</th>
-                                            <th>{% trans "النوع" %}</th>
-                                            <th>{% trans "الخادم" %}</th>
-                                            <th>{% trans "المنفذ" %}</th>
-                                            <th>{% trans "المستخدم" %}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for db in existing_in_system %}
-                                        <tr>
-                                            <td>
-                                                <strong class="text-primary">{{ db.name }}</strong>
-                                                <span class="badge badge-primary">{% trans "موجود" %}</span>
-                                            </td>
-                                            <td>
-                                                <i class="fas fa-database"></i>
-                                                {{ db.type|title }}
-                                            </td>
-                                            <td>{{ db.connection_info.HOST }}</td>
-                                            <td>{{ db.connection_info.PORT }}</td>
-                                            <td>{{ db.connection_info.USER }}</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        {% endif %}
-
-                        {% if new_dbs %}
+                            {% if new_dbs %}
+                                <h4 class="text-success">
+                                    <i class="fas fa-plus-circle"></i>
+                                    {% trans "قواعد بيانات جديدة" %} ({{ new_dbs|length }})
+                                </h4>
+                                <div class="table-responsive mb-4">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>{% trans "اسم قاعدة البيانات" %}</th>
+                                                <th>{% trans "النوع" %}</th>
+                                                <th>{% trans "الخادم" %}</th>
+                                                <th>{% trans "المنفذ" %}</th>
+                                                <th>{% trans "المستخدم" %}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for db in new_dbs %}
+                                                <tr>
+                                                    <td>
+                                                        <strong class="text-success">{{ db.name }}</strong>
+                                                        <span class="badge badge-success">{% trans "جديد" %}</span>
+                                                    </td>
+                                                    <td>
+                                                        <i class="fas fa-database"></i>
+                                                        {{ db.type|title }}
+                                                    </td>
+                                                    <td>{{ db.connection_info.HOST }}</td>
+                                                    <td>{{ db.connection_info.PORT }}</td>
+                                                    <td>{{ db.connection_info.USER }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% endif %}
+                            {% if existing_in_system %}
+                                <h4 class="text-primary">
+                                    <i class="fas fa-check-circle"></i>
+                                    {% trans "قواعد بيانات موجودة في النظام" %} ({{ existing_in_system|length }})
+                                </h4>
+                                <div class="table-responsive mb-4">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>{% trans "اسم قاعدة البيانات" %}</th>
+                                                <th>{% trans "النوع" %}</th>
+                                                <th>{% trans "الخادم" %}</th>
+                                                <th>{% trans "المنفذ" %}</th>
+                                                <th>{% trans "المستخدم" %}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for db in existing_in_system %}
+                                                <tr>
+                                                    <td>
+                                                        <strong class="text-primary">{{ db.name }}</strong>
+                                                        <span class="badge badge-primary">{% trans "موجود" %}</span>
+                                                    </td>
+                                                    <td>
+                                                        <i class="fas fa-database"></i>
+                                                        {{ db.type|title }}
+                                                    </td>
+                                                    <td>{{ db.connection_info.HOST }}</td>
+                                                    <td>{{ db.connection_info.PORT }}</td>
+                                                    <td>{{ db.connection_info.USER }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% endif %}
+                            {% if new_dbs %}
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    {% trans "سيتم إضافة قواعد البيانات الجديدة إلى النظام عند الضغط على زر المزامنة" %}
+                                </div>
+                                <form method="post" class="text-center">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fas fa-sync"></i>
+                                        {% trans "مزامنة قواعد البيانات" %}
+                                    </button>
+                                </form>
+                            {% else %}
+                                <div class="alert alert-success">
+                                    <i class="fas fa-check"></i>
+                                    {% trans "جميع قواعد البيانات المكتشفة موجودة بالفعل في النظام" %}
+                                </div>
+                            {% endif %}
+                        {% else %}
                             <div class="alert alert-warning">
                                 <i class="fas fa-exclamation-triangle"></i>
-                                {% trans "سيتم إضافة قواعد البيانات الجديدة إلى النظام عند الضغط على زر المزامنة" %}
+                                {% trans "لم يتم اكتشاف أي قواعد بيانات في PostgreSQL" %}
                             </div>
-
-                            <form method="post" class="text-center">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success btn-lg">
-                                    <i class="fas fa-sync"></i>
-                                    {% trans "مزامنة قواعد البيانات" %}
-                                </button>
-                            </form>
-                        {% else %}
-                            <div class="alert alert-success">
-                                <i class="fas fa-check"></i>
-                                {% trans "جميع قواعد البيانات المكتشفة موجودة بالفعل في النظام" %}
+                            <div class="text-center">
+                                <p class="text-muted">{% trans "تأكد من:" %}</p>
+                                <ul class="list-unstyled text-muted">
+                                    <li>
+                                        <i class="fas fa-check"></i> {% trans "تشغيل خادم PostgreSQL" %}
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-check"></i> {% trans "صحة معلومات الاتصال" %}
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-check"></i> {% trans "وجود أداة psql في النظام" %}
+                                    </li>
+                                </ul>
                             </div>
                         {% endif %}
-
-                    {% else %}
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            {% trans "لم يتم اكتشاف أي قواعد بيانات في PostgreSQL" %}
-                        </div>
-                        
-                        <div class="text-center">
-                            <p class="text-muted">
-                                {% trans "تأكد من:" %}
-                            </p>
-                            <ul class="list-unstyled text-muted">
-                                <li><i class="fas fa-check"></i> {% trans "تشغيل خادم PostgreSQL" %}</li>
-                                <li><i class="fas fa-check"></i> {% trans "صحة معلومات الاتصال" %}</li>
-                                <li><i class="fas fa-check"></i> {% trans "وجود أداة psql في النظام" %}</li>
-                            </ul>
-                        </div>
-                    {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

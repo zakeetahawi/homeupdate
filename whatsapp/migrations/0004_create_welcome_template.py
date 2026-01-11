@@ -5,16 +5,16 @@ from django.db import migrations
 
 def create_welcome_template(apps, schema_editor):
     """إنشاء قالب ترحيبي وقاعدة إشعار"""
-    WhatsAppMessageTemplate = apps.get_model('whatsapp', 'WhatsAppMessageTemplate')
-    WhatsAppNotificationRule = apps.get_model('whatsapp', 'WhatsAppNotificationRule')
-    
+    WhatsAppMessageTemplate = apps.get_model("whatsapp", "WhatsAppMessageTemplate")
+    WhatsAppNotificationRule = apps.get_model("whatsapp", "WhatsAppNotificationRule")
+
     # إنشاء القالب
     template, created = WhatsAppMessageTemplate.objects.get_or_create(
-        name='customer_welcome',
+        name="customer_welcome",
         defaults={
-            'message_type': 'CUSTOM',
-            'language': 'ar',
-            'template_text': """مرحباً {customer_name}! 👋
+            "message_type": "CUSTOM",
+            "language": "ar",
+            "template_text": """مرحباً {customer_name}! 👋
 
 نشكرك على انضمامك إلى الخواجة للمفروشات والستائر 🎉
 
@@ -28,29 +28,29 @@ def create_welcome_template(apps, schema_editor):
 📱 واتساب: {phone}
 
 شكراً لثقتكم 🙏""",
-            'is_active': True
-        }
+            "is_active": True,
+        },
     )
-    
+
     # إنشاء قاعدة الإشعار
     if created:
         WhatsAppNotificationRule.objects.get_or_create(
-            event_type='CUSTOMER_WELCOME',
+            event_type="CUSTOMER_WELCOME",
             defaults={
-                'template': template,
-                'is_enabled': False,  # معطل افتراضياً
-                'delay_minutes': 0
-            }
+                "template": template,
+                "is_enabled": False,  # معطل افتراضياً
+                "delay_minutes": 0,
+            },
         )
 
 
 def reverse_welcome_template(apps, schema_editor):
     """حذف القالب والقاعدة"""
-    WhatsAppMessageTemplate = apps.get_model('whatsapp', 'WhatsAppMessageTemplate')
-    WhatsAppNotificationRule = apps.get_model('whatsapp', 'WhatsAppNotificationRule')
-    
-    WhatsAppNotificationRule.objects.filter(event_type='CUSTOMER_WELCOME').delete()
-    WhatsAppMessageTemplate.objects.filter(name='customer_welcome').delete()
+    WhatsAppMessageTemplate = apps.get_model("whatsapp", "WhatsAppMessageTemplate")
+    WhatsAppNotificationRule = apps.get_model("whatsapp", "WhatsAppNotificationRule")
+
+    WhatsAppNotificationRule.objects.filter(event_type="CUSTOMER_WELCOME").delete()
+    WhatsAppMessageTemplate.objects.filter(name="customer_welcome").delete()
 
 
 class Migration(migrations.Migration):

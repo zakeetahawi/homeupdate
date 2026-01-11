@@ -2,89 +2,65 @@
 نماذج نشاط المستخدمين
 """
 
-from django.db import models
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from django.core.exceptions import ValidationError
-from django.utils.html import format_html
-from datetime import timedelta
 import json
+from datetime import timedelta
+
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.db import models
+from django.utils import timezone
+from django.utils.html import format_html
 
 User = get_user_model()
 
 
 class UserSession(models.Model):
     """نموذج لتتبع جلسات المستخدمين"""
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='activity_user_sessions',
-        verbose_name='المستخدم'
+        related_name="activity_user_sessions",
+        verbose_name="المستخدم",
     )
     session_key = models.CharField(
-        max_length=40,
-        unique=True,
-        verbose_name='مفتاح الجلسة'
+        max_length=40, unique=True, verbose_name="مفتاح الجلسة"
     )
-    ip_address = models.GenericIPAddressField(
-        verbose_name='عنوان IP'
-    )
-    user_agent = models.TextField(
-        blank=True,
-        verbose_name='معلومات المتصفح'
-    )
-    login_time = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='وقت الدخول'
-    )
-    last_activity = models.DateTimeField(
-        auto_now=True,
-        verbose_name='آخر نشاط'
-    )
-    logout_time = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='وقت الخروج'
-    )
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name='نشط'
-    )
+    ip_address = models.GenericIPAddressField(verbose_name="عنوان IP")
+    user_agent = models.TextField(blank=True, verbose_name="معلومات المتصفح")
+    login_time = models.DateTimeField(auto_now_add=True, verbose_name="وقت الدخول")
+    last_activity = models.DateTimeField(auto_now=True, verbose_name="آخر نشاط")
+    logout_time = models.DateTimeField(null=True, blank=True, verbose_name="وقت الخروج")
+    is_active = models.BooleanField(default=True, verbose_name="نشط")
 
     # معلومات إضافية عن الجلسة
     device_type = models.CharField(
         max_length=20,
         choices=[
-            ('desktop', 'سطح المكتب'),
-            ('mobile', 'هاتف محمول'),
-            ('tablet', 'جهاز لوحي'),
-            ('unknown', 'غير معروف'),
+            ("desktop", "سطح المكتب"),
+            ("mobile", "هاتف محمول"),
+            ("tablet", "جهاز لوحي"),
+            ("unknown", "غير معروف"),
         ],
-        default='unknown',
-        verbose_name='نوع الجهاز'
+        default="unknown",
+        verbose_name="نوع الجهاز",
     )
 
-    browser = models.CharField(
-        max_length=50,
-        blank=True,
-        verbose_name='المتصفح'
-    )
+    browser = models.CharField(max_length=50, blank=True, verbose_name="المتصفح")
 
     operating_system = models.CharField(
-        max_length=50,
-        blank=True,
-        verbose_name='نظام التشغيل'
+        max_length=50, blank=True, verbose_name="نظام التشغيل"
     )
 
     class Meta:
-        verbose_name = '💻 جلسة مستخدم'
-        verbose_name_plural = '💻 جلسات المستخدمين'
-        ordering = ['-last_activity']
+        verbose_name = "💻 جلسة مستخدم"
+        verbose_name_plural = "💻 جلسات المستخدمين"
+        ordering = ["-last_activity"]
         indexes = [
-            models.Index(fields=['user', '-last_activity']),
-            models.Index(fields=['is_active']),
-            models.Index(fields=['session_key']),
-            models.Index(fields=['login_time']),
+            models.Index(fields=["user", "-last_activity"]),
+            models.Index(fields=["is_active"]),
+            models.Index(fields=["session_key"]),
+            models.Index(fields=["login_time"]),
         ]
 
     def __str__(self):
@@ -108,60 +84,60 @@ class UserSession(models.Model):
         """إنهاء الجلسة"""
         self.logout_time = timezone.now()
         self.is_active = False
-        self.save(update_fields=['logout_time', 'is_active'])
+        self.save(update_fields=["logout_time", "is_active"])
 
 
 class UserActivityLog(models.Model):
     """نموذج مفصل لتسجيل جميع أنشطة المستخدمين"""
 
     ACTION_TYPES = [
-        ('login', 'تسجيل دخول'),
-        ('logout', 'تسجيل خروج'),
-        ('view', 'عرض صفحة'),
-        ('create', 'إنشاء'),
-        ('update', 'تحديث'),
-        ('delete', 'حذف'),
-        ('search', 'بحث'),
-        ('export', 'تصدير'),
-        ('import', 'استيراد'),
-        ('download', 'تحميل'),
-        ('upload', 'رفع ملف'),
-        ('print', 'طباعة'),
-        ('email', 'إرسال بريد إلكتروني'),
-        ('api_call', 'استدعاء API'),
-        ('error', 'خطأ'),
-        ('security', 'أمان'),
-        ('admin', 'إدارة'),
-        ('report', 'تقرير'),
-        ('backup', 'نسخ احتياطي'),
-        ('restore', 'استعادة'),
-        ('maintenance', 'صيانة'),
-        ('other', 'أخرى'),
+        ("login", "تسجيل دخول"),
+        ("logout", "تسجيل خروج"),
+        ("view", "عرض صفحة"),
+        ("create", "إنشاء"),
+        ("update", "تحديث"),
+        ("delete", "حذف"),
+        ("search", "بحث"),
+        ("export", "تصدير"),
+        ("import", "استيراد"),
+        ("download", "تحميل"),
+        ("upload", "رفع ملف"),
+        ("print", "طباعة"),
+        ("email", "إرسال بريد إلكتروني"),
+        ("api_call", "استدعاء API"),
+        ("error", "خطأ"),
+        ("security", "أمان"),
+        ("admin", "إدارة"),
+        ("report", "تقرير"),
+        ("backup", "نسخ احتياطي"),
+        ("restore", "استعادة"),
+        ("maintenance", "صيانة"),
+        ("other", "أخرى"),
     ]
 
     ENTITY_TYPES = [
-        ('user', 'مستخدم'),
-        ('customer', 'عميل'),
-        ('order', 'طلب'),
-        ('product', 'منتج'),
-        ('inspection', 'معاينة'),
-        ('manufacturing', 'تصنيع'),
-        ('installation', 'تركيب'),
-        ('complaint', 'شكوى'),
-        ('report', 'تقرير'),
-        ('system', 'نظام'),
-        ('file', 'ملف'),
-        ('page', 'صفحة'),
-        ('api', 'واجهة برمجية'),
-        ('database', 'قاعدة بيانات'),
-        ('other', 'أخرى'),
+        ("user", "مستخدم"),
+        ("customer", "عميل"),
+        ("order", "طلب"),
+        ("product", "منتج"),
+        ("inspection", "معاينة"),
+        ("manufacturing", "تصنيع"),
+        ("installation", "تركيب"),
+        ("complaint", "شكوى"),
+        ("report", "تقرير"),
+        ("system", "نظام"),
+        ("file", "ملف"),
+        ("page", "صفحة"),
+        ("api", "واجهة برمجية"),
+        ("database", "قاعدة بيانات"),
+        ("other", "أخرى"),
     ]
 
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='activity_activity_logs',
-        verbose_name='المستخدم'
+        related_name="activity_activity_logs",
+        verbose_name="المستخدم",
     )
 
     session = models.ForeignKey(
@@ -169,92 +145,57 @@ class UserActivityLog(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='activities',
-        verbose_name='الجلسة'
+        related_name="activities",
+        verbose_name="الجلسة",
     )
 
     action_type = models.CharField(
-        max_length=20,
-        choices=ACTION_TYPES,
-        verbose_name='نوع العملية'
+        max_length=20, choices=ACTION_TYPES, verbose_name="نوع العملية"
     )
 
     entity_type = models.CharField(
-        max_length=20,
-        choices=ENTITY_TYPES,
-        default='other',
-        verbose_name='نوع الكائن'
+        max_length=20, choices=ENTITY_TYPES, default="other", verbose_name="نوع الكائن"
     )
 
     entity_id = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='معرف الكائن'
+        null=True, blank=True, verbose_name="معرف الكائن"
     )
 
     entity_name = models.CharField(
-        max_length=200,
-        blank=True,
-        verbose_name='اسم الكائن'
+        max_length=200, blank=True, verbose_name="اسم الكائن"
     )
 
-    description = models.TextField(
-        verbose_name='الوصف'
-    )
+    description = models.TextField(verbose_name="الوصف")
 
-    url_path = models.CharField(
-        max_length=500,
-        blank=True,
-        verbose_name='مسار الصفحة'
-    )
+    url_path = models.CharField(max_length=500, blank=True, verbose_name="مسار الصفحة")
 
-    http_method = models.CharField(
-        max_length=10,
-        blank=True,
-        verbose_name='طريقة HTTP'
-    )
+    http_method = models.CharField(max_length=10, blank=True, verbose_name="طريقة HTTP")
 
-    ip_address = models.GenericIPAddressField(
-        verbose_name='عنوان IP'
-    )
+    ip_address = models.GenericIPAddressField(verbose_name="عنوان IP")
 
-    user_agent = models.TextField(
-        blank=True,
-        verbose_name='معلومات المتصفح'
-    )
+    user_agent = models.TextField(blank=True, verbose_name="معلومات المتصفح")
 
     extra_data = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name='بيانات إضافية'
+        default=dict, blank=True, verbose_name="بيانات إضافية"
     )
 
-    timestamp = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='الوقت'
-    )
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name="الوقت")
 
-    success = models.BooleanField(
-        default=True,
-        verbose_name='نجح'
-    )
+    success = models.BooleanField(default=True, verbose_name="نجح")
 
-    error_message = models.TextField(
-        blank=True,
-        verbose_name='رسالة الخطأ'
-    )
+    error_message = models.TextField(blank=True, verbose_name="رسالة الخطأ")
 
     class Meta:
-        verbose_name = '📋 سجل نشاط'
-        verbose_name_plural = '📋 سجلات النشاط'
-        ordering = ['-timestamp']
+        verbose_name = "📋 سجل نشاط"
+        verbose_name_plural = "📋 سجلات النشاط"
+        ordering = ["-timestamp"]
         indexes = [
-            models.Index(fields=['user', '-timestamp']),
-            models.Index(fields=['action_type']),
-            models.Index(fields=['entity_type']),
-            models.Index(fields=['timestamp']),
-            models.Index(fields=['success']),
-            models.Index(fields=['ip_address']),
+            models.Index(fields=["user", "-timestamp"]),
+            models.Index(fields=["action_type"]),
+            models.Index(fields=["entity_type"]),
+            models.Index(fields=["timestamp"]),
+            models.Index(fields=["success"]),
+            models.Index(fields=["ip_address"]),
         ]
 
     def __str__(self):
@@ -263,83 +204,83 @@ class UserActivityLog(models.Model):
     def get_icon(self):
         """إرجاع أيقونة حسب نوع العملية"""
         icons = {
-            'login': '🔑',
-            'logout': '🚪',
-            'view': '👁️',
-            'create': '➕',
-            'update': '✏️',
-            'delete': '🗑️',
-            'search': '🔍',
-            'export': '📤',
-            'import': '📥',
-            'download': '⬇️',
-            'upload': '⬆️',
-            'print': '🖨️',
-            'email': '📧',
-            'api_call': '🔌',
-            'error': '❌',
-            'security': '🔒',
-            'admin': '⚙️',
-            'report': '📊',
-            'backup': '💾',
-            'restore': '🔄',
-            'maintenance': '🔧',
-            'other': '📝',
+            "login": "🔑",
+            "logout": "🚪",
+            "view": "👁️",
+            "create": "➕",
+            "update": "✏️",
+            "delete": "🗑️",
+            "search": "🔍",
+            "export": "📤",
+            "import": "📥",
+            "download": "⬇️",
+            "upload": "⬆️",
+            "print": "🖨️",
+            "email": "📧",
+            "api_call": "🔌",
+            "error": "❌",
+            "security": "🔒",
+            "admin": "⚙️",
+            "report": "📊",
+            "backup": "💾",
+            "restore": "🔄",
+            "maintenance": "🔧",
+            "other": "📝",
         }
-        return icons.get(self.action_type, '📝')
+        return icons.get(self.action_type, "📝")
 
     def get_color_class(self):
         """إرجاع class لون حسب نوع العملية والنجاح"""
         if not self.success:
-            return 'danger'
-        
+            return "danger"
+
         color_map = {
-            'login': 'success',
-            'logout': 'secondary',
-            'view': 'info',
-            'create': 'success',
-            'update': 'warning',
-            'delete': 'danger',
-            'search': 'info',
-            'export': 'primary',
-            'import': 'primary',
-            'download': 'primary',
-            'upload': 'primary',
-            'print': 'secondary',
-            'email': 'info',
-            'api_call': 'secondary',
-            'error': 'danger',
-            'security': 'warning',
-            'admin': 'warning',
-            'report': 'info',
-            'backup': 'secondary',
-            'restore': 'secondary',
-            'maintenance': 'warning',
-            'other': 'secondary',
+            "login": "success",
+            "logout": "secondary",
+            "view": "info",
+            "create": "success",
+            "update": "warning",
+            "delete": "danger",
+            "search": "info",
+            "export": "primary",
+            "import": "primary",
+            "download": "primary",
+            "upload": "primary",
+            "print": "secondary",
+            "email": "info",
+            "api_call": "secondary",
+            "error": "danger",
+            "security": "warning",
+            "admin": "warning",
+            "report": "info",
+            "backup": "secondary",
+            "restore": "secondary",
+            "maintenance": "warning",
+            "other": "secondary",
         }
-        return color_map.get(self.action_type, 'secondary')
+        return color_map.get(self.action_type, "secondary")
 
     def get_entity_details(self):
         """إرجاع تفاصيل الكائن إذا كان متوفراً"""
         if self.entity_type and self.entity_name:
             entity_type_arabic = {
-                'user': 'مستخدم',
-                'customer': 'عميل',
-                'order': 'طلب',
-                'product': 'منتج',
-                'inspection': 'معاينة',
-                'manufacturing': 'تصنيع',
-                'installation': 'تركيب',
-                'complaint': 'شكوى',
-                'report': 'تقرير',
-                'system': 'نظام',
-                'file': 'ملف',
-                'page': 'صفحة',
-                'api': 'واجهة برمجية',
-                'database': 'قاعدة بيانات',
-                'other': 'أخرى',
+                "user": "مستخدم",
+                "customer": "عميل",
+                "order": "طلب",
+                "product": "منتج",
+                "inspection": "معاينة",
+                "manufacturing": "تصنيع",
+                "installation": "تركيب",
+                "complaint": "شكوى",
+                "report": "تقرير",
+                "system": "نظام",
+                "file": "ملف",
+                "page": "صفحة",
+                "api": "واجهة برمجية",
+                "database": "قاعدة بيانات",
+                "other": "أخرى",
             }.get(self.entity_type, self.entity_type)
-            
+
             return f"{entity_type_arabic}: {self.entity_name}"
         return ""
 
@@ -349,7 +290,7 @@ class UserActivityLog(models.Model):
         try:
             # الحصول على الجلسة الحالية إن وجدت
             session = None
-            if hasattr(user, '_current_session'):
+            if hasattr(user, "_current_session"):
                 session = user._current_session
 
             # إنشاء سجل النشاط
@@ -358,7 +299,7 @@ class UserActivityLog(models.Model):
                 session=session,
                 action_type=action_type,
                 description=description,
-                **kwargs
+                **kwargs,
             )
             return activity
         except Exception as e:
@@ -369,69 +310,52 @@ class UserActivityLog(models.Model):
 
 class OnlineUser(models.Model):
     """نموذج لتتبع المستخدمين المتصلين حالياً"""
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
-        related_name='activity_online_status',
-        verbose_name='المستخدم'
+        related_name="activity_online_status",
+        verbose_name="المستخدم",
     )
 
-    last_seen = models.DateTimeField(
-        auto_now=True,
-        verbose_name='آخر ظهور'
-    )
+    last_seen = models.DateTimeField(auto_now=True, verbose_name="آخر ظهور")
 
     current_page = models.CharField(
-        max_length=500,
-        blank=True,
-        verbose_name='الصفحة الحالية'
+        max_length=500, blank=True, verbose_name="الصفحة الحالية"
     )
 
     current_page_title = models.CharField(
-        max_length=200,
-        blank=True,
-        verbose_name='عنوان الصفحة الحالية'
+        max_length=200, blank=True, verbose_name="عنوان الصفحة الحالية"
     )
 
-    ip_address = models.GenericIPAddressField(
-        verbose_name='عنوان IP'
-    )
+    ip_address = models.GenericIPAddressField(verbose_name="عنوان IP")
 
-    session_key = models.CharField(
-        max_length=40,
-        verbose_name='مفتاح الجلسة'
-    )
+    session_key = models.CharField(max_length=40, verbose_name="مفتاح الجلسة")
 
     # معلومات الجهاز
     device_info = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name='معلومات الجهاز'
+        default=dict, blank=True, verbose_name="معلومات الجهاز"
     )
 
     # إحصائيات الجلسة الحالية
     pages_visited = models.PositiveIntegerField(
-        default=0,
-        verbose_name='عدد الصفحات المزارة'
+        default=0, verbose_name="عدد الصفحات المزارة"
     )
 
     actions_performed = models.PositiveIntegerField(
-        default=0,
-        verbose_name='عدد العمليات المنجزة'
+        default=0, verbose_name="عدد العمليات المنجزة"
     )
 
-    login_time = models.DateTimeField(
-        verbose_name='وقت الدخول'
-    )
+    login_time = models.DateTimeField(verbose_name="وقت الدخول")
 
     class Meta:
-        verbose_name = '🟢 مستخدم نشط'
-        verbose_name_plural = '🟢 المستخدمون النشطون'
-        ordering = ['-last_seen']
+        verbose_name = "🟢 مستخدم نشط"
+        verbose_name_plural = "🟢 المستخدمون النشطون"
+        ordering = ["-last_seen"]
         indexes = [
-            models.Index(fields=['-last_seen']),
-            models.Index(fields=['session_key']),
-            models.Index(fields=['user']),
+            models.Index(fields=["-last_seen"]),
+            models.Index(fields=["session_key"]),
+            models.Index(fields=["user"]),
         ]
 
     def __str__(self):
@@ -474,7 +398,15 @@ class OnlineUser(models.Model):
         if action_performed:
             self.actions_performed += 1
 
-        self.save(update_fields=['last_seen', 'current_page', 'current_page_title', 'pages_visited', 'actions_performed'])
+        self.save(
+            update_fields=[
+                "last_seen",
+                "current_page",
+                "current_page_title",
+                "pages_visited",
+                "actions_performed",
+            ]
+        )
 
     @classmethod
     def get_online_users(cls):
@@ -485,7 +417,7 @@ class OnlineUser(models.Model):
         # إرجاع المستخدمين النشطين
         return cls.objects.filter(
             last_seen__gte=timezone.now() - timedelta(minutes=15)
-        ).select_related('user')
+        ).select_related("user")
 
     @classmethod
     def cleanup_offline_users(cls):
@@ -494,26 +426,28 @@ class OnlineUser(models.Model):
         cls.objects.filter(last_seen__lt=offline_threshold).delete()
 
     @classmethod
-    def update_user_activity(cls, user, request, page_title=None, action_performed=False):
+    def update_user_activity(
+        cls, user, request, page_title=None, action_performed=False
+    ):
         """تحديث أو إنشاء سجل المستخدم النشط"""
         try:
             online_user, created = cls.objects.get_or_create(
                 user=user,
                 defaults={
-                    'ip_address': cls.get_client_ip(request),
-                    'session_key': request.session.session_key or '',
-                    'login_time': timezone.now(),
-                    'current_page': request.path,
-                    'current_page_title': page_title or '',
-                    'device_info': cls.get_device_info(request),
-                }
+                    "ip_address": cls.get_client_ip(request),
+                    "session_key": request.session.session_key or "",
+                    "login_time": timezone.now(),
+                    "current_page": request.path,
+                    "current_page_title": page_title or "",
+                    "device_info": cls.get_device_info(request),
+                },
             )
 
             if not created:
                 online_user.update_activity(
                     page_path=request.path,
                     page_title=page_title,
-                    action_performed=action_performed
+                    action_performed=action_performed,
                 )
 
             return online_user
@@ -525,127 +459,104 @@ class OnlineUser(models.Model):
     def get_client_ip(request):
         """الحصول على عنوان IP الحقيقي للعميل"""
         if not request:
-            return '127.0.0.1'  # default IP للحالات التي لا يوجد فيها request
+            return "127.0.0.1"  # default IP للحالات التي لا يوجد فيها request
 
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
         if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0].strip()
+            ip = x_forwarded_for.split(",")[0].strip()
         else:
-            ip = request.META.get('REMOTE_ADDR')
+            ip = request.META.get("REMOTE_ADDR")
 
         # ضمان وجود IP صالح
-        return ip if ip else '127.0.0.1'
+        return ip if ip else "127.0.0.1"
 
     @staticmethod
     def get_device_info(request):
         """الحصول على معلومات الجهاز"""
-        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
         return {
-            'user_agent': user_agent,
-            'accept_language': request.META.get('HTTP_ACCEPT_LANGUAGE', ''),
-            'accept_encoding': request.META.get('HTTP_ACCEPT_ENCODING', ''),
+            "user_agent": user_agent,
+            "accept_language": request.META.get("HTTP_ACCEPT_LANGUAGE", ""),
+            "accept_encoding": request.META.get("HTTP_ACCEPT_ENCODING", ""),
         }
 
 
 class UserLoginHistory(models.Model):
     """نموذج لتسجيل تاريخ تسجيل الدخول"""
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='activity_login_history',
-        verbose_name='المستخدم'
+        related_name="activity_login_history",
+        verbose_name="المستخدم",
     )
 
-    login_time = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='وقت الدخول'
-    )
+    login_time = models.DateTimeField(auto_now_add=True, verbose_name="وقت الدخول")
 
-    logout_time = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='وقت الخروج'
-    )
+    logout_time = models.DateTimeField(null=True, blank=True, verbose_name="وقت الخروج")
 
-    ip_address = models.GenericIPAddressField(
-        verbose_name='عنوان IP'
-    )
+    ip_address = models.GenericIPAddressField(verbose_name="عنوان IP")
 
-    user_agent = models.TextField(
-        blank=True,
-        verbose_name='معلومات المتصفح'
-    )
+    user_agent = models.TextField(blank=True, verbose_name="معلومات المتصفح")
 
-    session_key = models.CharField(
-        max_length=40,
-        verbose_name='مفتاح الجلسة'
-    )
+    session_key = models.CharField(max_length=40, verbose_name="مفتاح الجلسة")
 
     # معلومات الجهاز والمتصفح
-    browser = models.CharField(
-        max_length=100,
-        blank=True,
-        verbose_name='المتصفح'
-    )
+    browser = models.CharField(max_length=100, blank=True, verbose_name="المتصفح")
 
     operating_system = models.CharField(
-        max_length=100,
-        blank=True,
-        verbose_name='نظام التشغيل'
+        max_length=100, blank=True, verbose_name="نظام التشغيل"
     )
 
     device_type = models.CharField(
         max_length=20,
         choices=[
-            ('desktop', 'سطح المكتب'),
-            ('mobile', 'هاتف محمول'),
-            ('tablet', 'جهاز لوحي'),
-            ('unknown', 'غير معروف'),
+            ("desktop", "سطح المكتب"),
+            ("mobile", "هاتف محمول"),
+            ("tablet", "جهاز لوحي"),
+            ("unknown", "غير معروف"),
         ],
-        default='unknown',
-        verbose_name='نوع الجهاز'
+        default="unknown",
+        verbose_name="نوع الجهاز",
     )
 
     # إحصائيات الجلسة
     pages_visited = models.PositiveIntegerField(
-        default=0,
-        verbose_name='عدد الصفحات المزارة'
+        default=0, verbose_name="عدد الصفحات المزارة"
     )
 
     actions_performed = models.PositiveIntegerField(
-        default=0,
-        verbose_name='عدد العمليات المنجزة'
+        default=0, verbose_name="عدد العمليات المنجزة"
     )
 
     # حالة الجلسة
     is_successful_login = models.BooleanField(
-        default=True,
-        verbose_name='تسجيل دخول ناجح'
+        default=True, verbose_name="تسجيل دخول ناجح"
     )
 
     logout_reason = models.CharField(
         max_length=50,
         choices=[
-            ('manual', 'خروج يدوي'),
-            ('timeout', 'انتهاء المهلة'),
-            ('forced', 'خروج قسري'),
-            ('system', 'خروج النظام'),
-            ('unknown', 'غير معروف'),
+            ("manual", "خروج يدوي"),
+            ("timeout", "انتهاء المهلة"),
+            ("forced", "خروج قسري"),
+            ("system", "خروج النظام"),
+            ("unknown", "غير معروف"),
         ],
-        default='unknown',
+        default="unknown",
         blank=True,
-        verbose_name='سبب الخروج'
+        verbose_name="سبب الخروج",
     )
 
     class Meta:
-        verbose_name = '🔐 سجل دخول'
-        verbose_name_plural = '🔐 سجلات الدخول'
-        ordering = ['-login_time']
+        verbose_name = "🔐 سجل دخول"
+        verbose_name_plural = "🔐 سجلات الدخول"
+        ordering = ["-login_time"]
         indexes = [
-            models.Index(fields=['user', '-login_time']),
-            models.Index(fields=['login_time']),
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['is_successful_login']),
+            models.Index(fields=["user", "-login_time"]),
+            models.Index(fields=["login_time"]),
+            models.Index(fields=["ip_address"]),
+            models.Index(fields=["is_successful_login"]),
         ]
 
     def __str__(self):
@@ -672,11 +583,11 @@ class UserLoginHistory(models.Model):
         else:
             return f"{minutes} دقيقة"
 
-    def end_session(self, reason='manual'):
+    def end_session(self, reason="manual"):
         """إنهاء الجلسة"""
         self.logout_time = timezone.now()
         self.logout_reason = reason
-        self.save(update_fields=['logout_time', 'logout_reason'])
+        self.save(update_fields=["logout_time", "logout_reason"])
 
     @classmethod
     def create_login_record(cls, user, request, is_successful=True):
@@ -685,11 +596,15 @@ class UserLoginHistory(models.Model):
             return cls.objects.create(
                 user=user,
                 ip_address=OnlineUser.get_client_ip(request),
-                user_agent=request.META.get('HTTP_USER_AGENT', ''),
-                session_key=request.session.session_key or '',
-                browser=cls.extract_browser(request.META.get('HTTP_USER_AGENT', '')),
-                operating_system=cls.extract_os(request.META.get('HTTP_USER_AGENT', '')),
-                device_type=cls.extract_device_type(request.META.get('HTTP_USER_AGENT', '')),
+                user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                session_key=request.session.session_key or "",
+                browser=cls.extract_browser(request.META.get("HTTP_USER_AGENT", "")),
+                operating_system=cls.extract_os(
+                    request.META.get("HTTP_USER_AGENT", "")
+                ),
+                device_type=cls.extract_device_type(
+                    request.META.get("HTTP_USER_AGENT", "")
+                ),
                 is_successful_login=is_successful,
             )
         except Exception as e:
@@ -700,43 +615,43 @@ class UserLoginHistory(models.Model):
     def extract_browser(user_agent):
         """استخراج اسم المتصفح من user agent"""
         user_agent = user_agent.lower()
-        if 'chrome' in user_agent:
-            return 'Chrome'
-        elif 'firefox' in user_agent:
-            return 'Firefox'
-        elif 'safari' in user_agent:
-            return 'Safari'
-        elif 'edge' in user_agent:
-            return 'Edge'
-        elif 'opera' in user_agent:
-            return 'Opera'
+        if "chrome" in user_agent:
+            return "Chrome"
+        elif "firefox" in user_agent:
+            return "Firefox"
+        elif "safari" in user_agent:
+            return "Safari"
+        elif "edge" in user_agent:
+            return "Edge"
+        elif "opera" in user_agent:
+            return "Opera"
         else:
-            return 'Unknown'
+            return "Unknown"
 
     @staticmethod
     def extract_os(user_agent):
         """استخراج نظام التشغيل من user agent"""
         user_agent = user_agent.lower()
-        if 'windows' in user_agent:
-            return 'Windows'
-        elif 'mac' in user_agent:
-            return 'macOS'
-        elif 'linux' in user_agent:
-            return 'Linux'
-        elif 'android' in user_agent:
-            return 'Android'
-        elif 'ios' in user_agent:
-            return 'iOS'
+        if "windows" in user_agent:
+            return "Windows"
+        elif "mac" in user_agent:
+            return "macOS"
+        elif "linux" in user_agent:
+            return "Linux"
+        elif "android" in user_agent:
+            return "Android"
+        elif "ios" in user_agent:
+            return "iOS"
         else:
-            return 'Unknown'
+            return "Unknown"
 
     @staticmethod
     def extract_device_type(user_agent):
         """استخراج نوع الجهاز من user agent"""
         user_agent = user_agent.lower()
-        if 'mobile' in user_agent or 'android' in user_agent:
-            return 'mobile'
-        elif 'tablet' in user_agent or 'ipad' in user_agent:
-            return 'tablet'
+        if "mobile" in user_agent or "android" in user_agent:
+            return "mobile"
+        elif "tablet" in user_agent or "ipad" in user_agent:
+            return "tablet"
         else:
-            return 'desktop'
+            return "desktop"

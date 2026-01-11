@@ -28,21 +28,21 @@ echo "============================================================"
 read -p "هل تريد تطبيق التغييرات؟ (y/N): " confirm
 
 if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
-    echo ""
-    echo -e "${GREEN}✅ تطبيق التغييرات...${NC}"
-    echo ""
-    python manage.py clean_product_codes
-    
-    if [ $? -eq 0 ]; then
-        echo ""
-        echo -e "${GREEN}✅ تم تنظيف الأكواد بنجاح!${NC}"
-    else
-        echo ""
-        echo -e "${RED}❌ حدث خطأ أثناء التنظيف${NC}"
-        exit 1
-    fi
+	echo ""
+	echo -e "${GREEN}✅ تطبيق التغييرات...${NC}"
+	echo ""
+	python manage.py clean_product_codes
+
+	if [ $? -eq 0 ]; then
+		echo ""
+		echo -e "${GREEN}✅ تم تنظيف الأكواد بنجاح!${NC}"
+	else
+		echo ""
+		echo -e "${RED}❌ حدث خطأ أثناء التنظيف${NC}"
+		exit 1
+	fi
 else
-    echo ""
-    echo -e "${YELLOW}⏭️  تم الإلغاء${NC}"
-    exit 0
+	echo ""
+	echo -e "${YELLOW}⏭️  تم الإلغاء${NC}"
+	exit 0
 fi

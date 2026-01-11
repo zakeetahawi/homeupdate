@@ -1,5 +1,4 @@
 {% load complaints_tags %}
-
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-gradient-info text-white d-flex justify-content-between align-items-center">
         <h6 class="mb-0">
@@ -8,14 +7,11 @@
         </h6>
         {% if has_complaints %}
             <div class="d-flex align-items-center gap-2">
-                {% if overdue_count > 0 %}
-                    <span class="badge bg-danger">{{ overdue_count }} متأخرة</span>
-                {% endif %}
+                {% if overdue_count > 0 %}<span class="badge bg-danger">{{ overdue_count }} متأخرة</span>{% endif %}
                 <span class="badge bg-light text-dark">{{ complaints|length }}</span>
             </div>
         {% endif %}
     </div>
-    
     <div class="card-body">
         {% if has_complaints %}
             <div class="complaints-list">
@@ -29,21 +25,18 @@
                                 </span>
                             </div>
                         {% endif %}
-                        
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
                                 <h6 class="mb-1">
-                                    <a href="{% url 'complaints:complaint_detail' complaint.pk %}" 
+                                    <a href="{% url 'complaints:complaint_detail' complaint.pk %}"
                                        class="text-decoration-none text-dark">
                                         {{ complaint.title|truncatechars:45 }}
                                     </a>
                                 </h6>
-                                
                                 <div class="d-flex align-items-center gap-2 mb-2">
                                     {% complaint_status_badge complaint.status %}
                                     {% complaint_priority_badge complaint.priority %}
                                 </div>
-                                
                                 <div class="row text-muted small">
                                     <div class="col-12 col-md-6 mb-1">
                                         <i class="fas fa-user me-1"></i>
@@ -64,7 +57,6 @@
                                 </div>
                             </div>
                         </div>
-                        
                         <!-- Quick Actions -->
                         <div class="mt-2 d-flex gap-1">
                             <a href="{% url 'complaints:complaint_detail' complaint.pk %}"
@@ -107,10 +99,9 @@
                     </div>
                 {% endfor %}
             </div>
-            
             <!-- View All Link -->
             <div class="text-center mt-3">
-                <a href="{% url 'complaints:complaint_list' %}?assigned_to={{ user.id }}" 
+                <a href="{% url 'complaints:complaint_list' %}?assigned_to={{ user.id }}"
                    class="btn btn-outline-info">
                     <i class="fas fa-list me-1"></i>
                     عرض جميع الشكاوى المسندة إليك
@@ -119,10 +110,11 @@
         {% else %}
             <!-- No Complaints State -->
             <div class="text-center py-4">
-                <i class="fas fa-clipboard-check text-success mb-3" style="font-size: 3rem;"></i>
+                <i class="fas fa-clipboard-check text-success mb-3"
+                   style="font-size: 3rem"></i>
                 <h6 class="text-muted">لا توجد شكاوى مسندة إليك حالياً</h6>
                 <p class="text-muted small">عمل ممتاز! لا توجد شكاوى تحتاج لمتابعتك</p>
-                <a href="{% url 'complaints:complaint_list' %}" 
+                <a href="{% url 'complaints:complaint_list' %}"
                    class="btn btn-outline-info">
                     <i class="fas fa-search me-1"></i>
                     تصفح جميع الشكاوى
@@ -131,7 +123,6 @@
         {% endif %}
     </div>
 </div>
-
 <style>
 .bg-gradient-info {
     background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
@@ -153,7 +144,6 @@
 .border-escalated { border-color: #6f42c1 !important; }
 .border-closed { border-color: #6c757d !important; }
 </style>
-
 <!-- Load unified quick actions -->
 {% load static %}
 <script src="{% static 'js/complaints-quick-actions.js' %}"></script>

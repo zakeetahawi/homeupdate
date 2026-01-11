@@ -1,89 +1,90 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block styles %}
-<style>
+    <style>
     .user-info {
         background-color: #f8f9fc;
         padding: 15px;
         border-radius: 0.35rem;
         margin-bottom: 20px;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="card shadow mb-4">
-        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-            <h6 class="m-0 font-weight-bold text-primary">{{ title }}</h6>
-            <a href="{% url 'accounts:user_roles' user_obj.id %}" class="btn btn-sm btn-secondary">
-                <i class="fas fa-arrow-left"></i> العودة إلى أدوار المستخدم
-            </a>
-        </div>
-        <div class="card-body">
-            <!-- معلومات المستخدم -->
-            <div class="user-info">
-                <h5><i class="fas fa-user"></i> معلومات المستخدم</h5>
-                <div class="row">
-                    <div class="col-md-6">
-                        <dl class="row">
-                            <dt class="col-sm-4">اسم المستخدم:</dt>
-                            <dd class="col-sm-8">{{ user_obj.username }}</dd>
-                            
-                            <dt class="col-sm-4">الاسم الكامل:</dt>
-                            <dd class="col-sm-8">
-                                {{ user_obj.first_name }} {{ user_obj.last_name }}
-                            </dd>
-                        </dl>
-                    </div>
-                    <div class="col-md-6">
-                        <dl class="row">
-                            <dt class="col-sm-4">البريد الإلكتروني:</dt>
-                            <dd class="col-sm-8">{{ user_obj.email|default:"-" }}</dd>
-                            
-                            <dt class="col-sm-4">الفرع:</dt>
-                            <dd class="col-sm-8">{{ user_obj.branch|default:"-" }}</dd>
-                        </dl>
-                    </div>
-                </div>
+    <div class="container-fluid">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">{{ title }}</h6>
+                <a href="{% url 'accounts:user_roles' user_obj.id %}"
+                   class="btn btn-sm btn-secondary">
+                    <i class="fas fa-arrow-left"></i> العودة إلى أدوار المستخدم
+                </a>
             </div>
-            
-            <form method="post" action="">
-                {% csrf_token %}
-                
-                <!-- رسائل الخطأ -->
-                {% if form.errors %}
-                <div class="alert alert-danger">
-                    <strong>هناك أخطاء في النموذج:</strong>
-                    <ul>
-                    {% for field in form %}
-                        {% for error in field.errors %}
-                        <li>{{ field.label }}: {{ error }}</li>
-                        {% endfor %}
-                    {% endfor %}
-                    </ul>
+            <div class="card-body">
+                <!-- معلومات المستخدم -->
+                <div class="user-info">
+                    <h5>
+                        <i class="fas fa-user"></i> معلومات المستخدم
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">اسم المستخدم:</dt>
+                                <dd class="col-sm-8">
+                                    {{ user_obj.username }}
+                                </dd>
+                                <dt class="col-sm-4">الاسم الكامل:</dt>
+                                <dd class="col-sm-8">
+                                    {{ user_obj.first_name }} {{ user_obj.last_name }}
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">البريد الإلكتروني:</dt>
+                                <dd class="col-sm-8">
+                                    {{ user_obj.email|default:"-" }}
+                                </dd>
+                                <dt class="col-sm-4">الفرع:</dt>
+                                <dd class="col-sm-8">
+                                    {{ user_obj.branch|default:"-" }}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
                 </div>
-                {% endif %}
-                
-                <div class="mb-3">
-                    <label for="{{ form.role.id_for_label }}" class="form-label">اختر الدور <span class="text-danger">*</span></label>
-                    {{ form.role }}
-                    <small class="form-text text-muted">اختر الدور الذي تريد إسناده للمستخدم</small>
-                </div>
-                
-                <div class="text-center mt-4">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> إضافة الدور
-                    </button>
-                    <a href="{% url 'accounts:user_roles' user_obj.id %}" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> إلغاء
-                    </a>
-                </div>
-            </form>
+                <form method="post" action="">
+                    {% csrf_token %}
+                    <!-- رسائل الخطأ -->
+                    {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <strong>هناك أخطاء في النموذج:</strong>
+                            <ul>
+                                {% for field in form %}
+                                    {% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label for="{{ form.role.id_for_label }}" class="form-label">
+                            اختر الدور <span class="text-danger">*</span>
+                        </label>
+                        {{ form.role }}
+                        <small class="form-text text-muted">اختر الدور الذي تريد إسناده للمستخدم</small>
+                    </div>
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> إضافة الدور
+                        </button>
+                        <a href="{% url 'accounts:user_roles' user_obj.id %}"
+                           class="btn btn-secondary">
+                            <i class="fas fa-times"></i> إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}

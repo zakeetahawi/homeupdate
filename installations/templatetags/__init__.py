@@ -1,1 +1,1 @@
-# Template tags for installations app 
+# Template tags for installations app

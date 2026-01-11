@@ -1,213 +1,232 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block title %}تحديث الأسعار الجماعي - {{ base_product.name }}{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'inventory:base_product_list' %}">المنتجات الأساسية</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'inventory:base_product_detail' base_product.pk %}">{{ base_product.name }}</a></li>
-            <li class="breadcrumb-item active">تحديث الأسعار الجماعي</li>
-        </ol>
-    </nav>
-
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="card shadow">
-                <div class="card-header bg-warning text-dark">
-                    <h4 class="mb-0">
-                        <i class="fas fa-dollar-sign me-2"></i>
-                        تحديث الأسعار الجماعي - {{ base_product.name }}
-                    </h4>
-                </div>
-                
-                <div class="card-body">
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-
-                    <!-- Product Info -->
-                    <div class="alert alert-secondary mb-4">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <strong>المنتج الأساسي:</strong> {{ base_product.name }}<br>
-                                <small class="text-muted">الكود: {{ base_product.code }}</small>
-                            </div>
-                            <div class="col-md-6 text-md-end">
-                                <strong>السعر الأساسي:</strong>
-                                <span class="badge bg-success fs-6">{{ base_product.base_price|floatformat:2 }} {{ currency_symbol }}</span>
-                            </div>
-                        </div>
+    <div class="container-fluid">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'inventory:base_product_list' %}">المنتجات الأساسية</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'inventory:base_product_detail' base_product.pk %}">{{ base_product.name }}</a>
+                </li>
+                <li class="breadcrumb-item active">تحديث الأسعار الجماعي</li>
+            </ol>
+        </nav>
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0">
+                            <i class="fas fa-dollar-sign me-2"></i>
+                            تحديث الأسعار الجماعي - {{ base_product.name }}
+                        </h4>
                     </div>
-
-                    <!-- Help Info -->
-                    <div class="alert alert-info mb-4">
-                        <h6><i class="fas fa-info-circle me-2"></i>كيفية الاستخدام:</h6>
-                        <ul class="mb-0">
-                            <li><strong>نسبة مئوية:</strong> أدخل قيمة موجبة للزيادة أو سالبة للخصم (مثال: 10 للزيادة 10%، -5 للخصم 5%)</li>
-                            <li><strong>قيمة ثابتة:</strong> أدخل السعر الجديد المطلوب لجميع المتغيرات المحددة</li>
-                            <li><strong>إعادة للأساسي:</strong> يُلغي السعر المخصص ويعيد المتغيرات للسعر الأساسي</li>
-                        </ul>
-                    </div>
-
-                    <form method="post" novalidate>
-                        {% csrf_token %}
-                        
-                        <!-- Variants Selection Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h5 class="border-bottom pb-2 mb-3">
-                                    <i class="fas fa-palette text-primary me-2"></i>
-                                    المتغيرات ({{ variants|length }})
-                                </h5>
-                            </div>
-                            
-                            {% if variants %}
-                            <div class="col-12">
-                                <div class="table-responsive">
-                                    <table class="table table-hover table-sm">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th style="width: 40px;">
-                                                    <input type="checkbox" id="selectAll" class="form-check-input" checked>
-                                                </th>
-                                                <th>الكود</th>
-                                                <th>اللون</th>
-                                                <th class="text-center">السعر الحالي</th>
-                                                <th class="text-center">نوع السعر</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for variant in variants %}
-                                            <tr>
-                                                <td>
-                                                    <input type="checkbox" name="variant_ids" value="{{ variant.pk }}" 
-                                                           class="form-check-input variant-checkbox" checked>
-                                                </td>
-                                                <td>
-                                                    <strong>{{ variant.full_code }}</strong>
-                                                </td>
-                                                <td>
-                                                    {% if variant.color %}
-                                                        {% if variant.color.hex_code %}
-                                                            <span class="color-swatch me-1" 
-                                                                  style="display:inline-block; width:16px; height:16px; border-radius:50%; background-color:{{ variant.color.hex_code }}; border:1px solid #ddd; vertical-align:middle;"></span>
-                                                        {% endif %}
-                                                        {{ variant.color.name }}
-                                                    {% else %}
-                                                        {{ variant.color_code|default:variant.variant_code }}
-                                                    {% endif %}
-                                                </td>
-                                                <td class="text-center">
-                                                    <strong>{{ variant.effective_price|floatformat:2 }}</strong>
-                                                </td>
-                                                <td class="text-center">
-                                                    {% if variant.has_custom_price %}
-                                                        <span class="badge bg-warning text-dark">مخصص</span>
-                                                    {% else %}
-                                                        <span class="badge bg-secondary">أساسي</span>
-                                                    {% endif %}
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
+                    <div class="card-body">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                                 </div>
-                                <div class="text-muted small mb-3">
-                                    <span id="selectedCount">{{ variants|length }}</span> متغير محدد
-                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="selectAllVariants()">
-                                        <i class="fas fa-check-double"></i> تحديد الكل
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllVariants()">
-                                        <i class="fas fa-times"></i> إلغاء التحديد
-                                    </button>
-                                </div>
-                            </div>
-                            {% else %}
-                            <div class="col-12">
-                                <div class="alert alert-warning">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    لا توجد متغيرات لهذا المنتج
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        {% if variants %}
-                        <!-- Update Type Section -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h5 class="border-bottom pb-2 mb-3">
-                                    <i class="fas fa-cogs text-success me-2"></i>
-                                    نوع التحديث
-                                </h5>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="update_type" class="form-label">
-                                    نوع التحديث <span class="text-danger">*</span>
-                                </label>
-                                <select name="update_type" id="update_type" class="form-select" required>
-                                    <option value="percentage">نسبة مئوية (%)</option>
-                                    <option value="fixed">قيمة ثابتة</option>
-                                    <option value="reset">إعادة للسعر الأساسي</option>
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3" id="value_field">
-                                <label for="value" class="form-label">القيمة</label>
-                                <div class="input-group">
-                                    <input type="number" name="value" id="value" class="form-control" step="0.01">
-                                    <span class="input-group-text" id="value_suffix">%</span>
-                                </div>
-                            </div>
-
-                            <div class="col-12 mb-3">
-                                <label for="notes" class="form-label">ملاحظات</label>
-                                <textarea name="notes" id="notes" class="form-control" rows="2" 
-                                          placeholder="سبب التغيير (اختياري)"></textarea>
-                            </div>
-                            
-                            <div class="col-12 mb-3">
-                                <div class="form-check">
-                                    <input type="checkbox" name="apply_to_all" id="apply_to_all" class="form-check-input">
-                                    <label class="form-check-label" for="apply_to_all">
-                                        تطبيق على جميع المتغيرات (تجاهل التحديد)
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Form Actions -->
-                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                            <a href="{% url 'inventory:base_product_detail' base_product.pk %}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-right me-1"></i>
-                                رجوع
-                            </a>
-                            <button type="submit" class="btn btn-warning">
-                                <i class="fas fa-check me-1"></i>
-                                تطبيق التحديث
-                            </button>
-                        </div>
+                            {% endfor %}
                         {% endif %}
-                    </form>
+                        <!-- Product Info -->
+                        <div class="alert alert-secondary mb-4">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>المنتج الأساسي:</strong> {{ base_product.name }}
+                                    <br>
+                                    <small class="text-muted">الكود: {{ base_product.code }}</small>
+                                </div>
+                                <div class="col-md-6 text-md-end">
+                                    <strong>السعر الأساسي:</strong>
+                                    <span class="badge bg-success fs-6">{{ base_product.base_price|floatformat:2 }} {{ currency_symbol }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Help Info -->
+                        <div class="alert alert-info mb-4">
+                            <h6>
+                                <i class="fas fa-info-circle me-2"></i>كيفية الاستخدام:
+                            </h6>
+                            <ul class="mb-0">
+                                <li>
+                                    <strong>نسبة مئوية:</strong> أدخل قيمة موجبة للزيادة أو سالبة للخصم (مثال: 10 للزيادة 10%، -5 للخصم 5%)
+                                </li>
+                                <li>
+                                    <strong>قيمة ثابتة:</strong> أدخل السعر الجديد المطلوب لجميع المتغيرات المحددة
+                                </li>
+                                <li>
+                                    <strong>إعادة للأساسي:</strong> يُلغي السعر المخصص ويعيد المتغيرات للسعر الأساسي
+                                </li>
+                            </ul>
+                        </div>
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+                            <!-- Variants Selection Section -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2 mb-3">
+                                        <i class="fas fa-palette text-primary me-2"></i>
+                                        المتغيرات ({{ variants|length }})
+                                    </h5>
+                                </div>
+                                {% if variants %}
+                                    <div class="col-12">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover table-sm">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th style="width: 40px;">
+                                                            <input type="checkbox" id="selectAll" class="form-check-input" checked>
+                                                        </th>
+                                                        <th>الكود</th>
+                                                        <th>اللون</th>
+                                                        <th class="text-center">السعر الحالي</th>
+                                                        <th class="text-center">نوع السعر</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for variant in variants %}
+                                                        <tr>
+                                                            <td>
+                                                                <input type="checkbox"
+                                                                       name="variant_ids"
+                                                                       value="{{ variant.pk }}"
+                                                                       class="form-check-input variant-checkbox"
+                                                                       checked>
+                                                            </td>
+                                                            <td>
+                                                                <strong>{{ variant.full_code }}</strong>
+                                                            </td>
+                                                            <td>
+                                                                {% if variant.color %}
+                                                                    {% if variant.color.hex_code %}
+                                                                        <span class="color-swatch me-1"
+                                                                              style="display:inline-block;
+                                                                                     width:16px;
+                                                                                     height:16px;
+                                                                                     border-radius:50%;
+                                                                                     background-color:{{ variant.color.hex_code }};
+                                                                                     border:1px solid #ddd;
+                                                                                     vertical-align:middle"></span>
+                                                                    {% endif %}
+                                                                    {{ variant.color.name }}
+                                                                {% else %}
+                                                                    {{ variant.color_code|default:variant.variant_code }}
+                                                                {% endif %}
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <strong>{{ variant.effective_price|floatformat:2 }}</strong>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                {% if variant.has_custom_price %}
+                                                                    <span class="badge bg-warning text-dark">مخصص</span>
+                                                                {% else %}
+                                                                    <span class="badge bg-secondary">أساسي</span>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="text-muted small mb-3">
+                                            <span id="selectedCount">{{ variants|length }}</span> متغير محدد
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary ms-2"
+                                                    onclick="selectAllVariants()">
+                                                <i class="fas fa-check-double"></i> تحديد الكل
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-secondary"
+                                                    onclick="deselectAllVariants()">
+                                                <i class="fas fa-times"></i> إلغاء التحديد
+                                            </button>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="col-12">
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            لا توجد متغيرات لهذا المنتج
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% if variants %}
+                                <!-- Update Type Section -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h5 class="border-bottom pb-2 mb-3">
+                                            <i class="fas fa-cogs text-success me-2"></i>
+                                            نوع التحديث
+                                        </h5>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="update_type" class="form-label">
+                                            نوع التحديث <span class="text-danger">*</span>
+                                        </label>
+                                        <select name="update_type" id="update_type" class="form-select" required>
+                                            <option value="percentage">نسبة مئوية (%)</option>
+                                            <option value="fixed">قيمة ثابتة</option>
+                                            <option value="reset">إعادة للسعر الأساسي</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3" id="value_field">
+                                        <label for="value" class="form-label">القيمة</label>
+                                        <div class="input-group">
+                                            <input type="number"
+                                                   name="value"
+                                                   id="value"
+                                                   class="form-control"
+                                                   step="0.01">
+                                            <span class="input-group-text" id="value_suffix">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <label for="notes" class="form-label">ملاحظات</label>
+                                        <textarea name="notes"
+                                                  id="notes"
+                                                  class="form-control"
+                                                  rows="2"
+                                                  placeholder="سبب التغيير (اختياري)"></textarea>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <div class="form-check">
+                                            <input type="checkbox"
+                                                   name="apply_to_all"
+                                                   id="apply_to_all"
+                                                   class="form-check-input">
+                                            <label class="form-check-label" for="apply_to_all">تطبيق على جميع المتغيرات (تجاهل التحديد)</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Form Actions -->
+                                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                                    <a href="{% url 'inventory:base_product_detail' base_product.pk %}"
+                                       class="btn btn-secondary">
+                                        <i class="fas fa-arrow-right me-1"></i>
+                                        رجوع
+                                    </a>
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="fas fa-check me-1"></i>
+                                        تطبيق التحديث
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Select/Deselect all
     const selectAll = document.getElementById('selectAll');
@@ -264,5 +283,5 @@ function deselectAllVariants() {
     document.getElementById('selectAll').checked = false;
     document.getElementById('selectedCount').textContent = '0';
 }
-</script>
+    </script>
 {% endblock %}

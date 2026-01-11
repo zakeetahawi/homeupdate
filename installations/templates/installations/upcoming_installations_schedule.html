@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load order_extras %}
-
 {% block title %}التركيبات القادمة والمديونيات - نظام الخواجه{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
 .page-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -148,112 +146,107 @@
     font-size: 0.9rem;
     margin-top: 5px;
 }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="page-header text-center">
-        <h1><i class="fas fa-calendar-check me-3"></i>التركيبات القادمة والمديونيات</h1>
-        <p class="mb-0">متابعة جدول التركيبات المجدولة مع حالة الدفع والمديونيات</p>
-    </div>
-
-    <!-- Filters Section -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title mb-3">
-                <i class="fas fa-filter me-2"></i>
-                الفلاتر
-            </h5>
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="page-header text-center">
+            <h1>
+                <i class="fas fa-calendar-check me-3"></i>التركيبات القادمة والمديونيات
+            </h1>
+            <p class="mb-0">متابعة جدول التركيبات المجدولة مع حالة الدفع والمديونيات</p>
+        </div>
+        <!-- Filters Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="fas fa-filter me-2"></i>
+                    الفلاتر
+                </h5>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="branch-filter" class="form-label">
+                            <i class="fas fa-building me-1"></i>
+                            الفرع
+                        </label>
+                        <select id="branch-filter" class="form-select">
+                            <option value="">جميع الفروع</option>
+                            <!-- Will be populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="salesperson-filter" class="form-label">
+                            <i class="fas fa-user-tie me-1"></i>
+                            البائع
+                        </label>
+                        <select id="salesperson-filter" class="form-select">
+                            <option value="">جميع البائعين</option>
+                            <!-- Will be populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="debt-filter" class="form-label">
+                            <i class="fas fa-money-bill-wave me-1"></i>
+                            حالة الدفع
+                        </label>
+                        <select id="debt-filter" class="form-select">
+                            <option value="">الكل</option>
+                            <option value="with_debt">عليها مديونية فقط</option>
+                            <option value="fully_paid">مدفوعة بالكامل فقط</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 text-end">
+                        <button id="reset-filters" class="btn btn-secondary">
+                            <i class="fas fa-redo me-2"></i>
+                            إعادة تعيين الفلاتر
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Date Selector -->
+        <div class="date-selector-card">
+            <div class="card-body p-2">
+                <div class="d-flex align-items-center flex-wrap" id="date-tabs">
+                    <!-- سيتم ملؤها بـ JavaScript -->
+                </div>
+            </div>
+        </div>
+        <!-- Statistics Summary -->
+        <div class="stats-summary" id="stats-summary" style="display: none;">
             <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label for="branch-filter" class="form-label">
-                        <i class="fas fa-building me-1"></i>
-                        الفرع
-                    </label>
-                    <select id="branch-filter" class="form-select">
-                        <option value="">جميع الفروع</option>
-                        <!-- Will be populated dynamically -->
-                    </select>
+                <div class="col-md-3 stat-item">
+                    <div class="stat-value" id="total-installations">0</div>
+                    <div class="stat-label">إجمالي التركيبات</div>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <label for="salesperson-filter" class="form-label">
-                        <i class="fas fa-user-tie me-1"></i>
-                        البائع
-                    </label>
-                    <select id="salesperson-filter" class="form-select">
-                        <option value="">جميع البائعين</option>
-                        <!-- Will be populated dynamically -->
-                    </select>
+                <div class="col-md-3 stat-item">
+                    <div class="stat-value text-danger" id="total-debt">0</div>
+                    <div class="stat-label">إجمالي المديونيات</div>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <label for="debt-filter" class="form-label">
-                        <i class="fas fa-money-bill-wave me-1"></i>
-                        حالة الدفع
-                    </label>
-                    <select id="debt-filter" class="form-select">
-                        <option value="">الكل</option>
-                        <option value="with_debt">عليها مديونية فقط</option>
-                        <option value="fully_paid">مدفوعة بالكامل فقط</option>
-                    </select>
+                <div class="col-md-3 stat-item">
+                    <div class="stat-value text-success" id="total-paid">0</div>
+                    <div class="stat-label">إجمالي المدفوع</div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-12 text-end">
-                    <button id="reset-filters" class="btn btn-secondary">
-                        <i class="fas fa-redo me-2"></i>
-                        إعادة تعيين الفلاتر
-                    </button>
+                <div class="col-md-3 stat-item">
+                    <div class="stat-value text-warning" id="with-debt-count">0</div>
+                    <div class="stat-label">تركيبات بها مديونية</div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Date Selector -->
-    <div class="date-selector-card">
-        <div class="card-body p-2">
-            <div class="d-flex align-items-center flex-wrap" id="date-tabs">
-                <!-- سيتم ملؤها بـ JavaScript -->
+        <!-- Installations List -->
+        <div id="installations-container">
+            <div class="no-installations">
+                <i class="fas fa-calendar-times"></i>
+                <h4>اختر تاريخاً لعرض التركيبات</h4>
             </div>
         </div>
     </div>
-
-    <!-- Statistics Summary -->
-    <div class="stats-summary" id="stats-summary" style="display: none;">
-        <div class="row">
-            <div class="col-md-3 stat-item">
-                <div class="stat-value" id="total-installations">0</div>
-                <div class="stat-label">إجمالي التركيبات</div>
-            </div>
-            <div class="col-md-3 stat-item">
-                <div class="stat-value text-danger" id="total-debt">0</div>
-                <div class="stat-label">إجمالي المديونيات</div>
-            </div>
-            <div class="col-md-3 stat-item">
-                <div class="stat-value text-success" id="total-paid">0</div>
-                <div class="stat-label">إجمالي المدفوع</div>
-            </div>
-            <div class="col-md-3 stat-item">
-                <div class="stat-value text-warning" id="with-debt-count">0</div>
-                <div class="stat-label">تركيبات بها مديونية</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Installations List -->
-    <div id="installations-container">
-        <div class="no-installations">
-            <i class="fas fa-calendar-times"></i>
-            <h4>اختر تاريخاً لعرض التركيبات</h4>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 const currencySymbol = '{{ currency_symbol|default:"ج.م" }}';
 
 // توليد تواريخ الأيام القادمة (اليوم + 14 يوم)
@@ -523,7 +516,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('reset-filters').addEventListener('click', resetFilters);
 });
-</script>
+    </script>
 {% endblock %}
-
-

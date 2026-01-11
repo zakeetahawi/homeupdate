@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}تحويلات مخزنية{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .warehouse-radio-card {
         cursor: pointer;
         transition: all 0.3s;
@@ -102,248 +100,256 @@
     .form-check-label {
         cursor: pointer;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-12">
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>
-                    <i class="fas fa-bolt text-warning"></i>
-                    تحويلات مخزنية
-                </h2>
-                <a href="{% url 'inventory:stock_transfer_list' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-right"></i> رجوع
-                </a>
-            </div>
-
-            <!-- Step Indicator -->
-            <div class="step-indicator">
-                <div class="step active" id="step1">
-                    <i class="fas fa-warehouse"></i>
-                    <div>1. اختر المستودعات</div>
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>
+                        <i class="fas fa-bolt text-warning"></i>
+                        تحويلات مخزنية
+                    </h2>
+                    <a href="{% url 'inventory:stock_transfer_list' %}"
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-right"></i> رجوع
+                    </a>
                 </div>
-                <div class="step" id="step2">
-                    <i class="fas fa-boxes"></i>
-                    <div>2. اختر المنتجات</div>
-                </div>
-                <div class="step" id="step3">
-                    <i class="fas fa-check-circle"></i>
-                    <div>3. تأكيد ونقل</div>
-                </div>
-            </div>
-
-            <!-- Step 1: اختيار المستودعات -->
-            <div id="step1-content" class="step-content">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-warehouse"></i>
-                            اختر المستودع المصدر والمستهدف
-                        </h5>
+                <!-- Step Indicator -->
+                <div class="step-indicator">
+                    <div class="step active" id="step1">
+                        <i class="fas fa-warehouse"></i>
+                        <div>1. اختر المستودعات</div>
                     </div>
-                    <div class="card-body">
-                        <!-- من مستودع -->
-                        <div class="mb-4">
-                            <label class="form-label fw-bold fs-5">
-                                <i class="fas fa-warehouse text-danger"></i>
-                                من مستودع *
-                            </label>
-                            {% if is_warehouse_staff and user_warehouse %}
-                                <!-- موظف المستودع: مستودع واحد فقط (مستودعه المخصص) -->
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle"></i>
-                                    يمكنك فقط إنشاء تحويل من مستودعك المخصص: <strong>{{ user_warehouse.name }}</strong>
-                                </div>
-                                <input type="hidden" name="from_warehouse" value="{{ user_warehouse.id }}" id="from_warehouse_hidden">
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <div class="card warehouse-radio-card" style="border-color: #0d6efd; background: #e7f1ff;">
-                                            <div class="card-body text-center">
-                                                <i class="fas fa-warehouse fa-2x text-danger mb-2"></i>
-                                                <h6>{{ user_warehouse.name }}</h6>
-                                                <span class="badge bg-primary">مستودعك</span>
+                    <div class="step" id="step2">
+                        <i class="fas fa-boxes"></i>
+                        <div>2. اختر المنتجات</div>
+                    </div>
+                    <div class="step" id="step3">
+                        <i class="fas fa-check-circle"></i>
+                        <div>3. تأكيد ونقل</div>
+                    </div>
+                </div>
+                <!-- Step 1: اختيار المستودعات -->
+                <div id="step1-content" class="step-content">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-warehouse"></i>
+                                اختر المستودع المصدر والمستهدف
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- من مستودع -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold fs-5">
+                                    <i class="fas fa-warehouse text-danger"></i>
+                                    من مستودع *
+                                </label>
+                                {% if is_warehouse_staff and user_warehouse %}
+                                    <!-- موظف المستودع: مستودع واحد فقط (مستودعه المخصص) -->
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i>
+                                        يمكنك فقط إنشاء تحويل من مستودعك المخصص: <strong>{{ user_warehouse.name }}</strong>
+                                    </div>
+                                    <input type="hidden"
+                                           name="from_warehouse"
+                                           value="{{ user_warehouse.id }}"
+                                           id="from_warehouse_hidden">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <div class="card warehouse-radio-card"
+                                                 style="border-color: #0d6efd;
+                                                        background: #e7f1ff">
+                                                <div class="card-body text-center">
+                                                    <i class="fas fa-warehouse fa-2x text-danger mb-2"></i>
+                                                    <h6>{{ user_warehouse.name }}</h6>
+                                                    <span class="badge bg-primary">مستودعك</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            {% else %}
-                                <!-- المدير أو المستخدمون الآخرون: جميع المستودعات -->
-                                <div class="row g-3">
-                                    {% for warehouse in warehouses %}
-                                    <div class="col-md-4">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio"
-                                                   name="from_warehouse"
-                                                   id="from_{{ warehouse.id }}"
-                                                   value="{{ warehouse.id }}"
-                                                   onchange="updateToWarehouses()">
-                                            <label class="form-check-label w-100" for="from_{{ warehouse.id }}">
-                                                <div class="card h-100 warehouse-radio-card">
-                                                    <div class="card-body text-center">
-                                                        <i class="fas fa-warehouse fa-2x text-danger mb-2"></i>
-                                                        <h6>{{ warehouse.name }}</h6>
-                                                    </div>
+                                {% else %}
+                                    <!-- المدير أو المستخدمون الآخرون: جميع المستودعات -->
+                                    <div class="row g-3">
+                                        {% for warehouse in warehouses %}
+                                            <div class="col-md-4">
+                                                <div class="form-check">
+                                                    <input class="form-check-input"
+                                                           type="radio"
+                                                           name="from_warehouse"
+                                                           id="from_{{ warehouse.id }}"
+                                                           value="{{ warehouse.id }}"
+                                                           onchange="updateToWarehouses()">
+                                                    <label class="form-check-label w-100" for="from_{{ warehouse.id }}">
+                                                        <div class="card h-100 warehouse-radio-card">
+                                                            <div class="card-body text-center">
+                                                                <i class="fas fa-warehouse fa-2x text-danger mb-2"></i>
+                                                                <h6>{{ warehouse.name }}</h6>
+                                                            </div>
+                                                        </div>
+                                                    </label>
                                                 </div>
-                                            </label>
-                                        </div>
+                                            </div>
+                                        {% endfor %}
                                     </div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <hr class="my-4">
-
-                        <!-- إلى مستودع -->
-                        <div class="mb-4">
-                            <label class="form-label fw-bold fs-5">
-                                <i class="fas fa-warehouse text-success"></i>
-                                إلى مستودع *
-                            </label>
-                            <div class="row g-3" id="to-warehouses-container">
-                                <div class="col-12 text-center text-muted">
-                                    <i class="fas fa-arrow-up"></i>
-                                    اختر المستودع المصدر أولاً
+                                {% endif %}
+                            </div>
+                            <hr class="my-4">
+                            <!-- إلى مستودع -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold fs-5">
+                                    <i class="fas fa-warehouse text-success"></i>
+                                    إلى مستودع *
+                                </label>
+                                <div class="row g-3" id="to-warehouses-container">
+                                    <div class="col-12 text-center text-muted">
+                                        <i class="fas fa-arrow-up"></i>
+                                        اختر المستودع المصدر أولاً
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <hr class="my-4">
-
-                        <!-- معلومات إضافية -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">سبب التحويل</label>
-                                <input type="text" id="reason" class="form-control" placeholder="اختياري...">
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">ملاحظات</label>
-                                <input type="text" id="notes" class="form-control" placeholder="اختياري...">
-                            </div>
-                        </div>
-
-                        <button type="button" class="btn btn-primary btn-lg w-100" onclick="goToStep2()" id="next-step2-btn" disabled>
-                            <i class="fas fa-arrow-left"></i>
-                            التالي: اختيار المنتجات
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 2: اختيار المنتجات -->
-            <div id="step2-content" class="step-content" style="display:none;">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-boxes"></i>
-                            اختر المنتجات للنقل
-                        </h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <!-- Search Box -->
-                        <div class="search-box">
+                            <hr class="my-4">
+                            <!-- معلومات إضافية -->
                             <div class="row">
-                                <div class="col-md-4">
-                                    <input type="text" id="product-search" class="form-control form-control-lg"
-                                           placeholder="🔍 ابحث عن منتج (الاسم، الكود)...">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">سبب التحويل</label>
+                                    <input type="text" id="reason" class="form-control" placeholder="اختياري...">
                                 </div>
-                                <div class="col-md-2">
-                                    <button type="button" class="btn btn-primary w-100" onclick="loadAllProducts()">
-                                        <i class="fas fa-download"></i>
-                                        تحميل الكل
-                                    </button>
-                                </div>
-                                <div class="col-md-3">
-                                    <button type="button" class="btn btn-outline-success w-100" onclick="selectAll()">
-                                        <i class="fas fa-check-double"></i>
-                                        تحديد الكل
-                                    </button>
-                                </div>
-                                <div class="col-md-3">
-                                    <button type="button" class="btn btn-outline-danger w-100" onclick="deselectAll()">
-                                        <i class="fas fa-times-circle"></i>
-                                        إلغاء الكل
-                                    </button>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">ملاحظات</label>
+                                    <input type="text" id="notes" class="form-control" placeholder="اختياري...">
                                 </div>
                             </div>
-                            <div class="mt-2">
-                                <span class="badge bg-info">
-                                    <span id="selected-count">0</span> منتج محدد
-                                </span>
-                                <span class="badge bg-secondary ms-2">
-                                    <span id="total-products-count">0</span> منتج متاح
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <!-- Loading -->
-                        <div class="loading" id="products-loading">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">جاري التحميل...</span>
-                            </div>
-                            <p class="mt-2">جاري تحميل المنتجات...</p>
-                        </div>
-                        
-                        <!-- Products List -->
-                        <div class="products-container p-3" id="products-list">
-                            <!-- سيتم ملؤها ديناميكياً -->
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <div class="d-flex justify-content-between">
-                            <button type="button" class="btn btn-secondary" onclick="goToStep1()">
-                                <i class="fas fa-arrow-right"></i>
-                                رجوع
-                            </button>
-                            <button type="button" class="btn btn-success btn-lg" onclick="goToStep3()">
+                            <button type="button"
+                                    class="btn btn-primary btn-lg w-100"
+                                    onclick="goToStep2()"
+                                    id="next-step2-btn"
+                                    disabled>
                                 <i class="fas fa-arrow-left"></i>
-                                التالي: تأكيد النقل
+                                التالي: اختيار المنتجات
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Step 3: التأكيد والنقل -->
-            <div id="step3-content" class="step-content" style="display:none;">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0">
-                            <i class="fas fa-check-circle"></i>
-                            تأكيد التحويل
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="transfer-summary">
-                            <!-- سيتم ملؤها ديناميكياً -->
+                <!-- Step 2: اختيار المنتجات -->
+                <div id="step2-content" class="step-content" style="display:none;">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-boxes"></i>
+                                اختر المنتجات للنقل
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <!-- Search Box -->
+                            <div class="search-box">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <input type="text"
+                                               id="product-search"
+                                               class="form-control form-control-lg"
+                                               placeholder="🔍 ابحث عن منتج (الاسم، الكود)...">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button"
+                                                class="btn btn-primary w-100"
+                                                onclick="loadAllProducts()">
+                                            <i class="fas fa-download"></i>
+                                            تحميل الكل
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button type="button"
+                                                class="btn btn-outline-success w-100"
+                                                onclick="selectAll()">
+                                            <i class="fas fa-check-double"></i>
+                                            تحديد الكل
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button type="button"
+                                                class="btn btn-outline-danger w-100"
+                                                onclick="deselectAll()">
+                                            <i class="fas fa-times-circle"></i>
+                                            إلغاء الكل
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <span class="badge bg-info">
+                                        <span id="selected-count">0</span> منتج محدد
+                                    </span>
+                                    <span class="badge bg-secondary ms-2">
+                                        <span id="total-products-count">0</span> منتج متاح
+                                    </span>
+                                </div>
+                            </div>
+                            <!-- Loading -->
+                            <div class="loading" id="products-loading">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">جاري التحميل...</span>
+                                </div>
+                                <p class="mt-2">جاري تحميل المنتجات...</p>
+                            </div>
+                            <!-- Products List -->
+                            <div class="products-container p-3" id="products-list">
+                                <!-- سيتم ملؤها ديناميكياً -->
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-secondary" onclick="goToStep1()">
+                                    <i class="fas fa-arrow-right"></i>
+                                    رجوع
+                                </button>
+                                <button type="button" class="btn btn-success btn-lg" onclick="goToStep3()">
+                                    <i class="fas fa-arrow-left"></i>
+                                    التالي: تأكيد النقل
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-footer">
-                        <div class="d-flex justify-content-between">
-                            <button type="button" class="btn btn-secondary" onclick="goToStep2()">
-                                <i class="fas fa-arrow-right"></i>
-                                رجوع
-                            </button>
-                            <button type="button" class="btn btn-success btn-lg" onclick="submitTransfer()" id="submit-btn">
-                                <i class="fas fa-check"></i>
-                                تأكيد وإنشاء التحويل
-                            </button>
+                </div>
+                <!-- Step 3: التأكيد والنقل -->
+                <div id="step3-content" class="step-content" style="display:none;">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0">
+                                <i class="fas fa-check-circle"></i>
+                                تأكيد التحويل
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="transfer-summary">
+                                <!-- سيتم ملؤها ديناميكياً -->
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-secondary" onclick="goToStep2()">
+                                    <i class="fas fa-arrow-right"></i>
+                                    رجوع
+                                </button>
+                                <button type="button"
+                                        class="btn btn-success btn-lg"
+                                        onclick="submitTransfer()"
+                                        id="submit-btn">
+                                    <i class="fas fa-check"></i>
+                                    تأكيد وإنشاء التحويل
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 let selectedProducts = [];
 let allProducts = [];
 let fromWarehouseId = null;
@@ -372,11 +378,7 @@ function updateToWarehouses() {
         html += `
             <div class="col-md-4">
                 <div class="form-check">
-                    <input class="form-check-input" type="radio"
-                           name="to_warehouse"
-                           id="to_{{ warehouse.id }}"
-                           value="{{ warehouse.id }}"
-                           onchange="enableNextButton()">
+                    <input class="form-check-input" type="radio" name="to_warehouse" id="to_{{ warehouse.id }}" value="{{ warehouse.id }}" onchange="enableNextButton()">
                     <label class="form-check-label w-100" for="to_{{ warehouse.id }}">
                         <div class="card h-100 warehouse-radio-card">
                             <div class="card-body text-center">
@@ -765,6 +767,5 @@ $(document).ready(function() {
         updateToWarehouses();
     {% endif %}
 });
-</script>
+    </script>
 {% endblock %}
-

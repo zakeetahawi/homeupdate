@@ -1,215 +1,183 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}تعديل إعدادات الجدولة{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">{{ title }}</h3>
-                    <div class="card-tools">
-                        <a href="{% url 'installations:installation_detail' installation.id %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-right"></i> العودة للتفاصيل
-                        </a>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">{{ title }}</h3>
+                        <div class="card-tools">
+                            <a href="{% url 'installations:installation_detail' installation.id %}"
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-right"></i> العودة للتفاصيل
+                            </a>
+                        </div>
                     </div>
-                </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        <div class="row">
-                            <!-- معلومات الفريق -->
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h4>معلومات الفريق</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="form-group">
-                                            <label for="{{ form.technician_name.id_for_label }}">{{ form.technician_name.label }}</label>
-                                            {{ form.technician_name }}
-                                            {% if form.technician_name.help_text %}
-                                                <small class="form-text text-muted">{{ form.technician_name.help_text }}</small>
-                                            {% endif %}
-                                            {% if form.technician_name.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.technician_name.errors }}
-                                                </div>
-                                            {% endif %}
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="row">
+                                <!-- معلومات الفريق -->
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h4>معلومات الفريق</h4>
                                         </div>
-
-                                        <div class="form-group">
-                                            <label for="{{ form.driver_name.id_for_label }}">{{ form.driver_name.label }}</label>
-                                            {{ form.driver_name }}
-                                            {% if form.driver_name.help_text %}
-                                                <small class="form-text text-muted">{{ form.driver_name.help_text }}</small>
-                                            {% endif %}
-                                            {% if form.driver_name.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.driver_name.errors }}
-                                                </div>
-                                            {% endif %}
+                                        <div class="card-body">
+                                            <div class="form-group">
+                                                <label for="{{ form.technician_name.id_for_label }}">{{ form.technician_name.label }}</label>
+                                                {{ form.technician_name }}
+                                                {% if form.technician_name.help_text %}
+                                                    <small class="form-text text-muted">{{ form.technician_name.help_text }}</small>
+                                                {% endif %}
+                                                {% if form.technician_name.errors %}
+                                                    <div class="invalid-feedback d-block">{{ form.technician_name.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="{{ form.driver_name.id_for_label }}">{{ form.driver_name.label }}</label>
+                                                {{ form.driver_name }}
+                                                {% if form.driver_name.help_text %}
+                                                    <small class="form-text text-muted">{{ form.driver_name.help_text }}</small>
+                                                {% endif %}
+                                                {% if form.driver_name.errors %}<div class="invalid-feedback d-block">{{ form.driver_name.errors }}</div>{% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- معلومات العميل -->
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h4>معلومات العميل</h4>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-group">
+                                                <label for="{{ form.customer_phone.id_for_label }}">{{ form.customer_phone.label }}</label>
+                                                {{ form.customer_phone }}
+                                                {% if form.customer_phone.help_text %}
+                                                    <small class="form-text text-muted">{{ form.customer_phone.help_text }}</small>
+                                                {% endif %}
+                                                {% if form.customer_phone.errors %}
+                                                    <div class="invalid-feedback d-block">{{ form.customer_phone.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="{{ form.customer_address.id_for_label }}">{{ form.customer_address.label }}</label>
+                                                {{ form.customer_address }}
+                                                {% if form.customer_address.help_text %}
+                                                    <small class="form-text text-muted">{{ form.customer_address.help_text }}</small>
+                                                {% endif %}
+                                                {% if form.customer_address.errors %}
+                                                    <div class="invalid-feedback d-block">{{ form.customer_address.errors }}</div>
+                                                {% endif %}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- معلومات العميل -->
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h4>معلومات العميل</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="form-group">
-                                            <label for="{{ form.customer_phone.id_for_label }}">{{ form.customer_phone.label }}</label>
-                                            {{ form.customer_phone }}
-                                            {% if form.customer_phone.help_text %}
-                                                <small class="form-text text-muted">{{ form.customer_phone.help_text }}</small>
-                                            {% endif %}
-                                            {% if form.customer_phone.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.customer_phone.errors }}
-                                                </div>
-                                            {% endif %}
+                            <div class="row mt-3">
+                                <!-- معلومات الطلب -->
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h4>معلومات الطلب</h4>
                                         </div>
-
-                                        <div class="form-group">
-                                            <label for="{{ form.customer_address.id_for_label }}">{{ form.customer_address.label }}</label>
-                                            {{ form.customer_address }}
-                                            {% if form.customer_address.help_text %}
-                                                <small class="form-text text-muted">{{ form.customer_address.help_text }}</small>
-                                            {% endif %}
-                                            {% if form.customer_address.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.customer_address.errors }}
-                                                </div>
-                                            {% endif %}
+                                        <div class="card-body">
+                                            <div class="form-group">
+                                                <label for="{{ form.contract_number.id_for_label }}">{{ form.contract_number.label }}</label>
+                                                {{ form.contract_number }}
+                                                {% if form.contract_number.help_text %}
+                                                    <small class="form-text text-muted">{{ form.contract_number.help_text }}</small>
+                                                {% endif %}
+                                                {% if form.contract_number.errors %}
+                                                    <div class="invalid-feedback d-block">{{ form.contract_number.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="{{ form.invoice_number.id_for_label }}">{{ form.invoice_number.label }}</label>
+                                                {{ form.invoice_number }}
+                                                {% if form.invoice_number.help_text %}
+                                                    <small class="form-text text-muted">{{ form.invoice_number.help_text }}</small>
+                                                {% endif %}
+                                                {% if form.invoice_number.errors %}
+                                                    <div class="invalid-feedback d-block">{{ form.invoice_number.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- معلومات البيع -->
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h4>معلومات البيع</h4>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-group">
+                                                <label for="{{ form.salesperson_name.id_for_label }}">{{ form.salesperson_name.label }}</label>
+                                                {{ form.salesperson_name }}
+                                                {% if form.salesperson_name.help_text %}
+                                                    <small class="form-text text-muted">{{ form.salesperson_name.help_text }}</small>
+                                                {% endif %}
+                                                {% if form.salesperson_name.errors %}
+                                                    <div class="invalid-feedback d-block">{{ form.salesperson_name.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="{{ form.branch_name.id_for_label }}">{{ form.branch_name.label }}</label>
+                                                {{ form.branch_name }}
+                                                {% if form.branch_name.help_text %}
+                                                    <small class="form-text text-muted">{{ form.branch_name.help_text }}</small>
+                                                {% endif %}
+                                                {% if form.branch_name.errors %}<div class="invalid-feedback d-block">{{ form.branch_name.errors }}</div>{% endif %}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="row mt-3">
-                            <!-- معلومات الطلب -->
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h4>معلومات الطلب</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="form-group">
-                                            <label for="{{ form.contract_number.id_for_label }}">{{ form.contract_number.label }}</label>
-                                            {{ form.contract_number }}
-                                            {% if form.contract_number.help_text %}
-                                                <small class="form-text text-muted">{{ form.contract_number.help_text }}</small>
-                                            {% endif %}
-                                            {% if form.contract_number.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.contract_number.errors }}
-                                                </div>
-                                            {% endif %}
+                            <div class="row mt-3">
+                                <!-- تعليمات خاصة -->
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h4>تعليمات خاصة</h4>
                                         </div>
-
-                                        <div class="form-group">
-                                            <label for="{{ form.invoice_number.id_for_label }}">{{ form.invoice_number.label }}</label>
-                                            {{ form.invoice_number }}
-                                            {% if form.invoice_number.help_text %}
-                                                <small class="form-text text-muted">{{ form.invoice_number.help_text }}</small>
-                                            {% endif %}
-                                            {% if form.invoice_number.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.invoice_number.errors }}
-                                                </div>
-                                            {% endif %}
+                                        <div class="card-body">
+                                            <div class="form-group">
+                                                <label for="{{ form.special_instructions.id_for_label }}">{{ form.special_instructions.label }}</label>
+                                                {{ form.special_instructions }}
+                                                {% if form.special_instructions.help_text %}
+                                                    <small class="form-text text-muted">{{ form.special_instructions.help_text }}</small>
+                                                {% endif %}
+                                                {% if form.special_instructions.errors %}
+                                                    <div class="invalid-feedback d-block">{{ form.special_instructions.errors }}</div>
+                                                {% endif %}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- معلومات البيع -->
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h4>معلومات البيع</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="form-group">
-                                            <label for="{{ form.salesperson_name.id_for_label }}">{{ form.salesperson_name.label }}</label>
-                                            {{ form.salesperson_name }}
-                                            {% if form.salesperson_name.help_text %}
-                                                <small class="form-text text-muted">{{ form.salesperson_name.help_text }}</small>
-                                            {% endif %}
-                                            {% if form.salesperson_name.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.salesperson_name.errors }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-
-                                        <div class="form-group">
-                                            <label for="{{ form.branch_name.id_for_label }}">{{ form.branch_name.label }}</label>
-                                            {{ form.branch_name }}
-                                            {% if form.branch_name.help_text %}
-                                                <small class="form-text text-muted">{{ form.branch_name.help_text }}</small>
-                                            {% endif %}
-                                            {% if form.branch_name.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.branch_name.errors }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
+                            <!-- أزرار الحفظ -->
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="btn-group">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save"></i> حفظ الإعدادات
+                                        </button>
+                                        <a href="{% url 'installations:installation_detail' installation.id %}"
+                                           class="btn btn-secondary">
+                                            <i class="fas fa-times"></i> إلغاء
+                                        </a>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="row mt-3">
-                            <!-- تعليمات خاصة -->
-                            <div class="col-12">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h4>تعليمات خاصة</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="form-group">
-                                            <label for="{{ form.special_instructions.id_for_label }}">{{ form.special_instructions.label }}</label>
-                                            {{ form.special_instructions }}
-                                            {% if form.special_instructions.help_text %}
-                                                <small class="form-text text-muted">{{ form.special_instructions.help_text }}</small>
-                                            {% endif %}
-                                            {% if form.special_instructions.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {{ form.special_instructions.errors }}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- أزرار الحفظ -->
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="btn-group">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-save"></i> حفظ الإعدادات
-                                    </button>
-                                    <a href="{% url 'installations:installation_detail' installation.id %}" class="btn btn-secondary">
-                                        <i class="fas fa-times"></i> إلغاء
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

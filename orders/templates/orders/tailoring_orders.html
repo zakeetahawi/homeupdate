@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load unified_status_tags %}
 {% load order_extras %}
-
 {% block title %}طلبات التسليم - نظام الخواجه{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
 .page-header {
     background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
     color: white;
@@ -47,335 +45,364 @@
 .orders-table tbody tr:hover {
     background-color: rgba(67, 233, 123, 0.1);
 }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="page-header text-center">
-        <h1><i class="fas fa-shipping-fast me-3"></i>طلبات التسليم</h1>
-        <p class="mb-0">إدارة ومتابعة جميع طلبات التسليم والمنتجات النهائية</p>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-lg-3 col-md-6">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <i class="fas fa-list-alt fa-2x text-primary mb-2"></i>
-                    <h4 class="mb-1">{{ total_count }}</h4>
-                    <small class="text-muted">إجمالي طلبات التسليم</small>
-                </div>
-            </div>
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="page-header text-center">
+            <h1>
+                <i class="fas fa-shipping-fast me-3"></i>طلبات التسليم
+            </h1>
+            <p class="mb-0">إدارة ومتابعة جميع طلبات التسليم والمنتجات النهائية</p>
         </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <i class="fas fa-cogs fa-2x text-warning mb-2"></i>
-                    <h4 class="mb-1">{{ in_progress_count }}</h4>
-                    <small class="text-muted">قيد التصنيع</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <i class="fas fa-truck fa-2x text-info mb-2"></i>
-                    <h4 class="mb-1">{{ ready_count }}</h4>
-                    <small class="text-muted">جاهز للتسليم</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                    <h4 class="mb-1">{{ delivered_count }}</h4>
-                    <small class="text-muted">تم التسليم</small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Search and Filter -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label">البحث</label>
-                    <div class="input-group">
-                        <input type="text" name="search" class="form-control" placeholder="بحث برقم الطلب أو اسم العميل" value="{{ search_query }}">
-                        <button class="btn btn-outline-secondary" type="submit">
-                            <i class="fas fa-search"></i>
-                        </button>
+        <!-- Statistics Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-list-alt fa-2x text-primary mb-2"></i>
+                        <h4 class="mb-1">{{ total_count }}</h4>
+                        <small class="text-muted">إجمالي طلبات التسليم</small>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">الحالة</label>
-                    <select name="status" class="form-select">
-                        <option value="">-- جميع الحالات --</option>
-                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>قيد الانتظار</option>
-                        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>قيد التصنيع</option>
-                        <option value="ready_install" {% if status_filter == 'ready_install' %}selected{% endif %}>جاهز للتركيب</option>
-                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>مكتمل</option>
-                        <option value="delivered" {% if status_filter == 'delivered' %}selected{% endif %}>تم التسليم</option>
-                    </select>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-cogs fa-2x text-warning mb-2"></i>
+                        <h4 class="mb-1">{{ in_progress_count }}</h4>
+                        <small class="text-muted">قيد التصنيع</small>
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">نوع التسليم</label>
-                    <select name="delivery_type" class="form-select">
-                        <option value="">-- جميع الأنواع --</option>
-                        <option value="home" {% if delivery_type_filter == 'home' %}selected{% endif %}>توصيل منزلي</option>
-                        <option value="branch" {% if delivery_type_filter == 'branch' %}selected{% endif %}>استلام من الفرع</option>
-                    </select>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-truck fa-2x text-info mb-2"></i>
+                        <h4 class="mb-1">{{ ready_count }}</h4>
+                        <small class="text-muted">جاهز للتسليم</small>
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">رقم العقد</label>
-                    <input type="text" name="contract" class="form-control" placeholder="رقم العقد" value="{{ contract_filter }}">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">عدد الصفوف</label>
-                    <select name="page_size" class="form-select">
-                        <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
-                        <option value="25" {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>25</option>
-                        <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
-                        <option value="100" {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
-                    </select>
-                </div>
-                <div class="col-md-1">
-                    <button type="submit" class="btn btn-primary w-100">تصفية</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Orders Table -->
-    <div class="table-container">
-        <div class="card-header bg-transparent">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h5 class="mb-0">قائمة طلبات التسليم ({{ total_count }})</h5>
-                </div>
-                <div class="col-auto">
-                    {% if perms.orders.add_order %}
-                    <a href="{% url 'orders:wizard_start' %}" class="btn btn-success">
-                        <i class="fas fa-magic"></i> إنشاء طلب إلكتروني
-                    </a>
-                    {% endif %}
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                        <h4 class="mb-1">{{ delivered_count }}</h4>
+                        <small class="text-muted">تم التسليم</small>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        {% if page_obj %}
-        <div class="table-responsive">
-            <table class="table table-hover mb-0 orders-table">
-                <thead>
-                    <tr>
-                        <th class="text-center">رقم الطلب</th>
-                        <th class="text-center">العميل</th>
-                        <th class="text-center">رقم العقد</th>
-                        <th class="text-center">تاريخ الطلب</th>
-                        <th class="text-center">حالة التصنيع</th>
-                        <th class="text-center">تاريخ التسليم المتوقع</th>
-                        <th class="text-center">نوع التسليم</th>
-                        <th class="text-center">المبلغ الإجمالي</th>
-                        <th class="text-center">المبلغ المتبقي</th>
-                        <th class="text-center">البائع</th>
-                        <th class="text-center">الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for order in page_obj %}
-                    <tr>
-                        <td class="text-center">
-                            <a href="{% url 'orders:order_detail' order.pk %}" class="text-decoration-none fw-bold">
-                                {{ order.order_number }}
-                            </a>
-                        </td>
-                        <td class="text-center">
-                            <a href="{% url 'customers:customer_detail' order.customer.pk %}" class="text-decoration-none">
-                                <strong>{{ order.customer.name }}</strong>
-                            </a>
-                            <br>
-                            <small class="text-muted">{{ order.customer.phone }}</small>
-                        </td>
-                        <td class="text-center">
-                            {% if order.contract_number %}
-                                <span class="fw-bold text-primary" dir="ltr">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</span>
-                                {% if order.contract_number_2 %}
-                                    <br><span class="fw-bold text-primary">{{ order.contract_number_2 }}</span>
-                                {% endif %}
-                                {% if order.contract_number_3 %}
-                                    <br><span class="fw-bold text-primary">{{ order.contract_number_3 }}</span>
-                                {% endif %}
-                                {% if order.contract_file %}
-                                    <br>
-                                    <a href="{{ order.contract_file.url }}" target="_blank" class="btn btn-sm btn-outline-info">
-                                        <i class="fas fa-file-pdf"></i>
-                                    </a>
-                                {% endif %}
-                            {% elif order.contract_number_2 %}
-                                <span class="fw-bold text-primary">{{ order.contract_number_2 }}</span>
-                                {% if order.contract_number_3 %}
-                                    <br><span class="fw-bold text-primary">{{ order.contract_number_3 }}</span>
-                                {% endif %}
-                            {% elif order.contract_number_3 %}
-                                <span class="fw-bold text-primary">{{ order.contract_number_3 }}</span>
-                            {% else %}
-                                <span class="text-muted">غير محدد</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            {{ order.order_date|date:"Y-m-d" }}
-                            <br>
-                            <small class="text-muted">{{ order.order_date|date:"H:i" }}</small>
-                        </td>
-                        <td class="text-center">
-                            {% if order.manufacturing_order %}
-                                {% get_status_badge order.manufacturing_order.status "manufacturing" %}
-                                {% if order.manufacturing_order.completion_date %}
-                                    <br>
-                                    <small class="text-muted">
-                                        <i class="fas fa-calendar"></i> {{ order.manufacturing_order.completion_date|date:"Y-m-d" }}
-                                    </small>
-                                {% endif %}
-                            {% else %}
-                                <span class="badge bg-secondary">لا يوجد</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            {% if order.get_smart_delivery_date %}
-                                {{ order.get_smart_delivery_date|date:"Y-m-d" }}
-                                <br>
-                                <small class="text-muted">{{ order.get_delivery_date_label }}</small>
-                            {% else %}
-                                <span class="text-muted">غير محدد</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            {% if order.delivery_type == 'home' %}
-                                <span class="badge bg-info">
-                                    <i class="fas fa-home me-1"></i>توصيل منزلي
-                                </span>
-                                {% if order.delivery_address %}
-                                    <br>
-                                    <small class="text-muted" title="{{ order.delivery_address }}">
-                                        {{ order.delivery_address|truncatechars:20 }}
-                                    </small>
-                                {% endif %}
-                                {% if order.delivery_recipient_name %}
-                                    <br>
-                                    <small class="text-success">
-                                        <i class="fas fa-user"></i> {{ order.delivery_recipient_name }}
-                                    </small>
-                                {% endif %}
-                            {% else %}
-                                <span class="badge bg-secondary">
-                                    <i class="fas fa-store me-1"></i>استلام من الفرع
-                                </span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            <strong>{{ order.total_amount|floatformat:2 }} {{ currency_symbol }}</strong>
-                        </td>
-                        <td class="text-center">
-                            {% if order.remaining_amount == 0 or order.remaining_amount == None %}
-                                <span class="badge bg-success">مسدد</span>
-                            {% else %}
-                                <span class="text-danger fw-bold">{{ order.remaining_amount|floatformat:2 }} {{ currency_symbol }}</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            {% if order.salesperson %}
-                                {{ order.salesperson.name }}
-                            {% else %}
-                                <span class="text-muted">غير محدد</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            <div class="btn-group btn-group-sm">
-                                <a href="{% url 'orders:order_detail' order.pk %}" class="btn btn-info" title="عرض">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if perms.orders.change_order %}
-                                <a href="{% url 'orders:wizard_edit_options' order_pk=order.pk %}" class="btn btn-primary" title="تعديل">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                {% endif %}
-                                {% if perms.orders.delete_order %}
-                                <a href="{% url 'orders:order_delete' order.pk %}" class="btn btn-danger" title="حذف">
-                                    <i class="fas fa-trash"></i>
-                                </a>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Search and Filter -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">البحث</label>
+                        <div class="input-group">
+                            <input type="text"
+                                   name="search"
+                                   class="form-control"
+                                   placeholder="بحث برقم الطلب أو اسم العميل"
+                                   value="{{ search_query }}">
+                            <button class="btn btn-outline-secondary" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">الحالة</label>
+                        <select name="status" class="form-select">
+                            <option value="">-- جميع الحالات --</option>
+                            <option value="pending"
+                                    {% if status_filter == 'pending' %}selected{% endif %}>قيد الانتظار</option>
+                            <option value="in_progress"
+                                    {% if status_filter == 'in_progress' %}selected{% endif %}>قيد التصنيع</option>
+                            <option value="ready_install"
+                                    {% if status_filter == 'ready_install' %}selected{% endif %}>جاهز للتركيب</option>
+                            <option value="completed"
+                                    {% if status_filter == 'completed' %}selected{% endif %}>مكتمل</option>
+                            <option value="delivered"
+                                    {% if status_filter == 'delivered' %}selected{% endif %}>تم التسليم</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">نوع التسليم</label>
+                        <select name="delivery_type" class="form-select">
+                            <option value="">-- جميع الأنواع --</option>
+                            <option value="home"
+                                    {% if delivery_type_filter == 'home' %}selected{% endif %}>توصيل منزلي</option>
+                            <option value="branch"
+                                    {% if delivery_type_filter == 'branch' %}selected{% endif %}>
+                                استلام من الفرع
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">رقم العقد</label>
+                        <input type="text"
+                               name="contract"
+                               class="form-control"
+                               placeholder="رقم العقد"
+                               value="{{ contract_filter }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">عدد الصفوف</label>
+                        <select name="page_size" class="form-select">
+                            <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
+                            <option value="25"
+                                    {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>
+                                25
+                            </option>
+                            <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
+                            <option value="100"
+                                    {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <button type="submit" class="btn btn-primary w-100">تصفية</button>
+                    </div>
+                </form>
+            </div>
         </div>
-        {% else %}
-        <div class="card-body text-center py-5">
-            <i class="fas fa-shipping-fast fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">لا توجد طلبات تسليم</h5>
-            <p class="text-muted">لم يتم العثور على أي طلبات تسليم تطابق معايير البحث</p>
-            {% if perms.orders.add_order %}
-            <a href="{% url 'orders:wizard_start' %}" class="btn btn-success">
-                <i class="fas fa-magic me-2"></i>إنشاء طلب إلكتروني
-            </a>
+        <!-- Orders Table -->
+        <div class="table-container">
+            <div class="card-header bg-transparent">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="mb-0">قائمة طلبات التسليم ({{ total_count }})</h5>
+                    </div>
+                    <div class="col-auto">
+                        {% if perms.orders.add_order %}
+                            <a href="{% url 'orders:wizard_start' %}" class="btn btn-success">
+                                <i class="fas fa-magic"></i> إنشاء طلب إلكتروني
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% if page_obj %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 orders-table">
+                        <thead>
+                            <tr>
+                                <th class="text-center">رقم الطلب</th>
+                                <th class="text-center">العميل</th>
+                                <th class="text-center">رقم العقد</th>
+                                <th class="text-center">تاريخ الطلب</th>
+                                <th class="text-center">حالة التصنيع</th>
+                                <th class="text-center">تاريخ التسليم المتوقع</th>
+                                <th class="text-center">نوع التسليم</th>
+                                <th class="text-center">المبلغ الإجمالي</th>
+                                <th class="text-center">المبلغ المتبقي</th>
+                                <th class="text-center">البائع</th>
+                                <th class="text-center">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in page_obj %}
+                                <tr>
+                                    <td class="text-center">
+                                        <a href="{% url 'orders:order_detail' order.pk %}"
+                                           class="text-decoration-none fw-bold">{{ order.order_number }}</a>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'customers:customer_detail' order.customer.pk %}"
+                                           class="text-decoration-none">
+                                            <strong>{{ order.customer.name }}</strong>
+                                        </a>
+                                        <br>
+                                        <small class="text-muted">{{ order.customer.phone }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if order.contract_number %}
+                                            <span class="fw-bold text-primary" dir="ltr">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</span>
+                                            {% if order.contract_number_2 %}
+                                                <br>
+                                                <span class="fw-bold text-primary">{{ order.contract_number_2 }}</span>
+                                            {% endif %}
+                                            {% if order.contract_number_3 %}
+                                                <br>
+                                                <span class="fw-bold text-primary">{{ order.contract_number_3 }}</span>
+                                            {% endif %}
+                                            {% if order.contract_file %}
+                                                <br>
+                                                <a href="{{ order.contract_file.url }}"
+                                                   target="_blank"
+                                                   class="btn btn-sm btn-outline-info">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                </a>
+                                            {% endif %}
+                                        {% elif order.contract_number_2 %}
+                                            <span class="fw-bold text-primary">{{ order.contract_number_2 }}</span>
+                                            {% if order.contract_number_3 %}
+                                                <br>
+                                                <span class="fw-bold text-primary">{{ order.contract_number_3 }}</span>
+                                            {% endif %}
+                                        {% elif order.contract_number_3 %}
+                                            <span class="fw-bold text-primary">{{ order.contract_number_3 }}</span>
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {{ order.order_date|date:"Y-m-d" }}
+                                        <br>
+                                        <small class="text-muted">{{ order.order_date|date:"H:i" }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if order.manufacturing_order %}
+                                            {% get_status_badge order.manufacturing_order.status "manufacturing" %}
+                                            {% if order.manufacturing_order.completion_date %}
+                                                <br>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar"></i> {{ order.manufacturing_order.completion_date|date:"Y-m-d" }}
+                                                </small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-secondary">لا يوجد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if order.get_smart_delivery_date %}
+                                            {{ order.get_smart_delivery_date|date:"Y-m-d" }}
+                                            <br>
+                                            <small class="text-muted">{{ order.get_delivery_date_label }}</small>
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if order.delivery_type == 'home' %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-home me-1"></i>توصيل منزلي
+                                            </span>
+                                            {% if order.delivery_address %}
+                                                <br>
+                                                <small class="text-muted" title="{{ order.delivery_address }}">{{ order.delivery_address|truncatechars:20 }}</small>
+                                            {% endif %}
+                                            {% if order.delivery_recipient_name %}
+                                                <br>
+                                                <small class="text-success">
+                                                    <i class="fas fa-user"></i> {{ order.delivery_recipient_name }}
+                                                </small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-store me-1"></i>استلام من الفرع
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <strong>{{ order.total_amount|floatformat:2 }} {{ currency_symbol }}</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if order.remaining_amount == 0 or order.remaining_amount == None %}
+                                            <span class="badge bg-success">مسدد</span>
+                                        {% else %}
+                                            <span class="text-danger fw-bold">{{ order.remaining_amount|floatformat:2 }} {{ currency_symbol }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if order.salesperson %}
+                                            {{ order.salesperson.name }}
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'orders:order_detail' order.pk %}"
+                                               class="btn btn-info"
+                                               title="عرض">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if perms.orders.change_order %}
+                                                <a href="{% url 'orders:wizard_edit_options' order_pk=order.pk %}"
+                                                   class="btn btn-primary"
+                                                   title="تعديل">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            {% endif %}
+                                            {% if perms.orders.delete_order %}
+                                                <a href="{% url 'orders:order_delete' order.pk %}"
+                                                   class="btn btn-danger"
+                                                   title="حذف">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-shipping-fast fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">لا توجد طلبات تسليم</h5>
+                    <p class="text-muted">لم يتم العثور على أي طلبات تسليم تطابق معايير البحث</p>
+                    {% if perms.orders.add_order %}
+                        <a href="{% url 'orders:wizard_start' %}" class="btn btn-success">
+                            <i class="fas fa-magic me-2"></i>إنشاء طلب إلكتروني
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+                <div class="card-footer">
+                    <nav>
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if delivery_type_filter %}&delivery_type={{ delivery_type_filter }}{% endif %}{% if contract_filter %}&contract={{ contract_filter }}{% endif %}">
+                                        <i class="fas fa-angle-double-right"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if delivery_type_filter %}&delivery_type={{ delivery_type_filter }}{% endif %}{% if contract_filter %}&contract={{ contract_filter }}{% endif %}">
+                                        <i class="fas fa-angle-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if delivery_type_filter %}&delivery_type={{ delivery_type_filter }}{% endif %}{% if contract_filter %}&contract={{ contract_filter }}{% endif %}">
+                                            {{ num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if delivery_type_filter %}&delivery_type={{ delivery_type_filter }}{% endif %}{% if contract_filter %}&contract={{ contract_filter }}{% endif %}">
+                                        <i class="fas fa-angle-left"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if delivery_type_filter %}&delivery_type={{ delivery_type_filter }}{% endif %}{% if contract_filter %}&contract={{ contract_filter }}{% endif %}">
+                                        <i class="fas fa-angle-double-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
             {% endif %}
         </div>
-        {% endif %}
-
-        <!-- Pagination -->
-        {% if page_obj.has_other_pages %}
-        <div class="card-footer">
-            <nav>
-                <ul class="pagination justify-content-center mb-0">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if delivery_type_filter %}&delivery_type={{ delivery_type_filter }}{% endif %}{% if contract_filter %}&contract={{ contract_filter }}{% endif %}">
-                            <i class="fas fa-angle-double-right"></i>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if delivery_type_filter %}&delivery_type={{ delivery_type_filter }}{% endif %}{% if contract_filter %}&contract={{ contract_filter }}{% endif %}">
-                            <i class="fas fa-angle-right"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ num }}</span>
-                        </li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if delivery_type_filter %}&delivery_type={{ delivery_type_filter }}{% endif %}{% if contract_filter %}&contract={{ contract_filter }}{% endif %}">
-                                {{ num }}
-                            </a>
-                        </li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if delivery_type_filter %}&delivery_type={{ delivery_type_filter }}{% endif %}{% if contract_filter %}&contract={{ contract_filter }}{% endif %}">
-                            <i class="fas fa-angle-left"></i>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if delivery_type_filter %}&delivery_type={{ delivery_type_filter }}{% endif %}{% if contract_filter %}&contract={{ contract_filter }}{% endif %}">
-                            <i class="fas fa-angle-double-left"></i>
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
-        {% endif %}
     </div>
-</div>
 {% endblock %}

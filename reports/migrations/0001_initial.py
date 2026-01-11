@@ -15,204 +15,204 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Report',
+            name="Report",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'title',
-                    models.CharField(max_length=200, verbose_name='عنوان التقرير'),
+                    "title",
+                    models.CharField(max_length=200, verbose_name="عنوان التقرير"),
                 ),
                 (
-                    'report_type',
+                    "report_type",
                     models.CharField(
                         choices=[
-                            ('sales', 'تقرير المبيعات'),
-                            ('inventory', 'تقرير المخزون'),
-                            ('financial', 'تقرير مالي'),
-                            ('analytics', 'تقرير تحليلي'),
-                            ('custom', 'تقرير مخصص'),
+                            ("sales", "تقرير المبيعات"),
+                            ("inventory", "تقرير المخزون"),
+                            ("financial", "تقرير مالي"),
+                            ("analytics", "تقرير تحليلي"),
+                            ("custom", "تقرير مخصص"),
                         ],
                         max_length=20,
-                        verbose_name='نوع التقرير',
+                        verbose_name="نوع التقرير",
                     ),
                 ),
                 (
-                    'description',
-                    models.TextField(blank=True, verbose_name='وصف التقرير'),
+                    "description",
+                    models.TextField(blank=True, verbose_name="وصف التقرير"),
                 ),
                 (
-                    'parameters',
+                    "parameters",
                     models.JSONField(
-                        blank=True, default=dict, verbose_name='معلمات التقرير'
+                        blank=True, default=dict, verbose_name="معلمات التقرير"
                     ),
                 ),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'updated_at',
-                    models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث'),
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث"),
                 ),
                 (
-                    'created_by',
+                    "created_by",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='reports_created',
+                        related_name="reports_created",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تم الإنشاء بواسطة',
+                        verbose_name="تم الإنشاء بواسطة",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'تقرير',
-                'verbose_name_plural': 'التقارير',
-                'ordering': ['-created_at'],
+                "verbose_name": "تقرير",
+                "verbose_name_plural": "التقارير",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='ReportSchedule',
+            name="ReportSchedule",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('name', models.CharField(max_length=200, verbose_name='اسم الجدولة')),
+                ("name", models.CharField(max_length=200, verbose_name="اسم الجدولة")),
                 (
-                    'frequency',
+                    "frequency",
                     models.CharField(
                         choices=[
-                            ('daily', 'يومي'),
-                            ('weekly', 'أسبوعي'),
-                            ('monthly', 'شهري'),
-                            ('quarterly', 'ربع سنوي'),
+                            ("daily", "يومي"),
+                            ("weekly", "أسبوعي"),
+                            ("monthly", "شهري"),
+                            ("quarterly", "ربع سنوي"),
                         ],
                         max_length=20,
-                        verbose_name='التكرار',
+                        verbose_name="التكرار",
                     ),
                 ),
                 (
-                    'parameters',
+                    "parameters",
                     models.JSONField(
-                        blank=True, default=dict, verbose_name='معلمات التقرير'
+                        blank=True, default=dict, verbose_name="معلمات التقرير"
                     ),
                 ),
-                ('is_active', models.BooleanField(default=True, verbose_name='نشط')),
+                ("is_active", models.BooleanField(default=True, verbose_name="نشط")),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'updated_at',
-                    models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث'),
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث"),
                 ),
                 (
-                    'created_by',
+                    "created_by",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='report_schedules_created',
+                        related_name="report_schedules_created",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تم الإنشاء بواسطة',
+                        verbose_name="تم الإنشاء بواسطة",
                     ),
                 ),
                 (
-                    'recipients',
+                    "recipients",
                     models.ManyToManyField(
-                        related_name='report_subscriptions',
+                        related_name="report_subscriptions",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='المستلمون',
+                        verbose_name="المستلمون",
                     ),
                 ),
                 (
-                    'report',
+                    "report",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='schedules',
-                        to='reports.report',
-                        verbose_name='التقرير',
+                        related_name="schedules",
+                        to="reports.report",
+                        verbose_name="التقرير",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'جدولة تقرير',
-                'verbose_name_plural': 'جدولات التقارير',
-                'ordering': ['-created_at'],
+                "verbose_name": "جدولة تقرير",
+                "verbose_name_plural": "جدولات التقارير",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='SavedReport',
+            name="SavedReport",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'name',
+                    "name",
                     models.CharField(
-                        max_length=200, verbose_name='اسم النتيجة المحفوظة'
+                        max_length=200, verbose_name="اسم النتيجة المحفوظة"
                     ),
                 ),
-                ('data', models.JSONField(default=dict, verbose_name='بيانات التقرير')),
+                ("data", models.JSONField(default=dict, verbose_name="بيانات التقرير")),
                 (
-                    'parameters_used',
+                    "parameters_used",
                     models.JSONField(
-                        blank=True, default=dict, verbose_name='المعلمات المستخدمة'
+                        blank=True, default=dict, verbose_name="المعلمات المستخدمة"
                     ),
                 ),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'created_by',
+                    "created_by",
                     models.ForeignKey(
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='saved_reports',
+                        related_name="saved_reports",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تم الإنشاء بواسطة',
+                        verbose_name="تم الإنشاء بواسطة",
                     ),
                 ),
                 (
-                    'report',
+                    "report",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='saved_results',
-                        to='reports.report',
-                        verbose_name='التقرير',
+                        related_name="saved_results",
+                        to="reports.report",
+                        verbose_name="التقرير",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'تقرير محفوظ',
-                'verbose_name_plural': 'التقارير المحفوظة',
-                'ordering': ['-created_at'],
+                "verbose_name": "تقرير محفوظ",
+                "verbose_name_plural": "التقارير المحفوظة",
+                "ordering": ["-created_at"],
             },
         ),
     ]

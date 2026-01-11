@@ -6,13 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0040_add_branch_device_lock'),
+        ("accounts", "0040_add_branch_device_lock"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='branch',
-            name='require_device_lock',
-            field=models.BooleanField(default=False, help_text='إذا كان مفعل، يتطلب من موظفي هذا الفرع تسجيل الدخول من أجهزة مسجلة فقط', verbose_name='قفل الأجهزة'),
+            model_name="branch",
+            name="require_device_lock",
+            field=models.BooleanField(
+                default=False,
+                help_text="إذا كان مفعل، يتطلب من موظفي هذا الفرع تسجيل الدخول من أجهزة مسجلة فقط",
+                verbose_name="قفل الأجهزة",
+            ),
         ),
     ]

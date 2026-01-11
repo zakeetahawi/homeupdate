@@ -1,169 +1,168 @@
 {% extends 'inventory/inventory_base_custom.html' %}
 {% load static %}
-
 {% block inventory_title %}تفاصيل موقع التخزين{% endblock %}
-
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
-<li class="breadcrumb-item"><a href="{% url 'inventory:warehouse_location_list' %}">مواقع التخزين</a></li>
-<li class="breadcrumb-item active">{{ location.name }}</li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a>
+    </li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:warehouse_location_list' %}">مواقع التخزين</a>
+    </li>
+    <li class="breadcrumb-item active">{{ location.name }}</li>
 {% endblock %}
-
 {% block inventory_content %}
-<div class="container-fluid">
-    <div class="row">
-        <!-- معلومات الموقع -->
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-map-marker-alt"></i>
-                        {{ location.name }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span><i class="fas fa-barcode text-muted"></i> الرمز</span>
-                            <strong><code>{{ location.code }}</code></strong>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span><i class="fas fa-warehouse text-muted"></i> المستودع</span>
-                            <a href="{% url 'inventory:warehouse_detail' location.warehouse.pk %}">
-                                {{ location.warehouse.name }}
+    <div class="container-fluid">
+        <div class="row">
+            <!-- معلومات الموقع -->
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-map-marker-alt"></i>
+                            {{ location.name }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><i class="fas fa-barcode text-muted"></i> الرمز</span>
+                                <strong><code>{{ location.code }}</code></strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><i class="fas fa-warehouse text-muted"></i> المستودع</span>
+                                <a href="{% url 'inventory:warehouse_detail' location.warehouse.pk %}">{{ location.warehouse.name }}</a>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><i class="fas fa-box text-muted"></i> السعة</span>
+                                <strong>{{ location.capacity }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><i class="fas fa-chart-pie text-muted"></i> الإشغال</span>
+                                <span class="badge bg-{% if location.occupancy_rate > 80 %}danger{% elif location.occupancy_rate > 50 %}warning{% else %}success{% endif %}">
+                                    {{ location.occupancy_rate }}%
+                                </span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><i class="fas fa-toggle-on text-muted"></i> الحالة</span>
+                                {% if location.is_active %}
+                                    <span class="badge bg-success">نشط</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">غير نشط</span>
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'inventory:warehouse_location_update' location.pk %}"
+                               class="btn btn-sm btn-primary">
+                                <i class="fas fa-edit"></i> تعديل
                             </a>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span><i class="fas fa-box text-muted"></i> السعة</span>
-                            <strong>{{ location.capacity }}</strong>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span><i class="fas fa-chart-pie text-muted"></i> الإشغال</span>
-                            <span class="badge bg-{% if location.occupancy_rate > 80 %}danger{% elif location.occupancy_rate > 50 %}warning{% else %}success{% endif %}">
-                                {{ location.occupancy_rate }}%
-                            </span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span><i class="fas fa-toggle-on text-muted"></i> الحالة</span>
-                            {% if location.is_active %}
-                            <span class="badge bg-success">نشط</span>
-                            {% else %}
-                            <span class="badge bg-secondary">غير نشط</span>
-                            {% endif %}
-                        </li>
-                    </ul>
-                </div>
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between">
-                        <a href="{% url 'inventory:warehouse_location_update' location.pk %}" class="btn btn-sm btn-primary">
-                            <i class="fas fa-edit"></i> تعديل
-                        </a>
-                        <a href="{% url 'inventory:warehouse_location_delete' location.pk %}" class="btn btn-sm btn-danger">
-                            <i class="fas fa-trash"></i> حذف
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- الوصف -->
-            {% if location.description %}
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> الوصف</h6>
-                </div>
-                <div class="card-body">
-                    <p class="mb-0">{{ location.description }}</p>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- السعة والإشغال -->
-        <div class="col-md-8">
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0"><i class="fas fa-chart-bar"></i> السعة والإشغال</h6>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-md-4">
-                            <div class="border rounded p-3">
-                                <h4 class="text-primary">{{ location.capacity }}</h4>
-                                <small class="text-muted">السعة الإجمالية</small>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="border rounded p-3">
-                                <h4 class="text-success">{{ location.used_capacity }}</h4>
-                                <small class="text-muted">المستخدم</small>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="border rounded p-3">
-                                <h4 class="text-info">{{ location.available_capacity }}</h4>
-                                <small class="text-muted">المتاح</small>
-                            </div>
+                            <a href="{% url 'inventory:warehouse_location_delete' location.pk %}"
+                               class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i> حذف
+                            </a>
                         </div>
                     </div>
-
-                    <!-- شريط التقدم -->
-                    <div class="mt-4">
-                        <label class="form-label">نسبة الإشغال</label>
-                        <div class="progress" style="height: 25px;">
-                            <div class="progress-bar bg-{% if location.occupancy_rate > 80 %}danger{% elif location.occupancy_rate > 50 %}warning{% else %}success{% endif %}" 
-                                 role="progressbar" 
-                                 style="width: {{ location.occupancy_rate }}%"
-                                 aria-valuenow="{{ location.occupancy_rate }}" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="100">
-                                {{ location.occupancy_rate }}%
+                </div>
+                <!-- الوصف -->
+                {% if location.description %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-info-circle"></i> الوصف
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-0">{{ location.description }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            <!-- السعة والإشغال -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-bar"></i> السعة والإشغال
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <div class="border rounded p-3">
+                                    <h4 class="text-primary">{{ location.capacity }}</h4>
+                                    <small class="text-muted">السعة الإجمالية</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border rounded p-3">
+                                    <h4 class="text-success">{{ location.used_capacity }}</h4>
+                                    <small class="text-muted">المستخدم</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border rounded p-3">
+                                    <h4 class="text-info">{{ location.available_capacity }}</h4>
+                                    <small class="text-muted">المتاح</small>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- شريط التقدم -->
+                        <div class="mt-4">
+                            <label class="form-label">نسبة الإشغال</label>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar bg-{% if location.occupancy_rate > 80 %}danger{% elif location.occupancy_rate > 50 %}warning{% else %}success{% endif %}"
+                                     role="progressbar"
+                                     style="width: {{ location.occupancy_rate }}%"
+                                     aria-valuenow="{{ location.occupancy_rate }}"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">{{ location.occupancy_rate }}%</div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- الدفعات في الموقع -->
-            <div class="card">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0"><i class="fas fa-boxes"></i> المنتجات في هذا الموقع</h6>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>المنتج</th>
-                                    <th>رقم الدفعة</th>
-                                    <th>الكمية</th>
-                                    <th>تاريخ الإضافة</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for batch in location.product_batches.all %}
-                                <tr>
-                                    <td>
-                                        <a href="{% url 'inventory:product_detail' batch.product.pk %}">
-                                            {{ batch.product.name|truncatewords:4 }}
-                                        </a>
-                                    </td>
-                                    <td><code>{{ batch.batch_number }}</code></td>
-                                    <td>{{ batch.quantity }}</td>
-                                    <td>{{ batch.created_at|date:"Y-m-d" }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">
-                                        لا توجد منتجات في هذا الموقع
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                <!-- الدفعات في الموقع -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="fas fa-boxes"></i> المنتجات في هذا الموقع
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>المنتج</th>
+                                        <th>رقم الدفعة</th>
+                                        <th>الكمية</th>
+                                        <th>تاريخ الإضافة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for batch in location.product_batches.all %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'inventory:product_detail' batch.product.pk %}">{{ batch.product.name|truncatewords:4 }}</a>
+                                            </td>
+                                            <td>
+                                                <code>{{ batch.batch_number }}</code>
+                                            </td>
+                                            <td>{{ batch.quantity }}</td>
+                                            <td>{{ batch.created_at|date:"Y-m-d" }}</td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-4">لا توجد منتجات في هذا الموقع</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

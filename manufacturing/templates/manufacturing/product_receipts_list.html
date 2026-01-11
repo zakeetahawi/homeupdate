@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
-
 {% block title %}قائمة استلامات المنتجات{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .receipts-header {
         background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
         color: white;
@@ -110,149 +108,149 @@
         background-color: #f8f9fa !important;
         color: #333333 !important;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="receipts-header p-4 mb-4 shadow">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h2 class="mb-2">
-                    <i class="fas fa-list-alt me-3"></i>
-                    قائمة استلامات المنتجات
-                </h2>
-                <p class="mb-0">عرض جميع استلامات المنتجات مجمعة حسب العميل</p>
-            </div>
-            <div class="col-md-4 text-end">
-                <a href="{% url 'manufacturing:product_receipt' %}" class="btn btn-light btn-lg">
-                    <i class="fas fa-plus me-2"></i>استلام جديد
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- إحصائيات سريعة -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <h3 class="mb-2">{{ total_receipts }}</h3>
-                    <p class="mb-0">إجمالي الاستلامات</p>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="receipts-header p-4 mb-4 shadow">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="mb-2">
+                        <i class="fas fa-list-alt me-3"></i>
+                        قائمة استلامات المنتجات
+                    </h2>
+                    <p class="mb-0">عرض جميع استلامات المنتجات مجمعة حسب العميل</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{% url 'manufacturing:product_receipt' %}"
+                       class="btn btn-light btn-lg">
+                        <i class="fas fa-plus me-2"></i>استلام جديد
+                    </a>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <h3 class="mb-2">{{ today_receipts }}</h3>
-                    <p class="mb-0">استلامات اليوم</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- قائمة الاستلامات مجمعة حسب العميل -->
-    {% if receipts_by_customer %}
-        {% for customer_name, receipts in receipts_by_customer.items %}
-        <div class="card customer-card shadow">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-user me-2"></i>
-                    {{ customer_name }}
-                    <span class="badge badge-light text-primary ms-2">{{ receipts|length }} استلام</span>
-                </h5>
-            </div>
-            <div class="card-body">
-                {% for receipt in receipts %}
-                <div class="receipt-item">
-                    <div class="row align-items-center">
-                        <div class="col-md-2">
-                            <strong>رقم الاستلام:</strong><br>
-                            <span class="badge badge-primary">{{ receipt.receipt_number }}</span>
-                        </div>
-                        <div class="col-md-2">
-                            <strong>رقم الإذن:</strong><br>
-                            <span class="badge badge-info">{{ receipt.permit_number|default:"غير محدد" }}</span>
-                        </div>
-                        <div class="col-md-2">
-                            <strong>أمر التقطيع:</strong><br>
-                            {{ receipt.cutting_order.cutting_code }}
-                        </div>
-                        <div class="col-md-2">
-                            <strong>المستودع:</strong><br>
-                            {{ receipt.cutting_order.warehouse.name }}
-                        </div>
-                        <div class="col-md-2">
-                            <strong>المستلم:</strong><br>
-                            {{ receipt.received_by_name }}
-                        </div>
-                        <div class="col-md-2">
-                            <strong>تاريخ الاستلام:</strong><br>
-                            <small>{{ receipt.receipt_date|date:"Y-m-d H:i" }}</small>
-                        </div>
+        <!-- إحصائيات سريعة -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <h3 class="mb-2">{{ total_receipts }}</h3>
+                        <p class="mb-0">إجمالي الاستلامات</p>
                     </div>
-                    
-                    <!-- تفاصيل الأصناف -->
-                    <div class="mt-3">
-                        <h6 class="text-muted">الأصناف المستلمة:</h6>
-                        <div class="row">
-                            {% for item in receipt.cutting_order.items.all %}
-                            <div class="col-md-4 mb-2">
-                                <div class="border rounded p-2 bg-light">
-                                    <small>
-                                        <strong>{{ item.order_item.product.name|default:"غير محدد" }}</strong><br>
-                                        <span class="text-primary">الكمية: {{ item.order_item.quantity }}</span>
-                                        {% if item.additional_quantity and item.additional_quantity > 0 %}
-                                            <span class="text-warning"> + {{ item.additional_quantity }} إضافية</span>
-                                        {% endif %}<br>
-                                        {% if item.order_item.fabric_type %}
-                                            <span class="text-info">الخامة: {{ item.order_item.fabric_type }}</span><br>
-                                        {% endif %}
-                                        {% if item.order_item.fabric_color %}
-                                            <span class="text-success">اللون: {{ item.order_item.fabric_color }}</span><br>
-                                        {% endif %}
-                                        {% if item.notes %}
-                                        <span class="text-muted">ملاحظات: {{ item.notes }}</span>
-                                        {% endif %}
-                                    </small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <h3 class="mb-2">{{ today_receipts }}</h3>
+                        <p class="mb-0">استلامات اليوم</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- قائمة الاستلامات مجمعة حسب العميل -->
+        {% if receipts_by_customer %}
+            {% for customer_name, receipts in receipts_by_customer.items %}
+                <div class="card customer-card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user me-2"></i>
+                            {{ customer_name }}
+                            <span class="badge badge-light text-primary ms-2">{{ receipts|length }} استلام</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% for receipt in receipts %}
+                            <div class="receipt-item">
+                                <div class="row align-items-center">
+                                    <div class="col-md-2">
+                                        <strong>رقم الاستلام:</strong>
+                                        <br>
+                                        <span class="badge badge-primary">{{ receipt.receipt_number }}</span>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <strong>رقم الإذن:</strong>
+                                        <br>
+                                        <span class="badge badge-info">{{ receipt.permit_number|default:"غير محدد" }}</span>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <strong>أمر التقطيع:</strong>
+                                        <br>
+                                        {{ receipt.cutting_order.cutting_code }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <strong>المستودع:</strong>
+                                        <br>
+                                        {{ receipt.cutting_order.warehouse.name }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <strong>المستلم:</strong>
+                                        <br>
+                                        {{ receipt.received_by_name }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <strong>تاريخ الاستلام:</strong>
+                                        <br>
+                                        <small>{{ receipt.receipt_date|date:"Y-m-d H:i" }}</small>
+                                    </div>
                                 </div>
+                                <!-- تفاصيل الأصناف -->
+                                <div class="mt-3">
+                                    <h6 class="text-muted">الأصناف المستلمة:</h6>
+                                    <div class="row">
+                                        {% for item in receipt.cutting_order.items.all %}
+                                            <div class="col-md-4 mb-2">
+                                                <div class="border rounded p-2 bg-light">
+                                                    <small>
+                                                        <strong>{{ item.order_item.product.name|default:"غير محدد" }}</strong>
+                                                        <br>
+                                                        <span class="text-primary">الكمية: {{ item.order_item.quantity }}</span>
+                                                        {% if item.additional_quantity and item.additional_quantity > 0 %}
+                                                            <span class="text-warning">+ {{ item.additional_quantity }} إضافية</span>
+                                                        {% endif %}
+                                                        <br>
+                                                        {% if item.order_item.fabric_type %}
+                                                            <span class="text-info">الخامة: {{ item.order_item.fabric_type }}</span>
+                                                            <br>
+                                                        {% endif %}
+                                                        {% if item.order_item.fabric_color %}
+                                                            <span class="text-success">اللون: {{ item.order_item.fabric_color }}</span>
+                                                            <br>
+                                                        {% endif %}
+                                                        {% if item.notes %}<span class="text-muted">ملاحظات: {{ item.notes }}</span>{% endif %}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% if receipt.notes %}
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-sticky-note me-1"></i>
+                                            {{ receipt.notes }}
+                                        </small>
+                                    </div>
+                                {% endif %}
                             </div>
-                            {% endfor %}
-                        </div>
+                        {% endfor %}
                     </div>
-                    
-                    {% if receipt.notes %}
-                    <div class="mt-2">
-                        <small class="text-muted">
-                            <i class="fas fa-sticky-note me-1"></i>
-                            {{ receipt.notes }}
-                        </small>
-                    </div>
-                    {% endif %}
                 </div>
-                {% endfor %}
+            {% endfor %}
+        {% else %}
+            <div class="card shadow">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
+                    <h4 class="text-muted">لا توجد استلامات</h4>
+                    <p class="text-muted">لم يتم تسجيل أي استلامات للمنتجات حتى الآن</p>
+                    <a href="{% url 'manufacturing:product_receipt' %}"
+                       class="btn btn-primary">
+                        <i class="fas fa-plus"></i> إضافة استلام جديد
+                    </a>
+                </div>
             </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="card shadow">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
-                <h4 class="text-muted">لا توجد استلامات</h4>
-                <p class="text-muted">لم يتم تسجيل أي استلامات للمنتجات حتى الآن</p>
-                <a href="{% url 'manufacturing:product_receipt' %}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> إضافة استلام جديد
-                </a>
-            </div>
-        </div>
-    {% endif %}
-</div>
+        {% endif %}
+    </div>
 {% endblock %}
-
-{% block extra_js %}
-<script>
-// يمكن إضافة JavaScript إضافي هنا إذا لزم الأمر
-</script>
-{% endblock %}
+{% block extra_js %}<script>// يمكن إضافة JavaScript إضافي هنا إذا لزم الأمر</script>{% endblock %}

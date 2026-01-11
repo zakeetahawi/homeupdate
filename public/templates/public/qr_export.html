@@ -1,20 +1,18 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تصدير QR Code للمنتجات | {{ site_name }}</title>
-
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>تصدير QR Code للمنتجات | {{ site_name }}</title>
+        <!-- Google Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap"
+              rel="stylesheet">
+        <!-- Font Awesome -->
+        <link rel="stylesheet"
+              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <style>
         * {
             margin: 0;
             padding: 0;
@@ -241,103 +239,111 @@
             color: #ddd;
             margin-bottom: 20px;
         }
-    </style>
-</head>
-
-<body>
-    <!-- Controls Panel (hidden when printing) -->
-    <div class="controls-panel">
-        <div class="controls-content">
-            <div class="controls-title">
-                <i class="fas fa-qrcode"></i>
-                تصدير QR Code للمنتجات
-                <span class="badge">{{ total_products }} منتج</span>
-            </div>
-
-            <form method="get" class="filters-form">
-                <input type="text" name="search" class="filter-input" placeholder="بحث بالاسم..."
-                    value="{{ request.GET.search }}">
-
-                <select name="category" class="filter-select">
-                    <option value="">جميع الفئات</option>
-                    {% for category in categories %}
-                    <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"i" %}selected{% endif %}>{{ category.name }}</option>
-                    {% endfor %}
-                </select>
-
-                <button type="submit" class="btn btn-filter">
-                    <i class="fas fa-filter"></i>
-                    تصفية
-                </button>
-            </form>
-
-            <button onclick="window.print()" class="btn btn-print">
-                <i class="fas fa-print"></i>
-                طباعة الصفحة الحالية
-            </button>
-
-            <a href="{% url 'public:qr_pdf_download' %}?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.search %}search={{ request.GET.search }}{% endif %}"
-                class="btn btn-download" style="background: #28a745; color: white; margin-right: 10px;">
-                <i class="fas fa-file-pdf"></i>
-                تحميل PDF (جميع QR)
-            </a>
-        </div>
-    </div>
-
-    <!-- Print Preview -->
-    <div class="print-preview">
-        {% if products_with_qr %}
-        <div class="qr-grid">
-            {% for item in products_with_qr %}
-            <div class="qr-item">
-                <div class="qr-image">
-                    <img src="data:image/png;base64,{{ item.qr_code }}" alt="QR {{ item.product.code }}">
+        </style>
+    </head>
+    <body>
+        <!-- Controls Panel (hidden when printing) -->
+        <div class="controls-panel">
+            <div class="controls-content">
+                <div class="controls-title">
+                    <i class="fas fa-qrcode"></i>
+                    تصدير QR Code للمنتجات
+                    <span class="badge">{{ total_products }} منتج</span>
                 </div>
-                <div class="product-name">{{ item.product.name }}</div>
-                <div class="product-code">{{ item.product.code }}</div>
-                <div class="product-price">{{ item.product.price }} {{ item.product.get_currency_display }}</div>
-            </div>
-            {% endfor %}
-        </div>
-
-        <!-- Pagination (hidden when printing) -->
-        {% if total_pages > 1 %}
-        <div class="pagination-controls" style="text-align: center; padding: 20px; background: #f8f9fa;">
-            <div style="margin-bottom: 10px; color: #666;">
-                صفحة {{ page }} من {{ total_pages }} | إجمالي {{ total_products }} منتج
-            </div>
-            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                {% if has_prev %}
-                <a href="?page={{ page|add:'-1' }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
-                    class="btn btn-filter" style="text-decoration: none;">
-                    <i class="fas fa-arrow-right"></i> السابق
+                <form method="get" class="filters-form">
+                    <input type="text"
+                           name="search"
+                           class="filter-input"
+                           placeholder="بحث بالاسم..."
+                           value="{{ request.GET.search }}">
+                    <select name="category" class="filter-select">
+                        <option value="">جميع الفئات</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}"
+                                    {% if request.GET.category == category.id|stringformat:"i" %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-filter">
+                        <i class="fas fa-filter"></i>
+                        تصفية
+                    </button>
+                </form>
+                <button onclick="window.print()" class="btn btn-print">
+                    <i class="fas fa-print"></i>
+                    طباعة الصفحة الحالية
+                </button>
+                <a href="{% url 'public:qr_pdf_download' %}?{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.search %}search={{ request.GET.search }}{% endif %}"
+                   class="btn btn-download"
+                   style="background: #28a745;
+                          color: white;
+                          margin-right: 10px">
+                    <i class="fas fa-file-pdf"></i>
+                    تحميل PDF (جميع QR)
                 </a>
-                {% endif %}
-
-                <span
-                    style="padding: 10px 20px; background: #d4af37; color: #1a1a2e; border-radius: 8px; font-weight: 600;">
-                    {{ page }}
-                </span>
-
-                {% if has_next %}
-                <a href="?page={{ page|add:'1' }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
-                    class="btn btn-filter" style="text-decoration: none;">
-                    التالي <i class="fas fa-arrow-left"></i>
-                </a>
-                {% endif %}
             </div>
         </div>
-        {% endif %}
-        {% else %}
-        <div class="empty-state">
-            <i class="fas fa-box-open"></i>
-            <h3>لا توجد منتجات</h3>
-            <p>لم يتم العثور على منتجات تطابق معايير البحث</p>
+        <!-- Print Preview -->
+        <div class="print-preview">
+            {% if products_with_qr %}
+                <div class="qr-grid">
+                    {% for item in products_with_qr %}
+                        <div class="qr-item">
+                            <div class="qr-image">
+                                <img src="data:image/png;base64,{{ item.qr_code }}"
+                                     alt="QR {{ item.product.code }}">
+                            </div>
+                            <div class="product-name">{{ item.product.name }}</div>
+                            <div class="product-code">{{ item.product.code }}</div>
+                            <div class="product-price">{{ item.product.price }} {{ item.product.get_currency_display }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <!-- Pagination (hidden when printing) -->
+                {% if total_pages > 1 %}
+                    <div class="pagination-controls"
+                         style="text-align: center;
+                                padding: 20px;
+                                background: #f8f9fa">
+                        <div style="margin-bottom: 10px; color: #666;">
+                            صفحة {{ page }} من {{ total_pages }} | إجمالي {{ total_products }} منتج
+                        </div>
+                        <div style="display: flex;
+                                    justify-content: center;
+                                    gap: 10px;
+                                    flex-wrap: wrap">
+                            {% if has_prev %}
+                                <a href="?page={{ page|add:'-1' }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+                                   class="btn btn-filter"
+                                   style="text-decoration: none">
+                                    <i class="fas fa-arrow-right"></i> السابق
+                                </a>
+                            {% endif %}
+                            <span style="padding: 10px 20px;
+                                         background: #d4af37;
+                                         color: #1a1a2e;
+                                         border-radius: 8px;
+                                         font-weight: 600">{{ page }}</span>
+                            {% if has_next %}
+                                <a href="?page={{ page|add:'1' }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}"
+                                   class="btn btn-filter"
+                                   style="text-decoration: none">
+                                    التالي <i class="fas fa-arrow-left"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-box-open"></i>
+                    <h3>لا توجد منتجات</h3>
+                    <p>لم يتم العثور على منتجات تطابق معايير البحث</p>
+                </div>
+            {% endif %}
         </div>
-        {% endif %}
-    </div>
-
-    <script>
+        <script>
         // Auto detect Ctrl+P and trigger print
         document.addEventListener('keydown', function (e) {
             if (e.ctrlKey && e.key === 'p') {
@@ -345,7 +351,6 @@
                 window.print();
             }
         });
-    </script>
-</body>
-
+        </script>
+    </body>
 </html>

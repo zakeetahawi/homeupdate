@@ -1,354 +1,341 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
-
-{% block title %}{% trans 'تفاصيل المعاينة' %} - {{ inspection.contract_number }}{% endblock %}
-
+{% block title %}
+    {% trans 'تفاصيل المعاينة' %} - {{ inspection.contract_number }}
+{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>{% trans 'تفاصيل المعاينة' %}</h2>
-        <div class="d-flex gap-2">
-            <a href="{% url 'inspections:inspection_list' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-right"></i> {% trans 'عودة للقائمة' %}
-            </a>
-            {% if perms.inspections.change_inspection %}
-                <a href="{% url 'inspections:inspection_update' inspection.pk %}" class="btn btn-primary">
-                    <i class="fas fa-edit"></i> {% trans 'تعديل' %}
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>{% trans 'تفاصيل المعاينة' %}</h2>
+            <div class="d-flex gap-2">
+                <a href="{% url 'inspections:inspection_list' %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-arrow-right"></i> {% trans 'عودة للقائمة' %}
                 </a>
-            {% endif %}
-            {% if perms.inspections.delete_inspection %}
-                <a href="{% url 'inspections:inspection_delete' inspection.pk %}" class="btn btn-danger">
-                    <i class="fas fa-trash"></i> {% trans 'حذف' %}
-                </a>
-            {% endif %}
+                {% if perms.inspections.change_inspection %}
+                    <a href="{% url 'inspections:inspection_update' inspection.pk %}"
+                       class="btn btn-primary">
+                        <i class="fas fa-edit"></i> {% trans 'تعديل' %}
+                    </a>
+                {% endif %}
+                {% if perms.inspections.delete_inspection %}
+                    <a href="{% url 'inspections:inspection_delete' inspection.pk %}"
+                       class="btn btn-danger">
+                        <i class="fas fa-trash"></i> {% trans 'حذف' %}
+                    </a>
+                {% endif %}
+            </div>
         </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-8">
-            <!-- Main Inspection Details -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">{% trans 'معلومات المعاينة' %}</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-sm-4">
-                            <strong>{% trans 'الحالة' %}:</strong>
-                        </div>
-                        <div class="col-sm-8">
-                            {% load unified_status_tags %}
-                            {% get_status_badge inspection.status "inspection" %}
-                        </div>
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Main Inspection Details -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">{% trans 'معلومات المعاينة' %}</h5>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-sm-4">
-                            <strong>{% trans 'النتيجة' %}:</strong>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>{% trans 'الحالة' %}:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {% load unified_status_tags %}
+                                {% get_status_badge inspection.status "inspection" %}
+                            </div>
                         </div>
-                        <div class="col-sm-8">
-                            {% if inspection.result %}
-                                <span class="badge {% if inspection.result == 'passed' %}bg-success{% else %}bg-danger{% endif %}">
-                                    {{ inspection.get_result_display }}
-                                </span>
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-sm-4">
-                            <strong>{% trans 'تاريخ الطلب' %}:</strong>
-                        </div>
-                        <div class="col-sm-8">
-                            {{ inspection.request_date }}
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-sm-4">
-                            <strong><i class="fas fa-calendar-alt text-primary"></i> {% trans 'تاريخ ووقت التنفيذ' %}:</strong>
-                        </div>
-                        <div class="col-sm-8">
-                            <span class="badge bg-primary me-2">{{ inspection.scheduled_date }}</span>
-                            {% if inspection.scheduled_time %}
-                                <span class="badge bg-info">{{ inspection.scheduled_time|time:"H:i" }}</span>
-                            {% else %}
-                                <span class="text-muted">الوقت غير محدد</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-sm-4">
-                            <strong><i class="fas fa-clock text-primary"></i> {% trans 'تاريخ التسليم المتوقع' %}:</strong>
-                        </div>
-                        <div class="col-sm-8">
-                            {% if inspection.expected_delivery_date %}
-                                <span class="text-primary fw-bold">{{ inspection.expected_delivery_date }}</span>
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-sm-4">
-                            <strong>{% trans 'عدد الشبابيك' %}:</strong>
-                        </div>
-                        <div class="col-sm-8">
-                            {{ inspection.windows_count|default:"-" }}
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-sm-4">
-                            <strong>{% trans 'ملف المعاينة' %}:</strong>
-                        </div>
-                        <div class="col-sm-8">
-                            {% if inspection.inspection_file %}
-                                <div class="d-flex flex-column gap-3">
-                                    <!-- الملف المحلي -->
-                                    <div>
-                                        <a href="{{ inspection.inspection_file.url }}" target="_blank"
-                                           class="btn btn-outline-primary btn-lg"
-                                           title="عرض ملف المعاينة محلياً">
-                                            <i class="fas fa-file-pdf me-2"></i>
-                                            عرض الملف محلياً
-                                        </a>
-                                    </div>
-
-                                    <!-- Google Drive -->
-                                    {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
-                                        <div>
-                                            <a href="{{ inspection.google_drive_file_url }}" target="_blank"
-                                               class="btn btn-success btn-lg"
-                                               title="عرض ملف المعاينة في Google Drive"
-                                               data-inspection-id="{{ inspection.inspection_code }}">
-                                                <i class="fas fa-cloud me-2"></i>
-                                                عرض في Google Drive
-                                            </a>
-                                            {% if inspection.google_drive_file_name %}
-                                            <div class="mt-2">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-file-signature"></i>
-                                                    <strong>اسم الملف في Google Drive:</strong> {{ inspection.google_drive_file_name }}
-                                                </small>
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                    {% else %}
-                                        <!-- جاري الرفع -->
-                                        <div>
-                                            <span class="badge bg-warning text-dark p-3"
-                                                  data-inspection-id="{{ inspection.inspection_code }}"
-                                                  data-upload-pending="true">
-                                                <i class="fas fa-clock me-2"></i>
-                                                جاري رفع الملف إلى Google Drive
-                                            </span>
-                                            <div class="mt-2">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-info-circle"></i>
-                                                    سيتم رفع الملف تلقائياً...
-                                                </small>
-                                                <br>
-                                                <button class="btn btn-outline-primary btn-sm mt-1" onclick="location.reload()">
-                                                    <i class="fas fa-sync"></i> تحديث الصفحة
-                                                </button>
-                                            </div>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            {% else %}
-                                <div class="d-flex align-items-center gap-3">
-                                    <i class="fas fa-file-pdf text-muted" style="font-size: 48px;" title="لا يوجد ملف"></i>
-                                    <span class="text-muted">لا يوجد ملف مرفق</span>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- فني المعاينة -->
-                    <div class="row mb-3">
-                        <div class="col-sm-4">
-                            <strong>{% trans 'فني المعاينة' %}:</strong>
-                        </div>
-                        <div class="col-sm-8">
-                            {% if inspection.inspector %}
-                                {% if inspection.inspector.get_full_name %}
-                                    {{ inspection.inspector.get_full_name }}
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>{% trans 'النتيجة' %}:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {% if inspection.result %}
+                                    <span class="badge {% if inspection.result == 'passed' %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ inspection.get_result_display }}
+                                    </span>
                                 {% else %}
-                                    {{ inspection.inspector.username }}
+                                    <span class="text-muted">-</span>
                                 {% endif %}
-                            {% else %}
-                                <span class="text-muted">-</span>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>{% trans 'تاريخ الطلب' %}:</strong>
+                            </div>
+                            <div class="col-sm-8">{{ inspection.request_date }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong><i class="fas fa-calendar-alt text-primary"></i> {% trans 'تاريخ ووقت التنفيذ' %}:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                <span class="badge bg-primary me-2">{{ inspection.scheduled_date }}</span>
+                                {% if inspection.scheduled_time %}
+                                    <span class="badge bg-info">{{ inspection.scheduled_time|time:"H:i" }}</span>
+                                {% else %}
+                                    <span class="text-muted">الوقت غير محدد</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong><i class="fas fa-clock text-primary"></i> {% trans 'تاريخ التسليم المتوقع' %}:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {% if inspection.expected_delivery_date %}
+                                    <span class="text-primary fw-bold">{{ inspection.expected_delivery_date }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>{% trans 'عدد الشبابيك' %}:</strong>
+                            </div>
+                            <div class="col-sm-8">{{ inspection.windows_count|default:"-" }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>{% trans 'ملف المعاينة' %}:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {% if inspection.inspection_file %}
+                                    <div class="d-flex flex-column gap-3">
+                                        <!-- الملف المحلي -->
+                                        <div>
+                                            <a href="{{ inspection.inspection_file.url }}"
+                                               target="_blank"
+                                               class="btn btn-outline-primary btn-lg"
+                                               title="عرض ملف المعاينة محلياً">
+                                                <i class="fas fa-file-pdf me-2"></i>
+                                                عرض الملف محلياً
+                                            </a>
+                                        </div>
+                                        <!-- Google Drive -->
+                                        {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                                            <div>
+                                                <a href="{{ inspection.google_drive_file_url }}"
+                                                   target="_blank"
+                                                   class="btn btn-success btn-lg"
+                                                   title="عرض ملف المعاينة في Google Drive"
+                                                   data-inspection-id="{{ inspection.inspection_code }}">
+                                                    <i class="fas fa-cloud me-2"></i>
+                                                    عرض في Google Drive
+                                                </a>
+                                                {% if inspection.google_drive_file_name %}
+                                                    <div class="mt-2">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-file-signature"></i>
+                                                            <strong>اسم الملف في Google Drive:</strong> {{ inspection.google_drive_file_name }}
+                                                        </small>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <!-- جاري الرفع -->
+                                            <div>
+                                                <span class="badge bg-warning text-dark p-3"
+                                                      data-inspection-id="{{ inspection.inspection_code }}"
+                                                      data-upload-pending="true">
+                                                    <i class="fas fa-clock me-2"></i>
+                                                    جاري رفع الملف إلى Google Drive
+                                                </span>
+                                                <div class="mt-2">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-info-circle"></i>
+                                                        سيتم رفع الملف تلقائياً...
+                                                    </small>
+                                                    <br>
+                                                    <button class="btn btn-outline-primary btn-sm mt-1"
+                                                            onclick="location.reload()">
+                                                        <i class="fas fa-sync"></i> تحديث الصفحة
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <div class="d-flex align-items-center gap-3">
+                                        <i class="fas fa-file-pdf text-muted"
+                                           style="font-size: 48px"
+                                           title="لا يوجد ملف"></i>
+                                        <span class="text-muted">لا يوجد ملف مرفق</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <!-- فني المعاينة -->
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>{% trans 'فني المعاينة' %}:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {% if inspection.inspector %}
+                                    {% if inspection.inspector.get_full_name %}
+                                        {{ inspection.inspector.get_full_name }}
+                                    {% else %}
+                                        {{ inspection.inspector.username }}
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <!-- Salesperson Information -->
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>{% trans 'البائع' %}:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {% if inspection.responsible_employee %}
+                                    {{ inspection.responsible_employee }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <!-- Inspection Notes Section - Moved to the end -->
+                        {% if inspection.notes %}
+                            <div class="row mb-3">
+                                <div class="col-sm-4">
+                                    <strong>{% trans 'ملاحظات' %}:</strong>
+                                </div>
+                                <div class="col-sm-8">
+                                    <div class="p-2 bg-light rounded">{{ inspection.notes|linebreaks }}</div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                {% if inspection.order %}
+                    <!-- Order Details -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">{% trans 'معلومات الطلب' %}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <strong>{% trans 'رقم الطلب' %}:</strong>
+                                <div>{{ inspection.order.order_number }}</div>
+                            </div>
+                            <!-- Fix to correctly display the order notes using order_notes from the inspection -->
+                            {% if inspection.order_notes %}
+                                <div class="mb-3">
+                                    <strong>{% trans 'ملاحظات الطلب' %}:</strong>
+                                    <div class="alert alert-warning mt-2 mb-3 py-2">{{ inspection.order_notes|linebreaks }}</div>
+                                </div>
                             {% endif %}
+                            <a href="{% url 'orders:order_detail' inspection.order.pk %}"
+                               class="btn btn-info btn-sm">
+                                <i class="fas fa-external-link-alt"></i> {% trans 'عرض الطلب' %}
+                            </a>
                         </div>
                     </div>
-
-                    <!-- Salesperson Information -->
-                    <div class="row mb-3">
-                        <div class="col-sm-4">
-                            <strong>{% trans 'البائع' %}:</strong>
+                {% endif %}
+                <!-- Customer Details -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">{% trans 'معلومات العميل' %}</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if inspection.customer %}
+                            <div class="mb-3">
+                                <strong>{% trans 'الاسم' %}:</strong>
+                                <div>
+                                    <strong>{{ inspection.customer.name }}</strong>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <strong>{% trans 'رقم الهاتف' %}:</strong>
+                                <div>{{ inspection.customer.phone }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <strong>{% trans 'العنوان' %}:</strong>
+                                <div>{{ inspection.customer.address }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <a href="{% url 'customers:customer_detail' inspection.customer.pk %}"
+                                   class="btn btn-info btn-sm">
+                                    <i class="fas fa-user"></i> {% trans 'عرض ملف العميل' %}
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info mb-0">{% trans 'عميل جديد - لم يتم ربط العميل بعد' %}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- Customer Notes -->
+                {% if inspection.status == 'pending' and inspection.customer and inspection.customer.notes %}
+                    <div class="card mb-4 border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="card-title mb-0">{% trans 'ملاحظات العميل' %}</h5>
                         </div>
-                        <div class="col-sm-8">
-                            {% if inspection.responsible_employee %}
-                                {{ inspection.responsible_employee }}
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
+                        <div class="card-body bg-warning">
+                            <div class="mb-3 fw-bold">{{ inspection.customer.notes|linebreaks }}</div>
                         </div>
                     </div>
-
-                    <!-- Inspection Notes Section - Moved to the end -->
-                    {% if inspection.notes %}
-                    <div class="row mb-3">
-                        <div class="col-sm-4">
-                            <strong>{% trans 'ملاحظات' %}:</strong>
+                {% endif %}
+                <!-- Customer History -->
+                {% if inspection.customer and customer_notes %}
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">{% trans 'سجل ملاحظات العميل' %}</h5>
                         </div>
-                        <div class="col-sm-8">
-                            <div class="p-2 bg-light rounded">
-                                {{ inspection.notes|linebreaks }}
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                {% for note in customer_notes %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between">
+                                            <small class="text-muted">{{ note.created_at|date:"Y/m/d" }}</small>
+                                            <small class="text-muted">
+                                                {% if note.created_by %}
+                                                    {{ note.created_by.get_full_name|default:note.created_by.username }}
+                                                {% else %}
+                                                    غير محدد
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <p class="mb-0 mt-1">{{ note.note }}</p>
+                                    </div>
+                                {% endfor %}
                             </div>
                         </div>
                     </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            {% if inspection.order %}
-            <!-- Order Details -->
-            <div class="card mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5 class="card-title mb-0">{% trans 'معلومات الطلب' %}</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <strong>{% trans 'رقم الطلب' %}:</strong>
-                        <div>{{ inspection.order.order_number }}</div>
+                {% endif %}
+                <!-- Branch Details -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">{% trans 'معلومات الفرع' %}</h5>
                     </div>
-
-                    <!-- Fix to correctly display the order notes using order_notes from the inspection -->
-                    {% if inspection.order_notes %}
-                    <div class="mb-3">
-                        <strong>{% trans 'ملاحظات الطلب' %}:</strong>
-                        <div class="alert alert-warning mt-2 mb-3 py-2">
-                            {{ inspection.order_notes|linebreaks }}
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>{% trans 'الفرع' %}:</strong>
+                            <div>{{ inspection.branch.name }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <strong>{% trans 'كود الفرع' %}:</strong>
+                            <div>{{ inspection.branch.code }}</div>
                         </div>
                     </div>
-                    {% endif %}
-
-                    <a href="{% url 'orders:order_detail' inspection.order.pk %}" class="btn btn-info btn-sm">
-                        <i class="fas fa-external-link-alt"></i> {% trans 'عرض الطلب' %}
+                </div>
+            </div>
+            {% if can_evaluate %}
+                <div class="text-center my-4">
+                    <a href="{% url 'inspections:evaluation_create' inspection.pk %}"
+                       class="btn btn-outline-success btn-lg">
+                        <i class="fas fa-star"></i> {% trans 'إضافة تقييم المعاينة' %}
                     </a>
                 </div>
-            </div>
             {% endif %}
-
-            <!-- Customer Details -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">{% trans 'معلومات العميل' %}</h5>
-                </div>
-                <div class="card-body">
-                    {% if inspection.customer %}
-                    <div class="mb-3">
-                        <strong>{% trans 'الاسم' %}:</strong>
-                                                        <div><strong>{{ inspection.customer.name }}</strong></div>
-                    </div>
-                    <div class="mb-3">
-                        <strong>{% trans 'رقم الهاتف' %}:</strong>
-                        <div>{{ inspection.customer.phone }}</div>
-                    </div>
-                    <div class="mb-3">
-                        <strong>{% trans 'العنوان' %}:</strong>
-                        <div>{{ inspection.customer.address }}</div>
-                    </div>
-                    <div class="mb-3">
-                        <a href="{% url 'customers:customer_detail' inspection.customer.pk %}" class="btn btn-info btn-sm">
-                            <i class="fas fa-user"></i> {% trans 'عرض ملف العميل' %}
-                        </a>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info mb-0">
-                        {% trans 'عميل جديد - لم يتم ربط العميل بعد' %}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Customer Notes -->
-            {% if inspection.status == 'pending' and inspection.customer and inspection.customer.notes %}
-            <div class="card mb-4 border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="card-title mb-0">{% trans 'ملاحظات العميل' %}</h5>
-                </div>
-                <div class="card-body bg-warning">
-                    <div class="mb-3 fw-bold">
-                        {{ inspection.customer.notes|linebreaks }}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Customer History -->
-            {% if inspection.customer and customer_notes %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">{% trans 'سجل ملاحظات العميل' %}</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        {% for note in customer_notes %}
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between">
-                                <small class="text-muted">{{ note.created_at|date:"Y/m/d" }}</small>
-                                <small class="text-muted">
-                                    {% if note.created_by %}
-                                        {{ note.created_by.get_full_name|default:note.created_by.username }}
-                                    {% else %}
-                                        غير محدد
-                                    {% endif %}
-                                </small>
-                            </div>
-                            <p class="mb-0 mt-1">{{ note.note }}</p>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Branch Details -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">{% trans 'معلومات الفرع' %}</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <strong>{% trans 'الفرع' %}:</strong>
-                        <div>{{ inspection.branch.name }}</div>
-                    </div>
-                    <div class="mb-3">
-                        <strong>{% trans 'كود الفرع' %}:</strong>
-                        <div>{{ inspection.branch.code }}</div>
-                    </div>
-                </div>
-            </div>
         </div>
-    {% if can_evaluate %}
-    <div class="text-center my-4">
-        <a href="{% url 'inspections:evaluation_create' inspection.pk %}" class="btn btn-outline-success btn-lg">
-            <i class="fas fa-star"></i> {% trans 'إضافة تقييم المعاينة' %}
-        </a>
-    </div>
-    {% endif %}
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{% static 'inspections/js/upload_status_checker.js' %}"></script>
-<script>
+    {% endblock %}
+    {% block extra_js %}
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script src="{% static 'inspections/js/upload_status_checker.js' %}"></script>
+        <script>
     $(document).ready(function() {
         // الاحتفاظ فقط بالوظائف الأساسية
     });
@@ -367,8 +354,7 @@
             title: 'جاري رفع الملف إلى Google Drive...',
             html: `
                 <div class="progress mb-3">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-                         style="width: 0%" id="uploadProgress"></div>
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 0%" id="uploadProgress"></div>
                 </div>
                 <p>يرجى الانتظار...</p>
             `,
@@ -464,5 +450,5 @@
             }
         });
     }
-</script>
-{% endblock %}
+        </script>
+    {% endblock %}

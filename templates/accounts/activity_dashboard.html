@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
-
 {% block title %}لوحة تحكم نشاط المستخدمين - نظام الخواجة{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .activity-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: none;
@@ -150,226 +148,213 @@
         transform: translateY(-2px);
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="h3 mb-3">
-                <i class="fas fa-chart-line me-2"></i>
-                لوحة تحكم نشاط المستخدمين
-            </h1>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="h3 mb-3">
+                    <i class="fas fa-chart-line me-2"></i>
+                    لوحة تحكم نشاط المستخدمين
+                </h1>
+            </div>
         </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card activity-card h-100">
-                <div class="card-body text-center">
-                    <div class="stat-icon mb-3">
-                        <i class="fas fa-users"></i>
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card activity-card h-100">
+                    <div class="card-body text-center">
+                        <div class="stat-icon mb-3">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-number">{{ total_users }}</div>
+                        <div class="stat-label">إجمالي المستخدمين</div>
                     </div>
-                    <div class="stat-number">{{ total_users }}</div>
-                    <div class="stat-label">إجمالي المستخدمين</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card activity-card online-users h-100">
+                    <div class="card-body text-center">
+                        <div class="stat-icon mb-3">
+                            <i class="fas fa-circle"></i>
+                        </div>
+                        <div class="stat-number">{{ online_users_count }}</div>
+                        <div class="stat-label">متصلون الآن</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card activity-card today-logins h-100">
+                    <div class="card-body text-center">
+                        <div class="stat-icon mb-3">
+                            <i class="fas fa-sign-in-alt"></i>
+                        </div>
+                        <div class="stat-number">{{ today_logins }}</div>
+                        <div class="stat-label">تسجيلات دخول اليوم</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card activity-card today-activities h-100">
+                    <div class="card-body text-center">
+                        <div class="stat-icon mb-3">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <div class="stat-number">{{ today_activities }}</div>
+                        <div class="stat-label">أنشطة اليوم</div>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card activity-card online-users h-100">
-                <div class="card-body text-center">
-                    <div class="stat-icon mb-3">
-                        <i class="fas fa-circle"></i>
+        <div class="row">
+            <!-- المستخدمون النشطون -->
+            <div class="col-lg-6 mb-4">
+                <div class="section-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="section-title mb-0">
+                            <i class="fas fa-circle text-success me-2"></i>
+                            المستخدمون النشطون ({{ online_users_count }})
+                        </h5>
+                        <button class="refresh-btn" onclick="refreshOnlineUsers()">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            تحديث
+                        </button>
                     </div>
-                    <div class="stat-number">{{ online_users_count }}</div>
-                    <div class="stat-label">متصلون الآن</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card activity-card today-logins h-100">
-                <div class="card-body text-center">
-                    <div class="stat-icon mb-3">
-                        <i class="fas fa-sign-in-alt"></i>
-                    </div>
-                    <div class="stat-number">{{ today_logins }}</div>
-                    <div class="stat-label">تسجيلات دخول اليوم</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card activity-card today-activities h-100">
-                <div class="card-body text-center">
-                    <div class="stat-icon mb-3">
-                        <i class="fas fa-chart-bar"></i>
-                    </div>
-                    <div class="stat-number">{{ today_activities }}</div>
-                    <div class="stat-label">أنشطة اليوم</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- المستخدمون النشطون -->
-        <div class="col-lg-6 mb-4">
-            <div class="section-card">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="section-title mb-0">
-                        <i class="fas fa-circle text-success me-2"></i>
-                        المستخدمون النشطون ({{ online_users_count }})
-                    </h5>
-                    <button class="refresh-btn" onclick="refreshOnlineUsers()">
-                        <i class="fas fa-sync-alt me-1"></i>
-                        تحديث
-                    </button>
-                </div>
-                
-                <div id="online-users-container">
-                    {% for online_user in online_users %}
-                    <div class="online-user-card">
-                        <div class="d-flex align-items-center">
-                            <div class="me-3">
-                                {% if online_user.user.image %}
-                                    <img src="{{ online_user.user.image.url }}" alt="{{ online_user.user.username }}" class="user-avatar">
-                                {% else %}
-                                    <div class="user-avatar bg-primary d-flex align-items-center justify-content-center text-white">
-                                        {{ online_user.user.username|first|upper }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <div class="flex-grow-1">
+                    <div id="online-users-container">
+                        {% for online_user in online_users %}
+                            <div class="online-user-card">
                                 <div class="d-flex align-items-center">
-                                    <span class="online-indicator"></span>
-                                    <strong>{{ online_user.user.get_full_name|default:online_user.user.username }}</strong>
-                                </div>
-                                <div class="text-muted small">
-                                    {{ online_user.user.get_user_role_display }}
-                                </div>
-                                <div class="text-muted small">
-                                    <i class="fas fa-clock me-1"></i>
-                                    متصل منذ {{ online_user.online_duration_formatted }}
-                                </div>
-                                {% if online_user.current_page_title %}
-                                <div class="text-muted small">
-                                    <i class="fas fa-eye me-1"></i>
-                                    {{ online_user.current_page_title }}
-                                </div>
-                                {% endif %}
-                            </div>
-                            <div class="text-end">
-                                <div class="small text-muted">{{ online_user.pages_visited }} صفحة</div>
-                                <div class="small text-muted">{{ online_user.actions_performed }} عملية</div>
-                                <a href="{% url 'accounts:user_activity_detail' online_user.user.id %}" 
-                                   class="btn btn-sm btn-outline-primary mt-1">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-users fa-3x mb-3"></i>
-                        <p>لا يوجد مستخدمون متصلون حالياً</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <!-- أحدث الأنشطة -->
-        <div class="col-lg-6 mb-4">
-            <div class="section-card">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="section-title mb-0">
-                        <i class="fas fa-history me-2"></i>
-                        أحدث الأنشطة
-                    </h5>
-                    <a href="{% url 'accounts:activity_logs_list' %}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-list me-1"></i>
-                        عرض الكل
-                    </a>
-                </div>
-                
-                <div style="max-height: 500px; overflow-y: auto;">
-                    {% for activity in recent_activities %}
-                    <div class="activity-log {{ activity.get_color_class }}">
-                        <div class="d-flex align-items-center">
-                            <span class="activity-icon">{{ activity.get_icon }}</span>
-                            <div class="flex-grow-1">
-                                <div class="fw-bold">{{ activity.user.username }}</div>
-                                <div class="small">{{ activity.description }}</div>
-                                {% if activity.get_entity_details %}
-                                <div class="small text-muted">{{ activity.get_entity_details }}</div>
-                                {% endif %}
-                                <div class="activity-time">{{ activity.timestamp|timesince }} مضت</div>
-                            </div>
-                            {% if not activity.success %}
-                            <span class="badge bg-danger">فشل</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-history fa-3x mb-3"></i>
-                        <p>لا توجد أنشطة حديثة</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- أكثر المستخدمين نشاطاً -->
-    {% if most_active_users %}
-    <div class="row">
-        <div class="col-12">
-            <div class="section-card">
-                <h5 class="section-title">
-                    <i class="fas fa-trophy me-2"></i>
-                    أكثر المستخدمين نشاطاً اليوم
-                </h5>
-                
-                <div class="row">
-                    {% for user in most_active_users %}
-                    <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
-                        <div class="online-user-card">
-                            <div class="text-center">
-                                {% if user.image %}
-                                    <img src="{{ user.image.url }}" alt="{{ user.username }}" class="user-avatar mb-2">
-                                {% else %}
-                                    <div class="user-avatar bg-primary d-flex align-items-center justify-content-center text-white mx-auto mb-2">
-                                        {{ user.username|first|upper }}
+                                    <div class="me-3">
+                                        {% if online_user.user.image %}
+                                            <img src="{{ online_user.user.image.url }}"
+                                                 alt="{{ online_user.user.username }}"
+                                                 class="user-avatar">
+                                        {% else %}
+                                            <div class="user-avatar bg-primary d-flex align-items-center justify-content-center text-white">
+                                                {{ online_user.user.username|first|upper }}
+                                            </div>
+                                        {% endif %}
                                     </div>
-                                {% endif %}
-                                <div class="fw-bold">{{ user.get_full_name|default:user.username }}</div>
-                                <div class="text-muted small">{{ user.get_user_role_display }}</div>
-                                <div class="badge bg-primary mt-2">{{ user.activity_count }} نشاط</div>
-                                <div class="mt-2">
-                                    <a href="{% url 'accounts:user_activity_detail' user.id %}" 
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-eye me-1"></i>
-                                        عرض التفاصيل
-                                    </a>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center">
+                                            <span class="online-indicator"></span>
+                                            <strong>{{ online_user.user.get_full_name|default:online_user.user.username }}</strong>
+                                        </div>
+                                        <div class="text-muted small">{{ online_user.user.get_user_role_display }}</div>
+                                        <div class="text-muted small">
+                                            <i class="fas fa-clock me-1"></i>
+                                            متصل منذ {{ online_user.online_duration_formatted }}
+                                        </div>
+                                        {% if online_user.current_page_title %}
+                                            <div class="text-muted small">
+                                                <i class="fas fa-eye me-1"></i>
+                                                {{ online_user.current_page_title }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="small text-muted">{{ online_user.pages_visited }} صفحة</div>
+                                        <div class="small text-muted">{{ online_user.actions_performed }} عملية</div>
+                                        <a href="{% url 'accounts:user_activity_detail' online_user.user.id %}"
+                                           class="btn btn-sm btn-outline-primary mt-1">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        {% empty %}
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-users fa-3x mb-3"></i>
+                                <p>لا يوجد مستخدمون متصلون حالياً</p>
+                            </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                </div>
+            </div>
+            <!-- أحدث الأنشطة -->
+            <div class="col-lg-6 mb-4">
+                <div class="section-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="section-title mb-0">
+                            <i class="fas fa-history me-2"></i>
+                            أحدث الأنشطة
+                        </h5>
+                        <a href="{% url 'accounts:activity_logs_list' %}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-1"></i>
+                            عرض الكل
+                        </a>
+                    </div>
+                    <div style="max-height: 500px; overflow-y: auto;">
+                        {% for activity in recent_activities %}
+                            <div class="activity-log {{ activity.get_color_class }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="activity-icon">{{ activity.get_icon }}</span>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold">{{ activity.user.username }}</div>
+                                        <div class="small">{{ activity.description }}</div>
+                                        {% if activity.get_entity_details %}<div class="small text-muted">{{ activity.get_entity_details }}</div>{% endif %}
+                                        <div class="activity-time">{{ activity.timestamp|timesince }} مضت</div>
+                                    </div>
+                                    {% if not activity.success %}<span class="badge bg-danger">فشل</span>{% endif %}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-history fa-3x mb-3"></i>
+                                <p>لا توجد أنشطة حديثة</p>
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
+        <!-- أكثر المستخدمين نشاطاً -->
+        {% if most_active_users %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="section-card">
+                        <h5 class="section-title">
+                            <i class="fas fa-trophy me-2"></i>
+                            أكثر المستخدمين نشاطاً اليوم
+                        </h5>
+                        <div class="row">
+                            {% for user in most_active_users %}
+                                <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                                    <div class="online-user-card">
+                                        <div class="text-center">
+                                            {% if user.image %}
+                                                <img src="{{ user.image.url }}"
+                                                     alt="{{ user.username }}"
+                                                     class="user-avatar mb-2">
+                                            {% else %}
+                                                <div class="user-avatar bg-primary d-flex align-items-center justify-content-center text-white mx-auto mb-2">
+                                                    {{ user.username|first|upper }}
+                                                </div>
+                                            {% endif %}
+                                            <div class="fw-bold">{{ user.get_full_name|default:user.username }}</div>
+                                            <div class="text-muted small">{{ user.get_user_role_display }}</div>
+                                            <div class="badge bg-primary mt-2">{{ user.activity_count }} نشاط</div>
+                                            <div class="mt-2">
+                                                <a href="{% url 'accounts:user_activity_detail' user.id %}"
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye me-1"></i>
+                                                    عرض التفاصيل
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
     </div>
-    {% endif %}
-</div>
-
-<script>
+    <script>
 function refreshOnlineUsers() {
     const container = document.getElementById('online-users-container');
     const refreshBtn = document.querySelector('.refresh-btn');
@@ -445,5 +430,5 @@ function refreshOnlineUsers() {
 
 // تحديث تلقائي كل 30 ثانية
 setInterval(refreshOnlineUsers, 30000);
-</script>
+    </script>
 {% endblock %}

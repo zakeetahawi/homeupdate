@@ -1,6 +1,7 @@
 """
 Admin configurations for the public app
 """
+
 from django.contrib import admin
 
 # استيراد إعدادات admin الخاصة بتصميم QR

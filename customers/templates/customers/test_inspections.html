@@ -1,83 +1,84 @@
 {% extends 'base.html' %}
 {% load unified_status_tags %}
-
 {% block title %}اختبار عرض المعاينات{% endblock %}
-
 {% block content %}
-<div class="container mt-4">
-    <h2>اختبار عرض معاينات العميل</h2>
-    
-    <div class="card">
-        <div class="card-header">
-            <h5>تفاصيل العميل</h5>
+    <div class="container mt-4">
+        <h2>اختبار عرض معاينات العميل</h2>
+        <div class="card">
+            <div class="card-header">
+                <h5>تفاصيل العميل</h5>
+            </div>
+            <div class="card-body">
+                <p>
+                    <strong>اسم العميل:</strong> {{ customer.name }}
+                </p>
+                <p>
+                    <strong>ID:</strong> {{ customer.id }}
+                </p>
+                <p>
+                    <strong>عدد المعاينات المرسلة:</strong> {{ inspections|length }}
+                </p>
+            </div>
         </div>
-        <div class="card-body">
-            <p><strong>اسم العميل:</strong> {{ customer.name }}</p>
-            <p><strong>ID:</strong> {{ customer.id }}</p>
-            <p><strong>عدد المعاينات المرسلة:</strong> {{ inspections|length }}</p>
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5>قائمة المعاينات ({{ inspections|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if inspections %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>رقم المعاينة</th>
+                                    <th>تاريخ التنفيذ</th>
+                                    <th>الحالة</th>
+                                    <th>النتيجة</th>
+                                    <th>ملف المعاينة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inspection in inspections %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'inspections:inspection_detail_by_code' inspection.inspection_code %}">
+                                                {{ inspection.inspection_code }}
+                                            </a>
+                                        </td>
+                                        <td>{{ inspection.scheduled_date|date:"Y-m-d" }}</td>
+                                        <td>{% get_status_badge inspection.status "inspection" %}</td>
+                                        <td>
+                                            {% if inspection.result %}
+                                                <span class="badge {% if inspection.result == 'passed' %}bg-success {% else %}bg-danger{% endif %}">
+                                                    {{ inspection.get_result_display }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if inspection.inspection_file %}
+                                                <a href="{{ inspection.inspection_file.url }}"
+                                                   class="btn btn-sm btn-primary"
+                                                   target="_blank">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <h6>لا توجد معاينات</h6>
+                        <p>لم يتم العثور على أي معاينات لهذا العميل.</p>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
-    
-    <div class="card mt-3">
-        <div class="card-header">
-            <h5>قائمة المعاينات ({{ inspections|length }})</h5>
-        </div>
-        <div class="card-body">
-            {% if inspections %}
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>رقم المعاينة</th>
-                                <th>تاريخ التنفيذ</th>
-                                <th>الحالة</th>
-                                <th>النتيجة</th>
-                                <th>ملف المعاينة</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for inspection in inspections %}
-                            <tr>
-                                <td>
-                                    <a href="{% url 'inspections:inspection_detail_by_code' inspection.inspection_code %}">
-                                        {{ inspection.inspection_code }}
-                                    </a>
-                                </td>
-                                <td>{{ inspection.scheduled_date|date:"Y-m-d" }}</td>
-                                <td>
-                                    {% get_status_badge inspection.status "inspection" %}
-                                </td>
-                                <td>
-                                    {% if inspection.result %}
-                                        <span class="badge {% if inspection.result == 'passed' %}bg-success
-                                                   {% else %}bg-danger{% endif %}">
-                                            {{ inspection.get_result_display }}
-                                        </span>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if inspection.inspection_file %}
-                                        <a href="{{ inspection.inspection_file.url }}" class="btn btn-sm btn-primary" target="_blank">
-                                            <i class="fas fa-file-pdf"></i>
-                                        </a>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <div class="alert alert-info">
-                    <h6>لا توجد معاينات</h6>
-                    <p>لم يتم العثور على أي معاينات لهذا العميل.</p>
-                </div>
-            {% endif %}
-        </div>
-    </div>
-</div>
 {% endblock %}

@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}تقرير الطلبات{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .stats-card {
         border-radius: 12px;
         padding: 20px;
@@ -218,400 +216,417 @@
         text-decoration: none !important;
         color: inherit !important;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="mb-0">
-                <i class="fas fa-chart-bar"></i> تقرير الطلبات
-            </h2>
-            <p class="text-muted">عرض شامل للطلبات التقليدية وطلبات الويزارد</p>
-        </div>
-    </div>
-    
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-4 mb-3">
-            <a href="?order_type=wizard" class="stats-card wizard-card">
-                <div class="card-icon">🧙‍♂️</div>
-                <div class="card-number">{{ wizard_count }}</div>
-                <div class="card-label">طلبات الويزارد</div>
-            </a>
-        </div>
-        <div class="col-md-4 mb-3">
-            <a href="?order_type=traditional" class="stats-card traditional-card">
-                <div class="card-icon">📋</div>
-                <div class="card-number">{{ traditional_count }}</div>
-                <div class="card-label">الطلبات التقليدية</div>
-            </a>
-        </div>
-        <div class="col-md-4 mb-3">
-            <a href="?" class="stats-card" style="background: linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%); color: white;">
-                <div class="card-icon">📊</div>
-                <div class="card-number">{{ total_count }}</div>
-                <div class="card-label">إجمالي الطلبات</div>
-            </a>
-        </div>
-    </div>
-    
-    <!-- Top Salespersons Cards -->
-    <div class="row mb-4">
-        <div class="col-md-6 mb-3">
-            <div class="table-section" style="padding: 20px;">
-                <h5 style="margin-bottom: 15px; color: #f5576c; font-weight: 700;">
-                    <i class="fas fa-trophy"></i> أكثر البائعين نشاطاً - الطلبات التقليدية
-                </h5>
-                {% if top_traditional_salespersons %}
-                <div class="list-group">
-                    {% for seller in top_traditional_salespersons %}
-                    <a href="?salesperson={{ seller.salesperson__id }}{% if selected_date_filter %}&date_filter={{ selected_date_filter }}{% endif %}{% if selected_start_date and selected_end_date %}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}&order_type=traditional" 
-                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
-                       style="border-right: 3px solid #f5576c; cursor: pointer; transition: all 0.2s;">
-                        <div>
-                            <i class="fas fa-user-tie" style="color: #f5576c; margin-left: 8px;"></i>
-                            <strong>{{ seller.salesperson__name }}</strong>
-                        </div>
-                        <span class="badge" style="background: #f5576c; color: white; font-size: 14px; padding: 6px 12px;">
-                            {{ seller.order_count }} طلب
-                        </span>
-                    </a>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted text-center" style="padding: 20px;">لا توجد بيانات</p>
-                {% endif %}
+    <div class="container-fluid mt-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="mb-0">
+                    <i class="fas fa-chart-bar"></i> تقرير الطلبات
+                </h2>
+                <p class="text-muted">عرض شامل للطلبات التقليدية وطلبات الويزارد</p>
             </div>
         </div>
-        
-        <div class="col-md-6 mb-3">
-            <div class="table-section" style="padding: 20px;">
-                <h5 style="margin-bottom: 15px; color: #667eea; font-weight: 700;">
-                    <i class="fas fa-trophy"></i> أكثر البائعين نشاطاً - طلبات الويزارد
-                </h5>
-                {% if top_wizard_salespersons %}
-                <div class="list-group">
-                    {% for seller in top_wizard_salespersons %}
-                    <a href="?salesperson={{ seller.salesperson__id }}{% if selected_date_filter %}&date_filter={{ selected_date_filter }}{% endif %}{% if selected_start_date and selected_end_date %}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}&order_type=wizard" 
-                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
-                       style="border-right: 3px solid #667eea; cursor: pointer; transition: all 0.2s;">
-                        <div>
-                            <i class="fas fa-user-tie" style="color: #667eea; margin-left: 8px;"></i>
-                            <strong>{{ seller.salesperson__name }}</strong>
-                        </div>
-                        <span class="badge" style="background: #667eea; color: white; font-size: 14px; padding: 6px 12px;">
-                            {{ seller.order_count }} طلب
-                        </span>
-                    </a>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted text-center" style="padding: 20px;">لا توجد بيانات</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    
-    <!-- Filters Section -->
-    <div class="filter-section">
-        <h5 class="mb-3"><i class="fas fa-filter"></i> الفلاتر</h5>
-        
-        <form method="get" id="filterForm">
-            <!-- Time Filter Buttons -->
-            <div class="filter-btn-group">
-                <button type="button" class="filter-btn {% if filter_type == 'today' %}active{% endif %}" onclick="setFilter('today')">
-                    <i class="fas fa-calendar-day"></i> اليوم
-                </button>
-                <button type="button" class="filter-btn {% if filter_type == 'week' %}active{% endif %}" onclick="setFilter('week')">
-                    <i class="fas fa-calendar-week"></i> هذا الأسبوع
-                </button>
-                <button type="button" class="filter-btn {% if filter_type == 'month' %}active{% endif %}" onclick="setFilter('month')">
-                    <i class="fas fa-calendar-alt"></i> هذا الشهر
-                </button>
-                <button type="button" class="filter-btn {% if filter_type == 'all' %}active{% endif %}" onclick="setFilter('all')">
-                    <i class="fas fa-infinity"></i> الكل
-                </button>
-            </div>
-            
-            <input type="hidden" name="filter" id="filterInput" value="{{ filter_type }}">
-            
-            <div class="row">
-                <!-- Custom Date Range -->
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">من تاريخ</label>
-                    <input type="date" class="form-control" name="start_date" value="{{ start_date }}" onchange="setFilter('custom')">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">إلى تاريخ</label>
-                    <input type="date" class="form-control" name="end_date" value="{{ end_date }}" onchange="setFilter('custom')">
-                </div>
-                
-                <!-- Branch Filter -->
-                <div class="col-md-2 mb-3">
-                    <label class="form-label">الفرع</label>
-                    <select class="form-select" name="branch" onchange="this.form.submit()">
-                        <option value="">الكل</option>
-                        {% for branch in branches %}
-                        <option value="{{ branch.id }}" {% if selected_branch == branch.id|stringformat:"s" %}selected{% endif %}>
-                            {{ branch.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <!-- Salesperson Filter -->
-                <div class="col-md-2 mb-3">
-                    <label class="form-label">البائع</label>
-                    <select class="form-select" name="salesperson" onchange="this.form.submit()">
-                        <option value="">الكل</option>
-                        {% for salesperson in salespersons %}
-                        <option value="{{ salesperson.id }}" {% if selected_salesperson == salesperson.id|stringformat:"s" %}selected{% endif %}>
-                            {{ salesperson.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <!-- Order Type Filter -->
-                <div class="col-md-2 mb-3">
-                    <label class="form-label">نوع الطلب</label>
-                    <select class="form-select" name="order_type" onchange="this.form.submit()">
-                        <option value="">الكل</option>
-                        <option value="wizard" {% if selected_order_type == 'wizard' %}selected{% endif %}>ويزارد</option>
-                        <option value="traditional" {% if selected_order_type == 'traditional' %}selected{% endif %}>تقليدي</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-search"></i> تطبيق الفلاتر
-                </button>
-                <a href="?" class="btn btn-outline-secondary">
-                    <i class="fas fa-redo"></i> إعادة تعيين
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <a href="?order_type=wizard" class="stats-card wizard-card">
+                    <div class="card-icon">🧙‍♂️</div>
+                    <div class="card-number">{{ wizard_count }}</div>
+                    <div class="card-label">طلبات الويزارد</div>
                 </a>
             </div>
-        </form>
-    </div>
-    
-    <!-- Wizard Orders Table -->
-    {% if not selected_order_type or selected_order_type == 'wizard' %}
-    <div class="table-section">
-        <h3><i class="fas fa-magic"></i> طلبات الويزارد ({{ wizard_count }})</h3>
-        
-        {% if wizard_orders %}
-        <div class="table-responsive">
-            <table class="orders-table">
-                <thead>
-                    <tr>
-                        <th>رقم الطلب</th>
-                        <th>رقم العقد</th>
-                        <th>العميل</th>
-                        <th>صورة العقد</th>
-                        <th>الفرع</th>
-                        <th>البائع</th>
-                        <th>نوع الطلب</th>
-                        <th>التاريخ</th>
-                        <th>الحالة</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for draft in wizard_orders %}
-                    <tr>
-                        <td>
-                            {% if draft.final_order %}
-                            <a href="{% url 'orders:order_detail' draft.final_order.id %}">
-                                {{ draft.final_order.order_number }}
-                            </a>
-                            {% else %}
-                            <a href="{% url 'orders:wizard_step' 1 %}?draft_id={{ draft.id }}">
-                                مسودة #{{ draft.id }}
-                            </a>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if draft.final_order %}
-                            <a href="{% url 'orders:view_contract_template' draft.final_order.id %}">
-                                {{ draft.final_order.order_number }}-{{ draft.final_order.contract_number|default:"c1" }}
-                            </a>
-                            {% else %}
-                            <span class="text-muted">--</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{% url 'customers:customer_detail' draft.customer.id %}">
-                                {{ draft.customer.name }}
-                            </a>
-                        </td>
-                        <td class="text-center">
-                            {% if draft.final_order and draft.final_order.contract_file %}
-                            <a href="{{ draft.final_order.contract_file.url }}" target="_blank" title="عرض العقد">
-                                <i class="fas fa-file-pdf" style="font-size: 24px; color: #e74c3c;"></i>
-                            </a>
-                            {% else %}
-                            <span class="text-muted"><i class="fas fa-minus"></i></span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if draft.branch %}
-                            <strong>{{ draft.branch.name }}</strong>
-                            {% else %}
-                            <span class="text-muted">--</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if draft.salesperson %}
-                            {{ draft.salesperson.name }}
-                            {% else %}
-                            {{ draft.created_by.get_full_name|default:draft.created_by.username }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if draft.selected_type %}
-                                {% if draft.selected_type == 'tailoring' or draft.selected_type == 'تسليم' %}
-                                <span class="badge badge-tailoring">تسليم</span>
-                                {% elif draft.selected_type == 'installation' or draft.selected_type == 'تركيب' %}
-                                <span class="badge badge-installation">تركيب</span>
-                                {% elif draft.selected_type == 'accessory' or draft.selected_type == 'إكسسوار' %}
-                                <span class="badge badge-accessory">إكسسوار</span>
-                                {% elif draft.selected_type == 'products' or draft.selected_type == 'منتجات' %}
-                                <span class="badge badge-products">منتجات</span>
-                                {% elif draft.selected_type == 'inspection' or draft.selected_type == 'معاينة' %}
-                                <span class="badge badge-inspection">معاينة</span>
-                                {% else %}
-                                <span class="badge" style="background: #95a5a6; color: white;">{{ draft.selected_type }}</span>
-                                {% endif %}
-                            {% else %}
-                            <span class="text-muted">--</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ draft.created_at|date:"Y/m/d H:i" }}</td>
-                        <td>
-                            <span class="badge badge-wizard">ويزارد</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="col-md-4 mb-3">
+                <a href="?order_type=traditional" class="stats-card traditional-card">
+                    <div class="card-icon">📋</div>
+                    <div class="card-number">{{ traditional_count }}</div>
+                    <div class="card-label">الطلبات التقليدية</div>
+                </a>
+            </div>
+            <div class="col-md-4 mb-3">
+                <a href="?"
+                   class="stats-card"
+                   style="background: linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%);
+                          color: white">
+                    <div class="card-icon">📊</div>
+                    <div class="card-number">{{ total_count }}</div>
+                    <div class="card-label">إجمالي الطلبات</div>
+                </a>
+            </div>
         </div>
-        {% else %}
-        <div class="no-data">
-            <i class="fas fa-inbox"></i>
-            <p>لا توجد طلبات ويزارد في هذه الفترة</p>
+        <!-- Top Salespersons Cards -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+                <div class="table-section" style="padding: 20px;">
+                    <h5 style="margin-bottom: 15px; color: #f5576c; font-weight: 700;">
+                        <i class="fas fa-trophy"></i> أكثر البائعين نشاطاً - الطلبات التقليدية
+                    </h5>
+                    {% if top_traditional_salespersons %}
+                        <div class="list-group">
+                            {% for seller in top_traditional_salespersons %}
+                                <a href="?salesperson={{ seller.salesperson__id }}{% if selected_date_filter %}&date_filter={{ selected_date_filter }}{% endif %}{% if selected_start_date and selected_end_date %}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}&order_type=traditional"
+                                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                                   style="border-right: 3px solid #f5576c;
+                                          cursor: pointer;
+                                          transition: all 0.2s">
+                                    <div>
+                                        <i class="fas fa-user-tie" style="color: #f5576c; margin-left: 8px;"></i>
+                                        <strong>{{ seller.salesperson__name }}</strong>
+                                    </div>
+                                    <span class="badge"
+                                          style="background: #f5576c;
+                                                 color: white;
+                                                 font-size: 14px;
+                                                 padding: 6px 12px">{{ seller.order_count }} طلب</span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center" style="padding: 20px;">لا توجد بيانات</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="table-section" style="padding: 20px;">
+                    <h5 style="margin-bottom: 15px; color: #667eea; font-weight: 700;">
+                        <i class="fas fa-trophy"></i> أكثر البائعين نشاطاً - طلبات الويزارد
+                    </h5>
+                    {% if top_wizard_salespersons %}
+                        <div class="list-group">
+                            {% for seller in top_wizard_salespersons %}
+                                <a href="?salesperson={{ seller.salesperson__id }}{% if selected_date_filter %}&date_filter={{ selected_date_filter }}{% endif %}{% if selected_start_date and selected_end_date %}&start_date={{ selected_start_date }}&end_date={{ selected_end_date }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}&order_type=wizard"
+                                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                                   style="border-right: 3px solid #667eea;
+                                          cursor: pointer;
+                                          transition: all 0.2s">
+                                    <div>
+                                        <i class="fas fa-user-tie" style="color: #667eea; margin-left: 8px;"></i>
+                                        <strong>{{ seller.salesperson__name }}</strong>
+                                    </div>
+                                    <span class="badge"
+                                          style="background: #667eea;
+                                                 color: white;
+                                                 font-size: 14px;
+                                                 padding: 6px 12px">{{ seller.order_count }} طلب</span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center" style="padding: 20px;">لا توجد بيانات</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
-        {% endif %}
-    </div>
-    {% endif %}
-    
-    <!-- Traditional Orders Table -->
-    {% if not selected_order_type or selected_order_type == 'traditional' %}
-    <div class="table-section">
-        <h3><i class="fas fa-file-alt"></i> الطلبات التقليدية ({{ traditional_count }})</h3>
-        
-        {% if traditional_orders %}
-        <div class="table-responsive">
-            <table class="orders-table">
-                <thead>
-                    <tr>
-                        <th>رقم الطلب</th>
-                        <th>رقم العقد</th>
-                        <th>العميل</th>
-                        <th>صورة العقد</th>
-                        <th>الفرع</th>
-                        <th>البائع</th>
-                        <th>نوع الطلب</th>
-                        <th>التاريخ</th>
-                        <th>الحالة</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for order in traditional_orders %}
-                    <tr>
-                        <td>
-                            <a href="{% url 'orders:order_detail' order.id %}">
-                                {{ order.order_number }}
-                            </a>
-                        </td>
-                        <td>
-                            <a href="{% url 'orders:view_contract_template' order.id %}">
-                                {{ order.order_number }}-{{ order.contract_number|default:"c1" }}
-                            </a>
-                        </td>
-                        <td>
-                            <a href="{% url 'customers:customer_detail' order.customer.id %}">
-                                {{ order.customer.name }}
-                            </a>
-                        </td>
-                        <td class="text-center">
-                            {% if order.contract_file %}
-                            <a href="{{ order.contract_file.url }}" target="_blank" title="عرض العقد">
-                                <i class="fas fa-file-pdf" style="font-size: 24px; color: #e74c3c;"></i>
-                            </a>
-                            {% else %}
-                            <span class="text-muted"><i class="fas fa-minus"></i></span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if order.branch %}
-                            <strong>{{ order.branch.name }}</strong>
-                            {% else %}
-                            <span class="text-muted">--</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if order.salesperson %}
-                            {{ order.salesperson.name }}
-                            {% else %}
-                            {{ order.created_by.get_full_name|default:order.created_by.username }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% with types_list=order.get_selected_types_list %}
-                            {% if types_list %}
-                                {% for service in types_list %}
-                                    {% if service == 'tailoring' or service == 'تسليم' %}
-                                    <span class="badge badge-tailoring">تسليم</span>
-                                    {% elif service == 'installation' or service == 'تركيب' %}
-                                    <span class="badge badge-installation">تركيب</span>
-                                    {% elif service == 'accessory' or service == 'إكسسوار' %}
-                                    <span class="badge badge-accessory">إكسسوار</span>
-                                    {% elif service == 'products' or service == 'منتجات' %}
-                                    <span class="badge badge-products">منتجات</span>
-                                    {% elif service == 'inspection' or service == 'معاينة' %}
-                                    <span class="badge badge-inspection">معاينة</span>
-                                    {% else %}
-                                    <span class="badge" style="background: #95a5a6; color: white;">{{ service }}</span>
-                                    {% endif %}
+        <!-- Filters Section -->
+        <div class="filter-section">
+            <h5 class="mb-3">
+                <i class="fas fa-filter"></i> الفلاتر
+            </h5>
+            <form method="get" id="filterForm">
+                <!-- Time Filter Buttons -->
+                <div class="filter-btn-group">
+                    <button type="button"
+                            class="filter-btn {% if filter_type == 'today' %}active{% endif %}"
+                            onclick="setFilter('today')">
+                        <i class="fas fa-calendar-day"></i> اليوم
+                    </button>
+                    <button type="button"
+                            class="filter-btn {% if filter_type == 'week' %}active{% endif %}"
+                            onclick="setFilter('week')">
+                        <i class="fas fa-calendar-week"></i> هذا الأسبوع
+                    </button>
+                    <button type="button"
+                            class="filter-btn {% if filter_type == 'month' %}active{% endif %}"
+                            onclick="setFilter('month')">
+                        <i class="fas fa-calendar-alt"></i> هذا الشهر
+                    </button>
+                    <button type="button"
+                            class="filter-btn {% if filter_type == 'all' %}active{% endif %}"
+                            onclick="setFilter('all')">
+                        <i class="fas fa-infinity"></i> الكل
+                    </button>
+                </div>
+                <input type="hidden"
+                       name="filter"
+                       id="filterInput"
+                       value="{{ filter_type }}">
+                <div class="row">
+                    <!-- Custom Date Range -->
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">من تاريخ</label>
+                        <input type="date"
+                               class="form-control"
+                               name="start_date"
+                               value="{{ start_date }}"
+                               onchange="setFilter('custom')">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">إلى تاريخ</label>
+                        <input type="date"
+                               class="form-control"
+                               name="end_date"
+                               value="{{ end_date }}"
+                               onchange="setFilter('custom')">
+                    </div>
+                    <!-- Branch Filter -->
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">الفرع</label>
+                        <select class="form-select" name="branch" onchange="this.form.submit()">
+                            <option value="">الكل</option>
+                            {% for branch in branches %}
+                                <option value="{{ branch.id }}"
+                                        {% if selected_branch == branch.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ branch.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- Salesperson Filter -->
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">البائع</label>
+                        <select class="form-select" name="salesperson" onchange="this.form.submit()">
+                            <option value="">الكل</option>
+                            {% for salesperson in salespersons %}
+                                <option value="{{ salesperson.id }}"
+                                        {% if selected_salesperson == salesperson.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ salesperson.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- Order Type Filter -->
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">نوع الطلب</label>
+                        <select class="form-select" name="order_type" onchange="this.form.submit()">
+                            <option value="">الكل</option>
+                            <option value="wizard"
+                                    {% if selected_order_type == 'wizard' %}selected{% endif %}>ويزارد</option>
+                            <option value="traditional"
+                                    {% if selected_order_type == 'traditional' %}selected{% endif %}>تقليدي</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> تطبيق الفلاتر
+                    </button>
+                    <a href="?" class="btn btn-outline-secondary">
+                        <i class="fas fa-redo"></i> إعادة تعيين
+                    </a>
+                </div>
+            </form>
+        </div>
+        <!-- Wizard Orders Table -->
+        {% if not selected_order_type or selected_order_type == 'wizard' %}
+            <div class="table-section">
+                <h3>
+                    <i class="fas fa-magic"></i> طلبات الويزارد ({{ wizard_count }})
+                </h3>
+                {% if wizard_orders %}
+                    <div class="table-responsive">
+                        <table class="orders-table">
+                            <thead>
+                                <tr>
+                                    <th>رقم الطلب</th>
+                                    <th>رقم العقد</th>
+                                    <th>العميل</th>
+                                    <th>صورة العقد</th>
+                                    <th>الفرع</th>
+                                    <th>البائع</th>
+                                    <th>نوع الطلب</th>
+                                    <th>التاريخ</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for draft in wizard_orders %}
+                                    <tr>
+                                        <td>
+                                            {% if draft.final_order %}
+                                                <a href="{% url 'orders:order_detail' draft.final_order.id %}">{{ draft.final_order.order_number }}</a>
+                                            {% else %}
+                                                <a href="{% url 'orders:wizard_step' 1 %}?draft_id={{ draft.id }}">مسودة #{{ draft.id }}</a>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if draft.final_order %}
+                                                <a href="{% url 'orders:view_contract_template' draft.final_order.id %}">
+                                                    {{ draft.final_order.order_number }}-{{ draft.final_order.contract_number|default:"c1" }}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">--</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'customers:customer_detail' draft.customer.id %}">{{ draft.customer.name }}</a>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if draft.final_order and draft.final_order.contract_file %}
+                                                <a href="{{ draft.final_order.contract_file.url }}"
+                                                   target="_blank"
+                                                   title="عرض العقد">
+                                                    <i class="fas fa-file-pdf" style="font-size: 24px; color: #e74c3c;"></i>
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted"><i class="fas fa-minus"></i></span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if draft.branch %}
+                                                <strong>{{ draft.branch.name }}</strong>
+                                            {% else %}
+                                                <span class="text-muted">--</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if draft.salesperson %}
+                                                {{ draft.salesperson.name }}
+                                            {% else %}
+                                                {{ draft.created_by.get_full_name|default:draft.created_by.username }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if draft.selected_type %}
+                                                {% if draft.selected_type == 'tailoring' or draft.selected_type == 'تسليم' %}
+                                                    <span class="badge badge-tailoring">تسليم</span>
+                                                {% elif draft.selected_type == 'installation' or draft.selected_type == 'تركيب' %}
+                                                    <span class="badge badge-installation">تركيب</span>
+                                                {% elif draft.selected_type == 'accessory' or draft.selected_type == 'إكسسوار' %}
+                                                    <span class="badge badge-accessory">إكسسوار</span>
+                                                {% elif draft.selected_type == 'products' or draft.selected_type == 'منتجات' %}
+                                                    <span class="badge badge-products">منتجات</span>
+                                                {% elif draft.selected_type == 'inspection' or draft.selected_type == 'معاينة' %}
+                                                    <span class="badge badge-inspection">معاينة</span>
+                                                {% else %}
+                                                    <span class="badge" style="background: #95a5a6; color: white;">{{ draft.selected_type }}</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">--</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ draft.created_at|date:"Y/m/d H:i" }}</td>
+                                        <td>
+                                            <span class="badge badge-wizard">ويزارد</span>
+                                        </td>
+                                    </tr>
                                 {% endfor %}
-                            {% else %}
-                            <span class="text-muted">--</span>
-                            {% endif %}
-                            {% endwith %}
-                        </td>
-                        <td>{{ order.created_at|date:"Y/m/d H:i" }}</td>
-                        <td>
-                            <span class="badge badge-traditional">تقليدي</span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="no-data">
-            <i class="fas fa-inbox"></i>
-            <p>لا توجد طلبات تقليدية في هذه الفترة</p>
-        </div>
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="no-data">
+                        <i class="fas fa-inbox"></i>
+                        <p>لا توجد طلبات ويزارد في هذه الفترة</p>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+        <!-- Traditional Orders Table -->
+        {% if not selected_order_type or selected_order_type == 'traditional' %}
+            <div class="table-section">
+                <h3>
+                    <i class="fas fa-file-alt"></i> الطلبات التقليدية ({{ traditional_count }})
+                </h3>
+                {% if traditional_orders %}
+                    <div class="table-responsive">
+                        <table class="orders-table">
+                            <thead>
+                                <tr>
+                                    <th>رقم الطلب</th>
+                                    <th>رقم العقد</th>
+                                    <th>العميل</th>
+                                    <th>صورة العقد</th>
+                                    <th>الفرع</th>
+                                    <th>البائع</th>
+                                    <th>نوع الطلب</th>
+                                    <th>التاريخ</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in traditional_orders %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'orders:order_detail' order.id %}">{{ order.order_number }}</a>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'orders:view_contract_template' order.id %}">
+                                                {{ order.order_number }}-{{ order.contract_number|default:"c1" }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'customers:customer_detail' order.customer.id %}">{{ order.customer.name }}</a>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if order.contract_file %}
+                                                <a href="{{ order.contract_file.url }}"
+                                                   target="_blank"
+                                                   title="عرض العقد">
+                                                    <i class="fas fa-file-pdf" style="font-size: 24px; color: #e74c3c;"></i>
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted"><i class="fas fa-minus"></i></span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if order.branch %}
+                                                <strong>{{ order.branch.name }}</strong>
+                                            {% else %}
+                                                <span class="text-muted">--</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if order.salesperson %}
+                                                {{ order.salesperson.name }}
+                                            {% else %}
+                                                {{ order.created_by.get_full_name|default:order.created_by.username }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% with types_list=order.get_selected_types_list %}
+                                                {% if types_list %}
+                                                    {% for service in types_list %}
+                                                        {% if service == 'tailoring' or service == 'تسليم' %}
+                                                            <span class="badge badge-tailoring">تسليم</span>
+                                                        {% elif service == 'installation' or service == 'تركيب' %}
+                                                            <span class="badge badge-installation">تركيب</span>
+                                                        {% elif service == 'accessory' or service == 'إكسسوار' %}
+                                                            <span class="badge badge-accessory">إكسسوار</span>
+                                                        {% elif service == 'products' or service == 'منتجات' %}
+                                                            <span class="badge badge-products">منتجات</span>
+                                                        {% elif service == 'inspection' or service == 'معاينة' %}
+                                                            <span class="badge badge-inspection">معاينة</span>
+                                                        {% else %}
+                                                            <span class="badge" style="background: #95a5a6; color: white;">{{ service }}</span>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <span class="text-muted">--</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                        <td>{{ order.created_at|date:"Y/m/d H:i" }}</td>
+                                        <td>
+                                            <span class="badge badge-traditional">تقليدي</span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="no-data">
+                        <i class="fas fa-inbox"></i>
+                        <p>لا توجد طلبات تقليدية في هذه الفترة</p>
+                    </div>
+                {% endif %}
+            </div>
         {% endif %}
     </div>
-    {% endif %}
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 function setFilter(filterType) {
     document.getElementById('filterInput').value = filterType;
     
@@ -627,5 +642,5 @@ function setFilter(filterType) {
     
     document.getElementById('filterForm').submit();
 }
-</script>
+    </script>
 {% endblock %}

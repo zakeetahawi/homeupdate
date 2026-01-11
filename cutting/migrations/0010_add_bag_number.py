@@ -11,13 +11,10 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AddField(
-            model_name='cuttingorderitem',
-            name='bag_number',
+            model_name="cuttingorderitem",
+            name="bag_number",
             field=models.CharField(
-                max_length=50,
-                blank=True,
-                verbose_name='رقم الشنطة',
-                default=''
+                max_length=50, blank=True, verbose_name="رقم الشنطة", default=""
             ),
         ),
     ]

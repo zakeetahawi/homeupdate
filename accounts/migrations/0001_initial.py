@@ -13,1185 +13,1185 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('auth', '0012_alter_user_first_name_max_length'),
-        ('contenttypes', '0002_remove_content_type_name'),
+        ("auth", "0012_alter_user_first_name_max_length"),
+        ("contenttypes", "0002_remove_content_type_name"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='AboutPageSettings',
+            name="AboutPageSettings",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'title',
+                    "title",
                     models.CharField(
-                        default='عن النظام', max_length=100, verbose_name='عنوان الصفحة'
+                        default="عن النظام", max_length=100, verbose_name="عنوان الصفحة"
                     ),
                 ),
                 (
-                    'subtitle',
+                    "subtitle",
                     models.CharField(
-                        default='نظام إدارة المصنع والعملاء',
+                        default="نظام إدارة المصنع والعملاء",
                         max_length=200,
-                        verbose_name='العنوان الفرعي',
+                        verbose_name="العنوان الفرعي",
                     ),
                 ),
                 (
-                    'system_version',
+                    "system_version",
                     models.CharField(
-                        default='1.0.0',
+                        default="1.0.0",
                         editable=False,
                         max_length=50,
-                        verbose_name='إصدار النظام',
+                        verbose_name="إصدار النظام",
                     ),
                 ),
                 (
-                    'system_release_date',
+                    "system_release_date",
                     models.CharField(
-                        default='2025-04-30',
+                        default="2025-04-30",
                         editable=False,
                         max_length=50,
-                        verbose_name='تاريخ الإطلاق',
+                        verbose_name="تاريخ الإطلاق",
                     ),
                 ),
                 (
-                    'system_developer',
+                    "system_developer",
                     models.CharField(
-                        default='zakee tahawi',
+                        default="zakee tahawi",
                         editable=False,
                         max_length=100,
-                        verbose_name='المطور',
+                        verbose_name="المطور",
                     ),
                 ),
                 (
-                    'system_description',
+                    "system_description",
                     models.TextField(
-                        default='نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون',
-                        verbose_name='وصف النظام',
+                        default="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
+                        verbose_name="وصف النظام",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'إعدادات صفحة عن النظام',
-                'verbose_name_plural': 'إعدادات صفحة عن النظام',
+                "verbose_name": "إعدادات صفحة عن النظام",
+                "verbose_name_plural": "إعدادات صفحة عن النظام",
             },
         ),
         migrations.CreateModel(
-            name='Branch',
+            name="Branch",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('code', models.CharField(max_length=50, unique=True)),
-                ('name', models.CharField(max_length=100)),
-                ('address', models.TextField(blank=True, null=True)),
-                ('phone', models.CharField(blank=True, max_length=20, null=True)),
-                ('email', models.EmailField(blank=True, max_length=254, null=True)),
-                ('is_main_branch', models.BooleanField(default=False)),
-                ('is_active', models.BooleanField(default=True)),
+                ("code", models.CharField(max_length=50, unique=True)),
+                ("name", models.CharField(max_length=100)),
+                ("address", models.TextField(blank=True, null=True)),
+                ("phone", models.CharField(blank=True, max_length=20, null=True)),
+                ("email", models.EmailField(blank=True, max_length=254, null=True)),
+                ("is_main_branch", models.BooleanField(default=False)),
+                ("is_active", models.BooleanField(default=True)),
             ],
             options={
-                'verbose_name': 'فرع',
-                'verbose_name_plural': 'الفروع',
+                "verbose_name": "فرع",
+                "verbose_name_plural": "الفروع",
             },
         ),
         migrations.CreateModel(
-            name='CompanyInfo',
+            name="CompanyInfo",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'version',
+                    "version",
                     models.CharField(
                         blank=True,
-                        default='1.0.0',
+                        default="1.0.0",
                         editable=False,
                         max_length=50,
-                        verbose_name='إصدار النظام',
+                        verbose_name="إصدار النظام",
                     ),
                 ),
                 (
-                    'release_date',
+                    "release_date",
                     models.CharField(
                         blank=True,
-                        default='2025-04-30',
+                        default="2025-04-30",
                         editable=False,
                         max_length=50,
-                        verbose_name='تاريخ الإطلاق',
+                        verbose_name="تاريخ الإطلاق",
                     ),
                 ),
                 (
-                    'developer',
+                    "developer",
                     models.CharField(
                         blank=True,
-                        default='zakee tahawi',
+                        default="zakee tahawi",
                         editable=False,
                         max_length=100,
-                        verbose_name='المطور',
+                        verbose_name="المطور",
                     ),
                 ),
                 (
-                    'working_hours',
+                    "working_hours",
                     models.CharField(
                         blank=True,
-                        default='',
+                        default="",
                         max_length=100,
-                        verbose_name='ساعات العمل',
+                        verbose_name="ساعات العمل",
                     ),
                 ),
                 (
-                    'name',
+                    "name",
                     models.CharField(
-                        default='Elkhawaga', max_length=200, verbose_name='اسم الشركة'
+                        default="Elkhawaga", max_length=200, verbose_name="اسم الشركة"
                     ),
                 ),
                 (
-                    'copyright_text',
+                    "copyright_text",
                     models.CharField(
                         blank=True,
-                        default='جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi',
+                        default="جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi",
                         max_length=255,
-                        verbose_name='نص حقوق النشر',
+                        verbose_name="نص حقوق النشر",
                     ),
                 ),
                 (
-                    'logo',
+                    "logo",
                     models.ImageField(
-                        blank=True, null=True, upload_to='company_logos/'
+                        blank=True, null=True, upload_to="company_logos/"
                     ),
                 ),
-                ('address', models.TextField(blank=True, null=True)),
-                ('phone', models.CharField(blank=True, max_length=20, null=True)),
-                ('email', models.EmailField(blank=True, max_length=254, null=True)),
-                ('tax_number', models.CharField(blank=True, max_length=50, null=True)),
+                ("address", models.TextField(blank=True, null=True)),
+                ("phone", models.CharField(blank=True, max_length=20, null=True)),
+                ("email", models.EmailField(blank=True, max_length=254, null=True)),
+                ("tax_number", models.CharField(blank=True, max_length=50, null=True)),
                 (
-                    'commercial_register',
+                    "commercial_register",
                     models.CharField(blank=True, max_length=50, null=True),
                 ),
-                ('website', models.URLField(blank=True, null=True)),
-                ('social_links', models.JSONField(blank=True, null=True)),
-                ('description', models.TextField(blank=True, null=True)),
-                ('facebook', models.URLField(blank=True, null=True)),
-                ('twitter', models.URLField(blank=True, null=True)),
-                ('instagram', models.URLField(blank=True, null=True)),
-                ('linkedin', models.URLField(blank=True, null=True)),
-                ('about', models.TextField(blank=True, null=True)),
-                ('vision', models.TextField(blank=True, null=True)),
-                ('mission', models.TextField(blank=True, null=True)),
+                ("website", models.URLField(blank=True, null=True)),
+                ("social_links", models.JSONField(blank=True, null=True)),
+                ("description", models.TextField(blank=True, null=True)),
+                ("facebook", models.URLField(blank=True, null=True)),
+                ("twitter", models.URLField(blank=True, null=True)),
+                ("instagram", models.URLField(blank=True, null=True)),
+                ("linkedin", models.URLField(blank=True, null=True)),
+                ("about", models.TextField(blank=True, null=True)),
+                ("vision", models.TextField(blank=True, null=True)),
+                ("mission", models.TextField(blank=True, null=True)),
                 (
-                    'primary_color',
+                    "primary_color",
                     models.CharField(blank=True, max_length=20, null=True),
                 ),
                 (
-                    'secondary_color',
+                    "secondary_color",
                     models.CharField(blank=True, max_length=20, null=True),
                 ),
                 (
-                    'accent_color',
+                    "accent_color",
                     models.CharField(blank=True, max_length=20, null=True),
                 ),
             ],
             options={
-                'verbose_name': 'معلومات الشركة',
-                'verbose_name_plural': 'معلومات الشركة',
+                "verbose_name": "معلومات الشركة",
+                "verbose_name_plural": "معلومات الشركة",
             },
         ),
         migrations.CreateModel(
-            name='ContactFormSettings',
+            name="ContactFormSettings",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'title',
+                    "title",
                     models.CharField(
-                        default='اتصل بنا', max_length=100, verbose_name='عنوان الصفحة'
+                        default="اتصل بنا", max_length=100, verbose_name="عنوان الصفحة"
                     ),
                 ),
                 (
-                    'description',
-                    models.TextField(blank=True, null=True, verbose_name='وصف الصفحة'),
+                    "description",
+                    models.TextField(blank=True, null=True, verbose_name="وصف الصفحة"),
                 ),
                 (
-                    'company_name',
+                    "company_name",
                     models.CharField(
-                        default='Elkhawaga', max_length=200, verbose_name='اسم الشركة'
+                        default="Elkhawaga", max_length=200, verbose_name="اسم الشركة"
                     ),
                 ),
                 (
-                    'contact_email',
+                    "contact_email",
                     models.EmailField(
-                        default='info@elkhawaga.com',
+                        default="info@elkhawaga.com",
                         max_length=254,
-                        verbose_name='البريد الإلكتروني للاتصال',
+                        verbose_name="البريد الإلكتروني للاتصال",
                     ),
                 ),
                 (
-                    'contact_phone',
+                    "contact_phone",
                     models.CharField(
-                        default='+20 123 456 7890',
+                        default="+20 123 456 7890",
                         max_length=20,
-                        verbose_name='رقم الهاتف للاتصال',
+                        verbose_name="رقم الهاتف للاتصال",
                     ),
                 ),
                 (
-                    'contact_address',
+                    "contact_address",
                     models.TextField(
-                        blank=True, null=True, verbose_name='عنوان المكتب'
+                        blank=True, null=True, verbose_name="عنوان المكتب"
                     ),
                 ),
                 (
-                    'contact_hours',
+                    "contact_hours",
                     models.CharField(
-                        default='9 صباحاً - 5 مساءً',
+                        default="9 صباحاً - 5 مساءً",
                         max_length=100,
-                        verbose_name='ساعات العمل',
+                        verbose_name="ساعات العمل",
                     ),
                 ),
                 (
-                    'form_title',
+                    "form_title",
                     models.CharField(
-                        default='نموذج الاتصال',
+                        default="نموذج الاتصال",
                         max_length=100,
-                        verbose_name='عنوان النموذج',
+                        verbose_name="عنوان النموذج",
                     ),
                 ),
                 (
-                    'form_success_message',
+                    "form_success_message",
                     models.CharField(
-                        default='تم إرسال رسالتك بنجاح. سنتواصل معك قريباً.',
+                        default="تم إرسال رسالتك بنجاح. سنتواصل معك قريباً.",
                         max_length=200,
-                        verbose_name='رسالة النجاح',
+                        verbose_name="رسالة النجاح",
                     ),
                 ),
                 (
-                    'form_error_message',
+                    "form_error_message",
                     models.CharField(
-                        default='يرجى ملء جميع الحقول المطلوبة.',
+                        default="يرجى ملء جميع الحقول المطلوبة.",
                         max_length=200,
-                        verbose_name='رسالة الخطأ',
+                        verbose_name="رسالة الخطأ",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'إعدادات نموذج الاتصال',
-                'verbose_name_plural': 'إعدادات نموذج الاتصال',
+                "verbose_name": "إعدادات نموذج الاتصال",
+                "verbose_name_plural": "إعدادات نموذج الاتصال",
             },
         ),
         migrations.CreateModel(
-            name='FooterSettings',
+            name="FooterSettings",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'left_column_title',
+                    "left_column_title",
                     models.CharField(
-                        default='عن الشركة',
+                        default="عن الشركة",
                         max_length=100,
-                        verbose_name='عنوان العمود الأيسر',
+                        verbose_name="عنوان العمود الأيسر",
                     ),
                 ),
                 (
-                    'left_column_text',
+                    "left_column_text",
                     models.TextField(
-                        default='نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون',
-                        verbose_name='نص العمود الأيسر',
+                        default="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
+                        verbose_name="نص العمود الأيسر",
                     ),
                 ),
                 (
-                    'middle_column_title',
+                    "middle_column_title",
                     models.CharField(
-                        default='روابط سريعة',
+                        default="روابط سريعة",
                         max_length=100,
-                        verbose_name='عنوان العمود الأوسط',
+                        verbose_name="عنوان العمود الأوسط",
                     ),
                 ),
                 (
-                    'right_column_title',
+                    "right_column_title",
                     models.CharField(
-                        default='تواصل معنا',
+                        default="تواصل معنا",
                         max_length=100,
-                        verbose_name='عنوان العمود الأيمن',
+                        verbose_name="عنوان العمود الأيمن",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'إعدادات تذييل الصفحة',
-                'verbose_name_plural': 'إعدادات تذييل الصفحة',
+                "verbose_name": "إعدادات تذييل الصفحة",
+                "verbose_name_plural": "إعدادات تذييل الصفحة",
             },
         ),
         migrations.CreateModel(
-            name='SystemSettings',
+            name="SystemSettings",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'name',
+                    "name",
                     models.CharField(
-                        default='نظام الخواجه',
+                        default="نظام الخواجه",
                         max_length=100,
-                        verbose_name='اسم النظام',
+                        verbose_name="اسم النظام",
                     ),
                 ),
                 (
-                    'currency',
+                    "currency",
                     models.CharField(
                         choices=[
-                            ('SAR', 'ريال سعودي'),
-                            ('EGP', 'جنيه مصري'),
-                            ('USD', 'دولار أمريكي'),
-                            ('EUR', 'يورو'),
-                            ('AED', 'درهم إماراتي'),
-                            ('KWD', 'دينار كويتي'),
-                            ('QAR', 'ريال قطري'),
-                            ('BHD', 'دينار بحريني'),
-                            ('OMR', 'ريال عماني'),
+                            ("SAR", "ريال سعودي"),
+                            ("EGP", "جنيه مصري"),
+                            ("USD", "دولار أمريكي"),
+                            ("EUR", "يورو"),
+                            ("AED", "درهم إماراتي"),
+                            ("KWD", "دينار كويتي"),
+                            ("QAR", "ريال قطري"),
+                            ("BHD", "دينار بحريني"),
+                            ("OMR", "ريال عماني"),
                         ],
-                        default='SAR',
+                        default="SAR",
                         max_length=3,
-                        verbose_name='العملة',
+                        verbose_name="العملة",
                     ),
                 ),
                 (
-                    'version',
+                    "version",
                     models.CharField(
-                        default='1.0.0', max_length=20, verbose_name='إصدار النظام'
+                        default="1.0.0", max_length=20, verbose_name="إصدار النظام"
                     ),
                 ),
                 (
-                    'enable_notifications',
-                    models.BooleanField(default=True, verbose_name='تفعيل الإشعارات'),
+                    "enable_notifications",
+                    models.BooleanField(default=True, verbose_name="تفعيل الإشعارات"),
                 ),
                 (
-                    'enable_email_notifications',
+                    "enable_email_notifications",
                     models.BooleanField(
-                        default=False, verbose_name='تفعيل إشعارات البريد الإلكتروني'
+                        default=False, verbose_name="تفعيل إشعارات البريد الإلكتروني"
                     ),
                 ),
                 (
-                    'items_per_page',
+                    "items_per_page",
                     models.PositiveIntegerField(
-                        default=20, verbose_name='عدد العناصر في الصفحة'
+                        default=20, verbose_name="عدد العناصر في الصفحة"
                     ),
                 ),
                 (
-                    'low_stock_threshold',
+                    "low_stock_threshold",
                     models.PositiveIntegerField(
-                        default=20, verbose_name='حد المخزون المنخفض (%)'
+                        default=20, verbose_name="حد المخزون المنخفض (%)"
                     ),
                 ),
                 (
-                    'enable_analytics',
-                    models.BooleanField(default=True, verbose_name='تفعيل التحليلات'),
+                    "enable_analytics",
+                    models.BooleanField(default=True, verbose_name="تفعيل التحليلات"),
                 ),
                 (
-                    'maintenance_mode',
-                    models.BooleanField(default=False, verbose_name='وضع الصيانة'),
+                    "maintenance_mode",
+                    models.BooleanField(default=False, verbose_name="وضع الصيانة"),
                 ),
                 (
-                    'maintenance_message',
-                    models.TextField(blank=True, verbose_name='رسالة الصيانة'),
+                    "maintenance_message",
+                    models.TextField(blank=True, verbose_name="رسالة الصيانة"),
                 ),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'updated_at',
-                    models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث'),
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث"),
                 ),
             ],
             options={
-                'verbose_name': 'إعدادات النظام',
-                'verbose_name_plural': 'إعدادات النظام',
+                "verbose_name": "إعدادات النظام",
+                "verbose_name_plural": "إعدادات النظام",
             },
         ),
         migrations.CreateModel(
-            name='User',
+            name="User",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('password', models.CharField(max_length=128, verbose_name='password')),
+                ("password", models.CharField(max_length=128, verbose_name="password")),
                 (
-                    'last_login',
+                    "last_login",
                     models.DateTimeField(
-                        blank=True, null=True, verbose_name='last login'
+                        blank=True, null=True, verbose_name="last login"
                     ),
                 ),
                 (
-                    'is_superuser',
+                    "is_superuser",
                     models.BooleanField(
                         default=False,
-                        help_text='Designates that this user has all permissions without explicitly assigning them.',
-                        verbose_name='superuser status',
+                        help_text="Designates that this user has all permissions without explicitly assigning them.",
+                        verbose_name="superuser status",
                     ),
                 ),
                 (
-                    'username',
+                    "username",
                     models.CharField(
                         error_messages={
-                            'unique': 'A user with that username already exists.'
+                            "unique": "A user with that username already exists."
                         },
-                        help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.',
+                        help_text="Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.",
                         max_length=150,
                         unique=True,
                         validators=[
                             django.contrib.auth.validators.UnicodeUsernameValidator()
                         ],
-                        verbose_name='username',
+                        verbose_name="username",
                     ),
                 ),
                 (
-                    'first_name',
+                    "first_name",
                     models.CharField(
-                        blank=True, max_length=150, verbose_name='first name'
+                        blank=True, max_length=150, verbose_name="first name"
                     ),
                 ),
                 (
-                    'last_name',
+                    "last_name",
                     models.CharField(
-                        blank=True, max_length=150, verbose_name='last name'
+                        blank=True, max_length=150, verbose_name="last name"
                     ),
                 ),
                 (
-                    'email',
+                    "email",
                     models.EmailField(
-                        blank=True, max_length=254, verbose_name='email address'
+                        blank=True, max_length=254, verbose_name="email address"
                     ),
                 ),
                 (
-                    'is_staff',
+                    "is_staff",
                     models.BooleanField(
                         default=False,
-                        help_text='Designates whether the user can log into this admin site.',
-                        verbose_name='staff status',
+                        help_text="Designates whether the user can log into this admin site.",
+                        verbose_name="staff status",
                     ),
                 ),
                 (
-                    'is_active',
+                    "is_active",
                     models.BooleanField(
                         default=True,
-                        help_text='Designates whether this user should be treated as active. Unselect this instead of deleting accounts.',
-                        verbose_name='active',
+                        help_text="Designates whether this user should be treated as active. Unselect this instead of deleting accounts.",
+                        verbose_name="active",
                     ),
                 ),
                 (
-                    'date_joined',
+                    "date_joined",
                     models.DateTimeField(
-                        default=django.utils.timezone.now, verbose_name='date joined'
+                        default=django.utils.timezone.now, verbose_name="date joined"
                     ),
                 ),
                 (
-                    'image',
+                    "image",
                     models.ImageField(
                         blank=True,
                         null=True,
-                        upload_to='users/',
-                        verbose_name='صورة المستخدم',
+                        upload_to="users/",
+                        verbose_name="صورة المستخدم",
                     ),
                 ),
                 (
-                    'phone',
+                    "phone",
                     models.CharField(
-                        blank=True, max_length=20, verbose_name='رقم الهاتف'
+                        blank=True, max_length=20, verbose_name="رقم الهاتف"
                     ),
                 ),
                 (
-                    'is_inspection_technician',
-                    models.BooleanField(default=False, verbose_name='فني معاينة'),
+                    "is_inspection_technician",
+                    models.BooleanField(default=False, verbose_name="فني معاينة"),
                 ),
                 (
-                    'default_theme',
+                    "default_theme",
                     models.CharField(
-                        default='default', max_length=50, verbose_name='الثيم الافتراضي'
+                        default="default", max_length=50, verbose_name="الثيم الافتراضي"
                     ),
                 ),
                 (
-                    'updated_at',
-                    models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث'),
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث"),
                 ),
                 (
-                    'groups',
+                    "groups",
                     models.ManyToManyField(
                         blank=True,
-                        help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.',
-                        related_name='user_set',
-                        related_query_name='user',
-                        to='auth.group',
-                        verbose_name='groups',
+                        help_text="The groups this user belongs to. A user will get all permissions granted to each of their groups.",
+                        related_name="user_set",
+                        related_query_name="user",
+                        to="auth.group",
+                        verbose_name="groups",
                     ),
                 ),
                 (
-                    'user_permissions',
+                    "user_permissions",
                     models.ManyToManyField(
                         blank=True,
-                        help_text='Specific permissions for this user.',
-                        related_name='user_set',
-                        related_query_name='user',
-                        to='auth.permission',
-                        verbose_name='user permissions',
+                        help_text="Specific permissions for this user.",
+                        related_name="user_set",
+                        related_query_name="user",
+                        to="auth.permission",
+                        verbose_name="user permissions",
                     ),
                 ),
                 (
-                    'branch',
+                    "branch",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='users',
-                        to='accounts.branch',
-                        verbose_name='الفرع',
+                        related_name="users",
+                        to="accounts.branch",
+                        verbose_name="الفرع",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'مستخدم',
-                'verbose_name_plural': 'المستخدمين',
+                "verbose_name": "مستخدم",
+                "verbose_name_plural": "المستخدمين",
             },
             managers=[
-                ('objects', django.contrib.auth.models.UserManager()),
+                ("objects", django.contrib.auth.models.UserManager()),
             ],
         ),
         migrations.CreateModel(
-            name='ActivityLog',
+            name="ActivityLog",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'type',
+                    "type",
                     models.CharField(
                         choices=[
-                            ('عميل', 'عميل'),
-                            ('طلب', 'طلب'),
-                            ('مخزون', 'مخزون'),
-                            ('تركيب', 'تركيب'),
+                            ("عميل", "عميل"),
+                            ("طلب", "طلب"),
+                            ("مخزون", "مخزون"),
+                            ("تركيب", "تركيب"),
                         ],
                         max_length=20,
                     ),
                 ),
-                ('description', models.TextField()),
-                ('timestamp', models.DateTimeField(auto_now_add=True)),
+                ("description", models.TextField()),
+                ("timestamp", models.DateTimeField(auto_now_add=True)),
                 (
-                    'user',
+                    "user",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='activities',
+                        related_name="activities",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
             ],
             options={
-                'ordering': ['-timestamp'],
+                "ordering": ["-timestamp"],
             },
         ),
         migrations.CreateModel(
-            name='BranchMessage',
+            name="BranchMessage",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('title', models.CharField(max_length=200, verbose_name='العنوان')),
-                ('message', models.TextField(verbose_name='نص الرسالة')),
+                ("title", models.CharField(max_length=200, verbose_name="العنوان")),
+                ("message", models.TextField(verbose_name="نص الرسالة")),
                 (
-                    'message_type',
+                    "message_type",
                     models.CharField(
                         choices=[
-                            ('welcome', 'رسالة ترحيبية'),
-                            ('goal', 'هدف'),
-                            ('announcement', 'إعلان'),
-                            ('holiday', 'إجازة'),
+                            ("welcome", "رسالة ترحيبية"),
+                            ("goal", "هدف"),
+                            ("announcement", "إعلان"),
+                            ("holiday", "إجازة"),
                         ],
-                        default='announcement',
+                        default="announcement",
                         max_length=20,
-                        verbose_name='نوع الرسالة',
+                        verbose_name="نوع الرسالة",
                     ),
                 ),
                 (
-                    'color',
+                    "color",
                     models.CharField(
-                        default='primary', max_length=50, verbose_name='لون الرسالة'
+                        default="primary", max_length=50, verbose_name="لون الرسالة"
                     ),
                 ),
                 (
-                    'icon',
+                    "icon",
                     models.CharField(
-                        default='fas fa-bell', max_length=50, verbose_name='الأيقونة'
+                        default="fas fa-bell", max_length=50, verbose_name="الأيقونة"
                     ),
                 ),
-                ('start_date', models.DateTimeField(verbose_name='تاريخ البداية')),
-                ('end_date', models.DateTimeField(verbose_name='تاريخ النهاية')),
-                ('is_active', models.BooleanField(default=True, verbose_name='نشط')),
+                ("start_date", models.DateTimeField(verbose_name="تاريخ البداية")),
+                ("end_date", models.DateTimeField(verbose_name="تاريخ النهاية")),
+                ("is_active", models.BooleanField(default=True, verbose_name="نشط")),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'updated_at',
-                    models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث'),
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث"),
                 ),
                 (
-                    'branch',
+                    "branch",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='messages',
-                        to='accounts.branch',
-                        verbose_name='الفرع',
+                        related_name="messages",
+                        to="accounts.branch",
+                        verbose_name="الفرع",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'رسالة الفرع',
-                'verbose_name_plural': 'رسائل الفروع',
-                'ordering': ['-created_at'],
+                "verbose_name": "رسالة الفرع",
+                "verbose_name_plural": "رسائل الفروع",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='Department',
+            name="Department",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('name', models.CharField(max_length=100, verbose_name='الاسم')),
+                ("name", models.CharField(max_length=100, verbose_name="الاسم")),
                 (
-                    'code',
-                    models.CharField(max_length=50, unique=True, verbose_name='الرمز'),
+                    "code",
+                    models.CharField(max_length=50, unique=True, verbose_name="الرمز"),
                 ),
                 (
-                    'department_type',
+                    "department_type",
                     models.CharField(
                         choices=[
-                            ('administration', 'إدارة'),
-                            ('department', 'قسم'),
-                            ('unit', 'وحدة'),
+                            ("administration", "إدارة"),
+                            ("department", "قسم"),
+                            ("unit", "وحدة"),
                         ],
-                        default='department',
+                        default="department",
                         max_length=20,
-                        verbose_name='النوع',
+                        verbose_name="النوع",
                     ),
                 ),
                 (
-                    'description',
-                    models.TextField(blank=True, null=True, verbose_name='الوصف'),
+                    "description",
+                    models.TextField(blank=True, null=True, verbose_name="الوصف"),
                 ),
                 (
-                    'icon',
+                    "icon",
                     models.CharField(
                         blank=True,
-                        help_text='Font Awesome icon name',
+                        help_text="Font Awesome icon name",
                         max_length=50,
                         null=True,
-                        verbose_name='الأيقونة',
+                        verbose_name="الأيقونة",
                     ),
                 ),
                 (
-                    'url_name',
+                    "url_name",
                     models.CharField(
-                        blank=True, max_length=100, null=True, verbose_name='اسم الرابط'
+                        blank=True, max_length=100, null=True, verbose_name="اسم الرابط"
                     ),
                 ),
-                ('is_active', models.BooleanField(default=True, verbose_name='نشط')),
+                ("is_active", models.BooleanField(default=True, verbose_name="نشط")),
                 (
-                    'is_core',
+                    "is_core",
                     models.BooleanField(
                         default=False,
-                        help_text='حدد هذا الخيار إذا كان هذا القسم من أقسام النظام الأساسية التي لا يمكن حذفها أو تعديلها',
-                        verbose_name='قسم أساسي',
+                        help_text="حدد هذا الخيار إذا كان هذا القسم من أقسام النظام الأساسية التي لا يمكن حذفها أو تعديلها",
+                        verbose_name="قسم أساسي",
                     ),
                 ),
                 (
-                    'order',
-                    models.PositiveIntegerField(default=0, verbose_name='الترتيب'),
+                    "order",
+                    models.PositiveIntegerField(default=0, verbose_name="الترتيب"),
                 ),
                 (
-                    'has_pages',
+                    "has_pages",
                     models.BooleanField(
                         default=False,
-                        help_text='حدد هذا الخيار إذا كان هذا القسم يحتوي على صفحات متعددة',
-                        verbose_name='يحتوي على صفحات',
+                        help_text="حدد هذا الخيار إذا كان هذا القسم يحتوي على صفحات متعددة",
+                        verbose_name="يحتوي على صفحات",
                     ),
                 ),
                 (
-                    'manager',
+                    "manager",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='managed_departments',
+                        related_name="managed_departments",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='المدير',
+                        verbose_name="المدير",
                     ),
                 ),
                 (
-                    'parent',
+                    "parent",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='children',
-                        to='accounts.department',
-                        verbose_name='القسم الرئيسي',
+                        related_name="children",
+                        to="accounts.department",
+                        verbose_name="القسم الرئيسي",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'قسم',
-                'verbose_name_plural': 'الأقسام',
-                'ordering': ['order', 'name'],
+                "verbose_name": "قسم",
+                "verbose_name_plural": "الأقسام",
+                "ordering": ["order", "name"],
             },
         ),
         migrations.AddField(
-            model_name='user',
-            name='departments',
+            model_name="user",
+            name="departments",
             field=models.ManyToManyField(
                 blank=True,
-                related_name='users',
-                to='accounts.department',
-                verbose_name='الأقسام',
+                related_name="users",
+                to="accounts.department",
+                verbose_name="الأقسام",
             ),
         ),
         migrations.CreateModel(
-            name='Employee',
+            name="Employee",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('name', models.CharField(max_length=100, verbose_name='اسم الموظف')),
+                ("name", models.CharField(max_length=100, verbose_name="اسم الموظف")),
                 (
-                    'employee_id',
+                    "employee_id",
                     models.CharField(
-                        max_length=50, unique=True, verbose_name='رقم الموظف'
+                        max_length=50, unique=True, verbose_name="رقم الموظف"
                     ),
                 ),
-                ('is_active', models.BooleanField(default=True, verbose_name='نشط')),
+                ("is_active", models.BooleanField(default=True, verbose_name="نشط")),
                 (
-                    'branch',
+                    "branch",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='employees',
-                        to='accounts.branch',
-                        verbose_name='الفرع',
+                        related_name="employees",
+                        to="accounts.branch",
+                        verbose_name="الفرع",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'موظف',
-                'verbose_name_plural': 'الموظفون',
-                'ordering': ['name'],
+                "verbose_name": "موظف",
+                "verbose_name_plural": "الموظفون",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='FormField',
+            name="FormField",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'form_type',
+                    "form_type",
                     models.CharField(
                         choices=[
-                            ('customer', 'نموذج العميل'),
-                            ('order', 'نموذج الطلب'),
-                            ('inspection', 'نموذج المعاينة'),
-                            ('installation', 'نموذج التركيب'),
-                            ('product', 'نموذج المنتج'),
+                            ("customer", "نموذج العميل"),
+                            ("order", "نموذج الطلب"),
+                            ("inspection", "نموذج المعاينة"),
+                            ("installation", "نموذج التركيب"),
+                            ("product", "نموذج المنتج"),
                         ],
                         max_length=20,
                     ),
                 ),
-                ('field_name', models.CharField(max_length=100)),
-                ('field_label', models.CharField(max_length=200)),
+                ("field_name", models.CharField(max_length=100)),
+                ("field_label", models.CharField(max_length=200)),
                 (
-                    'field_type',
+                    "field_type",
                     models.CharField(
                         choices=[
-                            ('text', 'نص'),
-                            ('number', 'رقم'),
-                            ('email', 'بريد إلكتروني'),
-                            ('phone', 'هاتف'),
-                            ('date', 'تاريخ'),
-                            ('select', 'قائمة اختيار'),
-                            ('checkbox', 'مربع اختيار'),
-                            ('radio', 'زر اختيار'),
-                            ('textarea', 'منطقة نص'),
-                            ('file', 'ملف'),
+                            ("text", "نص"),
+                            ("number", "رقم"),
+                            ("email", "بريد إلكتروني"),
+                            ("phone", "هاتف"),
+                            ("date", "تاريخ"),
+                            ("select", "قائمة اختيار"),
+                            ("checkbox", "مربع اختيار"),
+                            ("radio", "زر اختيار"),
+                            ("textarea", "منطقة نص"),
+                            ("file", "ملف"),
                         ],
                         max_length=20,
                     ),
                 ),
-                ('required', models.BooleanField(default=False)),
-                ('enabled', models.BooleanField(default=True)),
-                ('order', models.PositiveIntegerField(default=0)),
+                ("required", models.BooleanField(default=False)),
+                ("enabled", models.BooleanField(default=True)),
+                ("order", models.PositiveIntegerField(default=0)),
                 (
-                    'choices',
+                    "choices",
                     models.TextField(
                         blank=True,
-                        help_text='قائمة الخيارات مفصولة بفواصل (للحقول من نوع select, radio, checkbox)',
+                        help_text="قائمة الخيارات مفصولة بفواصل (للحقول من نوع select, radio, checkbox)",
                         null=True,
                     ),
                 ),
                 (
-                    'default_value',
+                    "default_value",
                     models.CharField(blank=True, max_length=255, null=True),
                 ),
-                ('help_text', models.CharField(blank=True, max_length=255, null=True)),
-                ('min_length', models.PositiveIntegerField(blank=True, null=True)),
-                ('max_length', models.PositiveIntegerField(blank=True, null=True)),
-                ('min_value', models.FloatField(blank=True, null=True)),
-                ('max_value', models.FloatField(blank=True, null=True)),
+                ("help_text", models.CharField(blank=True, max_length=255, null=True)),
+                ("min_length", models.PositiveIntegerField(blank=True, null=True)),
+                ("max_length", models.PositiveIntegerField(blank=True, null=True)),
+                ("min_value", models.FloatField(blank=True, null=True)),
+                ("max_value", models.FloatField(blank=True, null=True)),
             ],
             options={
-                'verbose_name': 'حقل نموذج',
-                'verbose_name_plural': 'حقول النماذج',
-                'unique_together': {('form_type', 'field_name')},
+                "verbose_name": "حقل نموذج",
+                "verbose_name_plural": "حقول النماذج",
+                "unique_together": {("form_type", "field_name")},
             },
         ),
         migrations.CreateModel(
-            name='Notification',
+            name="Notification",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('title', models.CharField(max_length=200)),
-                ('message', models.TextField()),
+                ("title", models.CharField(max_length=200)),
+                ("message", models.TextField()),
                 (
-                    'priority',
+                    "priority",
                     models.CharField(
                         choices=[
-                            ('low', 'منخفضة'),
-                            ('medium', 'متوسطة'),
-                            ('high', 'عالية'),
+                            ("low", "منخفضة"),
+                            ("medium", "متوسطة"),
+                            ("high", "عالية"),
                         ],
-                        default='medium',
+                        default="medium",
                         max_length=10,
                     ),
                 ),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('read_at', models.DateTimeField(blank=True, null=True)),
-                ('is_read', models.BooleanField(default=False)),
-                ('object_id', models.PositiveIntegerField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("read_at", models.DateTimeField(blank=True, null=True)),
+                ("is_read", models.BooleanField(default=False)),
+                ("object_id", models.PositiveIntegerField(blank=True, null=True)),
                 (
-                    'content_type',
+                    "content_type",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.CASCADE,
-                        to='contenttypes.contenttype',
+                        to="contenttypes.contenttype",
                     ),
                 ),
                 (
-                    'read_by',
+                    "read_by",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='read_notifications',
+                        related_name="read_notifications",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
                 (
-                    'sender',
+                    "sender",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='sent_notifications',
+                        related_name="sent_notifications",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
                 (
-                    'sender_department',
+                    "sender_department",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name='sent_notifications',
-                        to='accounts.department',
+                        related_name="sent_notifications",
+                        to="accounts.department",
                     ),
                 ),
                 (
-                    'target_branch',
+                    "target_branch",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.CASCADE,
-                        to='accounts.branch',
+                        to="accounts.branch",
                     ),
                 ),
                 (
-                    'target_department',
+                    "target_department",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.CASCADE,
-                        to='accounts.department',
+                        to="accounts.department",
                     ),
                 ),
                 (
-                    'target_users',
+                    "target_users",
                     models.ManyToManyField(
                         blank=True,
-                        related_name='received_notifications',
+                        related_name="received_notifications",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'إشعار',
-                'verbose_name_plural': 'الإشعارات',
-                'ordering': ['-created_at'],
+                "verbose_name": "إشعار",
+                "verbose_name_plural": "الإشعارات",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='Role',
+            name="Role",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'name',
+                    "name",
                     models.CharField(
-                        max_length=100, unique=True, verbose_name='اسم الدور'
+                        max_length=100, unique=True, verbose_name="اسم الدور"
                     ),
                 ),
                 (
-                    'description',
-                    models.TextField(blank=True, null=True, verbose_name='وصف الدور'),
+                    "description",
+                    models.TextField(blank=True, null=True, verbose_name="وصف الدور"),
                 ),
                 (
-                    'is_system_role',
+                    "is_system_role",
                     models.BooleanField(
                         default=False,
-                        help_text='تحديد ما إذا كان هذا الدور من أدوار النظام الأساسية التي لا يمكن تعديلها',
-                        verbose_name='دور نظام',
+                        help_text="تحديد ما إذا كان هذا الدور من أدوار النظام الأساسية التي لا يمكن تعديلها",
+                        verbose_name="دور نظام",
                     ),
                 ),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'updated_at',
-                    models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث'),
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث"),
                 ),
                 (
-                    'permissions',
+                    "permissions",
                     models.ManyToManyField(
-                        blank=True, to='auth.permission', verbose_name='الصلاحيات'
+                        blank=True, to="auth.permission", verbose_name="الصلاحيات"
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'دور',
-                'verbose_name_plural': 'الأدوار',
-                'ordering': ['name'],
+                "verbose_name": "دور",
+                "verbose_name_plural": "الأدوار",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Salesperson',
+            name="Salesperson",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
-                ('name', models.CharField(max_length=100, verbose_name='اسم البائع')),
+                ("name", models.CharField(max_length=100, verbose_name="اسم البائع")),
                 (
-                    'employee_number',
+                    "employee_number",
                     models.CharField(
                         blank=True,
                         max_length=50,
                         null=True,
-                        verbose_name='الرقم الوظيفي',
+                        verbose_name="الرقم الوظيفي",
                     ),
                 ),
                 (
-                    'phone',
+                    "phone",
                     models.CharField(
-                        blank=True, max_length=20, verbose_name='رقم الهاتف'
+                        blank=True, max_length=20, verbose_name="رقم الهاتف"
                     ),
                 ),
                 (
-                    'email',
+                    "email",
                     models.EmailField(
                         blank=True,
                         max_length=254,
                         null=True,
-                        verbose_name='البريد الإلكتروني',
+                        verbose_name="البريد الإلكتروني",
                     ),
                 ),
                 (
-                    'address',
-                    models.TextField(blank=True, null=True, verbose_name='العنوان'),
+                    "address",
+                    models.TextField(blank=True, null=True, verbose_name="العنوان"),
                 ),
-                ('is_active', models.BooleanField(default=True, verbose_name='نشط')),
-                ('notes', models.TextField(blank=True, verbose_name='ملاحظات')),
+                ("is_active", models.BooleanField(default=True, verbose_name="نشط")),
+                ("notes", models.TextField(blank=True, verbose_name="ملاحظات")),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'updated_at',
-                    models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث'),
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث"),
                 ),
                 (
-                    'branch',
+                    "branch",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='salespersons',
-                        to='accounts.branch',
-                        verbose_name='الفرع',
+                        related_name="salespersons",
+                        to="accounts.branch",
+                        verbose_name="الفرع",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'بائع',
-                'verbose_name_plural': 'البائعون',
-                'ordering': ['name'],
+                "verbose_name": "بائع",
+                "verbose_name_plural": "البائعون",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='UserRole',
+            name="UserRole",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'assigned_at',
+                    "assigned_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإسناد'
+                        auto_now_add=True, verbose_name="تاريخ الإسناد"
                     ),
                 ),
                 (
-                    'role',
+                    "role",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='user_roles',
-                        to='accounts.role',
-                        verbose_name='الدور',
+                        related_name="user_roles",
+                        to="accounts.role",
+                        verbose_name="الدور",
                     ),
                 ),
                 (
-                    'user',
+                    "user",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='user_roles',
+                        related_name="user_roles",
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='المستخدم',
+                        verbose_name="المستخدم",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'دور المستخدم',
-                'verbose_name_plural': 'أدوار المستخدمين',
-                'unique_together': {('user', 'role')},
+                "verbose_name": "دور المستخدم",
+                "verbose_name_plural": "أدوار المستخدمين",
+                "unique_together": {("user", "role")},
             },
         ),
     ]

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ production_line.name }} - {{ now|date:"Y/m/d" }}</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <title>{{ production_line.name }} - {{ now|date:"Y/m/d" }}</title>
+        <style>
         @page {
             size: A4;
             margin: 1.5cm;
@@ -84,133 +84,125 @@
                 border: 1px solid black !important;
             }
         }
-    </style>
-    <script>
+        </style>
+        <script>
         // Auto print when page loads
         window.addEventListener('load', function() {
             setTimeout(function() {
                 window.print();
             }, 500);
         });
-    </script>
-</head>
-<body>
-    <div class="header">
-        <h1>{{ production_line.name }}</h1>
-        <p>تاريخ التقرير: {{ now|date:"Y/m/d H:i" }} | إجمالي الطلبات: {{ total_orders }}</p>
-        {% if production_line.description %}
-        <p>{{ production_line.description }}</p>
-        {% endif %}
-
-        {% if has_filters %}
-        <div style="margin-top: 10px; font-size: 11px; border-top: 1px solid #000; padding-top: 10px;">
-            <strong>الفلاتر المطبقة:</strong>
-            {% if applied_filters.status %}
-                الحالة: {{ applied_filters.status|join:", " }} |
-            {% endif %}
-            {% if applied_filters.branch %}
-                الفرع: {{ applied_filters.branch|join:", " }} |
-            {% endif %}
-            {% if applied_filters.order_type %}
-                نوع الطلب: {{ applied_filters.order_type|join:", " }} |
-            {% endif %}
-            {% if applied_filters.date_from %}
-                من تاريخ: {{ applied_filters.date_from }} |
-            {% endif %}
-            {% if applied_filters.date_to %}
-                إلى تاريخ: {{ applied_filters.date_to }} |
-            {% endif %}
-            {% if applied_filters.overdue %}
-                الطلبات المتأخرة فقط |
+        </script>
+    </head>
+    <body>
+        <div class="header">
+            <h1>{{ production_line.name }}</h1>
+            <p>تاريخ التقرير: {{ now|date:"Y/m/d H:i" }} | إجمالي الطلبات: {{ total_orders }}</p>
+            {% if production_line.description %}<p>{{ production_line.description }}</p>{% endif %}
+            {% if has_filters %}
+                <div style="margin-top: 10px;
+                            font-size: 11px;
+                            border-top: 1px solid #000;
+                            padding-top: 10px">
+                    <strong>الفلاتر المطبقة:</strong>
+                    {% if applied_filters.status %}الحالة: {{ applied_filters.status|join:", " }} |{% endif %}
+                    {% if applied_filters.branch %}الفرع: {{ applied_filters.branch|join:", " }} |{% endif %}
+                    {% if applied_filters.order_type %}نوع الطلب: {{ applied_filters.order_type|join:", " }} |{% endif %}
+                    {% if applied_filters.date_from %}من تاريخ: {{ applied_filters.date_from }} |{% endif %}
+                    {% if applied_filters.date_to %}إلى تاريخ: {{ applied_filters.date_to }} |{% endif %}
+                    {% if applied_filters.overdue %}الطلبات المتأخرة فقط |{% endif %}
+                </div>
             {% endif %}
         </div>
-        {% endif %}
-    </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>رقم الطلب</th>
-                <th>رقم العقد</th>
-                <th>رقم الفاتورة</th>
-                <th>العميل</th>
-                <th>نوع الطلب</th>
-                <th>الحالة</th>
-                <th>تاريخ الطلب</th>
-                <th>التسليم المتوقع</th>
-                <th>الفرع</th>
-                <th>البائع</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for order in orders %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td class="font-weight-bold">{{ order.manufacturing_code }}</td>
-                <td>
-                    {% if order.contract_number %}
-                        {{ order.contract_number }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if order.invoice_number %}
-                        {{ order.invoice_number }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if order.order.customer %}
-                        {{ order.order.customer.name|truncatechars:20 }}
-                        {% if order.order.customer.phone %}
-                        <br>{{ order.order.customer.phone }}
-                        {% endif %}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>{{ order.get_order_type_display }}</td>
-                <td>{{ order.get_status_display }}</td>
-                <td>{{ order.order_date|date:"Y-m-d" }}</td>
-                <td>
-                    {% if order.expected_delivery_date %}
-                        {{ order.expected_delivery_date|date:"Y-m-d" }}
-                        {% now "Y-m-d" as today %}
-                        {% if order.expected_delivery_date|date:"Y-m-d" < today and order.status not in 'completed,ready_install,delivered' %}
-                            <br>(متأخر)
-                        {% endif %}
-                    {% else %}
-                        غير محدد
-                    {% endif %}
-                </td>
-                <td>
-                    {% if order.order.branch %}
-                        {{ order.order.branch.name|truncatechars:15 }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if order.order.salesperson %}
-                        {{ order.order.salesperson.name|truncatechars:15 }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="11" class="text-center" style="padding: 20px;">لا توجد طلبات</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <div style="margin-top: 20px; text-align: center; font-size: 10px; border-top: 1px solid #000; padding-top: 10px;">
-        <p>تم إنشاء التقرير في: {{ now|date:"Y/m/d H:i" }} | خط الإنتاج: {{ production_line.name }}</p>
-    </div>
-</body>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>رقم الطلب</th>
+                    <th>رقم العقد</th>
+                    <th>رقم الفاتورة</th>
+                    <th>العميل</th>
+                    <th>نوع الطلب</th>
+                    <th>الحالة</th>
+                    <th>تاريخ الطلب</th>
+                    <th>التسليم المتوقع</th>
+                    <th>الفرع</th>
+                    <th>البائع</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td class="font-weight-bold">{{ order.manufacturing_code }}</td>
+                        <td>
+                            {% if order.contract_number %}
+                                {{ order.contract_number }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.invoice_number %}
+                                {{ order.invoice_number }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.order.customer %}
+                                {{ order.order.customer.name|truncatechars:20 }}
+                                {% if order.order.customer.phone %}
+                                    <br>
+                                    {{ order.order.customer.phone }}
+                                {% endif %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ order.get_order_type_display }}</td>
+                        <td>{{ order.get_status_display }}</td>
+                        <td>{{ order.order_date|date:"Y-m-d" }}</td>
+                        <td>
+                            {% if order.expected_delivery_date %}
+                                {{ order.expected_delivery_date|date:"Y-m-d" }}
+                                {% now "Y-m-d" as today %}
+                                {% if order.expected_delivery_date|date:"Y-m-d" < today and order.status not in 'completed,ready_install,delivered' %}
+                                    <br>
+                                    (متأخر)
+                                {% endif %}
+                            {% else %}
+                                غير محدد
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.order.branch %}
+                                {{ order.order.branch.name|truncatechars:15 }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.order.salesperson %}
+                                {{ order.order.salesperson.name|truncatechars:15 }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="11" class="text-center" style="padding: 20px;">لا توجد طلبات</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div style="margin-top: 20px;
+                    text-align: center;
+                    font-size: 10px;
+                    border-top: 1px solid #000;
+                    padding-top: 10px">
+            <p>تم إنشاء التقرير في: {{ now|date:"Y/m/d H:i" }} | خط الإنتاج: {{ production_line.name }}</p>
+        </div>
+    </body>
 </html>

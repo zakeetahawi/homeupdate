@@ -12,266 +12,266 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('orders', '0001_initial'),
+        ("orders", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ManufacturingOrder',
+            name="ManufacturingOrder",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'contract_number',
+                    "contract_number",
                     models.CharField(
-                        blank=True, max_length=100, null=True, verbose_name='رقم العقد'
+                        blank=True, max_length=100, null=True, verbose_name="رقم العقد"
                     ),
                 ),
                 (
-                    'invoice_number',
+                    "invoice_number",
                     models.CharField(
                         blank=True,
                         max_length=100,
                         null=True,
-                        verbose_name='رقم الفاتورة',
+                        verbose_name="رقم الفاتورة",
                     ),
                 ),
                 (
-                    'contract_file',
+                    "contract_file",
                     models.FileField(
                         blank=True,
                         null=True,
-                        upload_to='manufacturing/contracts/%Y/%m/%d/',
+                        upload_to="manufacturing/contracts/%Y/%m/%d/",
                         validators=[
                             django.core.validators.FileExtensionValidator(
                                 allowed_extensions=[
-                                    'pdf',
-                                    'doc',
-                                    'docx',
-                                    'jpg',
-                                    'jpeg',
-                                    'png',
+                                    "pdf",
+                                    "doc",
+                                    "docx",
+                                    "jpg",
+                                    "jpeg",
+                                    "png",
                                 ]
                             )
                         ],
-                        verbose_name='ملف العقد',
+                        verbose_name="ملف العقد",
                     ),
                 ),
                 (
-                    'inspection_file',
+                    "inspection_file",
                     models.FileField(
                         blank=True,
                         null=True,
-                        upload_to='manufacturing/inspections/%Y/%m/%d/',
+                        upload_to="manufacturing/inspections/%Y/%m/%d/",
                         validators=[
                             django.core.validators.FileExtensionValidator(
                                 allowed_extensions=[
-                                    'pdf',
-                                    'doc',
-                                    'docx',
-                                    'jpg',
-                                    'jpeg',
-                                    'png',
+                                    "pdf",
+                                    "doc",
+                                    "docx",
+                                    "jpg",
+                                    "jpeg",
+                                    "png",
                                 ]
                             )
                         ],
-                        verbose_name='ملف المعاينة',
+                        verbose_name="ملف المعاينة",
                     ),
                 ),
                 (
-                    'order_date',
+                    "order_date",
                     models.DateField(
                         default=django.utils.timezone.now,
-                        verbose_name='تاريخ استلام الطلب',
+                        verbose_name="تاريخ استلام الطلب",
                     ),
                 ),
                 (
-                    'expected_delivery_date',
-                    models.DateField(verbose_name='تاريخ التسليم المتوقع'),
+                    "expected_delivery_date",
+                    models.DateField(verbose_name="تاريخ التسليم المتوقع"),
                 ),
                 (
-                    'order_type',
+                    "order_type",
                     models.CharField(
                         choices=[
-                            ('installation', 'تركيب'),
-                            ('custom', 'تفصيل'),
-                            ('accessory', 'اكسسوار'),
+                            ("installation", "تركيب"),
+                            ("custom", "تفصيل"),
+                            ("accessory", "اكسسوار"),
                         ],
                         max_length=20,
-                        verbose_name='نوع الطلب',
+                        verbose_name="نوع الطلب",
                     ),
                 ),
                 (
-                    'status',
+                    "status",
                     models.CharField(
                         choices=[
-                            ('pending_approval', 'قيد الموافقة'),
-                            ('pending', 'قيد الانتظار'),
-                            ('in_progress', 'قيد التصنيع'),
-                            ('ready_install', 'جاهز للتركيب'),
-                            ('completed', 'مكتمل'),
-                            ('delivered', 'تم التسليم'),
-                            ('rejected', 'مرفوض'),
-                            ('cancelled', 'ملغي'),
+                            ("pending_approval", "قيد الموافقة"),
+                            ("pending", "قيد الانتظار"),
+                            ("in_progress", "قيد التصنيع"),
+                            ("ready_install", "جاهز للتركيب"),
+                            ("completed", "مكتمل"),
+                            ("delivered", "تم التسليم"),
+                            ("rejected", "مرفوض"),
+                            ("cancelled", "ملغي"),
                         ],
-                        default='pending_approval',
+                        default="pending_approval",
                         max_length=30,
-                        verbose_name='حالة الطلب',
+                        verbose_name="حالة الطلب",
                     ),
                 ),
                 (
-                    'exit_permit_number',
+                    "exit_permit_number",
                     models.CharField(
                         blank=True,
                         max_length=100,
                         null=True,
-                        verbose_name='رقم إذن الخروج',
+                        verbose_name="رقم إذن الخروج",
                     ),
                 ),
                 (
-                    'delivery_permit_number',
+                    "delivery_permit_number",
                     models.CharField(
                         blank=True,
                         max_length=100,
                         null=True,
-                        verbose_name='رقم إذن التسليم',
+                        verbose_name="رقم إذن التسليم",
                     ),
                 ),
                 (
-                    'delivery_recipient_name',
+                    "delivery_recipient_name",
                     models.CharField(
                         blank=True,
                         max_length=200,
                         null=True,
-                        verbose_name='اسم المستلم',
+                        verbose_name="اسم المستلم",
                     ),
                 ),
                 (
-                    'delivery_date',
+                    "delivery_date",
                     models.DateTimeField(
-                        blank=True, null=True, verbose_name='تاريخ التسليم'
+                        blank=True, null=True, verbose_name="تاريخ التسليم"
                     ),
                 ),
                 (
-                    'notes',
-                    models.TextField(blank=True, null=True, verbose_name='ملاحظات'),
+                    "notes",
+                    models.TextField(blank=True, null=True, verbose_name="ملاحظات"),
                 ),
                 (
-                    'rejection_reason',
-                    models.TextField(blank=True, null=True, verbose_name='سبب الرفض'),
+                    "rejection_reason",
+                    models.TextField(blank=True, null=True, verbose_name="سبب الرفض"),
                 ),
                 (
-                    'completion_date',
+                    "completion_date",
                     models.DateTimeField(
                         blank=True,
-                        help_text='يتم تعبئته تلقائياً عند اكتمال التصنيع أو جاهزية المنتج للتركيب',
+                        help_text="يتم تعبئته تلقائياً عند اكتمال التصنيع أو جاهزية المنتج للتركيب",
                         null=True,
-                        verbose_name='تاريخ الانتهاء',
+                        verbose_name="تاريخ الانتهاء",
                     ),
                 ),
                 (
-                    'created_at',
+                    "created_at",
                     models.DateTimeField(
-                        auto_now_add=True, verbose_name='تاريخ الإنشاء'
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
                     ),
                 ),
                 (
-                    'updated_at',
-                    models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث'),
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث"),
                 ),
                 (
-                    'created_by',
+                    "created_by",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
                         to=settings.AUTH_USER_MODEL,
-                        verbose_name='تم الإنشاء بواسطة',
+                        verbose_name="تم الإنشاء بواسطة",
                     ),
                 ),
                 (
-                    'order',
+                    "order",
                     models.OneToOneField(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='manufacturing_order',
-                        to='orders.order',
-                        verbose_name='رقم الطلب',
+                        related_name="manufacturing_order",
+                        to="orders.order",
+                        verbose_name="رقم الطلب",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'أمر تصنيع',
-                'verbose_name_plural': 'أوامر التصنيع',
-                'ordering': ['-created_at'],
-                'permissions': [
-                    ('can_approve_orders', 'يمكن الموافقة على أوامر التصنيع'),
-                    ('can_reject_orders', 'يمكن رفض أوامر التصنيع'),
+                "verbose_name": "أمر تصنيع",
+                "verbose_name_plural": "أوامر التصنيع",
+                "ordering": ["-created_at"],
+                "permissions": [
+                    ("can_approve_orders", "يمكن الموافقة على أوامر التصنيع"),
+                    ("can_reject_orders", "يمكن رفض أوامر التصنيع"),
                 ],
             },
         ),
         migrations.CreateModel(
-            name='ManufacturingOrderItem',
+            name="ManufacturingOrderItem",
             fields=[
                 (
-                    'id',
+                    "id",
                     models.BigAutoField(
                         auto_created=True,
                         primary_key=True,
                         serialize=False,
-                        verbose_name='ID',
+                        verbose_name="ID",
                     ),
                 ),
                 (
-                    'product_name',
-                    models.CharField(max_length=255, verbose_name='اسم المنتج'),
+                    "product_name",
+                    models.CharField(max_length=255, verbose_name="اسم المنتج"),
                 ),
                 (
-                    'quantity',
-                    models.PositiveIntegerField(default=1, verbose_name='الكمية'),
+                    "quantity",
+                    models.PositiveIntegerField(default=1, verbose_name="الكمية"),
                 ),
                 (
-                    'specifications',
-                    models.TextField(blank=True, null=True, verbose_name='المواصفات'),
+                    "specifications",
+                    models.TextField(blank=True, null=True, verbose_name="المواصفات"),
                 ),
                 (
-                    'status',
+                    "status",
                     models.CharField(
                         choices=[
-                            ('pending_approval', 'قيد الموافقة'),
-                            ('pending', 'قيد الانتظار'),
-                            ('in_progress', 'قيد التصنيع'),
-                            ('ready_install', 'جاهز للتركيب'),
-                            ('completed', 'مكتمل'),
-                            ('delivered', 'تم التسليم'),
-                            ('rejected', 'مرفوض'),
-                            ('cancelled', 'ملغي'),
+                            ("pending_approval", "قيد الموافقة"),
+                            ("pending", "قيد الانتظار"),
+                            ("in_progress", "قيد التصنيع"),
+                            ("ready_install", "جاهز للتركيب"),
+                            ("completed", "مكتمل"),
+                            ("delivered", "تم التسليم"),
+                            ("rejected", "مرفوض"),
+                            ("cancelled", "ملغي"),
                         ],
-                        default='pending',
+                        default="pending",
                         max_length=30,
-                        verbose_name='حالة العنصر',
+                        verbose_name="حالة العنصر",
                     ),
                 ),
                 (
-                    'manufacturing_order',
+                    "manufacturing_order",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name='items',
-                        to='manufacturing.manufacturingorder',
-                        verbose_name='أمر التصنيع',
+                        related_name="items",
+                        to="manufacturing.manufacturingorder",
+                        verbose_name="أمر التصنيع",
                     ),
                 ),
             ],
             options={
-                'verbose_name': 'عنصر أمر تصنيع',
-                'verbose_name_plural': 'عناصر أوامر التصنيع',
+                "verbose_name": "عنصر أمر تصنيع",
+                "verbose_name_plural": "عناصر أوامر التصنيع",
             },
         ),
     ]

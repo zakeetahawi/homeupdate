@@ -6,21 +6,21 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('whatsapp', '0024_initial_templates_data'),
+        ("whatsapp", "0024_initial_templates_data"),
     ]
 
     operations = [
         # إزالة حقول Twilio من WhatsAppSettings
         migrations.RemoveField(
-            model_name='whatsappsettings',
-            name='api_provider',
+            model_name="whatsappsettings",
+            name="api_provider",
         ),
         migrations.RemoveField(
-            model_name='whatsappsettings',
-            name='account_sid',
+            model_name="whatsappsettings",
+            name="account_sid",
         ),
         migrations.RemoveField(
-            model_name='whatsappsettings',
-            name='auth_token',
+            model_name="whatsappsettings",
+            name="auth_token",
         ),
     ]

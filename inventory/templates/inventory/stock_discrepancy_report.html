@@ -1,183 +1,187 @@
 {% extends 'inventory/inventory_base_custom.html' %}
 {% load static %}
-
 {% block inventory_title %}تقرير التناقضات في المخزون{% endblock %}
-
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
-<li class="breadcrumb-item"><a href="{% url 'inventory:report_list' %}">التقارير</a></li>
-<li class="breadcrumb-item active">تقرير التناقضات</li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a>
+    </li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:report_list' %}">التقارير</a>
+    </li>
+    <li class="breadcrumb-item active">تقرير التناقضات</li>
 {% endblock %}
-
 {% block inventory_content %}
-<div class="container-fluid">
-    <!-- معلومات التقرير -->
-    <div class="alert {% if discrepancies %}alert-warning{% else %}alert-success{% endif %} mb-4">
+    <div class="container-fluid">
+        <!-- معلومات التقرير -->
+        <div class="alert {% if discrepancies %}alert-warning{% else %}alert-success{% endif %} mb-4">
+            {% if discrepancies %}
+                <h5>
+                    <i class="fas fa-exclamation-triangle"></i> تم العثور على {{ discrepancies|length }} تناقض في المخزون
+                </h5>
+                <p class="mb-0">يرجى مراجعة التناقضات التالية وإجراء التسويات اللازمة.</p>
+            {% else %}
+                <h5>
+                    <i class="fas fa-check-circle"></i> لا توجد تناقضات
+                </h5>
+                <p class="mb-0">جميع أرصدة المخزون متطابقة مع الحركات المسجلة.</p>
+            {% endif %}
+        </div>
         {% if discrepancies %}
-        <h5><i class="fas fa-exclamation-triangle"></i> تم العثور على {{ discrepancies|length }} تناقض في المخزون</h5>
-        <p class="mb-0">يرجى مراجعة التناقضات التالية وإجراء التسويات اللازمة.</p>
-        {% else %}
-        <h5><i class="fas fa-check-circle"></i> لا توجد تناقضات</h5>
-        <p class="mb-0">جميع أرصدة المخزون متطابقة مع الحركات المسجلة.</p>
+            <!-- جدول التناقضات -->
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h6 class="mb-0">
+                        <i class="fas fa-not-equal"></i> التناقضات المكتشفة
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>المنتج</th>
+                                    <th>الكود</th>
+                                    <th class="text-center">المتوقع</th>
+                                    <th class="text-center">الفعلي</th>
+                                    <th class="text-center">الفرق</th>
+                                    <th>آخر حركة</th>
+                                    <th>إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in discrepancies %}
+                                    <tr class="{% if item.difference < 0 %}table-danger{% else %}table-warning{% endif %}">
+                                        <td>
+                                            <a href="{% url 'inventory:product_detail' item.product.pk %}">{{ item.product.name|truncatewords:5 }}</a>
+                                        </td>
+                                        <td>
+                                            <code>{{ item.product.code|default:"-" }}</code>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-secondary">{{ item.expected|floatformat:2 }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary">{{ item.actual|floatformat:2 }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if item.difference > 0 %}
+                                                <span class="badge bg-success">+{{ item.difference|floatformat:2 }}</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">{{ item.difference|floatformat:2 }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.last_transaction_date %}
+                                                {{ item.last_transaction_date|date:"Y-m-d" }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{% url 'inventory:product_stock_movement' item.product.pk %}"
+                                                   class="btn btn-outline-info"
+                                                   title="تحليل الحركة">
+                                                    <i class="fas fa-chart-line"></i>
+                                                </a>
+                                                <a href="{% url 'inventory:product_detail' item.product.pk %}"
+                                                   class="btn btn-outline-primary"
+                                                   title="تفاصيل المنتج">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>المتوقع:</strong> مجموع الوارد - مجموع الصادر من جميع الحركات
+                            </small>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>الفعلي:</strong> الرصيد المتحرك في آخر حركة
+                            </small>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>الفرق:</strong> الفعلي - المتوقع
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ملخص -->
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card border-danger">
+                        <div class="card-body text-center">
+                            <h4 class="text-danger">
+                                {% with negative_count=0 %}
+                                    {% for item in discrepancies %}
+                                        {% if item.difference < 0 %}
+                                            {% with negative_count=negative_count|add:1 %}{% endwith %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ discrepancies|length }}
+                                {% endwith %}
+                            </h4>
+                            <p class="mb-0 text-muted">تناقضات بالنقص</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-warning">
+                        <div class="card-body text-center">
+                            <h4 class="text-warning">{{ discrepancies|length }}</h4>
+                            <p class="mb-0 text-muted">إجمالي التناقضات</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <h4 class="text-success">
+                                {% with positive_count=0 %}
+                                    {% for item in discrepancies %}
+                                        {% if item.difference > 0 %}
+                                            {% with positive_count=positive_count|add:1 %}{% endwith %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ discrepancies|length }}
+                                {% endwith %}
+                            </h4>
+                            <p class="mb-0 text-muted">تناقضات بالزيادة</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         {% endif %}
-    </div>
-
-    {% if discrepancies %}
-    <!-- جدول التناقضات -->
-    <div class="card">
-        <div class="card-header bg-warning">
-            <h6 class="mb-0"><i class="fas fa-not-equal"></i> التناقضات المكتشفة</h6>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>المنتج</th>
-                            <th>الكود</th>
-                            <th class="text-center">المتوقع</th>
-                            <th class="text-center">الفعلي</th>
-                            <th class="text-center">الفرق</th>
-                            <th>آخر حركة</th>
-                            <th>إجراء</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in discrepancies %}
-                        <tr class="{% if item.difference < 0 %}table-danger{% else %}table-warning{% endif %}">
-                            <td>
-                                <a href="{% url 'inventory:product_detail' item.product.pk %}">
-                                    {{ item.product.name|truncatewords:5 }}
-                                </a>
-                            </td>
-                            <td><code>{{ item.product.code|default:"-" }}</code></td>
-                            <td class="text-center">
-                                <span class="badge bg-secondary">{{ item.expected|floatformat:2 }}</span>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-primary">{{ item.actual|floatformat:2 }}</span>
-                            </td>
-                            <td class="text-center">
-                                {% if item.difference > 0 %}
-                                <span class="badge bg-success">+{{ item.difference|floatformat:2 }}</span>
-                                {% else %}
-                                <span class="badge bg-danger">{{ item.difference|floatformat:2 }}</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if item.last_transaction_date %}
-                                {{ item.last_transaction_date|date:"Y-m-d" }}
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'inventory:product_stock_movement' item.product.pk %}" 
-                                       class="btn btn-outline-info" title="تحليل الحركة">
-                                        <i class="fas fa-chart-line"></i>
-                                    </a>
-                                    <a href="{% url 'inventory:product_detail' item.product.pk %}" 
-                                       class="btn btn-outline-primary" title="تفاصيل المنتج">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card-footer bg-light">
-            <div class="row">
-                <div class="col-md-4">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>المتوقع:</strong> مجموع الوارد - مجموع الصادر من جميع الحركات
-                    </small>
-                </div>
-                <div class="col-md-4">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>الفعلي:</strong> الرصيد المتحرك في آخر حركة
-                    </small>
-                </div>
-                <div class="col-md-4">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>الفرق:</strong> الفعلي - المتوقع
-                    </small>
+        <!-- أزرار الإجراءات -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <a href="{% url 'inventory:report_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> العودة للتقارير
+                        </a>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button onclick="window.print()" class="btn btn-outline-primary">
+                            <i class="fas fa-print"></i> طباعة التقرير
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- ملخص -->
-    <div class="row mt-4">
-        <div class="col-md-4">
-            <div class="card border-danger">
-                <div class="card-body text-center">
-                    <h4 class="text-danger">
-                        {% with negative_count=0 %}
-                        {% for item in discrepancies %}
-                        {% if item.difference < 0 %}
-                        {% with negative_count=negative_count|add:1 %}{% endwith %}
-                        {% endif %}
-                        {% endfor %}
-                        {{ discrepancies|length }}
-                        {% endwith %}
-                    </h4>
-                    <p class="mb-0 text-muted">تناقضات بالنقص</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-warning">
-                <div class="card-body text-center">
-                    <h4 class="text-warning">
-                        {{ discrepancies|length }}
-                    </h4>
-                    <p class="mb-0 text-muted">إجمالي التناقضات</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-success">
-                <div class="card-body text-center">
-                    <h4 class="text-success">
-                        {% with positive_count=0 %}
-                        {% for item in discrepancies %}
-                        {% if item.difference > 0 %}
-                        {% with positive_count=positive_count|add:1 %}{% endwith %}
-                        {% endif %}
-                        {% endfor %}
-                        {{ discrepancies|length }}
-                        {% endwith %}
-                    </h4>
-                    <p class="mb-0 text-muted">تناقضات بالزيادة</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- أزرار الإجراءات -->
-    <div class="card mt-4">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <a href="{% url 'inventory:report_list' %}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> العودة للتقارير
-                    </a>
-                </div>
-                <div class="col-md-6 text-end">
-                    <button onclick="window.print()" class="btn btn-outline-primary">
-                        <i class="fas fa-print"></i> طباعة التقرير
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}

@@ -1,213 +1,229 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load order_extras %}
-
 {% block title %}إدارة مديونية العميل - {{ order.order_number }}{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Heading -->
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-exclamation-triangle text-danger"></i>
-            إدارة مديونية العميل
-        </h1>
-        <div>
-            <a href="{% url 'orders:order_detail_by_number' order.order_number %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i>
-                العودة للطلب
-            </a>
+    <div class="container-fluid">
+        <!-- Page Heading -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-exclamation-triangle text-danger"></i>
+                إدارة مديونية العميل
+            </h1>
+            <div>
+                <a href="{% url 'orders:order_detail_by_number' order.order_number %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    العودة للطلب
+                </a>
+            </div>
         </div>
-    </div>
-
-    <!-- معلومات الطلب -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header py-3 bg-primary text-white">
-                    <h6 class="m-0 font-weight-bold">
-                        <i class="fas fa-file-invoice"></i>
-                        معلومات الطلب
-                    </h6>
+        <!-- معلومات الطلب -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header py-3 bg-primary text-white">
+                        <h6 class="m-0 font-weight-bold">
+                            <i class="fas fa-file-invoice"></i>
+                            معلومات الطلب
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <p>
+                                    <strong>رقم الطلب:</strong> {{ order.order_number }}
+                                </p>
+                            </div>
+                            <div class="col-md-3">
+                                <p>
+                                    <strong>العميل:</strong> {{ order.customer.name }}
+                                </p>
+                            </div>
+                            <div class="col-md-3">
+                                <p>
+                                    <strong>الهاتف:</strong> {{ order.customer.phone }}
+                                </p>
+                            </div>
+                            <div class="col-md-3">
+                                <p>
+                                    <strong>الفرع:</strong> {{ order.branch.name }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-3">
+                                <p>
+                                    <strong>المبلغ الإجمالي:</strong> <span class="text-primary">{{ order.total_amount|currency_format }}</span>
+                                </p>
+                            </div>
+                            <div class="col-md-3">
+                                <p>
+                                    <strong>المبلغ المدفوع:</strong> <span class="text-success">{{ order.paid_amount|currency_format }}</span>
+                                </p>
+                            </div>
+                            <div class="col-md-3">
+                                <p>
+                                    <strong>المبلغ المتبقي:</strong> <span class="text-danger font-weight-bold">{{ order.debt_amount|currency_format }}</span>
+                                </p>
+                            </div>
+                            <div class="col-md-3">
+                                <p>
+                                    <strong>البائع:</strong> {{ order.salesperson.get_display_name|default:"غير محدد" }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-12">
+                                <p>
+                                    <strong>الحالة:</strong>
+                                    {% if debt.is_paid %}
+                                        <span class="badge badge-success badge-lg">
+                                            <i class="fas fa-check-circle"></i> تم الدفع
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-danger badge-lg">
+                                            <i class="fas fa-exclamation-triangle"></i> غير مدفوع
+                                        </span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <p><strong>رقم الطلب:</strong> {{ order.order_number }}</p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>العميل:</strong> {{ order.customer.name }}</p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>الهاتف:</strong> {{ order.customer.phone }}</p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>الفرع:</strong> {{ order.branch.name }}</p>
-                        </div>
+            </div>
+        </div>
+        <!-- معلومات المديونية -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header py-3 bg-danger text-white">
+                        <h6 class="m-0 font-weight-bold">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            معلومات المديونية
+                        </h6>
                     </div>
-                    <div class="row mt-3">
-                        <div class="col-md-3">
-                            <p><strong>المبلغ الإجمالي:</strong> <span class="text-primary">{{ order.total_amount|currency_format }}</span></p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>المبلغ المدفوع:</strong> <span class="text-success">{{ order.paid_amount|currency_format }}</span></p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>المبلغ المتبقي:</strong> <span class="text-danger font-weight-bold">{{ order.debt_amount|currency_format }}</span></p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>البائع:</strong> {{ order.salesperson.get_display_name|default:"غير محدد" }}</p>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-md-12">
-                            <p><strong>الحالة:</strong>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p>
+                                    <strong>مبلغ المديونية:</strong> <span class="text-danger font-weight-bold" style="font-size: 1.3rem;">{{ debt.debt_amount|currency_format }}</span>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
                                 {% if debt.is_paid %}
-                                    <span class="badge badge-success badge-lg">
-                                        <i class="fas fa-check-circle"></i> تم الدفع
-                                    </span>
-                                {% else %}
-                                    <span class="badge badge-danger badge-lg">
-                                        <i class="fas fa-exclamation-triangle"></i> غير مدفوع
-                                    </span>
+                                    <p>
+                                        <strong>رقم إذن الاستلام:</strong> {{ debt.payment_receipt_number }}
+                                    </p>
+                                    <p>
+                                        <strong>اسم المستلم:</strong> {{ debt.payment_receiver_name }}
+                                    </p>
+                                    <p>
+                                        <strong>تاريخ الدفع:</strong> {{ debt.payment_date|date:"Y-m-d H:i" }}
+                                    </p>
                                 {% endif %}
-                            </p>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- معلومات المديونية -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header py-3 bg-danger text-white">
-                    <h6 class="m-0 font-weight-bold">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        معلومات المديونية
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>مبلغ المديونية:</strong> <span class="text-danger font-weight-bold" style="font-size: 1.3rem;">{{ debt.debt_amount|currency_format }}</span></p>
-                        </div>
-                        <div class="col-md-6">
-                            {% if debt.is_paid %}
-                                <p><strong>رقم إذن الاستلام:</strong> {{ debt.payment_receipt_number }}</p>
-                                <p><strong>اسم المستلم:</strong> {{ debt.payment_receiver_name }}</p>
-                                <p><strong>تاريخ الدفع:</strong> {{ debt.payment_date|date:"Y-m-d H:i" }}</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% if debt.notes %}
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <p><strong>ملاحظات:</strong></p>
-                            <p class="text-muted">{{ debt.notes }}</p>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- نموذج تحديث المديونية -->
-    {% if not debt.is_paid %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header py-3 bg-warning">
-                    <h6 class="m-0 font-weight-bold text-dark">
-                        <i class="fas fa-edit"></i>
-                        تحديث المديونية
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        {% if form.errors %}
-                            <div class="alert alert-danger">
-                                <h6><i class="fas fa-exclamation-triangle"></i> يرجى تصحيح الأخطاء التالية:</h6>
-                                {{ form.errors }}
+                        {% if debt.notes %}
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <p>
+                                        <strong>ملاحظات:</strong>
+                                    </p>
+                                    <p class="text-muted">{{ debt.notes }}</p>
+                                </div>
                             </div>
                         {% endif %}
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.debt_amount.id_for_label }}" class="form-label">مبلغ المديونية</label>
-                                {{ form.debt_amount }}
-                                {% if form.debt_amount.errors %}
-                                    <div class="text-danger">{{ form.debt_amount.errors }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">
-                                    {{ form.is_paid }}
-                                    تم الدفع
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="row" id="payment-fields" style="display: none;">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.payment_receipt_number.id_for_label }}" class="form-label">رقم إذن استلام المبلغ</label>
-                                {{ form.payment_receipt_number }}
-                                {% if form.payment_receipt_number.errors %}
-                                    <div class="text-danger">{{ form.payment_receipt_number.errors }}</div>
-                                {% endif %}
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.payment_receiver_name.id_for_label }}" class="form-label">اسم المستلم</label>
-                                {{ form.payment_receiver_name }}
-                                {% if form.payment_receiver_name.errors %}
-                                    <div class="text-danger">{{ form.payment_receiver_name.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-12 mb-3">
-                                <label for="{{ form.notes.id_for_label }}" class="form-label">ملاحظات</label>
-                                {{ form.notes }}
-                                {% if form.notes.errors %}
-                                    <div class="text-danger">{{ form.notes.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-warning btn-lg">
-                                    <i class="fas fa-save"></i>
-                                    حفظ التحديثات
-                                </button>
-                                <a href="{% url 'orders:order_detail_by_number' order.order_number %}" class="btn btn-secondary btn-lg">
-                                    <i class="fas fa-times"></i>
-                                    إلغاء
-                                </a>
-                            </div>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
+        <!-- نموذج تحديث المديونية -->
+        {% if not debt.is_paid %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow">
+                        <div class="card-header py-3 bg-warning">
+                            <h6 class="m-0 font-weight-bold text-dark">
+                                <i class="fas fa-edit"></i>
+                                تحديث المديونية
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                {% if form.errors %}
+                                    <div class="alert alert-danger">
+                                        <h6>
+                                            <i class="fas fa-exclamation-triangle"></i> يرجى تصحيح الأخطاء التالية:
+                                        </h6>
+                                        {{ form.errors }}
+                                    </div>
+                                {% endif %}
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ form.debt_amount.id_for_label }}" class="form-label">مبلغ المديونية</label>
+                                        {{ form.debt_amount }}
+                                        {% if form.debt_amount.errors %}<div class="text-danger">{{ form.debt_amount.errors }}</div>{% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">
+                                            {{ form.is_paid }}
+                                            تم الدفع
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="row" id="payment-fields" style="display: none;">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ form.payment_receipt_number.id_for_label }}"
+                                               class="form-label">رقم إذن استلام المبلغ</label>
+                                        {{ form.payment_receipt_number }}
+                                        {% if form.payment_receipt_number.errors %}
+                                            <div class="text-danger">{{ form.payment_receipt_number.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ form.payment_receiver_name.id_for_label }}"
+                                               class="form-label">اسم المستلم</label>
+                                        {{ form.payment_receiver_name }}
+                                        {% if form.payment_receiver_name.errors %}
+                                            <div class="text-danger">{{ form.payment_receiver_name.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <label for="{{ form.notes.id_for_label }}" class="form-label">ملاحظات</label>
+                                        {{ form.notes }}
+                                        {% if form.notes.errors %}<div class="text-danger">{{ form.notes.errors }}</div>{% endif %}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <button type="submit" class="btn btn-warning btn-lg">
+                                            <i class="fas fa-save"></i>
+                                            حفظ التحديثات
+                                        </button>
+                                        <a href="{% url 'orders:order_detail_by_number' order.order_number %}"
+                                           class="btn btn-secondary btn-lg">
+                                            <i class="fas fa-times"></i>
+                                            إلغاء
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i>
+                <strong>تم الدفع!</strong> تم تسجيل دفع هذه المديونية بنجاح.
+            </div>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="alert alert-success">
-        <i class="fas fa-check-circle"></i>
-        <strong>تم الدفع!</strong> تم تسجيل دفع هذه المديونية بنجاح.
-    </div>
-    {% endif %}
-</div>
-
-<script>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     const isPaidCheckbox = document.getElementById('{{ form.is_paid.id_for_label }}');
     const paymentFields = document.getElementById('payment-fields');
@@ -225,11 +241,10 @@ document.addEventListener('DOMContentLoaded', function() {
         togglePaymentFields();
     }
 });
-</script>
+    </script>
 {% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
 .card {
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -302,6 +317,5 @@ document.addEventListener('DOMContentLoaded', function() {
     color: white;
     box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
 }
-</style>
+    </style>
 {% endblock %}
-

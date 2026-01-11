@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
-
-{% block title %}{% trans "تصدير قاعدة بيانات" %}{% endblock %}
-
+{% block title %}
+    {% trans "تصدير قاعدة بيانات" %}
+{% endblock %}
 {% block extra_css %}
-<style>
+    <style>
     .export-container {
         max-width: 800px;
         margin: 0 auto;
@@ -60,86 +60,82 @@
         height: 50px;
         margin-bottom: 10px;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container mt-4 mb-5">
-    <div class="export-container">
-        <div class="export-header">
-            <h1>{% trans "تصدير قاعدة بيانات" %}</h1>
-            <p class="lead">{% trans "قم بتصدير البيانات من قاعدة البيانات إلى ملف" %}</p>
-            {% if default_db %}
-                <div class="alert alert-info">
-                    <i class="fas fa-database"></i>
-                    {% trans "قاعدة البيانات الحالية:" %} <strong>{{ default_db.name }}</strong>
-                    <span class="badge badge-primary">PostgreSQL</span>
-                </div>
-            {% endif %}
-        </div>
-
-        <form method="post">
-            {% csrf_token %}
-
-            <div class="export-section">
-                <h4>{% trans "اختر قاعدة البيانات" %}</h4>
-
-                <div class="form-group">
-                    <label for="database_config">{% trans "قاعدة البيانات" %}</label>
-                    {% if default_db %}
-                        <div class="alert alert-primary mb-2">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-database me-2"></i>
-                                <div>
-                                    <strong>{% trans "قاعدة البيانات الحالية:" %} {{ default_db.name }}</strong>
-                                    <div><small>{% trans "تم تحديد قاعدة البيانات الافتراضية تلقائيًا" %}</small></div>
+    <div class="container mt-4 mb-5">
+        <div class="export-container">
+            <div class="export-header">
+                <h1>{% trans "تصدير قاعدة بيانات" %}</h1>
+                <p class="lead">{% trans "قم بتصدير البيانات من قاعدة البيانات إلى ملف" %}</p>
+                {% if default_db %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-database"></i>
+                        {% trans "قاعدة البيانات الحالية:" %} <strong>{{ default_db.name }}</strong>
+                        <span class="badge badge-primary">PostgreSQL</span>
+                    </div>
+                {% endif %}
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="export-section">
+                    <h4>{% trans "اختر قاعدة البيانات" %}</h4>
+                    <div class="form-group">
+                        <label for="database_config">{% trans "قاعدة البيانات" %}</label>
+                        {% if default_db %}
+                            <div class="alert alert-primary mb-2">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-database me-2"></i>
+                                    <div>
+                                        <strong>{% trans "قاعدة البيانات الحالية:" %} {{ default_db.name }}</strong>
+                                        <div>
+                                            <small>{% trans "تم تحديد قاعدة البيانات الافتراضية تلقائيًا" %}</small>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+                        {% endif %}
+                        <select name="database_config" id="database_config" class="form-control">
+                            {% for db in databases %}
+                                <option value="{{ db.id }}" {% if db.is_default %}selected{% endif %}>
+                                    {{ db.name }} ({{ db.get_db_type_display }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">{% trans "اختر قاعدة البيانات التي تريد تصدير البيانات منها" %}</small>
+                    </div>
+                </div>
+                <div class="export-section">
+                    <h4>{% trans "اختر تنسيق التصدير" %}</h4>
+                    <div class="format-options">
+                        <div class="format-option active" data-format="json">
+                            <i class="fas fa-file-code fa-3x mb-2 text-primary"></i>
+                            <h5>JSON</h5>
+                            <p>{% trans "تنسيق قياسي لتبادل البيانات" %}</p>
+                            <input type="radio" name="format" value="json" checked style="display: none">
                         </div>
-                    {% endif %}
-                    <select name="database_config" id="database_config" class="form-control">
-                        {% for db in databases %}
-                            <option value="{{ db.id }}" {% if db.is_default %}selected{% endif %}>{{ db.name }} ({{ db.get_db_type_display }})</option>
-                        {% endfor %}
-                    </select>
-                    <small class="form-text text-muted">{% trans "اختر قاعدة البيانات التي تريد تصدير البيانات منها" %}</small>
-                </div>
-            </div>
-
-            <div class="export-section">
-                <h4>{% trans "اختر تنسيق التصدير" %}</h4>
-
-                <div class="format-options">
-                    <div class="format-option active" data-format="json">
-                        <i class="fas fa-file-code fa-3x mb-2 text-primary"></i>
-                        <h5>JSON</h5>
-                        <p>{% trans "تنسيق قياسي لتبادل البيانات" %}</p>
-                        <input type="radio" name="format" value="json" checked style="display: none;">
+                        <div class="format-option" data-format="dump">
+                            <i class="fas fa-database fa-3x mb-2 text-success"></i>
+                            <h5>SQL Dump</h5>
+                            <p>{% trans "نسخة احتياطية كاملة لقاعدة البيانات" %}</p>
+                            <input type="radio" name="format" value="dump" style="display: none;">
+                        </div>
                     </div>
-                    <div class="format-option" data-format="dump">
-                        <i class="fas fa-database fa-3x mb-2 text-success"></i>
-                        <h5>SQL Dump</h5>
-                        <p>{% trans "نسخة احتياطية كاملة لقاعدة البيانات" %}</p>
-                        <input type="radio" name="format" value="dump" style="display: none;">
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i> {% trans "ملاحظة: تنسيق SQL Dump متاح فقط لقواعد بيانات PostgreSQL." %}
                     </div>
                 </div>
-
-                <div class="alert alert-info mt-3">
-                    <i class="fas fa-info-circle"></i> {% trans "ملاحظة: تنسيق SQL Dump متاح فقط لقواعد بيانات PostgreSQL." %}
+                <div class="export-footer">
+                    <button type="submit" class="btn btn-primary btn-lg">{% trans "تصدير" %}</button>
+                    <a href="{% url 'db_manager:database_list' %}"
+                       class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
                 </div>
-            </div>
-
-            <div class="export-footer">
-                <button type="submit" class="btn btn-primary btn-lg">{% trans "تصدير" %}</button>
-                <a href="{% url 'db_manager:database_list' %}" class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     $(document).ready(function() {
         // تحديد تنسيق التصدير
         $('.format-option').click(function() {
@@ -166,5 +162,5 @@
             }
         }).trigger('change');
     });
-</script>
+    </script>
 {% endblock %}

@@ -11,158 +11,148 @@ Component Library - Buttons
 {% include 'components/buttons.html' with type='icon_button' icon='fas fa-edit' aria_label='تعديل' %}
 ===========================================
 {% endcomment %}
-
 {% comment %}=== PRIMARY BUTTON - زر أساسي ==={% endcomment %}
 {% if type == 'primary_button' or type == 'button' %}
-<button type="{{ button_type|default:'button' }}" 
-        class="btn btn-{{ variant|default:'primary' }} {% if size %}btn-{{ size }}{% endif %} {{ class }}"
-        {% if id %}id="{{ id }}"{% endif %}
-        {% if onclick %}onclick="{{ onclick }}"{% endif %}
-        {% if disabled %}disabled{% endif %}
-        {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
-        {% if data_attrs %}{{ data_attrs|safe }}{% endif %}
-        style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-medium); transition: all var(--transition-normal);">
-    {% if icon and icon_position != 'right' %}
-    <i class="{{ icon }} me-2"></i>
-    {% endif %}
-    {{ label }}
-    {% if icon and icon_position == 'right' %}
-    <i class="{{ icon }} ms-2"></i>
-    {% endif %}
-</button>
+    <button type="{{ button_type|default:'button' }}"
+            class="btn btn-{{ variant|default:'primary' }} {% if size %}btn-{{ size }}{% endif %} {{ class }}"
+            {% if id %}id="{{ id }}"{% endif %}
+            {% if onclick %}onclick="{{ onclick }}"{% endif %}
+            {% if disabled %}disabled{% endif %}
+            {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+            {% if data_attrs %}{{ data_attrs|safe }}{% endif %}
+            style="border-radius: var(--border-radius-sm);
+                   font-weight: var(--font-weight-medium);
+                   transition: all var(--transition-normal)">
+        {% if icon and icon_position != 'right' %}<i class="{{ icon }} me-2"></i>{% endif %}
+        {{ label }}
+        {% if icon and icon_position == 'right' %}<i class="{{ icon }} ms-2"></i>{% endif %}
+    </button>
 {% endif %}
-
 {% comment %}=== LOADING BUTTON - زر التحميل ==={% endcomment %}
 {% if type == 'loading_button' %}
-<button type="{{ button_type|default:'button' }}" 
-        class="btn btn-{{ variant|default:'primary' }} {% if size %}btn-{{ size }}{% endif %} {{ class }}"
-        {% if id %}id="{{ id }}"{% endif %}
-        disabled
-        {% if aria_label %}aria-label="{{ aria_label }}"{% else %}aria-label="جاري التحميل"{% endif %}
-        aria-busy="true"
-        style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-medium);">
-    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-    {{ label|default:'جاري التحميل...' }}
-</button>
+    <button type="{{ button_type|default:'button' }}"
+            class="btn btn-{{ variant|default:'primary' }} {% if size %}btn-{{ size }}{% endif %} {{ class }}"
+            {% if id %}id="{{ id }}"{% endif %}
+            disabled
+            {% if aria_label %}aria-label="{{ aria_label }}"{% else %}aria-label="جاري التحميل"{% endif %}
+            aria-busy="true"
+            style="border-radius: var(--border-radius-sm);
+                   font-weight: var(--font-weight-medium)">
+        <span class="spinner-border spinner-border-sm me-2"
+              role="status"
+              aria-hidden="true"></span>
+        {{ label|default:'جاري التحميل...' }}
+    </button>
 {% endif %}
-
 {% comment %}=== ICON ONLY BUTTON - زر بأيقونة فقط ==={% endcomment %}
 {% if type == 'icon_button' %}
-<button type="{{ button_type|default:'button' }}" 
-        class="btn btn-{{ variant|default:'primary' }} btn-icon-only {% if size %}btn-{{ size }}{% endif %} {{ class }}"
-        {% if id %}id="{{ id }}"{% endif %}
-        {% if onclick %}onclick="{{ onclick }}"{% endif %}
-        {% if disabled %}disabled{% endif %}
-        aria-label="{{ aria_label|default:'زر' }}"
-        {% if data_attrs %}{{ data_attrs|safe }}{% endif %}
-        style="border-radius: var(--border-radius-sm); min-width: 44px; min-height: 44px; padding: 0.5rem; display: inline-flex; align-items: center; justify-content: center;">
-    <i class="{{ icon }}" aria-hidden="true"></i>
-</button>
+    <button type="{{ button_type|default:'button' }}"
+            class="btn btn-{{ variant|default:'primary' }} btn-icon-only {% if size %}btn-{{ size }}{% endif %} {{ class }}"
+            {% if id %}id="{{ id }}"{% endif %}
+            {% if onclick %}onclick="{{ onclick }}"{% endif %}
+            {% if disabled %}disabled{% endif %}
+            aria-label="{{ aria_label|default:'زر' }}"
+            {% if data_attrs %}{{ data_attrs|safe }}{% endif %}
+            style="border-radius: var(--border-radius-sm);
+                   min-width: 44px;
+                   min-height: 44px;
+                   padding: 0.5rem;
+                   display: inline-flex;
+                   align-items: center;
+                   justify-content: center">
+        <i class="{{ icon }}" aria-hidden="true"></i>
+    </button>
 {% endif %}
-
 {% comment %}=== OUTLINE BUTTON - زر بحواف ==={% endcomment %}
 {% if type == 'outline_button' %}
-<button type="{{ button_type|default:'button' }}" 
-        class="btn btn-outline-{{ variant|default:'primary' }} {% if size %}btn-{{ size }}{% endif %} {{ class }}"
-        {% if id %}id="{{ id }}"{% endif %}
-        {% if onclick %}onclick="{{ onclick }}"{% endif %}
-        {% if disabled %}disabled{% endif %}
-        {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
-        {% if data_attrs %}{{ data_attrs|safe }}{% endif %}
-        style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-medium); transition: all var(--transition-normal);">
-    {% if icon and icon_position != 'right' %}
-    <i class="{{ icon }} me-2"></i>
-    {% endif %}
-    {{ label }}
-    {% if icon and icon_position == 'right' %}
-    <i class="{{ icon }} ms-2"></i>
-    {% endif %}
-</button>
+    <button type="{{ button_type|default:'button' }}"
+            class="btn btn-outline-{{ variant|default:'primary' }} {% if size %}btn-{{ size }}{% endif %} {{ class }}"
+            {% if id %}id="{{ id }}"{% endif %}
+            {% if onclick %}onclick="{{ onclick }}"{% endif %}
+            {% if disabled %}disabled{% endif %}
+            {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+            {% if data_attrs %}{{ data_attrs|safe }}{% endif %}
+            style="border-radius: var(--border-radius-sm);
+                   font-weight: var(--font-weight-medium);
+                   transition: all var(--transition-normal)">
+        {% if icon and icon_position != 'right' %}<i class="{{ icon }} me-2"></i>{% endif %}
+        {{ label }}
+        {% if icon and icon_position == 'right' %}<i class="{{ icon }} ms-2"></i>{% endif %}
+    </button>
 {% endif %}
-
 {% comment %}=== LINK BUTTON - زر كرابط ==={% endcomment %}
 {% if type == 'link_button' %}
-<a href="{{ href|default:'#' }}" 
-   class="btn btn-link {% if size %}btn-{{ size }}{% endif %} {{ class }}"
-   {% if id %}id="{{ id }}"{% endif %}
-   {% if target %}target="{{ target }}"{% endif %}
-   {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
-   {% if data_attrs %}{{ data_attrs|safe }}{% endif %}
-   style="font-weight: var(--font-weight-medium); text-decoration: none; transition: all var(--transition-normal);">
-    {% if icon and icon_position != 'right' %}
-    <i class="{{ icon }} me-2"></i>
-    {% endif %}
-    {{ label }}
-    {% if icon and icon_position == 'right' %}
-    <i class="{{ icon }} ms-2"></i>
-    {% endif %}
-</a>
+    <a href="{{ href|default:'#' }}"
+       class="btn btn-link {% if size %}btn-{{ size }}{% endif %} {{ class }}"
+       {% if id %}id="{{ id }}"{% endif %}
+       {% if target %}target="{{ target }}"{% endif %}
+       {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+       {% if data_attrs %}{{ data_attrs|safe }}{% endif %}
+       style="font-weight: var(--font-weight-medium);
+              text-decoration: none;
+              transition: all var(--transition-normal)">
+        {% if icon and icon_position != 'right' %}<i class="{{ icon }} me-2"></i>{% endif %}
+        {{ label }}
+        {% if icon and icon_position == 'right' %}<i class="{{ icon }} ms-2"></i>{% endif %}
+    </a>
 {% endif %}
-
 {% comment %}=== BUTTON GROUP - مجموعة أزرار ==={% endcomment %}
 {% if type == 'button_group' %}
-<div class="btn-group {{ class }}" role="group" {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}>
-    {{ content|safe }}
-</div>
+    <div class="btn-group {{ class }}"
+         role="group"
+         {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}>{{ content|safe }}</div>
 {% endif %}
-
 {% comment %}=== DROPDOWN BUTTON - زر منسدل ==={% endcomment %}
 {% if type == 'dropdown_button' %}
-<div class="btn-group {{ class }}">
-    <button type="button" 
-            class="btn btn-{{ variant|default:'primary' }} dropdown-toggle {% if size %}btn-{{ size }}{% endif %}"
-            {% if id %}id="{{ id }}"{% endif %}
-            data-bs-toggle="dropdown" 
-            aria-expanded="false"
-            {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
-            style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-medium);">
-        {% if icon %}
-        <i class="{{ icon }} me-2"></i>
-        {% endif %}
-        {{ label }}
-    </button>
-    <ul class="dropdown-menu {{ dropdown_class }}" {% if dropdown_id %}id="{{ dropdown_id }}"{% endif %}>
-        {{ dropdown_content|safe }}
-    </ul>
-</div>
+    <div class="btn-group {{ class }}">
+        <button type="button"
+                class="btn btn-{{ variant|default:'primary' }} dropdown-toggle {% if size %}btn-{{ size }}{% endif %}"
+                {% if id %}id="{{ id }}"{% endif %}
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+                style="border-radius: var(--border-radius-sm);
+                       font-weight: var(--font-weight-medium)">
+            {% if icon %}<i class="{{ icon }} me-2"></i>{% endif %}
+            {{ label }}
+        </button>
+        <ul class="dropdown-menu {{ dropdown_class }}"
+            {% if dropdown_id %}id="{{ dropdown_id }}"{% endif %}>
+            {{ dropdown_content|safe }}
+        </ul>
+    </div>
 {% endif %}
-
 {% comment %}=== DANGER BUTTON - زر خطر (حذف، إلغاء) ==={% endcomment %}
 {% if type == 'danger_button' %}
-<button type="{{ button_type|default:'button' }}" 
-        class="btn btn-danger {% if size %}btn-{{ size }}{% endif %} {{ class }}"
-        {% if id %}id="{{ id }}"{% endif %}
-        {% if onclick %}onclick="{{ onclick }}"{% endif %}
-        {% if disabled %}disabled{% endif %}
-        {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
-        {% if data_attrs %}{{ data_attrs|safe }}{% endif %}
-        style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-medium); transition: all var(--transition-normal);">
-    {% if icon and icon_position != 'right' %}
-    <i class="{{ icon }} me-2"></i>
-    {% endif %}
-    {{ label }}
-    {% if icon and icon_position == 'right' %}
-    <i class="{{ icon }} ms-2"></i>
-    {% endif %}
-</button>
+    <button type="{{ button_type|default:'button' }}"
+            class="btn btn-danger {% if size %}btn-{{ size }}{% endif %} {{ class }}"
+            {% if id %}id="{{ id }}"{% endif %}
+            {% if onclick %}onclick="{{ onclick }}"{% endif %}
+            {% if disabled %}disabled{% endif %}
+            {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+            {% if data_attrs %}{{ data_attrs|safe }}{% endif %}
+            style="border-radius: var(--border-radius-sm);
+                   font-weight: var(--font-weight-medium);
+                   transition: all var(--transition-normal)">
+        {% if icon and icon_position != 'right' %}<i class="{{ icon }} me-2"></i>{% endif %}
+        {{ label }}
+        {% if icon and icon_position == 'right' %}<i class="{{ icon }} ms-2"></i>{% endif %}
+    </button>
 {% endif %}
-
 {% comment %}=== SUCCESS BUTTON - زر نجاح ==={% endcomment %}
 {% if type == 'success_button' %}
-<button type="{{ button_type|default:'button' }}" 
-        class="btn btn-success {% if size %}btn-{{ size }}{% endif %} {{ class }}"
-        {% if id %}id="{{ id }}"{% endif %}
-        {% if onclick %}onclick="{{ onclick }}"{% endif %}
-        {% if disabled %}disabled{% endif %}
-        {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
-        {% if data_attrs %}{{ data_attrs|safe }}{% endif %}
-        style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-medium); transition: all var(--transition-normal);">
-    {% if icon and icon_position != 'right' %}
-    <i class="{{ icon }} me-2"></i>
-    {% endif %}
-    {{ label }}
-    {% if icon and icon_position == 'right' %}
-    <i class="{{ icon }} ms-2"></i>
-    {% endif %}
-</button>
+    <button type="{{ button_type|default:'button' }}"
+            class="btn btn-success {% if size %}btn-{{ size }}{% endif %} {{ class }}"
+            {% if id %}id="{{ id }}"{% endif %}
+            {% if onclick %}onclick="{{ onclick }}"{% endif %}
+            {% if disabled %}disabled{% endif %}
+            {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+            {% if data_attrs %}{{ data_attrs|safe }}{% endif %}
+            style="border-radius: var(--border-radius-sm);
+                   font-weight: var(--font-weight-medium);
+                   transition: all var(--transition-normal)">
+        {% if icon and icon_position != 'right' %}<i class="{{ icon }} me-2"></i>{% endif %}
+        {{ label }}
+        {% if icon and icon_position == 'right' %}<i class="{{ icon }} ms-2"></i>{% endif %}
+    </button>
 {% endif %}

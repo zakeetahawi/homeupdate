@@ -24,172 +24,251 @@ Component Library - Status Badges
 {% include 'components/status_badges.html' with status='custom' label='حالة خاصة' color='purple' %}
 ===========================================
 {% endcomment %}
-
 {% comment %}=== DEFAULT STATUS BADGES - شارات الحالة الافتراضية ==={% endcomment %}
-
 {% if status == 'pending' %}
-<span class="badge bg-warning text-dark {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% endif %}
-    {{ label|default:'قيد الانتظار' }}
-</span>
-
+    <span class="badge bg-warning text-dark {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}<i class="{{ icon }} me-1"></i>{% endif %}
+        {{ label|default:'قيد الانتظار' }}
+    </span>
 {% elif status == 'in_progress' or status == 'processing' %}
-<span class="badge bg-info text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="fas fa-spinner fa-spin me-1"></i>{% endif %}
-    {{ label|default:'قيد التنفيذ' }}
-</span>
-
+    <span class="badge bg-info text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="fas fa-spinner fa-spin me-1"></i>
+        {% endif %}
+        {{ label|default:'قيد التنفيذ' }}
+    </span>
 {% elif status == 'completed' or status == 'done' or status == 'finished' %}
-<span class="badge bg-success text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="fas fa-check-circle me-1"></i>{% endif %}
-    {{ label|default:'مكتمل' }}
-</span>
-
+    <span class="badge bg-success text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="fas fa-check-circle me-1"></i>
+        {% endif %}
+        {{ label|default:'مكتمل' }}
+    </span>
 {% elif status == 'cancelled' or status == 'canceled' %}
-<span class="badge bg-danger text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="fas fa-times-circle me-1"></i>{% endif %}
-    {{ label|default:'ملغي' }}
-</span>
-
+    <span class="badge bg-danger text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="fas fa-times-circle me-1"></i>
+        {% endif %}
+        {{ label|default:'ملغي' }}
+    </span>
 {% elif status == 'delivered' %}
-<span class="badge bg-success text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="fas fa-truck me-1"></i>{% endif %}
-    {{ label|default:'تم التوصيل' }}
-</span>
-
+    <span class="badge bg-success text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="fas fa-truck me-1"></i>
+        {% endif %}
+        {{ label|default:'تم التوصيل' }}
+    </span>
 {% elif status == 'confirmed' %}
-<span class="badge bg-primary text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="fas fa-check me-1"></i>{% endif %}
-    {{ label|default:'مؤكد' }}
-</span>
-
+    <span class="badge bg-primary text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="fas fa-check me-1"></i>
+        {% endif %}
+        {{ label|default:'مؤكد' }}
+    </span>
 {% elif status == 'scheduled' %}
-<span class="badge bg-info text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="fas fa-calendar-alt me-1"></i>{% endif %}
-    {{ label|default:'مجدول' }}
-</span>
-
+    <span class="badge bg-info text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="fas fa-calendar-alt me-1"></i>
+        {% endif %}
+        {{ label|default:'مجدول' }}
+    </span>
 {% elif status == 'active' %}
-<span class="badge bg-success text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="fas fa-circle me-1"></i>{% endif %}
-    {{ label|default:'نشط' }}
-</span>
-
+    <span class="badge bg-success text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="fas fa-circle me-1"></i>
+        {% endif %}
+        {{ label|default:'نشط' }}
+    </span>
 {% elif status == 'inactive' %}
-<span class="badge bg-secondary text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="far fa-circle me-1"></i>{% endif %}
-    {{ label|default:'غير نشط' }}
-</span>
-
+    <span class="badge bg-secondary text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="far fa-circle me-1"></i>
+        {% endif %}
+        {{ label|default:'غير نشط' }}
+    </span>
 {% elif status == 'approved' %}
-<span class="badge bg-success text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="fas fa-thumbs-up me-1"></i>{% endif %}
-    {{ label|default:'موافق عليه' }}
-</span>
-
+    <span class="badge bg-success text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="fas fa-thumbs-up me-1"></i>
+        {% endif %}
+        {{ label|default:'موافق عليه' }}
+    </span>
 {% elif status == 'rejected' %}
-<span class="badge bg-danger text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="fas fa-thumbs-down me-1"></i>{% endif %}
-    {{ label|default:'مرفوض' }}
-</span>
-
+    <span class="badge bg-danger text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="fas fa-thumbs-down me-1"></i>
+        {% endif %}
+        {{ label|default:'مرفوض' }}
+    </span>
 {% elif status == 'on_hold' %}
-<span class="badge bg-warning text-dark {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="fas fa-pause-circle me-1"></i>{% endif %}
-    {{ label|default:'معلق' }}
-</span>
-
+    <span class="badge bg-warning text-dark {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="fas fa-pause-circle me-1"></i>
+        {% endif %}
+        {{ label|default:'معلق' }}
+    </span>
 {% elif status == 'draft' %}
-<span class="badge bg-secondary text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="fas fa-file me-1"></i>{% endif %}
-    {{ label|default:'مسودة' }}
-</span>
-
+    <span class="badge bg-secondary text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="fas fa-file me-1"></i>
+        {% endif %}
+        {{ label|default:'مسودة' }}
+    </span>
 {% elif status == 'new' %}
-<span class="badge bg-primary text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% else %}<i class="fas fa-star me-1"></i>{% endif %}
-    {{ label|default:'جديد' }}
-</span>
-
-{% comment %}=== CUSTOM BADGE - شارة مخصصة ==={% endcomment %}
+    <span class="badge bg-primary text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}
+            <i class="{{ icon }} me-1"></i>
+        {% else %}
+            <i class="fas fa-star me-1"></i>
+        {% endif %}
+        {{ label|default:'جديد' }}
+    </span>
+    {% comment %}=== CUSTOM BADGE - شارة مخصصة ==={% endcomment %}
 {% elif status == 'custom' %}
-<span class="badge bg-{{ color|default:'primary' }} text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% endif %}
-    {{ label }}
-</span>
-
-{% comment %}=== OUTLINED BADGE - شارة محددة ==={% endcomment %}
+    <span class="badge bg-{{ color|default:'primary' }} text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}<i class="{{ icon }} me-1"></i>{% endif %}
+        {{ label }}
+    </span>
+    {% comment %}=== OUTLINED BADGE - شارة محددة ==={% endcomment %}
 {% elif status == 'outlined' %}
-<span class="badge border border-{{ variant|default:'primary' }} text-{{ variant|default:'primary' }} {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="background: transparent; border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% endif %}
-    {{ label }}
-</span>
-
-{% comment %}=== GRADIENT BADGE - شارة متدرجة ==={% endcomment %}
+    <span class="badge border border-{{ variant|default:'primary' }} text-{{ variant|default:'primary' }} {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="background: transparent;
+                 border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}<i class="{{ icon }} me-1"></i>{% endif %}
+        {{ label }}
+    </span>
+    {% comment %}=== GRADIENT BADGE - شارة متدرجة ==={% endcomment %}
 {% elif status == 'gradient' %}
-<span class="badge text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="background: var(--{{ variant|default:'primary' }}-gradient); border: none; border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% endif %}
-    {{ label }}
-</span>
-
-{% comment %}=== PILL BADGE - شارة دائرية ==={% endcomment %}
+    <span class="badge text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="background: var(--{{ variant|default:'primary' }}-gradient);
+                 border: none;
+                 border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}<i class="{{ icon }} me-1"></i>{% endif %}
+        {{ label }}
+    </span>
+    {% comment %}=== PILL BADGE - شارة دائرية ==={% endcomment %}
 {% elif status == 'pill' %}
-<span class="badge rounded-pill bg-{{ variant|default:'primary' }} text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="font-weight: var(--font-weight-semibold); padding: 0.5rem 1rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% endif %}
-    {{ label }}
-</span>
-
-{% comment %}=== DOT BADGE - شارة بنقطة ==={% endcomment %}
+    <span class="badge rounded-pill bg-{{ variant|default:'primary' }} text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="font-weight: var(--font-weight-semibold);
+                 padding: 0.5rem 1rem">
+        {% if icon %}<i class="{{ icon }} me-1"></i>{% endif %}
+        {{ label }}
+    </span>
+    {% comment %}=== DOT BADGE - شارة بنقطة ==={% endcomment %}
 {% elif status == 'dot' %}
-<span class="badge bg-{{ variant|default:'primary' }} text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    <span class="badge-dot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: currentColor; margin-inline-end: 0.5rem;"></span>
-    {{ label }}
-</span>
-
-{% comment %}=== DEFAULT FALLBACK ==={% endcomment %}
+    <span class="badge bg-{{ variant|default:'primary' }} text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        <span class="badge-dot"
+              style="display: inline-block;
+                     width: 8px;
+                     height: 8px;
+                     border-radius: 50%;
+                     background-color: currentColor;
+                     margin-inline-end: 0.5rem"></span>
+        {{ label }}
+    </span>
+    {% comment %}=== DEFAULT FALLBACK ==={% endcomment %}
 {% else %}
-<span class="badge bg-secondary text-white {{ class }}" 
-      {% if id %}id="{{ id }}"{% endif %}
-      style="border-radius: var(--border-radius-sm); font-weight: var(--font-weight-semibold); padding: 0.375rem 0.75rem;">
-    {% if icon %}<i class="{{ icon }} me-1"></i>{% endif %}
-    {{ label|default:status }}
-</span>
+    <span class="badge bg-secondary text-white {{ class }}"
+          {% if id %}id="{{ id }}"{% endif %}
+          style="border-radius: var(--border-radius-sm);
+                 font-weight: var(--font-weight-semibold);
+                 padding: 0.375rem 0.75rem">
+        {% if icon %}<i class="{{ icon }} me-1"></i>{% endif %}
+        {{ label|default:status }}
+    </span>
 {% endif %}

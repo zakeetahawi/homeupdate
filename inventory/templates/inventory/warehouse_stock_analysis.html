@@ -1,199 +1,202 @@
 {% extends 'inventory/inventory_base_custom.html' %}
 {% load static %}
-
 {% block inventory_title %}تحليل مخزون {{ warehouse.name }}{% endblock %}
-
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
-<li class="breadcrumb-item"><a href="{% url 'inventory:warehouse_list' %}">المستودعات</a></li>
-<li class="breadcrumb-item"><a href="{% url 'inventory:warehouse_detail' warehouse.pk %}">{{ warehouse.name }}</a></li>
-<li class="breadcrumb-item active">تحليل المخزون</li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a>
+    </li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:warehouse_list' %}">المستودعات</a>
+    </li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:warehouse_detail' warehouse.pk %}">{{ warehouse.name }}</a>
+    </li>
+    <li class="breadcrumb-item active">تحليل المخزون</li>
 {% endblock %}
-
 {% block inventory_content %}
-<div class="container-fluid">
-    <!-- معلومات المستودع -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-warehouse"></i>
-                {{ warehouse.name }}
-                <small class="text-light">({{ warehouse.code }})</small>
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3 text-center border-end">
-                    <h6 class="text-muted">إجمالي الحركات</h6>
-                    <h3 class="text-primary">{{ stats.total_transactions }}</h3>
-                </div>
-                <div class="col-md-3 text-center border-end">
-                    <h6 class="text-muted">إجمالي الوارد</h6>
-                    <h3 class="text-success">{{ stats.total_in }}</h3>
-                </div>
-                <div class="col-md-3 text-center border-end">
-                    <h6 class="text-muted">إجمالي الصادر</h6>
-                    <h3 class="text-danger">{{ stats.total_out }}</h3>
-                </div>
-                <div class="col-md-3 text-center">
-                    <h6 class="text-muted">عدد المنتجات</h6>
-                    <h3 class="text-info">{{ stats.unique_products }}</h3>
-                </div>
+    <div class="container-fluid">
+        <!-- معلومات المستودع -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-warehouse"></i>
+                    {{ warehouse.name }}
+                    <small class="text-light">({{ warehouse.code }})</small>
+                </h5>
             </div>
-        </div>
-    </div>
-
-    <!-- فلتر الفترة الزمنية -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
-                <div class="col-auto">
-                    <label class="form-label">الفترة الزمنية:</label>
-                    <select name="days" class="form-select" onchange="this.form.submit()">
-                        <option value="7" {% if days == 7 %}selected{% endif %}>آخر 7 أيام</option>
-                        <option value="30" {% if days == 30 %}selected{% endif %}>آخر 30 يوم</option>
-                        <option value="90" {% if days == 90 %}selected{% endif %}>آخر 90 يوم</option>
-                        <option value="180" {% if days == 180 %}selected{% endif %}>آخر 6 أشهر</option>
-                        <option value="365" {% if days == 365 %}selected{% endif %}>آخر سنة</option>
-                    </select>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- المنتجات في المستودع -->
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0"><i class="fas fa-boxes"></i> أعلى المنتجات في المستودع</h6>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>المنتج</th>
-                                    <th>الكمية</th>
-                                    <th>آخر تحديث</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in products_in_warehouse %}
-                                <tr>
-                                    <td>
-                                        <a href="{% url 'inventory:product_detail' item.product.pk %}">
-                                            {{ item.product.name|truncatewords:4 }}
-                                        </a>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-{% if item.quantity > 0 %}success{% else %}secondary{% endif %}">
-                                            {{ item.quantity }}
-                                        </span>
-                                    </td>
-                                    <td>{{ item.last_transaction_date|date:"Y-m-d" }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted py-4">
-                                        لا توجد منتجات
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center border-end">
+                        <h6 class="text-muted">إجمالي الحركات</h6>
+                        <h3 class="text-primary">{{ stats.total_transactions }}</h3>
+                    </div>
+                    <div class="col-md-3 text-center border-end">
+                        <h6 class="text-muted">إجمالي الوارد</h6>
+                        <h3 class="text-success">{{ stats.total_in }}</h3>
+                    </div>
+                    <div class="col-md-3 text-center border-end">
+                        <h6 class="text-muted">إجمالي الصادر</h6>
+                        <h3 class="text-danger">{{ stats.total_out }}</h3>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <h6 class="text-muted">عدد المنتجات</h6>
+                        <h3 class="text-info">{{ stats.unique_products }}</h3>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- التحويلات -->
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0"><i class="fas fa-exchange-alt"></i> التحويلات</h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <h6 class="text-success"><i class="fas fa-arrow-down"></i> واردة</h6>
-                            <ul class="list-group list-group-flush">
-                                {% for transfer in transfers_in|slice:":5" %}
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <small>{{ transfer.transfer_number }}</small>
-                                    <span class="badge bg-{{ transfer.status }}">{{ transfer.get_status_display }}</span>
-                                </li>
-                                {% empty %}
-                                <li class="list-group-item text-muted">لا توجد تحويلات</li>
-                                {% endfor %}
-                            </ul>
+        <!-- فلتر الفترة الزمنية -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-auto">
+                        <label class="form-label">الفترة الزمنية:</label>
+                        <select name="days" class="form-select" onchange="this.form.submit()">
+                            <option value="7" {% if days == 7 %}selected{% endif %}>آخر 7 أيام</option>
+                            <option value="30" {% if days == 30 %}selected{% endif %}>آخر 30 يوم</option>
+                            <option value="90" {% if days == 90 %}selected{% endif %}>آخر 90 يوم</option>
+                            <option value="180" {% if days == 180 %}selected{% endif %}>آخر 6 أشهر</option>
+                            <option value="365" {% if days == 365 %}selected{% endif %}>آخر سنة</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="row">
+            <!-- المنتجات في المستودع -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="fas fa-boxes"></i> أعلى المنتجات في المستودع
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>المنتج</th>
+                                        <th>الكمية</th>
+                                        <th>آخر تحديث</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in products_in_warehouse %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'inventory:product_detail' item.product.pk %}">{{ item.product.name|truncatewords:4 }}</a>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{% if item.quantity > 0 %}success{% else %}secondary{% endif %}">{{ item.quantity }}</span>
+                                            </td>
+                                            <td>{{ item.last_transaction_date|date:"Y-m-d" }}</td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted py-4">لا توجد منتجات</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="col-6">
-                            <h6 class="text-danger"><i class="fas fa-arrow-up"></i> صادرة</h6>
-                            <ul class="list-group list-group-flush">
-                                {% for transfer in transfers_out|slice:":5" %}
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <small>{{ transfer.transfer_number }}</small>
-                                    <span class="badge bg-secondary">{{ transfer.get_status_display }}</span>
-                                </li>
-                                {% empty %}
-                                <li class="list-group-item text-muted">لا توجد تحويلات</li>
-                                {% endfor %}
-                            </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- التحويلات -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="fas fa-exchange-alt"></i> التحويلات
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <h6 class="text-success">
+                                    <i class="fas fa-arrow-down"></i> واردة
+                                </h6>
+                                <ul class="list-group list-group-flush">
+                                    {% for transfer in transfers_in|slice:":5" %}
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <small>{{ transfer.transfer_number }}</small>
+                                            <span class="badge bg-{{ transfer.status }}">{{ transfer.get_status_display }}</span>
+                                        </li>
+                                    {% empty %}
+                                        <li class="list-group-item text-muted">لا توجد تحويلات</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-danger">
+                                    <i class="fas fa-arrow-up"></i> صادرة
+                                </h6>
+                                <ul class="list-group list-group-flush">
+                                    {% for transfer in transfers_out|slice:":5" %}
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <small>{{ transfer.transfer_number }}</small>
+                                            <span class="badge bg-secondary">{{ transfer.get_status_display }}</span>
+                                        </li>
+                                    {% empty %}
+                                        <li class="list-group-item text-muted">لا توجد تحويلات</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- آخر الحركات -->
-    <div class="card">
-        <div class="card-header bg-light">
-            <h6 class="mb-0"><i class="fas fa-history"></i> آخر حركات المخزون</h6>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>المنتج</th>
-                            <th>النوع</th>
-                            <th>الكمية</th>
-                            <th>الرصيد</th>
-                            <th>بواسطة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for trans in transactions %}
-                        <tr>
-                            <td>{{ trans.transaction_date|date:"Y-m-d H:i" }}</td>
-                            <td>{{ trans.product.name|truncatewords:3 }}</td>
-                            <td>
-                                {% if trans.transaction_type == 'in' %}
-                                <span class="badge bg-success">وارد</span>
-                                {% elif trans.transaction_type == 'out' %}
-                                <span class="badge bg-danger">صادر</span>
-                                {% else %}
-                                <span class="badge bg-info">{{ trans.get_transaction_type_display }}</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ trans.quantity }}</td>
-                            <td><strong>{{ trans.running_balance }}</strong></td>
-                            <td>{{ trans.created_by.username|default:"-" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                لا توجد حركات في هذه الفترة
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <!-- آخر الحركات -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-history"></i> آخر حركات المخزون
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>المنتج</th>
+                                <th>النوع</th>
+                                <th>الكمية</th>
+                                <th>الرصيد</th>
+                                <th>بواسطة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trans in transactions %}
+                                <tr>
+                                    <td>{{ trans.transaction_date|date:"Y-m-d H:i" }}</td>
+                                    <td>{{ trans.product.name|truncatewords:3 }}</td>
+                                    <td>
+                                        {% if trans.transaction_type == 'in' %}
+                                            <span class="badge bg-success">وارد</span>
+                                        {% elif trans.transaction_type == 'out' %}
+                                            <span class="badge bg-danger">صادر</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ trans.get_transaction_type_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ trans.quantity }}</td>
+                                    <td>
+                                        <strong>{{ trans.running_balance }}</strong>
+                                    </td>
+                                    <td>{{ trans.created_by.username|default:"-" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">لا توجد حركات في هذه الفترة</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

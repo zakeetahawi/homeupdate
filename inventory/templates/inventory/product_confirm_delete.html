@@ -1,55 +1,52 @@
 {% extends "base.html" %}
 {% block title %}حذف المنتج{% endblock %}
-
 {% block content %}
-<div class="container" style="margin-top: 100px;">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-danger text-white">
-                    <h2 class="card-title mb-0">تأكيد حذف المنتج</h2>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        هل أنت متأكد من حذف المنتج التالي؟
+    <div class="container" style="margin-top: 100px;">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        <h2 class="card-title mb-0">تأكيد حذف المنتج</h2>
                     </div>
-
-                    <table class="table table-bordered">
-                        <tr>
-                            <th width="35%">اسم المنتج:</th>
-                            <td>{{ product.name }}</td>
-                        </tr>
-                        <tr>
-                            <th>الكود:</th>
-                            <td>{{ product.code|default:"غير محدد" }}</td>
-                        </tr>
-                        <tr>
-                            <th>الصنف:</th>
-                            <td>{{ product.category.name }}</td>
-                        </tr>
-                        <tr>
-                            <th>المخزون الحالي:</th>
-                            <td>{{ product.current_stock }}</td>
-                        </tr>
-                    </table>
-
-                    <div class="alert alert-danger">
-                        <strong>تحذير!</strong> لا يمكن التراجع عن هذا الإجراء. سيتم حذف جميع البيانات المتعلقة بهذا المنتج.
+                    <div class="card-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            هل أنت متأكد من حذف المنتج التالي؟
+                        </div>
+                        <table class="table table-bordered">
+                            <tr>
+                                <th width="35%">اسم المنتج:</th>
+                                <td>{{ product.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>الكود:</th>
+                                <td>{{ product.code|default:"غير محدد" }}</td>
+                            </tr>
+                            <tr>
+                                <th>الصنف:</th>
+                                <td>{{ product.category.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>المخزون الحالي:</th>
+                                <td>{{ product.current_stock }}</td>
+                            </tr>
+                        </table>
+                        <div class="alert alert-danger">
+                            <strong>تحذير!</strong> لا يمكن التراجع عن هذا الإجراء. سيتم حذف جميع البيانات المتعلقة بهذا المنتج.
+                        </div>
+                        <form method="post" class="d-flex justify-content-between">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> تأكيد الحذف
+                            </button>
+                            <a href="{% url 'inventory:product_detail' product.id %}"
+                               class="btn btn-secondary">
+                                <i class="fas fa-times"></i> إلغاء
+                            </a>
+                        </form>
                     </div>
-
-                    <form method="post" class="d-flex justify-content-between">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-trash"></i> تأكيد الحذف
-                        </button>
-                        <a href="{% url 'inventory:product_detail' product.id %}" class="btn btn-secondary">
-                            <i class="fas fa-times"></i> إلغاء
-                        </a>
-                    </form>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

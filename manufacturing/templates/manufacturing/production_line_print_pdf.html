@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>طباعة خط الإنتاج - {{ production_line.name }}</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>طباعة خط الإنتاج - {{ production_line.name }}</title>
+        <style>
         @page {
             size: A4;
             margin: 1cm;
@@ -134,172 +134,153 @@
         .page-break {
             page-break-before: always;
         }
-    </style>
-</head>
-<body>
-    <!-- Header -->
-    <div class="header">
-        <h1>{{ production_line.name }}</h1>
-        <div class="subtitle">{{ production_line.description|default:"" }}</div>
-        <div class="subtitle">تاريخ الطباعة: {{ print_date|date:"Y-m-d H:i" }}</div>
-    </div>
-
-    <!-- Statistics -->
-    <div class="stats-row">
-        <div class="stat-item">
-            <div class="stat-number">{{ total_orders }}</div>
-            <div class="stat-label">إجمالي</div>
+        </style>
+    </head>
+    <body>
+        <!-- Header -->
+        <div class="header">
+            <h1>{{ production_line.name }}</h1>
+            <div class="subtitle">{{ production_line.description|default:"" }}</div>
+            <div class="subtitle">تاريخ الطباعة: {{ print_date|date:"Y-m-d H:i" }}</div>
         </div>
-        <div class="stat-item">
-            <div class="stat-number">{{ active_orders }}</div>
-            <div class="stat-label">نشط</div>
+        <!-- Statistics -->
+        <div class="stats-row">
+            <div class="stat-item">
+                <div class="stat-number">{{ total_orders }}</div>
+                <div class="stat-label">إجمالي</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ active_orders }}</div>
+                <div class="stat-label">نشط</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ completed_orders }}</div>
+                <div class="stat-label">مكتمل</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ overdue_orders }}</div>
+                <div class="stat-label">متأخر</div>
+            </div>
         </div>
-        <div class="stat-item">
-            <div class="stat-number">{{ completed_orders }}</div>
-            <div class="stat-label">مكتمل</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-number">{{ overdue_orders }}</div>
-            <div class="stat-label">متأخر</div>
-        </div>
-    </div>
-
-    <!-- Applied Filters -->
-    {% if applied_filters.status_filters or applied_filters.branch_filters or applied_filters.order_type_filters or applied_filters.overdue_filter or applied_filters.date_from or applied_filters.date_to %}
-    <div class="filters-applied">
-        <strong>الفلاتر المطبقة:</strong>
-        {% for status in applied_filters.status_filters %}
-            {% for status_code, status_name in filter_options.status_choices %}
-                {% if status_code == status %}
-                    <span class="filter-tag">حالة: {{ status_name }}</span>
-                {% endif %}
-            {% endfor %}
-        {% endfor %}
-        
-        {% for branch_id in applied_filters.branch_filters %}
-            {% for branch in filter_options.branches %}
-                {% if branch.id|stringformat:"s" == branch_id %}
-                    <span class="filter-tag">فرع: {{ branch.name }}</span>
-                {% endif %}
-            {% endfor %}
-        {% endfor %}
-        
-        {% for order_type in applied_filters.order_type_filters %}
-            {% for type_code, type_name in filter_options.order_type_choices %}
-                {% if type_code == order_type %}
-                    <span class="filter-tag">نوع: {{ type_name }}</span>
-                {% endif %}
-            {% endfor %}
-        {% endfor %}
-        
-        {% if applied_filters.overdue_filter == 'true' %}
-            <span class="filter-tag">طلبات متأخرة</span>
+        <!-- Applied Filters -->
+        {% if applied_filters.status_filters or applied_filters.branch_filters or applied_filters.order_type_filters or applied_filters.overdue_filter or applied_filters.date_from or applied_filters.date_to %}
+            <div class="filters-applied">
+                <strong>الفلاتر المطبقة:</strong>
+                {% for status in applied_filters.status_filters %}
+                    {% for status_code, status_name in filter_options.status_choices %}
+                        {% if status_code == status %}<span class="filter-tag">حالة: {{ status_name }}</span>{% endif %}
+                    {% endfor %}
+                {% endfor %}
+                {% for branch_id in applied_filters.branch_filters %}
+                    {% for branch in filter_options.branches %}
+                        {% if branch.id|stringformat:"s" == branch_id %}<span class="filter-tag">فرع: {{ branch.name }}</span>{% endif %}
+                    {% endfor %}
+                {% endfor %}
+                {% for order_type in applied_filters.order_type_filters %}
+                    {% for type_code, type_name in filter_options.order_type_choices %}
+                        {% if type_code == order_type %}<span class="filter-tag">نوع: {{ type_name }}</span>{% endif %}
+                    {% endfor %}
+                {% endfor %}
+                {% if applied_filters.overdue_filter == 'true' %}<span class="filter-tag">طلبات متأخرة</span>{% endif %}
+                {% if applied_filters.date_from %}<span class="filter-tag">من: {{ applied_filters.date_from }}</span>{% endif %}
+                {% if applied_filters.date_to %}<span class="filter-tag">إلى: {{ applied_filters.date_to }}</span>{% endif %}
+            </div>
         {% endif %}
-        
-        {% if applied_filters.date_from %}
-            <span class="filter-tag">من: {{ applied_filters.date_from }}</span>
+        <!-- Orders Table -->
+        {% if orders %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>رقم الطلب</th>
+                        <th>العميل</th>
+                        <th>نوع الطلب</th>
+                        <th>الحالة</th>
+                        <th>تاريخ الطلب</th>
+                        <th>التسليم المتوقع</th>
+                        <th>الفرع</th>
+                        <th>البائع</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ order.manufacturing_code }}</strong>
+                                {% if order.contract_number %}
+                                    <br>
+                                    <small>{{ order.contract_number }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.order.customer %}
+                                    {{ order.order.customer.name }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ order.get_order_type_display|default:"-" }}</td>
+                            <td>
+                                {% if order.status == 'pending_approval' %}
+                                    <span class="badge bg-warning">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'pending' %}
+                                    <span class="badge bg-secondary">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'in_progress' %}
+                                    <span class="badge bg-primary">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'completed' %}
+                                    <span class="badge bg-success">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'delivered' %}
+                                    <span class="badge bg-success">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'rejected' %}
+                                    <span class="badge bg-danger">{{ order.get_status_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ order.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ order.order_date|date:"Y-m-d" }}</td>
+                            <td>
+                                {% if order.expected_delivery_date %}
+                                    {{ order.expected_delivery_date|date:"Y-m-d" }}
+                                    {% now "Y-m-d" as today %}
+                                    {% if order.expected_delivery_date|date:"Y-m-d" < today and order.status != 'delivered' %}
+                                        <br>
+                                        <small class="text-danger">متأخر</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">غير محدد</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.order.branch %}
+                                    {{ order.order.branch.name }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.order.salesperson %}
+                                    {{ order.order.salesperson.name }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div style="text-align: center; padding: 50px; color: #666;">
+                <h3>لا توجد طلبات</h3>
+                <p>لا توجد طلبات في هذا الخط تطابق معايير البحث.</p>
+            </div>
         {% endif %}
-        
-        {% if applied_filters.date_to %}
-            <span class="filter-tag">إلى: {{ applied_filters.date_to }}</span>
-        {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- Orders Table -->
-    {% if orders %}
-    <table class="table">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>رقم الطلب</th>
-                <th>العميل</th>
-                <th>نوع الطلب</th>
-                <th>الحالة</th>
-                <th>تاريخ الطلب</th>
-                <th>التسليم المتوقع</th>
-                <th>الفرع</th>
-                <th>البائع</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for order in orders %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>
-                    <strong>{{ order.manufacturing_code }}</strong>
-                    {% if order.contract_number %}
-                    <br><small>{{ order.contract_number }}</small>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if order.order.customer %}
-                        {{ order.order.customer.name }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>{{ order.get_order_type_display|default:"-" }}</td>
-                <td>
-                    {% if order.status == 'pending_approval' %}
-                        <span class="badge bg-warning">{{ order.get_status_display }}</span>
-                    {% elif order.status == 'pending' %}
-                        <span class="badge bg-secondary">{{ order.get_status_display }}</span>
-                    {% elif order.status == 'in_progress' %}
-                        <span class="badge bg-primary">{{ order.get_status_display }}</span>
-                    {% elif order.status == 'completed' %}
-                        <span class="badge bg-success">{{ order.get_status_display }}</span>
-                    {% elif order.status == 'delivered' %}
-                        <span class="badge bg-success">{{ order.get_status_display }}</span>
-                    {% elif order.status == 'rejected' %}
-                        <span class="badge bg-danger">{{ order.get_status_display }}</span>
-                    {% else %}
-                        <span class="badge bg-secondary">{{ order.get_status_display }}</span>
-                    {% endif %}
-                </td>
-                <td>{{ order.order_date|date:"Y-m-d" }}</td>
-                <td>
-                    {% if order.expected_delivery_date %}
-                        {{ order.expected_delivery_date|date:"Y-m-d" }}
-                        {% now "Y-m-d" as today %}
-                        {% if order.expected_delivery_date|date:"Y-m-d" < today and order.status != 'delivered' %}
-                            <br><small class="text-danger">متأخر</small>
-                        {% endif %}
-                    {% else %}
-                        <span class="text-muted">غير محدد</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if order.order.branch %}
-                        {{ order.order.branch.name }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if order.order.salesperson %}
-                        {{ order.order.salesperson.name }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div style="text-align: center; padding: 50px; color: #666;">
-        <h3>لا توجد طلبات</h3>
-        <p>لا توجد طلبات في هذا الخط تطابق معايير البحث.</p>
-    </div>
-    {% endif %}
-
-    <!-- Footer -->
-    <div class="footer">
-        تم الطباعة في {{ print_date|date:"Y-m-d H:i" }} | 
-        خط الإنتاج: {{ production_line.name }} | 
-        عدد الطلبات: {{ orders.count }}
-        {% if user %} | طُبع بواسطة: {{ user.get_full_name|default:user.username }}{% endif %}
-    </div>
-</body>
+        <!-- Footer -->
+        <div class="footer">
+            تم الطباعة في {{ print_date|date:"Y-m-d H:i" }} |
+            خط الإنتاج: {{ production_line.name }} |
+            عدد الطلبات: {{ orders.count }}
+            {% if user %}| طُبع بواسطة: {{ user.get_full_name|default:user.username }}{% endif %}
+        </div>
+    </body>
 </html>

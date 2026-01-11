@@ -1,12 +1,10 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}{{ page_title }}{% endblock %}
-
 {% block extra_css %}
-<!-- Quill Rich Text Editor CSS -->
-<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-<style>
+    <!-- Quill Rich Text Editor CSS -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <style>
   /* إصلاح تضارب شرائط التمرير */
   html { 
     height: 100%; 
@@ -224,234 +222,288 @@
   .ql-size-20px { font-size: 20px; }
   .ql-size-24px { font-size: 24px; }
   .ql-size-32px { font-size: 32px; }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container py-3">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="m-0">{{ page_title }}</h3>
-    <div class="actions d-flex gap-2 align-items-center">
-      <select id="template_style" class="form-select form-select-sm" style="width: 220px;">
-        <option value="classic">القالب الكلاسيكي</option>
-        <option value="modern">القالب الحديث</option>
-        <option value="pro">القالب الاحترافي</option>
-        <option value="custom">قالب محفوظ</option>
-      </select>
-      <button id="set-default" class="btn btn-outline-primary btn-sm" {% if not template_id %}disabled{% endif %}>تعيين كافتراضي</button>
-      <button id="save-template" class="btn btn-success">حفظ القالب</button>
-      <a class="btn btn-secondary" href="{% url 'orders:template_list' %}">رجوع</a>
+    <div class="container py-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="m-0">{{ page_title }}</h3>
+            <div class="actions d-flex gap-2 align-items-center">
+                <select id="template_style"
+                        class="form-select form-select-sm"
+                        style="width: 220px">
+                    <option value="classic">القالب الكلاسيكي</option>
+                    <option value="modern">القالب الحديث</option>
+                    <option value="pro">القالب الاحترافي</option>
+                    <option value="custom">قالب محفوظ</option>
+                </select>
+                <button id="set-default"
+                        class="btn btn-outline-primary btn-sm"
+                        {% if not template_id %}disabled{% endif %}>تعيين كافتراضي</button>
+                <button id="save-template" class="btn btn-success">حفظ القالب</button>
+                <a class="btn btn-secondary" href="{% url 'orders:template_list' %}">رجوع</a>
+            </div>
+        </div>
+        <div class="studio">
+            <div class="panel preview">
+                <div class="panel-body">
+                    <div id="preview" class="a4"></div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-header">الإعدادات</div>
+                <div class="panel-body">
+                    <div class="mb-2">
+                        <label class="form-label">عنوان الفاتورة</label>
+                        <input type="text" id="invoice_title" class="form-control" value="فاتورة">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">تسمية رقم الفاتورة</label>
+                        <input type="text"
+                               id="label_invoice_number"
+                               class="form-control"
+                               value="رقم الفاتورة">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">تسمية التاريخ</label>
+                        <input type="text" id="label_date" class="form-control" value="التاريخ">
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label">اللون الأساسي</label>
+                            <input type="color"
+                                   id="primary_color"
+                                   class="form-control form-control-color"
+                                   value="#0d6efd">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">لون إبراز</label>
+                            <input type="color"
+                                   id="accent_color"
+                                   class="form-control form-control-color"
+                                   value="#ffc107">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">الخط</label>
+                        <select id="font_family" class="form-select">
+                            <option value="Cairo, Arial, sans-serif">Cairo</option>
+                            <option value="Tajawal, Arial, sans-serif">Tajawal</option>
+                            <option value="Arial, sans-serif">Arial</option>
+                        </select>
+                    </div>
+                    <hr>
+                    <div class="mb-2">
+                        <label class="form-label">عنوان قسم العميل</label>
+                        <input type="text"
+                               id="label_customer_section"
+                               class="form-control"
+                               value="بيانات العميل">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">عنوان قسم الشركة</label>
+                        <input type="text"
+                               id="label_company_section"
+                               class="form-control"
+                               value="بيانات الشركة">
+                    </div>
+                    <hr>
+                    <div class="mb-2">
+                        <label class="form-label">اسم الشركة</label>
+                        <input type="text"
+                               id="company_name"
+                               class="form-control"
+                               value="{{ company_info.name|default_if_none:'اسم الشركة' }}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">الهاتف</label>
+                        <input type="text"
+                               id="company_phone"
+                               class="form-control"
+                               value="{{ company_info.phone|default_if_none:'' }}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">العنوان</label>
+                        <input type="text"
+                               id="company_address"
+                               class="form-control"
+                               value="{{ company_info.address|default_if_none:'العنوان' }}">
+                    </div>
+                    <hr>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label">عنوان عمود الوصف</label>
+                            <input type="text" id="th_desc" class="form-control" value="الوصف">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">عنوان عمود الكمية</label>
+                            <input type="text" id="th_qty" class="form-control" value="الكمية">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label">عنوان عمود السعر</label>
+                            <input type="text" id="th_price" class="form-control" value="السعر">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">عنوان عمود المجموع</label>
+                            <input type="text" id="th_total" class="form-control" value="المجموع">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">عنوان عمود نسبة الخصم</label>
+                        <input type="text" id="th_discount" class="form-control" value="نسبة الخصم">
+                    </div>
+                    <div class="rich-editor-container">
+                        <label class="form-label">ملاحظات أسفل الفاتورة</label>
+                        <div id="notes_editor" class="rich-editor"></div>
+                        <textarea id="notes_text" style="display:none;"></textarea>
+                        <div class="small mt-1">سوف تظهر أسفل الصفحة.</div>
+                    </div>
+                    <div class="rich-editor-container">
+                        <label class="form-label">الشروط والأحكام</label>
+                        <div id="terms_editor" class="rich-editor"></div>
+                        <textarea id="terms_text" style="display:none;"></textarea>
+                    </div>
+                    <hr>
+                    <h6 class="mb-2">التحكم في البطاقات</h6>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="show_customer" checked>
+                        <label class="form-check-label" for="show_customer">إظهار بطاقة بيانات العميل</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="show_company" checked>
+                        <label class="form-check-label" for="show_company">إظهار بطاقة بيانات الشركة</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="show_order_info" checked>
+                        <label class="form-check-label" for="show_order_info">إظهار بطاقة بيانات الطلب</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="show_table" checked>
+                        <label class="form-check-label" for="show_table">إظهار جدول العناصر</label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="show_totals" checked>
+                        <label class="form-check-label" for="show_totals">إظهار بطاقة المجاميع</label>
+                    </div>
+                    <hr>
+                    <h6 class="mb-2">إعدادات اللوغو</h6>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="show_logo_header"
+                               checked>
+                        <label class="form-check-label" for="show_logo_header">إظهار لوغو الشركة في الهيدر</label>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">حجم لوغو الهيدر (بكسل)</label>
+                        <input type="number"
+                               id="logo_size"
+                               class="form-control"
+                               value="60"
+                               min="20"
+                               max="200"
+                               step="10">
+                        <div class="small mt-1">الحد الأدنى: 20px، الحد الأقصى: 200px</div>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="show_bg_logo">
+                        <label class="form-check-label" for="show_bg_logo">إظهار شعار الشركة كخلفية خفيفة</label>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">شفافية لوغو الخلفية (%)</label>
+                        <input type="range"
+                               id="bg_logo_opacity"
+                               class="form-range"
+                               min="3"
+                               max="15"
+                               value="8"
+                               step="1">
+                        <div class="small mt-1">
+                            القيمة الحالية: <span id="opacity_value">8%</span>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6 class="mb-2">إعدادات التذييل</h6>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="show_footer" checked>
+                        <label class="form-check-label" for="show_footer">إظهار تذييل الصفحة</label>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">رقم الهوت لاين</label>
+                        <input type="text"
+                               id="hotline_number"
+                               class="form-control"
+                               value="{{ company_info.phone|default_if_none:'' }}"
+                               placeholder="رقم الهوت لاين">
+                    </div>
+                    <div class="rich-editor-container">
+                        <label class="form-label">ملاحظة التذييل</label>
+                        <div id="footer_note_editor" class="rich-editor small"></div>
+                        <textarea id="footer_note" style="display:none;">شكراً لثقتكم بنا</textarea>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label">لون أيقونة الهاتف</label>
+                            <input type="color"
+                                   id="phone_icon_color"
+                                   class="form-control form-control-color"
+                                   value="#28a745">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">لون رقم الهاتف</label>
+                            <input type="color"
+                                   id="phone_text_color"
+                                   class="form-control form-control-color"
+                                   value="#0d6efd">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label">لون أيقونة الملاحظة</label>
+                            <input type="color"
+                                   id="note_icon_color"
+                                   class="form-control form-control-color"
+                                   value="#6c757d">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">لون نص الملاحظة</label>
+                            <input type="color"
+                                   id="note_text_color"
+                                   class="form-control form-control-color"
+                                   value="#495057">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label">حجم أيقونة الهاتف</label>
+                            <select id="phone_icon_size" class="form-select">
+                                <option value="16px">صغير (16px)</option>
+                                <option value="18px" selected>متوسط (18px)</option>
+                                <option value="20px">كبير (20px)</option>
+                                <option value="24px">كبير جداً (24px)</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">حجم أيقونة الملاحظة</label>
+                            <select id="note_icon_size" class="form-select">
+                                <option value="14px">صغير (14px)</option>
+                                <option value="16px" selected>متوسط (16px)</option>
+                                <option value="18px">كبير (18px)</option>
+                                <option value="20px">كبير جداً (20px)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-
-  <div class="studio">
-    <div class="panel preview">
-      <div class="panel-body">
-        <div id="preview" class="a4"></div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header">الإعدادات</div>
-      <div class="panel-body">
-        <div class="mb-2">
-          <label class="form-label">عنوان الفاتورة</label>
-          <input type="text" id="invoice_title" class="form-control" value="فاتورة">
-        </div>
-        <div class="mb-2">
-          <label class="form-label">تسمية رقم الفاتورة</label>
-          <input type="text" id="label_invoice_number" class="form-control" value="رقم الفاتورة">
-        </div>
-        <div class="mb-2">
-          <label class="form-label">تسمية التاريخ</label>
-          <input type="text" id="label_date" class="form-control" value="التاريخ">
-        </div>
-        <div class="row g-2 mb-2">
-          <div class="col-6">
-            <label class="form-label">اللون الأساسي</label>
-            <input type="color" id="primary_color" class="form-control form-control-color" value="#0d6efd">
-          </div>
-          <div class="col-6">
-            <label class="form-label">لون إبراز</label>
-            <input type="color" id="accent_color" class="form-control form-control-color" value="#ffc107">
-          </div>
-        </div>
-        <div class="mb-2">
-          <label class="form-label">الخط</label>
-          <select id="font_family" class="form-select">
-            <option value="Cairo, Arial, sans-serif">Cairo</option>
-            <option value="Tajawal, Arial, sans-serif">Tajawal</option>
-            <option value="Arial, sans-serif">Arial</option>
-          </select>
-        </div>
-        <hr>
-        <div class="mb-2">
-          <label class="form-label">عنوان قسم العميل</label>
-          <input type="text" id="label_customer_section" class="form-control" value="بيانات العميل">
-        </div>
-        <div class="mb-2">
-          <label class="form-label">عنوان قسم الشركة</label>
-          <input type="text" id="label_company_section" class="form-control" value="بيانات الشركة">
-        </div>
-        <hr>
-        <div class="mb-2">
-          <label class="form-label">اسم الشركة</label>
-          <input type="text" id="company_name" class="form-control" value="{{ company_info.name|default_if_none:'اسم الشركة' }}">
-        </div>
-        <div class="mb-2">
-          <label class="form-label">الهاتف</label>
-          <input type="text" id="company_phone" class="form-control" value="{{ company_info.phone|default_if_none:'' }}">
-        </div>
-        <div class="mb-2">
-          <label class="form-label">العنوان</label>
-          <input type="text" id="company_address" class="form-control" value="{{ company_info.address|default_if_none:'العنوان' }}">
-        </div>
-        <hr>
-        <div class="row g-2 mb-2">
-          <div class="col-6">
-            <label class="form-label">عنوان عمود الوصف</label>
-            <input type="text" id="th_desc" class="form-control" value="الوصف">
-          </div>
-          <div class="col-6">
-            <label class="form-label">عنوان عمود الكمية</label>
-            <input type="text" id="th_qty" class="form-control" value="الكمية">
-          </div>
-        </div>
-        <div class="row g-2 mb-2">
-          <div class="col-6">
-            <label class="form-label">عنوان عمود السعر</label>
-            <input type="text" id="th_price" class="form-control" value="السعر">
-          </div>
-          <div class="col-6">
-            <label class="form-label">عنوان عمود المجموع</label>
-            <input type="text" id="th_total" class="form-control" value="المجموع">
-          </div>
-        </div>
-        <div class="mb-2">
-          <label class="form-label">عنوان عمود نسبة الخصم</label>
-          <input type="text" id="th_discount" class="form-control" value="نسبة الخصم">
-        </div>
-
-        <div class="rich-editor-container">
-          <label class="form-label">ملاحظات أسفل الفاتورة</label>
-          <div id="notes_editor" class="rich-editor"></div>
-          <textarea id="notes_text" style="display:none;"></textarea>
-          <div class="small mt-1">سوف تظهر أسفل الصفحة.</div>
-        </div>
-        <div class="rich-editor-container">
-          <label class="form-label">الشروط والأحكام</label>
-          <div id="terms_editor" class="rich-editor"></div>
-          <textarea id="terms_text" style="display:none;"></textarea>
-        </div>
-        <hr>
-        <h6 class="mb-2">التحكم في البطاقات</h6>
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="show_customer" checked>
-          <label class="form-check-label" for="show_customer">إظهار بطاقة بيانات العميل</label>
-        </div>
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="show_company" checked>
-          <label class="form-check-label" for="show_company">إظهار بطاقة بيانات الشركة</label>
-        </div>
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="show_order_info" checked>
-          <label class="form-check-label" for="show_order_info">إظهار بطاقة بيانات الطلب</label>
-        </div>
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="show_table" checked>
-          <label class="form-check-label" for="show_table">إظهار جدول العناصر</label>
-        </div>
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="show_totals" checked>
-          <label class="form-check-label" for="show_totals">إظهار بطاقة المجاميع</label>
-        </div>
-        <hr>
-        <h6 class="mb-2">إعدادات اللوغو</h6>
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="show_logo_header" checked>
-          <label class="form-check-label" for="show_logo_header">إظهار لوغو الشركة في الهيدر</label>
-        </div>
-        <div class="mb-2">
-          <label class="form-label">حجم لوغو الهيدر (بكسل)</label>
-          <input type="number" id="logo_size" class="form-control" value="60" min="20" max="200" step="10">
-          <div class="small mt-1">الحد الأدنى: 20px، الحد الأقصى: 200px</div>
-        </div>
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="show_bg_logo">
-          <label class="form-check-label" for="show_bg_logo">إظهار شعار الشركة كخلفية خفيفة</label>
-        </div>
-        <div class="mb-2">
-          <label class="form-label">شفافية لوغو الخلفية (%)</label>
-          <input type="range" id="bg_logo_opacity" class="form-range" min="3" max="15" value="8" step="1">
-          <div class="small mt-1">القيمة الحالية: <span id="opacity_value">8%</span></div>
-        </div>
-        <hr>
-        <h6 class="mb-2">إعدادات التذييل</h6>
-        <div class="form-check mb-2">
-          <input class="form-check-input" type="checkbox" id="show_footer" checked>
-          <label class="form-check-label" for="show_footer">إظهار تذييل الصفحة</label>
-        </div>
-        <div class="mb-2">
-          <label class="form-label">رقم الهوت لاين</label>
-          <input type="text" id="hotline_number" class="form-control" value="{{ company_info.phone|default_if_none:'' }}" placeholder="رقم الهوت لاين">
-        </div>
-        <div class="rich-editor-container">
-          <label class="form-label">ملاحظة التذييل</label>
-          <div id="footer_note_editor" class="rich-editor small"></div>
-          <textarea id="footer_note" style="display:none;">شكراً لثقتكم بنا</textarea>
-        </div>
-        <div class="row g-2 mb-2">
-          <div class="col-6">
-            <label class="form-label">لون أيقونة الهاتف</label>
-            <input type="color" id="phone_icon_color" class="form-control form-control-color" value="#28a745">
-          </div>
-          <div class="col-6">
-            <label class="form-label">لون رقم الهاتف</label>
-            <input type="color" id="phone_text_color" class="form-control form-control-color" value="#0d6efd">
-          </div>
-        </div>
-        <div class="row g-2 mb-2">
-          <div class="col-6">
-            <label class="form-label">لون أيقونة الملاحظة</label>
-            <input type="color" id="note_icon_color" class="form-control form-control-color" value="#6c757d">
-          </div>
-          <div class="col-6">
-            <label class="form-label">لون نص الملاحظة</label>
-            <input type="color" id="note_text_color" class="form-control form-control-color" value="#495057">
-          </div>
-        </div>
-        <div class="row g-2 mb-2">
-          <div class="col-6">
-            <label class="form-label">حجم أيقونة الهاتف</label>
-            <select id="phone_icon_size" class="form-select">
-              <option value="16px">صغير (16px)</option>
-              <option value="18px" selected>متوسط (18px)</option>
-              <option value="20px">كبير (20px)</option>
-              <option value="24px">كبير جداً (24px)</option>
-            </select>
-          </div>
-          <div class="col-6">
-            <label class="form-label">حجم أيقونة الملاحظة</label>
-            <select id="note_icon_size" class="form-select">
-              <option value="14px">صغير (14px)</option>
-              <option value="16px" selected>متوسط (16px)</option>
-              <option value="18px">كبير (18px)</option>
-              <option value="20px">كبير جداً (20px)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-{{ saved_meta_content|json_script:"saved-meta" }}
-{{ saved_html_content|json_script:"saved-html" }}
-
-<!-- Quill Rich Text Editor JS -->
-<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-
-<script>
+    {{ saved_meta_content|json_script:"saved-meta" }}
+    {{ saved_html_content|json_script:"saved-html" }}
+    <!-- Quill Rich Text Editor JS -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <script>
   const TEMPLATE_ID = {% if template_id %}{{ template_id }}{% else %}null{% endif %};
   const SAVED_HTML = JSON.parse(document.getElementById('saved-html').textContent || '""');
   const META = JSON.parse(document.getElementById('saved-meta').textContent || '{}');
@@ -745,308 +797,30 @@
           print-color-adjust: exact !important;
         }
       }
-    </style>
+</style>
     <div class="bg-logo">
-      ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
+      ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "' />" : ''}
     </div>
     <div class="content">
       <div class="main-content">
         <div style="text-align:center; border-bottom: 2px solid var(--primary-color); padding-bottom:10px; margin-bottom:18px;">
-          ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;"/>` : ''}
+          ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />` : ''}
           <h1 style="color:var(--primary-color); margin:0;">${title}</h1>
           <div>${labelInvoice}: \${order.invoice_number} — ${labelDate}: \${order.order_date}</div>
         </div>
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:16px; margin-bottom:16px;">
         ${showCustomer ? `
-        <div style=\"background:#f8f9fa; padding:12px; border-right:4px solid var(--accent-color);\">
-          <div style=\"font-weight:600; margin-bottom:8px;\">${labelCustomerSec}</div>
-          <div>الاسم: \${customer.name} </div>
-          <div>الهاتف: \${customer.phone} </div>
-          <div>العنوان: \${customer.address} </div>
-        </div>` : ''}
-        ${showOrderInfo ? `
-        <div style=\"background:#fff3cd; padding:12px; border-right:4px solid var(--accent-color);\">
-          <div style=\"font-weight:600; margin-bottom:8px;\">بيانات الطلب</div>
-          <div>الفرع: \${branch.name} </div>
-          <div>اسم البائع: \${salesperson.name} </div>
-          <div>رقم الطلب: \${order.order_number} </div>
-          <div>نوع الطلب: \${order.type} </div>
-          <div>تسليم متوقع: \${order.expected_delivery_date} </div>
-        </div>` : ''}
-        ${showCompany ? `
-        <div style=\"background:#f8f9fa; padding:12px; border-right:4px solid var(--accent-color);\">
-          <div style=\"font-weight:600; margin-bottom:8px;\">${labelCompanySec}</div>
-          <div>${cname}</div>
-          <div>${cphone}</div>
-          <div>${caddr}</div>
-        </div>` : ''}
-      </div>
-      ${showTable ? `
-      <table class="items-table">
-        <thead>
-          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thDiscount}</th><th>${thTotal}</th></tr>
-        </thead>
-        <tbody>\${order.items_table} </tbody>
-      </table>` : ''}
-      ${showTotals ? `
-      <div class="totals">
-        <div class="row"><span>المجموع قبل الخصم:</span><span><strong>\${order.total_amount} \${systemSettings.currency_symbol}</strong></span></div>
-        <div class="row"><span>إجمالي الخصم:</span><span style="color:#dc3545;">-\${order.total_discount_amount} \${systemSettings.currency_symbol}</span></div>
-        <div class="row"><span>الإجمالي النهائي:</span><span style="color:#198754;"><strong>\${order.final_price_after_discount} \${systemSettings.currency_symbol}</strong></span></div>
-        <div class="row"><span>المبلغ المدفوع:</span><span style="color:#198754;">\${order.paid_amount} \${systemSettings.currency_symbol}</span></div>
-        <div class="row"><span>المبلغ المتبقي:</span><span style="color:#dc3545;">\${order.remaining_amount} \${systemSettings.currency_symbol}</span></div>
-      </div>` : ''}
-        ${notes ? `<div style=\"margin-top:14px; color:#6c757d;\">${notes}</div>` : ''}
-        ${terms ? `<div style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''}
-      </div>
-      ${showFooter ? `
-      <div class=\"footer\">
-        ${hotlineNumber ? `<div class=\"phone-section\"><div class=\"phone-icon\" style=\"color:${phoneIconColor}; font-size:${phoneIconSize};\"></div><span style=\"color:${phoneTextColor}\">${hotlineNumber}</span></div>` : ''}
-        ${footerNote ? `<div class=\"note-section\"><div class=\"note-icon\" style=\"color:${noteIconColor}; font-size:${noteIconSize};\"></div><span style=\"color:${noteTextColor}\">${footerNote}</span></div>` : ''}
-      </div>` : ''}
-    </div>`;
-
-    const modern = `
-    <style>
-      :root { --primary-color:${primary}; --accent-color:${accent}; }
-      body { font-family:${font}; }
-      .hero{ 
-        background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); 
-        color: #fff; 
-        padding: 25px; 
-        border-radius: 15px 15px 0 0; 
-        text-align: center; 
-        position: relative;
-        overflow: hidden;
-      }
-      .hero::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="80" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
-        pointer-events: none;
-      }
-      .card{ background:#fff; border:1px solid #eee; border-radius:10px; padding:12px; }
-      .grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-      .items-table{ width:100%; border-collapse: collapse; margin-top:10px; }
-      .items-table th{ background:#f1f3f5; }
-      .items-table th,.items-table td{ padding:10px; border-bottom:1px solid #eee; }
-      .items-table td:first-child{ text-align:right; word-break:break-word; }
-      .items-table td:nth-child(2), .items-table td:nth-child(3), .items-table td:nth-child(4){ text-align:center; }
-      .bg-logo{ position:fixed; inset:0; display:${bg?'block':'none'}; opacity:${bgOpacity/100}; z-index:-1; pointer-events:none; }
-      .bg-logo img{ max-width:60%; position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); }
-      .totals{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-top:12px; }
-      .totals .t{ background:#f8f9fa; border:1px solid #eee; border-radius:10px; padding:12px; text-align:center; }
-      .content{ position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column; }
-      .main-content{ flex:1; }
-      .footer{ 
-        margin-top: auto; 
-        padding: 25px 30px; 
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 20px; 
-        text-align: center; 
-        border: none;
-        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
-        page-break-inside: avoid;
-        position: relative;
-        overflow: hidden;
-      }
-      .footer::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-        pointer-events: none;
-      }
-      .footer .phone-section{ 
-        display: flex; align-items: center; justify-content: center; 
-        margin-bottom: 15px; font-size: 16px; font-weight: 600;
-        color: white; position: relative; z-index: 2;
-      }
-      .footer .phone-icon{ 
-        display: inline-block;
-        margin-left: 8px; 
-      }
-      .footer .phone-icon::before{ content: '📞'; font-size: 20px; }
-      .footer .note-section{ 
-        display: flex; align-items: center; justify-content: center; 
-        font-size: 14px; color: rgba(255, 255, 255, 0.9);
-        position: relative; z-index: 2;
-      }
-      .footer .note-icon{ 
-        width: 40px; height: 40px; 
-        background: rgba(255, 255, 255, 0.15);
-        border: 2px solid rgba(255, 255, 255, 0.25);
-        border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-        margin-left: 12px; box-shadow: 0 3px 12px rgba(0,0,0,0.15);
-        backdrop-filter: blur(8px); transition: all 0.3s ease;
-      }
-      .footer .note-icon::before{ content: '📝'; font-size: 18px; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3)); }
-      @media print { 
-        .bg-logo{ 
-          display:${bg?'block':'none'} !important; 
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          bottom: 0 !important;
-          opacity: ${bgOpacity/100} !important;
-          z-index: -1 !important;
-          pointer-events: none !important;
-          width: 100% !important;
-          height: 100% !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        .bg-logo img{ 
-          max-width: 60% !important; 
-          position: absolute !important; 
-          top: 40% !important; 
-          left: 50% !important; 
-          transform: translate(-50%,-50%) !important;
-          width: auto !important;
-          height: auto !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-      }
-    </style>
-    <div class="bg-logo">
-      ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
+        <div style=\"background:#f8f9fa; padding:12px; border-right:4px solid var(--accent-color);\"> <div style=\"font-weight:600; margin-bottom:8px;\">${labelCustomerSec}</div> <div>الاسم: \${customer.name} </div> <div>الهاتف: \${customer.phone} </div> <div>العنوان: \${customer.address} </div> </div>` : ''} ${showOrderInfo ? ` <div style=\"background:#fff3cd; padding:12px; border-right:4px solid var(--accent-color);\"> <div style=\"font-weight:600; margin-bottom:8px;\">بيانات الطلب</div> <div>الفرع: \${branch.name} </div> <div>اسم البائع: \${salesperson.name} </div> <div>رقم الطلب: \${order.order_number} </div> <div>نوع الطلب: \${order.type} </div> <div>تسليم متوقع: \${order.expected_delivery_date} </div> </div>` : ''} ${showCompany ? ` <div style=\"background:#f8f9fa; padding:12px; border-right:4px solid var(--accent-color);\"> <div style=\"font-weight:600; margin-bottom:8px;\">${labelCompanySec}</div> <div>${cname}</div> <div>${cphone}</div> <div>${caddr}</div> </div>` : ''} </div> ${showTable ? ` <table class="items-table"> <thead> <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thDiscount}</th><th>${thTotal}</th></tr> </thead> <tbody>\${order.items_table} </tbody> </table>` : ''} ${showTotals ? ` <div class="totals"> <div class="row"><span>المجموع قبل الخصم:</span><span><strong>\${order.total_amount} \${systemSettings.currency_symbol}</strong></span></div> <div class="row"><span>إجمالي الخصم:</span><span style="color:#dc3545;">-\${order.total_discount_amount} \${systemSettings.currency_symbol}</span></div> <div class="row"><span>الإجمالي النهائي:</span><span style="color:#198754;"><strong>\${order.final_price_after_discount} \${systemSettings.currency_symbol}</strong></span></div> <div class="row"><span>المبلغ المدفوع:</span><span style="color:#198754;">\${order.paid_amount} \${systemSettings.currency_symbol}</span></div> <div class="row"><span>المبلغ المتبقي:</span><span style="color:#dc3545;">\${order.remaining_amount} \${systemSettings.currency_symbol}</span></div> </div>` : ''} ${notes ? `<div style=\"margin-top:14px; color:#6c757d;\">${notes}</div>` : ''} ${terms ? `<div style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''} </div> ${showFooter ? ` <div class=\"footer\"> ${hotlineNumber ? `<div class=\"phone-section\"><div class=\"phone-icon\" style=\"color:${phoneIconColor}; font-size:${phoneIconSize};\"></div><span style=\"color:${phoneTextColor}\">${hotlineNumber}</span></div>` : ''} ${footerNote ? `<div class=\"note-section\"><div class=\"note-icon\" style=\"color:${noteIconColor}; font-size:${noteIconSize};\"></div><span style=\"color:${noteTextColor}\">${footerNote}</span></div>` : ''} </div>` : ''} </div>`;  const modern = ` <style> :root { --primary-color:${primary}; --accent-color:${accent}; } body { font-family:${font}; } .hero{ background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); color: #fff; padding: 25px; border-radius: 15px 15px 0 0; text-align: center; position: relative; overflow: hidden; } .hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="80" r="2" fill="rgba(255,255,255,0.1)"/></svg>'); pointer-events: none; } .card{ background:#fff; border:1px solid #eee; border-radius:10px; padding:12px; } .grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; } .items-table{ width:100%; border-collapse: collapse; margin-top:10px; } .items-table th{ background:#f1f3f5; } .items-table th,.items-table td{ padding:10px; border-bottom:1px solid #eee; } .items-table td:first-child{ text-align:right; word-break:break-word; } .items-table td:nth-child(2), .items-table td:nth-child(3), .items-table td:nth-child(4){ text-align:center; } .bg-logo{ position:fixed; inset:0; display:${bg?'block':'none'}; opacity:${bgOpacity/100}; z-index:-1; pointer-events:none; } .bg-logo img{ max-width:60%; position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); } .totals{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-top:12px; } .totals .t{ background:#f8f9fa; border:1px solid #eee; border-radius:10px; padding:12px; text-align:center; } .content{ position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column; } .main-content{ flex:1; } .footer{ margin-top: auto; padding: 25px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; text-align: center; border: none; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3); page-break-inside: avoid; position: relative; overflow: hidden; } .footer::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); pointer-events: none; } .footer .phone-section{ display: flex; align-items: center; justify-content: center; margin-bottom: 15px; font-size: 16px; font-weight: 600; color: white; position: relative; z-index: 2; } .footer .phone-icon{ display: inline-block; margin-left: 8px; } .footer .phone-icon::before{ content: '📞'; font-size: 20px; } .footer .note-section{ display: flex; align-items: center; justify-content: center; font-size: 14px; color: rgba(255, 255, 255, 0.9); position: relative; z-index: 2; } .footer .note-icon{ width: 40px; height: 40px; background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.25); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-left: 12px; box-shadow: 0 3px 12px rgba(0,0,0,0.15); backdrop-filter: blur(8px); transition: all 0.3s ease; } .footer .note-icon::before{ content: '📝'; font-size: 18px; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3)); } @media print { .bg-logo{ display:${bg?'block':'none'} !important; position: absolute !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; opacity: ${bgOpacity/100} !important; z-index: -1 !important; pointer-events: none !important; width: 100% !important; height: 100% !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .bg-logo img{ max-width: 60% !important; position: absolute !important; top: 40% !important; left: 50% !important; transform: translate(-50%,-50%) !important; width: auto !important; height: auto !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } } </style> <div class="bg-logo"> ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "' />" : ''}
     </div>
     <div class="main-content">
       <div class="hero">
-        ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto; border-radius: 8px;"/>` : ''}
+        ${showLogoHeader && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? `<img src="${COMPANY_LOGO_URL}" style="max-height: ${logoSize}px; max-width: ${logoSize}px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto; border-radius: 8px;" />` : ''}
         <h2 style="margin:0;">${title}</h2>
   <div class="small">${labelInvoice}: \${order.invoice_number} — ${labelDate}: \${order.order_date}</div>
       </div>
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:12px; margin-top:12px;">
       ${showCustomer ? `
-      <div class=\"card\">
-        <div style=\"font-weight:600; margin-bottom:6px;\">${labelCustomerSec}</div>
-  <div>الاسم: \${customer.name} </div>
-  <div>الهاتف: \${customer.phone} </div>
-  <div>العنوان: \${customer.address} </div>
-      </div>`: ''}
-      ${showOrderInfo ? `
-      <div class=\"card\" style=\"background:#fff3cd;\">
-        <div style=\"font-weight:600; margin-bottom:6px;\">بيانات الطلب</div>
-  <div>الفرع: \${branch.name} </div>
-  <div>اسم البائع: \${salesperson.name} </div>
-  <div>رقم الطلب: \${order.order_number} </div>
-  <div>نوع الطلب: \${order.type} </div>
-  <div>تسليم متوقع: \${order.expected_delivery_date} </div>
-      </div>`: ''}
-      ${showCompany ? `
-      <div class=\"card\">
-        <div style=\"font-weight:600; margin-bottom:6px;\">${labelCompanySec}</div>
-        <div>${cname}</div>
-        <div>${cphone}</div>
-        <div>${caddr}</div>
-      </div>`: ''}
-    </div>
-    ${showTable ? `
-    <div class=\"card\" style=\"margin-top:12px;\">
-      <table class=\"items-table\">
-        <thead>
-          <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thDiscount}</th><th>${thTotal}</th></tr>
-        </thead>
-  <tbody>\${order.items_table} </tbody>
-      </table>
-    </div>`: ''}
-    ${showTotals ? `
-    <div class=\"totals\">
-  <div class=\"t\"><div style=\"color:#666;\">المجموع قبل الخصم</div><strong>\${order.total_amount} \${systemSettings.currency_symbol}</strong></div>
-  <div class=\"t\"><div style=\"color:#dc3545;\">إجمالي الخصم</div><strong style=\"color:#dc3545;\">-\${order.total_discount_amount} \${systemSettings.currency_symbol}</strong></div>
-  <div class=\"t\"><div style=\"color:#198754;\">الإجمالي النهائي</div><strong style=\"color:#198754;\">\${order.final_price_after_discount} \${systemSettings.currency_symbol}</strong></div>
-  <div class=\"t\"><div style=\"color:#198754;\">المبلغ المدفوع</div><strong>\${order.paid_amount} \${systemSettings.currency_symbol}</strong></div>
-  <div class=\"t\"><div style=\"color:#dc3545;\">المبلغ المتبقي</div><strong>\${order.remaining_amount} \${systemSettings.currency_symbol}</strong></div>
-    </div>`: ''}
-      ${notes ? `<div class=\"card\" style=\"margin-top:12px; color:#495057;\">${notes}</div>` : ''}
-      ${terms ? `<div class=\"card\" style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''}
-    </div>
-    ${showFooter ? `
-    <div class=\"footer\">
-      ${hotlineNumber ? `<div class=\"phone-section\"><div class=\"phone-icon\" style=\"color:${phoneIconColor}; font-size:${phoneIconSize};\"></div><span style=\"color:${phoneTextColor}\">${hotlineNumber}</span></div>` : ''}
-      ${footerNote ? `<div class=\"note-section\"><div class=\"note-icon\" style=\"color:${noteIconColor}; font-size:${noteIconSize};\"></div><span style=\"color:${noteTextColor}\">${footerNote}</span></div>` : ''}
-    </div>` : ''}
-    `;
-
-    const pro = `
-    <style>
-      :root { --primary-color:${primary}; --accent-color:${accent}; }
-      body { font-family:${font}; }
-      .header{ display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:3px solid var(--primary-color); }
-      .company{ text-align:right; }
-      .logo{ height:${logoSize}px; max-width:${logoSize * 2}px; object-fit:contain; }
-      .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
-      .box{ background:#fff; border:1px solid #e9ecef; border-radius:10px; padding:12px; }
-      .box h4{ margin:0 0 8px; color:var(--primary-color); font-size:16px; }
-      .items-table{ width:100%; border-collapse: collapse; margin-top:14px; table-layout: fixed; }
-      .items-table thead th{ background:#fafbfc; border-bottom:2px solid var(--primary-color); }
-      .items-table th,.items-table td{ padding:10px; border-bottom:1px solid #eee; }
-      .totals{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-top:14px; }
-      .totals .t{ background:#f8f9fa; border:1px solid #eee; border-radius:10px; padding:12px; text-align:center; }
-      .bg-logo{ position:fixed; inset:0; display:${bg?'block':'none'}; opacity:${bgOpacity/100}; z-index:-1; pointer-events:none; }
-      .bg-logo img{ max-width:60%; position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); }
-      .content{ position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column; }
-      .main-content{ flex:1; }
-      .footer{ 
-        margin-top: auto; 
-        padding: 15px 20px; 
-        background: transparent;
-        border-top: 2px solid var(--primary-color);
-        text-align: center; 
-        page-break-inside: avoid;
-      }
-      .footer .phone-section{ 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        font-size: 16px; 
-        font-weight: 600;
-        color: var(--primary-color);
-      }
-      .footer .phone-icon{ 
-        display: inline-block;
-        margin-left: 8px; 
-        color: var(--primary-color);
-      }
-      .footer .phone-icon::before{ 
-        content: '📞'; 
-        font-size: 18px; 
-      }
-      @media print { 
-        .bg-logo{ 
-          display:${bg?'block':'none'} !important; 
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          bottom: 0 !important;
-          opacity: ${bgOpacity/100} !important;
-          z-index: -1 !important;
-          pointer-events: none !important;
-          width: 100% !important;
-          height: 100% !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        .bg-logo img{ 
-          max-width: 60% !important; 
-          position: absolute !important; 
-          top: 40% !important; 
-          left: 50% !important; 
-          transform: translate(-50%,-50%) !important;
-          width: auto !important;
-          height: auto !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-      }
-    </style>
-    <div class="bg-logo">
-      ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "'/>" : ''}
+      <div class=\"card\"> <div style=\"font-weight:600; margin-bottom:6px;\">${labelCustomerSec}</div> <div>الاسم: \${customer.name} </div> <div>الهاتف: \${customer.phone} </div> <div>العنوان: \${customer.address} </div> </div>`: ''} ${showOrderInfo ? ` <div class=\"card\" style=\"background:#fff3cd;\"> <div style=\"font-weight:600; margin-bottom:6px;\">بيانات الطلب</div> <div>الفرع: \${branch.name} </div> <div>اسم البائع: \${salesperson.name} </div> <div>رقم الطلب: \${order.order_number} </div> <div>نوع الطلب: \${order.type} </div> <div>تسليم متوقع: \${order.expected_delivery_date} </div> </div>`: ''} ${showCompany ? ` <div class=\"card\"> <div style=\"font-weight:600; margin-bottom:6px;\">${labelCompanySec}</div> <div>${cname}</div> <div>${cphone}</div> <div>${caddr}</div> </div>`: ''} </div> ${showTable ? ` <div class=\"card\" style=\"margin-top:12px;\"> <table class=\"items-table\"> <thead> <tr><th>${thDesc}</th><th>${thQty}</th><th>${thPrice}</th><th>${thDiscount}</th><th>${thTotal}</th></tr> </thead> <tbody>\${order.items_table} </tbody> </table> </div>`: ''} ${showTotals ? ` <div class=\"totals\"> <div class=\"t\"><div style=\"color:#666;\">المجموع قبل الخصم</div><strong>\${order.total_amount} \${systemSettings.currency_symbol}</strong></div> <div class=\"t\"><div style=\"color:#dc3545;\">إجمالي الخصم</div><strong style=\"color:#dc3545;\">-\${order.total_discount_amount} \${systemSettings.currency_symbol}</strong></div> <div class=\"t\"><div style=\"color:#198754;\">الإجمالي النهائي</div><strong style=\"color:#198754;\">\${order.final_price_after_discount} \${systemSettings.currency_symbol}</strong></div> <div class=\"t\"><div style=\"color:#198754;\">المبلغ المدفوع</div><strong>\${order.paid_amount} \${systemSettings.currency_symbol}</strong></div> <div class=\"t\"><div style=\"color:#dc3545;\">المبلغ المتبقي</div><strong>\${order.remaining_amount} \${systemSettings.currency_symbol}</strong></div> </div>`: ''} ${notes ? `<div class=\"card\" style=\"margin-top:12px; color:#495057;\">${notes}</div>` : ''} ${terms ? `<div class=\"card\" style=\"margin-top:8px; color:#6c757d;\">${terms}</div>` : ''} </div> ${showFooter ? ` <div class=\"footer\"> ${hotlineNumber ? `<div class=\"phone-section\"><div class=\"phone-icon\" style=\"color:${phoneIconColor}; font-size:${phoneIconSize};\"></div><span style=\"color:${phoneTextColor}\">${hotlineNumber}</span></div>` : ''} ${footerNote ? `<div class=\"note-section\"><div class=\"note-icon\" style=\"color:${noteIconColor}; font-size:${noteIconSize};\"></div><span style=\"color:${noteTextColor}\">${footerNote}</span></div>` : ''} </div>` : ''} `;  const pro = ` <style> :root { --primary-color:${primary}; --accent-color:${accent}; } body { font-family:${font}; } .header{ display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:3px solid var(--primary-color); } .company{ text-align:right; } .logo{ height:${logoSize}px; max-width:${logoSize * 2}px; object-fit:contain; } .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; } .box{ background:#fff; border:1px solid #e9ecef; border-radius:10px; padding:12px; } .box h4{ margin:0 0 8px; color:var(--primary-color); font-size:16px; } .items-table{ width:100%; border-collapse: collapse; margin-top:14px; table-layout: fixed; } .items-table thead th{ background:#fafbfc; border-bottom:2px solid var(--primary-color); } .items-table th,.items-table td{ padding:10px; border-bottom:1px solid #eee; } .totals{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-top:14px; } .totals .t{ background:#f8f9fa; border:1px solid #eee; border-radius:10px; padding:12px; text-align:center; } .bg-logo{ position:fixed; inset:0; display:${bg?'block':'none'}; opacity:${bgOpacity/100}; z-index:-1; pointer-events:none; } .bg-logo img{ max-width:60%; position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); } .content{ position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column; } .main-content{ flex:1; } .footer{ margin-top: auto; padding: 15px 20px; background: transparent; border-top: 2px solid var(--primary-color); text-align: center; page-break-inside: avoid; } .footer .phone-section{ display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; color: var(--primary-color); } .footer .phone-icon{ display: inline-block; margin-left: 8px; color: var(--primary-color); } .footer .phone-icon::before{ content: '📞'; font-size: 18px; } @media print { .bg-logo{ display:${bg?'block':'none'} !important; position: absolute !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; opacity: ${bgOpacity/100} !important; z-index: -1 !important; pointer-events: none !important; width: 100% !important; height: 100% !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .bg-logo img{ max-width: 60% !important; position: absolute !important; top: 40% !important; left: 50% !important; transform: translate(-50%,-50%) !important; width: auto !important; height: auto !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } } </style> <div class="bg-logo"> ${bg && COMPANY_LOGO_URL && COMPANY_LOGO_URL.trim() !== '' ? "<img src='" + COMPANY_LOGO_URL + "' />" : ''}
     </div>
     <div class="main-content">
       <div class="header">
@@ -1308,6 +1082,5 @@
     const data = await resp.json().catch(()=>({success:false}));
     if (data.success) alert('تم تعيين القالب كافتراضي'); else alert('تعذر التعيين كافتراضي');
   };
-</script>
+    </script>
 {% endblock %}
-

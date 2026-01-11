@@ -1,5 +1,4 @@
 {% load static %}
-
 <!-- CSS للنافذة المنبثقة -->
 <style>
     .scanner-modal {
@@ -334,20 +333,18 @@
         transform: scale(1.05);
     }
 </style>
-
 <!-- نافذة فحص الباركود -->
 <div class="scanner-modal" id="scannerModal">
     <div class="scanner-container">
-        <button class="scanner-close" id="closeScannerBtn" 
-                aria-label="إغلاق ماسح الباركود" 
+        <button class="scanner-close"
+                id="closeScannerBtn"
+                aria-label="إغلاق ماسح الباركود"
                 title="إغلاق">
             <i class="fas fa-times" aria-hidden="true"></i>
         </button>
-        
         <h3 class="text-center mb-3" style="color: #667eea; font-weight: bold;">
             <i class="fas fa-barcode"></i> فحص باركود المنتج
         </h3>
-        
         <!-- طلب الأذونات -->
         <div class="permission-request d-none" id="permissionRequest">
             <i class="fas fa-camera fa-3x mb-3" style="color: #4caf50;"></i>
@@ -357,21 +354,22 @@
                 <i class="fas fa-check-circle"></i> منح الإذن
             </button>
         </div>
-        
         <!-- تنبيه HTTPS -->
         <div class="https-warning d-none" id="httpsWarning">
             <strong>⚠️ تنبيه:</strong> الكاميرا تعمل فقط على:
-            <br>• <strong>HTTPS</strong> (الاتصال الآمن)
-            <br>• <strong>localhost</strong> (التطوير المحلي)
-            <br>استخدم الإدخال اليدوي أو رفع الصورة بدلاً من ذلك.
+            <br>
+            • <strong>HTTPS</strong> (الاتصال الآمن)
+            <br>
+            • <strong>localhost</strong> (التطوير المحلي)
+            <br>
+            استخدم الإدخال اليدوي أو رفع الصورة بدلاً من ذلك.
         </div>
-        
         <!-- خطأ الكاميرا -->
         <div class="camera-error d-none" id="cameraError">
             <strong>❌ فشل تشغيل الكاميرا</strong>
-            <br>الرجاء استخدام الإدخال اليدوي أو رفع صورة الباركود.
+            <br>
+            الرجاء استخدام الإدخال اليدوي أو رفع صورة الباركود.
         </div>
-        
         <!-- خيار الفحص بالكاميرا -->
         <div class="text-center mb-3">
             <button class="btn btn-primary" id="startCameraBtn">
@@ -381,10 +379,8 @@
                 <i class="fas fa-stop"></i> إيقاف الكاميرا
             </button>
         </div>
-        
         <!-- عنصر الفيديو للفحص -->
         <div id="reader" class="d-none"></div>
-        
         <!-- خيار رفع صورة -->
         <div class="upload-option">
             <p style="margin: 0 0 10px 0; font-weight: bold; color: #1976D2;">
@@ -395,24 +391,21 @@
                 <i class="fas fa-upload"></i> اختر صورة
             </label>
         </div>
-        
         <!-- خيار الإدخال اليدوي -->
         <div class="scanner-input-group">
-            <input type="text" 
-                   id="manualBarcodeInput" 
-                   class="scanner-input" 
+            <input type="text"
+                   id="manualBarcodeInput"
+                   class="scanner-input"
                    placeholder="أو أدخل كود المنتج يدوياً..."
                    autocomplete="off">
             <button class="scanner-submit-btn" id="manualScanBtn">
                 <i class="fas fa-search"></i> بحث
             </button>
         </div>
-        
         <!-- عرض النتيجة -->
         <div id="scanResult"></div>
     </div>
 </div>
-
 <!-- JavaScript للنافذة المنبثقة -->
 {% load static %}
 <script src="{% static 'vendor/qrcode/html5-qrcode.min.js' %}"></script>

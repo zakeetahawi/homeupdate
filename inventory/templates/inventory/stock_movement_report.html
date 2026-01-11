@@ -1,220 +1,235 @@
 {% extends 'inventory/inventory_base_custom.html' %}
 {% load static %}
-
 {% block inventory_title %}تقرير حركة المخزون{% endblock %}
-
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
-<li class="breadcrumb-item"><a href="{% url 'inventory:report_list' %}">التقارير</a></li>
-<li class="breadcrumb-item active" aria-current="page">تقرير حركة المخزون</li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a>
+    </li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:report_list' %}">التقارير</a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">تقرير حركة المخزون</li>
 {% endblock %}
-
 {% block quick_actions %}
-<a href="{% url 'inventory:report_list' %}" class="btn btn-secondary btn-sm">
-    <i class="fas fa-arrow-left"></i> العودة للتقارير
-</a>
-<a href="{% url 'inventory:low_stock_report' %}" class="btn btn-warning btn-sm">
-    <i class="fas fa-exclamation-triangle"></i> تقرير المخزون المنخفض
-</a>
+    <a href="{% url 'inventory:report_list' %}"
+       class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> العودة للتقارير
+    </a>
+    <a href="{% url 'inventory:low_stock_report' %}"
+       class="btn btn-warning btn-sm">
+        <i class="fas fa-exclamation-triangle"></i> تقرير المخزون المنخفض
+    </a>
 {% endblock %}
-
 {% block inventory_content %}
-<div class="stock-movement-report-container">
-    <!-- إحصائيات سريعة -->
-    <div class="stats-cards-container">
-        <div class="stat-card">
-            <div class="stat-card-icon">
-                <i class="fas fa-arrow-circle-down"></i>
-            </div>
-            <div class="stat-card-content">
-                <div class="stat-card-title">إجمالي الوارد</div>
-                <div class="stat-card-value">{{ total_in }}</div>
-                <div class="stat-card-change positive">
-                    <i class="fas fa-arrow-up"></i> 15% منذ الشهر الماضي
+    <div class="stock-movement-report-container">
+        <!-- إحصائيات سريعة -->
+        <div class="stats-cards-container">
+            <div class="stat-card">
+                <div class="stat-card-icon">
+                    <i class="fas fa-arrow-circle-down"></i>
                 </div>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-card-icon">
-                <i class="fas fa-arrow-circle-up"></i>
-            </div>
-            <div class="stat-card-content">
-                <div class="stat-card-title">إجمالي الصادر</div>
-                <div class="stat-card-value">{{ total_out }}</div>
-                <div class="stat-card-change negative">
-                    <i class="fas fa-arrow-up"></i> 8% منذ الشهر الماضي
-                </div>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-card-icon">
-                <i class="fas fa-exchange-alt"></i>
-            </div>
-            <div class="stat-card-content">
-                <div class="stat-card-title">صافي التغيير</div>
-                <div class="stat-card-value">{{ net_change }}</div>
-                <div class="stat-card-change {% if net_change >= 0 %}positive{% else %}negative{% endif %}">
-                    <i class="fas fa-{% if net_change >= 0 %}arrow-up{% else %}arrow-down{% endif %}"></i>
-                    {% if net_change >= 0 %}زيادة{% else %}نقص{% endif %} في المخزون
-                </div>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-card-icon">
-                <i class="fas fa-calendar-alt"></i>
-            </div>
-            <div class="stat-card-content">
-                <div class="stat-card-title">عدد الحركات</div>
-                <div class="stat-card-value">{{ transactions|length }}</div>
-                <div class="stat-card-change positive">
-                    <i class="fas fa-arrow-up"></i> 5% منذ الأسبوع الماضي
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- فلاتر البحث -->
-    <div class="filters-container mb-4">
-        <div class="card">
-            <div class="card-body">
-                <form method="get" class="row g-3">
-                    <div class="col-md-3">
-                        <label for="search" class="form-label">بحث</label>
-                        <input type="text" class="form-control" id="search" name="search" value="{{ search_query }}" placeholder="اسم المنتج، الكود، المرجع...">
+                <div class="stat-card-content">
+                    <div class="stat-card-title">إجمالي الوارد</div>
+                    <div class="stat-card-value">{{ total_in }}</div>
+                    <div class="stat-card-change positive">
+                        <i class="fas fa-arrow-up"></i> 15% منذ الشهر الماضي
                     </div>
-                    <div class="col-md-3">
-                        <label for="product" class="form-label">المنتج</label>
-                        <select class="form-select" id="product" name="product">
-                            <option value="">جميع المنتجات</option>
-                            {% for product in products %}
-                            <option value="{{ product.id }}" {% if selected_product == product.id|stringformat:"s" %}selected{% endif %}>{{ product.name }}</option>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-icon">
+                    <i class="fas fa-arrow-circle-up"></i>
+                </div>
+                <div class="stat-card-content">
+                    <div class="stat-card-title">إجمالي الصادر</div>
+                    <div class="stat-card-value">{{ total_out }}</div>
+                    <div class="stat-card-change negative">
+                        <i class="fas fa-arrow-up"></i> 8% منذ الشهر الماضي
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-icon">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <div class="stat-card-content">
+                    <div class="stat-card-title">صافي التغيير</div>
+                    <div class="stat-card-value">{{ net_change }}</div>
+                    <div class="stat-card-change {% if net_change >= 0 %}positive{% else %}negative{% endif %}">
+                        <i class="fas fa-{% if net_change >= 0 %}arrow-up{% else %}arrow-down{% endif %}"></i>
+                        {% if net_change >= 0 %}
+                            زيادة
+                        {% else %}
+                            نقص
+                        {% endif %}
+                        في المخزون
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="stat-card-content">
+                    <div class="stat-card-title">عدد الحركات</div>
+                    <div class="stat-card-value">{{ transactions|length }}</div>
+                    <div class="stat-card-change positive">
+                        <i class="fas fa-arrow-up"></i> 5% منذ الأسبوع الماضي
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- فلاتر البحث -->
+        <div class="filters-container mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="search" class="form-label">بحث</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="search"
+                                   name="search"
+                                   value="{{ search_query }}"
+                                   placeholder="اسم المنتج، الكود، المرجع...">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="product" class="form-label">المنتج</label>
+                            <select class="form-select" id="product" name="product">
+                                <option value="">جميع المنتجات</option>
+                                {% for product in products %}
+                                    <option value="{{ product.id }}"
+                                            {% if selected_product == product.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ product.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="type" class="form-label">نوع الحركة</label>
+                            <select class="form-select" id="type" name="type">
+                                <option value="">جميع الأنواع</option>
+                                <option value="in" {% if selected_type == 'in' %}selected{% endif %}>وارد</option>
+                                <option value="out" {% if selected_type == 'out' %}selected{% endif %}>صادر</option>
+                                <option value="adjustment"
+                                        {% if selected_type == 'adjustment' %}selected{% endif %}>تسوية</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="date_range" class="form-label">الفترة الزمنية</label>
+                            <select class="form-select" id="date_range" name="date_range">
+                                <option value="">جميع الفترات</option>
+                                <option value="today"
+                                        {% if selected_date_range == 'today' %}selected{% endif %}>اليوم</option>
+                                <option value="week"
+                                        {% if selected_date_range == 'week' %}selected{% endif %}>هذا الأسبوع</option>
+                                <option value="month"
+                                        {% if selected_date_range == 'month' %}selected{% endif %}>هذا الشهر</option>
+                                <option value="quarter"
+                                        {% if selected_date_range == 'quarter' %}selected{% endif %}>هذا الربع</option>
+                                <option value="year"
+                                        {% if selected_date_range == 'year' %}selected{% endif %}>هذا العام</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                            <a href="{% url 'inventory:stock_movement_report' %}"
+                               class="btn btn-secondary">
+                                <i class="fas fa-redo"></i> إعادة تعيين
+                            </a>
+                            <a href="#" class="btn btn-success float-end" id="exportBtn">
+                                <i class="fas fa-file-excel"></i> تصدير إلى Excel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- رسم بياني لحركة المخزون -->
+        <div class="chart-container mb-4">
+            <div class="chart-header">
+                <h4 class="chart-title">حركة المخزون</h4>
+                <div class="chart-actions">
+                    <div class="btn-group" role="group">
+                        <button type="button"
+                                class="btn btn-outline-secondary active"
+                                data-period="week">أسبوع</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="month">شهر</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="quarter">ربع سنة</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="year">سنة</button>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-body">
+                <canvas id="stockMovementChart" height="300"></canvas>
+            </div>
+        </div>
+        <!-- جدول حركات المخزون -->
+        <div class="data-table-container">
+            <div class="data-table-header">
+                <h4 class="data-table-title">
+                    حركات المخزون
+                    {% if transactions %}<span class="badge bg-primary">{{ transactions|length }}</span>{% endif %}
+                </h4>
+                <div class="data-table-actions">
+                    <a href="#" class="btn btn-primary btn-sm" id="printBtn">
+                        <i class="fas fa-print"></i> طباعة
+                    </a>
+                </div>
+            </div>
+            <div class="data-table-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover datatable">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>المنتج</th>
+                                <th>نوع الحركة</th>
+                                <th>الكمية</th>
+                                <th>السبب</th>
+                                <th>المرجع</th>
+                                <th>بواسطة</th>
+                                <th>ملاحظات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                                <tr>
+                                    <td>{{ transaction.date|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'inventory:product_detail' transaction.product.id %}">{{ transaction.product.name }}</a>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if transaction.transaction_type == 'in' %}bg-success{% elif transaction.transaction_type == 'out' %}bg-danger{% else %}bg-info{% endif %}">
+                                            {{ transaction.get_transaction_type_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ transaction.quantity }}</td>
+                                    <td>{{ transaction.get_reason_display }}</td>
+                                    <td>{{ transaction.reference|default:"-" }}</td>
+                                    <td>{{ transaction.created_by.get_full_name }}</td>
+                                    <td>{{ transaction.notes|default:"-" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">لا توجد حركات مخزون مطابقة للبحث</td>
+                                </tr>
                             {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="type" class="form-label">نوع الحركة</label>
-                        <select class="form-select" id="type" name="type">
-                            <option value="">جميع الأنواع</option>
-                            <option value="in" {% if selected_type == 'in' %}selected{% endif %}>وارد</option>
-                            <option value="out" {% if selected_type == 'out' %}selected{% endif %}>صادر</option>
-                            <option value="adjustment" {% if selected_type == 'adjustment' %}selected{% endif %}>تسوية</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="date_range" class="form-label">الفترة الزمنية</label>
-                        <select class="form-select" id="date_range" name="date_range">
-                            <option value="">جميع الفترات</option>
-                            <option value="today" {% if selected_date_range == 'today' %}selected{% endif %}>اليوم</option>
-                            <option value="week" {% if selected_date_range == 'week' %}selected{% endif %}>هذا الأسبوع</option>
-                            <option value="month" {% if selected_date_range == 'month' %}selected{% endif %}>هذا الشهر</option>
-                            <option value="quarter" {% if selected_date_range == 'quarter' %}selected{% endif %}>هذا الربع</option>
-                            <option value="year" {% if selected_date_range == 'year' %}selected{% endif %}>هذا العام</option>
-                        </select>
-                    </div>
-                    <div class="col-12 mt-3">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> بحث
-                        </button>
-                        <a href="{% url 'inventory:stock_movement_report' %}" class="btn btn-secondary">
-                            <i class="fas fa-redo"></i> إعادة تعيين
-                        </a>
-                        <a href="#" class="btn btn-success float-end" id="exportBtn">
-                            <i class="fas fa-file-excel"></i> تصدير إلى Excel
-                        </a>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- رسم بياني لحركة المخزون -->
-    <div class="chart-container mb-4">
-        <div class="chart-header">
-            <h4 class="chart-title">حركة المخزون</h4>
-            <div class="chart-actions">
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-secondary active" data-period="week">أسبوع</button>
-                    <button type="button" class="btn btn-outline-secondary" data-period="month">شهر</button>
-                    <button type="button" class="btn btn-outline-secondary" data-period="quarter">ربع سنة</button>
-                    <button type="button" class="btn btn-outline-secondary" data-period="year">سنة</button>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-        <div class="chart-body">
-            <canvas id="stockMovementChart" height="300"></canvas>
-        </div>
     </div>
-
-    <!-- جدول حركات المخزون -->
-    <div class="data-table-container">
-        <div class="data-table-header">
-            <h4 class="data-table-title">
-                حركات المخزون
-                {% if transactions %}
-                <span class="badge bg-primary">{{ transactions|length }}</span>
-                {% endif %}
-            </h4>
-            <div class="data-table-actions">
-                <a href="#" class="btn btn-primary btn-sm" id="printBtn">
-                    <i class="fas fa-print"></i> طباعة
-                </a>
-            </div>
-        </div>
-        <div class="data-table-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover datatable">
-                    <thead>
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>المنتج</th>
-                            <th>نوع الحركة</th>
-                            <th>الكمية</th>
-                            <th>السبب</th>
-                            <th>المرجع</th>
-                            <th>بواسطة</th>
-                            <th>ملاحظات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for transaction in transactions %}
-                        <tr>
-                            <td>{{ transaction.date|date:"Y-m-d H:i" }}</td>
-                            <td>
-                                <a href="{% url 'inventory:product_detail' transaction.product.id %}">{{ transaction.product.name }}</a>
-                            </td>
-                            <td>
-                                <span class="badge {% if transaction.transaction_type == 'in' %}bg-success{% elif transaction.transaction_type == 'out' %}bg-danger{% else %}bg-info{% endif %}">
-                                    {{ transaction.get_transaction_type_display }}
-                                </span>
-                            </td>
-                            <td>{{ transaction.quantity }}</td>
-                            <td>{{ transaction.get_reason_display }}</td>
-                            <td>{{ transaction.reference|default:"-" }}</td>
-                            <td>{{ transaction.created_by.get_full_name }}</td>
-                            <td>{{ transaction.notes|default:"-" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center">لا توجد حركات مخزون مطابقة للبحث</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-{{ block.super }}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/datatables.net@1.13.1/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/datatables.net-bs5@1.13.1/js/dataTables.bootstrap5.min.js"></script>
-<script>
+    {{ block.super }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/datatables.net@1.13.1/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/datatables.net-bs5@1.13.1/js/dataTables.bootstrap5.min.js"></script>
+    <script>
     document.addEventListener('DOMContentLoaded', function() {
         // تهيئة جدول البيانات
         $('.datatable').DataTable({
@@ -372,5 +387,5 @@
             window.print();
         });
     });
-</script>
+    </script>
 {% endblock %}

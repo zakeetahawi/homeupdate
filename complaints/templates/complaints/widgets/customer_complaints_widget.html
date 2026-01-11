@@ -1,5 +1,4 @@
 {% load complaints_tags %}
-
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
         <h6 class="mb-0">
@@ -7,16 +6,15 @@
             شكاوى العميل
         </h6>
         {% if has_complaints %}
-        <div class="btn-group">
-            <a href="{% url 'complaints:customer_complaints' customer.id %}"
-               class="btn btn-sm btn-outline-light">
-                <i class="fas fa-external-link-alt me-1"></i>
-                عرض الكل
-            </a>
-        </div>
+            <div class="btn-group">
+                <a href="{% url 'complaints:customer_complaints' customer.id %}"
+                   class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-external-link-alt me-1"></i>
+                    عرض الكل
+                </a>
+            </div>
         {% endif %}
     </div>
-    
     <div class="card-body">
         {% if has_complaints %}
             <!-- Statistics Row -->
@@ -38,9 +36,7 @@
                     <small class="text-muted">محلولة</small>
                 </div>
             </div>
-            
             <hr>
-            
             <!-- Recent Complaints -->
             <div class="complaints-list">
                 {% for complaint in complaints %}
@@ -48,7 +44,7 @@
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
                                 <h6 class="mb-1">
-                                    <a href="{% url 'complaints:complaint_detail' complaint.pk %}" 
+                                    <a href="{% url 'complaints:complaint_detail' complaint.pk %}"
                                        class="text-decoration-none text-dark">
                                         {{ complaint.title|truncatechars:50 }}
                                     </a>
@@ -56,9 +52,7 @@
                                 <small class="text-muted">
                                     <i class="fas fa-calendar me-1"></i>
                                     {{ complaint.created_at|date:"d/m/Y" }}
-                                    {% if complaint.complaint_type %}
-                                        | <i class="fas fa-tag me-1"></i>{{ complaint.complaint_type.name }}
-                                    {% endif %}
+                                    {% if complaint.complaint_type %}| <i class="fas fa-tag me-1"></i>{{ complaint.complaint_type.name }}{% endif %}
                                 </small>
                             </div>
                             <div class="text-end">
@@ -66,7 +60,6 @@
                                 {% complaint_priority_badge complaint.priority %}
                             </div>
                         </div>
-                        
                         {% if complaint.assigned_to %}
                             <div class="mt-2">
                                 <small class="text-muted">
@@ -75,7 +68,6 @@
                                 </small>
                             </div>
                         {% endif %}
-                        
                         <div class="mt-2">
                             <small class="text-muted">
                                 <i class="fas fa-clock me-1"></i>
@@ -85,7 +77,6 @@
                     </div>
                 {% endfor %}
             </div>
-            
             <!-- Quick Actions -->
             <div class="mt-3 d-flex gap-2">
                 <a href="{% url 'complaints:customer_complaints' customer.id %}"
@@ -108,7 +99,6 @@
         {% endif %}
     </div>
 </div>
-
 <style>
 .bg-gradient-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

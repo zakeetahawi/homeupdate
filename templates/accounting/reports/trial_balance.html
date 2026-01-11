@@ -1,83 +1,80 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}ميزان المراجعة{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2 class="mb-0">
-                    <i class="fas fa-balance-scale me-2"></i>
-                    ميزان المراجعة
-                </h2>
-                <button onclick="window.print()" class="btn btn-outline-secondary">
-                    <i class="fas fa-print me-1"></i> طباعة
-                </button>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">
+                        <i class="fas fa-balance-scale me-2"></i>
+                        ميزان المراجعة
+                    </h2>
+                    <button onclick="window.print()" class="btn btn-outline-secondary">
+                        <i class="fas fa-print me-1"></i> طباعة
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover mb-0">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>كود الحساب</th>
-                                    <th>اسم الحساب</th>
-                                    <th class="text-end text-success">مدين</th>
-                                    <th class="text-end text-danger">دائن</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in trial_data %}
-                                <tr>
-                                    <td><span class="badge bg-secondary">{{ item.account.code }}</span></td>
-                                    <td>{{ item.account.name }}</td>
-                                    <td class="text-end text-success">
-                                        {% if item.debit > 0 %}{{ item.debit|floatformat:2 }}{% endif %}
-                                    </td>
-                                    <td class="text-end text-danger">
-                                        {% if item.credit > 0 %}{{ item.credit|floatformat:2 }}{% endif %}
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-center py-4 text-muted">
-                                        لا توجد حسابات
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot class="table-dark">
-                                <tr class="fw-bold">
-                                    <th colspan="2" class="text-end">المجموع ({{ currency_symbol }}):</th>
-                                    <th class="text-end text-success">{{ total_debit|floatformat:2 }}</th>
-                                    <th class="text-end text-danger">{{ total_credit|floatformat:2 }}</th>
-                                </tr>
-                            </tfoot>
-                        </table>
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>كود الحساب</th>
+                                        <th>اسم الحساب</th>
+                                        <th class="text-end text-success">مدين</th>
+                                        <th class="text-end text-danger">دائن</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in trial_data %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-secondary">{{ item.account.code }}</span>
+                                            </td>
+                                            <td>{{ item.account.name }}</td>
+                                            <td class="text-end text-success">
+                                                {% if item.debit > 0 %}{{ item.debit|floatformat:2 }}{% endif %}
+                                            </td>
+                                            <td class="text-end text-danger">
+                                                {% if item.credit > 0 %}{{ item.credit|floatformat:2 }}{% endif %}
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">لا توجد حسابات</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-dark">
+                                    <tr class="fw-bold">
+                                        <th colspan="2" class="text-end">المجموع ({{ currency_symbol }}):</th>
+                                        <th class="text-end text-success">{{ total_debit|floatformat:2 }}</th>
+                                        <th class="text-end text-danger">{{ total_credit|floatformat:2 }}</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-center">
+                        {% if total_debit == total_credit %}
+                            <span class="badge bg-success fs-6">
+                                <i class="fas fa-check-circle me-1"></i>
+                                الميزان متوازن
+                            </span>
+                        {% else %}
+                            <span class="badge bg-danger fs-6">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                الميزان غير متوازن - الفرق: {{ total_debit|floatformat:2 }} - {{ total_credit|floatformat:2 }}
+                            </span>
+                        {% endif %}
                     </div>
                 </div>
-                <div class="card-footer text-center">
-                    {% if total_debit == total_credit %}
-                    <span class="badge bg-success fs-6">
-                        <i class="fas fa-check-circle me-1"></i>
-                        الميزان متوازن
-                    </span>
-                    {% else %}
-                    <span class="badge bg-danger fs-6">
-                        <i class="fas fa-exclamation-triangle me-1"></i>
-                        الميزان غير متوازن - الفرق: {{ total_debit|floatformat:2 }} - {{ total_credit|floatformat:2 }}
-                    </span>
-                    {% endif %}
-                </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

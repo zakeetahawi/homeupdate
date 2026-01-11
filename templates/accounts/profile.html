@@ -1,87 +1,90 @@
 {% extends 'base.html' %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block content %}
-<div class="row">
-    <div class="col-md-8 mx-auto">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">الملف الشخصي</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4 text-center">
-                        <div class="avatar-wrapper mb-3">
-                            {% if user.image %}
-                                <img src="{{ user.image.url }}" alt="{{ user.username }}"
-                                     class="img-fluid rounded-circle border border-3 border-primary"
-                                     style="max-width: 150px; max-height: 150px; object-fit: cover;">
-                            {% else %}
-                                <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center"
-                                     style="width: 150px; height: 150px;">
-                                    <i class="fas fa-user fa-4x text-white"></i>
-                                </div>
-                            {% endif %}
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">الملف الشخصي</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <div class="avatar-wrapper mb-3">
+                                {% if user.image %}
+                                    <img src="{{ user.image.url }}"
+                                         alt="{{ user.username }}"
+                                         class="img-fluid rounded-circle border border-3 border-primary"
+                                         style="max-width: 150px;
+                                                max-height: 150px;
+                                                object-fit: cover">
+                                {% else %}
+                                    <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center"
+                                         style="width: 150px;
+                                                height: 150px">
+                                        <i class="fas fa-user fa-4x text-white"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <table class="table">
+                                <tr>
+                                    <th>اسم المستخدم:</th>
+                                    <td>{{ user.username }}</td>
+                                </tr>
+                                <tr>
+                                    <th>الاسم الكامل:</th>
+                                    <td>{{ user.get_full_name|default:"غير محدد" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>البريد الإلكتروني:</th>
+                                    <td>{{ user.email|default:"غير محدد" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>تاريخ الانضمام:</th>
+                                    <td>{{ user.date_joined|date:"Y-m-d" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>آخر دخول:</th>
+                                    <td>{{ user.last_login|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% if user.is_staff %}
+                                    <tr>
+                                        <th>الصلاحيات:</th>
+                                        <td>
+                                            <span class="badge bg-success">مشرف</span>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </table>
                         </div>
                     </div>
-                    <div class="col-md-8">
+                    {% if user.branch %}
+                        <hr>
+                        <h6 class="mb-3">معلومات الفرع</h6>
                         <table class="table">
                             <tr>
-                                <th>اسم المستخدم:</th>
-                                <td>{{ user.username }}</td>
+                                <th>اسم الفرع:</th>
+                                <td>{{ user.branch.name }}</td>
                             </tr>
                             <tr>
-                                <th>الاسم الكامل:</th>
-                                <td>{{ user.get_full_name|default:"غير محدد" }}</td>
+                                <th>العنوان:</th>
+                                <td>{{ user.branch.address|default:"غير محدد" }}</td>
                             </tr>
                             <tr>
-                                <th>البريد الإلكتروني:</th>
-                                <td>{{ user.email|default:"غير محدد" }}</td>
+                                <th>رقم الهاتف:</th>
+                                <td>{{ user.branch.phone|default:"غير محدد" }}</td>
                             </tr>
-                            <tr>
-                                <th>تاريخ الانضمام:</th>
-                                <td>{{ user.date_joined|date:"Y-m-d" }}</td>
-                            </tr>
-                            <tr>
-                                <th>آخر دخول:</th>
-                                <td>{{ user.last_login|date:"Y-m-d H:i" }}</td>
-                            </tr>
-                            {% if user.is_staff %}
-                            <tr>
-                                <th>الصلاحيات:</th>
-                                <td><span class="badge bg-success">مشرف</span></td>
-                            </tr>
-                            {% endif %}
                         </table>
-                    </div>
+                    {% endif %}
                 </div>
-                
-                {% if user.branch %}
-                <hr>
-                <h6 class="mb-3">معلومات الفرع</h6>
-                <table class="table">
-                    <tr>
-                        <th>اسم الفرع:</th>
-                        <td>{{ user.branch.name }}</td>
-                    </tr>
-                    <tr>
-                        <th>العنوان:</th>
-                        <td>{{ user.branch.address|default:"غير محدد" }}</td>
-                    </tr>
-                    <tr>
-                        <th>رقم الهاتف:</th>
-                        <td>{{ user.branch.phone|default:"غير محدد" }}</td>
-                    </tr>
-                </table>
-                {% endif %}
-            </div>
-            <div class="card-footer">
-                <a href="{% url 'home' %}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-right"></i> العودة للرئيسية
-                </a>
+                <div class="card-footer">
+                    <a href="{% url 'home' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right"></i> العودة للرئيسية
+                    </a>
+                </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

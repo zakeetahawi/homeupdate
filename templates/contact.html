@@ -1,110 +1,123 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block content %}
-<div class="row">
-    <div class="col-md-8 mx-auto">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">{{ title|default:"اتصل بنا" }}</h5>
-            </div>
-            <div class="card-body">
-                {% if description %}
-                    <div class="alert alert-info mb-4">{{ description }}</div>
-                {% endif %}
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <h5 class="mb-3">معلومات الاتصال</h5>
-                        <div class="mb-4">
-                            <p><i class="fas fa-building text-primary"></i> {{ company_info.name|default:'اسم الشركة' }}</p>
-                            <p><i class="fas fa-map-marker-alt text-primary"></i> {{ company_info.address|default:'العنوان' }}</p>
-                            <p><i class="fas fa-phone text-primary"></i> {{ company_info.phone|default:'+20 123 456 7890' }}</p>
-                            <p><i class="fas fa-envelope text-primary"></i> {{ company_info.email|default:'info@latara.com' }}</p>
-                            <p><i class="fas fa-clock text-primary"></i> {{ company_info.working_hours|default:'ساعات العمل: 9 صباحاً - 5 مساءً' }}</p>
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ title|default:"اتصل بنا" }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if description %}<div class="alert alert-info mb-4">{{ description }}</div>{% endif %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="mb-3">معلومات الاتصال</h5>
+                            <div class="mb-4">
+                                <p>
+                                    <i class="fas fa-building text-primary"></i> {{ company_info.name|default:'اسم الشركة' }}
+                                </p>
+                                <p>
+                                    <i class="fas fa-map-marker-alt text-primary"></i> {{ company_info.address|default:'العنوان' }}
+                                </p>
+                                <p>
+                                    <i class="fas fa-phone text-primary"></i> {{ company_info.phone|default:'+20 123 456 7890' }}
+                                </p>
+                                <p>
+                                    <i class="fas fa-envelope text-primary"></i> {{ company_info.email|default:'info@latara.com' }}
+                                </p>
+                                <p>
+                                    <i class="fas fa-clock text-primary"></i> {{ company_info.working_hours|default:'ساعات العمل: 9 صباحاً - 5 مساءً' }}
+                                </p>
+                            </div>
+                            <h5 class="mb-3">تابعنا على</h5>
+                            <div class="social-links">
+                                {% if company_info.facebook %}
+                                    <a href="{{ company_info.facebook }}"
+                                       class="btn btn-outline-primary me-2"
+                                       target="_blank"
+                                       aria-label="تابعنا على فيسبوك"
+                                       title="فيسبوك">
+                                        <i class="fab fa-facebook-f" aria-hidden="true"></i>
+                                    </a>
+                                {% endif %}
+                                {% if company_info.twitter %}
+                                    <a href="{{ company_info.twitter }}"
+                                       class="btn btn-outline-primary me-2"
+                                       target="_blank"
+                                       aria-label="تابعنا على تويتر"
+                                       title="تويتر">
+                                        <i class="fab fa-twitter" aria-hidden="true"></i>
+                                    </a>
+                                {% endif %}
+                                {% if company_info.linkedin %}
+                                    <a href="{{ company_info.linkedin }}"
+                                       class="btn btn-outline-primary me-2"
+                                       target="_blank"
+                                       aria-label="تابعنا على لينكد إن"
+                                       title="لينكد إن">
+                                        <i class="fab fa-linkedin-in" aria-hidden="true"></i>
+                                    </a>
+                                {% endif %}
+                                {% if company_info.instagram %}
+                                    <a href="{{ company_info.instagram }}"
+                                       class="btn btn-outline-primary me-2"
+                                       target="_blank"
+                                       aria-label="تابعنا على إنستجرام"
+                                       title="إنستجرام">
+                                        <i class="fab fa-instagram" aria-hidden="true"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
                         </div>
-
-                        <h5 class="mb-3">تابعنا على</h5>
-                        <div class="social-links">
-                            {% if company_info.facebook %}
-                            <a href="{{ company_info.facebook }}" 
-                               class="btn btn-outline-primary me-2" 
-                               target="_blank" 
-                               aria-label="تابعنا على فيسبوك" 
-                               title="فيسبوك">
-                                <i class="fab fa-facebook-f" aria-hidden="true"></i>
-                            </a>
+                        <div class="col-md-6">
+                            <h5 class="mb-3">{{ form_title|default:"نموذج الاتصال" }}</h5>
+                            {% if messages %}
+                                <div class="messages mb-4">
+                                    {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
+                                </div>
                             {% endif %}
-                            {% if company_info.twitter %}
-                            <a href="{{ company_info.twitter }}" 
-                               class="btn btn-outline-primary me-2" 
-                               target="_blank" 
-                               aria-label="تابعنا على تويتر" 
-                               title="تويتر">
-                                <i class="fab fa-twitter" aria-hidden="true"></i>
-                            </a>
-                            {% endif %}
-                            {% if company_info.linkedin %}
-                            <a href="{{ company_info.linkedin }}" 
-                               class="btn btn-outline-primary me-2" 
-                               target="_blank" 
-                               aria-label="تابعنا على لينكد إن" 
-                               title="لينكد إن">
-                                <i class="fab fa-linkedin-in" aria-hidden="true"></i>
-                            </a>
-                            {% endif %}
-                            {% if company_info.instagram %}
-                            <a href="{{ company_info.instagram }}" 
-                               class="btn btn-outline-primary me-2" 
-                               target="_blank" 
-                               aria-label="تابعنا على إنستجرام" 
-                               title="إنستجرام">
-                                <i class="fab fa-instagram" aria-hidden="true"></i>
-                            </a>
-                            {% endif %}
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">الاسم</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="name"
+                                           name="name"
+                                           required
+                                           value="{{ request.POST.name|default:'' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">البريد الإلكتروني</label>
+                                    <input type="email"
+                                           class="form-control"
+                                           id="email"
+                                           name="email"
+                                           required
+                                           value="{{ request.POST.email|default:'' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="subject" class="form-label">الموضوع</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="subject"
+                                           name="subject"
+                                           required
+                                           value="{{ request.POST.subject|default:'' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="message" class="form-label">الرسالة</label>
+                                    <textarea class="form-control" id="message" name="message" rows="4" required>{{ request.POST.message|default:'' }}</textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> إرسال
+                                </button>
+                            </form>
                         </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <h5 class="mb-3">{{ form_title|default:"نموذج الاتصال" }}</h5>
-                        {% if messages %}
-                        <div class="messages mb-4">
-                            {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }}">
-                                {{ message }}
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                        
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="mb-3">
-                                <label for="name" class="form-label">الاسم</label>
-                                <input type="text" class="form-control" id="name" name="name" required value="{{ request.POST.name|default:'' }}">
-                            </div>
-                            <div class="mb-3">
-                                <label for="email" class="form-label">البريد الإلكتروني</label>
-                                <input type="email" class="form-control" id="email" name="email" required value="{{ request.POST.email|default:'' }}">
-                            </div>
-                            <div class="mb-3">
-                                <label for="subject" class="form-label">الموضوع</label>
-                                <input type="text" class="form-control" id="subject" name="subject" required value="{{ request.POST.subject|default:'' }}">
-                            </div>
-                            <div class="mb-3">
-                                <label for="message" class="form-label">الرسالة</label>
-                                <textarea class="form-control" id="message" name="message" rows="4" required>{{ request.POST.message|default:'' }}</textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-paper-plane"></i> إرسال
-                            </button>
-                        </form>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

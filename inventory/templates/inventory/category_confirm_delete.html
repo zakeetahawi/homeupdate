@@ -1,92 +1,89 @@
 {% extends 'inventory/inventory_base.html' %}
 {% load static %}
-
 {% block inventory_title %}حذف الفئة: {{ category.name }}{% endblock %}
-
 {% block inventory_content %}
-<div class="category-delete-container">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-exclamation-triangle"></i> تأكيد حذف الفئة
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-warning">
-                        <h4 class="alert-heading">تحذير!</h4>
-                        <p>هل أنت متأكد من حذف الفئة <strong>{{ category.name }}</strong>؟</p>
-                        <p>هذا الإجراء لا يمكن التراجع عنه.</p>
-                        
-                        {% if category.products.exists %}
-                        <hr>
-                        <p class="mb-0 text-danger">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <strong>تحذير:</strong> هذه الفئة تحتوي على {{ category.get_total_products_count }} منتج. لا يمكن حذفها حتى تقوم بنقل أو حذف هذه المنتجات أولاً.
-                        </p>
-                        {% endif %}
-                        
-                        {% if category.children.exists %}
-                        <hr>
-                        <p class="mb-0 text-danger">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <strong>تحذير:</strong> هذه الفئة تحتوي على {{ category.children.count }} فئة فرعية. لا يمكن حذفها حتى تقوم بنقل أو حذف هذه الفئات الفرعية أولاً.
-                        </p>
-                        {% endif %}
+    <div class="category-delete-container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-exclamation-triangle"></i> تأكيد حذف الفئة
+                        </h5>
                     </div>
-                    
-                    <div class="category-info">
-                        <h5>معلومات الفئة:</h5>
-                        <table class="table table-bordered">
-                            <tr>
-                                <th style="width: 150px;">الاسم</th>
-                                <td>{{ category.name }}</td>
-                            </tr>
-                            {% if category.parent %}
-                            <tr>
-                                <th>الفئة الأب</th>
-                                <td>{{ category.parent.name }}</td>
-                            </tr>
+                    <div class="card-body">
+                        <div class="alert alert-warning">
+                            <h4 class="alert-heading">تحذير!</h4>
+                            <p>
+                                هل أنت متأكد من حذف الفئة <strong>{{ category.name }}</strong>؟
+                            </p>
+                            <p>هذا الإجراء لا يمكن التراجع عنه.</p>
+                            {% if category.products.exists %}
+                                <hr>
+                                <p class="mb-0 text-danger">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    <strong>تحذير:</strong> هذه الفئة تحتوي على {{ category.get_total_products_count }} منتج. لا يمكن حذفها حتى تقوم بنقل أو حذف هذه المنتجات أولاً.
+                                </p>
                             {% endif %}
-                            {% if category.description %}
-                            <tr>
-                                <th>الوصف</th>
-                                <td>{{ category.description }}</td>
-                            </tr>
+                            {% if category.children.exists %}
+                                <hr>
+                                <p class="mb-0 text-danger">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    <strong>تحذير:</strong> هذه الفئة تحتوي على {{ category.children.count }} فئة فرعية. لا يمكن حذفها حتى تقوم بنقل أو حذف هذه الفئات الفرعية أولاً.
+                                </p>
                             {% endif %}
-                            <tr>
-                                <th>عدد المنتجات</th>
-                                <td>{{ category.get_total_products_count }}</td>
-                            </tr>
-                            <tr>
-                                <th>عدد الفئات الفرعية</th>
-                                <td>{{ category.children.count }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                    
-                    <div class="text-end mt-4">
-                        <a href="{% url 'inventory:category_list' %}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> العودة
-                        </a>
-                        
-                        {% if not category.products.exists and not category.children.exists %}
-                        <form method="post" action="{% url 'inventory:category_delete' category.id %}" class="d-inline">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-trash"></i> تأكيد الحذف
-                            </button>
-                        </form>
-                        {% else %}
-                        <button type="button" class="btn btn-danger" disabled>
-                            <i class="fas fa-trash"></i> لا يمكن الحذف
-                        </button>
-                        {% endif %}
+                        </div>
+                        <div class="category-info">
+                            <h5>معلومات الفئة:</h5>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 150px;">الاسم</th>
+                                    <td>{{ category.name }}</td>
+                                </tr>
+                                {% if category.parent %}
+                                    <tr>
+                                        <th>الفئة الأب</th>
+                                        <td>{{ category.parent.name }}</td>
+                                    </tr>
+                                {% endif %}
+                                {% if category.description %}
+                                    <tr>
+                                        <th>الوصف</th>
+                                        <td>{{ category.description }}</td>
+                                    </tr>
+                                {% endif %}
+                                <tr>
+                                    <th>عدد المنتجات</th>
+                                    <td>{{ category.get_total_products_count }}</td>
+                                </tr>
+                                <tr>
+                                    <th>عدد الفئات الفرعية</th>
+                                    <td>{{ category.children.count }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="text-end mt-4">
+                            <a href="{% url 'inventory:category_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> العودة
+                            </a>
+                            {% if not category.products.exists and not category.children.exists %}
+                                <form method="post"
+                                      action="{% url 'inventory:category_delete' category.id %}"
+                                      class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="fas fa-trash"></i> تأكيد الحذف
+                                    </button>
+                                </form>
+                            {% else %}
+                                <button type="button" class="btn btn-danger" disabled>
+                                    <i class="fas fa-trash"></i> لا يمكن الحذف
+                                </button>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

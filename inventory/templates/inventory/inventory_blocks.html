@@ -1,52 +1,55 @@
 {% load static %}
-
 {# التعريفات المشتركة لقوالب المخزون #}
-
 {% block inventory_extra_css %}
-<link rel="stylesheet" href="{% static 'css/inventory-dashboard.css' %}">
-<link rel="stylesheet" href="{% static 'css/mobile.css' %}">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="{% static 'css/inventory-dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'css/mobile.css' %}">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 {% endblock %}
-
 {# محتوى المخزون #}
 {% block inventory_breadcrumb %}
-<!-- شريط التنقل للمخزون -->
-<div class="dashboard-breadcrumb">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">الرئيسية</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">المخزون</a></li>
-            {% block breadcrumb_items %}
-            <li class="breadcrumb-item active" aria-current="page">لوحة التحكم</li>
+    <!-- شريط التنقل للمخزون -->
+    <div class="dashboard-breadcrumb">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'home' %}">الرئيسية</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'inventory:dashboard' %}">المخزون</a>
+                </li>
+                {% block breadcrumb_items %}<li class="breadcrumb-item active" aria-current="page">لوحة التحكم</li>{% endblock %}
+            </ol>
+        </nav>
+        <div class="quick-actions">
+            {% block quick_actions %}
+                <a href="{% url 'inventory:product_create' %}"
+                   class="btn btn-success btn-sm">
+                    <i class="fas fa-plus"></i> منتج جديد
+                </a>
+                <a href="{% url 'inventory:purchase_order_list' %}"
+                   class="btn btn-primary btn-sm">
+                    <i class="fas fa-shopping-cart"></i> طلبات الشراء
+                </a>
             {% endblock %}
-        </ol>
-    </nav>
-    <div class="quick-actions">
-        {% block quick_actions %}
-        <a href="{% url 'inventory:product_create' %}" class="btn btn-success btn-sm">
-            <i class="fas fa-plus"></i> منتج جديد
-        </a>
-        <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-primary btn-sm">
-            <i class="fas fa-shopping-cart"></i> طلبات الشراء
-        </a>
-        {% endblock %}
-    </div>
-</div>
-{% endblock %}
-
-{% block inventory_search %}
-<div class="search-box">
-    <form action="{% url 'inventory:product_list' %}" method="get">
-        <div class="input-group">
-            <input type="text" name="search" class="form-control" placeholder="بحث عن منتج...">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-search"></i>
-            </button>
         </div>
-    </form>
-</div>
+    </div>
 {% endblock %}
-
+{% block inventory_search %}
+    <div class="search-box">
+        <form action="{% url 'inventory:product_list' %}" method="get">
+            <div class="input-group">
+                <input type="text"
+                       name="search"
+                       class="form-control"
+                       placeholder="بحث عن منتج...">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+{% endblock %}
 {% block inventory_extra_js %}
-<script src="{% static 'js/inventory-dashboard.js' %}"></script>
+    <script src="{% static 'js/inventory-dashboard.js' %}"></script>
 {% endblock %}

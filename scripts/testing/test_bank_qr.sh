@@ -26,7 +26,7 @@ echo ""
 # 2. إنشاء حساب بنك CIB تجريبي
 echo -e "${BLUE}🏛️  الخطوة 2: إنشاء حساب بنك CIB...${NC}"
 
-python manage.py shell << EOF
+python manage.py shell <<EOF
 from accounting.models import BankAccount
 
 # حذف الحساب التجريبي إن وجد

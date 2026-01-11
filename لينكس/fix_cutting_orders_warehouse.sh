@@ -13,7 +13,7 @@ cd "$PROJECT_DIR"
 
 # تفعيل البيئة الافتراضية إذا وجدت
 if [ -d "venv" ]; then
-    source venv/bin/activate
+	source venv/bin/activate
 fi
 
 # تشغيل سكريبت Python

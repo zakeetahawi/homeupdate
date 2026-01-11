@@ -6,13 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('installations', '0008_merge_20250805_1608'),
+        ("installations", "0008_merge_20250805_1608"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='technician',
-            name='department',
-            field=models.CharField(choices=[('installation', 'التركيبات'), ('inspection', 'المعاينات'), ('maintenance', 'الصيانة'), ('general', 'عام')], default='general', max_length=20, verbose_name='القسم'),
+            model_name="technician",
+            name="department",
+            field=models.CharField(
+                choices=[
+                    ("installation", "التركيبات"),
+                    ("inspection", "المعاينات"),
+                    ("maintenance", "الصيانة"),
+                    ("general", "عام"),
+                ],
+                default="general",
+                max_length=20,
+                verbose_name="القسم",
+            ),
         ),
     ]

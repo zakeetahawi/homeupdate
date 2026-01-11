@@ -1,84 +1,109 @@
 {% extends 'base.html' %}
-
 {% block title %}تشخيص الجهاز - نظام الخواجه{% endblock %}
-
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            <div class="card">
-                <div class="card-header" style="background-color: var(--primary); color: white;">
-                    <h5 class="mb-0"><i class="fas fa-stethoscope"></i> تشخيص الجهاز</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>معلومات:</strong> هذه الصفحة تساعدك في معرفة ما إذا كان جهازك مسجل في النظام أم لا.
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card">
+                    <div class="card-header"
+                         style="background-color: var(--primary);
+                                color: white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-stethoscope"></i> تشخيص الجهاز
+                        </h5>
                     </div>
-
-                    <div class="card bg-light mb-3">
-                        <div class="card-body">
-                            <h6 class="card-title"><i class="fas fa-fingerprint"></i> معلومات الجهاز الحالي</h6>
-                            <div id="deviceInfoDisplay">
-                                <p class="mb-2"><strong>🎫 Device Token (UUID):</strong></p>
-                                <p class="font-monospace bg-white p-2 border rounded text-primary fw-bold" id="deviceTokenDisplay">جارِ التحقق من IndexedDB...</p>
-                                <small class="text-muted d-block mb-3">المعرف الدائم للجهاز - يُحفظ في المتصفح بعد التسجيل</small>
-                                
-                                <p class="mb-2"><strong>🔐 Enhanced Fingerprint (SHA-256):</strong></p>
-                                <p class="font-monospace bg-white p-2 border rounded small text-muted" id="fingerprintDisplay">جارِ الحساب...</p>
-                                <small class="text-muted d-block mb-3">البصمة المحسّنة (GPU + Canvas + Audio + Platform)</small>
-                                
-                                <hr>
-                                
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <p class="mb-1"><strong>المتصفح:</strong> <span id="browserDisplay">...</span></p>
-                                        <p class="mb-1"><strong>نظام التشغيل:</strong> <span id="osDisplay">...</span></p>
-                                        <p class="mb-1"><strong>دقة الشاشة:</strong> <span id="screenDisplay">...</span></p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <p class="mb-1"><strong>المنطقة الزمنية:</strong> <span id="timezoneDisplay">...</span></p>
-                                        <p class="mb-1"><strong>عدد الأنوية:</strong> <span id="coresDisplay">...</span></p>
-                                        <p class="mb-1"><strong>GPU:</strong> <span id="gpuDisplay">...</span></p>
-                                        <p class="mb-0"><strong>عمق الألوان:</strong> <span id="colorDepthDisplay">...</span></p>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>معلومات:</strong> هذه الصفحة تساعدك في معرفة ما إذا كان جهازك مسجل في النظام أم لا.
+                        </div>
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-fingerprint"></i> معلومات الجهاز الحالي
+                                </h6>
+                                <div id="deviceInfoDisplay">
+                                    <p class="mb-2">
+                                        <strong>🎫 Device Token (UUID):</strong>
+                                    </p>
+                                    <p class="font-monospace bg-white p-2 border rounded text-primary fw-bold"
+                                       id="deviceTokenDisplay">جارِ التحقق من IndexedDB...</p>
+                                    <small class="text-muted d-block mb-3">المعرف الدائم للجهاز - يُحفظ في المتصفح بعد التسجيل</small>
+                                    <p class="mb-2">
+                                        <strong>🔐 Enhanced Fingerprint (SHA-256):</strong>
+                                    </p>
+                                    <p class="font-monospace bg-white p-2 border rounded small text-muted"
+                                       id="fingerprintDisplay">جارِ الحساب...</p>
+                                    <small class="text-muted d-block mb-3">البصمة المحسّنة (GPU + Canvas + Audio + Platform)</small>
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-1">
+                                                <strong>المتصفح:</strong> <span id="browserDisplay">...</span>
+                                            </p>
+                                            <p class="mb-1">
+                                                <strong>نظام التشغيل:</strong> <span id="osDisplay">...</span>
+                                            </p>
+                                            <p class="mb-1">
+                                                <strong>دقة الشاشة:</strong> <span id="screenDisplay">...</span>
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-1">
+                                                <strong>المنطقة الزمنية:</strong> <span id="timezoneDisplay">...</span>
+                                            </p>
+                                            <p class="mb-1">
+                                                <strong>عدد الأنوية:</strong> <span id="coresDisplay">...</span>
+                                            </p>
+                                            <p class="mb-1">
+                                                <strong>GPU:</strong> <span id="gpuDisplay">...</span>
+                                            </p>
+                                            <p class="mb-0">
+                                                <strong>عمق الألوان:</strong> <span id="colorDepthDisplay">...</span>
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    {% if user.is_authenticated %}
-                    <div class="card bg-light mb-3">
-                        <div class="card-body">
-                            <h6 class="card-title"><i class="fas fa-user"></i> معلومات المستخدم</h6>
-                            <p class="mb-1"><strong>اسم المستخدم:</strong> {{ user.username }}</p>
-                            <p class="mb-1"><strong>الفرع:</strong> {{ user.branch.name|default:"غير محدد" }}</p>
-                            <p class="mb-0"><strong>الدور:</strong> {{ user.get_user_role_display }}</p>
+                        {% if user.is_authenticated %}
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-user"></i> معلومات المستخدم
+                                    </h6>
+                                    <p class="mb-1">
+                                        <strong>اسم المستخدم:</strong> {{ user.username }}
+                                    </p>
+                                    <p class="mb-1">
+                                        <strong>الفرع:</strong> {{ user.branch.name|default:"غير محدد" }}
+                                    </p>
+                                    <p class="mb-0">
+                                        <strong>الدور:</strong> {{ user.get_user_role_display }}
+                                    </p>
+                                </div>
+                            </div>
+                        {% endif %}
+                        <div id="checkResult" class="mt-3"></div>
+                        <div class="d-grid gap-2 mt-3">
+                            <button type="button" class="btn btn-primary" id="checkDeviceBtn">
+                                <i class="fas fa-search"></i> تحقق من تسجيل الجهاز
+                            </button>
+                            <a href="{% url 'accounts:register_device' %}" class="btn btn-success">
+                                <i class="fas fa-plus"></i> تسجيل هذا الجهاز
+                            </a>
+                            <a href="{% url 'admin:accounts_branchdevice_changelist' %}"
+                               class="btn btn-secondary">
+                                <i class="fas fa-list"></i> عرض جميع الأجهزة المسجلة
+                            </a>
                         </div>
-                    </div>
-                    {% endif %}
-
-                    <div id="checkResult" class="mt-3"></div>
-
-                    <div class="d-grid gap-2 mt-3">
-                        <button type="button" class="btn btn-primary" id="checkDeviceBtn">
-                            <i class="fas fa-search"></i> تحقق من تسجيل الجهاز
-                        </button>
-                        <a href="{% url 'accounts:register_device' %}" class="btn btn-success">
-                            <i class="fas fa-plus"></i> تسجيل هذا الجهاز
-                        </a>
-                        <a href="{% url 'admin:accounts_branchdevice_changelist' %}" class="btn btn-secondary">
-                            <i class="fas fa-list"></i> عرض جميع الأجهزة المسجلة
-                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-<script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script>
 // ====================
 // IndexedDB Helper
 // ====================
@@ -378,5 +403,5 @@ document.getElementById('checkDeviceBtn').addEventListener('click', function() {
         `;
     });
 });
-</script>
+    </script>
 {% endblock %}

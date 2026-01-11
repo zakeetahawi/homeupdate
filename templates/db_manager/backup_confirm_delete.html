@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
-
-{% block title %}{% trans "تأكيد حذف النسخة الاحتياطية" %}{% endblock %}
-
+{% block title %}
+    {% trans "تأكيد حذف النسخة الاحتياطية" %}
+{% endblock %}
 {% block extra_css %}
-<style>
+    <style>
     .confirm-container {
         max-width: 600px;
         margin: 0 auto;
@@ -40,46 +40,54 @@
         border-radius: 5px;
         margin-bottom: 20px;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container mt-5">
-    <div class="confirm-container">
-        <div class="confirm-header">
-            <i class="fas fa-trash-alt"></i>
-            <h1>{% trans "تأكيد حذف النسخة الاحتياطية" %}</h1>
-        </div>
-        
-        <div class="confirm-content">
-            <div class="alert alert-danger">
-                <p>{% trans "هل أنت متأكد من أنك تريد حذف هذه النسخة الاحتياطية؟" %}</p>
-                <p><strong>{% trans "تحذير:" %}</strong> {% trans "هذه العملية لا يمكن التراجع عنها!" %}</p>
+    <div class="container mt-5">
+        <div class="confirm-container">
+            <div class="confirm-header">
+                <i class="fas fa-trash-alt"></i>
+                <h1>{% trans "تأكيد حذف النسخة الاحتياطية" %}</h1>
             </div>
-            
-            <div class="backup-info">
-                <h5>{% trans "معلومات النسخة الاحتياطية:" %}</h5>
-                <p><strong>{% trans "الاسم:" %}</strong> {{ backup.name }}</p>
-                <p><strong>{% trans "قاعدة البيانات:" %}</strong> {{ backup.database_config.name }}</p>
-                <p><strong>{% trans "النوع:" %}</strong> 
-                    {% if backup.backup_type == 'full' %}
-                        {% trans "نسخة كاملة" %}
-                    {% else %}
-                        {% trans "نسخة جزئية" %}
-                    {% endif %}
-                </p>
-                <p><strong>{% trans "تاريخ الإنشاء:" %}</strong> {{ backup.created_at|date:"Y-m-d H:i" }}</p>
-                <p><strong>{% trans "الحجم:" %}</strong> {{ backup.size|filesizeformat }}</p>
+            <div class="confirm-content">
+                <div class="alert alert-danger">
+                    <p>{% trans "هل أنت متأكد من أنك تريد حذف هذه النسخة الاحتياطية؟" %}</p>
+                    <p>
+                        <strong>{% trans "تحذير:" %}</strong> {% trans "هذه العملية لا يمكن التراجع عنها!" %}
+                    </p>
+                </div>
+                <div class="backup-info">
+                    <h5>{% trans "معلومات النسخة الاحتياطية:" %}</h5>
+                    <p>
+                        <strong>{% trans "الاسم:" %}</strong> {{ backup.name }}
+                    </p>
+                    <p>
+                        <strong>{% trans "قاعدة البيانات:" %}</strong> {{ backup.database_config.name }}
+                    </p>
+                    <p>
+                        <strong>{% trans "النوع:" %}</strong>
+                        {% if backup.backup_type == 'full' %}
+                            {% trans "نسخة كاملة" %}
+                        {% else %}
+                            {% trans "نسخة جزئية" %}
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>{% trans "تاريخ الإنشاء:" %}</strong> {{ backup.created_at|date:"Y-m-d H:i" }}
+                    </p>
+                    <p>
+                        <strong>{% trans "الحجم:" %}</strong> {{ backup.size|filesizeformat }}
+                    </p>
+                </div>
             </div>
-        </div>
-        
-        <div class="confirm-footer">
-            <form method="post">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger btn-lg">{% trans "نعم، حذف النسخة الاحتياطية" %}</button>
-                <a href="{% url 'db_manager:backup_list' %}" class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
-            </form>
+            <div class="confirm-footer">
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-lg">{% trans "نعم، حذف النسخة الاحتياطية" %}</button>
+                    <a href="{% url 'db_manager:backup_list' %}"
+                       class="btn btn-secondary btn-lg">{% trans "إلغاء" %}</a>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}

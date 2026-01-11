@@ -5,7 +5,7 @@
 # تحميل Celery عند بدء Django
 from .celery import app as celery_app
 
-__all__ = ('celery_app',)
+__all__ = ("celery_app",)
 
 # استيراد الإشارات لإصلاح تسلسل ID
 try:
@@ -13,4 +13,4 @@ try:
 except ImportError:
     pass
 
-default_app_config = 'crm.apps.CrmConfig'
+default_app_config = "crm.apps.CrmConfig"

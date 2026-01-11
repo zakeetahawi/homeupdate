@@ -1,10 +1,11 @@
 """
 وسيط لمعالجة أخطاء الصلاحيات بشكل موحد في النظام
 """
+
 from django.contrib import messages
-from django.shortcuts import redirect
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
+from django.shortcuts import redirect
 
 
 class PermissionDeniedMiddleware:
@@ -19,31 +20,29 @@ class PermissionDeniedMiddleware:
 
             # معالجة طلبات AJAX بشكل خاص
             is_ajax = (
-                request.headers.get('x-requested-with') == 'XMLHttpRequest' or
-                'application/json' in request.headers.get('Accept', '') or
-                request.path.startswith('/api/') or
-                'status' in request.path or 'progress' in request.path
+                request.headers.get("x-requested-with") == "XMLHttpRequest"
+                or "application/json" in request.headers.get("Accept", "")
+                or request.path.startswith("/api/")
+                or "status" in request.path
+                or "progress" in request.path
             )
 
             if is_ajax:
-                message = (
-                    'عذراً، ليس لديك الصلاحيات '
-                    'الكافية للقيام بهذا الإجراء'
+                message = "عذراً، ليس لديك الصلاحيات " "الكافية للقيام بهذا الإجراء"
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "Permission Denied",
+                        "message": message,
+                    },
+                    status=403,
                 )
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Permission Denied',
-                    'message': message
-                }, status=403)
 
-            error_message = (
-                'عذراً، ليس لديك الصلاحيات '
-                'الكافية للقيام بهذا الإجراء'
-            )
+            error_message = "عذراً، ليس لديك الصلاحيات " "الكافية للقيام بهذا الإجراء"
             messages.error(request, error_message)
             # Get the previous URL from the session
-            previous_url = request.META.get('HTTP_REFERER')
+            previous_url = request.META.get("HTTP_REFERER")
             if previous_url:
                 return redirect(previous_url)
-            return redirect('home')
+            return redirect("home")
         return None

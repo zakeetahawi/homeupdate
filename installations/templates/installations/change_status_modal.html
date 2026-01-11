@@ -4,11 +4,13 @@
         <i class="fas fa-edit"></i>
         تغيير حالة التركيب - {{ installation.order.order_number }}
     </h5>
-    <button type="button" class="close text-white" data-dismiss="modal" aria-label="إغلاق">
+    <button type="button"
+            class="close text-white"
+            data-dismiss="modal"
+            aria-label="إغلاق">
         <span aria-hidden="true">&times;</span>
     </button>
 </div>
-
 <form id="statusChangeForm" method="post">
     {% csrf_token %}
     <div class="modal-body">
@@ -21,12 +23,19 @@
                             <i class="fas fa-info-circle"></i>
                             معلومات التركيب
                         </h6>
-                        <p class="mb-1"><strong>العميل:</strong> {{ installation.order.customer.name }}</p>
-                        <p class="mb-1"><strong>رقم الطلب:</strong> {{ installation.order.order_number }}</p>
-                        <p class="mb-1"><strong>الحالة الحالية:</strong> 
+                        <p class="mb-1">
+                            <strong>العميل:</strong> {{ installation.order.customer.name }}
+                        </p>
+                        <p class="mb-1">
+                            <strong>رقم الطلب:</strong> {{ installation.order.order_number }}
+                        </p>
+                        <p class="mb-1">
+                            <strong>الحالة الحالية:</strong>
                             <span class="badge badge-info">{{ installation.get_status_display }}</span>
                         </p>
-                        <p class="mb-0"><strong>تاريخ الجدولة:</strong> {{ installation.scheduled_date|date:"Y-m-d" }}</p>
+                        <p class="mb-0">
+                            <strong>تاريخ الجدولة:</strong> {{ installation.scheduled_date|date:"Y-m-d" }}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -38,14 +47,20 @@
                             فريق التركيب
                         </h6>
                         {% if installation.team %}
-                            <p class="mb-1"><strong>الفريق:</strong> {{ installation.team.name }}</p>
-                            <p class="mb-1"><strong>الفنيين:</strong> 
+                            <p class="mb-1">
+                                <strong>الفريق:</strong> {{ installation.team.name }}
+                            </p>
+                            <p class="mb-1">
+                                <strong>الفنيين:</strong>
                                 {% for tech in installation.team.technicians.all %}
-                                    {{ tech.name }}{% if not forloop.last %}, {% endif %}
+                                    {{ tech.name }}
+                                    {% if not forloop.last %},{% endif %}
                                 {% endfor %}
                             </p>
                             {% if installation.team.driver %}
-                                <p class="mb-0"><strong>السائق:</strong> {{ installation.team.driver.name }}</p>
+                                <p class="mb-0">
+                                    <strong>السائق:</strong> {{ installation.team.driver.name }}
+                                </p>
                             {% endif %}
                         {% else %}
                             <p class="text-muted">لم يتم تعيين فريق بعد</p>
@@ -54,7 +69,6 @@
                 </div>
             </div>
         </div>
-
         <!-- نموذج تغيير الحالة -->
         <div class="row">
             <div class="col-12">
@@ -64,18 +78,13 @@
                         الحالة الجديدة
                     </label>
                     {{ form.status }}
-                    {% if form.status.help_text %}
-                        <small class="form-text text-muted">{{ form.status.help_text }}</small>
-                    {% endif %}
+                    {% if form.status.help_text %}<small class="form-text text-muted">{{ form.status.help_text }}</small>{% endif %}
                     {% if form.status.errors %}
                         <div class="invalid-feedback d-block">
-                            {% for error in form.status.errors %}
-                                {{ error }}
-                            {% endfor %}
+                            {% for error in form.status.errors %}{{ error }}{% endfor %}
                         </div>
                     {% endif %}
                 </div>
-
                 <!-- حقل سبب التغيير -->
                 <div class="form-group" id="reasonField">
                     <label for="{{ form.reason.id_for_label }}" class="font-weight-bold">
@@ -83,18 +92,13 @@
                         سبب التغيير
                     </label>
                     {{ form.reason }}
-                    {% if form.reason.help_text %}
-                        <small class="form-text text-muted">{{ form.reason.help_text }}</small>
-                    {% endif %}
+                    {% if form.reason.help_text %}<small class="form-text text-muted">{{ form.reason.help_text }}</small>{% endif %}
                     {% if form.reason.errors %}
                         <div class="invalid-feedback d-block">
-                            {% for error in form.reason.errors %}
-                                {{ error }}
-                            {% endfor %}
+                            {% for error in form.reason.errors %}{{ error }}{% endfor %}
                         </div>
                     {% endif %}
                 </div>
-
                 <!-- حقل ملاحظات إضافية -->
                 <div class="form-group">
                     <label for="{{ form.notes.id_for_label }}" class="font-weight-bold">
@@ -102,47 +106,39 @@
                         ملاحظات إضافية
                     </label>
                     {{ form.notes }}
-                    {% if form.notes.help_text %}
-                        <small class="form-text text-muted">{{ form.notes.help_text }}</small>
-                    {% endif %}
+                    {% if form.notes.help_text %}<small class="form-text text-muted">{{ form.notes.help_text }}</small>{% endif %}
                     {% if form.notes.errors %}
                         <div class="invalid-feedback d-block">
-                            {% for error in form.notes.errors %}
-                                {{ error }}
-                            {% endfor %}
+                            {% for error in form.notes.errors %}{{ error }}{% endfor %}
                         </div>
                     {% endif %}
                 </div>
-
                 <!-- حقل تاريخ الإكمال (مخفي افتراضياً) -->
                 {% if form.completion_date.widget.input_type != 'hidden' %}
-                <div class="form-group" id="completionDateField" style="display: none;">
-                    <label for="{{ form.completion_date.id_for_label }}" class="font-weight-bold">
-                        <i class="fas fa-calendar-check"></i>
-                        تاريخ الإكمال
-                    </label>
-                    {{ form.completion_date }}
-                    {% if form.completion_date.help_text %}
-                        <small class="form-text text-muted">{{ form.completion_date.help_text }}</small>
-                    {% endif %}
-                    {% if form.completion_date.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.completion_date.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
+                    <div class="form-group" id="completionDateField" style="display: none;">
+                        <label for="{{ form.completion_date.id_for_label }}"
+                               class="font-weight-bold">
+                            <i class="fas fa-calendar-check"></i>
+                            تاريخ الإكمال
+                        </label>
+                        {{ form.completion_date }}
+                        {% if form.completion_date.help_text %}
+                            <small class="form-text text-muted">{{ form.completion_date.help_text }}</small>
+                        {% endif %}
+                        {% if form.completion_date.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.completion_date.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
                 {% else %}
                     {{ form.completion_date }}
                 {% endif %}
             </div>
         </div>
-
         <!-- تحذيرات خاصة -->
         <div id="statusWarnings" class="mt-3"></div>
     </div>
-
     <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">
             <i class="fas fa-times"></i>
@@ -154,9 +150,13 @@
         </button>
     </div>
 </form>
-
 <!-- Modal لإنشاء طلب التعديل -->
-<div class="modal fade" id="modificationRequestModal" tabindex="-1" role="dialog" aria-labelledby="modificationRequestModalLabel" aria-hidden="true">
+<div class="modal fade"
+     id="modificationRequestModal"
+     tabindex="-1"
+     role="dialog"
+     aria-labelledby="modificationRequestModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
@@ -178,7 +178,10 @@
                                     <i class="fas fa-wrench"></i>
                                     نوع التعديل <span class="text-danger">*</span>
                                 </label>
-                                <select class="form-control" id="modificationType" name="modification_type" required>
+                                <select class="form-control"
+                                        id="modificationType"
+                                        name="modification_type"
+                                        required>
                                     <option value="">اختر نوع التعديل</option>
                                     <option value="تعديل فني">تعديل فني</option>
                                     <option value="تعديل تصميمي">تعديل تصميمي</option>
@@ -208,22 +211,31 @@
                             <i class="fas fa-comment"></i>
                             وصف التعديل <span class="text-danger">*</span>
                         </label>
-                        <textarea class="form-control" id="modificationDescription" name="description" rows="4" 
-                                  placeholder="وصف تفصيلي للتعديل المطلوب..." required></textarea>
+                        <textarea class="form-control"
+                                  id="modificationDescription"
+                                  name="description"
+                                  rows="4"
+                                  placeholder="وصف تفصيلي للتعديل المطلوب..."
+                                  required></textarea>
                     </div>
                     <div class="form-group">
                         <label for="estimatedCost">
                             <i class="fas fa-dollar-sign"></i>
                             التكلفة المتوقعة (اختياري)
                         </label>
-                        <input type="number" class="form-control" id="estimatedCost" name="estimated_cost" 
-                               step="0.01" placeholder="0.00">
+                        <input type="number"
+                               class="form-control"
+                               id="estimatedCost"
+                               name="estimated_cost"
+                               step="0.01"
+                               placeholder="0.00">
                     </div>
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="customerApproval" name="customer_approval">
-                        <label class="form-check-label" for="customerApproval">
-                            موافقة العميل مطلوبة
-                        </label>
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="customerApproval"
+                               name="customer_approval">
+                        <label class="form-check-label" for="customerApproval">موافقة العميل مطلوبة</label>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -240,7 +252,6 @@
         </div>
     </div>
 </div>
-
 <!-- SweetAlert2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -431,7 +442,6 @@ $(document).ready(function() {
     });
 });
 </script>
-
 <style>
 .modal-header.bg-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;

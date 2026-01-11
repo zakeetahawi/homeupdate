@@ -1,221 +1,206 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}تعديل جدولة التركيب - {{ installation.order.order_number }}{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- عنوان الصفحة -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">
-            <i class="fas fa-edit text-primary"></i>
-            تعديل جدولة التركيب - {{ installation.order.order_number }}
-        </h1>
-        <div class="btn-group">
-            <a href="{% url 'installations:installation_detail' installation.id %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-right"></i> العودة للتفاصيل
-            </a>
-            <a href="{% url 'installations:dashboard' %}" class="btn btn-outline-primary">
-                <i class="fas fa-tachometer-alt"></i> لوحة التحكم
-            </a>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-calendar-edit"></i>
-                        تعديل جدولة التركيب
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.scheduled_date.id_for_label }}">
-                                        <i class="fas fa-calendar-alt"></i>
-                                        تاريخ التركيب
-                                    </label>
-                                    {{ form.scheduled_date }}
-                                    {% if form.scheduled_date.errors %}
-                                        <div class="text-danger">
-                                            {% for error in form.scheduled_date.errors %}
-                                                <small><i class="fas fa-exclamation-circle"></i> {{ error }}</small>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.scheduled_time.id_for_label }}">
-                                        <i class="fas fa-clock"></i>
-                                        موعد التركيب
-                                    </label>
-                                    {{ form.scheduled_time }}
-                                    {% if form.scheduled_time.errors %}
-                                        <div class="text-danger">
-                                            {% for error in form.scheduled_time.errors %}
-                                                <small><i class="fas fa-exclamation-circle"></i> {{ error }}</small>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.team.id_for_label }}">
-                                        <i class="fas fa-users"></i>
-                                        الفريق
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form.team }}
-                                    {% if form.team.errors %}
-                                        <div class="alert alert-danger mt-2 py-2">
-                                            {% for error in form.team.errors %}
-                                                <i class="fas fa-exclamation-triangle"></i> {{ error }}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    <small class="form-text text-muted">
-                                        <i class="fas fa-info-circle"></i> اختيار الفريق إلزامي
-                                    </small>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.location_type.id_for_label }}">
-                                        <i class="fas fa-map-marker-alt"></i>
-                                        نوع المكان
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form.location_type }}
-                                    {% if form.location_type.errors %}
-                                        <div class="alert alert-danger mt-2 py-2">
-                                            {% for error in form.location_type.errors %}
-                                                <i class="fas fa-exclamation-triangle"></i> {{ error }}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    <small class="form-text text-muted">
-                                        <i class="fas fa-info-circle"></i> تحديد نوع المكان إلزامي
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.windows_count.id_for_label }}">
-                                        <i class="fas fa-window-maximize"></i>
-                                        عدد الشبابيك
-                                        <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form.windows_count }}
-                                    {% if form.windows_count.errors %}
-                                        <div class="alert alert-danger mt-2 py-2">
-                                            {% for error in form.windows_count.errors %}
-                                                <i class="fas fa-exclamation-triangle"></i> {{ error }}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    {% if form.windows_count.help_text %}
-                                    <small class="form-text text-muted">
-                                        <i class="fas fa-info-circle"></i> {{ form.windows_count.help_text }}
-                                    </small>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="{{ form.notes.id_for_label }}">
-                                <i class="fas fa-sticky-note"></i>
-                                ملاحظات
-                            </label>
-                            {{ form.notes }}
-                            {% if form.notes.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.notes.errors %}
-                                        <small><i class="fas fa-exclamation-circle"></i> {{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="form-group">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> حفظ التعديلات
-                            </button>
-                            <a href="{% url 'installations:installation_detail' installation.id %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times"></i> إلغاء
-                            </a>
-                        </div>
-                    </form>
-                </div>
+    <div class="container-fluid">
+        <!-- عنوان الصفحة -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-edit text-primary"></i>
+                تعديل جدولة التركيب - {{ installation.order.order_number }}
+            </h1>
+            <div class="btn-group">
+                <a href="{% url 'installations:installation_detail' installation.id %}"
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-right"></i> العودة للتفاصيل
+                </a>
+                <a href="{% url 'installations:dashboard' %}"
+                   class="btn btn-outline-primary">
+                    <i class="fas fa-tachometer-alt"></i> لوحة التحكم
+                </a>
             </div>
         </div>
-        
-        <!-- معلومات الطلب -->
-        <div class="col-lg-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-info-circle"></i>
-                        معلومات الطلب
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <table class="table table-borderless">
-                        <tr>
-                            <th>رقم الطلب:</th>
-                            <td>{{ installation.order.order_number }}</td>
-                        </tr>
-                        <tr>
-                            <th>اسم العميل:</th>
-                            <td>{{ installation.order.customer.name }}</td>
-                        </tr>
-                        <tr>
-                            <th>رقم الهاتف:</th>
-                            <td>{{ installation.order.customer.phone }}</td>
-                        </tr>
-                        <tr>
-                            <th>العنوان:</th>
-                            <td>{{ installation.order.customer.address|default:"غير محدد" }}</td>
-                        </tr>
-                        <tr>
-                            <th>حالة الطلب:</th>
-                            <td>
-                                {% if installation.order.order_status == 'pending' %}
-                                    <span class="badge badge-warning">في الانتظار</span>
-                                {% elif installation.order.order_status == 'in_progress' %}
-                                    <span class="badge badge-primary">قيد التنفيذ</span>
-                                {% elif installation.order.order_status == 'completed' %}
-                                    <span class="badge badge-success">مكتمل</span>
-                                {% else %}
-                                    <span class="badge badge-secondary">{{ installation.order.get_order_status_display }}</span>
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-calendar-edit"></i>
+                            تعديل جدولة التركيب
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.scheduled_date.id_for_label }}">
+                                            <i class="fas fa-calendar-alt"></i>
+                                            تاريخ التركيب
+                                        </label>
+                                        {{ form.scheduled_date }}
+                                        {% if form.scheduled_date.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.scheduled_date.errors %}
+                                                    <small><i class="fas fa-exclamation-circle"></i> {{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.scheduled_time.id_for_label }}">
+                                            <i class="fas fa-clock"></i>
+                                            موعد التركيب
+                                        </label>
+                                        {{ form.scheduled_time }}
+                                        {% if form.scheduled_time.errors %}
+                                            <div class="text-danger">
+                                                {% for error in form.scheduled_time.errors %}
+                                                    <small><i class="fas fa-exclamation-circle"></i> {{ error }}</small>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.team.id_for_label }}">
+                                            <i class="fas fa-users"></i>
+                                            الفريق
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.team }}
+                                        {% if form.team.errors %}
+                                            <div class="alert alert-danger mt-2 py-2">
+                                                {% for error in form.team.errors %}<i class="fas fa-exclamation-triangle"></i> {{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-info-circle"></i> اختيار الفريق إلزامي
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.location_type.id_for_label }}">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            نوع المكان
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.location_type }}
+                                        {% if form.location_type.errors %}
+                                            <div class="alert alert-danger mt-2 py-2">
+                                                {% for error in form.location_type.errors %}<i class="fas fa-exclamation-triangle"></i> {{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-info-circle"></i> تحديد نوع المكان إلزامي
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.windows_count.id_for_label }}">
+                                            <i class="fas fa-window-maximize"></i>
+                                            عدد الشبابيك
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.windows_count }}
+                                        {% if form.windows_count.errors %}
+                                            <div class="alert alert-danger mt-2 py-2">
+                                                {% for error in form.windows_count.errors %}<i class="fas fa-exclamation-triangle"></i> {{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        {% if form.windows_count.help_text %}
+                                            <small class="form-text text-muted">
+                                                <i class="fas fa-info-circle"></i> {{ form.windows_count.help_text }}
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="{{ form.notes.id_for_label }}">
+                                    <i class="fas fa-sticky-note"></i>
+                                    ملاحظات
+                                </label>
+                                {{ form.notes }}
+                                {% if form.notes.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.notes.errors %}<small><i class="fas fa-exclamation-circle"></i> {{ error }}</small>{% endfor %}
+                                    </div>
                                 {% endif %}
-                            </td>
-                        </tr>
-                    </table>
+                            </div>
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> حفظ التعديلات
+                                </button>
+                                <a href="{% url 'installations:installation_detail' installation.id %}"
+                                   class="btn btn-outline-secondary">
+                                    <i class="fas fa-times"></i> إلغاء
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- معلومات الطلب -->
+            <div class="col-lg-4">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-info-circle"></i>
+                            معلومات الطلب
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th>رقم الطلب:</th>
+                                <td>{{ installation.order.order_number }}</td>
+                            </tr>
+                            <tr>
+                                <th>اسم العميل:</th>
+                                <td>{{ installation.order.customer.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>رقم الهاتف:</th>
+                                <td>{{ installation.order.customer.phone }}</td>
+                            </tr>
+                            <tr>
+                                <th>العنوان:</th>
+                                <td>{{ installation.order.customer.address|default:"غير محدد" }}</td>
+                            </tr>
+                            <tr>
+                                <th>حالة الطلب:</th>
+                                <td>
+                                    {% if installation.order.order_status == 'pending' %}
+                                        <span class="badge badge-warning">في الانتظار</span>
+                                    {% elif installation.order.order_status == 'in_progress' %}
+                                        <span class="badge badge-primary">قيد التنفيذ</span>
+                                    {% elif installation.order.order_status == 'completed' %}
+                                        <span class="badge badge-success">مكتمل</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{{ installation.order.get_order_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .form-control {
         border-radius: 0.5rem;
         border: 2px solid #e3e6f0;
@@ -336,5 +321,5 @@
         font-weight: 600;
         border-radius: 0.5rem;
     }
-</style>
+    </style>
 {% endblock %}

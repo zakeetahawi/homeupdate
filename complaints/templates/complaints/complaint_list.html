@@ -1,22 +1,22 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load pagination_tags %}
-
 {% block title %}قائمة الشكاوى - نظام الخواجه{% endblock %}
-
 {% block meta_tags %}
-    <meta name="description" content="إدارة شكاوى العملاء في نظام الخواجه - تسجيل، متابعة، وحل الشكاوى بكفاءة عالية لضمان رضا العملاء">
-    <meta name="keywords" content="إدارة الشكاوى, شكاوى العملاء, خدمة العملاء, حل المشاكل, دعم العملاء">
+    <meta name="description"
+          content="إدارة شكاوى العملاء في نظام الخواجه - تسجيل، متابعة، وحل الشكاوى بكفاءة عالية لضمان رضا العملاء">
+    <meta name="keywords"
+          content="إدارة الشكاوى, شكاوى العملاء, خدمة العملاء, حل المشاكل, دعم العملاء">
     <meta property="og:title" content="قائمة الشكاوى - نظام الخواجه">
     <meta property="og:type" content="website">
 {% endblock %}
-
 {% block extra_css %}
-<!-- Select2 CSS for enhanced dropdowns -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-
-<style>
+    <!-- Select2 CSS for enhanced dropdowns -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+          rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+          rel="stylesheet" />
+    <style>
     /* Complaint Row Status Colors - FUNCTIONAL */
     .complaint-row {
         border-left: 4px solid #dee2e6;
@@ -50,371 +50,401 @@
     .bulk-actions.show {
         display: block;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>
-            <i class="fas fa-exclamation-triangle"></i>
-            قائمة الشكاوى
-        </h2>
-        <div class="btn-group">
-            <a href="{% url 'complaints:complaint_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i>
-                شكوى جديدة
-            </a>
-            <button type="button" class="btn btn-secondary" onclick="showBulkActions()">
-                <i class="fas fa-tasks me-1"></i>
-                إجراءات مجمعة
-            </button>
-            <a href="{% url 'complaints:analysis' %}" class="btn btn-info">
-                <i class="fas fa-chart-line me-1"></i>
-                تحليل الشكاوى
-            </a>
-        </div>
-    </div>
-
-    <!-- فلاتر البحث المحسنة -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>فلاتر البحث المتقدمة</h5>
-        </div>
-        <div class="card-body">
-            <form method="get" class="row g-3" id="filterForm">
-            <div class="col-md-3">
-                <label for="{{ filter_form.status.id_for_label }}" class="form-label">
-                    <i class="fas fa-tasks me-1"></i>{{ filter_form.status.label }}
-                </label>
-                {{ filter_form.status }}
-            </div>
-            <div class="col-md-3">
-                <label for="{{ filter_form.priority.id_for_label }}" class="form-label">
-                    <i class="fas fa-exclamation-triangle me-1"></i>{{ filter_form.priority.label }}
-                </label>
-                {{ filter_form.priority }}
-            </div>
-            <div class="col-md-3">
-                <label for="{{ filter_form.complaint_type.id_for_label }}" class="form-label">
-                    <i class="fas fa-tags me-1"></i>{{ filter_form.complaint_type.label }}
-                </label>
-                {{ filter_form.complaint_type }}
-            </div>
-            <div class="col-md-3">
-                <label for="{{ filter_form.assigned_to.id_for_label }}" class="form-label">
-                    <i class="fas fa-user me-1"></i>{{ filter_form.assigned_to.label }}
-                </label>
-                {{ filter_form.assigned_to }}
-            </div>
-            <div class="col-md-3">
-                <label for="{{ filter_form.assigned_department.id_for_label }}" class="form-label">
-                    <i class="fas fa-building me-1"></i>{{ filter_form.assigned_department.label }}
-                </label>
-                {{ filter_form.assigned_department }}
-            </div>
-            <div class="col-md-2">
-                <label for="{{ filter_form.date_from.id_for_label }}" class="form-label">
-                    <i class="fas fa-calendar me-1"></i>{{ filter_form.date_from.label }}
-                </label>
-                {{ filter_form.date_from }}
-            </div>
-            <div class="col-md-2">
-                <label for="{{ filter_form.date_to.id_for_label }}" class="form-label">
-                    <i class="fas fa-calendar me-1"></i>{{ filter_form.date_to.label }}
-                </label>
-                {{ filter_form.date_to }}
-            </div>
-            <div class="col-md-5">
-                <label for="{{ filter_form.search.id_for_label }}" class="form-label">
-                    <i class="fas fa-search me-1"></i>{{ filter_form.search.label }}
-                </label>
-                {{ filter_form.search }}
-            </div>
-
-            <!-- الحقول المتقدمة -->
-            <div class="col-md-3 advanced-filter" style="display: none;">
-                <label class="form-label">
-                    <i class="fas fa-user me-1"></i>العميل
-                </label>
-                <input type="text" name="customer_name" class="form-control" placeholder="اسم العميل" value="{{ request.GET.customer_name }}">
-            </div>
-            <div class="col-md-3 advanced-filter" style="display: none;">
-                <label class="form-label">
-                    <i class="fas fa-hashtag me-1"></i>رقم الشكوى
-                </label>
-                <input type="text" name="complaint_id" class="form-control" placeholder="رقم الشكوى" value="{{ request.GET.complaint_id }}">
-            </div>
-            <div class="col-md-3 advanced-filter" style="display: none;">
-                <label class="form-label">
-                    <i class="fas fa-user-tie me-1"></i>المسؤول
-                </label>
-                <select name="assigned_to" class="form-select">
-                    <option value="">جميع المسؤولين</option>
-                    {% for user in users %}
-                    <option value="{{ user.id }}" {% if request.GET.assigned_to == user.id|stringformat:"s" %}selected{% endif %}>
-                        {{ user.get_full_name|default:user.username }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3 advanced-filter" style="display: none;">
-                <label class="form-label">
-                    <i class="fas fa-star me-1"></i>حالة التقييم
-                </label>
-                <select name="evaluation_status" class="form-select">
-                    <option value="">جميع الحالات</option>
-                    <option value="needs_evaluation" {% if request.GET.evaluation_status == 'needs_evaluation' %}selected{% endif %}>بحاجة تقييم</option>
-                    <option value="evaluated" {% if request.GET.evaluation_status == 'evaluated' %}selected{% endif %}>تم التقييم</option>
-                    <option value="not_evaluated" {% if request.GET.evaluation_status == 'not_evaluated' %}selected{% endif %}>لم يتم التقييم</option>
-                </select>
-            </div>
-            <div class="col-md-12 d-flex justify-content-center gap-2 mt-3">
-                <button type="submit" class="btn btn-light btn-lg">
-                    <i class="fas fa-search me-2"></i>
-                    تطبيق الفلاتر
-                </button>
-                <a href="{% url 'complaints:complaint_list' %}" class="btn btn-outline-light btn-lg">
-                    <i class="fas fa-undo me-2"></i>
-                    إعادة تعيين
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-exclamation-triangle"></i>
+                قائمة الشكاوى
+            </h2>
+            <div class="btn-group">
+                <a href="{% url 'complaints:complaint_create' %}"
+                   class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>
+                    شكوى جديدة
                 </a>
-                <button type="button" class="btn btn-info btn-lg" onclick="toggleAdvancedFilters()">
-                    <i class="fas fa-cog me-2"></i>
-                    فلاتر متقدمة
+                <button type="button" class="btn btn-secondary" onclick="showBulkActions()">
+                    <i class="fas fa-tasks me-1"></i>
+                    إجراءات مجمعة
+                </button>
+                <a href="{% url 'complaints:analysis' %}" class="btn btn-info">
+                    <i class="fas fa-chart-line me-1"></i>
+                    تحليل الشكاوى
+                </a>
+            </div>
+        </div>
+        <!-- فلاتر البحث المحسنة -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>فلاتر البحث المتقدمة
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3" id="filterForm">
+                    <div class="col-md-3">
+                        <label for="{{ filter_form.status.id_for_label }}" class="form-label">
+                            <i class="fas fa-tasks me-1"></i>{{ filter_form.status.label }}
+                        </label>
+                        {{ filter_form.status }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ filter_form.priority.id_for_label }}" class="form-label">
+                            <i class="fas fa-exclamation-triangle me-1"></i>{{ filter_form.priority.label }}
+                        </label>
+                        {{ filter_form.priority }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ filter_form.complaint_type.id_for_label }}"
+                               class="form-label">
+                            <i class="fas fa-tags me-1"></i>{{ filter_form.complaint_type.label }}
+                        </label>
+                        {{ filter_form.complaint_type }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ filter_form.assigned_to.id_for_label }}" class="form-label">
+                            <i class="fas fa-user me-1"></i>{{ filter_form.assigned_to.label }}
+                        </label>
+                        {{ filter_form.assigned_to }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ filter_form.assigned_department.id_for_label }}"
+                               class="form-label">
+                            <i class="fas fa-building me-1"></i>{{ filter_form.assigned_department.label }}
+                        </label>
+                        {{ filter_form.assigned_department }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="{{ filter_form.date_from.id_for_label }}" class="form-label">
+                            <i class="fas fa-calendar me-1"></i>{{ filter_form.date_from.label }}
+                        </label>
+                        {{ filter_form.date_from }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="{{ filter_form.date_to.id_for_label }}" class="form-label">
+                            <i class="fas fa-calendar me-1"></i>{{ filter_form.date_to.label }}
+                        </label>
+                        {{ filter_form.date_to }}
+                    </div>
+                    <div class="col-md-5">
+                        <label for="{{ filter_form.search.id_for_label }}" class="form-label">
+                            <i class="fas fa-search me-1"></i>{{ filter_form.search.label }}
+                        </label>
+                        {{ filter_form.search }}
+                    </div>
+                    <!-- الحقول المتقدمة -->
+                    <div class="col-md-3 advanced-filter" style="display: none;">
+                        <label class="form-label">
+                            <i class="fas fa-user me-1"></i>العميل
+                        </label>
+                        <input type="text"
+                               name="customer_name"
+                               class="form-control"
+                               placeholder="اسم العميل"
+                               value="{{ request.GET.customer_name }}">
+                    </div>
+                    <div class="col-md-3 advanced-filter" style="display: none;">
+                        <label class="form-label">
+                            <i class="fas fa-hashtag me-1"></i>رقم الشكوى
+                        </label>
+                        <input type="text"
+                               name="complaint_id"
+                               class="form-control"
+                               placeholder="رقم الشكوى"
+                               value="{{ request.GET.complaint_id }}">
+                    </div>
+                    <div class="col-md-3 advanced-filter" style="display: none;">
+                        <label class="form-label">
+                            <i class="fas fa-user-tie me-1"></i>المسؤول
+                        </label>
+                        <select name="assigned_to" class="form-select">
+                            <option value="">جميع المسؤولين</option>
+                            {% for user in users %}
+                                <option value="{{ user.id }}"
+                                        {% if request.GET.assigned_to == user.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ user.get_full_name|default:user.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 advanced-filter" style="display: none;">
+                        <label class="form-label">
+                            <i class="fas fa-star me-1"></i>حالة التقييم
+                        </label>
+                        <select name="evaluation_status" class="form-select">
+                            <option value="">جميع الحالات</option>
+                            <option value="needs_evaluation"
+                                    {% if request.GET.evaluation_status == 'needs_evaluation' %}selected{% endif %}>
+                                بحاجة تقييم
+                            </option>
+                            <option value="evaluated"
+                                    {% if request.GET.evaluation_status == 'evaluated' %}selected{% endif %}>
+                                تم التقييم
+                            </option>
+                            <option value="not_evaluated"
+                                    {% if request.GET.evaluation_status == 'not_evaluated' %}selected{% endif %}>
+                                لم يتم التقييم
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-12 d-flex justify-content-center gap-2 mt-3">
+                        <button type="submit" class="btn btn-light btn-lg">
+                            <i class="fas fa-search me-2"></i>
+                            تطبيق الفلاتر
+                        </button>
+                        <a href="{% url 'complaints:complaint_list' %}"
+                           class="btn btn-outline-light btn-lg">
+                            <i class="fas fa-undo me-2"></i>
+                            إعادة تعيين
+                        </a>
+                        <button type="button"
+                                class="btn btn-info btn-lg"
+                                onclick="toggleAdvancedFilters()">
+                            <i class="fas fa-cog me-2"></i>
+                            فلاتر متقدمة
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- الإجراءات المجمعة -->
+        <div id="bulkActions" class="bulk-actions">
+            <form method="post"
+                  action="{% url 'complaints:bulk_action' %}"
+                  id="bulkForm">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        {{ bulk_action_form.action.label_tag }}
+                        {{ bulk_action_form.action }}
+                    </div>
+                    <div class="col-md-2" id="assignedToField" style="display: none;">
+                        {{ bulk_action_form.assigned_to.label_tag }}
+                        {{ bulk_action_form.assigned_to }}
+                    </div>
+                    <div class="col-md-2" id="statusField" style="display: none;">
+                        {{ bulk_action_form.status.label_tag }}
+                        {{ bulk_action_form.status }}
+                    </div>
+                    <div class="col-md-2" id="priorityField" style="display: none;">
+                        {{ bulk_action_form.priority.label_tag }}
+                        {{ bulk_action_form.priority }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ bulk_action_form.notes.label_tag }}
+                        {{ bulk_action_form.notes }}
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-check me-1"></i>
+                            تنفيذ
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="hideBulkActions()">إلغاء</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <!-- عدد النتائج -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <span class="text-muted">
+                    إجمالي {{ page_obj.paginator.count }} شكوى
+                    {% if page_obj.has_other_pages %}- صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}{% endif %}
+                </span>
+            </div>
+            <div>
+                <button type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        onclick="selectAll()">
+                    <i class="fas fa-check-square me-1"></i>
+                    تحديد الكل
+                </button>
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        onclick="deselectAll()">
+                    <i class="fas fa-square me-1"></i>
+                    إلغاء التحديد
                 </button>
             </div>
-        </form>
         </div>
-    </div>
-
-    <!-- الإجراءات المجمعة -->
-    <div id="bulkActions" class="bulk-actions">
-        <form method="post" action="{% url 'complaints:bulk_action' %}" id="bulkForm">
-            {% csrf_token %}
-            <div class="row g-3">
-                <div class="col-md-3">
-                    {{ bulk_action_form.action.label_tag }}
-                    {{ bulk_action_form.action }}
-                </div>
-                <div class="col-md-2" id="assignedToField" style="display: none;">
-                    {{ bulk_action_form.assigned_to.label_tag }}
-                    {{ bulk_action_form.assigned_to }}
-                </div>
-                <div class="col-md-2" id="statusField" style="display: none;">
-                    {{ bulk_action_form.status.label_tag }}
-                    {{ bulk_action_form.status }}
-                </div>
-                <div class="col-md-2" id="priorityField" style="display: none;">
-                    {{ bulk_action_form.priority.label_tag }}
-                    {{ bulk_action_form.priority }}
-                </div>
-                <div class="col-md-3">
-                    {{ bulk_action_form.notes.label_tag }}
-                    {{ bulk_action_form.notes }}
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="fas fa-check me-1"></i>
-                        تنفيذ
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="hideBulkActions()">
-                        إلغاء
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <!-- عدد النتائج -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <span class="text-muted">
-                إجمالي {{ page_obj.paginator.count }} شكوى
-                {% if page_obj.has_other_pages %}
-                - صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+        <!-- قائمة الشكاوى -->
+        <div class="card">
+            <div class="card-body p-0">
+                {% if complaints %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width: 50px;">
+                                        <input type="checkbox"
+                                               id="selectAll"
+                                               class="form-check-input"
+                                               onchange="toggleAllCheckboxes()">
+                                    </th>
+                                    <th style="width: 150px;">
+                                        <i class="fas fa-hashtag me-2"></i>رقم الشكوى
+                                    </th>
+                                    <th style="width: 200px;">
+                                        <i class="fas fa-user me-2"></i>العميل
+                                    </th>
+                                    <th>
+                                        <i class="fas fa-file-alt me-2"></i>العنوان والنوع
+                                    </th>
+                                    <th style="width: 120px;" class="text-center">
+                                        <i class="fas fa-exclamation-circle me-2"></i>الأولوية
+                                    </th>
+                                    <th style="width: 150px;" class="text-center">
+                                        <i class="fas fa-info-circle me-2"></i>الحالة
+                                    </th>
+                                    <th class="text-center" style="width: 150px;">
+                                        <i class="fas fa-cogs me-2"></i>إجراءات
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for complaint in complaints %}
+                                    <tr class="complaint-row {{ complaint.status }}{% if complaint.is_fully_completed %} fully-completed{% endif %}">
+                                        <td class="text-center">
+                                            <input type="checkbox"
+                                                   name="complaint_checkbox"
+                                                   value="{{ complaint.pk }}"
+                                                   class="form-check-input complaint-checkbox"
+                                                   onchange="toggleBulkActions()">
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-column">
+                                                <a href="{% url 'complaints:complaint_detail' complaint.pk %}"
+                                                   class="text-decoration-none fw-bold text-primary">
+                                                    <i class="fas fa-ticket-alt me-2"></i>{{ complaint.complaint_number }}
+                                                </a>
+                                                <small class="text-muted mt-1">
+                                                    <i class="fas fa-calendar me-1"></i>{{ complaint.created_at|date:"Y-m-d" }}
+                                                </small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-column">
+                                                <div class="fw-semibold text-dark">
+                                                    <i class="fas fa-user me-2 text-info"></i>{{ complaint.customer.name }}
+                                                </div>
+                                                <small class="text-muted mt-1">
+                                                    <i class="fas fa-phone me-1"></i>{{ complaint.customer.phone }}
+                                                </small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-column">
+                                                <div class="fw-semibold text-dark mb-2">{{ complaint.title|truncatechars:50 }}</div>
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-tag me-1"></i>{{ complaint.complaint_type.name }}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-{{ complaint.get_priority_badge_class|slice:'3:' }}">
+                                                <i class="fas fa-exclamation-circle me-1"></i>{{ complaint.get_priority_display }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="d-flex flex-column align-items-center gap-1">
+                                                <span class="badge bg-{{ complaint.get_status_badge_class|slice:'3:' }}">
+                                                    <i class="fas fa-info-circle me-1"></i>{{ complaint.get_status_display }}
+                                                </span>
+                                                {% if complaint.escalations.exists %}
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="fas fa-arrow-up me-1"></i>مصعدة
+                                                    </span>
+                                                {% endif %}
+                                                {% if complaint.is_overdue %}
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>متأخرة
+                                                    </span>
+                                                {% endif %}
+                                                {% if complaint.needs_evaluation %}
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="fas fa-star-half-alt me-1"></i>بحاجة تقييم
+                                                    </span>
+                                                {% endif %}
+                                                {% if complaint.is_fully_completed %}
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check-double me-1"></i>منتهية تماماً
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group" role="group">
+                                                <a href="{% url 'complaints:complaint_detail' complaint.pk %}"
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   title="عرض التفاصيل">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{% url 'complaints:complaint_edit' complaint.pk %}"
+                                                   class="btn btn-sm btn-outline-secondary"
+                                                   title="تعديل">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                {% if complaint.status != 'closed' %}
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-success"
+                                                            onclick="quickStatusUpdate({{ complaint.pk }}, 'resolved')"
+                                                            title="حل الشكوى">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                            {% if complaint.assigned_to %}
+                                                <div class="mt-2">
+                                                    <small class="text-success">
+                                                        <i class="fas fa-user-check me-1"></i>{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username|truncatechars:15 }}
+                                                    </small>
+                                                </div>
+                                            {% else %}
+                                                <div class="mt-2">
+                                                    <small class="text-warning">
+                                                        <i class="fas fa-user-times me-1"></i>غير مُعين
+                                                    </small>
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination -->
+                    {% load pagination_tags %}
+                    {% render_pagination page_obj %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
+                        <h3 class="text-muted mb-3">لا توجد شكاوى</h3>
+                        <p class="text-muted mb-4">لم يتم العثور على شكاوى تطابق معايير البحث المحددة.</p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'complaints:complaint_create' %}"
+                               class="btn btn-primary btn-lg">
+                                <i class="fas fa-plus me-2"></i>
+                                إنشاء شكوى جديدة
+                            </a>
+                            <a href="{% url 'complaints:complaint_list' %}"
+                               class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-refresh me-2"></i>
+                                إعادة تحميل
+                            </a>
+                        </div>
+                    </div>
                 {% endif %}
-            </span>
-        </div>
-        <div>
-            <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAll()">
-                <i class="fas fa-check-square me-1"></i>
-                تحديد الكل
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAll()">
-                <i class="fas fa-square me-1"></i>
-                إلغاء التحديد
-            </button>
+            </div>
         </div>
     </div>
-
-    <!-- قائمة الشكاوى -->
-    <div class="card">
-        <div class="card-body p-0">
-    {% if complaints %}
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th class="text-center" style="width: 50px;">
-                                <input type="checkbox" id="selectAll" class="form-check-input" onchange="toggleAllCheckboxes()">
-                            </th>
-                            <th style="width: 150px;">
-                                <i class="fas fa-hashtag me-2"></i>رقم الشكوى
-                            </th>
-                            <th style="width: 200px;">
-                                <i class="fas fa-user me-2"></i>العميل
-                            </th>
-                            <th>
-                                <i class="fas fa-file-alt me-2"></i>العنوان والنوع
-                            </th>
-                            <th style="width: 120px;" class="text-center">
-                                <i class="fas fa-exclamation-circle me-2"></i>الأولوية
-                            </th>
-                            <th style="width: 150px;" class="text-center">
-                                <i class="fas fa-info-circle me-2"></i>الحالة
-                            </th>
-                            <th class="text-center" style="width: 150px;">
-                                <i class="fas fa-cogs me-2"></i>إجراءات
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-
-                        {% for complaint in complaints %}
-                        <tr class="complaint-row {{ complaint.status }}{% if complaint.is_fully_completed %} fully-completed{% endif %}">
-                            <td class="text-center">
-                                <input type="checkbox" name="complaint_checkbox" value="{{ complaint.pk }}"
-                                       class="form-check-input complaint-checkbox" onchange="toggleBulkActions()">
-                            </td>
-                            <td>
-                                <div class="d-flex flex-column">
-                                    <a href="{% url 'complaints:complaint_detail' complaint.pk %}" class="text-decoration-none fw-bold text-primary">
-                                        <i class="fas fa-ticket-alt me-2"></i>{{ complaint.complaint_number }}
-                                    </a>
-                                    <small class="text-muted mt-1">
-                                        <i class="fas fa-calendar me-1"></i>{{ complaint.created_at|date:"Y-m-d" }}
-                                    </small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="d-flex flex-column">
-                                    <div class="fw-semibold text-dark">
-                                        <i class="fas fa-user me-2 text-info"></i>{{ complaint.customer.name }}
-                                    </div>
-                                    <small class="text-muted mt-1">
-                                        <i class="fas fa-phone me-1"></i>{{ complaint.customer.phone }}
-                                    </small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="d-flex flex-column">
-                                    <div class="fw-semibold text-dark mb-2">{{ complaint.title|truncatechars:50 }}</div>
-                                    <span class="badge bg-secondary">
-                                        <i class="fas fa-tag me-1"></i>{{ complaint.complaint_type.name }}
-                                    </span>
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-{{ complaint.get_priority_badge_class|slice:'3:' }}">
-                                    <i class="fas fa-exclamation-circle me-1"></i>{{ complaint.get_priority_display }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                <div class="d-flex flex-column align-items-center gap-1">
-                                    <span class="badge bg-{{ complaint.get_status_badge_class|slice:'3:' }}">
-                                        <i class="fas fa-info-circle me-1"></i>{{ complaint.get_status_display }}
-                                    </span>
-                                    {% if complaint.escalations.exists %}
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="fas fa-arrow-up me-1"></i>مصعدة
-                                    </span>
-                                    {% endif %}
-                                    {% if complaint.is_overdue %}
-                                    <span class="badge bg-danger">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>متأخرة
-                                    </span>
-                    {% endif %}
-                                    {% if complaint.needs_evaluation %}
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="fas fa-star-half-alt me-1"></i>بحاجة تقييم
-                                    </span>
-                                    {% endif %}
-                                    {% if complaint.is_fully_completed %}
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-check-double me-1"></i>منتهية تماماً
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'complaints:complaint_detail' complaint.pk %}"
-                                       class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{% url 'complaints:complaint_edit' complaint.pk %}"
-                                       class="btn btn-sm btn-outline-secondary" title="تعديل">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    {% if complaint.status != 'closed' %}
-                                    <button type="button" class="btn btn-sm btn-outline-success"
-                                            onclick="quickStatusUpdate({{ complaint.pk }}, 'resolved')" title="حل الشكوى">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    {% endif %}
-                                </div>
-                                {% if complaint.assigned_to %}
-                                    <div class="mt-2">
-                                        <small class="text-success">
-                                            <i class="fas fa-user-check me-1"></i>{{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username|truncatechars:15 }}
-                                        </small>
-                                    </div>
-                                {% else %}
-                                    <div class="mt-2">
-                                        <small class="text-warning">
-                                            <i class="fas fa-user-times me-1"></i>غير مُعين
-                                        </small>
-                                    </div>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            {% load pagination_tags %}
-            {% render_pagination page_obj %}
-
-    {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
-                <h3 class="text-muted mb-3">لا توجد شكاوى</h3>
-                <p class="text-muted mb-4">لم يتم العثور على شكاوى تطابق معايير البحث المحددة.</p>
-                <div class="d-flex justify-content-center gap-3">
-                    <a href="{% url 'complaints:complaint_create' %}" class="btn btn-primary btn-lg">
-                        <i class="fas fa-plus me-2"></i>
-                        إنشاء شكوى جديدة
-                    </a>
-                    <a href="{% url 'complaints:complaint_list' %}" class="btn btn-outline-secondary btn-lg">
-                        <i class="fas fa-refresh me-2"></i>
-                        إعادة تحميل
-                    </a>
-                </div>
-            </div>
-    {% endif %}
-        </div>
-    </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<!-- Select2 JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-<script>
+    <!-- Select2 JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
     // Initialize enhanced dropdowns
     $(document).ready(function() {
         // Initialize Select2 for all filter fields
@@ -643,5 +673,5 @@
 
     // Initialize auto-filter (uncomment to enable)
     // enableAutoFilter();
-</script>
+    </script>
 {% endblock %}

@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}سجل أحداث التركيبات{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/arabic-fonts.css' %}">
-<style>
+    <link rel="stylesheet" href="{% static 'css/arabic-fonts.css' %}">
+    <style>
 .table {
     font-family: 'Arial', sans-serif !important;
     font-size: 0.9rem;
@@ -68,280 +66,296 @@
 .text-muted {
     color: #6c757d !important;
 }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-{% csrf_token %}
-<div class="container-fluid">
-    <!-- عنوان الصفحة -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">
-            <i class="fas fa-history text-primary"></i>
-            سجل أحداث التركيبات
-        </h1>
-        <div class="btn-group">
-            <a href="{% url 'installations:dashboard' %}" class="btn btn-outline-primary">
-                <i class="fas fa-tachometer-alt"></i> لوحة التحكم
-            </a>
-            <a href="{% url 'installations:installation_list' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-list"></i> قائمة التركيبات
-            </a>
-        </div>
-    </div>
-
-    <!-- فلاتر البحث -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-filter"></i>
-                فلاتر البحث
-            </h6>
-        </div>
-        <div class="card-body">
-            <form method="get" class="row">
-                <div class="col-md-3">
-                    <label for="event_type" class="form-label">نوع الحدث:</label>
-                    <select name="event_type" id="event_type" class="form-control">
-                        <option value="">جميع الأحداث</option>
-                        <option value="status_change" {% if request.GET.event_type == 'status_change' %}selected{% endif %}>تغيير حالة</option>
-                        <option value="schedule_change" {% if request.GET.event_type == 'schedule_change' %}selected{% endif %}>تغيير جدولة</option>
-                        <option value="team_assignment" {% if request.GET.event_type == 'team_assignment' %}selected{% endif %}>تعيين فريق</option>
-                        <option value="modification_request" {% if request.GET.event_type == 'modification_request' %}selected{% endif %}>طلب تعديل</option>
-                        <option value="payment_received" {% if request.GET.event_type == 'payment_received' %}selected{% endif %}>استلام دفعة</option>
-                        <option value="completion" {% if request.GET.event_type == 'completion' %}selected{% endif %}>إكمال</option>
-                        <option value="cancellation" {% if request.GET.event_type == 'cancellation' %}selected{% endif %}>إلغاء</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="date_from" class="form-label">من تاريخ:</label>
-                    <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request.GET.date_from }}">
-                </div>
-                <div class="col-md-3">
-                    <label for="date_to" class="form-label">إلى تاريخ:</label>
-                    <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request.GET.date_to }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">&nbsp;</label>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> بحث
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- جدول سجل الأحداث -->
-    <div class="card shadow">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-table"></i>
-                سجل الأحداث الأخيرة
-            </h6>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped table-hover">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th class="text-center" style="width: 12%;">التاريخ والوقت</th>
-                            <th class="text-center" style="width: 10%;">نوع الحدث</th>
-                            <th class="text-center" style="width: 10%;">رقم الطلب</th>
-                            <th class="text-center" style="width: 15%;">اسم العميل</th>
-                            <th class="text-center" style="width: 12%;">حالة التركيب</th>
-                            <th class="text-center" style="width: 15%;">تاريخ التركيب المتوقع</th>
-                            <th class="text-center" style="width: 15%;">وصف الحدث</th>
-                            <th class="text-center" style="width: 8%;">المستخدم</th>
-                            <th class="text-center" style="width: 10%;">الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in event_logs %}
-                            <tr>
-                                <!-- التاريخ والوقت -->
-                                <td class="text-center">
-                                    <div class="font-weight-bold">{{ log.created_at|date:"Y-m-d" }}</div>
-                                    <small class="text-muted">{{ log.created_at|time:"H:i" }}</small>
-                                </td>
-                                
-                                <!-- نوع الحدث -->
-                                <td class="text-center">
-                                    <span class="badge event-badge badge-{% if log.event_type == 'completion' %}success{% elif log.event_type == 'cancellation' %}danger{% elif log.event_type == 'modification_request' %}warning{% elif log.event_type == 'status_change' %}info{% elif log.event_type == 'schedule_change' %}primary{% elif log.event_type == 'payment_received' %}success{% elif log.event_type == 'team_assignment' %}info{% else %}secondary{% endif %}">
-                                        {% if log.event_type == 'completion' %}
-                                            <i class="fas fa-check-circle"></i>
-                                        {% elif log.event_type == 'cancellation' %}
-                                            <i class="fas fa-times-circle"></i>
-                                        {% elif log.event_type == 'modification_request' %}
-                                            <i class="fas fa-tools"></i>
-                                        {% elif log.event_type == 'status_change' %}
-                                            <i class="fas fa-exchange-alt"></i>
-                                        {% elif log.event_type == 'schedule_change' %}
-                                            <i class="fas fa-calendar-alt"></i>
-                                        {% elif log.event_type == 'payment_received' %}
-                                            <i class="fas fa-money-bill"></i>
-                                        {% elif log.event_type == 'team_assignment' %}
-                                            <i class="fas fa-users"></i>
-                                        {% else %}
-                                            <i class="fas fa-info-circle"></i>
-                                        {% endif %}
-                                        {{ log.get_event_type_display }}
-                                    </span>
-                                </td>
-                                
-                                <!-- رقم الطلب -->
-                                <td class="text-center">
-                                    <a href="{% url 'orders:order_detail' log.installation.order.id %}" class="text-primary font-weight-bold">
-                                        {% if log.installation.order and log.installation.order.order_number %}
-                                            {{ log.installation.order.order_number }}
-                                        {% else %}
-                                            <span class="text-muted">غير محدد</span>
-                                        {% endif %}
-                                    </a>
-                                </td>
-                                
-                                <!-- اسم العميل -->
-                                <td class="text-center">
-                                    <a href="{% url 'customers:customer_detail' log.installation.order.customer.id %}" class="text-primary font-weight-bold">
-                                        {% if log.installation.order and log.installation.order.customer and log.installation.order.customer.name %}
-                                            {{ log.installation.order.customer.name }}
-                                        {% else %}
-                                            <span class="text-muted">غير محدد</span>
-                                        {% endif %}
-                                    </a>
-                                    <small class="text-muted">
-                                        {% if log.installation.order and log.installation.order.customer and log.installation.order.customer.phone %}
-                                            {{ log.installation.order.customer.phone }}
-                                        {% else %}
-                                            <span class="text-muted">بدون رقم هاتف</span>
-                                        {% endif %}
-                                    </small>
-                                </td>
-                                
-                                <!-- حالة التركيب -->
-                                <td class="text-center">
-                                    {% if log.installation.status == 'needs_scheduling' %}
-                                        <span class="badge status-badge badge-warning">
-                                            <i class="fas fa-calendar-plus"></i> بحاجة جدولة
-                                        </span>
-                                    {% elif log.installation.status == 'scheduled' %}
-                                        <span class="badge status-badge badge-info">
-                                            <i class="fas fa-calendar-check"></i> مجدول
-                                        </span>
-                                    {% elif log.installation.status == 'in_installation' %}
-                                        <span class="badge status-badge badge-primary">
-                                            <i class="fas fa-tools"></i> قيد التركيب
-                                        </span>
-                                    {% elif log.installation.status == 'completed' %}
-                                        <span class="badge status-badge badge-success">
-                                            <i class="fas fa-check-circle"></i> مكتمل
-                                        </span>
-                                    {% elif log.installation.status == 'cancelled' %}
-                                        <span class="badge status-badge badge-danger">
-                                            <i class="fas fa-times-circle"></i> ملغي
-                                        </span>
-                                    {% elif log.installation.status == 'modification_required' %}
-                                        <span class="badge status-badge badge-warning">
-                                            <i class="fas fa-exclamation-triangle"></i> يحتاج تعديل
-                                        </span>
-                                    {% elif log.installation.status == 'modification_in_progress' %}
-                                        <span class="badge status-badge badge-info">
-                                            <i class="fas fa-cogs"></i> التعديل قيد التنفيذ
-                                        </span>
-                                    {% elif log.installation.status == 'modification_completed' %}
-                                        <span class="badge status-badge badge-success">
-                                            <i class="fas fa-check-circle"></i> التعديل مكتمل
-                                        </span>
-                                    {% else %}
-                                        <span class="badge status-badge badge-secondary">
-                                            {{ log.installation.get_status_display }}
-                                        </span>
-                                    {% endif %}
-                                </td>
-                                
-                                <!-- تاريخ التركيب المتوقع -->
-                                <td class="text-center">
-                                    {% if log.installation.scheduled_date %}
-                                        <div class="badge badge-info">
-                                            <i class="fas fa-calendar"></i> {{ log.installation.scheduled_date|date:"Y-m-d" }}
-                                        </div>
-                                        {% if log.installation.scheduled_time %}
-                                            <br><small class="text-muted font-weight-bold">{{ log.installation.scheduled_time|time:"H:i" }}</small>
-                                        {% endif %}
-                                    {% else %}
-                                        <span class="badge badge-light">
-                                            <i class="fas fa-question-circle"></i> غير محدد
-                                        </span>
-                                    {% endif %}
-                                </td>
-                                
-                                <!-- وصف الحدث -->
-                                <td>
-                                    <div class="text-right">
-                                        {{ log.description }}
-                                    </div>
-                                </td>
-                                
-                                <!-- المستخدم -->
-                                <td class="text-center">
-                                    <div class="font-weight-bold">{{ log.user.get_full_name|default:log.user.username }}</div>
-                                    <small class="text-muted">{{ log.user.username }}</small>
-                                </td>
-                                
-                                <!-- الإجراءات -->
-                                <td class="text-center">
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{% url 'installations:installation_detail' log.installation.id %}" 
-                                           class="btn btn-info btn-sm" title="تفاصيل التركيب">
-                                            <i class="fas fa-tools"></i> تفاصيل الطلب
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="9" class="text-center py-4">
-                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                                    <div class="text-muted font-weight-bold">لا توجد أحداث</div>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    {% csrf_token %}
+    <div class="container-fluid">
+        <!-- عنوان الصفحة -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-history text-primary"></i>
+                سجل أحداث التركيبات
+            </h1>
+            <div class="btn-group">
+                <a href="{% url 'installations:dashboard' %}"
+                   class="btn btn-outline-primary">
+                    <i class="fas fa-tachometer-alt"></i> لوحة التحكم
+                </a>
+                <a href="{% url 'installations:installation_list' %}"
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-list"></i> قائمة التركيبات
+                </a>
             </div>
-
-            <!-- ترقيم الصفحات -->
-            {% if page_obj.has_other_pages %}
-                <nav aria-label="Page navigation">
-                    <ul class="pagination justify-content-center">
-                        {% if page_obj.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.event_type %}&event_type={{ request.GET.event_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">السابق</a>
-                            </li>
-                        {% endif %}
-
-                        {% for num in page_obj.paginator.page_range %}
-                            {% if page_obj.number == num %}
-                                <li class="page-item active">
-                                    <span class="page-link">{{ num }}</span>
-                                </li>
-                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        </div>
+        <!-- فلاتر البحث -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-filter"></i>
+                    فلاتر البحث
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row">
+                    <div class="col-md-3">
+                        <label for="event_type" class="form-label">نوع الحدث:</label>
+                        <select name="event_type" id="event_type" class="form-control">
+                            <option value="">جميع الأحداث</option>
+                            <option value="status_change"
+                                    {% if request.GET.event_type == 'status_change' %}selected{% endif %}>
+                                تغيير حالة
+                            </option>
+                            <option value="schedule_change"
+                                    {% if request.GET.event_type == 'schedule_change' %}selected{% endif %}>
+                                تغيير جدولة
+                            </option>
+                            <option value="team_assignment"
+                                    {% if request.GET.event_type == 'team_assignment' %}selected{% endif %}>
+                                تعيين فريق
+                            </option>
+                            <option value="modification_request"
+                                    {% if request.GET.event_type == 'modification_request' %}selected{% endif %}>
+                                طلب تعديل
+                            </option>
+                            <option value="payment_received"
+                                    {% if request.GET.event_type == 'payment_received' %}selected{% endif %}>
+                                استلام دفعة
+                            </option>
+                            <option value="completion"
+                                    {% if request.GET.event_type == 'completion' %}selected{% endif %}>إكمال</option>
+                            <option value="cancellation"
+                                    {% if request.GET.event_type == 'cancellation' %}selected{% endif %}>إلغاء</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_from" class="form-label">من تاريخ:</label>
+                        <input type="date"
+                               name="date_from"
+                               id="date_from"
+                               class="form-control"
+                               value="{{ request.GET.date_from }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_to" class="form-label">إلى تاريخ:</label>
+                        <input type="date"
+                               name="date_to"
+                               id="date_to"
+                               class="form-control"
+                               value="{{ request.GET.date_to }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- جدول سجل الأحداث -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-table"></i>
+                    سجل الأحداث الأخيرة
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-hover">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th class="text-center" style="width: 12%;">التاريخ والوقت</th>
+                                <th class="text-center" style="width: 10%;">نوع الحدث</th>
+                                <th class="text-center" style="width: 10%;">رقم الطلب</th>
+                                <th class="text-center" style="width: 15%;">اسم العميل</th>
+                                <th class="text-center" style="width: 12%;">حالة التركيب</th>
+                                <th class="text-center" style="width: 15%;">تاريخ التركيب المتوقع</th>
+                                <th class="text-center" style="width: 15%;">وصف الحدث</th>
+                                <th class="text-center" style="width: 8%;">المستخدم</th>
+                                <th class="text-center" style="width: 10%;">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in event_logs %}
+                                <tr>
+                                    <!-- التاريخ والوقت -->
+                                    <td class="text-center">
+                                        <div class="font-weight-bold">{{ log.created_at|date:"Y-m-d" }}</div>
+                                        <small class="text-muted">{{ log.created_at|time:"H:i" }}</small>
+                                    </td>
+                                    <!-- نوع الحدث -->
+                                    <td class="text-center">
+                                        <span class="badge event-badge badge-{% if log.event_type == 'completion' %}success{% elif log.event_type == 'cancellation' %}danger{% elif log.event_type == 'modification_request' %}warning{% elif log.event_type == 'status_change' %}info{% elif log.event_type == 'schedule_change' %}primary{% elif log.event_type == 'payment_received' %}success{% elif log.event_type == 'team_assignment' %}info{% else %}secondary{% endif %}">
+                                            {% if log.event_type == 'completion' %}
+                                                <i class="fas fa-check-circle"></i>
+                                            {% elif log.event_type == 'cancellation' %}
+                                                <i class="fas fa-times-circle"></i>
+                                            {% elif log.event_type == 'modification_request' %}
+                                                <i class="fas fa-tools"></i>
+                                            {% elif log.event_type == 'status_change' %}
+                                                <i class="fas fa-exchange-alt"></i>
+                                            {% elif log.event_type == 'schedule_change' %}
+                                                <i class="fas fa-calendar-alt"></i>
+                                            {% elif log.event_type == 'payment_received' %}
+                                                <i class="fas fa-money-bill"></i>
+                                            {% elif log.event_type == 'team_assignment' %}
+                                                <i class="fas fa-users"></i>
+                                            {% else %}
+                                                <i class="fas fa-info-circle"></i>
+                                            {% endif %}
+                                            {{ log.get_event_type_display }}
+                                        </span>
+                                    </td>
+                                    <!-- رقم الطلب -->
+                                    <td class="text-center">
+                                        <a href="{% url 'orders:order_detail' log.installation.order.id %}"
+                                           class="text-primary font-weight-bold">
+                                            {% if log.installation.order and log.installation.order.order_number %}
+                                                {{ log.installation.order.order_number }}
+                                            {% else %}
+                                                <span class="text-muted">غير محدد</span>
+                                            {% endif %}
+                                        </a>
+                                    </td>
+                                    <!-- اسم العميل -->
+                                    <td class="text-center">
+                                        <a href="{% url 'customers:customer_detail' log.installation.order.customer.id %}"
+                                           class="text-primary font-weight-bold">
+                                            {% if log.installation.order and log.installation.order.customer and log.installation.order.customer.name %}
+                                                {{ log.installation.order.customer.name }}
+                                            {% else %}
+                                                <span class="text-muted">غير محدد</span>
+                                            {% endif %}
+                                        </a>
+                                        <small class="text-muted">
+                                            {% if log.installation.order and log.installation.order.customer and log.installation.order.customer.phone %}
+                                                {{ log.installation.order.customer.phone }}
+                                            {% else %}
+                                                <span class="text-muted">بدون رقم هاتف</span>
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <!-- حالة التركيب -->
+                                    <td class="text-center">
+                                        {% if log.installation.status == 'needs_scheduling' %}
+                                            <span class="badge status-badge badge-warning">
+                                                <i class="fas fa-calendar-plus"></i> بحاجة جدولة
+                                            </span>
+                                        {% elif log.installation.status == 'scheduled' %}
+                                            <span class="badge status-badge badge-info">
+                                                <i class="fas fa-calendar-check"></i> مجدول
+                                            </span>
+                                        {% elif log.installation.status == 'in_installation' %}
+                                            <span class="badge status-badge badge-primary">
+                                                <i class="fas fa-tools"></i> قيد التركيب
+                                            </span>
+                                        {% elif log.installation.status == 'completed' %}
+                                            <span class="badge status-badge badge-success">
+                                                <i class="fas fa-check-circle"></i> مكتمل
+                                            </span>
+                                        {% elif log.installation.status == 'cancelled' %}
+                                            <span class="badge status-badge badge-danger">
+                                                <i class="fas fa-times-circle"></i> ملغي
+                                            </span>
+                                        {% elif log.installation.status == 'modification_required' %}
+                                            <span class="badge status-badge badge-warning">
+                                                <i class="fas fa-exclamation-triangle"></i> يحتاج تعديل
+                                            </span>
+                                        {% elif log.installation.status == 'modification_in_progress' %}
+                                            <span class="badge status-badge badge-info">
+                                                <i class="fas fa-cogs"></i> التعديل قيد التنفيذ
+                                            </span>
+                                        {% elif log.installation.status == 'modification_completed' %}
+                                            <span class="badge status-badge badge-success">
+                                                <i class="fas fa-check-circle"></i> التعديل مكتمل
+                                            </span>
+                                        {% else %}
+                                            <span class="badge status-badge badge-secondary">{{ log.installation.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- تاريخ التركيب المتوقع -->
+                                    <td class="text-center">
+                                        {% if log.installation.scheduled_date %}
+                                            <div class="badge badge-info">
+                                                <i class="fas fa-calendar"></i> {{ log.installation.scheduled_date|date:"Y-m-d" }}
+                                            </div>
+                                            {% if log.installation.scheduled_time %}
+                                                <br>
+                                                <small class="text-muted font-weight-bold">{{ log.installation.scheduled_time|time:"H:i" }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge badge-light">
+                                                <i class="fas fa-question-circle"></i> غير محدد
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <!-- وصف الحدث -->
+                                    <td>
+                                        <div class="text-right">{{ log.description }}</div>
+                                    </td>
+                                    <!-- المستخدم -->
+                                    <td class="text-center">
+                                        <div class="font-weight-bold">{{ log.user.get_full_name|default:log.user.username }}</div>
+                                        <small class="text-muted">{{ log.user.username }}</small>
+                                    </td>
+                                    <!-- الإجراءات -->
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'installations:installation_detail' log.installation.id %}"
+                                               class="btn btn-info btn-sm"
+                                               title="تفاصيل التركيب">
+                                                <i class="fas fa-tools"></i> تفاصيل الطلب
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center py-4">
+                                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                        <div class="text-muted font-weight-bold">لا توجد أحداث</div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- ترقيم الصفحات -->
+                {% if page_obj.has_other_pages %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
                                 <li class="page-item">
-                                    <a class="page-link" href="?page={{ num }}{% if request.GET.event_type %}&event_type={{ request.GET.event_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">{{ num }}</a>
+                                    <a class="page-link"
+                                       href="?page={{ page_obj.previous_page_number }}{% if request.GET.event_type %}&event_type={{ request.GET.event_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">السابق</a>
                                 </li>
                             {% endif %}
-                        {% endfor %}
-
-                        {% if page_obj.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.event_type %}&event_type={{ request.GET.event_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">التالي</a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-            {% endif %}
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ num }}{% if request.GET.event_type %}&event_type={{ request.GET.event_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ page_obj.next_page_number }}{% if request.GET.event_type %}&event_type={{ request.GET.event_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">التالي</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}

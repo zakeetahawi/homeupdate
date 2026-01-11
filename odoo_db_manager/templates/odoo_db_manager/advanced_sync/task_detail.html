@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}تفاصيل المهمة - {{ task.id }}{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
-<style>
+    <link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+    <style>
     .task-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -139,258 +137,248 @@
         box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4);
         color: white;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid arabic-text">
-    <!-- رأس المهمة -->
-    <div class="task-header">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="mb-2">
-                    <i class="fas fa-tasks"></i>
-                    مهمة المزامنة #{{ task.id }}
-                </h1>
-                <p class="mb-0 opacity-75">
-                    {{ task.mapping.name }} - {{ task.get_task_type_display }}
-                </p>
-            </div>
-            <div class="col-md-4 text-end">
-                <span class="task-status status-{{ task.status }}">
-                    {{ task.get_status_display }}
-                </span>
-                <div class="mt-2">
-                    <small>تم الإنشاء: {{ task.created_at|date:"Y-m-d H:i" }}</small>
+    <div class="container-fluid arabic-text">
+        <!-- رأس المهمة -->
+        <div class="task-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-2">
+                        <i class="fas fa-tasks"></i>
+                        مهمة المزامنة #{{ task.id }}
+                    </h1>
+                    <p class="mb-0 opacity-75">{{ task.mapping.name }} - {{ task.get_task_type_display }}</p>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- شريط الأدوات -->
-    <div class="toolbar mb-4">
-        <div>
-            <a href="{% url 'odoo_db_manager:mapping_detail' task.mapping.id %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-right"></i>
-                العودة للتعيين
-            </a>
-            <a href="{% url 'odoo_db_manager:advanced_sync_dashboard' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-tachometer-alt"></i>
-                لوحة التحكم
-            </a>
-        </div>
-        <div>
-            <button onclick="location.reload()" class="btn btn-refresh">
-                <i class="fas fa-sync-alt"></i>
-                تحديث
-            </button>
-        </div>
-    </div>
-
-    <!-- إحصائيات المهمة -->
-    {% if task.status == 'completed' and task.result_data %}
-    <div class="stats-grid">
-        {% with stats=task.result_data.stats %}
-        <div class="stat-card">
-            <div class="stat-number customers-created">{{ stats.customers_created|default:0 }}</div>
-            <div class="stat-label">عملاء جدد</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number customers-updated">{{ stats.customers_updated|default:0 }}</div>
-            <div class="stat-label">عملاء محدثون</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number orders-created">{{ stats.orders_created|default:0 }}</div>
-            <div class="stat-label">طلبات جديدة</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number errors">{{ stats.errors|length|default:0 }}</div>
-            <div class="stat-label">أخطاء</div>
-        </div>
-        {% endwith %}
-    </div>
-    {% endif %}
-
-    <div class="row">
-        <!-- معلومات المهمة -->
-        <div class="col-md-6">
-            <div class="info-section">
-                <h5 class="section-title">
-                    <i class="fas fa-info-circle"></i>
-                    معلومات المهمة
-                </h5>
-                
-                <div class="row mb-3">
-                    <div class="col-sm-4"><strong>نوع المهمة:</strong></div>
-                    <div class="col-sm-8">{{ task.get_task_type_display }}</div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-sm-4"><strong>الحالة:</strong></div>
-                    <div class="col-sm-8">
-                        <span class="task-status status-{{ task.status }}">
-                            {{ task.get_status_display }}
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-sm-4"><strong>تم الإنشاء:</strong></div>
-                    <div class="col-sm-8">{{ task.created_at|date:"Y-m-d H:i:s" }}</div>
-                </div>
-                
-                {% if task.started_at %}
-                <div class="row mb-3">
-                    <div class="col-sm-4"><strong>بدء التنفيذ:</strong></div>
-                    <div class="col-sm-8">{{ task.started_at|date:"Y-m-d H:i:s" }}</div>
-                </div>
-                {% endif %}
-                
-                {% if task.completed_at %}
-                <div class="row mb-3">
-                    <div class="col-sm-4"><strong>انتهاء التنفيذ:</strong></div>
-                    <div class="col-sm-8">{{ task.completed_at|date:"Y-m-d H:i:s" }}</div>
-                </div>
-                {% endif %}
-                
-                <div class="row mb-3">
-                    <div class="col-sm-4"><strong>منشئ المهمة:</strong></div>
-                    <div class="col-sm-8">{{ task.created_by.get_full_name|default:task.created_by.username }}</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- معلومات التعيين -->
-        <div class="col-md-6">
-            <div class="info-section">
-                <h5 class="section-title">
-                    <i class="fas fa-table"></i>
-                    معلومات التعيين
-                </h5>
-                
-                <div class="row mb-3">
-                    <div class="col-sm-4"><strong>اسم التعيين:</strong></div>
-                    <div class="col-sm-8">{{ task.mapping.name }}</div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-sm-4"><strong>اسم الصفحة:</strong></div>
-                    <div class="col-sm-8">{{ task.mapping.sheet_name }}</div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-sm-4"><strong>صف العناوين:</strong></div>
-                    <div class="col-sm-8">{{ task.mapping.header_row }}</div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-sm-4"><strong>صف البداية:</strong></div>
-                    <div class="col-sm-8">{{ task.mapping.start_row }}</div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-sm-4"><strong>معرف الجدول:</strong></div>
-                    <div class="col-sm-8">
-                        <small class="text-muted">{{ task.mapping.spreadsheet_id }}</small>
+                <div class="col-md-4 text-end">
+                    <span class="task-status status-{{ task.status }}">{{ task.get_status_display }}</span>
+                    <div class="mt-2">
+                        <small>تم الإنشاء: {{ task.created_at|date:"Y-m-d H:i" }}</small>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- التقدم والنتائج -->
-    {% if task.status == 'running' or task.status == 'completed' %}
-    <div class="info-section">
-        <h5 class="section-title">
-            <i class="fas fa-chart-line"></i>
-            التقدم والنتائج
-        </h5>
-        
-        {% if task.total_rows > 0 %}
-        <div class="mb-3">
-            <div class="d-flex justify-content-between mb-2">
-                <span>التقدم</span>
-                <span>{{ task.processed_rows }}/{{ task.total_rows }} ({{ task.get_progress_percentage }}%)</span>
+        <!-- شريط الأدوات -->
+        <div class="toolbar mb-4">
+            <div>
+                <a href="{% url 'odoo_db_manager:mapping_detail' task.mapping.id %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-arrow-right"></i>
+                    العودة للتعيين
+                </a>
+                <a href="{% url 'odoo_db_manager:advanced_sync_dashboard' %}"
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-tachometer-alt"></i>
+                    لوحة التحكم
+                </a>
             </div>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: {{ task.get_progress_percentage }}%"></div>
+            <div>
+                <button onclick="location.reload()" class="btn btn-refresh">
+                    <i class="fas fa-sync-alt"></i>
+                    تحديث
+                </button>
             </div>
         </div>
+        <!-- إحصائيات المهمة -->
+        {% if task.status == 'completed' and task.result_data %}
+            <div class="stats-grid">
+                {% with stats=task.result_data.stats %}
+                    <div class="stat-card">
+                        <div class="stat-number customers-created">{{ stats.customers_created|default:0 }}</div>
+                        <div class="stat-label">عملاء جدد</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number customers-updated">{{ stats.customers_updated|default:0 }}</div>
+                        <div class="stat-label">عملاء محدثون</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number orders-created">{{ stats.orders_created|default:0 }}</div>
+                        <div class="stat-label">طلبات جديدة</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number errors">{{ stats.errors|length|default:0 }}</div>
+                        <div class="stat-label">أخطاء</div>
+                    </div>
+                {% endwith %}
+            </div>
         {% endif %}
-        
-        {% if task.result_data %}
         <div class="row">
-            {% with stats=task.result_data.stats %}
-            <div class="col-md-3">
-                <strong>الصفوف المعالجة:</strong> {{ stats.processed_rows|default:0 }}
+            <!-- معلومات المهمة -->
+            <div class="col-md-6">
+                <div class="info-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-info-circle"></i>
+                        معلومات المهمة
+                    </h5>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>نوع المهمة:</strong>
+                        </div>
+                        <div class="col-sm-8">{{ task.get_task_type_display }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>الحالة:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            <span class="task-status status-{{ task.status }}">{{ task.get_status_display }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>تم الإنشاء:</strong>
+                        </div>
+                        <div class="col-sm-8">{{ task.created_at|date:"Y-m-d H:i:s" }}</div>
+                    </div>
+                    {% if task.started_at %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>بدء التنفيذ:</strong>
+                            </div>
+                            <div class="col-sm-8">{{ task.started_at|date:"Y-m-d H:i:s" }}</div>
+                        </div>
+                    {% endif %}
+                    {% if task.completed_at %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>انتهاء التنفيذ:</strong>
+                            </div>
+                            <div class="col-sm-8">{{ task.completed_at|date:"Y-m-d H:i:s" }}</div>
+                        </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>منشئ المهمة:</strong>
+                        </div>
+                        <div class="col-sm-8">{{ task.created_by.get_full_name|default:task.created_by.username }}</div>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-3">
-                <strong>العملاء الجدد:</strong> {{ stats.customers_created|default:0 }}
+            <!-- معلومات التعيين -->
+            <div class="col-md-6">
+                <div class="info-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-table"></i>
+                        معلومات التعيين
+                    </h5>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>اسم التعيين:</strong>
+                        </div>
+                        <div class="col-sm-8">{{ task.mapping.name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>اسم الصفحة:</strong>
+                        </div>
+                        <div class="col-sm-8">{{ task.mapping.sheet_name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>صف العناوين:</strong>
+                        </div>
+                        <div class="col-sm-8">{{ task.mapping.header_row }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>صف البداية:</strong>
+                        </div>
+                        <div class="col-sm-8">{{ task.mapping.start_row }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4">
+                            <strong>معرف الجدول:</strong>
+                        </div>
+                        <div class="col-sm-8">
+                            <small class="text-muted">{{ task.mapping.spreadsheet_id }}</small>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-3">
-                <strong>العملاء المحدثون:</strong> {{ stats.customers_updated|default:0 }}
-            </div>
-            <div class="col-md-3">
-                <strong>الطلبات الجديدة:</strong> {{ stats.orders_created|default:0 }}
-            </div>
-            {% endwith %}
         </div>
+        <!-- التقدم والنتائج -->
+        {% if task.status == 'running' or task.status == 'completed' %}
+            <div class="info-section">
+                <h5 class="section-title">
+                    <i class="fas fa-chart-line"></i>
+                    التقدم والنتائج
+                </h5>
+                {% if task.total_rows > 0 %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>التقدم</span>
+                            <span>{{ task.processed_rows }}/{{ task.total_rows }} ({{ task.get_progress_percentage }}%)</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill"
+                                 style="width: {{ task.get_progress_percentage }}%"></div>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if task.result_data %}
+                    <div class="row">
+                        {% with stats=task.result_data.stats %}
+                            <div class="col-md-3">
+                                <strong>الصفوف المعالجة:</strong> {{ stats.processed_rows|default:0 }}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>العملاء الجدد:</strong> {{ stats.customers_created|default:0 }}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>العملاء المحدثون:</strong> {{ stats.customers_updated|default:0 }}
+                            </div>
+                            <div class="col-md-3">
+                                <strong>الطلبات الجديدة:</strong> {{ stats.orders_created|default:0 }}
+                            </div>
+                        {% endwith %}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+        <!-- الأخطاء -->
+        {% if task.status == 'failed' or task.error_message %}
+            <div class="info-section">
+                <h5 class="section-title text-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    الأخطاء
+                </h5>
+                {% if task.error_message %}
+                    <div class="error-list">
+                        <div class="error-item">
+                            <strong>رسالة الخطأ:</strong> {{ task.error_message }}
+                        </div>
+                    </div>
+                {% endif %}
+                {% if task.result_data.stats.errors %}
+                    <div class="error-list mt-3">
+                        <strong>أخطاء المعالجة:</strong>
+                        {% for error in task.result_data.stats.errors %}<div class="error-item">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+        <!-- التحذيرات -->
+        {% if task.result_data.stats.warnings %}
+            <div class="info-section">
+                <h5 class="section-title text-warning">
+                    <i class="fas fa-exclamation-circle"></i>
+                    التحذيرات
+                </h5>
+                <div class="alert alert-warning">
+                    {% for warning in task.result_data.stats.warnings %}<div>{{ warning }}</div>{% endfor %}
+                </div>
+            </div>
         {% endif %}
     </div>
-    {% endif %}
-
-    <!-- الأخطاء -->
-    {% if task.status == 'failed' or task.error_message %}
-    <div class="info-section">
-        <h5 class="section-title text-danger">
-            <i class="fas fa-exclamation-triangle"></i>
-            الأخطاء
-        </h5>
-        
-        {% if task.error_message %}
-        <div class="error-list">
-            <div class="error-item">
-                <strong>رسالة الخطأ:</strong> {{ task.error_message }}
-            </div>
-        </div>
-        {% endif %}
-        
-        {% if task.result_data.stats.errors %}
-        <div class="error-list mt-3">
-            <strong>أخطاء المعالجة:</strong>
-            {% for error in task.result_data.stats.errors %}
-            <div class="error-item">{{ error }}</div>
-            {% endfor %}
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- التحذيرات -->
-    {% if task.result_data.stats.warnings %}
-    <div class="info-section">
-        <h5 class="section-title text-warning">
-            <i class="fas fa-exclamation-circle"></i>
-            التحذيرات
-        </h5>
-        
-        <div class="alert alert-warning">
-            {% for warning in task.result_data.stats.warnings %}
-            <div>{{ warning }}</div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 // تحديث تلقائي للمهام قيد التنفيذ
 {% if task.status == 'running' or task.status == 'pending' %}
 setInterval(function() {
     location.reload();
 }, 5000); // تحديث كل 5 ثوان
 {% endif %}
-</script>
+    </script>
 {% endblock %}

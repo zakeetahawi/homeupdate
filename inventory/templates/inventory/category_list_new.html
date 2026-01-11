@@ -1,153 +1,157 @@
 {% extends 'inventory/inventory_base_custom.html' %}
 {% load static %}
-
 {% block inventory_title %}فئات المنتجات{% endblock %}
-
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
-<li class="breadcrumb-item active" aria-current="page">فئات المنتجات</li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">فئات المنتجات</li>
 {% endblock %}
-
 {% block quick_actions %}
-<button type="button" class="btn btn-success btn-sm" onclick="openAddCategoryModal()">
-    <i class="fas fa-plus"></i> إضافة فئة
-</button>
-<a href="{% url 'inventory:product_list' %}" class="btn btn-primary btn-sm">
-    <i class="fas fa-box"></i> المنتجات
-</a>
+    <button type="button"
+            class="btn btn-success btn-sm"
+            onclick="openAddCategoryModal()">
+        <i class="fas fa-plus"></i> إضافة فئة
+    </button>
+    <a href="{% url 'inventory:product_list' %}"
+       class="btn btn-primary btn-sm">
+        <i class="fas fa-box"></i> المنتجات
+    </a>
 {% endblock %}
-
 {% block inventory_content %}
-<div class="category-list-container">
-    <!-- قائمة الفئات -->
-    <div class="data-table-container">
-        <div class="data-table-header">
-            <h4 class="data-table-title">
-                فئات المنتجات
-                {% if categories %}
-                <span class="badge bg-primary">{{ categories|length }}</span>
-                {% endif %}
-            </h4>
-            <div class="data-table-actions">
-                <button class="btn btn-outline-secondary" id="expandAllBtn">
-                    <i class="fas fa-expand-arrows-alt"></i> توسيع الكل
-                </button>
-                <button class="btn btn-outline-secondary" id="collapseAllBtn">
-                    <i class="fas fa-compress-arrows-alt"></i> طي الكل
-                </button>
+    <div class="category-list-container">
+        <!-- قائمة الفئات -->
+        <div class="data-table-container">
+            <div class="data-table-header">
+                <h4 class="data-table-title">
+                    فئات المنتجات
+                    {% if categories %}<span class="badge bg-primary">{{ categories|length }}</span>{% endif %}
+                </h4>
+                <div class="data-table-actions">
+                    <button class="btn btn-outline-secondary" id="expandAllBtn">
+                        <i class="fas fa-expand-arrows-alt"></i> توسيع الكل
+                    </button>
+                    <button class="btn btn-outline-secondary" id="collapseAllBtn">
+                        <i class="fas fa-compress-arrows-alt"></i> طي الكل
+                    </button>
+                </div>
             </div>
-        </div>
-        <div class="data-table-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>اسم الفئة</th>
-                            <th>الوصف</th>
-                            <th>عدد المنتجات</th>
-                            <th>الفئة الأب</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for category in categories %}
-                        {% if not category.parent %}
-                        <tr class="parent-category" data-category-id="{{ category.id }}">
-                            <td>
-                                <i class="fas fa-folder text-warning"></i>
-                                <strong>{{ category.name }}</strong>
-                                {% if category.children.exists %}
-                                <button class="btn btn-sm btn-link toggle-children" data-category-id="{{ category.id }}">
-                                    <i class="fas fa-chevron-down"></i>
-                                </button>
+            <div class="data-table-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>اسم الفئة</th>
+                                <th>الوصف</th>
+                                <th>عدد المنتجات</th>
+                                <th>الفئة الأب</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in categories %}
+                                {% if not category.parent %}
+                                    <tr class="parent-category" data-category-id="{{ category.id }}">
+                                        <td>
+                                            <i class="fas fa-folder text-warning"></i>
+                                            <strong>{{ category.name }}</strong>
+                                            {% if category.children.exists %}
+                                                <button class="btn btn-sm btn-link toggle-children"
+                                                        data-category-id="{{ category.id }}">
+                                                    <i class="fas fa-chevron-down"></i>
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ category.description|default:"-" }}</td>
+                                        <td>
+                                            <span class="badge bg-info">{{ category.get_total_products_count }}</span>
+                                        </td>
+                                        <td>-</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{% url 'inventory:category_update' category.id %}"
+                                                   class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="{% url 'inventory:category_delete' category.id %}"
+                                                   class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                                <a href="{% url 'inventory:product_list' %}?category={{ category.id }}"
+                                                   class="btn btn-info btn-sm">
+                                                    <i class="fas fa-box"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% for child in category.children.all %}
+                                        <tr class="child-category category-{{ category.id }}"
+                                            style="display: none">
+                                            <td>
+                                                <div class="ms-4">
+                                                    <i class="fas fa-folder-open text-info"></i>
+                                                    {{ child.name }}
+                                                </div>
+                                            </td>
+                                            <td>{{ child.description|default:"-" }}</td>
+                                            <td>
+                                                <span class="badge bg-info">{{ child.products.count }}</span>
+                                            </td>
+                                            <td>{{ child.parent.name }}</td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'inventory:category_update' child.id %}"
+                                                       class="btn btn-primary btn-sm">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a href="{% url 'inventory:category_delete' child.id %}"
+                                                       class="btn btn-danger btn-sm">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                    <a href="{% url 'inventory:product_list' %}?category={{ child.id }}"
+                                                       class="btn btn-info btn-sm">
+                                                        <i class="fas fa-box"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
                                 {% endif %}
-                            </td>
-                            <td>{{ category.description|default:"-" }}</td>
-                            <td>
-                                <span class="badge bg-info">{{ category.get_total_products_count }}</span>
-                            </td>
-                            <td>-</td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'inventory:category_update' category.id %}" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{% url 'inventory:category_delete' category.id %}" class="btn btn-danger btn-sm">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                    <a href="{% url 'inventory:product_list' %}?category={{ category.id }}" class="btn btn-info btn-sm">
-                                        <i class="fas fa-box"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% for child in category.children.all %}
-                        <tr class="child-category category-{{ category.id }}" style="display: none;">
-                            <td>
-                                <div class="ms-4">
-                                    <i class="fas fa-folder-open text-info"></i>
-                                    {{ child.name }}
-                                </div>
-                            </td>
-                            <td>{{ child.description|default:"-" }}</td>
-                            <td>
-                                <span class="badge bg-info">{{ child.products.count }}</span>
-                            </td>
-                            <td>{{ child.parent.name }}</td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'inventory:category_update' child.id %}" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{% url 'inventory:category_delete' child.id %}" class="btn btn-danger btn-sm">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                    <a href="{% url 'inventory:product_list' %}?category={{ child.id }}" class="btn btn-info btn-sm">
-                                        <i class="fas fa-box"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        {% endif %}
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center">لا توجد فئات مضافة</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">لا توجد فئات مضافة</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
-
-    <!-- إحصائيات الفئات -->
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="chart-container">
-                <div class="chart-header">
-                    <h4 class="chart-title">توزيع المنتجات حسب الفئات</h4>
-                    <div class="chart-actions">
-                        <button class="btn btn-sm btn-outline-secondary">
-                            <i class="fas fa-download"></i> تصدير
-                        </button>
+        <!-- إحصائيات الفئات -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h4 class="chart-title">توزيع المنتجات حسب الفئات</h4>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-download"></i> تصدير
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="categoriesChart" height="300"></canvas>
                     </div>
                 </div>
-                <div class="chart-body">
-                    <canvas id="categoriesChart" height="300"></canvas>
-                </div>
             </div>
         </div>
     </div>
-</div>
-
-{% include 'inventory/sweetalert2_utils.html' %}
+    {% include 'inventory/sweetalert2_utils.html' %}
 {% endblock %}
-
 {% block extra_js %}
-{{ block.super }}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-<script>
+    {{ block.super }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script>
     document.addEventListener('DOMContentLoaded', function() {
         // تبديل عرض الفئات الفرعية
         const toggleButtons = document.querySelectorAll('.toggle-children');
@@ -239,5 +243,5 @@
             }
         });
     });
-</script>
+    </script>
 {% endblock %}

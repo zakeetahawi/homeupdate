@@ -1,10 +1,12 @@
-from django.http import JsonResponse, HttpResponse
-from django.db import connection
-from django.conf import settings
-import psutil
 import logging
 
+import psutil
+from django.conf import settings
+from django.db import connection
+from django.http import HttpResponse, JsonResponse
+
 logger = logging.getLogger(__name__)
+
 
 def health_check(request):
     """
@@ -16,13 +18,15 @@ def health_check(request):
     4. مساحة القرص (فقط للطلبات المفصلة)
     """
     # إذا كان المسار هو '/health/' بالضبط، نعيد استجابة بسيطة وسريعة
-    if request.path == '/health/' or request.path == '/health':
+    if request.path == "/health/" or request.path == "/health":
         # طباعة رسالة تأكيد
         print("تم استدعاء فحص الصحة")
         return HttpResponse("OK", content_type="text/plain")
 
     # تسجيل طلب فحص الصحة المفصل فقط
-    logger.info(f"Detailed health check requested from {request.META.get('REMOTE_ADDR')} - Path: {request.path}")
+    logger.info(
+        f"Detailed health check requested from {request.META.get('REMOTE_ADDR')} - Path: {request.path}"
+    )
 
     # التحقق من اتصال قاعدة البيانات (فقط للطلبات المفصلة)
     db_status = "healthy"
@@ -44,7 +48,7 @@ def health_check(request):
         # فحص القرص (اختياري)
         disk = None
         try:
-            disk = psutil.disk_usage('/')
+            disk = psutil.disk_usage("/")
         except Exception:
             pass  # تجاهل أخطاء فحص القرص
     except Exception as e:

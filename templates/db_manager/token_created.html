@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
-
-{% block title %}{% trans "تم إنشاء رمز الإعداد" %}{% endblock %}
-
+{% block title %}
+    {% trans "تم إنشاء رمز الإعداد" %}
+{% endblock %}
 {% block extra_css %}
-<style>
+    <style>
     .success-container {
         max-width: 600px;
         margin: 0 auto;
@@ -54,55 +54,47 @@
     .copy-btn {
         margin-top: 10px;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container mt-5">
-    <div class="success-container">
-        <div class="success-header">
-            <i class="fas fa-check-circle"></i>
-            <h1>{% trans "تم إنشاء رمز الإعداد بنجاح" %}</h1>
-        </div>
-        
-        <div class="success-content">
-            <div class="alert alert-success">
-                <p>{% trans "تم إنشاء رمز الإعداد بنجاح. يمكنك استخدام هذا الرمز لإعداد النظام." %}</p>
+    <div class="container mt-5">
+        <div class="success-container">
+            <div class="success-header">
+                <i class="fas fa-check-circle"></i>
+                <h1>{% trans "تم إنشاء رمز الإعداد بنجاح" %}</h1>
             </div>
-            
-            <h5>{% trans "رمز الإعداد:" %}</h5>
-            <div class="token-value">
-                {{ token.token }}
+            <div class="success-content">
+                <div class="alert alert-success">
+                    <p>{% trans "تم إنشاء رمز الإعداد بنجاح. يمكنك استخدام هذا الرمز لإعداد النظام." %}</p>
+                </div>
+                <h5>{% trans "رمز الإعداد:" %}</h5>
+                <div class="token-value">{{ token.token }}</div>
+                <button class="btn btn-sm btn-outline-primary copy-btn" id="copy-token">
+                    <i class="fas fa-copy"></i> {% trans "نسخ الرمز" %}
+                </button>
+                <h5 class="mt-4">{% trans "رابط الإعداد:" %}</h5>
+                <div class="setup-url">
+                    <a href="{{ setup_url }}" target="_blank">{{ setup_url }}</a>
+                </div>
+                <button class="btn btn-sm btn-outline-primary copy-btn" id="copy-url">
+                    <i class="fas fa-copy"></i> {% trans "نسخ الرابط" %}
+                </button>
+                <div class="alert alert-warning mt-4">
+                    <h5>{% trans "ملاحظة هامة:" %}</h5>
+                    <p>{% trans "هذا الرمز صالح لمدة محدودة فقط. بعد ذلك، ستحتاج إلى إنشاء رمز جديد." %}</p>
+                    <p>{% trans "يمكن استخدام هذا الرمز مرة واحدة فقط." %}</p>
+                </div>
             </div>
-            <button class="btn btn-sm btn-outline-primary copy-btn" id="copy-token">
-                <i class="fas fa-copy"></i> {% trans "نسخ الرمز" %}
-            </button>
-            
-            <h5 class="mt-4">{% trans "رابط الإعداد:" %}</h5>
-            <div class="setup-url">
-                <a href="{{ setup_url }}" target="_blank">{{ setup_url }}</a>
+            <div class="success-footer">
+                <a href="{{ setup_url }}" class="btn btn-primary btn-lg" target="_blank">{% trans "الانتقال إلى صفحة الإعداد" %}</a>
+                <a href="{% url 'db_manager:token_list' %}"
+                   class="btn btn-secondary btn-lg">{% trans "العودة إلى قائمة الرموز" %}</a>
             </div>
-            <button class="btn btn-sm btn-outline-primary copy-btn" id="copy-url">
-                <i class="fas fa-copy"></i> {% trans "نسخ الرابط" %}
-            </button>
-            
-            <div class="alert alert-warning mt-4">
-                <h5>{% trans "ملاحظة هامة:" %}</h5>
-                <p>{% trans "هذا الرمز صالح لمدة محدودة فقط. بعد ذلك، ستحتاج إلى إنشاء رمز جديد." %}</p>
-                <p>{% trans "يمكن استخدام هذا الرمز مرة واحدة فقط." %}</p>
-            </div>
-        </div>
-        
-        <div class="success-footer">
-            <a href="{{ setup_url }}" class="btn btn-primary btn-lg" target="_blank">{% trans "الانتقال إلى صفحة الإعداد" %}</a>
-            <a href="{% url 'db_manager:token_list' %}" class="btn btn-secondary btn-lg">{% trans "العودة إلى قائمة الرموز" %}</a>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     $(document).ready(function() {
         // نسخ رمز الإعداد
         $('#copy-token').click(function() {
@@ -154,5 +146,5 @@
             }, 2000);
         });
     });
-</script>
+    </script>
 {% endblock %}

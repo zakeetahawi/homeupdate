@@ -6,25 +6,47 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0001_initial'),
+        ("accounts", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='DashboardYearSettings',
+            name="DashboardYearSettings",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('year', models.IntegerField(unique=True, verbose_name='السنة')),
-                ('is_active', models.BooleanField(default=True, verbose_name='نشط')),
-                ('is_default', models.BooleanField(default=False, verbose_name='افتراضي')),
-                ('description', models.CharField(blank=True, max_length=200, verbose_name='الوصف')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')),
-                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("year", models.IntegerField(unique=True, verbose_name="السنة")),
+                ("is_active", models.BooleanField(default=True, verbose_name="نشط")),
+                (
+                    "is_default",
+                    models.BooleanField(default=False, verbose_name="افتراضي"),
+                ),
+                (
+                    "description",
+                    models.CharField(blank=True, max_length=200, verbose_name="الوصف"),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="تاريخ الإنشاء"
+                    ),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث"),
+                ),
             ],
             options={
-                'verbose_name': 'إعدادات سنة الداش بورد',
-                'verbose_name_plural': 'إعدادات سنوات الداش بورد',
-                'ordering': ['-year'],
+                "verbose_name": "إعدادات سنة الداش بورد",
+                "verbose_name_plural": "إعدادات سنوات الداش بورد",
+                "ordering": ["-year"],
             },
         ),
     ]

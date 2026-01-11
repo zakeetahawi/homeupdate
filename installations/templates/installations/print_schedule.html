@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ title }}</title>
+        <style>
         body {
             font-family: 'Arial', sans-serif;
             margin: 0;
@@ -72,76 +72,77 @@
             body { margin: 0; }
             .no-print { display: none; }
         }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>جدول التركيبات</h1>
-        {% if date %}
-            <p>التاريخ: {{ date }}</p>
-        {% endif %}
-        {% if team %}
-            <p>الفريق: {{ team.name }}</p>
-        {% endif %}
-        {% if status %}
-            <p>الحالة: {{ status }}</p>
-        {% endif %}
-        <p>تاريخ الطباعة: {{ print_date|date:"Y-m-d H:i" }}</p>
-    </div>
-
-    <div class="info-section">
-        <h3>ملخص التركيبات</h3>
-        <p>إجمالي التركيبات: {{ installations|length }}</p>
-    </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th>رقم الطلب</th>
-                <th>العميل</th>
-                <th>تاريخ التركيب</th>
-                <th>وقت التركيب</th>
-                <th>الفريق</th>
-                <th>الحالة</th>
-                <th>ملاحظات</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for installation in installations %}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>جدول التركيبات</h1>
+            {% if date %}<p>التاريخ: {{ date }}</p>{% endif %}
+            {% if team %}<p>الفريق: {{ team.name }}</p>{% endif %}
+            {% if status %}<p>الحالة: {{ status }}</p>{% endif %}
+            <p>تاريخ الطباعة: {{ print_date|date:"Y-m-d H:i" }}</p>
+        </div>
+        <div class="info-section">
+            <h3>ملخص التركيبات</h3>
+            <p>إجمالي التركيبات: {{ installations|length }}</p>
+        </div>
+        <table>
+            <thead>
                 <tr>
-                    <td>{{ installation.order.order_number }}</td>
-                    <td>{{ installation.order.customer.name }}</td>
-                    <td>{{ installation.scheduled_date|date:"Y-m-d" }}</td>
-                    <td>{{ installation.scheduled_time|time:"H:i" }}</td>
-                    <td>
-                        {% if installation.team %}
-                            {{ installation.team.name }}
-                        {% else %}
-                            غير محدد
-                        {% endif %}
-                    </td>
-                    <td>
-                        <span class="status-badge status-{{ installation.status }}">
-                            {{ installation.get_status_display }}
-                        </span>
-                    </td>
-                    <td>{{ installation.notes|truncatechars:50 }}</td>
+                    <th>رقم الطلب</th>
+                    <th>العميل</th>
+                    <th>تاريخ التركيب</th>
+                    <th>وقت التركيب</th>
+                    <th>الفريق</th>
+                    <th>الحالة</th>
+                    <th>ملاحظات</th>
                 </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="7" style="text-align: center;">لا توجد تركيبات</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <div class="footer">
-        <p>تم إنشاء هذا التقرير بواسطة نظام إدارة التركيبات</p>
-    </div>
-
-    <div class="no-print" style="text-align: center; margin-top: 20px;">
-        <button onclick="window.print()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">طباعة</button>
-        <button onclick="window.close()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">إغلاق</button>
-    </div>
-</body>
+            </thead>
+            <tbody>
+                {% for installation in installations %}
+                    <tr>
+                        <td>{{ installation.order.order_number }}</td>
+                        <td>{{ installation.order.customer.name }}</td>
+                        <td>{{ installation.scheduled_date|date:"Y-m-d" }}</td>
+                        <td>{{ installation.scheduled_time|time:"H:i" }}</td>
+                        <td>
+                            {% if installation.team %}
+                                {{ installation.team.name }}
+                            {% else %}
+                                غير محدد
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ installation.status }}">{{ installation.get_status_display }}</span>
+                        </td>
+                        <td>{{ installation.notes|truncatechars:50 }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align: center;">لا توجد تركيبات</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="footer">
+            <p>تم إنشاء هذا التقرير بواسطة نظام إدارة التركيبات</p>
+        </div>
+        <div class="no-print" style="text-align: center; margin-top: 20px;">
+            <button onclick="window.print()"
+                    style="padding: 10px 20px;
+                           background: #007bff;
+                           color: white;
+                           border: none;
+                           border-radius: 5px;
+                           cursor: pointer">طباعة</button>
+            <button onclick="window.close()"
+                    style="padding: 10px 20px;
+                           background: #6c757d;
+                           color: white;
+                           border: none;
+                           border-radius: 5px;
+                           cursor: pointer;
+                           margin-left: 10px">إغلاق</button>
+        </div>
+    </body>
 </html>

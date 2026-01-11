@@ -1,306 +1,325 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block title %}{{ variant.full_code }} - تفاصيل المتغير{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'inventory:base_product_list' %}">المنتجات الأساسية</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'inventory:base_product_detail' variant.base_product.pk %}">{{ variant.base_product.name }}</a></li>
-            <li class="breadcrumb-item active">{{ variant.variant_code }}</li>
-        </ol>
-    </nav>
-
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-1">
-                <span class="badge bg-primary me-2">{{ variant.full_code }}</span>
-                {% if variant.color %}
-                    {% if variant.color.hex_code %}
-                        <span class="color-swatch" style="display: inline-block; width: 24px; height: 24px; border-radius: 50%; background-color: {{ variant.color.hex_code }}; border: 2px solid #ddd; vertical-align: middle;"></span>
-                    {% endif %}
-                    {{ variant.color.name }}
-                {% endif %}
-            </h2>
-            <p class="text-muted mb-0">
-                المنتج الأساسي: <a href="{% url 'inventory:base_product_detail' variant.base_product.pk %}">{{ variant.base_product.name }}</a>
-            </p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'inventory:variant_stock_update' variant.pk %}" class="btn btn-success">
-                <i class="fas fa-boxes me-1"></i>
-                تحديث المخزون
-            </a>
-            <a href="{% url 'inventory:variant_update' variant.pk %}" class="btn btn-primary">
-                <i class="fas fa-edit me-1"></i>
-                تعديل
-            </a>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- Variant Info Card -->
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        معلومات المتغير
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <table class="table table-borderless">
-                        <tr>
-                            <th width="40%">الكود الكامل:</th>
-                            <td><code class="fs-5">{{ variant.full_code }}</code></td>
-                        </tr>
-                        <tr>
-                            <th>كود المتغير:</th>
-                            <td>{{ variant.variant_code }}</td>
-                        </tr>
-                        {% if variant.barcode %}
-                        <tr>
-                            <th>الباركود:</th>
-                            <td>
-                                <i class="fas fa-barcode me-1"></i>
-                                {{ variant.barcode }}
-                            </td>
-                        </tr>
+    <div class="container-fluid">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'inventory:base_product_list' %}">المنتجات الأساسية</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'inventory:base_product_detail' variant.base_product.pk %}">{{ variant.base_product.name }}</a>
+                </li>
+                <li class="breadcrumb-item active">{{ variant.variant_code }}</li>
+            </ol>
+        </nav>
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="mb-1">
+                    <span class="badge bg-primary me-2">{{ variant.full_code }}</span>
+                    {% if variant.color %}
+                        {% if variant.color.hex_code %}
+                            <span class="color-swatch"
+                                  style="display: inline-block;
+                                         width: 24px;
+                                         height: 24px;
+                                         border-radius: 50%;
+                                         background-color: {{ variant.color.hex_code }};
+                                         border: 2px solid #ddd;
+                                         vertical-align: middle"></span>
                         {% endif %}
-                        <tr>
-                            <th>اللون:</th>
-                            <td>
-                                {% if variant.color %}
-                                    {% if variant.color.hex_code %}
-                                        <span class="color-swatch me-1" style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background-color: {{ variant.color.hex_code }}; border: 1px solid #ddd; vertical-align: middle;"></span>
-                                    {% endif %}
-                                    {{ variant.color.name }} ({{ variant.color_code }})
-                                {% else %}
-                                    {{ variant.color_code|default:"-" }}
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>الحالة:</th>
-                            <td>
-                                {% if variant.is_active %}
-                                    <span class="badge bg-success">نشط</span>
-                                {% else %}
-                                    <span class="badge bg-danger">غير نشط</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>تاريخ الإنشاء:</th>
-                            <td>{{ variant.created_at|date:"Y-m-d H:i" }}</td>
-                        </tr>
-                    </table>
-                    
-                    {% if variant.description %}
-                        <hr>
-                        <h6>الوصف:</h6>
-                        <p class="text-muted">{{ variant.description }}</p>
+                        {{ variant.color.name }}
                     {% endif %}
-
-                    {% if variant.legacy_product %}
-                        <hr>
-                        <div class="alert alert-info mb-0">
-                            <i class="fas fa-link me-1"></i>
-                            <strong>مرتبط بالمنتج القديم:</strong>
-                            <a href="{% url 'inventory:product_detail' variant.legacy_product.pk %}">
-                                {{ variant.legacy_product.name }}
-                            </a>
-                        </div>
-                    {% endif %}
-                </div>
+                </h2>
+                <p class="text-muted mb-0">
+                    المنتج الأساسي: <a href="{% url 'inventory:base_product_detail' variant.base_product.pk %}">{{ variant.base_product.name }}</a>
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'inventory:variant_stock_update' variant.pk %}"
+                   class="btn btn-success">
+                    <i class="fas fa-boxes me-1"></i>
+                    تحديث المخزون
+                </a>
+                <a href="{% url 'inventory:variant_update' variant.pk %}"
+                   class="btn btn-primary">
+                    <i class="fas fa-edit me-1"></i>
+                    تعديل
+                </a>
             </div>
         </div>
-
-        <!-- Pricing Card -->
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow h-100">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-dollar-sign me-2"></i>
-                        التسعير
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-6">
-                            <h6 class="text-muted">السعر الأساسي</h6>
-                            <h3 class="text-success">{{ variant.base_product.base_price|floatformat:2 }}</h3>
-                            <small class="text-muted">{{ currency_symbol }}</small>
-                        </div>
-                        <div class="col-6">
-                            <h6 class="text-muted">السعر الفعلي</h6>
-                            <h3 class="{% if variant.has_custom_price %}text-warning{% else %}text-success{% endif %}">
-                                {{ variant.effective_price|floatformat:2 }}
-                            </h3>
-                            <small class="text-muted">{{ currency_symbol }}</small>
-                            {% if variant.has_custom_price %}
-                                <br><span class="badge bg-warning text-dark mt-1">سعر مخصص</span>
-                            {% endif %}
-                        </div>
+        <div class="row">
+            <!-- Variant Info Card -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            معلومات المتغير
+                        </h5>
                     </div>
-
-                    {% if variant.price_override %}
-                        <hr>
-                        <div class="alert alert-warning mb-0">
-                            <i class="fas fa-info-circle me-1"></i>
-                            تم تعيين سعر مخصص لهذا المتغير: <strong>{{ variant.price_override|floatformat:2 }}</strong>
-                            <br><small>الفرق عن السعر الأساسي: 
-                                {% widthratio variant.price_override 1 100 as override_perc %}
-                                {% widthratio variant.base_product.base_price 1 100 as base_perc %}
-                                {{ variant.price_override|floatformat:2 }} - {{ variant.base_product.base_price|floatformat:2 }}
-                            </small>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stock Section -->
-    <div class="card shadow mb-4">
-        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="fas fa-warehouse me-2"></i>
-                المخزون حسب المستودع
-            </h5>
-            <a href="{% url 'inventory:variant_stock_update' variant.pk %}" class="btn btn-sm btn-dark">
-                <i class="fas fa-plus me-1"></i>
-                تحديث المخزون
-            </a>
-        </div>
-        <div class="card-body">
-            {% if stock_data %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
+                    <div class="card-body">
+                        <table class="table table-borderless">
                             <tr>
-                                <th>المستودع</th>
-                                <th class="text-center">الكمية الحالية</th>
-                                <th class="text-center">الكمية المحجوزة</th>
-                                <th class="text-center">المتاح</th>
-                                <th>آخر تحديث</th>
-                                <th>الإجراءات</th>
+                                <th width="40%">الكود الكامل:</th>
+                                <td>
+                                    <code class="fs-5">{{ variant.full_code }}</code>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {% for stock in stock_data %}
+                            <tr>
+                                <th>كود المتغير:</th>
+                                <td>{{ variant.variant_code }}</td>
+                            </tr>
+                            {% if variant.barcode %}
                                 <tr>
+                                    <th>الباركود:</th>
                                     <td>
-                                        <strong>{{ stock.warehouse.name }}</strong>
-                                        {% if stock.warehouse.location %}
-                                            <br><small class="text-muted">{{ stock.warehouse.location }}</small>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-primary fs-6">{{ stock.current_quantity }}</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-secondary">{{ stock.reserved_quantity }}</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge {% if stock.available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %} fs-6">
-                                            {{ stock.available_quantity }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <small>{{ stock.last_updated|date:"Y-m-d H:i" }}</small>
-                                    </td>
-                                    <td>
-                                        <a href="{% url 'inventory:variant_stock_transfer' variant.pk %}?from_warehouse={{ stock.warehouse.pk }}" 
-                                           class="btn btn-sm btn-outline-info" title="نقل">
-                                            <i class="fas fa-exchange-alt"></i>
-                                        </a>
+                                        <i class="fas fa-barcode me-1"></i>
+                                        {{ variant.barcode }}
                                     </td>
                                 </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot class="table-light">
+                            {% endif %}
                             <tr>
-                                <th>الإجمالي</th>
-                                <th class="text-center">{{ total_stock }}</th>
-                                <th class="text-center">{{ total_reserved }}</th>
-                                <th class="text-center">{{ total_available }}</th>
-                                <th colspan="2"></th>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-boxes fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">لا يوجد مخزون مسجل لهذا المتغير</h5>
-                    <a href="{% url 'inventory:variant_stock_update' variant.pk %}" class="btn btn-warning mt-2">
-                        <i class="fas fa-plus me-1"></i>
-                        إضافة مخزون
-                    </a>
-                </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Price History Section -->
-    {% if price_history %}
-    <div class="card shadow">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">
-                <i class="fas fa-history me-2"></i>
-                سجل تغييرات السعر
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>السعر القديم</th>
-                            <th>السعر الجديد</th>
-                            <th>نوع التغيير</th>
-                            <th>القيمة</th>
-                            <th>التاريخ</th>
-                            <th>بواسطة</th>
-                            <th>ملاحظات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for history in price_history %}
-                            <tr>
-                                <td>{{ history.old_price|floatformat:2 }}</td>
+                                <th>اللون:</th>
                                 <td>
-                                    <strong>{{ history.new_price|floatformat:2 }}</strong>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{% if history.change_type == 'percentage' %}info{% elif history.change_type == 'fixed' %}primary{% elif history.change_type == 'reset' %}secondary{% else %}warning{% endif %}">
-                                        {{ history.get_change_type_display }}
-                                    </span>
-                                </td>
-                                <td>
-                                    {% if history.change_value %}
-                                        {{ history.change_value }}{% if history.change_type == 'percentage' %}%{% endif %}
+                                    {% if variant.color %}
+                                        {% if variant.color.hex_code %}
+                                            <span class="color-swatch me-1"
+                                                  style="display: inline-block;
+                                                         width: 16px;
+                                                         height: 16px;
+                                                         border-radius: 50%;
+                                                         background-color: {{ variant.color.hex_code }};
+                                                         border: 1px solid #ddd;
+                                                         vertical-align: middle"></span>
+                                        {% endif %}
+                                        {{ variant.color.name }} ({{ variant.color_code }})
                                     {% else %}
-                                        -
+                                        {{ variant.color_code|default:"-" }}
                                     {% endif %}
                                 </td>
-                                <td>{{ history.changed_at|date:"Y-m-d H:i" }}</td>
-                                <td>{{ history.changed_by.get_full_name|default:history.changed_by.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>الحالة:</th>
                                 <td>
-                                    <small class="text-muted">{{ history.notes|default:"-"|truncatewords:10 }}</small>
+                                    {% if variant.is_active %}
+                                        <span class="badge bg-success">نشط</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">غير نشط</span>
+                                    {% endif %}
                                 </td>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            <tr>
+                                <th>تاريخ الإنشاء:</th>
+                                <td>{{ variant.created_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                        </table>
+                        {% if variant.description %}
+                            <hr>
+                            <h6>الوصف:</h6>
+                            <p class="text-muted">{{ variant.description }}</p>
+                        {% endif %}
+                        {% if variant.legacy_product %}
+                            <hr>
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-link me-1"></i>
+                                <strong>مرتبط بالمنتج القديم:</strong>
+                                <a href="{% url 'inventory:product_detail' variant.legacy_product.pk %}">{{ variant.legacy_product.name }}</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <!-- Pricing Card -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-dollar-sign me-2"></i>
+                            التسعير
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h6 class="text-muted">السعر الأساسي</h6>
+                                <h3 class="text-success">{{ variant.base_product.base_price|floatformat:2 }}</h3>
+                                <small class="text-muted">{{ currency_symbol }}</small>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-muted">السعر الفعلي</h6>
+                                <h3 class="{% if variant.has_custom_price %}text-warning{% else %}text-success{% endif %}">
+                                    {{ variant.effective_price|floatformat:2 }}
+                                </h3>
+                                <small class="text-muted">{{ currency_symbol }}</small>
+                                {% if variant.has_custom_price %}
+                                    <br>
+                                    <span class="badge bg-warning text-dark mt-1">سعر مخصص</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if variant.price_override %}
+                            <hr>
+                            <div class="alert alert-warning mb-0">
+                                <i class="fas fa-info-circle me-1"></i>
+                                تم تعيين سعر مخصص لهذا المتغير: <strong>{{ variant.price_override|floatformat:2 }}</strong>
+                                <br>
+                                <small>الفرق عن السعر الأساسي:
+                                    {% widthratio variant.price_override 1 100 as override_perc %}
+                                    {% widthratio variant.base_product.base_price 1 100 as base_perc %}
+                                    {{ variant.price_override|floatformat:2 }} - {{ variant.base_product.base_price|floatformat:2 }}
+                                </small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
+        <!-- Stock Section -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-warehouse me-2"></i>
+                    المخزون حسب المستودع
+                </h5>
+                <a href="{% url 'inventory:variant_stock_update' variant.pk %}"
+                   class="btn btn-sm btn-dark">
+                    <i class="fas fa-plus me-1"></i>
+                    تحديث المخزون
+                </a>
+            </div>
+            <div class="card-body">
+                {% if stock_data %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>المستودع</th>
+                                    <th class="text-center">الكمية الحالية</th>
+                                    <th class="text-center">الكمية المحجوزة</th>
+                                    <th class="text-center">المتاح</th>
+                                    <th>آخر تحديث</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stock in stock_data %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ stock.warehouse.name }}</strong>
+                                            {% if stock.warehouse.location %}
+                                                <br>
+                                                <small class="text-muted">{{ stock.warehouse.location }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary fs-6">{{ stock.current_quantity }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-secondary">{{ stock.reserved_quantity }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge {% if stock.available_quantity > 0 %}bg-success{% else %}bg-danger{% endif %} fs-6">
+                                                {{ stock.available_quantity }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small>{{ stock.last_updated|date:"Y-m-d H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'inventory:variant_stock_transfer' variant.pk %}?from_warehouse={{ stock.warehouse.pk }}"
+                                               class="btn btn-sm btn-outline-info"
+                                               title="نقل">
+                                                <i class="fas fa-exchange-alt"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th>الإجمالي</th>
+                                    <th class="text-center">{{ total_stock }}</th>
+                                    <th class="text-center">{{ total_reserved }}</th>
+                                    <th class="text-center">{{ total_available }}</th>
+                                    <th colspan="2"></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-boxes fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">لا يوجد مخزون مسجل لهذا المتغير</h5>
+                        <a href="{% url 'inventory:variant_stock_update' variant.pk %}"
+                           class="btn btn-warning mt-2">
+                            <i class="fas fa-plus me-1"></i>
+                            إضافة مخزون
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <!-- Price History Section -->
+        {% if price_history %}
+            <div class="card shadow">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        سجل تغييرات السعر
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>السعر القديم</th>
+                                    <th>السعر الجديد</th>
+                                    <th>نوع التغيير</th>
+                                    <th>القيمة</th>
+                                    <th>التاريخ</th>
+                                    <th>بواسطة</th>
+                                    <th>ملاحظات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for history in price_history %}
+                                    <tr>
+                                        <td>{{ history.old_price|floatformat:2 }}</td>
+                                        <td>
+                                            <strong>{{ history.new_price|floatformat:2 }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if history.change_type == 'percentage' %}info{% elif history.change_type == 'fixed' %}primary{% elif history.change_type == 'reset' %}secondary{% else %}warning{% endif %}">
+                                                {{ history.get_change_type_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if history.change_value %}
+                                                {{ history.change_value }}
+                                                {% if history.change_type == 'percentage' %}
+                                                    %
+                                                {% endif %}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ history.changed_at|date:"Y-m-d H:i" }}</td>
+                                        <td>{{ history.changed_by.get_full_name|default:history.changed_by.username }}</td>
+                                        <td>
+                                            <small class="text-muted">{{ history.notes|default:"-"|truncatewords:10 }}</small>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
     </div>
-    {% endif %}
-</div>
 {% endblock %}

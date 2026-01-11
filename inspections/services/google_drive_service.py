@@ -2,24 +2,28 @@
 خدمة Google Drive لرفع ملفات المعاينات
 """
 
-import os
 import json
-from django.conf import settings
-from django.utils import timezone
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 import logging
+import os
+
+from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
 try:
+    from google.oauth2.service_account import Credentials
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
-    from google.oauth2.service_account import Credentials
+
     GOOGLE_AVAILABLE = True
 except ImportError:
     GOOGLE_AVAILABLE = False
-    logger.warning("Google API libraries not available. Install google-api-python-client and google-auth")
+    logger.warning(
+        "Google API libraries not available. Install google-api-python-client and google-auth"
+    )
 
 
 class GoogleDriveService:
@@ -33,11 +37,14 @@ class GoogleDriveService:
     def _initialize(self):
         """تهيئة خدمة Google Drive"""
         if not GOOGLE_AVAILABLE:
-            logger.warning("مكتبات Google API غير متوفرة. سيتم تجاهل وظائف Google Drive")
+            logger.warning(
+                "مكتبات Google API غير متوفرة. سيتم تجاهل وظائف Google Drive"
+            )
             return
 
         try:
             from odoo_db_manager.models import GoogleDriveConfig
+
             self.config = GoogleDriveConfig.get_active_config()
 
             if not self.config:
@@ -55,11 +62,13 @@ class GoogleDriveService:
                 return
 
             # إنشاء الاعتماد
-            scopes = ['https://www.googleapis.com/auth/drive.file']
-            credentials = Credentials.from_service_account_file(credentials_path, scopes=scopes)
+            scopes = ["https://www.googleapis.com/auth/drive.file"]
+            credentials = Credentials.from_service_account_file(
+                credentials_path, scopes=scopes
+            )
 
             # إنشاء خدمة Google Drive
-            self.service = build('drive', 'v3', credentials=credentials)
+            self.service = build("drive", "v3", credentials=credentials)
             logger.info("تم تهيئة خدمة Google Drive بنجاح")
 
         except Exception as e:
@@ -80,31 +89,39 @@ class GoogleDriveService:
 
             # معلومات الملف
             file_metadata = {
-                'name': drive_filename,
-                'parents': [self.config.inspections_folder_id],
-                'description': self._generate_file_description(inspection)
+                "name": drive_filename,
+                "parents": [self.config.inspections_folder_id],
+                "description": self._generate_file_description(inspection),
             }
 
             # رفع الملف
-            media = MediaFileUpload(file_path, mimetype='application/pdf')
-            file = self.service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id,webViewLink,webContentLink'
-            ).execute()
+            media = MediaFileUpload(file_path, mimetype="application/pdf")
+            file = (
+                self.service.files()
+                .create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields="id,webViewLink,webContentLink",
+                )
+                .execute()
+            )
 
             # تحديث الإحصائيات
             self.config.total_uploads += 1
             self.config.last_upload = timezone.now()
-            self.config.save(update_fields=['total_uploads', 'last_upload'])
+            self.config.save(update_fields=["total_uploads", "last_upload"])
 
             return {
-                'file_id': file.get('id'),
-                'view_url': file.get('webViewLink'),
-                'download_url': file.get('webContentLink'),
-                'filename': drive_filename,
-                'customer_name': inspection.customer.name if inspection.customer else 'عميل جديد',
-                'branch_name': inspection.branch.name if inspection.branch else 'فرع غير محدد'
+                "file_id": file.get("id"),
+                "view_url": file.get("webViewLink"),
+                "download_url": file.get("webContentLink"),
+                "filename": drive_filename,
+                "customer_name": (
+                    inspection.customer.name if inspection.customer else "عميل جديد"
+                ),
+                "branch_name": (
+                    inspection.branch.name if inspection.branch else "فرع غير محدد"
+                ),
             }
 
         except Exception as e:
@@ -116,15 +133,15 @@ class GoogleDriveService:
         description_parts = [
             f'ملف معاينة للعميل: {inspection.customer.name if inspection.customer else "عميل جديد"}',
             f'الفرع: {inspection.branch.name if inspection.branch else "غير محدد"}',
-            f'التاريخ: {inspection.scheduled_date}',
+            f"التاريخ: {inspection.scheduled_date}",
         ]
 
         if inspection.order:
-            description_parts.append(f'رقم الطلب: {inspection.order.order_number}')
+            description_parts.append(f"رقم الطلب: {inspection.order.order_number}")
         elif inspection.contract_number:
-            description_parts.append(f'رقم العقد: {inspection.contract_number}')
+            description_parts.append(f"رقم العقد: {inspection.contract_number}")
 
-        return '\n'.join(description_parts)
+        return "\n".join(description_parts)
 
     def get_file_view_url(self, file_id):
         """الحصول على رابط معاينة الملف"""
@@ -134,54 +151,56 @@ class GoogleDriveService:
         """اختبار الاتصال مع Google Drive"""
         try:
             if not self.service:
-                return {
-                    'success': False,
-                    'message': 'خدمة Google Drive غير مهيأة'
-                }
+                return {"success": False, "message": "خدمة Google Drive غير مهيأة"}
 
             if not self.config.inspections_folder_id:
-                return {
-                    'success': False,
-                    'message': 'معرف مجلد المعاينات غير محدد'
-                }
+                return {"success": False, "message": "معرف مجلد المعاينات غير محدد"}
 
             # أولاً: اختبار الاتصال العام مع Google Drive
             try:
                 about = self.service.about().get(fields="user").execute()
-                user_email = about.get('user', {}).get('emailAddress', 'غير معروف')
+                user_email = about.get("user", {}).get("emailAddress", "غير معروف")
                 logger.info(f"تم الاتصال بـ Google Drive باستخدام الحساب: {user_email}")
             except Exception as e:
                 return {
-                    'success': False,
-                    'message': f'فشل الاتصال مع Google Drive: {str(e)}'
+                    "success": False,
+                    "message": f"فشل الاتصال مع Google Drive: {str(e)}",
                 }
 
             # ثانياً: اختبار الوصول للمجلد المحدد باستخدام نفس طريقة الرفع
             try:
                 # اختبار رفع ملف تجريبي مباشرة (نفس الطريقة التي نجحت)
                 from io import BytesIO
-                test_content = BytesIO(f'ملف اختبار الاتصال - {timezone.now()}'.encode('utf-8'))
+
+                test_content = BytesIO(
+                    f"ملف اختبار الاتصال - {timezone.now()}".encode("utf-8")
+                )
 
                 file_metadata = {
-                    'name': f'connection_test_{timezone.now().strftime("%Y%m%d_%H%M%S")}.txt',
-                    'parents': [self.config.inspections_folder_id]
+                    "name": f'connection_test_{timezone.now().strftime("%Y%m%d_%H%M%S")}.txt',
+                    "parents": [self.config.inspections_folder_id],
                 }
 
                 from googleapiclient.http import MediaIoBaseUpload
-                media = MediaIoBaseUpload(test_content, mimetype='text/plain')
+
+                media = MediaIoBaseUpload(test_content, mimetype="text/plain")
 
                 # رفع الملف
-                file = self.service.files().create(
-                    body=file_metadata,
-                    media_body=media,
-                    fields='id,name,webViewLink,parents'
-                ).execute()
+                file = (
+                    self.service.files()
+                    .create(
+                        body=file_metadata,
+                        media_body=media,
+                        fields="id,name,webViewLink,parents",
+                    )
+                    .execute()
+                )
 
                 # حذف الملف فوراً بعد الاختبار
-                self.service.files().delete(fileId=file.get('id')).execute()
+                self.service.files().delete(fileId=file.get("id")).execute()
 
                 # نجح الاختبار
-                success_message = f'''✅ تم الاتصال بنجاح مع Google Drive!
+                success_message = f"""✅ تم الاتصال بنجاح مع Google Drive!
 
 🔗 Service Account: {user_email}
 📁 معرف المجلد: {self.config.inspections_folder_id}
@@ -189,18 +208,20 @@ class GoogleDriveService:
 ✅ صلاحيات الكتابة: متوفرة
 📄 ملف الاختبار: {file.get('name')} (تم حذفه)
 
-🎉 النظام جاهز لرفع ملفات المعاينات!'''
+🎉 النظام جاهز لرفع ملفات المعاينات!"""
 
                 # تحديث حالة الاختبار
                 self.config.last_test = timezone.now()
-                self.config.test_status = 'success'
+                self.config.test_status = "success"
                 self.config.test_message = success_message
-                self.config.save(update_fields=['last_test', 'test_status', 'test_message'])
+                self.config.save(
+                    update_fields=["last_test", "test_status", "test_message"]
+                )
 
                 return {
-                    'success': True,
-                    'message': success_message,
-                    'user_email': user_email
+                    "success": True,
+                    "message": success_message,
+                    "user_email": user_email,
                 }
 
             except Exception as folder_error:
@@ -211,34 +232,45 @@ class GoogleDriveService:
                     # محاولة أخيرة: البحث عن جميع المجلدات المتاحة
                     try:
                         # البحث عن جميع المجلدات
-                        search_results = self.service.files().list(
-                            q="mimeType='application/vnd.google-apps.folder'",
-                            fields="files(id,name,parents,owners,shared)",
-                            pageSize=20
-                        ).execute()
+                        search_results = (
+                            self.service.files()
+                            .list(
+                                q="mimeType='application/vnd.google-apps.folder'",
+                                fields="files(id,name,parents,owners,shared)",
+                                pageSize=20,
+                            )
+                            .execute()
+                        )
 
-                        folders_found = search_results.get('files', [])
+                        folders_found = search_results.get("files", [])
 
                         if folders_found:
-                            folder_list = "\n".join([
-                                f"- {f['name']} (ID: {f['id']}) - مشارك: {f.get('shared', False)}"
-                                for f in folders_found[:10]
-                            ])
+                            folder_list = "\n".join(
+                                [
+                                    f"- {f['name']} (ID: {f['id']}) - مشارك: {f.get('shared', False)}"
+                                    for f in folders_found[:10]
+                                ]
+                            )
                         else:
                             # إذا لم توجد مجلدات، جرب البحث عن أي ملفات
-                            all_files = self.service.files().list(
-                                fields="files(id,name,mimeType)",
-                                pageSize=10
-                            ).execute()
+                            all_files = (
+                                self.service.files()
+                                .list(fields="files(id,name,mimeType)", pageSize=10)
+                                .execute()
+                            )
 
-                            files_found = all_files.get('files', [])
+                            files_found = all_files.get("files", [])
                             if files_found:
-                                folder_list = f"لا توجد مجلدات، لكن توجد ملفات:\n" + "\n".join([
-                                    f"- {f['name']} ({f.get('mimeType', 'unknown')})"
-                                    for f in files_found[:5]
-                                ])
+                                folder_list = f"لا توجد مجلدات، لكن توجد ملفات:\n" + "\n".join(
+                                    [
+                                        f"- {f['name']} ({f.get('mimeType', 'unknown')})"
+                                        for f in files_found[:5]
+                                    ]
+                                )
                             else:
-                                folder_list = "لا توجد ملفات أو مجلدات متاحة للـ Service Account"
+                                folder_list = (
+                                    "لا توجد ملفات أو مجلدات متاحة للـ Service Account"
+                                )
 
                         detailed_message = f"""
 خطأ 404: لا يمكن الوصول للمجلد المحدد
@@ -295,30 +327,31 @@ Service Account: {user_email}
 
                 # تحديث حالة الاختبار
                 self.config.last_test = timezone.now()
-                self.config.test_status = 'failed'
+                self.config.test_status = "failed"
                 self.config.test_message = detailed_message
-                self.config.save(update_fields=['last_test', 'test_status', 'test_message'])
+                self.config.save(
+                    update_fields=["last_test", "test_status", "test_message"]
+                )
 
                 return {
-                    'success': False,
-                    'message': detailed_message,
-                    'user_email': user_email
+                    "success": False,
+                    "message": detailed_message,
+                    "user_email": user_email,
                 }
 
         except Exception as e:
-            error_message = f'خطأ عام في الاتصال: {str(e)}'
+            error_message = f"خطأ عام في الاتصال: {str(e)}"
 
             # تحديث حالة الاختبار
             if self.config:
                 self.config.last_test = timezone.now()
-                self.config.test_status = 'failed'
+                self.config.test_status = "failed"
                 self.config.test_message = error_message
-                self.config.save(update_fields=['last_test', 'test_status', 'test_message'])
+                self.config.save(
+                    update_fields=["last_test", "test_status", "test_message"]
+                )
 
-            return {
-                'success': False,
-                'message': error_message
-            }
+            return {"success": False, "message": error_message}
 
 
 def get_google_drive_service():
@@ -342,27 +375,28 @@ def create_test_folder():
         if config and config.inspections_folder_id:
             # إنشاء مجلد فرعي داخل المجلد المحدد
             folder_metadata = {
-                'name': f'CRM_Test_Folder_{timezone.now().strftime("%Y%m%d_%H%M%S")}',
-                'mimeType': 'application/vnd.google-apps.folder',
-                'parents': [config.inspections_folder_id]  # إنشاء داخل المجلد المحدد
+                "name": f'CRM_Test_Folder_{timezone.now().strftime("%Y%m%d_%H%M%S")}',
+                "mimeType": "application/vnd.google-apps.folder",
+                "parents": [config.inspections_folder_id],  # إنشاء داخل المجلد المحدد
             }
         else:
             # إنشاء مجلد في الجذر إذا لم يكن هناك مجلد محدد
             folder_metadata = {
-                'name': f'CRM_Test_Folder_{timezone.now().strftime("%Y%m%d_%H%M%S")}',
-                'mimeType': 'application/vnd.google-apps.folder'
+                "name": f'CRM_Test_Folder_{timezone.now().strftime("%Y%m%d_%H%M%S")}',
+                "mimeType": "application/vnd.google-apps.folder",
             }
 
-        folder = drive_service.service.files().create(
-            body=folder_metadata,
-            fields='id,name,webViewLink,parents'
-        ).execute()
+        folder = (
+            drive_service.service.files()
+            .create(body=folder_metadata, fields="id,name,webViewLink,parents")
+            .execute()
+        )
 
         return {
-            'id': folder.get('id'),
-            'name': folder.get('name'),
-            'url': folder.get('webViewLink'),
-            'parents': folder.get('parents', [])
+            "id": folder.get("id"),
+            "name": folder.get("name"),
+            "url": folder.get("webViewLink"),
+            "parents": folder.get("parents", []),
         }
 
     except Exception as e:
@@ -379,52 +413,55 @@ def test_file_upload_to_folder():
 
         config = drive_service.config
         if not config or not config.inspections_folder_id:
-            return {
-                'success': False,
-                'message': 'معرف المجلد غير محدد في الإعدادات'
-            }
+            return {"success": False, "message": "معرف المجلد غير محدد في الإعدادات"}
 
         # إنشاء ملف تجريبي
         from io import BytesIO
-        test_content = BytesIO(f'ملف اختبار تم إنشاؤه في {timezone.now()}'.encode('utf-8'))
+
+        test_content = BytesIO(
+            f"ملف اختبار تم إنشاؤه في {timezone.now()}".encode("utf-8")
+        )
 
         file_metadata = {
-            'name': f'test_file_{timezone.now().strftime("%Y%m%d_%H%M%S")}.txt',
-            'parents': [config.inspections_folder_id]
+            "name": f'test_file_{timezone.now().strftime("%Y%m%d_%H%M%S")}.txt',
+            "parents": [config.inspections_folder_id],
         }
 
         from googleapiclient.http import MediaIoBaseUpload
-        media = MediaIoBaseUpload(test_content, mimetype='text/plain')
+
+        media = MediaIoBaseUpload(test_content, mimetype="text/plain")
 
         # رفع الملف
-        file = drive_service.service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id,name,webViewLink,parents'
-        ).execute()
+        file = (
+            drive_service.service.files()
+            .create(
+                body=file_metadata,
+                media_body=media,
+                fields="id,name,webViewLink,parents",
+            )
+            .execute()
+        )
 
         # حذف الملف فوراً بعد الاختبار
-        drive_service.service.files().delete(fileId=file.get('id')).execute()
+        drive_service.service.files().delete(fileId=file.get("id")).execute()
 
         return {
-            'success': True,
-            'message': 'تم اختبار رفع الملف بنجاح',
-            'file_name': file.get('name'),
-            'folder_id': config.inspections_folder_id
+            "success": True,
+            "message": "تم اختبار رفع الملف بنجاح",
+            "file_name": file.get("name"),
+            "folder_id": config.inspections_folder_id,
         }
 
     except Exception as e:
         logger.error(f"فشل في اختبار رفع الملف: {str(e)}")
-        return {
-            'success': False,
-            'message': f'فشل في اختبار رفع الملف: {str(e)}'
-        }
+        return {"success": False, "message": f"فشل في اختبار رفع الملف: {str(e)}"}
 
 
 def get_service_account_email():
     """الحصول على البريد الإلكتروني للـ Service Account من ملف الاعتماد"""
     try:
         from odoo_db_manager.models import GoogleDriveConfig
+
         config = GoogleDriveConfig.get_active_config()
 
         if not config or not config.credentials_file:
@@ -434,9 +471,9 @@ def get_service_account_email():
         if not os.path.exists(credentials_path):
             return None
 
-        with open(credentials_path, 'r') as f:
+        with open(credentials_path, "r") as f:
             credentials_data = json.load(f)
-            return credentials_data.get('client_email')
+            return credentials_data.get("client_email")
 
     except Exception as e:
         logger.error(f"خطأ في قراءة البريد الإلكتروني للـ Service Account: {str(e)}")

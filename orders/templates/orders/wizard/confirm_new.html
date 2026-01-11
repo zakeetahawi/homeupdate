@@ -1,145 +1,135 @@
 {% extends 'orders/wizard/base_wizard.html' %}
 {% load static %}
-
 {% block wizard_content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm border-warning">
-                <div class="card-header bg-warning text-dark">
-                    <h4 class="mb-0">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        يوجد مسودات غير مكتملة
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <!-- معلومات الحد الأقصى -->
-                    <div class="alert {% if can_create_new %}alert-info{% else %}alert-danger{% endif %} mb-4">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas {% if can_create_new %}fa-info-circle{% else %}fa-exclamation-circle{% endif %} me-2"></i>
-                                لديك <strong>{{ current_drafts_count }}</strong> من <strong>{{ max_drafts }}</strong> مسودة مسموحة
-                            </div>
-                            <div>
-                                {% if can_create_new %}
-                                    <span class="badge bg-success">متبقي {{ remaining_drafts }} مسودة</span>
-                                {% else %}
-                                    <span class="badge bg-danger">تم الوصول للحد الأقصى</span>
-                                {% endif %}
-                            </div>
-                        </div>
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow-sm border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            يوجد مسودات غير مكتملة
+                        </h4>
                     </div>
-                    
-                    <!-- قائمة المسودات الموجودة -->
-                    <div class="mb-4">
-                        <h5 class="mb-3">
-                            <i class="fas fa-file-alt me-2"></i>
-                            المسودات الحالية:
-                        </h5>
-                        <div class="list-group">
-                            {% for draft in existing_drafts %}
-                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div class="card-body">
+                        <!-- معلومات الحد الأقصى -->
+                        <div class="alert {% if can_create_new %}alert-info{% else %}alert-danger{% endif %} mb-4">
+                            <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <div class="fw-bold">
-                                        {% if draft.customer %}
-                                            <i class="fas fa-user me-2 text-primary"></i>
-                                            {{ draft.customer.name }}
-                                        {% else %}
-                                            <i class="fas fa-question-circle me-2 text-muted"></i>
-                                            <span class="text-muted">بدون عميل</span>
-                                        {% endif %}
-                                    </div>
-                                    <small class="text-muted">
-                                        <i class="fas fa-clock me-1"></i>
-                                        آخر تحديث: {{ draft.updated_at|date:"Y/m/d H:i" }}
-                                        {% if draft.branch %}
-                                            | <i class="fas fa-building me-1"></i>{{ draft.branch.name }}
-                                        {% endif %}
-                                        | الخطوة: {{ draft.current_step }}
-                                    </small>
+                                    <i class="fas {% if can_create_new %}fa-info-circle{% else %}fa-exclamation-circle{% endif %} me-2"></i>
+                                    لديك <strong>{{ current_drafts_count }}</strong> من <strong>{{ max_drafts }}</strong> مسودة مسموحة
                                 </div>
                                 <div>
-                                    <a href="{% url 'orders:wizard_step' step=draft.current_step %}" 
-                                       class="btn btn-sm btn-success"
-                                       onclick="sessionStorage.setItem('wizard_draft_id', '{{ draft.id }}')">
-                                        <i class="fas fa-play me-1"></i>
-                                        متابعة
-                                    </a>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    
-                    <hr>
-                    
-                    <!-- خيارات الإجراء -->
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="card h-100 border-success">
-                                <div class="card-body text-center">
-                                    <i class="fas fa-play-circle fa-3x text-success mb-3"></i>
-                                    <h5>متابعة المسودة الأخيرة</h5>
-                                    <p class="text-muted small">
-                                        العودة لإكمال آخر مسودة بدأت فيها
-                                    </p>
-                                    {% with last_draft=existing_drafts.first %}
-                                    <a href="{% url 'orders:wizard_step' step=last_draft.current_step %}" 
-                                       class="btn btn-success">
-                                        <i class="fas fa-arrow-left me-2"></i>
-                                        متابعة المسودة
-                                    </a>
-                                    {% endwith %}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="card h-100 {% if can_create_new %}border-primary{% else %}border-secondary{% endif %}">
-                                <div class="card-body text-center">
-                                    <i class="fas fa-plus-circle fa-3x {% if can_create_new %}text-primary{% else %}text-secondary{% endif %} mb-3"></i>
-                                    <h5>إنشاء طلب جديد</h5>
-                                    <p class="text-muted small">
-                                        {% if can_create_new %}
-                                            إنشاء مسودة جديدة مع الاحتفاظ بالمسودات الحالية
-                                        {% else %}
-                                            لا يمكن إنشاء مسودة جديدة - يجب إكمال أو حذف مسودة
-                                        {% endif %}
-                                    </p>
                                     {% if can_create_new %}
-                                    <a href="{% url 'orders:wizard_start_new' %}?confirm_new=1{% if pending_params.customer_id %}&customer_id={{ pending_params.customer_id }}{% elif pending_params.customer %}&customer={{ pending_params.customer }}{% endif %}" 
-                                       class="btn btn-primary">
-                                        <i class="fas fa-plus me-2"></i>
-                                        إنشاء جديد ({{ remaining_drafts }} متبقية)
-                                    </a>
+                                        <span class="badge bg-success">متبقي {{ remaining_drafts }} مسودة</span>
                                     {% else %}
-                                    <button class="btn btn-secondary" disabled>
-                                        <i class="fas fa-ban me-2"></i>
-                                        الحد الأقصى {{ max_drafts }}
-                                    </button>
+                                        <span class="badge bg-danger">تم الوصول للحد الأقصى</span>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <hr class="my-4">
-                    
-                    <div class="d-flex justify-content-center gap-3">
-                        <a href="{% url 'orders:wizard_drafts_list' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-list me-2"></i>
-                            عرض جميع المسودات
-                        </a>
-                        <a href="{% url 'orders:wizard_delete_and_create_new' %}{% if pending_params.customer_id %}?customer_id={{ pending_params.customer_id }}{% elif pending_params.customer %}?customer={{ pending_params.customer }}{% endif %}" 
-                           class="btn btn-outline-danger"
-                           onclick="return confirm('هل أنت متأكد من حذف جميع المسودات غير المكتملة؟')">
-                            <i class="fas fa-trash me-2"></i>
-                            حذف الكل وإنشاء جديد
-                        </a>
+                        <!-- قائمة المسودات الموجودة -->
+                        <div class="mb-4">
+                            <h5 class="mb-3">
+                                <i class="fas fa-file-alt me-2"></i>
+                                المسودات الحالية:
+                            </h5>
+                            <div class="list-group">
+                                {% for draft in existing_drafts %}
+                                    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-bold">
+                                                {% if draft.customer %}
+                                                    <i class="fas fa-user me-2 text-primary"></i>
+                                                    {{ draft.customer.name }}
+                                                {% else %}
+                                                    <i class="fas fa-question-circle me-2 text-muted"></i>
+                                                    <span class="text-muted">بدون عميل</span>
+                                                {% endif %}
+                                            </div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                آخر تحديث: {{ draft.updated_at|date:"Y/m/d H:i" }}
+                                                {% if draft.branch %}| <i class="fas fa-building me-1"></i>{{ draft.branch.name }}{% endif %}
+                                                | الخطوة: {{ draft.current_step }}
+                                            </small>
+                                        </div>
+                                        <div>
+                                            <a href="{% url 'orders:wizard_step' step=draft.current_step %}"
+                                               class="btn btn-sm btn-success"
+                                               onclick="sessionStorage.setItem('wizard_draft_id', '{{ draft.id }}')">
+                                                <i class="fas fa-play me-1"></i>
+                                                متابعة
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <hr>
+                        <!-- خيارات الإجراء -->
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card h-100 border-success">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-play-circle fa-3x text-success mb-3"></i>
+                                        <h5>متابعة المسودة الأخيرة</h5>
+                                        <p class="text-muted small">العودة لإكمال آخر مسودة بدأت فيها</p>
+                                        {% with last_draft=existing_drafts.first %}
+                                            <a href="{% url 'orders:wizard_step' step=last_draft.current_step %}"
+                                               class="btn btn-success">
+                                                <i class="fas fa-arrow-left me-2"></i>
+                                                متابعة المسودة
+                                            </a>
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100 {% if can_create_new %}border-primary{% else %}border-secondary{% endif %}">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-plus-circle fa-3x {% if can_create_new %}text-primary{% else %}text-secondary{% endif %} mb-3"></i>
+                                        <h5>إنشاء طلب جديد</h5>
+                                        <p class="text-muted small">
+                                            {% if can_create_new %}
+                                                إنشاء مسودة جديدة مع الاحتفاظ بالمسودات الحالية
+                                            {% else %}
+                                                لا يمكن إنشاء مسودة جديدة - يجب إكمال أو حذف مسودة
+                                            {% endif %}
+                                        </p>
+                                        {% if can_create_new %}
+                                            <a href="{% url 'orders:wizard_start_new' %}?confirm_new=1{% if pending_params.customer_id %}&customer_id={{ pending_params.customer_id }}{% elif pending_params.customer %}&customer={{ pending_params.customer }}{% endif %}"
+                                               class="btn btn-primary">
+                                                <i class="fas fa-plus me-2"></i>
+                                                إنشاء جديد ({{ remaining_drafts }} متبقية)
+                                            </a>
+                                        {% else %}
+                                            <button class="btn btn-secondary" disabled>
+                                                <i class="fas fa-ban me-2"></i>
+                                                الحد الأقصى {{ max_drafts }}
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="my-4">
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'orders:wizard_drafts_list' %}"
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-list me-2"></i>
+                                عرض جميع المسودات
+                            </a>
+                            <a href="{% url 'orders:wizard_delete_and_create_new' %}{% if pending_params.customer_id %}?customer_id={{ pending_params.customer_id }}{% elif pending_params.customer %}?customer={{ pending_params.customer }}{% endif %}"
+                               class="btn btn-outline-danger"
+                               onclick="return confirm('هل أنت متأكد من حذف جميع المسودات غير المكتملة؟')">
+                                <i class="fas fa-trash me-2"></i>
+                                حذف الكل وإنشاء جديد
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

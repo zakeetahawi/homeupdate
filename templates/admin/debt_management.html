@@ -1,11 +1,9 @@
 {% extends "admin/base_site.html" %}
 {% load i18n admin_urls static %}
-
 {% block title %}إدارة المديونيات{% endblock %}
-
 {% block extrahead %}
-{{ block.super }}
-<style>
+    {{ block.super }}
+    <style>
     .debt-card {
         background: linear-gradient(135deg, #ff6b6b, #ee5a52);
         color: white;
@@ -93,230 +91,231 @@
         transform: translateY(-1px);
         box-shadow: 0 4px 8px rgba(0,123,255,0.3);
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <h1 class="mb-4">
-                <i class="fas fa-money-bill-wave"></i>
-                إدارة المديونيات
-            </h1>
-        </div>
-    </div>
-    
-    <!-- إحصائيات سريعة -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="debt-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h3 class="mb-1">{{ stats.total_debts }}</h3>
-                        <p class="mb-0">إجمالي المديونيات</p>
-                    </div>
-                    <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
-                </div>
-                <div class="mt-3">
-                    <h4 class="mb-0">{{ stats.total_amount|floatformat:2 }} ج.م</h4>
-                    <small>إجمالي المبلغ</small>
-                </div>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="mb-4">
+                    <i class="fas fa-money-bill-wave"></i>
+                    إدارة المديونيات
+                </h1>
             </div>
         </div>
-        
-        <div class="col-md-4">
-            <div class="payment-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h3 class="mb-1">{{ stats.paid_today }}</h3>
-                        <p class="mb-0">مدفوعات اليوم</p>
-                    </div>
-                    <i class="fas fa-check-circle fa-2x opacity-75"></i>
-                </div>
-                <div class="mt-3">
-                    <h4 class="mb-0">{{ stats.paid_amount_today|floatformat:2 }} ج.م</h4>
-                    <small>مبلغ اليوم</small>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="debt-card" style="background: linear-gradient(135deg, #fd7e14, #e8590c);">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h3 class="mb-1">{{ stats.overdue_count }}</h3>
-                        <p class="mb-0">مديونيات متأخرة</p>
-                    </div>
-                    <i class="fas fa-clock fa-2x opacity-75"></i>
-                </div>
-                <div class="mt-3">
-                    <small>أكثر من 30 يوم</small>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- فلاتر البحث -->
-    <div class="filter-section">
-        <form method="get" class="row align-items-end">
-            <div class="col-md-3">
-                <label for="status" class="form-label">حالة الدفع</label>
-                <select name="status" id="status" class="form-select">
-                    <option value="">الكل</option>
-                    <option value="unpaid" {% if request.GET.status == 'unpaid' %}selected{% endif %}>غير مدفوع</option>
-                    <option value="paid" {% if request.GET.status == 'paid' %}selected{% endif %}>مدفوع</option>
-                    <option value="overdue" {% if request.GET.status == 'overdue' %}selected{% endif %}>متأخر</option>
-                </select>
-            </div>
-            
-            <div class="col-md-3">
-                <label for="search" class="form-label">البحث</label>
-                <input type="text" name="search" id="search" class="form-control" 
-                       placeholder="اسم العميل أو رقم الطلب" value="{{ request.GET.search }}">
-            </div>
-            
-            <div class="col-md-2">
-                <label for="min_amount" class="form-label">الحد الأدنى</label>
-                <input type="number" name="min_amount" id="min_amount" class="form-control" 
-                       placeholder="0" value="{{ request.GET.min_amount }}" step="0.01">
-            </div>
-            
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-search"></i> بحث
-                </button>
-            </div>
-            
-            <div class="col-md-2">
-                <a href="{% url 'admin:debt_management' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-times"></i> إعادة تعيين
-                </a>
-            </div>
-        </form>
-    </div>
-    
-    <!-- جدول المديونيات -->
-    <div class="debt-table">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>العميل</th>
-                    <th>رقم الطلب</th>
-                    <th>مبلغ المديونية</th>
-                    <th>تاريخ الإنشاء</th>
-                    <th>حالة الدفع</th>
-                    <th>تاريخ الدفع</th>
-                    <th>الإجراءات</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for debt in debts %}
-                <tr>
-                    <td>
-                        <strong>{{ debt.customer.name }}</strong>
-                        <br>
-                        <small class="text-muted">{{ debt.customer.phone|default:"لا يوجد هاتف" }}</small>
-                    </td>
-                    <td>
-                        <a href="{% url 'admin:orders_order_change' debt.order.id %}" class="text-decoration-none">
-                            {{ debt.order.order_number }}
-                        </a>
-                    </td>
-                    <td>
-                        <span class="debt-amount">{{ debt.debt_amount|floatformat:2 }} ج.م</span>
-                    </td>
-                    <td>
-                        {{ debt.created_at|date:"d/m/Y" }}
-                        <br>
-                        <small class="text-muted">{{ debt.created_at|time:"H:i" }}</small>
-                    </td>
-                    <td>
-                        {% if debt.is_paid %}
-                            <span class="paid-badge">
-                                <i class="fas fa-check"></i> مدفوع
-                            </span>
-                        {% else %}
-                            {% if debt.created_at|timesince > "30 days" %}
-                                <span class="overdue-badge">
-                                    <i class="fas fa-clock"></i> متأخر
-                                </span>
-                            {% else %}
-                                <span class="unpaid-badge">
-                                    <i class="fas fa-times"></i> غير مدفوع
-                                </span>
-                            {% endif %}
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if debt.payment_date %}
-                            {{ debt.payment_date|date:"d/m/Y" }}
-                            <br>
-                            <small class="text-muted">{{ debt.payment_date|time:"H:i" }}</small>
-                        {% else %}
-                            <span class="text-muted">لم يتم الدفع</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="btn-group" role="group">
-                            <a href="{% url 'admin:installations_customerdebt_change' debt.id %}" 
-                               class="btn btn-debt-action btn-sm">
-                                <i class="fas fa-edit"></i> تعديل
-                            </a>
-                            {% if not debt.is_paid %}
-                            <button class="btn btn-success btn-sm" 
-                                    onclick="markAsPaid({{ debt.id }}, '{{ debt.customer.name }}', '{{ debt.debt_amount|floatformat:2 }}')">
-                                <i class="fas fa-check"></i> تسديد
-                            </button>
-                            {% endif %}
+        <!-- إحصائيات سريعة -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="debt-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-1">{{ stats.total_debts }}</h3>
+                            <p class="mb-0">إجمالي المديونيات</p>
                         </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center py-4">
-                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">لا توجد مديونيات</p>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                    </div>
+                    <div class="mt-3">
+                        <h4 class="mb-0">{{ stats.total_amount|floatformat:2 }} ج.م</h4>
+                        <small>إجمالي المبلغ</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="payment-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-1">{{ stats.paid_today }}</h3>
+                            <p class="mb-0">مدفوعات اليوم</p>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                    <div class="mt-3">
+                        <h4 class="mb-0">{{ stats.paid_amount_today|floatformat:2 }} ج.م</h4>
+                        <small>مبلغ اليوم</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="debt-card"
+                     style="background: linear-gradient(135deg, #fd7e14, #e8590c)">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-1">{{ stats.overdue_count }}</h3>
+                            <p class="mb-0">مديونيات متأخرة</p>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                    <div class="mt-3">
+                        <small>أكثر من 30 يوم</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- فلاتر البحث -->
+        <div class="filter-section">
+            <form method="get" class="row align-items-end">
+                <div class="col-md-3">
+                    <label for="status" class="form-label">حالة الدفع</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">الكل</option>
+                        <option value="unpaid"
+                                {% if request.GET.status == 'unpaid' %}selected{% endif %}>غير مدفوع</option>
+                        <option value="paid" {% if request.GET.status == 'paid' %}selected{% endif %}>مدفوع</option>
+                        <option value="overdue"
+                                {% if request.GET.status == 'overdue' %}selected{% endif %}>متأخر</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="search" class="form-label">البحث</label>
+                    <input type="text"
+                           name="search"
+                           id="search"
+                           class="form-control"
+                           placeholder="اسم العميل أو رقم الطلب"
+                           value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="min_amount" class="form-label">الحد الأدنى</label>
+                    <input type="number"
+                           name="min_amount"
+                           id="min_amount"
+                           class="form-control"
+                           placeholder="0"
+                           value="{{ request.GET.min_amount }}"
+                           step="0.01">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> بحث
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <a href="{% url 'admin:debt_management' %}"
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> إعادة تعيين
+                    </a>
+                </div>
+            </form>
+        </div>
+        <!-- جدول المديونيات -->
+        <div class="debt-table">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>العميل</th>
+                        <th>رقم الطلب</th>
+                        <th>مبلغ المديونية</th>
+                        <th>تاريخ الإنشاء</th>
+                        <th>حالة الدفع</th>
+                        <th>تاريخ الدفع</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for debt in debts %}
+                        <tr>
+                            <td>
+                                <strong>{{ debt.customer.name }}</strong>
+                                <br>
+                                <small class="text-muted">{{ debt.customer.phone|default:"لا يوجد هاتف" }}</small>
+                            </td>
+                            <td>
+                                <a href="{% url 'admin:orders_order_change' debt.order.id %}"
+                                   class="text-decoration-none">{{ debt.order.order_number }}</a>
+                            </td>
+                            <td>
+                                <span class="debt-amount">{{ debt.debt_amount|floatformat:2 }} ج.م</span>
+                            </td>
+                            <td>
+                                {{ debt.created_at|date:"d/m/Y" }}
+                                <br>
+                                <small class="text-muted">{{ debt.created_at|time:"H:i" }}</small>
+                            </td>
+                            <td>
+                                {% if debt.is_paid %}
+                                    <span class="paid-badge">
+                                        <i class="fas fa-check"></i> مدفوع
+                                    </span>
+                                {% else %}
+                                    {% if debt.created_at|timesince > "30 days" %}
+                                        <span class="overdue-badge">
+                                            <i class="fas fa-clock"></i> متأخر
+                                        </span>
+                                    {% else %}
+                                        <span class="unpaid-badge">
+                                            <i class="fas fa-times"></i> غير مدفوع
+                                        </span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if debt.payment_date %}
+                                    {{ debt.payment_date|date:"d/m/Y" }}
+                                    <br>
+                                    <small class="text-muted">{{ debt.payment_date|time:"H:i" }}</small>
+                                {% else %}
+                                    <span class="text-muted">لم يتم الدفع</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'admin:installations_customerdebt_change' debt.id %}"
+                                       class="btn btn-debt-action btn-sm">
+                                        <i class="fas fa-edit"></i> تعديل
+                                    </a>
+                                    {% if not debt.is_paid %}
+                                        <button class="btn btn-success btn-sm"
+                                                onclick="markAsPaid({{ debt.id }}, '{{ debt.customer.name }}', '{{ debt.debt_amount|floatformat:2 }}')">
+                                            <i class="fas fa-check"></i> تسديد
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">لا توجد مديونيات</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <!-- ترقيم الصفحات -->
+        {% if debts.has_other_pages %}
+            <nav aria-label="ترقيم الصفحات" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if debts.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="?page={{ debts.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">السابق</a>
+                        </li>
+                    {% endif %}
+                    {% for num in debts.paginator.page_range %}
+                        {% if debts.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if debts.has_next %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="?page={{ debts.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">التالي</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
     </div>
-    
-    <!-- ترقيم الصفحات -->
-    {% if debts.has_other_pages %}
-    <nav aria-label="ترقيم الصفحات" class="mt-4">
-        <ul class="pagination justify-content-center">
-            {% if debts.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ debts.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">السابق</a>
-                </li>
-            {% endif %}
-            
-            {% for num in debts.paginator.page_range %}
-                {% if debts.number == num %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ num }}</span>
-                    </li>
-                {% else %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ num }}</a>
-                    </li>
-                {% endif %}
-            {% endfor %}
-            
-            {% if debts.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ debts.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">التالي</a>
-                </li>
-            {% endif %}
-        </ul>
-    </nav>
-    {% endif %}
-</div>
-
-<script>
+    <script>
 function markAsPaid(debtId, customerName, amount) {
     if (confirm(`هل أنت متأكد من تسديد مديونية ${customerName} بمبلغ ${amount} ج.م؟`)) {
         // إرسال طلب AJAX لتسديد المديونية
@@ -341,5 +340,5 @@ function markAsPaid(debtId, customerName, amount) {
         });
     }
 }
-</script>
+    </script>
 {% endblock %}

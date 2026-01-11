@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load widget_tweaks %}
-
 {% block title %}
     {% if complaint %}
         تعديل شكوى {{ complaint.complaint_number }} - نظام الخواجه
@@ -9,13 +8,13 @@
         شكوى جديدة - نظام الخواجه
     {% endif %}
 {% endblock %}
-
 {% block extra_css %}
-<!-- Select2 CSS for smart search -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css" rel="stylesheet" />
-
-<style>
+    <!-- Select2 CSS for smart search -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+          rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css"
+          rel="stylesheet" />
+    <style>
     /* Mobile-first styles */
     .form-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -213,381 +212,331 @@
     .position-relative {
         position: relative !important;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'complaints:dashboard' %}">لوحة التحكم</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'complaints:complaint_list' %}">قائمة الشكاوى</a></li>
-            {% if complaint %}
-                <li class="breadcrumb-item"><a href="{% url 'complaints:complaint_detail' complaint.pk %}">{{ complaint.complaint_number }}</a></li>
-                <li class="breadcrumb-item active">تعديل</li>
-            {% else %}
-                <li class="breadcrumb-item active">شكوى جديدة</li>
-            {% endif %}
-        </ol>
-    </nav>
-
-    <!-- Form Header -->
-    <div class="form-header">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="mb-2">
-                    <i class="fas fa-edit me-2"></i>
-                    {% if complaint %}
-                        تعديل شكوى {{ complaint.complaint_number }}
-                    {% else %}
-                        إنشاء شكوى جديدة
-                    {% endif %}
-                </h1>
-                <p class="mb-0 opacity-75">
-                    {% if complaint %}
-                        قم بتعديل بيانات الشكوى وحفظ التغييرات
-                    {% else %}
-                        املأ البيانات المطلوبة لإنشاء شكوى جديدة
-                    {% endif %}
-                </p>
-            </div>
-            <div class="col-md-4 text-end">
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'complaints:dashboard' %}">لوحة التحكم</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'complaints:complaint_list' %}">قائمة الشكاوى</a>
+                </li>
                 {% if complaint %}
-                <span class="badge bg-light text-dark fs-6">
-                    {{ complaint.get_status_display }}
-                </span>
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'complaints:complaint_detail' complaint.pk %}">{{ complaint.complaint_number }}</a>
+                    </li>
+                    <li class="breadcrumb-item active">تعديل</li>
                 {% else %}
-                <span class="badge bg-light text-dark fs-6">
-                    <i class="fas fa-plus me-1"></i>
-                    شكوى جديدة
-                </span>
+                    <li class="breadcrumb-item active">شكوى جديدة</li>
                 {% endif %}
+            </ol>
+        </nav>
+        <!-- Form Header -->
+        <div class="form-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-2">
+                        <i class="fas fa-edit me-2"></i>
+                        {% if complaint %}
+                            تعديل شكوى {{ complaint.complaint_number }}
+                        {% else %}
+                            إنشاء شكوى جديدة
+                        {% endif %}
+                    </h1>
+                    <p class="mb-0 opacity-75">
+                        {% if complaint %}
+                            قم بتعديل بيانات الشكوى وحفظ التغييرات
+                        {% else %}
+                            املأ البيانات المطلوبة لإنشاء شكوى جديدة
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    {% if complaint %}
+                        <span class="badge bg-light text-dark fs-6">{{ complaint.get_status_display }}</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark fs-6">
+                            <i class="fas fa-plus me-1"></i>
+                            شكوى جديدة
+                        </span>
+                    {% endif %}
+                </div>
             </div>
         </div>
-    </div>
-
-    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
-        {% csrf_token %}
-        
-        <div class="row">
-            <div class="col-md-8">
-                <!-- معلومات الشكوى الأساسية -->
-                <div class="form-card">
-                    <div class="form-section">
-                        <h5 class="form-section-title">
-                            <i class="fas fa-info-circle me-2"></i>
-                            معلومات الشكوى الأساسية
-                        </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.customer.id_for_label }}" class="form-label required-field">
-                                    {{ form.customer.label }}
-                                </label>
-                                <select id="customer_search_select" class="form-select" style="width: 100%;">
-                                    {% if complaint.customer %}
-                                        <option value="{{ complaint.customer.id }}" selected>
-                                            {{ complaint.customer.name }} - {{ complaint.customer.phone }}
-                                        </option>
+        <form method="post"
+              enctype="multipart/form-data"
+              class="needs-validation"
+              novalidate>
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-8">
+                    <!-- معلومات الشكوى الأساسية -->
+                    <div class="form-card">
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-info-circle me-2"></i>
+                                معلومات الشكوى الأساسية
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.customer.id_for_label }}"
+                                           class="form-label required-field">{{ form.customer.label }}</label>
+                                    <select id="customer_search_select" class="form-select" style="width: 100%;">
+                                        {% if complaint.customer %}
+                                            <option value="{{ complaint.customer.id }}" selected>
+                                                {{ complaint.customer.name }} - {{ complaint.customer.phone }}
+                                            </option>
+                                        {% endif %}
+                                    </select>
+                                    {{ form.customer }}
+                                    {{ form.customer_search|add_class:"d-none" }}
+                                    {% if form.customer.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.customer.errors|join:", " }}</div>
                                     {% endif %}
-                                </select>
-                                {{ form.customer }}
-                                {{ form.customer_search|add_class:"d-none" }}
-                                {% if form.customer.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.customer.errors|join:", " }}
-                                    </div>
-                                {% endif %}
-                                <div class="form-help-text">ابحث عن العميل بالاسم أو الهاتف</div>
+                                    <div class="form-help-text">ابحث عن العميل بالاسم أو الهاتف</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_complaint_type" class="form-label required-field">نوع الشكوى</label>
+                                    {{ form.complaint_type }}
+                                    {% if form.complaint_type.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.complaint_type.errors|join:", " }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                                                <label for="id_complaint_type" class="form-label required-field">
-                                    نوع الشكوى
-                                </label>
-                                {{ form.complaint_type }}
-                                {% if form.complaint_type.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.complaint_type.errors|join:", " }}
+                            <div class="mb-3">
+                                <label for="id_title" class="form-label required-field">{{ form.title.label }}</label>
+                                {{ form.title }}
+                                {% if form.title.errors %}<div class="invalid-feedback d-block">{{ form.title.errors|join:", " }}</div>{% endif %}
+                                <div class="form-help-text">عنوان مختصر وواضح للشكوى</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="id_description" class="form-label required-field">{{ form.description.label }}</label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.description.errors|join:", " }}</div>
+                                {% endif %}
+                                <div class="form-help-text">وصف تفصيلي للشكوى والمشكلة المراد حلها</div>
+                            </div>
+                        </div>
+                        <!-- تصنيف ومعلومات إضافية -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-tags me-2"></i>
+                                التصنيف والأولوية
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="id_priority" class="form-label required-field">الأولوية</label>
+                                    {{ form.priority }}
+                                    {% if form.priority.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.priority.errors|join:", " }}</div>
+                                    {% endif %}
+                                    <div id="priority-preview" class="mt-2" style="display:none;">
+                                        <span class="priority-preview"></span>
+                                        <span class="priority-text"></span>
+                                    </div>
+                                    <!-- عرض التاريخ والموعد النهائي -->
+                                    <div id="deadline-preview" class="mt-2" style="display:none;">
+                                        <div class="alert alert-info p-2">
+                                            <small>
+                                                <i class="fas fa-clock me-1"></i>
+                                                <strong>التاريخ الحالي:</strong> <span id="current-date"></span>
+                                                <br>
+                                                <i class="fas fa-calendar-alt me-1"></i>
+                                                <strong>الموعد النهائي المتوقع:</strong> <span id="expected-deadline"></span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="id_status" class="form-label">{{ form.status.label }}</label>
+                                    {{ form.status }}
+                                    {% if form.status.errors %}<div class="invalid-feedback d-block">{{ form.status.errors|join:", " }}</div>{% endif %}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="id_deadline" class="form-label">{{ form.deadline.label }}</label>
+                                    {{ form.deadline }}
+                                    {% if form.deadline.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.deadline.errors|join:", " }}</div>
+                                    {% endif %}
+                                    <div class="form-help-text">تاريخ ووقت الموعد النهائي لحل الشكوى</div>
+                                </div>
+                                {% if complaint and complaint.resolved_at %}
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">
+                                            <i class="fas fa-check-circle text-success me-1"></i>
+                                            تاريخ الحل
+                                        </label>
+                                        <div class="form-control-plaintext bg-light border rounded p-2">
+                                            <i class="fas fa-calendar me-1"></i>
+                                            {{ complaint.resolved_at|date:"Y-m-d H:i" }}
+                                        </div>
+                                        <div class="form-help-text text-success">تم حل الشكوى في هذا التاريخ</div>
                                     </div>
                                 {% endif %}
                             </div>
                         </div>
-                        
-                        <div class="mb-3">
-                                                            <label for="id_title" class="form-label required-field">
-                                {{ form.title.label }}
-                            </label>
-                            {{ form.title }}
-                            {% if form.title.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.title.errors|join:", " }}
+                        <!-- الأشخاص المسؤولون -->
+                        <div class="form-section">
+                            <h5 class="form-section-title">
+                                <i class="fas fa-users me-2"></i>
+                                التعيين والمسؤولية
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_assigned_to" class="form-label">{{ form.assigned_to.label }}</label>
+                                    {{ form.assigned_to }}
+                                    {% if form.assigned_to.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.assigned_to.errors|join:", " }}</div>
+                                    {% endif %}
+                                    <div class="form-help-text">الموظف المسؤول عن متابعة الشكوى</div>
                                 </div>
-                            {% endif %}
-                            <div class="form-help-text">عنوان مختصر وواضح للشكوى</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                                                            <label for="id_description" class="form-label required-field">
-                                {{ form.description.label }}
-                            </label>
-                            {{ form.description }}
-                            {% if form.description.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.description.errors|join:", " }}
+                                <div class="col-md-6 mb-3">
+                                    <label for="id_assigned_department" class="form-label">{{ form.assigned_department.label }}</label>
+                                    {{ form.assigned_department }}
+                                    {% if form.assigned_department.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.assigned_department.errors|join:", " }}</div>
+                                    {% endif %}
+                                    <div class="form-help-text">القسم المختص بحل هذا النوع من الشكاوى</div>
                                 </div>
-                            {% endif %}
-                            <div class="form-help-text">وصف تفصيلي للشكوى والمشكلة المراد حلها</div>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- تصنيف ومعلومات إضافية -->
-                    <div class="form-section">
-                        <h5 class="form-section-title">
-                            <i class="fas fa-tags me-2"></i>
-                            التصنيف والأولوية
+                </div>
+                <!-- العمود الجانبي -->
+                <div class="col-md-4">
+                    <!-- معلومات العميل -->
+                    <div class="form-card">
+                        <h5 class="mb-3">
+                            <i class="fas fa-user me-2"></i>
+                            معلومات العميل
                         </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                                                <label for="id_priority" class="form-label required-field">
-                                    الأولوية
-                                </label>
-                                {{ form.priority }}
-                                {% if form.priority.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.priority.errors|join:", " }}
-                                    </div>
-                                {% endif %}
-                                <div id="priority-preview" class="mt-2" style="display:none;">
-                                    <span class="priority-preview"></span>
-                                    <span class="priority-text"></span>
+                        <div id="customer-info" class="customer-info-card" style="display:none;">
+                            <div id="customer-details"></div>
+                        </div>
+                        <div id="no-customer-selected" class="text-muted text-center py-3">
+                            <i class="fas fa-user-slash me-2"></i>
+                            لم يتم اختيار عميل بعد
+                        </div>
+                    </div>
+                    <!-- معلومات نوع الشكوى -->
+                    <div class="form-card">
+                        <h5 class="mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            معلومات نوع الشكوى
+                        </h5>
+                        <div id="complaint-type-info" style="display:none;">
+                            <div id="complaint-type-details"></div>
+                        </div>
+                        <div id="no-type-selected" class="text-muted text-center py-3">
+                            <i class="fas fa-tag me-2"></i>
+                            لم يتم اختيار نوع الشكوى بعد
+                        </div>
+                    </div>
+                    <!-- معلومات السجل المرتبط -->
+                    <div class="form-card" id="related-object-card" style="display:none;">
+                        <h5 class="mb-3">
+                            <i class="fas fa-link me-2"></i>
+                            السجل المرتبط
+                        </h5>
+                        <div id="related-object-info" class="related-object-card">
+                            <div id="related-object-details"></div>
+                        </div>
+                    </div>
+                    <!-- معلومات حالة الشكوى -->
+                    {% if complaint %}
+                        <div class="form-card">
+                            <h5 class="mb-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                معلومات الحالة
+                            </h5>
+                            <div class="customer-info-card">
+                                <div class="mb-2">
+                                    <strong>الحالة الحالية:</strong>
+                                    <span class="badge bg-{{ complaint.get_status_badge_class }} ms-1">{{ complaint.get_status_display }}</span>
                                 </div>
-                                
-                                <!-- عرض التاريخ والموعد النهائي -->
-                                <div id="deadline-preview" class="mt-2" style="display:none;">
-                                    <div class="alert alert-info p-2">
-                                        <small>
-                                            <i class="fas fa-clock me-1"></i>
-                                            <strong>التاريخ الحالي:</strong> <span id="current-date"></span><br>
-                                            <i class="fas fa-calendar-alt me-1"></i>
-                                            <strong>الموعد النهائي المتوقع:</strong> <span id="expected-deadline"></span>
+                                <div class="mb-2">
+                                    <strong>تاريخ الإنشاء:</strong>
+                                    <small class="text-muted">{{ complaint.created_at|date:"Y-m-d H:i" }}</small>
+                                </div>
+                                {% if complaint.deadline %}
+                                    <div class="mb-2">
+                                        <strong>الموعد النهائي:</strong>
+                                        <small class="text-{% if complaint.is_overdue %}danger{% else %}primary{% endif %}">
+                                            {{ complaint.deadline|date:"Y-m-d H:i" }}
                                         </small>
                                     </div>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-4 mb-3">
-                                <label for="id_status" class="form-label">
-                                    {{ form.status.label }}
-                                </label>
-                                {{ form.status }}
-                                {% if form.status.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.status.errors|join:", " }}
+                                {% endif %}
+                                {% if complaint.resolved_at %}
+                                    <div class="mb-2">
+                                        <strong>تاريخ الحل:</strong>
+                                        <small class="text-success">{{ complaint.resolved_at|date:"Y-m-d H:i" }}</small>
+                                    </div>
+                                    <div class="mb-0">
+                                        <strong>مدة الحل:</strong>
+                                        <small class="text-info">{{ complaint.get_resolution_time_display }}</small>
                                     </div>
                                 {% endif %}
                             </div>
-                            
-                            <div class="col-md-4 mb-3">
-                                <label for="id_deadline" class="form-label">
-                                    {{ form.deadline.label }}
-                                </label>
-                                {{ form.deadline }}
-                                {% if form.deadline.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.deadline.errors|join:", " }}
-                                    </div>
-                                {% endif %}
-                                <div class="form-help-text">تاريخ ووقت الموعد النهائي لحل الشكوى</div>
-                            </div>
-                            
-                            {% if complaint and complaint.resolved_at %}
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">
-                                    <i class="fas fa-check-circle text-success me-1"></i>
-                                    تاريخ الحل
-                                </label>
-                                <div class="form-control-plaintext bg-light border rounded p-2">
-                                    <i class="fas fa-calendar me-1"></i>
-                                    {{ complaint.resolved_at|date:"Y-m-d H:i" }}
-                                </div>
-                                <div class="form-help-text text-success">تم حل الشكوى في هذا التاريخ</div>
-                            </div>
-                            {% endif %}
                         </div>
-                    </div>
-
-                    <!-- الأشخاص المسؤولون -->
-                    <div class="form-section">
-                        <h5 class="form-section-title">
-                            <i class="fas fa-users me-2"></i>
-                            التعيين والمسؤولية
-                        </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="id_assigned_to" class="form-label">
-                                    {{ form.assigned_to.label }}
-                                </label>
-                                {{ form.assigned_to }}
-                                {% if form.assigned_to.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.assigned_to.errors|join:", " }}
-                                    </div>
-                                {% endif %}
-                                <div class="form-help-text">الموظف المسؤول عن متابعة الشكوى</div>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="id_assigned_department" class="form-label">
-                                    {{ form.assigned_department.label }}
-                                </label>
-                                {{ form.assigned_department }}
-                                {% if form.assigned_department.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.assigned_department.errors|join:", " }}
-                                    </div>
-                                {% endif %}
-                                <div class="form-help-text">القسم المختص بحل هذا النوع من الشكاوى</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- العمود الجانبي -->
-            <div class="col-md-4">
-                <!-- معلومات العميل -->
-                <div class="form-card">
-                    <h5 class="mb-3">
-                        <i class="fas fa-user me-2"></i>
-                        معلومات العميل
-                    </h5>
-                    <div id="customer-info" class="customer-info-card" style="display:none;">
-                        <div id="customer-details"></div>
-                    </div>
-                    <div id="no-customer-selected" class="text-muted text-center py-3">
-                        <i class="fas fa-user-slash me-2"></i>
-                        لم يتم اختيار عميل بعد
-                    </div>
-                </div>
-
-                <!-- معلومات نوع الشكوى -->
-                <div class="form-card">
-                    <h5 class="mb-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        معلومات نوع الشكوى
-                    </h5>
-                    <div id="complaint-type-info" style="display:none;">
-                        <div id="complaint-type-details"></div>
-                    </div>
-                    <div id="no-type-selected" class="text-muted text-center py-3">
-                        <i class="fas fa-tag me-2"></i>
-                        لم يتم اختيار نوع الشكوى بعد
-                    </div>
-                </div>
-
-                <!-- معلومات السجل المرتبط -->
-                <div class="form-card" id="related-object-card" style="display:none;">
-                    <h5 class="mb-3">
-                        <i class="fas fa-link me-2"></i>
-                        السجل المرتبط
-                    </h5>
-                    <div id="related-object-info" class="related-object-card">
-                        <div id="related-object-details"></div>
-                    </div>
-                </div>
-
-                <!-- معلومات حالة الشكوى -->
-                {% if complaint %}
-                <div class="form-card">
-                    <h5 class="mb-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        معلومات الحالة
-                    </h5>
-                    <div class="customer-info-card">
-                        <div class="mb-2">
-                            <strong>الحالة الحالية:</strong> 
-                            <span class="badge bg-{{ complaint.get_status_badge_class }} ms-1">
-                                {{ complaint.get_status_display }}
-                            </span>
-                        </div>
-                        <div class="mb-2">
-                            <strong>تاريخ الإنشاء:</strong> 
-                            <small class="text-muted">{{ complaint.created_at|date:"Y-m-d H:i" }}</small>
-                        </div>
-                        {% if complaint.deadline %}
-                        <div class="mb-2">
-                            <strong>الموعد النهائي:</strong> 
-                            <small class="text-{% if complaint.is_overdue %}danger{% else %}primary{% endif %}">
-                                {{ complaint.deadline|date:"Y-m-d H:i" }}
-                            </small>
-                        </div>
-                        {% endif %}
-                        {% if complaint.resolved_at %}
-                        <div class="mb-2">
-                            <strong>تاريخ الحل:</strong> 
-                            <small class="text-success">{{ complaint.resolved_at|date:"Y-m-d H:i" }}</small>
-                        </div>
-                        <div class="mb-0">
-                            <strong>مدة الحل:</strong> 
-                            <small class="text-info">{{ complaint.get_resolution_time_display }}</small>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- أزرار الحفظ -->
-                <div class="form-card">
-                    <h5 class="mb-3">
-                        <i class="fas fa-save me-2"></i>
-                        حفظ الشكوى
-                    </h5>
-                    
-                    <div class="d-grid gap-2">
-                        <button type="submit" name="action" value="save" class="btn btn-primary btn-action submit-btn">
-                            <i class="fas fa-save me-1"></i>
-                            {% if complaint %}تحديث الشكوى{% else %}حفظ الشكوى{% endif %}
-                        </button>
-                        
-                        {% if not complaint %}
-                        <button type="submit" name="action" value="save_and_new" class="btn btn-success btn-action submit-btn">
-                            <i class="fas fa-plus me-1"></i>
-                            حفظ وإنشاء جديدة
-                        </button>
-                        {% endif %}
-                        
-                        <a href="{% if complaint %}{% url 'complaints:complaint_detail' complaint.pk %}{% else %}{% url 'complaints:complaint_list' %}{% endif %}" 
-                           class="btn btn-secondary btn-action">
-                            <i class="fas fa-times me-1"></i>
-                            إلغاء
-                        </a>
-                    </div>
-                    
-                    {% if complaint %}
-                    <hr>
-                    <div class="d-grid">
-                        <a href="{% url 'complaints:complaint_detail' complaint.pk %}" class="btn btn-outline-info btn-action">
-                            <i class="fas fa-eye me-1"></i>
-                            عرض تفاصيل الشكوى
-                        </a>
-                    </div>
                     {% endif %}
+                    <!-- أزرار الحفظ -->
+                    <div class="form-card">
+                        <h5 class="mb-3">
+                            <i class="fas fa-save me-2"></i>
+                            حفظ الشكوى
+                        </h5>
+                        <div class="d-grid gap-2">
+                            <button type="submit"
+                                    name="action"
+                                    value="save"
+                                    class="btn btn-primary btn-action submit-btn">
+                                <i class="fas fa-save me-1"></i>
+                                {% if complaint %}
+                                    تحديث الشكوى
+                                {% else %}
+                                    حفظ الشكوى
+                                {% endif %}
+                            </button>
+                            {% if not complaint %}
+                                <button type="submit"
+                                        name="action"
+                                        value="save_and_new"
+                                        class="btn btn-success btn-action submit-btn">
+                                    <i class="fas fa-plus me-1"></i>
+                                    حفظ وإنشاء جديدة
+                                </button>
+                            {% endif %}
+                            <a href="{% if complaint %}{% url 'complaints:complaint_detail' complaint.pk %}{% else %}{% url 'complaints:complaint_list' %}{% endif %}"
+                               class="btn btn-secondary btn-action">
+                                <i class="fas fa-times me-1"></i>
+                                إلغاء
+                            </a>
+                        </div>
+                        {% if complaint %}
+                            <hr>
+                            <div class="d-grid">
+                                <a href="{% url 'complaints:complaint_detail' complaint.pk %}"
+                                   class="btn btn-outline-info btn-action">
+                                    <i class="fas fa-eye me-1"></i>
+                                    عرض تفاصيل الشكوى
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
-    </form>
-</div>
+        </form>
+    </div>
 {% endblock %}
-
 {% block extra_js %}
-<!-- Select2 JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-<script>
+    <!-- Select2 JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
     // تحديث معلومات العميل عند الاختيار
     function updateCustomerInfo(customerId) {
         console.log('تحديث معلومات العميل:', customerId);
@@ -1389,5 +1338,5 @@
             }
         });
     };
-</script>
+    </script>
 {% endblock %}

@@ -6,13 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('orders', '0006_add_location_type_to_order'),
+        ("orders", "0006_add_location_type_to_order"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='order',
-            name='location_address',
-            field=models.TextField(blank=True, help_text='عنوان التركيب بالتفصيل', null=True, verbose_name='عنوان التركيب'),
+            model_name="order",
+            name="location_address",
+            field=models.TextField(
+                blank=True,
+                help_text="عنوان التركيب بالتفصيل",
+                null=True,
+                verbose_name="عنوان التركيب",
+            ),
         ),
     ]

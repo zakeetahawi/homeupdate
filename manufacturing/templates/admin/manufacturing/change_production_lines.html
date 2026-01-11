@@ -1,9 +1,8 @@
 {% extends "admin/base_site.html" %}
 {% load i18n static %}
-
 {% block extrahead %}
-{{ block.super }}
-<style>
+    {{ block.super }}
+    <style>
     .production-line-form {
         max-width: 1200px;
         margin: 20px auto;
@@ -91,80 +90,70 @@
         margin-bottom: 20px;
         border-radius: 4px;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="production-line-form">
-    <h1>{{ title }}</h1>
-    
-    <div class="info-box">
-        <strong>📦 استلام الأقمشة:</strong> {{ fabric_receipt.receipt_code }}<br/>
-        <strong>👤 العميل:</strong> {{ fabric_receipt.order.customer.name|default:"-" }}<br/>
-        <strong>📅 تاريخ الاستلام:</strong> {{ fabric_receipt.receipt_date|date:"Y-m-d" }}<br/>
-        <strong>🎒 رقم الشنطة:</strong> {{ fabric_receipt.bag_number }}
-    </div>
-
-    <form method="post">
-        {% csrf_token %}
-        
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th style="width: 40%;">المنتج</th>
-                    <th style="width: 10%; text-align: center;">الكمية</th>
-                    <th style="width: 25%;">خط الإنتاج الحالي</th>
-                    <th style="width: 25%;">خط الإنتاج الجديد</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item_data in items_data %}
-                <tr>
-                    <td>
-                        <strong>{{ item_data.receipt_item.product_name }}</strong>
-                    </td>
-                    <td style="text-align: center;">
-                        {{ item_data.receipt_item.quantity_received }}
-                    </td>
-                    <td>
-                        {% if item_data.current_production_line %}
-                            <span class="current-line">
-                                ✓ {{ item_data.current_production_line.name }}
-                            </span>
-                        {% else %}
-                            <span class="no-line">لم يتم التحديد</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <select name="production_line_{{ item_data.receipt_item.pk }}" class="production-line-select">
-                            <option value="">-- اختر خط الإنتاج --</option>
-                            {% for line in production_lines %}
-                                <option value="{{ line.pk }}" 
-                                    {% if item_data.current_production_line and item_data.current_production_line.pk == line.pk %}selected{% endif %}>
-                                    {{ line.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" style="text-align: center; color: #999; padding: 30px;">
-                        لا توجد عناصر مستلمة
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <div class="submit-row">
-            <a href="{% url 'admin:manufacturing_fabricreceipt_change' fabric_receipt.pk %}" class="cancel-button">
-                ← إلغاء
-            </a>
-            <button type="submit" class="submit-button">
-                💾 حفظ التغييرات
-            </button>
+    <div class="production-line-form">
+        <h1>{{ title }}</h1>
+        <div class="info-box">
+            <strong>📦 استلام الأقمشة:</strong> {{ fabric_receipt.receipt_code }}
+            <br />
+            <strong>👤 العميل:</strong> {{ fabric_receipt.order.customer.name|default:"-" }}
+            <br />
+            <strong>📅 تاريخ الاستلام:</strong> {{ fabric_receipt.receipt_date|date:"Y-m-d" }}
+            <br />
+            <strong>🎒 رقم الشنطة:</strong> {{ fabric_receipt.bag_number }}
         </div>
-    </form>
-</div>
+        <form method="post">
+            {% csrf_token %}
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">المنتج</th>
+                        <th style="width: 10%; text-align: center;">الكمية</th>
+                        <th style="width: 25%;">خط الإنتاج الحالي</th>
+                        <th style="width: 25%;">خط الإنتاج الجديد</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item_data in items_data %}
+                        <tr>
+                            <td>
+                                <strong>{{ item_data.receipt_item.product_name }}</strong>
+                            </td>
+                            <td style="text-align: center;">{{ item_data.receipt_item.quantity_received }}</td>
+                            <td>
+                                {% if item_data.current_production_line %}
+                                    <span class="current-line">✓ {{ item_data.current_production_line.name }}</span>
+                                {% else %}
+                                    <span class="no-line">لم يتم التحديد</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <select name="production_line_{{ item_data.receipt_item.pk }}"
+                                        class="production-line-select">
+                                    <option value="">-- اختر خط الإنتاج --</option>
+                                    {% for line in production_lines %}
+                                        <option value="{{ line.pk }}"
+                                                {% if item_data.current_production_line and item_data.current_production_line.pk == line.pk %}selected{% endif %}>
+                                            {{ line.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #999; padding: 30px;">لا توجد عناصر مستلمة</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="submit-row">
+                <a href="{% url 'admin:manufacturing_fabricreceipt_change' fabric_receipt.pk %}"
+                   class="cancel-button">← إلغاء</a>
+                <button type="submit" class="submit-button">💾 حفظ التغييرات</button>
+            </div>
+        </form>
+    </div>
 {% endblock %}

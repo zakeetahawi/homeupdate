@@ -1,5 +1,4 @@
 {% load static %}
-
 <!-- Monthly Filter Component -->
 <div class="monthly-filter-component">
     <div class="filter-header">
@@ -7,30 +6,35 @@
             <i class="fas fa-calendar-alt me-2"></i>
             فلترة شهرية
         </h6>
-        <button class="btn btn-sm btn-outline-secondary reset-filters" type="button" onclick="resetMonthlyFilters()">
+        <button class="btn btn-sm btn-outline-secondary reset-filters"
+                type="button"
+                onclick="resetMonthlyFilters()">
             <i class="fas fa-undo me-1"></i>
             إعادة تعيين
         </button>
     </div>
-    
     <div class="filter-controls">
         <!-- Year Selection -->
         <div class="filter-group">
             <label for="year-select" class="form-label">السنة</label>
-            <select name="year" id="year-select" class="form-select form-select-sm" onchange="submitForm()">
+            <select name="year"
+                    id="year-select"
+                    class="form-select form-select-sm"
+                    onchange="submitForm()">
                 <option value="">جميع السنوات</option>
                 {% for year in available_years %}
-                    <option value="{{ year }}" {% if selected_year == year|stringformat:'s' %}selected{% endif %}>
-                        {{ year }}
-                    </option>
+                    <option value="{{ year }}"
+                            {% if selected_year == year|stringformat:'s' %}selected{% endif %}>{{ year }}</option>
                 {% endfor %}
             </select>
         </div>
-
         <!-- Month Selection -->
         <div class="filter-group">
             <label for="month-select" class="form-label">الشهر</label>
-            <select name="month" id="month-select" class="form-select form-select-sm" onchange="submitForm()">
+            <select name="month"
+                    id="month-select"
+                    class="form-select form-select-sm"
+                    onchange="submitForm()">
                 <option value="">جميع الشهور</option>
                 <option value="1" {% if selected_month == '1' %}selected{% endif %}>يناير</option>
                 <option value="2" {% if selected_month == '2' %}selected{% endif %}>فبراير</option>
@@ -46,36 +50,35 @@
                 <option value="12" {% if selected_month == '12' %}selected{% endif %}>ديسمبر</option>
             </select>
         </div>
-        
         <!-- Quick Month Buttons -->
         <div class="filter-group">
             <label class="form-label">اختيار سريع</label>
             <div class="quick-month-buttons">
-                <button type="button" class="btn btn-sm btn-outline-primary quick-month" data-month="current">
-                    الشهر الحالي
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary quick-month" data-month="last">
-                    الشهر الماضي
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-info quick-month" data-month="quarter">
-                    آخر 3 أشهر
-                </button>
+                <button type="button"
+                        class="btn btn-sm btn-outline-primary quick-month"
+                        data-month="current">الشهر الحالي</button>
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary quick-month"
+                        data-month="last">الشهر الماضي</button>
+                <button type="button"
+                        class="btn btn-sm btn-outline-info quick-month"
+                        data-month="quarter">آخر 3 أشهر</button>
             </div>
         </div>
     </div>
-    
     <!-- Filter Summary -->
     <div class="filter-summary" id="filter-summary" style="display: none;">
         <div class="summary-content">
             <i class="fas fa-filter me-2"></i>
             <span id="summary-text"></span>
-            <button type="button" class="btn btn-sm btn-link clear-filter" onclick="clearMonthlyFilter()">
+            <button type="button"
+                    class="btn btn-sm btn-link clear-filter"
+                    onclick="clearMonthlyFilter()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
     </div>
 </div>
-
 <style>
 .monthly-filter-component {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
@@ -171,7 +174,6 @@
     }
 }
 </style>
-
 <script>
 // Monthly Filter JavaScript
 function submitForm() {

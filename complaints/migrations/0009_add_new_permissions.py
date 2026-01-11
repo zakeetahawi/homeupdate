@@ -46,7 +46,6 @@ class Migration(migrations.Migration):
                 verbose_name="يمكن حذف الشكاوى",
             ),
         ),
-
         migrations.AddField(
             model_name="complaintuserpermissions",
             name="can_resolve_complaints",

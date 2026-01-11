@@ -1,23 +1,16 @@
 {% load static %}
-
-<div class="card stats-card {% if class %}{{ class }}{% endif %}" {% if id %}id="{{ id }}"{% endif %}>
+<div class="card stats-card {% if class %}{{ class }}{% endif %}"
+     {% if id %}id="{{ id }}"{% endif %}>
     <div class="card-body text-center">
         {% if icon %}
-        <i class="{{ icon }} {% if icon_size %}icon-{{ icon_size }}{% else %}icon-lg{% endif %} {% if icon_color %}text-{{ icon_color }}{% endif %} mb-2"></i>
+            <i class="{{ icon }} {% if icon_size %}icon-{{ icon_size }}{% else %}icon-lg{% endif %} {% if icon_color %}text-{{ icon_color }}{% endif %} mb-2"></i>
         {% endif %}
-        
-        {% if value is not None %}
-        <h4 class="mb-1">{{ value }}</h4>
-        {% endif %}
-        
-        {% if label %}
-        <small class="text-muted">{{ label }}</small>
-        {% endif %}
-        
+        {% if value is not None %}<h4 class="mb-1">{{ value }}</h4>{% endif %}
+        {% if label %}<small class="text-muted">{{ label }}</small>{% endif %}
         {% if url %}
-        <div class="mt-2">
-            <a href="{{ url }}" class="btn btn-sm btn-outline-primary">عرض التفاصيل</a>
-        </div>
+            <div class="mt-2">
+                <a href="{{ url }}" class="btn btn-sm btn-outline-primary">عرض التفاصيل</a>
+            </div>
         {% endif %}
     </div>
 </div>

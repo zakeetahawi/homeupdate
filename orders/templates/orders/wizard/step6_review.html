@@ -1,507 +1,546 @@
 {% extends 'orders/wizard/base_wizard.html' %}
 {% load static decimal_filters %}
-
 {% block wizard_content %}
-<div class="alert alert-success mb-4">
-    <h5 class="alert-heading">
-        <i class="fas fa-check-circle me-2"></i>مراجعة الطلب قبل التأكيد
-    </h5>
-    <p class="mb-0">يرجى مراجعة جميع التفاصيل قبل تأكيد إنشاء الطلب.</p>
-</div>
-
-<!-- Customer & Order Info -->
-<div class="card mb-4">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            <i class="fas fa-info-circle me-2"></i>معلومات الطلب الأساسية
+    <div class="alert alert-success mb-4">
+        <h5 class="alert-heading">
+            <i class="fas fa-check-circle me-2"></i>مراجعة الطلب قبل التأكيد
         </h5>
-        <a href="{% url 'orders:wizard_step' step=1 %}" class="btn btn-sm btn-outline-primary">
-            <i class="fas fa-edit me-1"></i>تعديل
-        </a>
+        <p class="mb-0">يرجى مراجعة جميع التفاصيل قبل تأكيد إنشاء الطلب.</p>
     </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <table class="table table-borderless table-sm">
-                    <tr>
-                        <th width="40%">العميل:</th>
-                        <td>{{ draft.customer.name }}</td>
-                    </tr>
-                    <tr>
-                        <th>الهاتف:</th>
-                        <td>{{ draft.customer.phone }}</td>
-                    </tr>
-                    <tr>
-                        <th>الفرع:</th>
-                        <td>{{ draft.branch.name }}</td>
-                    </tr>
-                    <tr>
-                        <th>البائع:</th>
-                        <td>{{ draft.salesperson.name }}</td>
-                    </tr>
-                </table>
-            </div>
-            <div class="col-md-6">
-                <table class="table table-borderless table-sm">
-                    <tr>
-                        <th width="40%">وضع العميل:</th>
-                        <td>
-                            {% if draft.status == 'vip' %}
-                                <span class="badge bg-warning">VIP</span>
-                            {% else %}
-                                <span class="badge bg-secondary">عادي</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>نوع الطلب:</th>
-                        <td><span class="badge bg-primary">{{ draft.get_selected_type_display }}</span></td>
-                    </tr>
-                    {% if draft.notes %}
-                    <tr>
-                        <th>ملاحظات:</th>
-                        <td>{{ draft.notes }}</td>
-                    </tr>
-                    {% endif %}
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Order Items -->
-<div class="card mb-4">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            <i class="fas fa-shopping-cart me-2"></i>عناصر الطلب ({{ items.count }})
-        </h5>
-        <a href="{% url 'orders:wizard_step' step=3 %}" class="btn btn-sm btn-outline-primary">
-            <i class="fas fa-edit me-1"></i>تعديل
-        </a>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>المنتج</th>
-                        <th>الكمية</th>
-                        <th>السعر</th>
-                        <th>الخصم</th>
-                        <th>الإجمالي</th>
-                        <th>النهائي</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in items %}
-                    <tr>
-                        <td>{{ item.product.name }}</td>
-                        <td>{{ item.quantity|clean_decimal:3 }}</td>
-                        <td>{{ item.unit_price|format_currency }}</td>
-                        <td>{{ item.discount_percentage|format_percentage }}</td>
-                        <td>{{ item.total_price|format_currency }}</td>
-                        <td class="fw-bold">{{ item.final_price|format_currency }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot class="table-light">
-                    <tr>
-                        <th colspan="4" class="text-end">المجموع قبل الخصم:</th>
-                        <th colspan="2">{{ totals.subtotal|format_currency }}</th>
-                    </tr>
-                    <tr>
-                        <th colspan="4" class="text-end text-danger">إجمالي الخصم:</th>
-                        <th colspan="2" class="text-danger">{{ totals.total_discount|format_currency }}</th>
-                    </tr>
-                    <tr>
-                        <th colspan="4" class="text-end">المجموع النهائي:</th>
-                        <th colspan="2" class="text-success h5">{{ totals.final_total|format_currency }}</th>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Invoice & Payment Info -->
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">
-                    <i class="fas fa-file-invoice me-2"></i>تفاصيل المرجع
-                </h6>
-                <a href="{% url 'orders:wizard_step' step=4 %}" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-edit"></i>
-                </a>
-            </div>
-            <div class="card-body">
-                <table class="table table-borderless table-sm">
-                    {% if draft.invoice_number %}
-                    <tr>
-                        <th>رقم المرجع الرئيسي:</th>
-                        <td>{{ draft.invoice_number }}</td>
-                    </tr>
-                    {% endif %}
-                    {% if draft.contract_number %}
-                    <tr>
-                        <th>رقم العقد:</th>
-                        <td><strong class="text-primary">{{ draft.contract_number }}</strong></td>
-                    </tr>
-                    {% endif %}
-                    {% if draft.contract_type %}
-                    <tr>
-                        <th>نوع العقد:</th>
-                        <td>
-                            {% if draft.contract_type == 'electronic' %}
-                                <span class="badge bg-info">إلكتروني</span>
-                            {% elif draft.contract_type == 'pdf' %}
-                                <span class="badge bg-warning">PDF مرفوع</span>
-                            {% else %}
-                                <span class="badge bg-secondary">{{ draft.contract_type }}</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endif %}
-                </table>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">
-                    <i class="fas fa-money-bill-wave me-2"></i>معلومات الدفع
-                </h6>
-                <a href="{% url 'orders:wizard_step' step=4 %}" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-edit"></i>
-                </a>
-            </div>
-            <div class="card-body">
-                <table class="table table-borderless table-sm">
-                    <tr>
-                        <th>طريقة الدفع:</th>
-                        <td>{{ draft.get_payment_method_display }}</td>
-                    </tr>
-                    <tr>
-                        <th>المبلغ المدفوع:</th>
-                        <td class="fw-bold text-success">{{ draft.paid_amount|format_currency }}</td>
-                    </tr>
-                    <tr>
-                        <th>المتبقي:</th>
-                        <td class="fw-bold text-danger">{{ totals.remaining|format_currency }}</td>
-                    </tr>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Inspection File (if exists) -->
-{% if inspection %}
-<div class="card mb-4">
-    <div class="card-header bg-light">
-        <h5 class="mb-0">
-            <i class="fas fa-clipboard-check me-2"></i>المعاينة المرتبطة
-        </h5>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-8">
-                <table class="table table-borderless table-sm">
-                    <tr>
-                        <th width="30%">رقم المعاينة:</th>
-                        <td>{{ inspection.id }}</td>
-                    </tr>
-                    <tr>
-                        <th>التاريخ:</th>
-                        <td>{{ inspection.created_at|date:"Y-m-d H:i" }}</td>
-                    </tr>
-                    {% if inspection.notes %}
-                    <tr>
-                        <th>ملاحظات:</th>
-                        <td>{{ inspection.notes }}</td>
-                    </tr>
-                    {% endif %}
-                </table>
-            </div>
-            <div class="col-md-4 text-end">
-                {% if inspection_file_url %}
-                <a href="{{ inspection_file_url }}" target="_blank" class="btn btn-primary">
-                    <i class="fas fa-file-pdf me-2"></i>عرض ملف المعاينة
-                </a>
-                {% else %}
-                <p class="text-muted">لا يوجد ملف مرفق</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Contract PDF Preview (if exists) -->
-{% if contract_file_url %}
-<div class="card mb-4">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            <i class="fas fa-file-contract me-2"></i>ملف العقد
-            {% if draft.contract_number %}
-                <span class="text-primary">({{ draft.contract_number }})</span>
-            {% endif %}
-        </h5>
-        <div>
-            <a href="{{ contract_file_url }}" target="_blank" class="btn btn-primary btn-sm me-2">
-                <i class="fas fa-external-link-alt me-1"></i>فتح في نافذة جديدة
-            </a>
-            <a href="{{ contract_file_url }}" download class="btn btn-success btn-sm">
-                <i class="fas fa-download me-1"></i>تحميل
+    <!-- Customer & Order Info -->
+    <div class="card mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-info-circle me-2"></i>معلومات الطلب الأساسية
+            </h5>
+            <a href="{% url 'orders:wizard_step' step=1 %}"
+               class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-edit me-1"></i>تعديل
             </a>
         </div>
-    </div>
-    <div class="card-body p-0">
-        <div class="ratio ratio-16x9" style="height: 600px;">
-            <iframe src="{{ contract_file_url }}" 
-                    frameborder="0" 
-                    style="border: none;"
-                    allowfullscreen>
-            </iframe>
-        </div>
-    </div>
-    <div class="card-footer bg-light">
-        <div class="alert alert-info mb-0">
-            <i class="fas fa-info-circle me-2"></i>
-            يرجى مراجعة ملف العقد بعناية. إذا وجدت أي أخطاء، يمكنك العودة للخطوة السابقة لتعديلها.
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Contract Details (if exists) -->
-{% if curtains %}
-<div class="card mb-4">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            <i class="fas fa-file-contract me-2"></i>تفاصيل العقد الإلكتروني
-            {% if draft.contract_number %}
-                <span class="text-primary">({{ draft.contract_number }})</span>
-            {% endif %}
-            <span class="badge bg-info ms-2">{{ curtains.count }} ستارة</span>
-        </h5>
-        <a href="{% url 'orders:wizard_step' step=5 %}" class="btn btn-warning btn-sm">
-            <i class="fas fa-edit me-1"></i>تعديل العقد
-        </a>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            {% for curtain in curtains %}
-            <div class="col-md-6 mb-3">
-                <div class="border rounded p-3 h-100">
-                    <h6 class="text-primary border-bottom pb-2 mb-3">
-                        <i class="fas fa-th me-2"></i>{{ curtain.room_name }}
-                    </h6>
-                    
-                    <!-- القياسات -->
-                    <div class="mb-3">
-                        <strong class="d-block mb-2"><i class="fas fa-ruler-combined me-2"></i>القياسات:</strong>
-                        <div class="ms-3">
-                            <p class="mb-1"><small>العرض: {{ curtain.width }} م</small></p>
-                            <p class="mb-1"><small>الارتفاع: {{ curtain.height }} م</small></p>
-                            <p class="mb-1"><small class="text-success">المساحة: {{ curtain.area }} م²</small></p>
-                        </div>
-                    </div>
-                    
-                    <!-- نوع التركيب -->
-                    <div class="mb-3">
-                        <strong class="d-block mb-1"><i class="fas fa-tools me-2"></i>نوع التركيب:</strong>
-                        <span class="badge bg-secondary ms-3">{{ curtain.get_installation_type_display }}</span>
-                    </div>
-                    
-                    <!-- بيت الستارة إن وجد -->
-                    {% if curtain.curtain_box_width and curtain.curtain_box_depth %}
-                    <div class="mb-3">
-                        <strong class="d-block mb-2"><i class="fas fa-box me-2"></i>بيت الستارة:</strong>
-                        <div class="ms-3">
-                            <p class="mb-1"><small>العرض: {{ curtain.curtain_box_width }} سم</small></p>
-                            <p class="mb-0"><small>العمق: {{ curtain.curtain_box_depth }} سم</small></p>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- الأقمشة -->
-                    {% if curtain.fabrics.all %}
-                    <div class="mb-3">
-                        <strong class="d-block mb-2"><i class="fas fa-scroll me-2"></i>الأقمشة ({{ curtain.fabrics.count }}):</strong>
-                        <div class="ms-3">
-                            {% for fabric in curtain.fabrics.all %}
-                            <div class="border-start border-3 border-info ps-2 mb-2">
-                                <p class="mb-0"><small><strong>{{ fabric.get_fabric_type_display }}:</strong> {{ fabric.fabric_name }}</small></p>
-                                <p class="mb-0"><small class="text-muted">
-                                    {% if fabric.source == 'belt' or fabric.unit == 'piece' or 'حزام' in fabric.fabric_name %}
-                                        {{ fabric.pieces }} قطعة
-                                    {% else %}
-                                        {{ fabric.meters }} متر - {{ fabric.pieces }} قطعة
-                                    {% endif %}
-                                </small></p>
-                                {% if fabric.tailoring_type %}
-                                <p class="mb-0"><small class="text-muted">التفصيل: {{ fabric.get_tailoring_type_display }}</small></p>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <th width="40%">العميل:</th>
+                            <td>{{ draft.customer.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>الهاتف:</th>
+                            <td>{{ draft.customer.phone }}</td>
+                        </tr>
+                        <tr>
+                            <th>الفرع:</th>
+                            <td>{{ draft.branch.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>البائع:</th>
+                            <td>{{ draft.salesperson.name }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <th width="40%">وضع العميل:</th>
+                            <td>
+                                {% if draft.status == 'vip' %}
+                                    <span class="badge bg-warning">VIP</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">عادي</span>
                                 {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- الإكسسوارات -->
-                    {% if curtain.accessories.all %}
-                    <div class="mb-3">
-                        <strong class="d-block mb-2"><i class="fas fa-shapes me-2"></i>الإكسسوارات ({{ curtain.accessories.count }}):</strong>
-                        <div class="ms-3">
-                            {% for accessory in curtain.accessories.all %}
-                            <div class="border-start border-3 border-warning ps-2 mb-2">
-                                <p class="mb-0">
-                                    <small><strong>{{ accessory.accessory_name }}</strong></small>
-                                    {% if accessory.accessory_type %}
-                                        <span class="badge bg-warning text-dark ms-1">{{ accessory.accessory_type }}</span>
-                                    {% endif %}
-                                </p>
-                                <p class="mb-0">
-                                    <small class="text-muted">
-                                        {% if accessory.size and accessory.size > 0 %}
-                                            العدد: {{ accessory.count }} × المقاس: {{ accessory.size|stringformat:"g" }}م = {{ accessory.quantity|stringformat:"g" }}م
-                                        {% else %}
-                                            العدد: {{ accessory.count }} قطعة
-                                        {% endif %}
-                                    </small>
-                                </p>
-                                {% if accessory.color %}
-                                <p class="mb-0"><small class="text-muted">اللون: {{ accessory.color }}</small></p>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- الملاحظات -->
-                    {% if curtain.notes %}
-                    <div>
-                        <strong class="d-block mb-1"><i class="fas fa-sticky-note me-2"></i>ملاحظات:</strong>
-                        <p class="ms-3 mb-0"><small class="text-muted">{{ curtain.notes }}</small></p>
-                    </div>
-                    {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>نوع الطلب:</th>
+                            <td>
+                                <span class="badge bg-primary">{{ draft.get_selected_type_display }}</span>
+                            </td>
+                        </tr>
+                        {% if draft.notes %}
+                            <tr>
+                                <th>ملاحظات:</th>
+                                <td>{{ draft.notes }}</td>
+                            </tr>
+                        {% endif %}
+                    </table>
                 </div>
             </div>
-            {% endfor %}
         </div>
     </div>
-    <div class="card-footer bg-light">
-        <div class="alert alert-warning mb-0">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            يرجى مراجعة تفاصيل العقد بعناية. يمكنك العودة لتعديل أي معلومات قبل الحفظ النهائي.
+    <!-- Order Items -->
+    <div class="card mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-shopping-cart me-2"></i>عناصر الطلب ({{ items.count }})
+            </h5>
+            <a href="{% url 'orders:wizard_step' step=3 %}"
+               class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-edit me-1"></i>تعديل
+            </a>
         </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- Summary Box -->
-<div class="card mb-4 border-success">
-    <div class="card-header bg-success text-white">
-        <h5 class="mb-0">
-            <i class="fas fa-clipboard-list me-2"></i>ملخص الطلب النهائي
-        </h5>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <h6 class="text-primary mb-3">معلومات العميل والطلب</h6>
-                <table class="table table-sm table-borderless">
-                    <tr>
-                        <td width="40%" class="text-muted">العميل:</td>
-                        <td><strong>{{ draft.customer.name }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">الفرع:</td>
-                        <td>{{ draft.branch.name }}</td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">البائع:</td>
-                        <td>{{ draft.salesperson.name }}</td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">نوع الطلب:</td>
-                        <td><span class="badge bg-primary">{{ draft.get_selected_type_display }}</span></td>
-                    </tr>
-                    {% if draft.contract_number %}
-                    <tr>
-                        <td class="text-muted">رقم العقد:</td>
-                        <td><strong class="text-success">{{ draft.contract_number }}</strong></td>
-                    </tr>
-                    {% endif %}
-                </table>
-            </div>
-            <div class="col-md-6">
-                <h6 class="text-primary mb-3">الملخص المالي</h6>
-                <table class="table table-sm table-borderless">
-                    <tr>
-                        <td width="40%" class="text-muted">عدد المنتجات:</td>
-                        <td><strong>{{ items.count }}</strong></td>
-                    </tr>
-                    {% if curtains %}
-                    <tr>
-                        <td class="text-muted">عدد الستائر:</td>
-                        <td><strong>{{ curtains.count }}</strong></td>
-                    </tr>
-                    {% endif %}
-                    <tr>
-                        <td class="text-muted">الإجمالي:</td>
-                        <td><strong>{{ totals.subtotal|format_currency }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">الخصم:</td>
-                        <td class="text-danger"><strong>{{ totals.total_discount|format_currency }}</strong></td>
-                    </tr>
-                    <tr class="border-top">
-                        <td class="text-muted"><strong>المبلغ النهائي:</strong></td>
-                        <td><strong class="text-success fs-5">{{ totals.final_total|format_currency }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">المدفوع:</td>
-                        <td><strong class="text-success">{{ draft.paid_amount|format_currency }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">المتبقي:</td>
-                        <td><strong class="text-danger">{{ totals.remaining|format_currency }}</strong></td>
-                    </tr>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>المنتج</th>
+                            <th>الكمية</th>
+                            <th>السعر</th>
+                            <th>الخصم</th>
+                            <th>الإجمالي</th>
+                            <th>النهائي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                            <tr>
+                                <td>{{ item.product.name }}</td>
+                                <td>{{ item.quantity|clean_decimal:3 }}</td>
+                                <td>{{ item.unit_price|format_currency }}</td>
+                                <td>{{ item.discount_percentage|format_percentage }}</td>
+                                <td>{{ item.total_price|format_currency }}</td>
+                                <td class="fw-bold">{{ item.final_price|format_currency }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <th colspan="4" class="text-end">المجموع قبل الخصم:</th>
+                            <th colspan="2">{{ totals.subtotal|format_currency }}</th>
+                        </tr>
+                        <tr>
+                            <th colspan="4" class="text-end text-danger">إجمالي الخصم:</th>
+                            <th colspan="2" class="text-danger">{{ totals.total_discount|format_currency }}</th>
+                        </tr>
+                        <tr>
+                            <th colspan="4" class="text-end">المجموع النهائي:</th>
+                            <th colspan="2" class="text-success h5">{{ totals.final_total|format_currency }}</th>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
     </div>
-</div>
-
-<!-- Actions -->
-<div class="wizard-actions">
-    <div>
-        <a href="{% url 'orders:wizard_cancel' %}" class="btn btn-wizard btn-wizard-danger me-2">
-            <i class="fas fa-times me-2"></i>إلغاء
-        </a>
-        <a href="{% url 'orders:wizard_step' step=5 %}" class="btn btn-wizard btn-wizard-secondary">
-            <i class="fas fa-arrow-right me-2"></i>السابق
-        </a>
+    <!-- Invoice & Payment Info -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-file-invoice me-2"></i>تفاصيل المرجع
+                    </h6>
+                    <a href="{% url 'orders:wizard_step' step=4 %}"
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless table-sm">
+                        {% if draft.invoice_number %}
+                            <tr>
+                                <th>رقم المرجع الرئيسي:</th>
+                                <td>{{ draft.invoice_number }}</td>
+                            </tr>
+                        {% endif %}
+                        {% if draft.contract_number %}
+                            <tr>
+                                <th>رقم العقد:</th>
+                                <td>
+                                    <strong class="text-primary">{{ draft.contract_number }}</strong>
+                                </td>
+                            </tr>
+                        {% endif %}
+                        {% if draft.contract_type %}
+                            <tr>
+                                <th>نوع العقد:</th>
+                                <td>
+                                    {% if draft.contract_type == 'electronic' %}
+                                        <span class="badge bg-info">إلكتروني</span>
+                                    {% elif draft.contract_type == 'pdf' %}
+                                        <span class="badge bg-warning">PDF مرفوع</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ draft.contract_type }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-money-bill-wave me-2"></i>معلومات الدفع
+                    </h6>
+                    <a href="{% url 'orders:wizard_step' step=4 %}"
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <th>طريقة الدفع:</th>
+                            <td>{{ draft.get_payment_method_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>المبلغ المدفوع:</th>
+                            <td class="fw-bold text-success">{{ draft.paid_amount|format_currency }}</td>
+                        </tr>
+                        <tr>
+                            <th>المتبقي:</th>
+                            <td class="fw-bold text-danger">{{ totals.remaining|format_currency }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
-    <div>
-        <button type="button" class="btn btn-success btn-lg px-5 shadow-lg" onclick="finalizeOrder()">
-            <i class="fas fa-check-circle me-2"></i>تأكيد وإنشاء الطلب
-        </button>
+    <!-- Inspection File (if exists) -->
+    {% if inspection %}
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-clipboard-check me-2"></i>المعاينة المرتبطة
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <table class="table table-borderless table-sm">
+                            <tr>
+                                <th width="30%">رقم المعاينة:</th>
+                                <td>{{ inspection.id }}</td>
+                            </tr>
+                            <tr>
+                                <th>التاريخ:</th>
+                                <td>{{ inspection.created_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                            {% if inspection.notes %}
+                                <tr>
+                                    <th>ملاحظات:</th>
+                                    <td>{{ inspection.notes }}</td>
+                                </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        {% if inspection_file_url %}
+                            <a href="{{ inspection_file_url }}"
+                               target="_blank"
+                               class="btn btn-primary">
+                                <i class="fas fa-file-pdf me-2"></i>عرض ملف المعاينة
+                            </a>
+                        {% else %}
+                            <p class="text-muted">لا يوجد ملف مرفق</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    <!-- Contract PDF Preview (if exists) -->
+    {% if contract_file_url %}
+        <div class="card mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-contract me-2"></i>ملف العقد
+                    {% if draft.contract_number %}<span class="text-primary">({{ draft.contract_number }})</span>{% endif %}
+                </h5>
+                <div>
+                    <a href="{{ contract_file_url }}"
+                       target="_blank"
+                       class="btn btn-primary btn-sm me-2">
+                        <i class="fas fa-external-link-alt me-1"></i>فتح في نافذة جديدة
+                    </a>
+                    <a href="{{ contract_file_url }}"
+                       download
+                       class="btn btn-success btn-sm">
+                        <i class="fas fa-download me-1"></i>تحميل
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="ratio ratio-16x9" style="height: 600px;">
+                    <iframe src="{{ contract_file_url }}"
+                            frameborder="0"
+                            style="border: none"
+                            allowfullscreen>
+                    </iframe>
+                </div>
+            </div>
+            <div class="card-footer bg-light">
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    يرجى مراجعة ملف العقد بعناية. إذا وجدت أي أخطاء، يمكنك العودة للخطوة السابقة لتعديلها.
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    <!-- Contract Details (if exists) -->
+    {% if curtains %}
+        <div class="card mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-contract me-2"></i>تفاصيل العقد الإلكتروني
+                    {% if draft.contract_number %}<span class="text-primary">({{ draft.contract_number }})</span>{% endif %}
+                    <span class="badge bg-info ms-2">{{ curtains.count }} ستارة</span>
+                </h5>
+                <a href="{% url 'orders:wizard_step' step=5 %}"
+                   class="btn btn-warning btn-sm">
+                    <i class="fas fa-edit me-1"></i>تعديل العقد
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for curtain in curtains %}
+                        <div class="col-md-6 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-th me-2"></i>{{ curtain.room_name }}
+                                </h6>
+                                <!-- القياسات -->
+                                <div class="mb-3">
+                                    <strong class="d-block mb-2"><i class="fas fa-ruler-combined me-2"></i>القياسات:</strong>
+                                    <div class="ms-3">
+                                        <p class="mb-1">
+                                            <small>العرض: {{ curtain.width }} م</small>
+                                        </p>
+                                        <p class="mb-1">
+                                            <small>الارتفاع: {{ curtain.height }} م</small>
+                                        </p>
+                                        <p class="mb-1">
+                                            <small class="text-success">المساحة: {{ curtain.area }} م²</small>
+                                        </p>
+                                    </div>
+                                </div>
+                                <!-- نوع التركيب -->
+                                <div class="mb-3">
+                                    <strong class="d-block mb-1"><i class="fas fa-tools me-2"></i>نوع التركيب:</strong>
+                                    <span class="badge bg-secondary ms-3">{{ curtain.get_installation_type_display }}</span>
+                                </div>
+                                <!-- بيت الستارة إن وجد -->
+                                {% if curtain.curtain_box_width and curtain.curtain_box_depth %}
+                                    <div class="mb-3">
+                                        <strong class="d-block mb-2"><i class="fas fa-box me-2"></i>بيت الستارة:</strong>
+                                        <div class="ms-3">
+                                            <p class="mb-1">
+                                                <small>العرض: {{ curtain.curtain_box_width }} سم</small>
+                                            </p>
+                                            <p class="mb-0">
+                                                <small>العمق: {{ curtain.curtain_box_depth }} سم</small>
+                                            </p>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                <!-- الأقمشة -->
+                                {% if curtain.fabrics.all %}
+                                    <div class="mb-3">
+                                        <strong class="d-block mb-2"><i class="fas fa-scroll me-2"></i>الأقمشة ({{ curtain.fabrics.count }}):</strong>
+                                        <div class="ms-3">
+                                            {% for fabric in curtain.fabrics.all %}
+                                                <div class="border-start border-3 border-info ps-2 mb-2">
+                                                    <p class="mb-0">
+                                                        <small><strong>{{ fabric.get_fabric_type_display }}:</strong> {{ fabric.fabric_name }}</small>
+                                                    </p>
+                                                    <p class="mb-0">
+                                                        <small class="text-muted">
+                                                            {% if fabric.source == 'belt' or fabric.unit == 'piece' or 'حزام' in fabric.fabric_name %}
+                                                                {{ fabric.pieces }} قطعة
+                                                            {% else %}
+                                                                {{ fabric.meters }} متر - {{ fabric.pieces }} قطعة
+                                                            {% endif %}
+                                                        </small>
+                                                    </p>
+                                                    {% if fabric.tailoring_type %}
+                                                        <p class="mb-0">
+                                                            <small class="text-muted">التفصيل: {{ fabric.get_tailoring_type_display }}</small>
+                                                        </p>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                <!-- الإكسسوارات -->
+                                {% if curtain.accessories.all %}
+                                    <div class="mb-3">
+                                        <strong class="d-block mb-2"><i class="fas fa-shapes me-2"></i>الإكسسوارات ({{ curtain.accessories.count }}):</strong>
+                                        <div class="ms-3">
+                                            {% for accessory in curtain.accessories.all %}
+                                                <div class="border-start border-3 border-warning ps-2 mb-2">
+                                                    <p class="mb-0">
+                                                        <small><strong>{{ accessory.accessory_name }}</strong></small>
+                                                        {% if accessory.accessory_type %}
+                                                            <span class="badge bg-warning text-dark ms-1">{{ accessory.accessory_type }}</span>
+                                                        {% endif %}
+                                                    </p>
+                                                    <p class="mb-0">
+                                                        <small class="text-muted">
+                                                            {% if accessory.size and accessory.size > 0 %}
+                                                                العدد: {{ accessory.count }} × المقاس: {{ accessory.size|stringformat:"g" }}م = {{ accessory.quantity|stringformat:"g" }}م
+                                                            {% else %}
+                                                                العدد: {{ accessory.count }} قطعة
+                                                            {% endif %}
+                                                        </small>
+                                                    </p>
+                                                    {% if accessory.color %}
+                                                        <p class="mb-0">
+                                                            <small class="text-muted">اللون: {{ accessory.color }}</small>
+                                                        </p>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                <!-- الملاحظات -->
+                                {% if curtain.notes %}
+                                    <div>
+                                        <strong class="d-block mb-1"><i class="fas fa-sticky-note me-2"></i>ملاحظات:</strong>
+                                        <p class="ms-3 mb-0">
+                                            <small class="text-muted">{{ curtain.notes }}</small>
+                                        </p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer bg-light">
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    يرجى مراجعة تفاصيل العقد بعناية. يمكنك العودة لتعديل أي معلومات قبل الحفظ النهائي.
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    <!-- Summary Box -->
+    <div class="card mb-4 border-success">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-clipboard-list me-2"></i>ملخص الطلب النهائي
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-primary mb-3">معلومات العميل والطلب</h6>
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td width="40%" class="text-muted">العميل:</td>
+                            <td>
+                                <strong>{{ draft.customer.name }}</strong>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">الفرع:</td>
+                            <td>{{ draft.branch.name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">البائع:</td>
+                            <td>{{ draft.salesperson.name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">نوع الطلب:</td>
+                            <td>
+                                <span class="badge bg-primary">{{ draft.get_selected_type_display }}</span>
+                            </td>
+                        </tr>
+                        {% if draft.contract_number %}
+                            <tr>
+                                <td class="text-muted">رقم العقد:</td>
+                                <td>
+                                    <strong class="text-success">{{ draft.contract_number }}</strong>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-primary mb-3">الملخص المالي</h6>
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td width="40%" class="text-muted">عدد المنتجات:</td>
+                            <td>
+                                <strong>{{ items.count }}</strong>
+                            </td>
+                        </tr>
+                        {% if curtains %}
+                            <tr>
+                                <td class="text-muted">عدد الستائر:</td>
+                                <td>
+                                    <strong>{{ curtains.count }}</strong>
+                                </td>
+                            </tr>
+                        {% endif %}
+                        <tr>
+                            <td class="text-muted">الإجمالي:</td>
+                            <td>
+                                <strong>{{ totals.subtotal|format_currency }}</strong>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">الخصم:</td>
+                            <td class="text-danger">
+                                <strong>{{ totals.total_discount|format_currency }}</strong>
+                            </td>
+                        </tr>
+                        <tr class="border-top">
+                            <td class="text-muted">
+                                <strong>المبلغ النهائي:</strong>
+                            </td>
+                            <td>
+                                <strong class="text-success fs-5">{{ totals.final_total|format_currency }}</strong>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">المدفوع:</td>
+                            <td>
+                                <strong class="text-success">{{ draft.paid_amount|format_currency }}</strong>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">المتبقي:</td>
+                            <td>
+                                <strong class="text-danger">{{ totals.remaining|format_currency }}</strong>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+    <!-- Actions -->
+    <div class="wizard-actions">
+        <div>
+            <a href="{% url 'orders:wizard_cancel' %}"
+               class="btn btn-wizard btn-wizard-danger me-2">
+                <i class="fas fa-times me-2"></i>إلغاء
+            </a>
+            <a href="{% url 'orders:wizard_step' step=5 %}"
+               class="btn btn-wizard btn-wizard-secondary">
+                <i class="fas fa-arrow-right me-2"></i>السابق
+            </a>
+        </div>
+        <div>
+            <button type="button"
+                    class="btn btn-success btn-lg px-5 shadow-lg"
+                    onclick="finalizeOrder()">
+                <i class="fas fa-check-circle me-2"></i>تأكيد وإنشاء الطلب
+            </button>
+        </div>
+    </div>
 {% endblock %}
-
 {% block extra_js %}
-{{ block.super }}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script>
+    {{ block.super }}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
 function finalizeOrder() {
     Swal.fire({
         title: 'تأكيد إنشاء الطلب',
@@ -549,5 +588,5 @@ function finalizeOrder() {
         }
     });
 }
-</script>
+    </script>
 {% endblock %}

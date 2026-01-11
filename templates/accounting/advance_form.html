@@ -1,147 +1,155 @@
 {% extends 'base.html' %}
 {% load static %}
-
-{% block title %}{% if advance %}تعديل عربون{% else %}عربون جديد{% endif %}{% endblock %}
-
+{% block title %}
+    {% if advance %}
+        تعديل عربون
+    {% else %}
+        عربون جديد
+    {% endif %}
+{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">المحاسبة</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'accounting:advance_list' %}">العربونات</a></li>
-                    <li class="breadcrumb-item active">{% if advance %}تعديل{% else %}عربون جديد{% endif %}</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="mb-0">
-                <i class="fas fa-hand-holding-usd me-2"></i>
-                {% if advance %}تعديل عربون{% else %}تسجيل عربون جديد{% endif %}
-            </h2>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-body">
-                    <form method="post" novalidate>
-                        {% csrf_token %}
-                        
-                        {% if customer %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-user me-2"></i>
-                            عربون للعميل: <strong>{{ customer.name }}</strong>
-                        </div>
-                        <input type="hidden" name="customer" value="{{ customer.pk }}">
-                        {% else %}
-                        <div class="mb-3">
-                            <label for="id_customer" class="form-label">العميل <span class="text-danger">*</span></label>
-                            {{ form.customer }}
-                            {% if form.customer.errors %}
-                            <div class="invalid-feedback d-block">{{ form.customer.errors.0 }}</div>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'accounting:dashboard' %}">المحاسبة</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'accounting:advance_list' %}">العربونات</a>
+                        </li>
+                        <li class="breadcrumb-item active">
+                            {% if advance %}
+                                تعديل
+                            {% else %}
+                                عربون جديد
                             {% endif %}
-                        </div>
-                        {% endif %}
-                        
-                        <div class="row">
-                            <div class="col-md-6">
+                        </li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="mb-0">
+                    <i class="fas fa-hand-holding-usd me-2"></i>
+                    {% if advance %}
+                        تعديل عربون
+                    {% else %}
+                        تسجيل عربون جديد
+                    {% endif %}
+                </h2>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+                            {% if customer %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-user me-2"></i>
+                                    عربون للعميل: <strong>{{ customer.name }}</strong>
+                                </div>
+                                <input type="hidden" name="customer" value="{{ customer.pk }}">
+                            {% else %}
                                 <div class="mb-3">
-                                    <label for="id_amount" class="form-label">المبلغ <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        {{ form.amount }}
-                                        <span class="input-group-text">{{ currency_symbol }}</span>
+                                    <label for="id_customer" class="form-label">
+                                        العميل <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.customer }}
+                                    {% if form.customer.errors %}<div class="invalid-feedback d-block">{{ form.customer.errors.0 }}</div>{% endif %}
+                                </div>
+                            {% endif %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="id_amount" class="form-label">
+                                            المبلغ <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.amount }}
+                                            <span class="input-group-text">{{ currency_symbol }}</span>
+                                        </div>
+                                        {% if form.amount.errors %}<div class="invalid-feedback d-block">{{ form.amount.errors.0 }}</div>{% endif %}
                                     </div>
-                                    {% if form.amount.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.amount.errors.0 }}</div>
-                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="id_payment_method" class="form-label">
+                                            طريقة الدفع <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.payment_method }}
+                                        {% if form.payment_method.errors %}
+                                            <div class="invalid-feedback d-block">{{ form.payment_method.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="id_payment_method" class="form-label">طريقة الدفع <span class="text-danger">*</span></label>
-                                    {{ form.payment_method }}
-                                    {% if form.payment_method.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.payment_method.errors.0 }}</div>
-                                    {% endif %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="id_receipt_number" class="form-label">رقم الإيصال</label>
+                                        {{ form.receipt_number }}
+                                        {% if form.receipt_number.errors %}
+                                            <div class="invalid-feedback d-block">{{ form.receipt_number.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="id_branch" class="form-label">الفرع</label>
+                                        {{ form.branch }}
+                                        {% if form.branch.errors %}<div class="invalid-feedback d-block">{{ form.branch.errors.0 }}</div>{% endif %}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="id_receipt_number" class="form-label">رقم الإيصال</label>
-                                    {{ form.receipt_number }}
-                                    {% if form.receipt_number.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.receipt_number.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
+                            <div class="mb-3">
+                                <label for="id_notes" class="form-label">ملاحظات</label>
+                                {{ form.notes }}
+                                {% if form.notes.errors %}<div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>{% endif %}
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="id_branch" class="form-label">الفرع</label>
-                                    {{ form.branch }}
-                                    {% if form.branch.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.branch.errors.0 }}</div>
-                                    {% endif %}
-                                </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-check me-1"></i> حفظ العربون
+                                </button>
+                                <a href="{% url 'accounting:advance_list' %}"
+                                   class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i> إلغاء
+                                </a>
                             </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="id_notes" class="form-label">ملاحظات</label>
-                            {{ form.notes }}
-                            {% if form.notes.errors %}
-                            <div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-check me-1"></i> حفظ العربون
-                            </button>
-                            <a href="{% url 'accounting:advance_list' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times me-1"></i> إلغاء
-                            </a>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-lg-4">
-            <div class="card bg-light">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        معلومات
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <p class="small text-muted mb-2">
-                        <strong>العربوناتة:</strong> هي مبلغ يدفعه العميل مقدماً قبل تنفيذ الطلب.
-                    </p>
-                    <p class="small text-muted mb-2">
-                        <strong>استخدام العربون:</strong> يمكن خصم العربوناتة من أي طلب للعميل لاحقاً.
-                    </p>
-                    <p class="small text-muted mb-0">
-                        <strong>الإلغاء:</strong> يمكن إلغاء العربوناتة قبل استخدامها وإرجاع المبلغ للعميل.
-                    </p>
+            <div class="col-lg-4">
+                <div class="card bg-light">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            معلومات
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted mb-2">
+                            <strong>العربوناتة:</strong> هي مبلغ يدفعه العميل مقدماً قبل تنفيذ الطلب.
+                        </p>
+                        <p class="small text-muted mb-2">
+                            <strong>استخدام العربون:</strong> يمكن خصم العربوناتة من أي طلب للعميل لاحقاً.
+                        </p>
+                        <p class="small text-muted mb-0">
+                            <strong>الإلغاء:</strong> يمكن إلغاء العربوناتة قبل استخدامها وإرجاع المبلغ للعميل.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<style>
+    <style>
 .form-control, .form-select {
     border-radius: 0.375rem;
 }
-</style>
+    </style>
 {% endblock %}

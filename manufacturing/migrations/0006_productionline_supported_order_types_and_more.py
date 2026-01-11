@@ -6,16 +6,21 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('manufacturing', '0005_productionline_manufacturingorder_production_line'),
+        ("manufacturing", "0005_productionline_manufacturingorder_production_line"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='productionline',
-            name='supported_order_types',
-            field=models.JSONField(blank=True, default=list, help_text='أنواع الطلبات التي يمكن لهذا الخط التعامل معها', verbose_name='أنواع الطلبات المدعومة'),
+            model_name="productionline",
+            name="supported_order_types",
+            field=models.JSONField(
+                blank=True,
+                default=list,
+                help_text="أنواع الطلبات التي يمكن لهذا الخط التعامل معها",
+                verbose_name="أنواع الطلبات المدعومة",
+            ),
         ),
         migrations.DeleteModel(
-            name='ManufacturingDisplaySettings',
+            name="ManufacturingDisplaySettings",
         ),
     ]

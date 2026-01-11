@@ -2,13 +2,13 @@
 {% load static %}
 {% load widget_tweaks %}
 {% load i18n %}
-
 {% block title %}تعديل الطلب {{ order.order_number }}{% endblock %}
-
 {% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-<style>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+          rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+          rel="stylesheet" />
+    <style>
     .order-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -62,258 +62,229 @@
         padding: 15px;
         margin-top: 20px;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- رأس الصفحة -->
-    <div class="order-header">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h2><i class="fas fa-edit me-2"></i>تعديل الطلب {{ order.order_number }}</h2>
-                <p class="mb-0">العميل: {{ order.customer.name }} | الفرع: {{ order.branch.name }}</p>
-            </div>
-            <div class="col-md-4 text-end">
-                <a href="{% url 'orders:order_detail_by_number' order_number=order.order_number %}" 
-                   class="btn btn-light">
-                    <i class="fas fa-arrow-right me-2"></i>العودة للتفاصيل
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <form method="post" enctype="multipart/form-data" id="order-edit-form">
-        {% csrf_token %}
-        
-        <!-- معلومات الطلب الأساسية -->
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>معلومات الطلب الأساسية</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.customer.id_for_label }}" class="form-label">العميل</label>
-                            {% render_field form.customer class="form-control" %}
-                            {% if form.customer.errors %}
-                                <div class="text-danger">{{ form.customer.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.branch.id_for_label }}" class="form-label">الفرع</label>
-                            {% render_field form.branch class="form-control" %}
-                            {% if form.branch.errors %}
-                                <div class="text-danger">{{ form.branch.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.salesperson.id_for_label }}" class="form-label">البائع</label>
-                            {% render_field form.salesperson class="form-control" %}
-                            {% if form.salesperson.errors %}
-                                <div class="text-danger">{{ form.salesperson.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
+    <div class="container-fluid">
+        <!-- رأس الصفحة -->
+        <div class="order-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2>
+                        <i class="fas fa-edit me-2"></i>تعديل الطلب {{ order.order_number }}
+                    </h2>
+                    <p class="mb-0">العميل: {{ order.customer.name }} | الفرع: {{ order.branch.name }}</p>
                 </div>
-                
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.invoice_number.id_for_label }}" class="form-label">رقم الفاتورة</label>
-                            {% render_field form.invoice_number class="form-control" %}
-                            {% if form.invoice_number.errors %}
-                                <div class="text-danger">{{ form.invoice_number.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.contract_number.id_for_label }}" class="form-label">رقم العقد</label>
-                            {% render_field form.contract_number class="form-control" %}
-                            {% if form.contract_number.errors %}
-                                <div class="text-danger">{{ form.contract_number.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.invoice_number_2.id_for_label }}" class="form-label">رقم الفاتورة 2</label>
-                            {% render_field form.invoice_number_2 class="form-control" %}
-                            {% if form.invoice_number_2.errors %}
-                                <div class="text-danger">{{ form.invoice_number_2.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.contract_number_2.id_for_label }}" class="form-label">رقم العقد 2</label>
-                            {% render_field form.contract_number_2 class="form-control" %}
-                            {% if form.contract_number_2.errors %}
-                                <div class="text-danger">{{ form.contract_number_2.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.selected_types.id_for_label }}" class="form-label">نوع الطلب</label>
-                            {% render_field form.selected_types class="form-control readonly-field" %}
-                            <small class="text-muted">{{ form.selected_types.help_text }}</small>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.total_amount.id_for_label }}" class="form-label">إجمالي المبلغ</label>
-                            {% render_field form.total_amount class="form-control readonly-field" %}
-                            <small class="text-muted">{{ form.total_amount.help_text }}</small>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.paid_amount.id_for_label }}" class="form-label">المبلغ المدفوع</label>
-                            {% render_field form.paid_amount class="form-control" %}
-                            {% if form.paid_amount.errors %}
-                                <div class="text-danger">{{ form.paid_amount.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="form-group mb-3">
-                            <label for="{{ form.notes.id_for_label }}" class="form-label">ملاحظات الطلب</label>
-                            {% render_field form.notes class="form-control" %}
-                            {% if form.notes.errors %}
-                                <div class="text-danger">{{ form.notes.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
+                <div class="col-md-4 text-end">
+                    <a href="{% url 'orders:order_detail_by_number' order_number=order.order_number %}"
+                       class="btn btn-light">
+                        <i class="fas fa-arrow-right me-2"></i>العودة للتفاصيل
+                    </a>
                 </div>
             </div>
         </div>
-
-        <!-- عناصر الطلب -->
-        <div class="card mb-4">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-list me-2"></i>عناصر الطلب</h5>
-                <button type="button" class="btn btn-light btn-sm" id="add-item">
-                    <i class="fas fa-plus me-2"></i>إضافة عنصر
-                </button>
-            </div>
-            <div class="card-body">
-                {{ formset.management_form }}
-                
-                <div id="formset-container">
-                    {% for form in formset %}
-                        <div class="formset-item" data-form-index="{{ forloop.counter0 }}">
-                            <div class="row align-items-center">
-                                <div class="col-md-1">
-                                    <strong>#{{ forloop.counter }}</strong>
-                                    {% for hidden in form.hidden_fields %}
-                                        {{ hidden }}
-                                    {% endfor %}
-                                    {% if form.item_type %}
-                                        {{ form.item_type.as_hidden }}
-                                    {% else %}
-                                        <input type="hidden" name="{{ form.prefix }}-item_type" value="product">
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-group">
-                                        <label class="form-label">اسم المنتج</label>
-                                        {% render_field form.product class="form-control product-select" %}
-                                        {% if form.product.errors %}
-                                            <div class="text-danger">{{ form.product.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="col-md-2">
-                                    <div class="form-group">
-                                        <label class="form-label">الكمية</label>
-                                        {% render_field form.quantity class="form-control item-quantity" %}
-                                        {% if form.quantity.errors %}
-                                            <div class="text-danger">{{ form.quantity.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="col-md-2">
-                                    <div class="form-group">
-                                        <label class="form-label">سعر الوحدة</label>
-                                        {% render_field form.unit_price class="form-control item-price" %}
-                                        {% if form.unit_price.errors %}
-                                            <div class="text-danger">{{ form.unit_price.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-group">
-                                        <label class="form-label">ملاحظات</label>
-                                        {% render_field form.notes class="form-control" %}
-                                        {% if form.notes.errors %}
-                                            <div class="text-danger">{{ form.notes.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="col-md-1">
-                                    {% if form.DELETE %}
-                                        <div class="form-check">
-                                            {% render_field form.DELETE class="form-check-input delete-checkbox" %}
-                                            <label class="form-check-label text-danger">حذف</label>
-                                        </div>
-                                    {% else %}
-                                        <button type="button" class="btn btn-sm btn-remove-item remove-item">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
+        <form method="post" enctype="multipart/form-data" id="order-edit-form">
+            {% csrf_token %}
+            <!-- معلومات الطلب الأساسية -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>معلومات الطلب الأساسية
+                    </h5>
                 </div>
-                
-                <!-- حساب الإجمالي -->
-                <div class="total-calculation">
+                <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6><i class="fas fa-calculator me-2"></i>حساب الإجمالي</h6>
-                            <p class="mb-0">سيتم حساب المبلغ الإجمالي تلقائياً من عناصر الطلب</p>
+                            <div class="form-group mb-3">
+                                <label for="{{ form.customer.id_for_label }}" class="form-label">العميل</label>
+                                {% render_field form.customer class="form-control" %}
+                                {% if form.customer.errors %}<div class="text-danger">{{ form.customer.errors.0 }}</div>{% endif %}
+                            </div>
                         </div>
-                        <div class="col-md-6 text-end">
-                            <h4 class="mb-0">الإجمالي: <span id="calculated-total">{{ order.total_amount|floatformat:2 }}</span> ج.م</h4>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.branch.id_for_label }}" class="form-label">الفرع</label>
+                                {% render_field form.branch class="form-control" %}
+                                {% if form.branch.errors %}<div class="text-danger">{{ form.branch.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.salesperson.id_for_label }}" class="form-label">البائع</label>
+                                {% render_field form.salesperson class="form-control" %}
+                                {% if form.salesperson.errors %}<div class="text-danger">{{ form.salesperson.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.invoice_number.id_for_label }}" class="form-label">رقم الفاتورة</label>
+                                {% render_field form.invoice_number class="form-control" %}
+                                {% if form.invoice_number.errors %}<div class="text-danger">{{ form.invoice_number.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.contract_number.id_for_label }}" class="form-label">رقم العقد</label>
+                                {% render_field form.contract_number class="form-control" %}
+                                {% if form.contract_number.errors %}<div class="text-danger">{{ form.contract_number.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.invoice_number_2.id_for_label }}" class="form-label">رقم الفاتورة 2</label>
+                                {% render_field form.invoice_number_2 class="form-control" %}
+                                {% if form.invoice_number_2.errors %}<div class="text-danger">{{ form.invoice_number_2.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.contract_number_2.id_for_label }}" class="form-label">رقم العقد 2</label>
+                                {% render_field form.contract_number_2 class="form-control" %}
+                                {% if form.contract_number_2.errors %}<div class="text-danger">{{ form.contract_number_2.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.selected_types.id_for_label }}" class="form-label">نوع الطلب</label>
+                                {% render_field form.selected_types class="form-control readonly-field" %}
+                                <small class="text-muted">{{ form.selected_types.help_text }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.total_amount.id_for_label }}" class="form-label">إجمالي المبلغ</label>
+                                {% render_field form.total_amount class="form-control readonly-field" %}
+                                <small class="text-muted">{{ form.total_amount.help_text }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.paid_amount.id_for_label }}" class="form-label">المبلغ المدفوع</label>
+                                {% render_field form.paid_amount class="form-control" %}
+                                {% if form.paid_amount.errors %}<div class="text-danger">{{ form.paid_amount.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.notes.id_for_label }}" class="form-label">ملاحظات الطلب</label>
+                                {% render_field form.notes class="form-control" %}
+                                {% if form.notes.errors %}<div class="text-danger">{{ form.notes.errors.0 }}</div>{% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- أزرار الحفظ -->
-        <div class="card">
-            <div class="card-body text-center">
-                <button type="submit" class="btn btn-primary btn-lg me-3">
-                    <i class="fas fa-save me-2"></i>حفظ التعديلات
-                </button>
-                <a href="{% url 'orders:order_detail_by_number' order_number=order.order_number %}" 
-                   class="btn btn-secondary btn-lg">
-                    <i class="fas fa-times me-2"></i>إلغاء
-                </a>
+            <!-- عناصر الطلب -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>عناصر الطلب
+                    </h5>
+                    <button type="button" class="btn btn-light btn-sm" id="add-item">
+                        <i class="fas fa-plus me-2"></i>إضافة عنصر
+                    </button>
+                </div>
+                <div class="card-body">
+                    {{ formset.management_form }}
+                    <div id="formset-container">
+                        {% for form in formset %}
+                            <div class="formset-item" data-form-index="{{ forloop.counter0 }}">
+                                <div class="row align-items-center">
+                                    <div class="col-md-1">
+                                        <strong>#{{ forloop.counter }}</strong>
+                                        {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                                        {% if form.item_type %}
+                                            {{ form.item_type.as_hidden }}
+                                        {% else %}
+                                            <input type="hidden" name="{{ form.prefix }}-item_type" value="product">
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">اسم المنتج</label>
+                                            {% render_field form.product class="form-control product-select" %}
+                                            {% if form.product.errors %}<div class="text-danger">{{ form.product.errors.0 }}</div>{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label class="form-label">الكمية</label>
+                                            {% render_field form.quantity class="form-control item-quantity" %}
+                                            {% if form.quantity.errors %}<div class="text-danger">{{ form.quantity.errors.0 }}</div>{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label class="form-label">سعر الوحدة</label>
+                                            {% render_field form.unit_price class="form-control item-price" %}
+                                            {% if form.unit_price.errors %}<div class="text-danger">{{ form.unit_price.errors.0 }}</div>{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">ملاحظات</label>
+                                            {% render_field form.notes class="form-control" %}
+                                            {% if form.notes.errors %}<div class="text-danger">{{ form.notes.errors.0 }}</div>{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1">
+                                        {% if form.DELETE %}
+                                            <div class="form-check">
+                                                {% render_field form.DELETE class="form-check-input delete-checkbox" %}
+                                                <label class="form-check-label text-danger">حذف</label>
+                                            </div>
+                                        {% else %}
+                                            <button type="button" class="btn btn-sm btn-remove-item remove-item">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <!-- حساب الإجمالي -->
+                    <div class="total-calculation">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>
+                                    <i class="fas fa-calculator me-2"></i>حساب الإجمالي
+                                </h6>
+                                <p class="mb-0">سيتم حساب المبلغ الإجمالي تلقائياً من عناصر الطلب</p>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <h4 class="mb-0">
+                                    الإجمالي: <span id="calculated-total">{{ order.total_amount|floatformat:2 }}</span> ج.م
+                                </h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </form>
-</div>
+            <!-- أزرار الحفظ -->
+            <div class="card">
+                <div class="card-body text-center">
+                    <button type="submit" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-save me-2"></i>حفظ التعديلات
+                    </button>
+                    <a href="{% url 'orders:order_detail_by_number' order_number=order.order_number %}"
+                       class="btn btn-secondary btn-lg">
+                        <i class="fas fa-times me-2"></i>إلغاء
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
 $(document).ready(function() {
 
     // متغيرات للـ formset
@@ -475,5 +446,5 @@ $(document).ready(function() {
         }
     });
 });
-</script>
+    </script>
 {% endblock %}

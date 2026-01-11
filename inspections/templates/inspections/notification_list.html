@@ -1,116 +1,103 @@
 {% extends 'base.html' %}
 {% load i18n %}
-
-{% block title %}{% trans 'تنبيهات المعاينات' %}{% endblock %}
-
-{% block content %}
-<div class="container mt-4">
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <h2>{% trans 'تنبيهات المعاينات' %}</h2>
-        </div>
-    </div>
-
-    <!-- Filter Form -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">{% trans 'نوع التنبيه' %}</label>
-                    <select name="type" class="form-select">
-                        <option value="">{% trans 'كل التنبيهات' %}</option>
-                        {% for key, value in notification_types %}
-                        <option value="{{ key }}" {% if request.GET.type == key %}selected{% endif %}>
-                            {{ value }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">{% trans 'الحالة' %}</label>
-                    <select name="is_read" class="form-select">
-                        <option value="">{% trans 'كل الحالات' %}</option>
-                        <option value="0" {% if request.GET.is_read == '0' %}selected{% endif %}>
-                            {% trans 'غير مقروء' %}
-                        </option>
-                        <option value="1" {% if request.GET.is_read == '1' %}selected{% endif %}>
-                            {% trans 'مقروء' %}
-                        </option>
-                    </select>
-                </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-secondary">
-                        <i class="fas fa-search"></i> {% trans 'بحث' %}
-                    </button>
-                    <a href="{% url 'inspections:notification_list' %}" class="btn btn-light">
-                        <i class="fas fa-times"></i> {% trans 'إعادة تعيين' %}
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {% if notifications %}
-    <div class="list-group">
-        {% for notification in notifications %}
-        <div class="list-group-item {% if not notification.is_read %}list-group-item-warning{% endif %}">
-            <div class="d-flex w-100 justify-content-between">
-                <h5 class="mb-1">
-                    <i class="fas {% if notification.type == 'scheduled' %}fa-calendar
-                              {% elif notification.type == 'reminder' %}fa-bell
-                              {% elif notification.type == 'status_change' %}fa-exchange-alt
-                              {% else %}fa-star{% endif %} me-2"></i>
-                    {{ notification.get_type_display }}
-                </h5>
-                <small class="text-muted">
-                    {{ notification.created_at|timesince }}
-                </small>
-            </div>
-            <p class="mb-1">{{ notification.message }}</p>
-            <div class="d-flex justify-content-between align-items-center">
-                <small>
-                    {% trans 'معاينة رقم' %}: 
-                    <a href="{% url 'inspections:inspection_detail' notification.inspection.pk %}">
-                        {{ notification.inspection.contract_number }}
-                    </a>
-                </small>
-                {% if not notification.is_read %}
-                <form method="post" action="{% url 'inspections:mark_notification_read' notification.pk %}" class="d-inline">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success" title="{% trans 'تحديد كمقروء' %}">
-                        <i class="fas fa-check"></i>
-                    </button>
-                </form>
-                {% endif %}
-            </div>
-            {% if notification.scheduled_for %}
-            <div class="mt-2">
-                <small class="text-primary">
-                    <i class="fas fa-clock"></i>
-                    {% trans 'موعد التنبيه' %}: {{ notification.scheduled_for|date:"Y/m/d H:i" }}
-                </small>
-            </div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-
-    <!-- Unified Pagination -->
-    {% if is_paginated %}
-    {% load pagination_tags %}
-    {% render_pagination page_obj %}
-    {% endif %}
-
-    {% else %}
-    <div class="alert alert-info">
-        {% trans 'لا توجد تنبيهات.' %}
-    </div>
-    {% endif %}
-</div>
+{% block title %}
+    {% trans 'تنبيهات المعاينات' %}
 {% endblock %}
-
+{% block content %}
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h2>{% trans 'تنبيهات المعاينات' %}</h2>
+            </div>
+        </div>
+        <!-- Filter Form -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">{% trans 'نوع التنبيه' %}</label>
+                        <select name="type" class="form-select">
+                            <option value="">{% trans 'كل التنبيهات' %}</option>
+                            {% for key, value in notification_types %}
+                                <option value="{{ key }}" {% if request.GET.type == key %}selected{% endif %}>{{ value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">{% trans 'الحالة' %}</label>
+                        <select name="is_read" class="form-select">
+                            <option value="">{% trans 'كل الحالات' %}</option>
+                            <option value="0" {% if request.GET.is_read == '0' %}selected{% endif %}>{% trans 'غير مقروء' %}</option>
+                            <option value="1" {% if request.GET.is_read == '1' %}selected{% endif %}>{% trans 'مقروء' %}</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-secondary">
+                            <i class="fas fa-search"></i> {% trans 'بحث' %}
+                        </button>
+                        <a href="{% url 'inspections:notification_list' %}"
+                           class="btn btn-light">
+                            <i class="fas fa-times"></i> {% trans 'إعادة تعيين' %}
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% if notifications %}
+            <div class="list-group">
+                {% for notification in notifications %}
+                    <div class="list-group-item {% if not notification.is_read %}list-group-item-warning{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">
+                                <i class="fas {% if notification.type == 'scheduled' %}fa-calendar {% elif notification.type == 'reminder' %}fa-bell {% elif notification.type == 'status_change' %}fa-exchange-alt {% else %}fa-star{% endif %} me-2"></i>
+                                {{ notification.get_type_display }}
+                            </h5>
+                            <small class="text-muted">{{ notification.created_at|timesince }}</small>
+                        </div>
+                        <p class="mb-1">{{ notification.message }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small>
+                                {% trans 'معاينة رقم' %}:
+                                <a href="{% url 'inspections:inspection_detail' notification.inspection.pk %}">
+                                    {{ notification.inspection.contract_number }}
+                                </a>
+                            </small>
+                            {% if not notification.is_read %}
+                                <form method="post"
+                                      action="{% url 'inspections:mark_notification_read' notification.pk %}"
+                                      class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="btn btn-sm btn-success"
+                                            title="{% trans 'تحديد كمقروء' %}">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                        {% if notification.scheduled_for %}
+                            <div class="mt-2">
+                                <small class="text-primary">
+                                    <i class="fas fa-clock"></i>
+                                    {% trans 'موعد التنبيه' %}: {{ notification.scheduled_for|date:"Y/m/d H:i" }}
+                                </small>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            <!-- Unified Pagination -->
+            {% if is_paginated %}
+                {% load pagination_tags %}
+                {% render_pagination page_obj %}
+            {% endif %}
+        {% else %}
+            <div class="alert alert-info">{% trans 'لا توجد تنبيهات.' %}</div>
+        {% endif %}
+    </div>
+{% endblock %}
 {% block extra_js %}
-<script>
+    <script>
     $(document).ready(function() {
         // Enable tooltips
         $('[data-toggle="tooltip"]').tooltip();
@@ -120,5 +107,5 @@
             location.reload();
         }, 300000);
     });
-</script>
+    </script>
 {% endblock %}

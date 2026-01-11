@@ -6,68 +6,122 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('orders', '0018_add_invoice_templates'),
+        ("orders", "0018_add_invoice_templates"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='invoicetemplate',
-            name='accent_color',
-            field=models.CharField(default='#ffc107', help_text='مثل: #ffc107 (أصفر)', max_length=7, verbose_name='لون التمييز'),
+            model_name="invoicetemplate",
+            name="accent_color",
+            field=models.CharField(
+                default="#ffc107",
+                help_text="مثل: #ffc107 (أصفر)",
+                max_length=7,
+                verbose_name="لون التمييز",
+            ),
         ),
         migrations.AddField(
-            model_name='invoicetemplate',
-            name='advanced_settings',
-            field=models.JSONField(default=dict, help_text='إعدادات متقدمة للقالب (JSON)', verbose_name='إعدادات متقدمة'),
+            model_name="invoicetemplate",
+            name="advanced_settings",
+            field=models.JSONField(
+                default=dict,
+                help_text="إعدادات متقدمة للقالب (JSON)",
+                verbose_name="إعدادات متقدمة",
+            ),
         ),
         migrations.AddField(
-            model_name='invoicetemplate',
-            name='css_styles',
-            field=models.TextField(blank=True, help_text='أنماط CSS إضافية للقالب', verbose_name='أنماط CSS مخصصة'),
+            model_name="invoicetemplate",
+            name="css_styles",
+            field=models.TextField(
+                blank=True,
+                help_text="أنماط CSS إضافية للقالب",
+                verbose_name="أنماط CSS مخصصة",
+            ),
         ),
         migrations.AddField(
-            model_name='invoicetemplate',
-            name='html_content',
-            field=models.TextField(blank=True, help_text='محتوى HTML مخصص للقالب (للمحرر المتقدم)', verbose_name='محتوى HTML مخصص'),
+            model_name="invoicetemplate",
+            name="html_content",
+            field=models.TextField(
+                blank=True,
+                help_text="محتوى HTML مخصص للقالب (للمحرر المتقدم)",
+                verbose_name="محتوى HTML مخصص",
+            ),
         ),
         migrations.AddField(
-            model_name='invoicetemplate',
-            name='last_used',
-            field=models.DateTimeField(blank=True, null=True, verbose_name='آخر استخدام'),
+            model_name="invoicetemplate",
+            name="last_used",
+            field=models.DateTimeField(
+                blank=True, null=True, verbose_name="آخر استخدام"
+            ),
         ),
         migrations.AddField(
-            model_name='invoicetemplate',
-            name='page_margins',
-            field=models.IntegerField(default=20, help_text='الهوامش حول محتوى الفاتورة', verbose_name='هوامش الصفحة (mm)'),
+            model_name="invoicetemplate",
+            name="page_margins",
+            field=models.IntegerField(
+                default=20,
+                help_text="الهوامش حول محتوى الفاتورة",
+                verbose_name="هوامش الصفحة (mm)",
+            ),
         ),
         migrations.AddField(
-            model_name='invoicetemplate',
-            name='page_size',
-            field=models.CharField(choices=[('A4', 'A4 (210x297mm)'), ('Letter', 'Letter (216x279mm)'), ('Legal', 'Legal (216x356mm)')], default='A4', max_length=20, verbose_name='حجم الصفحة'),
+            model_name="invoicetemplate",
+            name="page_size",
+            field=models.CharField(
+                choices=[
+                    ("A4", "A4 (210x297mm)"),
+                    ("Letter", "Letter (216x279mm)"),
+                    ("Legal", "Legal (216x356mm)"),
+                ],
+                default="A4",
+                max_length=20,
+                verbose_name="حجم الصفحة",
+            ),
         ),
         migrations.AddField(
-            model_name='invoicetemplate',
-            name='usage_count',
-            field=models.IntegerField(default=0, verbose_name='عدد مرات الاستخدام'),
+            model_name="invoicetemplate",
+            name="usage_count",
+            field=models.IntegerField(default=0, verbose_name="عدد مرات الاستخدام"),
         ),
         migrations.AlterField(
-            model_name='invoicetemplate',
-            name='font_family',
-            field=models.CharField(choices=[('Cairo, Arial, sans-serif', 'Cairo'), ('Amiri, serif', 'Amiri'), ('Noto Sans Arabic, Arial, sans-serif', 'Noto Sans Arabic'), ('Tajawal, Arial, sans-serif', 'Tajawal'), ('IBM Plex Sans Arabic, Arial, sans-serif', 'IBM Plex Sans Arabic')], default='Cairo, Arial, sans-serif', help_text='نوع الخط المستخدم في الفاتورة', max_length=100, verbose_name='نوع الخط'),
+            model_name="invoicetemplate",
+            name="font_family",
+            field=models.CharField(
+                choices=[
+                    ("Cairo, Arial, sans-serif", "Cairo"),
+                    ("Amiri, serif", "Amiri"),
+                    ("Noto Sans Arabic, Arial, sans-serif", "Noto Sans Arabic"),
+                    ("Tajawal, Arial, sans-serif", "Tajawal"),
+                    ("IBM Plex Sans Arabic, Arial, sans-serif", "IBM Plex Sans Arabic"),
+                ],
+                default="Cairo, Arial, sans-serif",
+                help_text="نوع الخط المستخدم في الفاتورة",
+                max_length=100,
+                verbose_name="نوع الخط",
+            ),
         ),
         migrations.AlterField(
-            model_name='invoicetemplate',
-            name='font_size',
-            field=models.IntegerField(default=14, verbose_name='حجم الخط الأساسي'),
+            model_name="invoicetemplate",
+            name="font_size",
+            field=models.IntegerField(default=14, verbose_name="حجم الخط الأساسي"),
         ),
         migrations.AlterField(
-            model_name='invoicetemplate',
-            name='primary_color',
-            field=models.CharField(default='#0d6efd', help_text='مثل: #0d6efd (أزرق)', max_length=7, verbose_name='اللون الأساسي'),
+            model_name="invoicetemplate",
+            name="primary_color",
+            field=models.CharField(
+                default="#0d6efd",
+                help_text="مثل: #0d6efd (أزرق)",
+                max_length=7,
+                verbose_name="اللون الأساسي",
+            ),
         ),
         migrations.AlterField(
-            model_name='invoicetemplate',
-            name='secondary_color',
-            field=models.CharField(default='#198754', help_text='مثل: #198754 (أخضر)', max_length=7, verbose_name='اللون الثانوي'),
+            model_name="invoicetemplate",
+            name="secondary_color",
+            field=models.CharField(
+                default="#198754",
+                help_text="مثل: #198754 (أخضر)",
+                max_length=7,
+                verbose_name="اللون الثانوي",
+            ),
         ),
     ]

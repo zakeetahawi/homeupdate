@@ -2,47 +2,50 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 User = get_user_model()
 
 
 def get_customer_types():
     """استرجاع أنواع العملاء من قاعدة البيانات مع تخزين مؤقت"""
-    cache_key = 'customer_types_choices'
+    cache_key = "customer_types_choices"
     cached_types = cache.get(cache_key)
-    
+
     if cached_types is None:
         try:
             from django.apps import apps
-            CustomerType = apps.get_model('customers', 'CustomerType')
-            
-            types = [(t.code, t.name) for t in CustomerType.objects.filter(
-                is_active=True).order_by('name')]
+
+            CustomerType = apps.get_model("customers", "CustomerType")
+
+            types = [
+                (t.code, t.name)
+                for t in CustomerType.objects.filter(is_active=True).order_by("name")
+            ]
             cache.set(cache_key, types, timeout=3600)
             cached_types = types
         except Exception:
             cached_types = [
-                ('retail', 'أفراد'),
-                ('wholesale', 'جملة'),
-                ('corporate', 'شركات'),
+                ("retail", "أفراد"),
+                ("wholesale", "جملة"),
+                ("corporate", "شركات"),
             ]
-            
+
     return cached_types or []
 
 
 class CustomerCategory(models.Model):
-    name = models.CharField(_('اسم التصنيف'), max_length=50, db_index=True)
-    description = models.TextField(_('وصف التصنيف'), blank=True)
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    name = models.CharField(_("اسم التصنيف"), max_length=50, db_index=True)
+    description = models.TextField(_("وصف التصنيف"), blank=True)
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
 
     class Meta:
-        verbose_name = _('تصنيف العملاء')
-        verbose_name_plural = _('تصنيفات العملاء')
-        ordering = ['name']
+        verbose_name = _("تصنيف العملاء")
+        verbose_name_plural = _("تصنيفات العملاء")
+        ordering = ["name"]
         indexes = [
-            models.Index(fields=['name'], name='customer_cat_name_idx'),
+            models.Index(fields=["name"], name="customer_cat_name_idx"),
         ]
 
     def __str__(self):
@@ -58,10 +61,10 @@ def get_default_customer_category_id():
     """
     try:
         from django.apps import apps
-        CustomerCategory = apps.get_model('customers', 'CustomerCategory')
+
+        CustomerCategory = apps.get_model("customers", "CustomerCategory")
         obj, created = CustomerCategory.objects.get_or_create(
-            name='فرع',
-            defaults={'description': 'تصنيف افتراضي: فرع'}
+            name="فرع", defaults={"description": "تصنيف افتراضي: فرع"}
         )
         return obj.pk
     except Exception:
@@ -73,112 +76,87 @@ def get_default_customer_category_id():
 
 class CustomerNote(models.Model):
     customer = models.ForeignKey(
-        'Customer',
+        "Customer",
         on_delete=models.CASCADE,
-        related_name='notes_history',
-        verbose_name=_('العميل')
+        related_name="notes_history",
+        verbose_name=_("العميل"),
     )
-    note = models.TextField(_('الملاحظة'))
+    note = models.TextField(_("الملاحظة"))
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='customer_notes_created',
-        verbose_name=_('تم الإنشاء بواسطة')
+        related_name="customer_notes_created",
+        verbose_name=_("تم الإنشاء بواسطة"),
     )
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
 
     class Meta:
-        verbose_name = _('ملاحظة العميل')
-        verbose_name_plural = _('ملاحظات العملاء')
-        ordering = ['-created_at']
+        verbose_name = _("ملاحظة العميل")
+        verbose_name_plural = _("ملاحظات العملاء")
+        ordering = ["-created_at"]
         indexes = [
-            models.Index(
-                fields=['customer', 'created_at'],
-                name='customer_note_idx'
-            ),
-            models.Index(
-                fields=['created_by'],
-                name='customer_note_creator_idx'
-            ),
+            models.Index(fields=["customer", "created_at"], name="customer_note_idx"),
+            models.Index(fields=["created_by"], name="customer_note_creator_idx"),
         ]
 
     def __str__(self):
-        return (f"{self.customer.name} - "
-                f"{self.created_at.strftime('%Y-%m-%d')}")
+        return f"{self.customer.name} - " f"{self.created_at.strftime('%Y-%m-%d')}"
 
 
 class CustomerAccessLog(models.Model):
     """سجل الوصول للعملاء"""
+
     customer = models.ForeignKey(
-        'Customer',
+        "Customer",
         on_delete=models.CASCADE,
-        related_name='access_logs',
-        verbose_name=_('العميل')
+        related_name="access_logs",
+        verbose_name=_("العميل"),
     )
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        verbose_name=_('المستخدم')
-    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name=_("المستخدم"))
     user_branch = models.ForeignKey(
-        'accounts.Branch',
+        "accounts.Branch",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='user_accesses',
-        verbose_name=_('فرع المستخدم')
+        related_name="user_accesses",
+        verbose_name=_("فرع المستخدم"),
     )
     customer_branch = models.ForeignKey(
-        'accounts.Branch',
+        "accounts.Branch",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='customer_accesses',
-        verbose_name=_('فرع العميل')
+        related_name="customer_accesses",
+        verbose_name=_("فرع العميل"),
     )
-    is_cross_branch = models.BooleanField(
-        _('وصول عبر فروع'),
-        default=False
-    )
-    ip_address = models.GenericIPAddressField(
-        _('عنوان IP'),
-        null=True,
-        blank=True
-    )
-    user_agent = models.TextField(
-        _('معلومات المتصفح'),
-        blank=True
-    )
-    accessed_at = models.DateTimeField(
-        _('تاريخ الوصول'),
-        auto_now_add=True
-    )
+    is_cross_branch = models.BooleanField(_("وصول عبر فروع"), default=False)
+    ip_address = models.GenericIPAddressField(_("عنوان IP"), null=True, blank=True)
+    user_agent = models.TextField(_("معلومات المتصفح"), blank=True)
+    accessed_at = models.DateTimeField(_("تاريخ الوصول"), auto_now_add=True)
 
     class Meta:
-        verbose_name = _('سجل وصول العميل')
-        verbose_name_plural = _('سجلات وصول العملاء')
-        ordering = ['-accessed_at']
+        verbose_name = _("سجل وصول العميل")
+        verbose_name_plural = _("سجلات وصول العملاء")
+        ordering = ["-accessed_at"]
         indexes = [
             models.Index(
-                fields=['customer', 'accessed_at'],
-                name='customer_access_log_idx'
+                fields=["customer", "accessed_at"], name="customer_access_log_idx"
             ),
+            models.Index(fields=["user", "accessed_at"], name="user_access_log_idx"),
             models.Index(
-                fields=['user', 'accessed_at'],
-                name='user_access_log_idx'
-            ),
-            models.Index(
-                fields=['is_cross_branch', 'accessed_at'],
-                name='cross_branch_access_idx'
+                fields=["is_cross_branch", "accessed_at"],
+                name="cross_branch_access_idx",
             ),
         ]
 
     def __str__(self):
         cross_branch_text = " (عبر فروع)" if self.is_cross_branch else ""
-        return (f"{self.user.get_full_name() or self.user.username} - "
-                f"{self.customer.name}{cross_branch_text} - "
-                f"{self.accessed_at.strftime('%Y-%m-%d %H:%M')}")
+        return (
+            f"{self.user.get_full_name() or self.user.username} - "
+            f"{self.customer.name}{cross_branch_text} - "
+            f"{self.accessed_at.strftime('%Y-%m-%d %H:%M')}"
+        )
 
     @property
     def access_type(self):
@@ -191,6 +169,7 @@ class CustomerAccessLog(models.Model):
     def time_since_access(self):
         """الوقت منذ الوصول"""
         from django.utils import timezone
+
         now = timezone.now()
         diff = now - self.accessed_at
 
@@ -207,19 +186,19 @@ class CustomerAccessLog(models.Model):
 
 
 class CustomerType(models.Model):
-    code = models.CharField(_('الرمز'), max_length=20, unique=True)
-    name = models.CharField(_('اسم النوع'), max_length=50, db_index=True)
-    description = models.TextField(_('وصف النوع'), blank=True)
-    is_active = models.BooleanField(_('نشط'), default=True)
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    code = models.CharField(_("الرمز"), max_length=20, unique=True)
+    name = models.CharField(_("اسم النوع"), max_length=50, db_index=True)
+    description = models.TextField(_("وصف النوع"), blank=True)
+    is_active = models.BooleanField(_("نشط"), default=True)
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
 
     class Meta:
-        verbose_name = _('نوع العميل')
-        verbose_name_plural = _('أنواع العملاء')
-        ordering = ['name']
+        verbose_name = _("نوع العميل")
+        verbose_name_plural = _("أنواع العملاء")
+        ordering = ["name"]
         indexes = [
-            models.Index(fields=['code'], name='customer_type_code_idx'),
-            models.Index(fields=['name'], name='customer_type_name_idx'),
+            models.Index(fields=["code"], name="customer_type_code_idx"),
+            models.Index(fields=["name"], name="customer_type_name_idx"),
         ]
 
     def __str__(self):
@@ -228,26 +207,27 @@ class CustomerType(models.Model):
 
 class DiscountType(models.Model):
     """أنواع الخصومات"""
-    name = models.CharField(_('اسم نوع الخصم'), max_length=100, db_index=True)
+
+    name = models.CharField(_("اسم نوع الخصم"), max_length=100, db_index=True)
     percentage = models.DecimalField(
-        _('نسبة الخصم'),
+        _("نسبة الخصم"),
         max_digits=5,
         decimal_places=2,
-        help_text=_('نسبة الخصم بالمئة (مثال: 10.50)')
+        help_text=_("نسبة الخصم بالمئة (مثال: 10.50)"),
     )
-    description = models.TextField(_('وصف الخصم'), blank=True)
-    is_active = models.BooleanField(_('نشط'), default=True)
-    is_default = models.BooleanField(_('افتراضي'), default=False)
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+    description = models.TextField(_("وصف الخصم"), blank=True)
+    is_active = models.BooleanField(_("نشط"), default=True)
+    is_default = models.BooleanField(_("افتراضي"), default=False)
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
 
     class Meta:
-        verbose_name = _('نوع الخصم')
-        verbose_name_plural = _('أنواع الخصومات')
-        ordering = ['-is_default', 'percentage', 'name']
+        verbose_name = _("نوع الخصم")
+        verbose_name_plural = _("أنواع الخصومات")
+        ordering = ["-is_default", "percentage", "name"]
         indexes = [
-            models.Index(fields=['is_active'], name='discount_type_active_idx'),
-            models.Index(fields=['percentage'], name='discount_type_perc_idx'),
+            models.Index(fields=["is_active"], name="discount_type_active_idx"),
+            models.Index(fields=["percentage"], name="discount_type_perc_idx"),
         ]
 
     def __str__(self):
@@ -255,34 +235,38 @@ class DiscountType(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
+
         if self.percentage < 0 or self.percentage > 100:
-            raise ValidationError(_('نسبة الخصم يجب أن تكون بين 0 و 100'))
+            raise ValidationError(_("نسبة الخصم يجب أن تكون بين 0 و 100"))
 
 
 class CustomerResponsible(models.Model):
     """مسؤولي العملاء (للشركات والجهات الحكومية)"""
+
     customer = models.ForeignKey(
-        'Customer',
+        "Customer",
         on_delete=models.CASCADE,
-        related_name='responsibles',
-        verbose_name=_('العميل')
+        related_name="responsibles",
+        verbose_name=_("العميل"),
     )
-    name = models.CharField(_('اسم المسؤول'), max_length=200, db_index=True)
-    position = models.CharField(_('المنصب'), max_length=100, blank=True)
-    phone = models.CharField(_('رقم الهاتف'), max_length=20, blank=True)
-    email = models.EmailField(_('البريد الإلكتروني'), blank=True)
-    is_primary = models.BooleanField(_('المسؤول الرئيسي'), default=False)
-    order = models.PositiveSmallIntegerField(_('الترتيب'), default=1)
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    name = models.CharField(_("اسم المسؤول"), max_length=200, db_index=True)
+    position = models.CharField(_("المنصب"), max_length=100, blank=True)
+    phone = models.CharField(_("رقم الهاتف"), max_length=20, blank=True)
+    email = models.EmailField(_("البريد الإلكتروني"), blank=True)
+    is_primary = models.BooleanField(_("المسؤول الرئيسي"), default=False)
+    order = models.PositiveSmallIntegerField(_("الترتيب"), default=1)
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
 
     class Meta:
-        verbose_name = _('مسؤول العميل')
-        verbose_name_plural = _('مسؤولي العملاء')
-        ordering = ['order', 'name']
-        unique_together = [('customer', 'order')]
+        verbose_name = _("مسؤول العميل")
+        verbose_name_plural = _("مسؤولي العملاء")
+        ordering = ["order", "name"]
+        unique_together = [("customer", "order")]
         indexes = [
-            models.Index(fields=['customer', 'is_primary'], name='cust_resp_primary_idx'),
-            models.Index(fields=['name'], name='cust_resp_name_idx'),
+            models.Index(
+                fields=["customer", "is_primary"], name="cust_resp_primary_idx"
+            ),
+            models.Index(fields=["name"], name="cust_resp_name_idx"),
         ]
 
     def __str__(self):
@@ -290,15 +274,17 @@ class CustomerResponsible(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
+
         # التأكد من وجود مسؤول رئيسي واحد فقط لكل عميل
         if self.is_primary:
             existing_primary = CustomerResponsible.objects.filter(
-                customer=self.customer,
-                is_primary=True
+                customer=self.customer, is_primary=True
             ).exclude(pk=self.pk)
 
             if existing_primary.exists():
-                raise ValidationError(_('يمكن أن يكون هناك مسؤول رئيسي واحد فقط لكل عميل'))
+                raise ValidationError(
+                    _("يمكن أن يكون هناك مسؤول رئيسي واحد فقط لكل عميل")
+                )
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -307,160 +293,129 @@ class CustomerResponsible(models.Model):
 
 class Customer(models.Model):
     STATUS_CHOICES = [
-        ('active', _('نشط')),
-        ('inactive', _('غير نشط')),
-        ('blocked', _('محظور')),
+        ("active", _("نشط")),
+        ("inactive", _("غير نشط")),
+        ("blocked", _("محظور")),
     ]
 
-    code = models.CharField(
-        _('كود العميل'),
-        max_length=10,
-        unique=True,
-        blank=True
-    )
+    code = models.CharField(_("كود العميل"), max_length=10, unique=True, blank=True)
     image = models.ImageField(
-        _('صورة العميل'),
-        upload_to='customers/images/%Y/%m/',
-        blank=True,
-        null=True
+        _("صورة العميل"), upload_to="customers/images/%Y/%m/", blank=True, null=True
     )
     category = models.ForeignKey(
-    CustomerCategory,
-    on_delete=models.SET_DEFAULT,
-    default=get_default_customer_category_id,
-    null=False,
-    blank=False,
-        related_name='customers',
-        verbose_name=_('تصنيف العميل')
+        CustomerCategory,
+        on_delete=models.SET_DEFAULT,
+        default=get_default_customer_category_id,
+        null=False,
+        blank=False,
+        related_name="customers",
+        verbose_name=_("تصنيف العميل"),
     )
-    customer_type = models.CharField(
-        _('نوع العميل'),
-        max_length=20,
-        default='retail'
-    )
-    name = models.CharField(_('اسم العميل'), max_length=200, db_index=True)
+    customer_type = models.CharField(_("نوع العميل"), max_length=20, default="retail")
+    name = models.CharField(_("اسم العميل"), max_length=200, db_index=True)
     branch = models.ForeignKey(
-        'accounts.Branch',
+        "accounts.Branch",
         on_delete=models.CASCADE,
-        related_name='customers',
-        verbose_name=_('الفرع'),
+        related_name="customers",
+        verbose_name=_("الفرع"),
         null=True,
-        blank=True
+        blank=True,
     )
-    phone = models.CharField(_('رقم الهاتف'), max_length=20, db_index=True)
+    phone = models.CharField(_("رقم الهاتف"), max_length=20, db_index=True)
     phone2 = models.CharField(
-        _('رقم الهاتف الثاني'),
+        _("رقم الهاتف الثاني"),
         max_length=20,
         blank=True,
         null=True,
-        help_text=_('رقم هاتف إضافي اختياري')
+        help_text=_("رقم هاتف إضافي اختياري"),
     )
-    email = models.EmailField(_('البريد الإلكتروني'), blank=True, null=True)
+    email = models.EmailField(_("البريد الإلكتروني"), blank=True, null=True)
     birth_date = models.DateField(
-        _('تاريخ الميلاد'),
+        _("تاريخ الميلاد"),
         blank=True,
         null=True,
-        help_text=_('أدخل الشهر واليوم فقط (مثال: 15-03)')
+        help_text=_("أدخل الشهر واليوم فقط (مثال: 15-03)"),
     )
-    address = models.TextField(_('العنوان'))
+    address = models.TextField(_("العنوان"))
     location_type = models.CharField(
         max_length=20,
         choices=[
-            ('open', 'مفتوح'),
-            ('compound', 'كومبوند'),
+            ("open", "مفتوح"),
+            ("compound", "كومبوند"),
         ],
         blank=True,
         null=True,
-        verbose_name=_('نوع المكان'),
-        help_text='نوع المكان (مفتوح أو كومبوند)'
+        verbose_name=_("نوع المكان"),
+        help_text="نوع المكان (مفتوح أو كومبوند)",
     )
     interests = models.TextField(
-        _('اهتمامات العميل'),
-        blank=True,
-        help_text=_('اكتب اهتمامات العميل وتفضيلاته')
+        _("اهتمامات العميل"), blank=True, help_text=_("اكتب اهتمامات العميل وتفضيلاته")
     )
     status = models.CharField(
-        _('الحالة'),
+        _("الحالة"),
         max_length=10,
         choices=STATUS_CHOICES,
-        default='active',
-        db_index=True
+        default="active",
+        db_index=True,
     )
-    notes = models.TextField(_('ملاحظات'), blank=True)
+    notes = models.TextField(_("ملاحظات"), blank=True)
 
     # حقل الخصم
     discount_type = models.ForeignKey(
-        'DiscountType',
+        "DiscountType",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='customers',
-        verbose_name=_('نوع الخصم'),
-        help_text=_('نوع الخصم المطبق على هذا العميل')
+        related_name="customers",
+        verbose_name=_("نوع الخصم"),
+        help_text=_("نوع الخصم المطبق على هذا العميل"),
     )
 
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='customers_created',
-        verbose_name=_('تم الإنشاء بواسطة')
+        related_name="customers_created",
+        verbose_name=_("تم الإنشاء بواسطة"),
     )
     # ملاحظة: هذا الحقل يجب أن يكون قابل للتعيين من الكود (وليس auto_now_add) حتى يمكن استيراد التاريخ من مصادر خارجية مثل Google Sheets
-    created_at = models.DateTimeField(_('تاريخ الإنشاء'), default=timezone.now, editable=True)
-    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+    created_at = models.DateTimeField(
+        _("تاريخ الإنشاء"), default=timezone.now, editable=True
+    )
+    updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
 
     class Meta:
-        verbose_name = _('عميل')
-        verbose_name_plural = _('سجل العملاء')
-        ordering = ['-created_at']
+        verbose_name = _("عميل")
+        verbose_name_plural = _("سجل العملاء")
+        ordering = ["-created_at"]
         indexes = [
             # فهارس بسيطة للحقول الأساسية
-            models.Index(fields=['code'], name='cust_code_idx'),
-            models.Index(fields=['name'], name='cust_name_idx'),
-            models.Index(
-                fields=['phone', 'phone2'],
-                name='cust_phones_idx'
-            ),
-            models.Index(fields=['email'], name='cust_email_idx'),
-            models.Index(fields=['status'], name='cust_status_idx'),
-            models.Index(
-                fields=['customer_type'],
-                name='cust_type_idx'
-            ),
-            models.Index(
-                fields=['created_at'],
-                name='cust_created_idx'
-            ),
-            models.Index(
-                fields=['updated_at'],
-                name='cust_updated_idx'
-            ),
-            
+            models.Index(fields=["code"], name="cust_code_idx"),
+            models.Index(fields=["name"], name="cust_name_idx"),
+            models.Index(fields=["phone", "phone2"], name="cust_phones_idx"),
+            models.Index(fields=["email"], name="cust_email_idx"),
+            models.Index(fields=["status"], name="cust_status_idx"),
+            models.Index(fields=["customer_type"], name="cust_type_idx"),
+            models.Index(fields=["created_at"], name="cust_created_idx"),
+            models.Index(fields=["updated_at"], name="cust_updated_idx"),
             # فهارس مركبة للبحث المتعدد
             models.Index(
-                fields=['branch', 'status', 'customer_type'],
-                name='cust_br_st_type_idx'
+                fields=["branch", "status", "customer_type"], name="cust_br_st_type_idx"
             ),
+            models.Index(fields=["name", "phone", "email"], name="cust_search_idx"),
             models.Index(
-                fields=['name', 'phone', 'email'],
-                name='cust_search_idx'
+                fields=["created_by", "branch"], name="cust_creator_branch_idx"
             ),
-            models.Index(
-                fields=['created_by', 'branch'],
-                name='cust_creator_branch_idx'
-            ),
-            
             # فهرس جزئي للعملاء النشطين
             models.Index(
-                fields=['name', 'phone'],
-                name='cust_active_idx',
-                condition=models.Q(status='active')
+                fields=["name", "phone"],
+                name="cust_active_idx",
+                condition=models.Q(status="active"),
             ),
         ]
         permissions = [
-            ('view_customer_reports', _('Can view customer reports')),
-            ('export_customer_data', _('Can export customer data')),
+            ("view_customer_reports", _("Can view customer reports")),
+            ("export_customer_data", _("Can export customer data")),
         ]
 
     def __str__(self):
@@ -469,22 +424,25 @@ class Customer(models.Model):
     def clean(self):
         if self.created_by and not self.created_by.is_superuser:
             if self.branch != self.created_by.branch:
-                raise ValidationError(
-                    _('لا يمكنك إضافة عملاء لفرع آخر')
-                )
+                raise ValidationError(_("لا يمكنك إضافة عملاء لفرع آخر"))
         # منع تكرار رقم الهاتف
         if self.phone:
             qs = Customer.objects.filter(phone=self.phone)
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
             if qs.exists():
-                raise ValidationError({'phone': _('رقم الهاتف مستخدم بالفعل لعميل آخر')})
+                raise ValidationError(
+                    {"phone": _("رقم الهاتف مستخدم بالفعل لعميل آخر")}
+                )
 
     def save(self, *args, **kwargs):
         # تحويل الأرقام العربية إلى إنجليزية
         from core.utils import convert_model_arabic_numbers
-        convert_model_arabic_numbers(self, ['phone', 'phone2', 'national_id', 'tax_number'])
-        
+
+        convert_model_arabic_numbers(
+            self, ["phone", "phone2", "national_id", "tax_number"]
+        )
+
         if not self.code:
             self.code = self.generate_unique_code()
         super().save(*args, **kwargs)
@@ -494,51 +452,61 @@ class Customer(models.Model):
         try:
             # الحصول على كود الفرع
             branch_code = self.branch.code if self.branch else "00"
-            
+
             # البحث عن آخر كود عميل في نفس الفرع
-            last_customer = Customer.objects.filter(
-                branch=self.branch,
-                code__startswith=f"{branch_code}-"
-            ).exclude(pk=self.pk).order_by('-code').first()
-            
+            last_customer = (
+                Customer.objects.filter(
+                    branch=self.branch, code__startswith=f"{branch_code}-"
+                )
+                .exclude(pk=self.pk)
+                .order_by("-code")
+                .first()
+            )
+
             if last_customer:
                 try:
                     # استخراج الرقم التسلسلي
-                    sequence = int(last_customer.code.split('-')[-1]) + 1
+                    sequence = int(last_customer.code.split("-")[-1]) + 1
                 except (IndexError, ValueError):
                     sequence = 1
             else:
                 sequence = 1
-            
+
             # التأكد من عدم تكرار الكود
             max_attempts = 100
             for attempt in range(max_attempts):
                 potential_code = f"{branch_code}-{sequence:04d}"
-                
+
                 # التحقق من عدم وجود كود مكرر
-                if not Customer.objects.filter(code=potential_code).exclude(pk=self.pk).exists():
+                if (
+                    not Customer.objects.filter(code=potential_code)
+                    .exclude(pk=self.pk)
+                    .exists()
+                ):
                     return potential_code
-                
+
                 sequence += 1
-            
+
             # إذا فشل في العثور على كود فريد، استخدم UUID
             import uuid
+
             return f"{branch_code}-{str(uuid.uuid4())[:8]}"
-            
+
         except Exception:
             # في حالة حدوث خطأ، استخدم UUID
             import uuid
+
             return f"CUST-{str(uuid.uuid4())[:8]}"
 
     @property
     def branch_code(self):
         """Get the branch code part"""
-        return self.code.split('-')[0] if self.code else ''
+        return self.code.split("-")[0] if self.code else ""
 
     @property
     def sequence_number(self):
         """Get the sequence number part"""
-        return self.code.split('-')[1] if self.code else ''
+        return self.code.split("-")[1] if self.code else ""
 
     @classmethod
     def get_customer_types(cls):
@@ -548,19 +516,22 @@ class Customer(models.Model):
     def get_customer_type_display(self):
         """عرض نوع العميل بالاسم المقروء"""
         if not self.customer_type:
-            return 'غير محدد'
-        
+            return "غير محدد"
+
         customer_types_dict = dict(get_customer_types())
         return customer_types_dict.get(self.customer_type, self.customer_type)
 
     def get_absolute_url(self):
         """الحصول على رابط تفاصيل العميل"""
         from django.urls import reverse
-        return reverse('customers:customer_detail_by_code', kwargs={'customer_code': self.code})
+
+        return reverse(
+            "customers:customer_detail_by_code", kwargs={"customer_code": self.code}
+        )
 
     def requires_responsibles(self):
         """تحديد ما إذا كان نوع العميل يتطلب مسؤولين"""
-        return self.customer_type in ['corporate', 'government']
+        return self.customer_type in ["corporate", "government"]
 
     def get_primary_responsible(self):
         """الحصول على المسؤول الرئيسي"""
@@ -568,7 +539,7 @@ class Customer(models.Model):
 
     def get_all_responsibles(self):
         """الحصول على جميع المسؤولين مرتبين"""
-        return self.responsibles.all().order_by('order', 'name')
+        return self.responsibles.all().order_by("order", "name")
 
     def get_discount_percentage(self):
         """الحصول على نسبة الخصم"""
@@ -584,6 +555,7 @@ class Customer(models.Model):
         """حذف العميل مع حذف السجلات المرتبطة بشكل آمن"""
         from django.db import connection, transaction
         from django.db.models.signals import post_delete
+
         from orders import signals as order_signals
         from orders.models import OrderItem
 
@@ -594,12 +566,15 @@ class Customer(models.Model):
             with transaction.atomic():
                 # حذف سجلات OrderStatusLog لجميع طلبات العميل
                 with connection.cursor() as cursor:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         DELETE FROM orders_orderstatuslog
                         WHERE order_id IN (
                             SELECT id FROM orders_order WHERE customer_id = %s
                         )
-                    """, [self.pk])
+                    """,
+                        [self.pk],
+                    )
 
                 # حذف العميل (سيتم حذف الطلبات تلقائياً بسبب CASCADE)
                 super().delete(*args, **kwargs)

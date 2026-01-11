@@ -5,9 +5,9 @@
 echo "🔧 تحسين إعدادات PostgreSQL..."
 
 # التحقق من وجود PostgreSQL
-if ! command -v psql &> /dev/null; then
-    echo "❌ PostgreSQL غير مثبت"
-    exit 1
+if ! command -v psql &>/dev/null; then
+	echo "❌ PostgreSQL غير مثبت"
+	exit 1
 fi
 
 # إنشاء ملف إعدادات محسن
@@ -17,12 +17,12 @@ POSTGRES_CONF="/etc/postgresql/*/main/postgresql.conf"
 CONF_FILE="/var/lib/postgres/data/postgresql.conf"
 
 if [ ! -f "$CONF_FILE" ]; then
-    # محاولة البحث في مواقع أخرى
-    CONF_FILE=$(find /etc/postgresql -name "postgresql.conf" 2>/dev/null | head -1)
-    if [ -z "$CONF_FILE" ]; then
-        echo "❌ لم يتم العثور على ملف إعدادات PostgreSQL"
-        exit 1
-    fi
+	# محاولة البحث في مواقع أخرى
+	CONF_FILE=$(find /etc/postgresql -name "postgresql.conf" 2>/dev/null | head -1)
+	if [ -z "$CONF_FILE" ]; then
+		echo "❌ لم يتم العثور على ملف إعدادات PostgreSQL"
+		exit 1
+	fi
 fi
 
 echo "📁 ملف الإعدادات: $CONF_FILE"
@@ -34,7 +34,7 @@ echo "✅ تم إنشاء نسخة احتياطية"
 # تطبيق الإعدادات المحسنة
 echo "⚙️ تطبيق الإعدادات المحسنة..."
 
-sudo tee -a "$CONF_FILE" > /dev/null << 'EOF'
+sudo tee -a "$CONF_FILE" >/dev/null <<'EOF'
 
 # ===== إعدادات محسنة لتجنب مشكلة "too many clients" =====
 
@@ -82,13 +82,13 @@ sudo systemctl restart postgresql
 
 # التحقق من حالة الخدمة
 if sudo systemctl is-active --quiet postgresql; then
-    echo "✅ PostgreSQL يعمل بنجاح"
+	echo "✅ PostgreSQL يعمل بنجاح"
 else
-    echo "❌ فشل في إعادة تشغيل PostgreSQL"
-    echo "🔄 استعادة النسخة الاحتياطية..."
-    sudo cp "$CONF_FILE.backup."* "$CONF_FILE"
-    sudo systemctl restart postgresql
-    exit 1
+	echo "❌ فشل في إعادة تشغيل PostgreSQL"
+	echo "🔄 استعادة النسخة الاحتياطية..."
+	sudo cp "$CONF_FILE.backup."* "$CONF_FILE"
+	sudo systemctl restart postgresql
+	exit 1
 fi
 
 # عرض معلومات الاتصالات الحالية

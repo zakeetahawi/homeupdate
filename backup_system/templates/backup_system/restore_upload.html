@@ -1,115 +1,95 @@
 {% extends 'backup_system/base.html' %}
-
 {% block backup_content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="backup-card">
-            <div class="backup-card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-upload me-2"></i>
-                    رفع ملف للاستعادة
-                </h5>
-            </div>
-            <div class="backup-card-body">
-                <form method="post" enctype="multipart/form-data" id="uploadForm">
-                    {% csrf_token %}
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.backup_file.id_for_label }}" class="form-label">
-                            {{ form.backup_file.label }}
-                            <span class="text-danger">*</span>
-                        </label>
-                        {{ form.backup_file }}
-                        {% if form.backup_file.errors %}
-                            <div class="text-danger small mt-1">
-                                {{ form.backup_file.errors.0 }}
-                            </div>
-                        {% endif %}
-                        <div class="form-text">{{ form.backup_file.help_text }}</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.name.id_for_label }}" class="form-label">
-                            {{ form.name.label }}
-                            <span class="text-danger">*</span>
-                        </label>
-                        {{ form.name }}
-                        {% if form.name.errors %}
-                            <div class="text-danger small mt-1">
-                                {{ form.name.errors.0 }}
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.description.id_for_label }}" class="form-label">
-                            {{ form.description.label }}
-                        </label>
-                        {{ form.description }}
-                        {% if form.description.errors %}
-                            <div class="text-danger small mt-1">
-                                {{ form.description.errors.0 }}
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            {{ form.clear_existing_data }}
-                            <label class="form-check-label" for="{{ form.clear_existing_data.id_for_label }}">
-                                {{ form.clear_existing_data.label }}
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="backup-card">
+                <div class="backup-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-upload me-2"></i>
+                        رفع ملف للاستعادة
+                    </h5>
+                </div>
+                <div class="backup-card-body">
+                    <form method="post" enctype="multipart/form-data" id="uploadForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="{{ form.backup_file.id_for_label }}" class="form-label">
+                                {{ form.backup_file.label }}
+                                <span class="text-danger">*</span>
                             </label>
+                            {{ form.backup_file }}
+                            {% if form.backup_file.errors %}<div class="text-danger small mt-1">{{ form.backup_file.errors.0 }}</div>{% endif %}
+                            <div class="form-text">{{ form.backup_file.help_text }}</div>
                         </div>
-                        <div class="form-text text-danger">
-                            {{ form.clear_existing_data.help_text }}
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                {{ form.name.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>{% endif %}
                         </div>
-                        {% if form.clear_existing_data.errors %}
-                            <div class="text-danger small mt-1">
-                                {{ form.clear_existing_data.errors.0 }}
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.clear_existing_data }}
+                                <label class="form-check-label"
+                                       for="{{ form.clear_existing_data.id_for_label }}">
+                                    {{ form.clear_existing_data.label }}
+                                </label>
                             </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- معلومات إضافية -->
-                    <div class="alert alert-info">
-                        <h6><i class="fas fa-info-circle me-2"></i>معلومات مهمة:</h6>
-                        <ul class="mb-0">
-                            <li>يدعم النظام ملفات JSON و JSON.GZ المضغوطة</li>
-                            <li>الحد الأقصى لحجم الملف: 100 MB</li>
-                            <li>العملية قد تستغرق عدة دقائق حسب حجم الملف</li>
-                            <li>سيتم إشعارك عند اكتمال العملية</li>
-                        </ul>
-                    </div>
-                    
-                    <!-- تحذير حذف البيانات -->
-                    <div class="alert alert-warning" id="clearDataWarning" style="display: none;">
-                        <h6><i class="fas fa-exclamation-triangle me-2"></i>تحذير مهم:</h6>
-                        <p class="mb-0">
-                            لقد اخترت حذف البيانات الموجودة قبل الاستعادة. 
-                            هذا يع��ي أن جميع البيانات الحالية في النظام ستُحذف نهائياً ولا يمكن استرجاعها.
-                            يُنصح بشدة بإنشاء نسخة احتياطية من البيانات الحالية قبل المتابعة.
-                        </p>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between">
-                        <a href="{% url 'backup_system:dashboard' %}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-right me-1"></i>
-                            إلغاء
-                        </a>
-                        <button type="submit" class="btn btn-success" id="submitBtn">
-                            <i class="fas fa-upload me-1"></i>
-                            بدء الاستعادة
-                        </button>
-                    </div>
-                </form>
+                            <div class="form-text text-danger">{{ form.clear_existing_data.help_text }}</div>
+                            {% if form.clear_existing_data.errors %}
+                                <div class="text-danger small mt-1">{{ form.clear_existing_data.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <!-- معلومات إضافية -->
+                        <div class="alert alert-info">
+                            <h6>
+                                <i class="fas fa-info-circle me-2"></i>معلومات مهمة:
+                            </h6>
+                            <ul class="mb-0">
+                                <li>يدعم النظام ملفات JSON و JSON.GZ المضغوطة</li>
+                                <li>الحد الأقصى لحجم الملف: 100 MB</li>
+                                <li>العملية قد تستغرق عدة دقائق حسب حجم الملف</li>
+                                <li>سيتم إشعارك عند اكتمال العملية</li>
+                            </ul>
+                        </div>
+                        <!-- تحذير حذف البيانات -->
+                        <div class="alert alert-warning"
+                             id="clearDataWarning"
+                             style="display: none">
+                            <h6>
+                                <i class="fas fa-exclamation-triangle me-2"></i>تحذير مهم:
+                            </h6>
+                            <p class="mb-0">
+                                لقد اخترت حذف البيانات الموجودة قبل الاستعادة.
+                                هذا يع��ي أن جميع البيانات الحالية في النظام ستُحذف نهائياً ولا يمكن استرجاعها.
+                                يُنصح بشدة بإنشاء نسخة احتياطية من البيانات الحالية قبل المتابعة.
+                            </p>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'backup_system:dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-right me-1"></i>
+                                إلغاء
+                            </a>
+                            <button type="submit" class="btn btn-success" id="submitBtn">
+                                <i class="fas fa-upload me-1"></i>
+                                بدء الاستعادة
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 // إظهار/إخفاء تحذير حذف البيانات
 document.getElementById('{{ form.clear_existing_data.id_for_label }}').addEventListener('change', function() {
     const warning = document.getElementById('clearDataWarning');
@@ -190,5 +170,5 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         }
     });
 });
-</script>
+    </script>
 {% endblock %}

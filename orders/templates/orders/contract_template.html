@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 {% load static %}
 <html lang="ar" dir="rtl">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عقد رقم {{ order.order_number }}-{{ order.contract_number|default:"c1" }}</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>عقد رقم {{ order.order_number }}-{{ order.contract_number|default:"c1" }}</title>
+        <style>
         /* تحميل خط Noto Naskh Arabic - محسّن (Regular و Bold فقط لتحسين الأداء) */
         @font-face {
             font-family: 'Noto Naskh Arabic';
@@ -735,339 +734,343 @@
                 padding: 0;
             }
         }
-    </style>
-</head>
-
-<body>
-    <button class="print-btn" onclick="window.print()">🖨️ طباعة</button>
-
-    <!-- العلامة المائية -->
-    <div class="watermark">
-        <img src="{{ MEDIA_ROOT }}/company_logos/Logo_1080.png" alt="علامة مائية">
-    </div>
-
-    <div class="contract-page">
-        <!-- HEADER -->
-        <div class="header-section">
-            {% if settings.company_logo %}
-            <div class="logo-box">
-                <img src="{{ settings.company_logo.url }}" alt="الشعار">
-            </div>
-            {% endif %}
-
-            <!-- Service Types (Right) -->
-            <div class="header-right">
-                {% if order.service_types and order.service_types|length > 0 %}
-                {% for service in order.service_types %}
-                <span class="service-badge badge-{{ service }}">
-                    {% if service == 'tailoring' %}تسليم
-                    {% elif service == 'installation' %}تركيب
-                    {% elif service == 'accessory' %}إكسسوار
-                    {% elif service == 'products' %}منتجات
-                    {% elif service == 'inspection' %}معاينة
-                    {% else %}{{ service }}{% endif %}
-                </span>
-                {% endfor %}
-                {% if total_meters %}
-                <div style="font-size: 11px; color: #666; margin-top: 3px; margin-right: 5px;">
-                    ({{ total_meters|floatformat:2 }} متر)
-                </div>
-                {% endif %}
-                {% endif %}
-            </div>
-
-            <!-- Contract Number (Center) -->
-            <div class="header-center">
-                <span class="contract-number-main" dir="ltr">
-                    {{ order.order_number }}-{{ order.contract_number|default:"c1" }}
-                </span>
-            </div>
-
-            <!-- Order Type/Status (Left) -->
-            <div class="header-left">
-                {% if order.status == 'vip' %}
-                <span class="vip-badge">
-                    <span class="vip-crown">👑</span> VIP
-                </span>
-                {% else %}
-                <span class="order-status-text">عادي</span>
-                {% endif %}
-            </div>
+        </style>
+    </head>
+    <body>
+        <button class="print-btn" onclick="window.print()">🖨️ طباعة</button>
+        <!-- العلامة المائية -->
+        <div class="watermark">
+            <img src="{{ MEDIA_ROOT }}/company_logos/Logo_1080.png" alt="علامة مائية">
         </div>
-
-        <!-- INFO CARDS -->
-        <div class="cards-row">
-            <!-- Order Info Card -->
-            <div class="info-card">
-                <div class="card-title">بيانات الطلب</div>
-                <div class="card-row">
-                    <div>
-                        <span class="card-label">رقم الفاتورة</span>
-                        <span class="card-value">{{ order.invoice_number|default:"--" }}</span>
+        <div class="contract-page">
+            <!-- HEADER -->
+            <div class="header-section">
+                {% if settings.company_logo %}
+                    <div class="logo-box">
+                        <img src="{{ settings.company_logo.url }}" alt="الشعار">
                     </div>
-                    <div style="text-align: left;">
-                        <span class="card-label">عدد الستائر</span>
-                        <span class="curtain-count-badge">{{ curtains.count }}</span>
-                    </div>
-                </div>
-                <div class="card-row">
-                    <div>
-                        <span class="card-label">تاريخ الطلب</span>
-                        <span class="card-value">{{ order.created_at|date:"Y/m/d" }}</span>
-                    </div>
-                    <div style="text-align: left;">
-                        <span class="card-label">التسليم المتوقع</span>
-                        <span class="card-value">
-                            {% if order.expected_delivery_date %}
-                            {{ order.expected_delivery_date|date:"Y/m/d" }}
-                            {% else %}
-                            غير محدد
-                            {% endif %}
-                        </span>
-                    </div>
-                </div>
-                <div class="card-row">
-                    <div style="width: 100%;">
-                        <span class="card-label">عدد أيام التشغيل</span>
-                        <span class="card-value">
-                            {% if working_days %}{{ working_days }}{% else %}--{% endif %} يوم
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Customer Card -->
-            <div class="info-card">
-                <div class="card-title">بيانات العميل</div>
-                <div class="card-row">
-                    <div>
-                        <span class="card-label">العميل</span>
-                        <span class="card-value">{{ order.customer.name }}</span>
-                    </div>
-                    <div style="text-align: left;">
-                        <span class="card-label">الهاتف</span>
-                        <span class="card-value">{{ order.customer.phone|default:"--" }}</span>
-                    </div>
-                </div>
-                <div class="card-row">
-                    <div>
-                        <span class="card-label">البائع</span>
-                        <span class="card-value">
-                            {% if order.salesperson %}
-                            {{ order.salesperson.name }}
-                            {% elif order.created_by.get_full_name %}
-                            {{ order.created_by.get_full_name }}
-                            {% else %}
-                            {{ order.created_by.username }}
-                            {% endif %}
-                        </span>
-                        {% if order.salesperson.phone %}
-                        <span class="salesperson-phone">{{ order.salesperson.phone }}</span>
-                        {% endif %}
-                    </div>
-                    <div style="text-align: left;">
-                        <span class="card-label">الفرع</span>
-                        <span class="card-value">{{ order.branch.name|default:"--" }}</span>
-                    </div>
-                </div>
-                <div class="card-row">
-                    <div style="width: 100%;">
-                        <span class="card-label">العنوان</span>
-                        <span class="card-value">{{ order.customer.address|default:"غير محدد" }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- CURTAINS -->
-        <div class="section-title">تفاصيل الستائر</div>
-
-        {% for curtain in curtains %}
-        <div class="curtain-row">
-            <!-- Curtain Header -->
-            <div class="curtain-header">
-                <!-- Right: Number + Name -->
-                <div class="curtain-name-box">
-                    <span class="curtain-number">ستارة {{ forloop.counter }}:</span>
-                    <span class="curtain-name">{{ curtain.room_name }}</span>
-                </div>
-
-                <!-- Contract Number Badge -->
-                <div
-                    style="background: #f8f5f0; border: 1.5px solid #a67c52; border-radius: 4px; padding: 2px 8px; margin: 0 10px;">
-                    <span style="font-size: 10px; font-weight: 700; color: #a67c52; letter-spacing: 0.5px; direction: ltr; display: inline-block;">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</span>
-                </div>
-
-                <!-- Center: Dimensions -->
-                <div class="curtain-dimensions">
-                    <div class="dim-item">
-                        <span class="dim-label">عرض:</span>
-                        <span class="dim-badge">{{ curtain.width }}م</span>
-                    </div>
-                    <div class="dim-item">
-                        <span class="dim-label">طول:</span>
-                        <span class="dim-badge height-badge">{{ curtain.height }}م</span>
-                    </div>
-                </div>
-
-                <!-- Left: Type + Box Info -->
-                <div class="curtain-extra-info">
-                    {% if curtain.installation_type %}
-                    <div class="curtain-type">{{ curtain.get_installation_type_display }}</div>
-                    {% endif %}
-                    {% if curtain.curtain_box_width or curtain.curtain_box_depth %}
-                    <div class="box-dimensions">
-                        {% if curtain.curtain_box_width %}عرض {{ curtain.curtain_box_width|floatformat:0 }}{% endif %}
-                        {% if curtain.curtain_box_width and curtain.curtain_box_depth %} - {% endif %}
-                        {% if curtain.curtain_box_depth %}عمق {{ curtain.curtain_box_depth|floatformat:0 }}{% endif %}سم
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Curtain Content -->
-            <div class="curtain-content">
-                <!-- Accessories -->
-                <div class="accessories-section">
-                    <div class="acc-title-text">
-                        <span class="acc-icon-emoji">🔧</span> الإكسسوارات
-                    </div>
-                    {% if curtain.accessories.exists %}
-                    <div class="accessories-items">
-                        {% for accessory in curtain.accessories.all %}
-                        <div class="accessory-row">
-                            <div style="flex: 1;">
-                                <span class="acc-name-text">{{ accessory.display_name }}</span>
-                                {% if accessory.accessory_type %}
-                                <span style="background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%); color: #333; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-right: 5px;">{{ accessory.accessory_type }}</span>
-                                {% endif %}
-                                {% if accessory.color %}
-                                <div style="font-size: 11px; color: #666; margin-top: 2px;">
-                                    <strong>اللون:</strong> {{ accessory.color }}
-                                </div>
-                                {% endif %}
-                            </div>
-                            <div class="acc-info-right">
-                                {% if accessory.size and accessory.size > 0 %}
-                                <div style="text-align: center; margin-left: 10px;">
-                                    <div style="font-size: 10px; color: #666; margin-bottom: 1px;">مقاس</div>
-                                    <span class="acc-size-pill">{{ accessory.size|stringformat:"g" }}م</span>
-                                </div>
-                                <div style="text-align: center;">
-                                    <div style="font-size: 10px; color: #666; margin-bottom: 1px;">عدد</div>
-                                    <span class="acc-qty-pill">{{ accessory.count }}</span>
-                                </div>
+                {% endif %}
+                <!-- Service Types (Right) -->
+                <div class="header-right">
+                    {% if order.service_types and order.service_types|length > 0 %}
+                        {% for service in order.service_types %}
+                            <span class="service-badge badge-{{ service }}">
+                                {% if service == 'tailoring' %}
+                                    تسليم
+                                {% elif service == 'installation' %}
+                                    تركيب
+                                {% elif service == 'accessory' %}
+                                    إكسسوار
+                                {% elif service == 'products' %}
+                                    منتجات
+                                {% elif service == 'inspection' %}
+                                    معاينة
                                 {% else %}
-                                <div style="text-align: center;">
-                                    <div style="font-size: 10px; color: #666; margin-bottom: 1px;">العدد</div>
-                                    <span class="acc-qty-pill">{{ accessory.count }} قطعة</span>
-                                </div>
+                                    {{ service }}
                                 {% endif %}
-                            </div>
-                        </div>
+                            </span>
                         {% endfor %}
-                    </div>
-                    {% else %}
-                    <div style="text-align: center; padding: 10px; color: #999; font-size: 13px;">
-                        لم يتم إضافة إكسسوارات
-                    </div>
+                        {% if total_meters %}
+                            <div style="font-size: 11px;
+                                        color: #666;
+                                        margin-top: 3px;
+                                        margin-right: 5px">({{ total_meters|floatformat:2 }} متر)</div>
+                        {% endif %}
                     {% endif %}
                 </div>
-
-                <!-- Fabrics -->
-                <div class="fabric-section">
-                    <div class="section-header">
-                        <span class="section-icon">🎨</span> الأقمشة
-                    </div>
-                    {% if curtain.fabrics.exists %}
-                    {% for fabric in curtain.fabrics.all %}
-                    <div class="fabric-block">
-                        <div class="fabric-name-line">
-                            {% if fabric.fabric_type == 'light' %}
-                            <span class="fabric-type-badge light">خفيف</span>
-                            {% elif fabric.fabric_type == 'heavy' %}
-                            <span class="fabric-type-badge heavy">ثقيل</span>
-                            {% elif fabric.fabric_type == 'blackout' %}
-                            <span class="fabric-type-badge blackout">بلاك أوت</span>
-                            {% elif fabric.fabric_type == 'additional' %}
-                            <span class="fabric-type-badge extra">إضافي</span>
-                            {% elif fabric.fabric_type == 'extra' %}
-                            <span class="fabric-type-badge extra">إضافي</span>
-                            {% elif fabric.fabric_type %}
-                            <span class="fabric-type-badge light">{{ fabric.get_fabric_type_display }}</span>
-                            {% endif %}
-                            <span class="fabric-name-bold">{{ fabric.display_name }}</span>
-                            {% if 'حزام' in fabric.display_name or fabric.meters == 0 %}
-                            <span class="fabric-meters">{{ fabric.pieces }} قطعة</span>
-                            {% else %}
-                            <span class="fabric-meters">{{ fabric.meters }}م × {{ fabric.pieces }} قطعة</span>
-                            {% endif %}
+                <!-- Contract Number (Center) -->
+                <div class="header-center">
+                    <span class="contract-number-main" dir="ltr">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</span>
+                </div>
+                <!-- Order Type/Status (Left) -->
+                <div class="header-left">
+                    {% if order.status == 'vip' %}
+                        <span class="vip-badge">
+                            <span class="vip-crown">👑</span> VIP
+                        </span>
+                    {% else %}
+                        <span class="order-status-text">عادي</span>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- INFO CARDS -->
+            <div class="cards-row">
+                <!-- Order Info Card -->
+                <div class="info-card">
+                    <div class="card-title">بيانات الطلب</div>
+                    <div class="card-row">
+                        <div>
+                            <span class="card-label">رقم الفاتورة</span>
+                            <span class="card-value">{{ order.invoice_number|default:"--" }}</span>
                         </div>
-                        <div class="fabric-specs">
-                            <div class="fabric-spec-item large">
-                                <span class="spec-label-text">نوع التفصيل:</span> {{ fabric.get_tailoring_type_display }}
+                        <div style="text-align: left;">
+                            <span class="card-label">عدد الستائر</span>
+                            <span class="curtain-count-badge">{{ curtains.count }}</span>
+                        </div>
+                    </div>
+                    <div class="card-row">
+                        <div>
+                            <span class="card-label">تاريخ الطلب</span>
+                            <span class="card-value">{{ order.created_at|date:"Y/m/d" }}</span>
+                        </div>
+                        <div style="text-align: left;">
+                            <span class="card-label">التسليم المتوقع</span>
+                            <span class="card-value">
+                                {% if order.expected_delivery_date %}
+                                    {{ order.expected_delivery_date|date:"Y/m/d" }}
+                                {% else %}
+                                    غير محدد
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-row">
+                        <div style="width: 100%;">
+                            <span class="card-label">عدد أيام التشغيل</span>
+                            <span class="card-value">
+                                {% if working_days %}
+                                    {{ working_days }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                                يوم
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Customer Card -->
+                <div class="info-card">
+                    <div class="card-title">بيانات العميل</div>
+                    <div class="card-row">
+                        <div>
+                            <span class="card-label">العميل</span>
+                            <span class="card-value">{{ order.customer.name }}</span>
+                        </div>
+                        <div style="text-align: left;">
+                            <span class="card-label">الهاتف</span>
+                            <span class="card-value">{{ order.customer.phone|default:"--" }}</span>
+                        </div>
+                    </div>
+                    <div class="card-row">
+                        <div>
+                            <span class="card-label">البائع</span>
+                            <span class="card-value">
+                                {% if order.salesperson %}
+                                    {{ order.salesperson.name }}
+                                {% elif order.created_by.get_full_name %}
+                                    {{ order.created_by.get_full_name }}
+                                {% else %}
+                                    {{ order.created_by.username }}
+                                {% endif %}
+                            </span>
+                            {% if order.salesperson.phone %}<span class="salesperson-phone">{{ order.salesperson.phone }}</span>{% endif %}
+                        </div>
+                        <div style="text-align: left;">
+                            <span class="card-label">الفرع</span>
+                            <span class="card-value">{{ order.branch.name|default:"--" }}</span>
+                        </div>
+                    </div>
+                    <div class="card-row">
+                        <div style="width: 100%;">
+                            <span class="card-label">العنوان</span>
+                            <span class="card-value">{{ order.customer.address|default:"غير محدد" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- CURTAINS -->
+            <div class="section-title">تفاصيل الستائر</div>
+            {% for curtain in curtains %}
+                <div class="curtain-row">
+                    <!-- Curtain Header -->
+                    <div class="curtain-header">
+                        <!-- Right: Number + Name -->
+                        <div class="curtain-name-box">
+                            <span class="curtain-number">ستارة {{ forloop.counter }}:</span>
+                            <span class="curtain-name">{{ curtain.room_name }}</span>
+                        </div>
+                        <!-- Contract Number Badge -->
+                        <div style="background: #f8f5f0;
+                                    border: 1.5px solid #a67c52;
+                                    border-radius: 4px;
+                                    padding: 2px 8px;
+                                    margin: 0 10px">
+                            <span style="font-size: 10px;
+                                         font-weight: 700;
+                                         color: #a67c52;
+                                         letter-spacing: 0.5px;
+                                         direction: ltr;
+                                         display: inline-block">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</span>
+                        </div>
+                        <!-- Center: Dimensions -->
+                        <div class="curtain-dimensions">
+                            <div class="dim-item">
+                                <span class="dim-label">عرض:</span>
+                                <span class="dim-badge">{{ curtain.width }}م</span>
+                            </div>
+                            <div class="dim-item">
+                                <span class="dim-label">طول:</span>
+                                <span class="dim-badge height-badge">{{ curtain.height }}م</span>
                             </div>
                         </div>
-                        {% if fabric.notes %}
-                        <div class="fabric-notes">
-                            <strong>ملاحظات:</strong> {{ fabric.notes }}
+                        <!-- Left: Type + Box Info -->
+                        <div class="curtain-extra-info">
+                            {% if curtain.installation_type %}
+                                <div class="curtain-type">{{ curtain.get_installation_type_display }}</div>
+                            {% endif %}
+                            {% if curtain.curtain_box_width or curtain.curtain_box_depth %}
+                                <div class="box-dimensions">
+                                    {% if curtain.curtain_box_width %}عرض {{ curtain.curtain_box_width|floatformat:0 }}{% endif %}
+                                    {% if curtain.curtain_box_width and curtain.curtain_box_depth %}-{% endif %}
+                                    {% if curtain.curtain_box_depth %}عمق {{ curtain.curtain_box_depth|floatformat:0 }}{% endif %}
+                                    سم
+                                </div>
+                            {% endif %}
                         </div>
+                    </div>
+                    <!-- Curtain Content -->
+                    <div class="curtain-content">
+                        <!-- Accessories -->
+                        <div class="accessories-section">
+                            <div class="acc-title-text">
+                                <span class="acc-icon-emoji">🔧</span> الإكسسوارات
+                            </div>
+                            {% if curtain.accessories.exists %}
+                                <div class="accessories-items">
+                                    {% for accessory in curtain.accessories.all %}
+                                        <div class="accessory-row">
+                                            <div style="flex: 1;">
+                                                <span class="acc-name-text">{{ accessory.display_name }}</span>
+                                                {% if accessory.accessory_type %}
+                                                    <span style="background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%);
+                                                                 color: #333;
+                                                                 padding: 2px 6px;
+                                                                 border-radius: 4px;
+                                                                 font-size: 10px;
+                                                                 font-weight: 700;
+                                                                 margin-right: 5px">{{ accessory.accessory_type }}</span>
+                                                {% endif %}
+                                                {% if accessory.color %}
+                                                    <div style="font-size: 11px; color: #666; margin-top: 2px;">
+                                                        <strong>اللون:</strong> {{ accessory.color }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="acc-info-right">
+                                                {% if accessory.size and accessory.size > 0 %}
+                                                    <div style="text-align: center; margin-left: 10px;">
+                                                        <div style="font-size: 10px; color: #666; margin-bottom: 1px;">مقاس</div>
+                                                        <span class="acc-size-pill">{{ accessory.size|stringformat:"g" }}م</span>
+                                                    </div>
+                                                    <div style="text-align: center;">
+                                                        <div style="font-size: 10px; color: #666; margin-bottom: 1px;">عدد</div>
+                                                        <span class="acc-qty-pill">{{ accessory.count }}</span>
+                                                    </div>
+                                                {% else %}
+                                                    <div style="text-align: center;">
+                                                        <div style="font-size: 10px; color: #666; margin-bottom: 1px;">العدد</div>
+                                                        <span class="acc-qty-pill">{{ accessory.count }} قطعة</span>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div style="text-align: center;
+                                            padding: 10px;
+                                            color: #999;
+                                            font-size: 13px">لم يتم إضافة إكسسوارات</div>
+                            {% endif %}
+                        </div>
+                        <!-- Fabrics -->
+                        <div class="fabric-section">
+                            <div class="section-header">
+                                <span class="section-icon">🎨</span> الأقمشة
+                            </div>
+                            {% if curtain.fabrics.exists %}
+                                {% for fabric in curtain.fabrics.all %}
+                                    <div class="fabric-block">
+                                        <div class="fabric-name-line">
+                                            {% if fabric.fabric_type == 'light' %}
+                                                <span class="fabric-type-badge light">خفيف</span>
+                                            {% elif fabric.fabric_type == 'heavy' %}
+                                                <span class="fabric-type-badge heavy">ثقيل</span>
+                                            {% elif fabric.fabric_type == 'blackout' %}
+                                                <span class="fabric-type-badge blackout">بلاك أوت</span>
+                                            {% elif fabric.fabric_type == 'additional' %}
+                                                <span class="fabric-type-badge extra">إضافي</span>
+                                            {% elif fabric.fabric_type == 'extra' %}
+                                                <span class="fabric-type-badge extra">إضافي</span>
+                                            {% elif fabric.fabric_type %}
+                                                <span class="fabric-type-badge light">{{ fabric.get_fabric_type_display }}</span>
+                                            {% endif %}
+                                            <span class="fabric-name-bold">{{ fabric.display_name }}</span>
+                                            {% if 'حزام' in fabric.display_name or fabric.meters == 0 %}
+                                                <span class="fabric-meters">{{ fabric.pieces }} قطعة</span>
+                                            {% else %}
+                                                <span class="fabric-meters">{{ fabric.meters }}م × {{ fabric.pieces }} قطعة</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="fabric-specs">
+                                            <div class="fabric-spec-item large">
+                                                <span class="spec-label-text">نوع التفصيل:</span> {{ fabric.get_tailoring_type_display }}
+                                            </div>
+                                        </div>
+                                        {% if fabric.notes %}
+                                            <div class="fabric-notes">
+                                                <strong>ملاحظات:</strong> {{ fabric.notes }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div style="text-align: center;
+                                            padding: 10px;
+                                            color: #999;
+                                            font-size: 13px">لم يتم إضافة أقمشة</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <!-- Curtain Notes Section - Full Width Row -->
+                    {% if curtain.notes %}
+                        <div class="curtain-notes-section">
+                            <div class="notes-header">
+                                <span class="notes-icon">📝</span> ملاحظة:
+                            </div>
+                            <div class="notes-content">{{ curtain.notes }}</div>
+                        </div>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <div style="text-align: center; padding: 20px; color: #999;">لم يتم إضافة ستائر لهذا العقد</div>
+            {% endfor %}
+            <!-- FOOTER -->
+            <div class="footer-section">
+                <div class="signature-box">
+                    <div class="sig-line"></div>
+                    <div class="sig-label">توقيع البائع</div>
+                    <div class="sig-name">
+                        {% if order.salesperson %}
+                            {{ order.salesperson.name }}
+                        {% elif order.created_by.get_full_name %}
+                            {{ order.created_by.get_full_name }}
+                        {% else %}
+                            {{ order.created_by.username }}
                         {% endif %}
                     </div>
-                    {% endfor %}
-                    {% else %}
-                    <div style="text-align: center; padding: 10px; color: #999; font-size: 13px;">
-                        لم يتم إضافة أقمشة
-                    </div>
-                    {% endif %}
+                </div>
+                <div class="signature-box">
+                    <div class="sig-line"></div>
+                    <div class="sig-label">تاريخ الطباعة</div>
+                    <div class="sig-name">{% now "Y/m/d H:i" %}</div>
                 </div>
             </div>
-
-            <!-- Curtain Notes Section - Full Width Row -->
-            {% if curtain.notes %}
-            <div class="curtain-notes-section">
-                <div class="notes-header">
-                    <span class="notes-icon">📝</span> ملاحظة:
-                </div>
-                <div class="notes-content">{{ curtain.notes }}</div>
-            </div>
-            {% endif %}
-        </div>
-        {% empty %}
-        <div style="text-align: center; padding: 20px; color: #999;">
-            لم يتم إضافة ستائر لهذا العقد
-        </div>
-        {% endfor %}
-
-        <!-- FOOTER -->
-        <div class="footer-section">
-            <div class="signature-box">
-                <div class="sig-line"></div>
-                <div class="sig-label">توقيع البائع</div>
-                <div class="sig-name">
-                    {% if order.salesperson %}
-                    {{ order.salesperson.name }}
-                    {% elif order.created_by.get_full_name %}
-                    {{ order.created_by.get_full_name }}
-                    {% else %}
-                    {{ order.created_by.username }}
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="signature-box">
-                <div class="sig-line"></div>
-                <div class="sig-label">تاريخ الطباعة</div>
-                <div class="sig-name">{% now "Y/m/d H:i" %}</div>
-            </div>
-        </div>
-
-        <div class="page-number">
-            <script>
+            <div class="page-number">
+                <script>
                 document.write('صفحة ' + '<span class="page"></span>' + ' من ' + '<span class="pages"></span>');
-            </script>
+                </script>
+            </div>
         </div>
-    </div>
-</body>
-
+    </body>
 </html>

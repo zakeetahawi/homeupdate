@@ -2,33 +2,36 @@
 
 from django.db import migrations
 
+
 def update_order_numbers(apps, schema_editor):
     """تحديث جميع أرقام الطلبات لتصبح مبنية على ID"""
-    Order = apps.get_model('orders', 'Order')
-    
+    Order = apps.get_model("orders", "Order")
+
     # تحديث جميع الطلبات التي لا تحتوي على order_number صالح
     orders_to_update = []
     for order in Order.objects.all():
-        if not order.order_number or order.order_number.strip() == '':
+        if not order.order_number or order.order_number.strip() == "":
             # إنشاء رقم جديد مبني على ID
             branch_code = order.branch.code if order.branch else "00"
             year = order.order_date.year if order.order_date else 2025
             new_order_number = f"{order.id}-{branch_code}-{year}-0001"
             order.order_number = new_order_number
             orders_to_update.append(order)
-    
+
     # تحديث مجمع للأداء
     if orders_to_update:
-        Order.objects.bulk_update(orders_to_update, ['order_number'], batch_size=100)
+        Order.objects.bulk_update(orders_to_update, ["order_number"], batch_size=100)
+
 
 def reverse_update_order_numbers(apps, schema_editor):
     """التراجع عن التحديث"""
     pass  # لا نحتاج تراجع لأن هذا تحسين
 
+
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('orders', '0012_add_contract_number_2_and_3'),
+        ("orders", "0012_add_contract_number_2_and_3"),
     ]
 
     operations = [

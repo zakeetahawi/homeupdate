@@ -2,13 +2,14 @@
 إشارات تطبيق إدارة قواعد البيانات على طراز أودو
 """
 
-import os
 import logging
-from django.db.models.signals import post_save, post_delete
+import os
+
+from django.apps import apps
+from django.conf import settings
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from django.conf import settings
-from django.apps import apps
 
 from .models import Database
 from .services.database_service import DatabaseService
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 # تم نقل مزامنة قواعد البيانات إلى ملف apps.py
 
 # تم حذف معالج Backup لأنه تم نقله إلى backup_system
+
 
 @receiver(post_save, sender=Database)
 def handle_database_save(sender, instance, created, **kwargs):
@@ -31,10 +33,12 @@ def handle_database_save(sender, instance, created, **kwargs):
         if instance.is_active:
             # تحديث ملف الإعدادات
             from .services.database_service import DatabaseService
+
             database_service = DatabaseService()
             database_service._update_settings_file(instance)
 
             logger.info(f"تم تنشيط قاعدة البيانات: {instance.name}")
+
 
 @receiver(post_delete, sender=Database)
 def handle_database_delete(sender, instance, **kwargs):
@@ -53,6 +57,7 @@ def handle_database_delete(sender, instance, **kwargs):
         else:
             # إذا لم تكن هناك قواعد بيانات أخرى، قم بإنشاء ملف إعدادات فارغ
             from .services.database_service import DatabaseService
+
             database_service = DatabaseService()
             database_service._update_settings_file(None)
 

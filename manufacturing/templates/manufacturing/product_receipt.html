@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}استلام المنتجات من المخازن{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .receipt-card {
         transition: all 0.3s ease;
         border-radius: 10px;
@@ -142,304 +140,304 @@
     .items-container::-webkit-scrollbar-thumb:hover {
         background: #555;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <h2 class="mb-3">
-                        <i class="fas fa-warehouse me-3"></i>
-                        استلام المنتجات من المخازن
-                    </h2>
-                    <p class="mb-0">استلام المنتجات المقطعة من المخازن</p>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <h2 class="mb-3">
+                            <i class="fas fa-warehouse me-3"></i>
+                            استلام المنتجات من المخازن
+                        </h2>
+                        <p class="mb-0">استلام المنتجات المقطعة من المخازن</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- إحصائيات سريعة -->
-    <div class="row mb-4">
-        <div class="col-md-4 text-center">
-            <div class="d-flex justify-content-center gap-3 mb-3">
+        <!-- إحصائيات سريعة -->
+        <div class="row mb-4">
+            <div class="col-md-4 text-center">
+                <div class="d-flex justify-content-center gap-3 mb-3">
+                    <div class="text-center">
+                        <div class="h4 mb-0">{{ total_cutting_ready }}</div>
+                        <small>أوامر متاحة</small>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-center gap-2">
+                    <a href="{% url 'manufacturing:dashboard' %}"
+                       class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> العودة
+                    </a>
+                    <a href="{% url 'manufacturing:product_receipts_list' %}"
+                       class="btn btn-info btn-sm">
+                        <i class="fas fa-list"></i> قائمة الاستلامات
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-4 text-center">
                 <div class="text-center">
-                    <div class="h4 mb-0">{{ total_cutting_ready }}</div>
-                    <small>أوامر متاحة</small>
+                    <div class="h4 mb-0 text-warning">{{ total_pending_items }}</div>
+                    <small>في الانتظار</small>
                 </div>
             </div>
-            <div class="d-flex justify-content-center gap-2">
-                <a href="{% url 'manufacturing:dashboard' %}" class="btn btn-secondary btn-sm">
-                    <i class="fas fa-arrow-left"></i> العودة
-                </a>
-                <a href="{% url 'manufacturing:product_receipts_list' %}" class="btn btn-info btn-sm">
-                    <i class="fas fa-list"></i> قائمة الاستلامات
-                </a>
+            <div class="col-md-4 text-center">
+                <div class="text-center">
+                    <div class="h4 mb-0 text-success">{{ received_today }}</div>
+                    <small>تم اليوم</small>
+                </div>
             </div>
         </div>
-        <div class="col-md-4 text-center">
-            <div class="text-center">
-                <div class="h4 mb-0 text-warning">{{ total_pending_items }}</div>
-                <small>في الانتظار</small>
+        <!-- جدول الاستلامات الأخيرة -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0 font-weight-bold">
+                    <i class="fas fa-history"></i>
+                    آخر الاستلامات ({{ received_today }} اليوم)
+                </h6>
             </div>
-        </div>
-        <div class="col-md-4 text-center">
-            <div class="text-center">
-                <div class="h4 mb-0 text-success">{{ received_today }}</div>
-                <small>تم اليوم</small>
-            </div>
-        </div>
-    </div>
-
-    <!-- جدول الاستلامات الأخيرة -->
-    <div class="card shadow mb-4">
-        <div class="card-header bg-primary text-white">
-            <h6 class="mb-0 font-weight-bold">
-                <i class="fas fa-history"></i>
-                آخر الاستلامات ({{ received_today }} اليوم)
-            </h6>
-        </div>
-        <div class="card-body">
-            {% if recent_receipts %}
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>رقم الاستلام</th>
-                            <th>أمر التقطيع</th>
-                            <th>العميل</th>
-                            <th>المستودع</th>
-                            <th>المستلم</th>
-                            <th>تاريخ الاستلام</th>
-                            <th>الحالة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for receipt in recent_receipts %}
-                        <tr>
-                            <td>
-                                <span class="badge badge-primary text-white">{{ receipt.receipt_number }}</span>
-                            </td>
-                            <td>{{ receipt.cutting_order.cutting_code }}</td>
-                            <td>{{ receipt.cutting_order.order.customer.name }}</td>
-                            <td>{{ receipt.cutting_order.warehouse.name }}</td>
-                            <td>{{ receipt.received_by_name }}</td>
-                            <td>{{ receipt.receipt_date|date:"Y-m-d H:i" }}</td>
-                            <td>
-                                <span class="badge badge-success text-white">
-                                    <i class="fas fa-check"></i> مستلم
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="text-center py-4">
-                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                <p class="text-muted">لا توجد استلامات حتى الآن</p>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- أوامر التقطيع الجاهزة للاستلام -->
-    {% if cutting_orders_ready %}
-    <div class="card shadow mb-4">
-        <div class="card-header bg-success text-white">
-            <h6 class="mb-0 font-weight-bold">
-                <i class="fas fa-cut"></i>
-                أوامر التقطيع الجاهزة للاستلام ({{ total_cutting_ready }})
-            </h6>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                {% for cutting_order in cutting_orders_ready %}
-                <div class="col-md-6 mb-3">
-                    <div class="card border-success receipt-card">
-                        <div class="card-header bg-light">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-cut text-success"></i>
-                                    {{ cutting_order.cutting_code }}
-                                </h6>
-                                <span class="badge badge-success text-white">جاهز للاستلام</span>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-12">
-                                    <h6 class="text-success mb-2">
-                                        <i class="fas fa-user"></i>
-                                        {{ cutting_order.order.customer.name }}
-                                        <small class="text-muted">({{ cutting_order.order.order_number }})</small>
-                                    </h6>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p class="text-muted small mb-1">
-                                        <i class="fas fa-receipt"></i>
-                                        رقم الفاتورة: 
-                                        <span class="badge badge-warning text-dark">
-                                            {{ cutting_order.order.invoice_number|default:"غير محدد" }}
-                                        </span>
-                                    </p>
-                                    <p class="text-muted small mb-1">
-                                        <i class="fas fa-warehouse"></i>
-                                        المستودع: {{ cutting_order.warehouse.name }}
-                                    </p>
-                                    <p class="text-muted small mb-1">
-                                        <i class="fas fa-store"></i>
-                                        جهة التسليم: 
-                                        <span class="badge badge-info text-white">
-                                            {% if cutting_order.order.customer.branch %}
-                                                {{ cutting_order.order.customer.branch.name }}
-                                            {% elif cutting_order.order.branch %}
-                                                {{ cutting_order.order.branch.name }}
-                                            {% else %}
-                                                غير محدد
-                                            {% endif %}
-                                        </span>
-                                    </p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p class="text-muted small mb-1">
-                                        <i class="fas fa-calendar"></i>
-                                        تاريخ الإكمال: {{ cutting_order.completed_at|date:"d/m/Y H:i" }}
-                                    </p>
-                                    <p class="text-muted small mb-1">
-                                        <i class="fas fa-list"></i>
-                                        العناصر: {{ cutting_order.items.count }}
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <!-- عرض الأصناف -->
-                            <div class="border-top pt-2 mt-2 mb-3">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="text-primary mb-0">
-                                        <i class="fas fa-list"></i> الأصناف
-                                    </h6>
-                                    <span class="badge bg-info text-white">{{ cutting_order.items.count }} صنف</span>
-                                </div>
-                                <div class="items-container">
-                                    {% for item in cutting_order.items.all %}
-                                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-white rounded">
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-box text-info me-2"></i>
-                                                <strong class="small">{{ item.order_item.product.name }}</strong>
-                                            </div>
-                                            <small class="text-muted d-block ms-4">
-                                                <i class="fas fa-balance-scale"></i>
-                                                {{ item.order_item.quantity|floatformat:2 }} {{ item.order_item.product.unit }}
-                                            </small>
-                                        </div>
-                                        <div>
-                                            {% if item.status == 'completed' %}
-                                            <span class="badge badge-success badge-sm text-white">
-                                                <i class="fas fa-check"></i>
+            <div class="card-body">
+                {% if recent_receipts %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>رقم الاستلام</th>
+                                    <th>أمر التقطيع</th>
+                                    <th>العميل</th>
+                                    <th>المستودع</th>
+                                    <th>المستلم</th>
+                                    <th>تاريخ الاستلام</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for receipt in recent_receipts %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge badge-primary text-white">{{ receipt.receipt_number }}</span>
+                                        </td>
+                                        <td>{{ receipt.cutting_order.cutting_code }}</td>
+                                        <td>{{ receipt.cutting_order.order.customer.name }}</td>
+                                        <td>{{ receipt.cutting_order.warehouse.name }}</td>
+                                        <td>{{ receipt.received_by_name }}</td>
+                                        <td>{{ receipt.receipt_date|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            <span class="badge badge-success text-white">
+                                                <i class="fas fa-check"></i> مستلم
                                             </span>
-                                            {% elif item.status == 'in_progress' %}
-                                            <span class="badge badge-info badge-sm text-white">
-                                                <i class="fas fa-cut"></i>
-                                            </span>
-                                            {% else %}
-                                            <span class="badge badge-warning badge-sm text-dark">
-                                                <i class="fas fa-clock"></i>
-                                            </span>
-                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">لا توجد استلامات حتى الآن</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <!-- أوامر التقطيع الجاهزة للاستلام -->
+        {% if cutting_orders_ready %}
+            <div class="card shadow mb-4">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0 font-weight-bold">
+                        <i class="fas fa-cut"></i>
+                        أوامر التقطيع الجاهزة للاستلام ({{ total_cutting_ready }})
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for cutting_order in cutting_orders_ready %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-success receipt-card">
+                                    <div class="card-header bg-light">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">
+                                                <i class="fas fa-cut text-success"></i>
+                                                {{ cutting_order.cutting_code }}
+                                            </h6>
+                                            <span class="badge badge-success text-white">جاهز للاستلام</span>
                                         </div>
                                     </div>
-                                    {% endfor %}
+                                    <div class="card-body">
+                                        <div class="row mb-3">
+                                            <div class="col-12">
+                                                <h6 class="text-success mb-2">
+                                                    <i class="fas fa-user"></i>
+                                                    {{ cutting_order.order.customer.name }}
+                                                    <small class="text-muted">({{ cutting_order.order.order_number }})</small>
+                                                </h6>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p class="text-muted small mb-1">
+                                                    <i class="fas fa-receipt"></i>
+                                                    رقم الفاتورة:
+                                                    <span class="badge badge-warning text-dark">{{ cutting_order.order.invoice_number|default:"غير محدد" }}</span>
+                                                </p>
+                                                <p class="text-muted small mb-1">
+                                                    <i class="fas fa-warehouse"></i>
+                                                    المستودع: {{ cutting_order.warehouse.name }}
+                                                </p>
+                                                <p class="text-muted small mb-1">
+                                                    <i class="fas fa-store"></i>
+                                                    جهة التسليم:
+                                                    <span class="badge badge-info text-white">
+                                                        {% if cutting_order.order.customer.branch %}
+                                                            {{ cutting_order.order.customer.branch.name }}
+                                                        {% elif cutting_order.order.branch %}
+                                                            {{ cutting_order.order.branch.name }}
+                                                        {% else %}
+                                                            غير محدد
+                                                        {% endif %}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p class="text-muted small mb-1">
+                                                    <i class="fas fa-calendar"></i>
+                                                    تاريخ الإكمال: {{ cutting_order.completed_at|date:"d/m/Y H:i" }}
+                                                </p>
+                                                <p class="text-muted small mb-1">
+                                                    <i class="fas fa-list"></i>
+                                                    العناصر: {{ cutting_order.items.count }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <!-- عرض الأصناف -->
+                                        <div class="border-top pt-2 mt-2 mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <h6 class="text-primary mb-0">
+                                                    <i class="fas fa-list"></i> الأصناف
+                                                </h6>
+                                                <span class="badge bg-info text-white">{{ cutting_order.items.count }} صنف</span>
+                                            </div>
+                                            <div class="items-container">
+                                                {% for item in cutting_order.items.all %}
+                                                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-white rounded">
+                                                        <div class="flex-grow-1">
+                                                            <div class="d-flex align-items-center">
+                                                                <i class="fas fa-box text-info me-2"></i>
+                                                                <strong class="small">{{ item.order_item.product.name }}</strong>
+                                                            </div>
+                                                            <small class="text-muted d-block ms-4">
+                                                                <i class="fas fa-balance-scale"></i>
+                                                                {{ item.order_item.quantity|floatformat:2 }} {{ item.order_item.product.unit }}
+                                                            </small>
+                                                        </div>
+                                                        <div>
+                                                            {% if item.status == 'completed' %}
+                                                                <span class="badge badge-success badge-sm text-white">
+                                                                    <i class="fas fa-check"></i>
+                                                                </span>
+                                                            {% elif item.status == 'in_progress' %}
+                                                                <span class="badge badge-info badge-sm text-white">
+                                                                    <i class="fas fa-cut"></i>
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="badge badge-warning badge-sm text-dark">
+                                                                    <i class="fas fa-clock"></i>
+                                                                </span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2 mt-3">
+                                            <button class="btn btn-sm btn-success"
+                                                    onclick="startProductReceipt('{{ cutting_order.id }}', '{{ cutting_order.cutting_code }}', '{{ cutting_order.order.customer.name }}')">
+                                                <i class="fas fa-plus"></i> استلام المنتج
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <div class="d-flex gap-2 mt-3">
-                                <button class="btn btn-sm btn-success" 
-                                        onclick="startProductReceipt('{{ cutting_order.id }}', '{{ cutting_order.cutting_code }}', '{{ cutting_order.order.customer.name }}')">
-                                    <i class="fas fa-plus"></i> استلام المنتج
-                                </button>
-                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="card shadow">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">لا توجد أوامر تقطيع جاهزة للاستلام</h5>
+                    <p class="text-muted">لم يتم العثور على أوامر تقطيع مكتملة لطلبات المنتجات</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    <!-- Modal استلام المنتج -->
+    <div class="modal fade" id="productReceiptModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus me-2"></i>
+                        استلام منتج من المخزن
+                    </h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"></button>
+                </div>
+                <form id="productReceiptForm">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <input type="hidden" id="cutting_order_id" name="cutting_order_id">
+                        <div class="mb-3">
+                            <label class="form-label">أمر التقطيع</label>
+                            <input type="text" id="cutting_code_display" class="form-control" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">العميل</label>
+                            <input type="text" id="customer_name_display" class="form-control" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bag_number" class="form-label">
+                                رقم الشنطة <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="bag_number"
+                                   name="bag_number"
+                                   required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="received_by_name" class="form-label">
+                                اسم المستلم <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="received_by_name"
+                                   name="received_by_name"
+                                   required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">ملاحظات</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
                         </div>
                     </div>
-                </div>
-                {% endfor %}
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>حفظ الاستلام
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-    {% else %}
-    <div class="card shadow">
-        <div class="card-body text-center py-5">
-            <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">لا توجد أوامر تقطيع جاهزة للاستلام</h5>
-            <p class="text-muted">لم يتم العثور على أوامر تقطيع مكتملة لطلبات المنتجات</p>
-        </div>
-    </div>
-    {% endif %}
-</div>
-
-<!-- Modal استلام المنتج -->
-<div class="modal fade" id="productReceiptModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-plus me-2"></i>
-                    استلام منتج من المخزن
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="productReceiptForm">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <input type="hidden" id="cutting_order_id" name="cutting_order_id">
-                    
-                    <div class="mb-3">
-                        <label class="form-label">أمر التقطيع</label>
-                        <input type="text" id="cutting_code_display" class="form-control" readonly>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">العميل</label>
-                        <input type="text" id="customer_name_display" class="form-control" readonly>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="bag_number" class="form-label">رقم الشنطة <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="bag_number" name="bag_number" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="received_by_name" class="form-label">اسم المستلم <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="received_by_name" name="received_by_name" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="notes" class="form-label">ملاحظات</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save me-2"></i>حفظ الاستلام
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 // دالة بدء استلام المنتج
 function startProductReceipt(cuttingOrderId, cuttingCode, customerName) {
     document.getElementById('cutting_order_id').value = cuttingOrderId;
@@ -494,5 +492,5 @@ $('#productReceiptModal').on('hidden.bs.modal', function () {
     $('.modal-backdrop').remove();
     $('body').removeClass('modal-open');
 });
-</script>
+    </script>
 {% endblock %}

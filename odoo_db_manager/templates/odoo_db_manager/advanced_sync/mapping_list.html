@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}قائمة تعيينات المزامنة المتقدمة{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
-<style>
+    <link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+    <style>
     .mapping-card {
         border: 1px solid #ddd;
         border-radius: 8px;
@@ -227,197 +225,181 @@
         font-size: 0.85em;
         font-style: italic;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<!-- إضافة csrf token مخفي للصفحة ليستخدمه الجافاسكريبت -->
-<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-
-<div class="container-fluid">
-    <!-- شريط الأدوات -->
-    <div class="toolbar">
-        <h1>
-            <i class="fas fa-sync-alt"></i>
-            تعيينات المزامنة المتقدمة
-        </h1>
-        <div>
-            <a href="{% url 'odoo_db_manager:mapping_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i>
-                إنشاء تعيين جديد
-            </a>
-            <a href="{% url 'odoo_db_manager:advanced_sync_dashboard' %}" class="btn btn-secondary">
-                <i class="fas fa-dashboard"></i>
-                لوحة التحكم
-            </a>
-        </div>
-    </div>
-
-    <!-- قائمة التعيينات -->
-    {% if page_obj %}
-        <div class="row">
-            {% for mapping in page_obj %}
-            <div class="col-lg-6 col-xl-4">
-                <div class="mapping-card">
-                    <!-- رأس البطاقة -->
-                    <div class="mapping-header">
-                        <h3 class="mapping-title arabic-text">{{ mapping.name }}</h3>
-                        <div class="mapping-status">
-                            {% if mapping.is_active %}
-                                <span class="status-badge status-active">
-                                    <i class="fas fa-check-circle"></i>
-                                    نشط
-                                </span>
-                            {% else %}
-                                <span class="status-badge status-inactive">
-                                    <i class="fas fa-pause-circle"></i>
-                                    غير نشط
-                                </span>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- معلومات التعيين -->
-                    <div class="mapping-info">
-                        <div class="info-item">
-                            <span class="info-label">اسم الصفحة</span>
-                            <span class="info-value arabic-text">{{ mapping.sheet_name|default:"غير محدد" }}</span>
-                        </div>
-
-                        <div class="info-item">
-                            <span class="info-label">معرف الجدول</span>
-                            <span class="info-value">{{ mapping.spreadsheet_id|truncatechars:20 }}</span>
-                        </div>
-
-                        <div class="info-item">
-                            <span class="info-label">صف العناوين</span>
-                            <span class="info-value">{{ mapping.header_row }}</span>
-                        </div>
-
-                        <div class="info-item">
-                            <span class="info-label">صف البداية</span>
-                            <span class="info-value">{{ mapping.start_row }}</span>
-                        </div>
-
-                        <div class="info-item">
-                            <span class="info-label">آخر مزامنة</span>
-                            <span class="info-value">
-                                {% if mapping.last_sync %}
-                                    {{ mapping.last_sync|date:"Y-m-d H:i" }}
-                                {% else %}
-                                    لم تتم بعد
-                                {% endif %}
-                            </span>
-                        </div>
-
-                        <div class="info-item">
-                            <span class="info-label">آخر صف معالج</span>
-                            <span class="info-value">{{ mapping.last_row_processed|default:"لا يوجد" }}</span>
-                        </div>
-                    </div>
-
-                    <!-- إعدادات الإنشاء التلقائي -->
-                    <div class="info-item">
-                        <span class="info-label">الإنشاء التلقائي</span>
-                        <div class="info-value">
-                            {% if mapping.auto_create_customers %}
-                                <span class="badge badge-success">العملاء</span>
-                            {% endif %}
-                            {% if mapping.auto_create_orders %}
-                                <span class="badge badge-success">الطلبات</span>
-                            {% endif %}
-                            {% if mapping.auto_create_inspections %}
-                                <span class="badge badge-success">المعاينات</span>
-                            {% endif %}
-                            {% if not mapping.auto_create_customers and not mapping.auto_create_orders and not mapping.auto_create_inspections %}
-                                <span class="text-muted">غير مفعل</span>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- تعيينات الأعمدة -->
-                    {% if mapping.column_mappings %}
-                    <div class="info-item">
-                        <span class="info-label">تعيينات الأعمدة ({{ mapping.column_mappings|length }})</span>
-                        <div class="column-mappings">
-                            {% for column, field_type in mapping.get_clean_column_mappings.items %}
-                            <div class="column-mapping-item">
-                                <span class="arabic-text" title="{{ column }}">{{ column|truncatechars:30 }}</span>
-                                <span class="text-muted">{{ field_type }}</span>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- ملخص آخر مزامنة -->
-                    {% with last_task=mapping.sync_tasks.first %}
-                    {% if last_task %}
-                    <div class="info-item" style="margin-top:10px;">
-                        <span class="info-label">ملخص آخر مزامنة</span>
-                        <div class="info-value">
-                            <span class="badge badge-info">التاريخ: {{ last_task.completed_at|date:"Y-m-d H:i"|default:"-" }}</span>
-                            <span class="badge badge-success">العملاء الجدد: {{ last_task.results.stats.customers_created|default:0 }}</span>
-                            <span class="badge badge-warning">العملاء المحدثون: {{ last_task.results.stats.customers_updated|default:0 }}</span>
-                            <span class="badge badge-success">الطلبات الجديدة: {{ last_task.results.stats.orders_created|default:0 }}</span>
-                            <span class="badge badge-warning">الطلبات المحدثة: {{ last_task.results.stats.orders_updated|default:0 }}</span>
-                            <span class="badge badge-danger">الأخطاء: {{ last_task.results.stats.errors|length|default:0 }}</span>
-                        </div>
-                    </div>
-                    {% endif %}
-                    {% endwith %}
-                    <!-- نهاية ملخص آخر مزامنة -->
-
-                    <!-- أزرار الإجراءات -->
-                    <div class="mapping-actions">
-                        <a href="{% url 'odoo_db_manager:mapping_detail' mapping.id %}"
-                           class="btn btn-sm btn-primary" title="عرض التفاصيل">
-                            <i class="fas fa-eye"></i>
-                            عرض
-                        </a>
-
-                        <a href="{% url 'odoo_db_manager:mapping_detail' mapping.id %}"
-                           class="btn btn-sm btn-warning" title="تعديل التعيين">
-                            <i class="fas fa-edit"></i>
-                            تعديل
-                        </a>
-
-                        {% if mapping.is_active %}
-                        <button onclick="runSync({{ mapping.id }}, '{{ mapping.name }}')"
-                                class="btn btn-sm btn-success" title="تشغيل المزامنة">
-                            <i class="fas fa-sync-alt"></i>
-                            مزامنة
-                        </button>
-                        {% endif %}
-
-                        <button onclick="deleteMapping({{ mapping.id }}, '{{ mapping.name }}')"
-                                class="btn btn-sm btn-danger" title="حذف التعيين">
-                            <i class="fas fa-trash"></i>
-                            حذف
-                        </button>
-                    </div>
-                </div>
+    <!-- إضافة csrf token مخفي للصفحة ليستخدمه الجافاسكريبت -->
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+    <div class="container-fluid">
+        <!-- شريط الأدوات -->
+        <div class="toolbar">
+            <h1>
+                <i class="fas fa-sync-alt"></i>
+                تعيينات المزامنة المتقدمة
+            </h1>
+            <div>
+                <a href="{% url 'odoo_db_manager:mapping_create' %}"
+                   class="btn btn-primary">
+                    <i class="fas fa-plus"></i>
+                    إنشاء تعيين جديد
+                </a>
+                <a href="{% url 'odoo_db_manager:advanced_sync_dashboard' %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-dashboard"></i>
+                    لوحة التحكم
+                </a>
             </div>
-            {% endfor %}
         </div>
-    {% else %}
-        <!-- حالة فارغة -->
-        <div class="empty-state">
-            <i class="fas fa-sync-alt"></i>
-            <h3>لا توجد تعيينات مزامنة</h3>
-            <p>ابدأ بإنشاء تعيين جديد لمزامنة البيانات مع Google Sheets</p>
-            <a href="{% url 'odoo_db_manager:mapping_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i>
-                إنشاء تعيين جديد
-            </a>
-        </div>
-    {% endif %}
-</div>
+        <!-- قائمة التعيينات -->
+        {% if page_obj %}
+            <div class="row">
+                {% for mapping in page_obj %}
+                    <div class="col-lg-6 col-xl-4">
+                        <div class="mapping-card">
+                            <!-- رأس البطاقة -->
+                            <div class="mapping-header">
+                                <h3 class="mapping-title arabic-text">{{ mapping.name }}</h3>
+                                <div class="mapping-status">
+                                    {% if mapping.is_active %}
+                                        <span class="status-badge status-active">
+                                            <i class="fas fa-check-circle"></i>
+                                            نشط
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge status-inactive">
+                                            <i class="fas fa-pause-circle"></i>
+                                            غير نشط
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <!-- معلومات التعيين -->
+                            <div class="mapping-info">
+                                <div class="info-item">
+                                    <span class="info-label">اسم الصفحة</span>
+                                    <span class="info-value arabic-text">{{ mapping.sheet_name|default:"غير محدد" }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">معرف الجدول</span>
+                                    <span class="info-value">{{ mapping.spreadsheet_id|truncatechars:20 }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">صف العناوين</span>
+                                    <span class="info-value">{{ mapping.header_row }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">صف البداية</span>
+                                    <span class="info-value">{{ mapping.start_row }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">آخر مزامنة</span>
+                                    <span class="info-value">
+                                        {% if mapping.last_sync %}
+                                            {{ mapping.last_sync|date:"Y-m-d H:i" }}
+                                        {% else %}
+                                            لم تتم بعد
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">آخر صف معالج</span>
+                                    <span class="info-value">{{ mapping.last_row_processed|default:"لا يوجد" }}</span>
+                                </div>
+                            </div>
+                            <!-- إعدادات الإنشاء التلقائي -->
+                            <div class="info-item">
+                                <span class="info-label">الإنشاء التلقائي</span>
+                                <div class="info-value">
+                                    {% if mapping.auto_create_customers %}<span class="badge badge-success">العملاء</span>{% endif %}
+                                    {% if mapping.auto_create_orders %}<span class="badge badge-success">الطلبات</span>{% endif %}
+                                    {% if mapping.auto_create_inspections %}<span class="badge badge-success">المعاينات</span>{% endif %}
+                                    {% if not mapping.auto_create_customers and not mapping.auto_create_orders and not mapping.auto_create_inspections %}
+                                        <span class="text-muted">غير مفعل</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <!-- تعيينات الأعمدة -->
+                            {% if mapping.column_mappings %}
+                                <div class="info-item">
+                                    <span class="info-label">تعيينات الأعمدة ({{ mapping.column_mappings|length }})</span>
+                                    <div class="column-mappings">
+                                        {% for column, field_type in mapping.get_clean_column_mappings.items %}
+                                            <div class="column-mapping-item">
+                                                <span class="arabic-text" title="{{ column }}">{{ column|truncatechars:30 }}</span>
+                                                <span class="text-muted">{{ field_type }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            <!-- ملخص آخر مزامنة -->
+                            {% with last_task=mapping.sync_tasks.first %}
+                                {% if last_task %}
+                                    <div class="info-item" style="margin-top:10px;">
+                                        <span class="info-label">ملخص آخر مزامنة</span>
+                                        <div class="info-value">
+                                            <span class="badge badge-info">التاريخ: {{ last_task.completed_at|date:"Y-m-d H:i"|default:"-" }}</span>
+                                            <span class="badge badge-success">العملاء الجدد: {{ last_task.results.stats.customers_created|default:0 }}</span>
+                                            <span class="badge badge-warning">العملاء المحدثون: {{ last_task.results.stats.customers_updated|default:0 }}</span>
+                                            <span class="badge badge-success">الطلبات الجديدة: {{ last_task.results.stats.orders_created|default:0 }}</span>
+                                            <span class="badge badge-warning">الطلبات المحدثة: {{ last_task.results.stats.orders_updated|default:0 }}</span>
+                                            <span class="badge badge-danger">الأخطاء: {{ last_task.results.stats.errors|length|default:0 }}</span>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endwith %}
+                            <!-- نهاية ملخص آخر مزامنة -->
+                            <!-- أزرار الإجراءات -->
+                            <div class="mapping-actions">
+                                <a href="{% url 'odoo_db_manager:mapping_detail' mapping.id %}"
+                                   class="btn btn-sm btn-primary"
+                                   title="عرض التفاصيل">
+                                    <i class="fas fa-eye"></i>
+                                    عرض
+                                </a>
+                                <a href="{% url 'odoo_db_manager:mapping_detail' mapping.id %}"
+                                   class="btn btn-sm btn-warning"
+                                   title="تعديل التعيين">
+                                    <i class="fas fa-edit"></i>
+                                    تعديل
+                                </a>
+                                {% if mapping.is_active %}
+                                    <button onclick="runSync({{ mapping.id }}, '{{ mapping.name }}')"
+                                            class="btn btn-sm btn-success"
+                                            title="تشغيل المزامنة">
+                                        <i class="fas fa-sync-alt"></i>
+                                        مزامنة
+                                    </button>
+                                {% endif %}
+                                <button onclick="deleteMapping({{ mapping.id }}, '{{ mapping.name }}')"
+                                        class="btn btn-sm btn-danger"
+                                        title="حذف التعيين">
+                                    <i class="fas fa-trash"></i>
+                                    حذف
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <!-- حالة فارغة -->
+            <div class="empty-state">
+                <i class="fas fa-sync-alt"></i>
+                <h3>لا توجد تعيينات مزامنة</h3>
+                <p>ابدأ بإنشاء تعيين جديد لمزامنة البيانات مع Google Sheets</p>
+                <a href="{% url 'odoo_db_manager:mapping_create' %}"
+                   class="btn btn-primary">
+                    <i class="fas fa-plus"></i>
+                    إنشاء تعيين جديد
+                </a>
+            </div>
+        {% endif %}
+    </div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
 function runSync(mappingId, mappingName) {
     Swal.fire({
         title: 'تشغيل المزامنة',
@@ -543,5 +525,5 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
-</script>
+    </script>
 {% endblock %}

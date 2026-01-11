@@ -3,9 +3,10 @@ Middleware للتحقق من وجود مستخدم افتراضي عند بدء 
 """
 
 import threading
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import connection
-from django.conf import settings
 
 
 class DefaultUserMiddleware:
@@ -23,7 +24,7 @@ class DefaultUserMiddleware:
     def __call__(self, request):
         # تخطي التحقق لمسارات معينة لتجنب التضارب أثناء الاستعادة
         path = request.path
-        if 'restore-progress' in path or 'refresh-session' in path:
+        if "restore-progress" in path or "refresh-session" in path:
             return self.get_response(request)
 
         # التحقق مرة واحدة فقط عند بدء التشغيل
@@ -52,11 +53,11 @@ class DefaultUserMiddleware:
 
                 # إنشاء المستخدم الافتراضي
                 User.objects.create_superuser(
-                    username='admin',
-                    email='admin@example.com',
-                    password='admin123',
-                    first_name='مدير',
-                    last_name='النظام'
+                    username="admin",
+                    email="admin@example.com",
+                    password="admin123",
+                    first_name="مدير",
+                    last_name="النظام",
                 )
 
                 print("✅ تم إنشاء المستخدم الافتراضي بنجاح:")
@@ -79,12 +80,15 @@ class DefaultUserMiddleware:
                 table_name = User._meta.db_table
 
                 # استعلام للتحقق من وجود الجدول
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT EXISTS (
                         SELECT FROM information_schema.tables
                         WHERE table_name = %s
                     )
-                """, [table_name])
+                """,
+                    [table_name],
+                )
 
                 result = cursor.fetchone()
                 return result[0] if result else False

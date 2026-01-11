@@ -1,783 +1,389 @@
 {% extends 'inventory/inventory_base_custom.html' %}
 {% load static %}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 *الإصدار: 2.0 - Performance Edition**آخر تحديث: 25 نوفمبر 2025*---**النظام الآن جاهز للإنتاج بكفاءة عالية! 🚀**- 🎯 **تجربة مستخدم ممتازة**- 📊 **تتبع لحظي real-time**- 💾 **استهلاك أقل 70%**- ⚡ **أسرع 10-100x**تم تحسين النظام بشكل شامل ليكون:## ✨ الخلاصة---4. اتصل بالدعم الفني3. افحص قاعدة البيانات2. تحقق من Celery workers1. راجع السجلات (logs)في حالة وجود أي مشاكل:## 📞 الدعم والمساعدة---   ```   # تحديث فوري بدون polling   # استخدام Django Channels   ```python3. **WebSockets للتحديث الفوري**:   ```   ]       'django.middleware.gzip.GZipMiddleware',   MIDDLEWARE = [   # ضغط JSON responses   ```python2. **ضغط البيانات**:   ```       # معالجة 4 دفعات في نفس الوقت   with ProcessPoolExecutor(max_workers=4) as executor:      from concurrent.futures import ProcessPoolExecutor   # استخدام multiprocessing   ```python1. **معالجة متوازية حقيقية**:### Phase 2 (اختياري):## 🚀 التحسينات المستقبلية المقترحة---   - أكّد النجاح بوضوح   - أضف تأثيرات بصرية   - اعرض معلومات مفيدة3. **User Experience**:   - اجمع العمليات   - استخدم عتبات (thresholds)   - لا تحدّث كل iteration2. **Frontend Updates**:   - استخدم bulk operations   - تجنب N+1 queries   - استخدم `.only()` دائماً1. **Database Queries**:### ✅ Best Practices:## 📚 الدروس المستفادة---```✅ المدة الكلية✅ نسبة النجاح✅ الوقت المتبقي المتوقع✅ السرعة اللحظية```python### 3. معلومات السياق:```✅ عدد الأخطاء الفعلية✅ عدد المنتجات المتخطاة✅ عدد المنتجات المحدّثة✅ عدد المنتجات المنشأة```python### 2. إحصائيات دقيقة:```✅ تصنيف الأخطاء (فشل / تخطي / تحديث)✅ تفاصيل دقيقة لكل خطأ✅ تسجيل الأخطاء بالدفعة (bulk_create)```python### 1. تتبع الأخطاء المحسّن:## 🎁 ميزات إضافية---```)  # ✅ فقط ما نحتاجه    'id', 'name', 'code', 'price'products = Product.objects.only(# بعد (سريع)products = Product.objects.all()  # 😱 كل الحقول# قبل (بطيء)```python### استعلامات محسّنة:```eta_seconds = remaining_rows / speedremaining_rows = total_rows - processed_count# الوقت المتبقيspeed = processed_count / elapsed  # صف/ثانيةelapsed = (now - upload_log.created_at).total_seconds()# السرعة الحالية```python### حساب السرعة:```)    batch_size=500  # حجم مثالي للإدراج    errors_batch, BulkUploadError.objects.bulk_create(# bulk_create الأمثلUPDATE_THRESHOLD = 5  # تحديث كل 5%# عتبة التحديثBATCH_SIZE = 1000  # معايرة لأفضل أداء# حجم الدفعة الأمثل```python### معالجة الدفعات:## 🔍 التفاصيل التقنية---```})    timer: 2000    text: 'تم معالجة 50,000 صف بنجاح',    title: 'اكتمل الرفع! 🎉',    icon: 'success',Swal.fire({```javascript### رسائل النجاح التلقائية:```└─────────────────────────────────────────┘│  ❌ أخطاء: 12                         ││  ⏭️ تم تخطيه: 350                    ││  🔄 تم تحديثه: 2,180                  ││  ✅ تم إنشاؤه: 5,420                  ││                                         ││  ⏱️ الوقت المتبقي: 25 ثانية          ││  ⚡ السرعة: 1,500 صف/ثانية            ││                                         ││  ████████████████░░░░ 75%              │├─────────────────────────────────────────┤│  📊 عملية الرفع الجماعي              │┌─────────────────────────────────────────┐```html### شاشة التقدم الجديدة:## 🎨 التحسينات البصرية---   ```   📊 التقدم: 67%   ⏱️ الوقت المتبقي: 45 ثانية   ⚡ السرعة: 1,234 صف/ثانية   ```4. **راقب التقدم**:   - عرض السرعة والوقت المتبقي   - تحديث لحظي كل 300ms   - سيتم معالجة 1000 صف/دفعة ⚡3. **ارفع الملف**:   - `clean_start`: بداية نظيفة   - `add_only`: إضافة جديد فقط   - `merge_warehouses`: دمج المستودعات   - `smart_update`: تحديث ذكي (موصى به)2. **اختر الوضع**:   ```   إكسل بصيغة .xlsx أو .xls   ```1. **اختر الملف**:### الرفع الجماعي المحسّن:## 📝 كيفية الاستخدام---```✅ Efficient DOM updates       // تحديثات DOM فعّالة✅ Progressive enhancement     // تحسين تدريجي✅ Real-time updates (300ms)    // تحديث سريع```javascript### 4. Frontend Performance:```✅ bulk operations               # عمليات جماعية✅ تحديث حالة ذكي               # كل 5% فقط✅ Batch processing كبير         # 1000 صف/دفعة```python### 3. Celery Optimization:```✅ Cache invalidation ذكي       # تحديث عند الحاجة فقط✅ get_cached_dashboard_stats()  # تخزين مؤقت للإحصائيات```python### 2. Caching Strategy:```✅ bulk_create()        # إدراج جماعي✅ prefetch_related()   # تحميل علاقات معقدة✅ only()               # تحميل حقول محددة فقط✅ select_related()      # تقليل N+1 queries```python### 1. Database Optimization:## 🔧 التقنيات المستخدمة---   - رسائل نجاح تلقائية   - تأثيرات بصرية محسّنة   - عرض السرعة والوقت المتبقي   - تحديث كل 300ms (بدلاً من 1000ms)4. ✅ `/inventory/templates/inventory/bulk_upload_report.html`### Frontend:   - دعم معلومات Celery task   - عرض الوقت المتبقي   - حساب السرعة real-time3. ✅ `/inventory/api_views.py`   - زيادة page_size الافتراضي   - تقليل حجم البيانات المحملة   - استخدام `.only()` في كل مكان2. ✅ `/inventory/views.py`   - bulk_create محسّن   - تحديث تقدم ذكي (كل 5%)   - زيادة batch_size من 100 إلى 10001. ✅ `/inventory/tasks_optimized.py`### Backend:## 🎯 الملفات المحسّنة---| حجم البيانات | 8.5 MB | **2.1 MB** | **75% أقل** 💾 || استعلامات DB | 45 استعلام | **3 استعلامات** | **93% أقل** 📊 || وقت التحميل | 2.3 ثانية | **0.4 ثانية** | **5.7x أسرع** ⚡ ||---------|-----|-----|---------|| المقياس | قبل | بعد | التحسين |### سيناريو: عرض 1,000 منتج| استهلاك الذاكرة | 2.5 GB | **800 MB** | **68% أقل** 💾 || استهلاك CPU | 80% | **35%** | **56% أقل** ⚙️ || عمليات الكتابة | 500 عملية | **50 عملية** | **90% أقل** 💾 || السرعة | 166 صف/ث | **1,666 صف/ث** | **10x أسرع** ⚡ || الوقت الكلي | ~5 دقائق | **~30 ثانية** | **10x أسرع** 🚀 ||---------|-----|-----|---------|| المقياس | قبل | بعد | التحسين |### سيناريو: رفع 50,000 منتج## 📈 مقارنة الأداء---- استعلامات قاعدة البيانات: أقل بنسبة **75%**- تحميل Dashboard: من 1.5 ثانية إلى **0.2 ثانية** ⚡**النتائج:**```.only('id', 'name', 'created_at')# استخدام only() في كل مكانstart_date = end_date - timedelta(days=2)  # بدلاً من 6 أيام# فترة زمنية أقصرcategory_stats = ...[:5]          # بدلاً من [:10]recent_transactions = ...[:5]     # بدلاً من [:10]low_stock_products = ...[:5]      # بدلاً من [:10]# من 10 عناصر إلى 5 (أسرع مرتين)```python#### التحسينات:### 4. تحسين Dashboard---- استهلاك الذاكرة: أقل بنسبة **65%** 💾- وقت تحميل قائمة المنتجات: من 2-3 ثانية إلى **0.3-0.5 ثانية** ⚡**النتائج:**```categories = Category.objects.only('id', 'name')  # 70% أقل بيانات)  # ✅ فقط الحقول المطلوبة    'id', 'name', 'code', 'price', 'category', 'created_at'products = Product.objects.select_related('category').only(# محسّن - استعلام واحد```python#### بعد:```categories = Category.objects.all()   # تحميل كل الحقول)    current_stock_calc=Subquery(...)  # 😱 N+1 queriesproducts = Product.objects.select_related('category').annotate(# ثقيل جداً - استعلامات متعددة```python#### قبل:### 3. تحسين صفحات المخزون---```└─────────────────────────────┘│ 🔄 تم تحديثه: 2,180       ││ ✅ تم إنشاؤه: 5,420        ││ 📊 التقدم: 75% ████████▒▒  ││ ⏱️ الوقت المتبقي: 25 ثانية ││ ⚡ السرعة: 1,500 صف/ثانية  │┌─────────────────────────────┐```#### شاشة التقدم المحسّنة:```🎯 إحصائيات لحظية📊 نسبة الإنجاز الدقيقة⏱️ الوقت المتبقي المتوقع✅ السرعة الحالية (صف/ثانية)// عرض معلومات حية:setInterval(..., 300)// تحديث فائق السرعة - كل 300ms```javascript#### الميزات الجديدة:### 2. نظام التتبع اللحظي---- معالجة 100,000 صف: من ~10 دقائق إلى **~1 دقيقة** 🚀- معالجة 10,000 صف: من ~60 ثانية إلى **~6 ثوانٍ** ⚡**النتائج:**```bulk_create(batch_size=500)  # إدراج جماعي فائق السرعةتحديث كل 5%                  # 95% أقل عمليات كتابةbatch_size = 1000             # ⚡ 10x أسرع!```python#### بعد التحسين:```تحديث كل batch (بطيء)       # عمليات كتابة كثيرةbatch_size = 100              # معالجة 100 صف في المرة```python#### قبل التحسين:### 1. نظام الرفع الجماعي (Bulk Upload)## 🔥 التحسينات الرئيسية---- 💾 **استهلاك موارد أقل** بنسبة 70%- 🎯 **صفحات أسرع 5-10x** في قوائم المخزون- 📈 **تتبع لحظي real-time** مع تحديث كل 300ms- ⚡ **سرعة رفع أسرع 10-100 ضعف**تم تحسين نظام المخزون والرفع الجماعي بشكل شامل لتحقيق:## 📊 ملخص التحسينات
 {% block inventory_title %}تقرير عملية {{ upload_log.get_upload_type_display }}{% endblock %}
-
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
-<li class="breadcrumb-item"><a href="{% url 'inventory:bulk_upload_log_list' %}">سجلات الرفع الجماعي</a></li>
-<li class="breadcrumb-item active" aria-current="page">تقرير #{{ upload_log.id }}</li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a>
+    </li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:bulk_upload_log_list' %}">سجلات الرفع الجماعي</a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">تقرير #{{ upload_log.id }}</li>
 {% endblock %}
-
 {% block quick_actions %}
-<a href="{% url 'inventory:bulk_upload_log_list' %}" class="btn btn-secondary btn-sm">
-    <i class="fas fa-list"></i> كل السجلات
-</a>
-<a href="javascript:window.print()" class="btn btn-info btn-sm">
-    <i class="fas fa-print"></i> طباعة
-</a>
+    <a href="{% url 'inventory:bulk_upload_log_list' %}"
+       class="btn btn-secondary btn-sm">
+        <i class="fas fa-list"></i> كل السجلات
+    </a>
+    <a href="javascript:window.print()" class="btn btn-info btn-sm">
+        <i class="fas fa-print"></i> طباعة
+    </a>
 {% endblock %}
-
 {% block inventory_content %}
-<div class="row">
-    <!-- معلومات العملية -->
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header {% if upload_log.status == 'completed' %}bg-success{% elif upload_log.status == 'completed_with_errors' %}bg-warning{% elif upload_log.status == 'failed' %}bg-danger{% else %}bg-info{% endif %} text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-file-upload"></i>
-                    معلومات عملية {{ upload_log.get_upload_type_display }}
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <table class="table table-sm">
-                            <tr>
-                                <th width="40%">اسم الملف:</th>
-                                <td><strong>{{ upload_log.file_name }}</strong></td>
-                            </tr>
-                            <tr>
-                                <th>الحالة:</th>
-                                <td>
-                                    {% if upload_log.status == 'completed' %}
-                                        <span class="badge bg-success">{{ upload_log.get_status_display }}</span>
-                                    {% elif upload_log.status == 'completed_with_errors' %}
-                                        <span class="badge bg-warning">{{ upload_log.get_status_display }}</span>
-                                    {% elif upload_log.status == 'failed' %}
-                                        <span class="badge bg-danger">{{ upload_log.get_status_display }}</span>
-                                    {% else %}
-                                        <span class="badge bg-info">{{ upload_log.get_status_display }}</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>المستودع:</th>
-                                <td>{{ upload_log.warehouse|default:"غير محدد" }}</td>
-                            </tr>
-                            <tr>
-                                <th>تم بواسطة:</th>
-                                <td>{{ upload_log.created_by.get_full_name|default:upload_log.created_by.username }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <table class="table table-sm">
-                            <tr>
-                                <th width="40%">تاريخ البدء:</th>
-                                <td>{{ upload_log.created_at|date:"Y-m-d H:i:s" }}</td>
-                            </tr>
-                            <tr>
-                                <th>تاريخ الإكمال:</th>
-                                <td>{{ upload_log.completed_at|date:"Y-m-d H:i:s"|default:"جاري المعالجة..." }}</td>
-                            </tr>
-                            <tr>
-                                <th>المدة:</th>
-                                <td>
-                                    {% if upload_log.duration %}
-                                        {{ upload_log.duration|floatformat:2 }} ثانية
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <th>نسبة النجاح:</th>
-                                <td>
-                                    <div class="progress" style="height: 25px;">
-                                        <div class="progress-bar {% if upload_log.success_rate >= 80 %}bg-success{% elif upload_log.success_rate >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
-                                             role="progressbar" 
-                                             style="width: {{ upload_log.success_rate }}%"
-                                             aria-valuenow="{{ upload_log.success_rate }}" 
-                                             aria-valuemin="0" 
-                                             aria-valuemax="100">
-                                            {{ upload_log.success_rate }}%
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
+    <div class="row">
+        <!-- معلومات العملية -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header {% if upload_log.status == 'completed' %}bg-success{% elif upload_log.status == 'completed_with_errors' %}bg-warning{% elif upload_log.status == 'failed' %}bg-danger{% else %}bg-info{% endif %} text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-upload"></i>
+                        معلومات عملية {{ upload_log.get_upload_type_display }}
+                    </h5>
                 </div>
-                
-                {% if upload_log.summary %}
-                <div class="alert alert-info mt-3 mb-0">
-                    <strong><i class="fas fa-info-circle"></i> ملخص العملية:</strong><br>
-                    {{ upload_log.summary }}
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <!-- الإحصائيات -->
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h6 class="mb-0">
-                    <i class="fas fa-chart-pie"></i>
-                    الإحصائيات
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-6 mb-3">
-                        <div class="p-3 bg-light rounded">
-                            <h2 class="mb-0 text-primary">{{ upload_log.total_rows }}</h2>
-                            <small class="text-muted">إجمالي الصفوف</small>
-                        </div>
-                    </div>
-                    <div class="col-6 mb-3">
-                        <div class="p-3 bg-light rounded">
-                            <h2 class="mb-0 text-success" id="processedCount">{{ upload_log.processed_count }}</h2>
-                            <small class="text-muted">تم معالجته</small>
-                        </div>
-                    </div>
-                    <div class="col-6 mb-3">
-                        <div class="p-3 bg-light rounded">
-                            <h2 class="mb-0 text-info" id="createdCount">{{ upload_log.created_count }}</h2>
-                            <small class="text-muted">تم إنشاؤه</small>
-                        </div>
-                    </div>
-                    <div class="col-6 mb-3">
-                        <div class="p-3 bg-light rounded">
-                            <h2 class="mb-0 text-warning" id="updatedCount">{{ upload_log.updated_count }}</h2>
-                            <small class="text-muted">تم تحديثه</small>
-                        </div>
-                    </div>
-                    {% if upload_log.skipped_count > 0 %}
-                    <div class="col-6 mb-3">
-                        <div class="p-3 bg-light rounded">
-                            <h2 class="mb-0 text-secondary" id="skippedCount">{{ upload_log.skipped_count }}</h2>
-                            <small class="text-muted">تم تخطيه</small>
-                        </div>
-                    </div>
-                    {% endif %}
-                    <!-- معلومات السرعة والوقت المتبقي -->
-                    <div class="col-6 mb-3">
-                        <div class="p-3 bg-info text-white rounded">
-                            <h2 class="mb-0" id="uploadSpeed">⚡ -</h2>
-                            <small>السرعة (صف/ثانية)</small>
-                        </div>
-                    </div>
-                    <div class="col-6 mb-3">
-                        <div class="p-3 bg-primary text-white rounded">
-                            <h2 class="mb-0" id="etaTime">⏱️ -</h2>
-                            <small>الوقت المتبقي</small>
-                        </div>
-                    </div>
-                </div>
-                {% if actual_errors_count > 0 %}
-                <div class="alert alert-danger text-center mb-0">
-                    <h3 class="mb-0">{{ actual_errors_count }}</h3>
-                    <small>عدد الأخطاء الفعلية</small>
-                </div>
-                {% else %}
-                <div class="alert alert-success text-center mb-0">
-                    <i class="fas fa-check-circle fa-2x"></i><br>
-                    <small>لا توجد أخطاء</small>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        {% if upload_log.created_warehouses %}
-        <div class="card mt-3">
-            <div class="card-header bg-success text-white">
-                <h6 class="mb-0">
-                    <i class="fas fa-warehouse"></i>
-                    المستودعات المُنشأة
-                </h6>
-            </div>
-            <div class="card-body">
-                <ul class="list-unstyled mb-0">
-                    {% for warehouse in upload_log.created_warehouses %}
-                    <li><i class="fas fa-check text-success"></i> {{ warehouse }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- قائمة النتائج (أخطاء + متخطاة) -->
-{% if upload_log.errors.count > 0 %}
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header {% if actual_errors_count > 0 %}bg-danger{% else %}bg-info{% endif %} text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-list"></i>
-                    تفاصيل المعالجة 
-                    ({{ actual_errors_count }} خطأ، {{ upload_log.skipped_count }} متخطى)
-                </h5>
-            </div>
-            <div class="card-body">
-                <!-- فلاتر -->
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label"><strong>فلترة حسب الحالة:</strong></label>
-                        <div class="btn-group d-flex" role="group">
-                            <a href="?" class="btn btn-sm {% if not result_status %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                                الكل
-                            </a>
-                            <a href="?result_status=failed" class="btn btn-sm {% if result_status == 'failed' %}btn-danger{% else %}btn-outline-danger{% endif %}">
-                                فشل ({{ failed_count }})
-                            </a>
-                            <a href="?result_status=skipped" class="btn btn-sm {% if result_status == 'skipped' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
-                                متخطى ({{ skipped_count }})
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label"><strong>إحصائيات:</strong></label>
-                        <div class="d-flex flex-wrap gap-2">
-                            {% for status_type, count in status_stats.items %}
-                            <span class="badge {% if status_type == 'فشل' %}bg-danger{% elif status_type == 'تم التخطي' %}bg-secondary{% else %}bg-info{% endif %}">
-                                {{ status_type }}: {{ count }}
-                            </span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- جدول النتائج -->
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th width="7%">رقم الصف</th>
-                                <th width="10%">الحالة</th>
-                                <th width="13%">نوع</th>
-                                <th width="25%">اسم المنتج</th>
-                                <th width="10%">الكود</th>
-                                <th>الوصف</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for result in results_page %}
-                            <tr class="{% if result.result_status == 'failed' %}table-danger{% elif result.result_status == 'skipped' %}table-secondary{% endif %}">
-                                <td><span class="badge bg-dark">{{ result.row_number }}</span></td>
-                                <td>
-                                    <span class="badge 
-                                        {% if result.result_status == 'failed' %}bg-danger
-                                        {% elif result.result_status == 'skipped' %}bg-secondary
-                                        {% elif result.result_status == 'updated' %}bg-warning
-                                        {% elif result.result_status == 'created' %}bg-success
-                                        {% else %}bg-info
-                                        {% endif %}">
-                                        {% if result.result_status == 'failed' %}
-                                            <i class="fas fa-times"></i> فشل
-                                        {% elif result.result_status == 'skipped' %}
-                                            <i class="fas fa-forward"></i> تخطي
-                                        {% elif result.result_status == 'updated' %}
-                                            <i class="fas fa-edit"></i> تحديث
-                                        {% elif result.result_status == 'created' %}
-                                            <i class="fas fa-plus"></i> جديد
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th width="40%">اسم الملف:</th>
+                                    <td>
+                                        <strong>{{ upload_log.file_name }}</strong>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>الحالة:</th>
+                                    <td>
+                                        {% if upload_log.status == 'completed' %}
+                                            <span class="badge bg-success">{{ upload_log.get_status_display }}</span>
+                                        {% elif upload_log.status == 'completed_with_errors' %}
+                                            <span class="badge bg-warning">{{ upload_log.get_status_display }}</span>
+                                        {% elif upload_log.status == 'failed' %}
+                                            <span class="badge bg-danger">{{ upload_log.get_status_display }}</span>
                                         {% else %}
-                                            {{ result.get_result_status_display }}
+                                            <span class="badge bg-info">{{ upload_log.get_status_display }}</span>
                                         {% endif %}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge 
-                                        {% if result.error_type == 'missing_data' %}bg-warning
-                                        {% elif result.error_type == 'duplicate' %}bg-info
-                                        {% elif result.error_type == 'invalid_data' %}bg-danger
-                                        {% elif result.error_type == 'database' %}bg-dark
-                                        {% else %}bg-secondary
-                                        {% endif %}">
-                                        {{ result.get_error_type_display }}
-                                    </span>
-                                </td>
-                                <td><strong>{{ result.product_name }}</strong></td>
-                                <td>
-                                    {% if result.product_code %}
-                                        <code>{{ result.product_code }}</code>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if result.result_status == 'failed' %}
-                                        <span class="text-danger">{{ result.error_message }}</span>
-                                    {% else %}
-                                        <span class="text-muted">{{ result.error_message }}</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">لا توجد نتائج</td>
-                            </tr>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>المستودع:</th>
+                                    <td>{{ upload_log.warehouse|default:"غير محدد" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>تم بواسطة:</th>
+                                    <td>{{ upload_log.created_by.get_full_name|default:upload_log.created_by.username }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th width="40%">تاريخ البدء:</th>
+                                    <td>{{ upload_log.created_at|date:"Y-m-d H:i:s" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>تاريخ الإكمال:</th>
+                                    <td>{{ upload_log.completed_at|date:"Y-m-d H:i:s"|default:"جاري المعالجة..." }}</td>
+                                </tr>
+                                <tr>
+                                    <th>المدة:</th>
+                                    <td>
+                                        {% if upload_log.duration %}
+                                            {{ upload_log.duration|floatformat:2 }} ثانية
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>نسبة النجاح:</th>
+                                    <td>
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar {% if upload_log.success_rate >= 80 %}bg-success{% elif upload_log.success_rate >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                 role="progressbar"
+                                                 style="width: {{ upload_log.success_rate }}%"
+                                                 aria-valuenow="{{ upload_log.success_rate }}"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100">{{ upload_log.success_rate }}%</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    {% if upload_log.summary %}
+                        <div class="alert alert-info mt-3 mb-0">
+                            <strong><i class="fas fa-info-circle"></i> ملخص العملية:</strong>
+                            <br>
+                            {{ upload_log.summary }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <!-- الإحصائيات -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-pie"></i>
+                        الإحصائيات
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="p-3 bg-light rounded">
+                                <h2 class="mb-0 text-primary">{{ upload_log.total_rows }}</h2>
+                                <small class="text-muted">إجمالي الصفوف</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="p-3 bg-light rounded">
+                                <h2 class="mb-0 text-success" id="processedCount">{{ upload_log.processed_count }}</h2>
+                                <small class="text-muted">تم معالجته</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="p-3 bg-light rounded">
+                                <h2 class="mb-0 text-info" id="createdCount">{{ upload_log.created_count }}</h2>
+                                <small class="text-muted">تم إنشاؤه</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="p-3 bg-light rounded">
+                                <h2 class="mb-0 text-warning" id="updatedCount">{{ upload_log.updated_count }}</h2>
+                                <small class="text-muted">تم تحديثه</small>
+                            </div>
+                        </div>
+                        {% if upload_log.skipped_count > 0 %}
+                            <div class="col-6 mb-3">
+                                <div class="p-3 bg-light rounded">
+                                    <h2 class="mb-0 text-secondary" id="skippedCount">{{ upload_log.skipped_count }}</h2>
+                                    <small class="text-muted">تم تخطيه</small>
+                                </div>
+                            </div>
+                        {% endif %}
+                        <!-- معلومات السرعة والوقت المتبقي -->
+                        <div class="col-6 mb-3">
+                            <div class="p-3 bg-info text-white rounded">
+                                <h2 class="mb-0" id="uploadSpeed">⚡ -</h2>
+                                <small>السرعة (صف/ثانية)</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="p-3 bg-primary text-white rounded">
+                                <h2 class="mb-0" id="etaTime">⏱️ -</h2>
+                                <small>الوقت المتبقي</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% if actual_errors_count > 0 %}
+                        <div class="alert alert-danger text-center mb-0">
+                            <h3 class="mb-0">{{ actual_errors_count }}</h3>
+                            <small>عدد الأخطاء الفعلية</small>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success text-center mb-0">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                            <br>
+                            <small>لا توجد أخطاء</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% if upload_log.created_warehouses %}
+                <div class="card mt-3">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-warehouse"></i>
+                            المستودعات المُنشأة
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            {% for warehouse in upload_log.created_warehouses %}
+                                <li>
+                                    <i class="fas fa-check text-success"></i> {{ warehouse }}
+                                </li>
                             {% endfor %}
-                        </tbody>
-                    </table>
+                        </ul>
+                    </div>
                 </div>
-
-                <!-- الصفحات -->
-                {% if results_page.has_other_pages %}
-                <nav aria-label="Page navigation">
-                    <ul class="pagination justify-content-center">
-                        {% if results_page.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ results_page.previous_page_number }}{% if result_status %}&result_status={{ result_status }}{% endif %}{% if error_type %}&error_type={{ error_type }}{% endif %}">السابق</a>
-                        </li>
+            {% endif %}
+        </div>
+    </div>
+    <!-- قائمة النتائج (أخطاء + متخطاة) -->
+    {% if upload_log.errors.count > 0 %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header {% if actual_errors_count > 0 %}bg-danger{% else %}bg-info{% endif %} text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list"></i>
+                            تفاصيل المعالجة
+                            ({{ actual_errors_count }} خطأ، {{ upload_log.skipped_count }} متخطى)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- فلاتر -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    <strong>فلترة حسب الحالة:</strong>
+                                </label>
+                                <div class="btn-group d-flex" role="group">
+                                    <a href="?"
+                                       class="btn btn-sm {% if not result_status %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                        الكل
+                                    </a>
+                                    <a href="?result_status=failed"
+                                       class="btn btn-sm {% if result_status == 'failed' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                                        فشل ({{ failed_count }})
+                                    </a>
+                                    <a href="?result_status=skipped"
+                                       class="btn btn-sm {% if result_status == 'skipped' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+                                        متخطى ({{ skipped_count }})
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    <strong>إحصائيات:</strong>
+                                </label>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for status_type, count in status_stats.items %}
+                                        <span class="badge {% if status_type == 'فشل' %}bg-danger{% elif status_type == 'تم التخطي' %}bg-secondary{% else %}bg-info{% endif %}">
+                                            {{ status_type }}: {{ count }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        <!-- جدول النتائج -->
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th width="7%">رقم الصف</th>
+                                        <th width="10%">الحالة</th>
+                                        <th width="13%">نوع</th>
+                                        <th width="25%">اسم المنتج</th>
+                                        <th width="10%">الكود</th>
+                                        <th>الوصف</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for result in results_page %}
+                                        <tr class="{% if result.result_status == 'failed' %}table-danger{% elif result.result_status == 'skipped' %}table-secondary{% endif %}">
+                                            <td>
+                                                <span class="badge bg-dark">{{ result.row_number }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge {% if result.result_status == 'failed' %}bg-danger {% elif result.result_status == 'skipped' %}bg-secondary {% elif result.result_status == 'updated' %}bg-warning {% elif result.result_status == 'created' %}bg-success {% else %}bg-info {% endif %}">
+                                                    {% if result.result_status == 'failed' %}
+                                                        <i class="fas fa-times"></i> فشل
+                                                    {% elif result.result_status == 'skipped' %}
+                                                        <i class="fas fa-forward"></i> تخطي
+                                                    {% elif result.result_status == 'updated' %}
+                                                        <i class="fas fa-edit"></i> تحديث
+                                                    {% elif result.result_status == 'created' %}
+                                                        <i class="fas fa-plus"></i> جديد
+                                                    {% else %}
+                                                        {{ result.get_result_status_display }}
+                                                    {% endif %}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge {% if result.error_type == 'missing_data' %}bg-warning {% elif result.error_type == 'duplicate' %}bg-info {% elif result.error_type == 'invalid_data' %}bg-danger {% elif result.error_type == 'database' %}bg-dark {% else %}bg-secondary {% endif %}">
+                                                    {{ result.get_error_type_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <strong>{{ result.product_name }}</strong>
+                                            </td>
+                                            <td>
+                                                {% if result.product_code %}
+                                                    <code>{{ result.product_code }}</code>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if result.result_status == 'failed' %}
+                                                    <span class="text-danger">{{ result.error_message }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">{{ result.error_message }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">لا توجد نتائج</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- الصفحات -->
+                        {% if results_page.has_other_pages %}
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination justify-content-center">
+                                    {% if results_page.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link"
+                                               href="?page={{ results_page.previous_page_number }}{% if result_status %}&result_status={{ result_status }}{% endif %}{% if error_type %}&error_type={{ error_type }}{% endif %}">السابق</a>
+                                        </li>
+                                    {% endif %}
+                                    {% for num in results_page.paginator.page_range %}
+                                        {% if results_page.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > results_page.number|add:'-3' and num < results_page.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link"
+                                                   href="?page={{ num }}{% if result_status %}&result_status={{ result_status }}{% endif %}{% if error_type %}&error_type={{ error_type }}{% endif %}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if results_page.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link"
+                                               href="?page={{ results_page.next_page_number }}{% if result_status %}&result_status={{ result_status }}{% endif %}{% if error_type %}&error_type={{ error_type }}{% endif %}">التالي</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
                         {% endif %}
-
-                        {% for num in results_page.paginator.page_range %}
-                            {% if results_page.number == num %}
-                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                            {% elif num > results_page.number|add:'-3' and num < results_page.number|add:'3' %}
-                            <li class="page-item"><a class="page-link" href="?page={{ num }}{% if result_status %}&result_status={{ result_status }}{% endif %}{% if error_type %}&error_type={{ error_type }}{% endif %}">{{ num }}</a></li>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    <!-- خيارات إضافية -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            {% if upload_log.upload_type == 'products' %}
+                                <a href="{% url 'inventory:product_bulk_upload' %}"
+                                   class="btn btn-primary">
+                                    <i class="fas fa-upload"></i> رفع منتجات جديدة
+                                </a>
+                            {% else %}
+                                <a href="{% url 'inventory:bulk_stock_update' %}"
+                                   class="btn btn-primary">
+                                    <i class="fas fa-sync-alt"></i> تحديث مخزون جديد
+                                </a>
                             {% endif %}
-                        {% endfor %}
-
-                        {% if results_page.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ results_page.next_page_number }}{% if result_status %}&result_status={{ result_status }}{% endif %}{% if error_type %}&error_type={{ error_type }}{% endif %}">التالي</a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- خيارات إضافية -->
-<div class="row mt-3">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        {% if upload_log.upload_type == 'products' %}
-                        <a href="{% url 'inventory:product_bulk_upload' %}" class="btn btn-primary">
-                            <i class="fas fa-upload"></i> رفع منتجات جديدة
-                        </a>
-                        {% else %}
-                        <a href="{% url 'inventory:bulk_stock_update' %}" class="btn btn-primary">
-                            <i class="fas fa-sync-alt"></i> تحديث مخزون جديد
-                        </a>
-                        {% endif %}
-                        <a href="{% url 'inventory:product_list' %}" class="btn btn-secondary">
-                            <i class="fas fa-list"></i> قائمة المنتجات
-                        </a>
-                    </div>
-                    <div class="text-muted">
-                        <small>رقم التقرير: #{{ upload_log.id }}</small>
+                            <a href="{% url 'inventory:product_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-list"></i> قائمة المنتجات
+                            </a>
+                        </div>
+                        <div class="text-muted">
+                            <small>رقم التقرير: #{{ upload_log.id }}</small>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     @media print {
         .btn, .breadcrumb, .card-header .btn {
             display: none !important;
@@ -797,11 +403,10 @@
         font-weight: bold;
         color: #000;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     const uploadLogId = {{ upload_log.id }};
     const status = '{{ upload_log.status }}';
@@ -818,8 +423,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span id="percentText" class="badge bg-primary fs-6">0%</span>
                 </div>
                 <div class="progress" style="height: 25px;">
-                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
-                         style="width: 0%"></div>
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
                 </div>
                 <div class="mt-2 small text-muted">
                     <span id="processedCount">0</span> من <span id="totalRows">0</span> صف
@@ -904,5 +508,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-</script>
+    </script>
 {% endblock %}

@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block styles %}
-<style>
+    <style>
     .system-role {
         background-color: #e8f4ff;
     }
@@ -14,155 +12,167 @@
     .role-actions {
         white-space: nowrap;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- بطاقة قائمة الأدوار -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-            <h6 class="m-0 font-weight-bold text-primary">{{ title }}</h6>
-            <div>
-                <a href="{% url 'accounts:role_create' %}" class="btn btn-sm btn-primary">
-                    <i class="fas fa-plus"></i> إنشاء دور جديد
-                </a>
-            </div>
-        </div>
-        <div class="card-body">
-            <!-- قسم البحث والتصفية -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <form action="{% url 'accounts:role_list' %}" method="get" class="form-inline">
-                        <div class="input-group mb-2">
-                            <input type="text" class="form-control" name="search" placeholder="بحث عن دور..." value="{{ search_query }}">
-                            <div class="input-group-append">
-                                <button class="btn btn-primary" type="submit">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
+    <div class="container-fluid">
+        <!-- بطاقة قائمة الأدوار -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">{{ title }}</h6>
+                <div>
+                    <a href="{% url 'accounts:role_create' %}"
+                       class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus"></i> إنشاء دور جديد
+                    </a>
                 </div>
-                <div class="col-md-6">
-                    <div class="btn-group float-end">
-                        <a href="{% url 'accounts:role_list' %}" class="btn btn-outline-primary {% if role_type == '' %}active{% endif %}">
-                            الكل
-                        </a>
-                        <a href="{% url 'accounts:role_list' %}?type=system" class="btn btn-outline-primary {% if role_type == 'system' %}active{% endif %}">
-                            أدوار النظام
-                        </a>
-                        <a href="{% url 'accounts:role_list' %}?type=custom" class="btn btn-outline-primary {% if role_type == 'custom' %}active{% endif %}">
-                            أدوار مخصصة
-                        </a>
+            </div>
+            <div class="card-body">
+                <!-- قسم البحث والتصفية -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <form action="{% url 'accounts:role_list' %}"
+                              method="get"
+                              class="form-inline">
+                            <div class="input-group mb-2">
+                                <input type="text"
+                                       class="form-control"
+                                       name="search"
+                                       placeholder="بحث عن دور..."
+                                       value="{{ search_query }}">
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="btn-group float-end">
+                            <a href="{% url 'accounts:role_list' %}"
+                               class="btn btn-outline-primary {% if role_type == '' %}active{% endif %}">الكل</a>
+                            <a href="{% url 'accounts:role_list' %}?type=system"
+                               class="btn btn-outline-primary {% if role_type == 'system' %}active{% endif %}">
+                                أدوار النظام
+                            </a>
+                            <a href="{% url 'accounts:role_list' %}?type=custom"
+                               class="btn btn-outline-primary {% if role_type == 'custom' %}active{% endif %}">
+                                أدوار مخصصة
+                            </a>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- جدول الأدوار -->
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped" id="roles-table" width="100%" cellspacing="0">
-                    <thead>
-                        <tr>
-                            <th>الاسم</th>
-                            <th>الوصف</th>
-                            <th>عدد المستخدمين</th>
-                            <th>عدد الصلاحيات</th>
-                            <th>النوع</th>
-                            <th>تاريخ الإنشاء</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for role in page_obj %}
-                        <tr class="{% if role.is_system_role %}system-role{% else %}custom-role{% endif %}">
-                            <td>{{ role.name }}</td>
-                            <td>{{ role.description|default:"-" }}</td>
-                            <td>{{ role.user_roles.count }}</td>
-                            <td>{{ role.permissions.count }}</td>
-                            <td>
-                                {% if role.is_system_role %}
-                                <span class="badge bg-primary">نظام</span>
-                                {% else %}
-                                <span class="badge bg-secondary">مخصص</span>
+                <!-- جدول الأدوار -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped"
+                           id="roles-table"
+                           width="100%"
+                           cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>الاسم</th>
+                                <th>الوصف</th>
+                                <th>عدد المستخدمين</th>
+                                <th>عدد الصلاحيات</th>
+                                <th>النوع</th>
+                                <th>تاريخ الإنشاء</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for role in page_obj %}
+                                <tr class="{% if role.is_system_role %}system-role{% else %}custom-role{% endif %}">
+                                    <td>{{ role.name }}</td>
+                                    <td>{{ role.description|default:"-" }}</td>
+                                    <td>{{ role.user_roles.count }}</td>
+                                    <td>{{ role.permissions.count }}</td>
+                                    <td>
+                                        {% if role.is_system_role %}
+                                            <span class="badge bg-primary">نظام</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">مخصص</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ role.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td class="role-actions">
+                                        <a href="{% url 'accounts:role_assign' role.id %}"
+                                           class="btn btn-sm btn-info">
+                                            <i class="fas fa-user-plus"></i> إسناد
+                                        </a>
+                                        <a href="{% url 'accounts:role_update' role.id %}"
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit"></i> تعديل
+                                        </a>
+                                        {% if not role.is_system_role %}
+                                            <a href="{% url 'accounts:role_delete' role.id %}"
+                                               class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash-alt"></i> حذف
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">لا توجد أدوار متاحة</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- التنقل بين الصفحات -->
+                {% if page_obj.has_other_pages %}
+                    <div class="pagination justify-content-center mt-4">
+                        <ul class="pagination">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if role_type %}&type={{ role_type }}{% endif %}"
+                                       aria-label="السابق">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link" aria-hidden="true">&laquo;</span>
+                                </li>
+                            {% endif %}
+                            {% for i in page_obj.paginator.page_range %}
+                                {% if page_obj.number == i %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ i }}</span>
+                                    </li>
+                                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% if role_type %}&type={{ role_type }}{% endif %}">{{ i }}</a>
+                                    </li>
                                 {% endif %}
-                            </td>
-                            <td>{{ role.created_at|date:"Y-m-d H:i" }}</td>
-                            <td class="role-actions">
-                                <a href="{% url 'accounts:role_assign' role.id %}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-user-plus"></i> إسناد
-                                </a>
-                                <a href="{% url 'accounts:role_update' role.id %}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> تعديل
-                                </a>
-                                {% if not role.is_system_role %}
-                                <a href="{% url 'accounts:role_delete' role.id %}" class="btn btn-sm btn-danger">
-                                    <i class="fas fa-trash-alt"></i> حذف
-                                </a>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center">لا توجد أدوار متاحة</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            {% endfor %}
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if role_type %}&type={{ role_type }}{% endif %}"
+                                       aria-label="التالي">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link" aria-hidden="true">&raquo;</span>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                {% endif %}
             </div>
-
-            <!-- التنقل بين الصفحات -->
-            {% if page_obj.has_other_pages %}
-            <div class="pagination justify-content-center mt-4">
-                <ul class="pagination">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if role_type %}&type={{ role_type }}{% endif %}" aria-label="السابق">
-                            <span aria-hidden="true">&laquo;</span>
-                        </a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled">
-                        <span class="page-link" aria-hidden="true">&laquo;</span>
-                    </li>
-                    {% endif %}
-
-                    {% for i in page_obj.paginator.page_range %}
-                    {% if page_obj.number == i %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ i }}</span>
-                    </li>
-                    {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% if role_type %}&type={{ role_type }}{% endif %}">{{ i }}</a>
-                    </li>
-                    {% endif %}
-                    {% endfor %}
-
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if role_type %}&type={{ role_type }}{% endif %}" aria-label="التالي">
-                            <span aria-hidden="true">&raquo;</span>
-                        </a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled">
-                        <span class="page-link" aria-hidden="true">&raquo;</span>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
-            {% endif %}
-
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block scripts %}
-<script>
+    <script>
     $(document).ready(function() {
         // يمكن إضافة تأثيرات JavaScript هنا
     });
-</script>
+    </script>
 {% endblock %}

@@ -1,25 +1,24 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="{{ product.name }} - {{ site_name }}">
-    <meta property="og:title" content="{{ product.name }} | {{ site_name }}">
-    <meta property="og:description" content="{{ product.description|truncatewords:30 }}">
-    <meta property="og:url" content="{{ share_url }}">
-    <meta property="og:type" content="product">
-    <title>{{ product.name }} | {{ site_name }}</title>
-
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="{{ product.name }} - {{ site_name }}">
+        <meta property="og:title" content="{{ product.name }} | {{ site_name }}">
+        <meta property="og:description"
+              content="{{ product.description|truncatewords:30 }}">
+        <meta property="og:url" content="{{ share_url }}">
+        <meta property="og:type" content="product">
+        <title>{{ product.name }} | {{ site_name }}</title>
+        <!-- Google Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap"
+              rel="stylesheet">
+        <!-- Font Awesome -->
+        <link rel="stylesheet"
+              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <style>
         :root {
             --gold: #d4af37;
             --gold-light: #f4d03f;
@@ -419,98 +418,84 @@
                 padding: 20px;
             }
         }
-    </style>
-</head>
-
-<body>
-    <div class="container">
-        <!-- Brand Header -->
-        <header class="brand-header">
-            <div class="brand-logo">الخواجة</div>
-            <div class="brand-tagline">جودة لا تُضاهى</div>
-        </header>
-
-        <!-- Product Card -->
-        <article class="product-card">
-            <!-- Product Visual -->
-            <div class="product-visual">
-                <span class="category-badge">
-                    <i class="fas fa-tag"></i>
-                    {{ category_name }}
-                </span>
-                <i class="fas fa-box-open product-icon"></i>
-            </div>
-
-            <!-- Product Content -->
-            <div class="product-content">
-                <!-- Product Code -->
-                <span class="product-code">
-                    <i class="fas fa-barcode"></i>
-                    {{ product.code }}
-                </span>
-
-                <!-- Product Name -->
-                <h1 class="product-name">{{ product.name }}</h1>
-
-                <!-- Product Description -->
-                {% if product.description %}
-                <p class="product-description">{{ product.description }}</p>
-                {% endif %}
-
-                <!-- Price Section -->
-                <div class="price-section">
-                    <div class="price-label">السعر</div>
-                    <div class="price-value">{{ product.price }} {{ currency_display }}</div>
-                    <span class="price-unit">لكل {{ unit_display }}</span>
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <!-- Brand Header -->
+            <header class="brand-header">
+                <div class="brand-logo">الخواجة</div>
+                <div class="brand-tagline">جودة لا تُضاهى</div>
+            </header>
+            <!-- Product Card -->
+            <article class="product-card">
+                <!-- Product Visual -->
+                <div class="product-visual">
+                    <span class="category-badge">
+                        <i class="fas fa-tag"></i>
+                        {{ category_name }}
+                    </span>
+                    <i class="fas fa-box-open product-icon"></i>
                 </div>
-
-                <!-- Product Meta -->
-                <div class="product-meta">
-                    <div class="meta-item">
-                        <div class="meta-label">الفئة</div>
-                        <div class="meta-value">{{ category_name }}</div>
+                <!-- Product Content -->
+                <div class="product-content">
+                    <!-- Product Code -->
+                    <span class="product-code">
+                        <i class="fas fa-barcode"></i>
+                        {{ product.code }}
+                    </span>
+                    <!-- Product Name -->
+                    <h1 class="product-name">{{ product.name }}</h1>
+                    <!-- Product Description -->
+                    {% if product.description %}<p class="product-description">{{ product.description }}</p>{% endif %}
+                    <!-- Price Section -->
+                    <div class="price-section">
+                        <div class="price-label">السعر</div>
+                        <div class="price-value">{{ product.price }} {{ currency_display }}</div>
+                        <span class="price-unit">لكل {{ unit_display }}</span>
                     </div>
-                    <div class="meta-item">
-                        <div class="meta-label">الوحدة</div>
-                        <div class="meta-value">{{ unit_display }}</div>
+                    <!-- Product Meta -->
+                    <div class="product-meta">
+                        <div class="meta-item">
+                            <div class="meta-label">الفئة</div>
+                            <div class="meta-value">{{ category_name }}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">الوحدة</div>
+                            <div class="meta-value">{{ unit_display }}</div>
+                        </div>
+                    </div>
+                    <!-- QR Code Section -->
+                    <div class="qr-section">
+                        <div class="qr-title">امسح للمشاركة</div>
+                        <div class="qr-image">
+                            <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+                        </div>
+                    </div>
+                    <!-- Action Buttons -->
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="shareProduct()">
+                            <i class="fas fa-share-alt"></i>
+                            مشاركة
+                        </button>
+                        <button class="btn btn-secondary" onclick="copyLink()">
+                            <i class="fas fa-link"></i>
+                            نسخ الرابط
+                        </button>
                     </div>
                 </div>
-
-                <!-- QR Code Section -->
-                <div class="qr-section">
-                    <div class="qr-title">امسح للمشاركة</div>
-                    <div class="qr-image">
-                        <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="actions">
-                    <button class="btn btn-primary" onclick="shareProduct()">
-                        <i class="fas fa-share-alt"></i>
-                        مشاركة
-                    </button>
-                    <button class="btn btn-secondary" onclick="copyLink()">
-                        <i class="fas fa-link"></i>
-                        نسخ الرابط
-                    </button>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <footer class="card-footer">
-                <a href="{{ site_url }}" class="footer-link" target="_blank">
-                    <i class="fas fa-globe"></i>
-                    www.elkhawaga.uk
-                </a>
-            </footer>
-        </article>
-    </div>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="toast"></div>
-
-    <script>
+                <!-- Footer -->
+                <footer class="card-footer">
+                    <a href="{{ site_url }}" class="footer-link" target="_blank">
+                        <i class="fas fa-globe"></i>
+                        www.elkhawaga.uk
+                    </a>
+                </footer>
+            </article>
+        </div>
+        <!-- Toast Notification -->
+        <div id="toast" class="toast"></div>
+        <script>
         function showToast(message) {
             const toast = document.getElementById('toast');
             toast.textContent = message;
@@ -554,7 +539,6 @@
                 copyLink();
             }
         }
-    </script>
-</body>
-
+        </script>
+    </body>
 </html>

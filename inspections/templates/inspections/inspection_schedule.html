@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}جدولة المعاينات - {{ selected_date }}{% endblock %}
-
 {% block extra_css %}
-<style>
+    <style>
     .schedule-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -77,11 +75,10 @@
     @media print {
         .no-print { display: none !important; }
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     // دالة الطباعة السريعة
     function quickPrint() {
         const selectedDate = '{{ selected_date|date:"Y-m-d" }}';
@@ -112,238 +109,240 @@
 
     // تحديث عنوان الصفحة ليتضمن التاريخ
     document.title = 'جدولة المعاينات - {{ selected_date }}';
-</script>
+    </script>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- رأس الصفحة -->
-    <div class="schedule-header">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="mb-2">
-                    <i class="fas fa-calendar-alt me-2"></i>جدولة المعاينات
-                </h1>
-                <p class="mb-0">عرض وإدارة مواعيد المعاينات المجدولة</p>
-            </div>
-            <div class="col-md-4 text-end">
-                <a href="{% url 'inspections:print_daily_schedule' %}?date={{ selected_date|date:'Y-m-d' }}"
-                   class="print-btn" target="_blank">
-                    <i class="fas fa-print me-2"></i>طباعة جدول {{ selected_date }}
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- التنقل بين التواريخ -->
-    <div class="date-navigation">
-        <div class="row align-items-center">
-            <div class="col-md-4">
-                <a href="?date={{ prev_date }}" class="btn btn-outline-primary">
-                    <i class="fas fa-chevron-right me-2"></i>اليوم السابق
-                </a>
-            </div>
-            <div class="col-md-4 text-center">
-                <h4 class="mb-0">
-                    <i class="fas fa-calendar me-2"></i>{{ selected_date }}
-                    {% if selected_date == today %}
-                        <span class="badge bg-success ms-2">اليوم</span>
-                    {% endif %}
-                </h4>
-                <div class="d-flex gap-2 mt-2">
-                    <input type="date" class="form-control" value="{{ selected_date|date:'Y-m-d' }}"
-                           onchange="window.location.href='?date=' + this.value">
-                    {% if total_inspections > 0 %}
-                    <button onclick="quickPrint()" class="btn btn-outline-primary btn-sm" title="طباعة سريعة (Ctrl+P)">
-                        <i class="fas fa-print"></i>
-                    </button>
-                    {% endif %}
+    <div class="container-fluid">
+        <!-- رأس الصفحة -->
+        <div class="schedule-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-2">
+                        <i class="fas fa-calendar-alt me-2"></i>جدولة المعاينات
+                    </h1>
+                    <p class="mb-0">عرض وإدارة مواعيد المعاينات المجدولة</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{% url 'inspections:print_daily_schedule' %}?date={{ selected_date|date:'Y-m-d' }}"
+                       class="print-btn"
+                       target="_blank">
+                        <i class="fas fa-print me-2"></i>طباعة جدول {{ selected_date }}
+                    </a>
                 </div>
             </div>
-            <div class="col-md-4 text-end">
-                <a href="?date={{ next_date }}" class="btn btn-outline-primary">
-                    اليوم التالي<i class="fas fa-chevron-left ms-2"></i>
-                </a>
-            </div>
         </div>
-    </div>
-
-    <!-- إحصائيات مبسطة -->
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="alert alert-info d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-calendar-check me-2"></i><strong>{{ total_inspections }}</strong> معاينة لهذا اليوم</span>
-                {% if total_inspections > 0 %}
-                <span class="badge bg-success">جاهز للطباعة</span>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <!-- قائمة المعاينات -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-calendar-check me-2"></i>معاينات {{ selected_date }}
-                    </h5>
-                    {% if inspections %}
-                    <div class="d-flex gap-2">
-                        <span class="badge bg-light text-dark">{{ total_inspections }} معاينة</span>
-                        <a href="{% url 'inspections:print_daily_schedule' %}?date={{ selected_date|date:'Y-m-d' }}"
-                           class="btn btn-sm btn-light" target="_blank" title="طباعة هذا الجدول">
-                            <i class="fas fa-print me-1"></i>طباعة
-                        </a>
+        <!-- التنقل بين التواريخ -->
+        <div class="date-navigation">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <a href="?date={{ prev_date }}" class="btn btn-outline-primary">
+                        <i class="fas fa-chevron-right me-2"></i>اليوم السابق
+                    </a>
+                </div>
+                <div class="col-md-4 text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-calendar me-2"></i>{{ selected_date }}
+                        {% if selected_date == today %}<span class="badge bg-success ms-2">اليوم</span>{% endif %}
+                    </h4>
+                    <div class="d-flex gap-2 mt-2">
+                        <input type="date"
+                               class="form-control"
+                               value="{{ selected_date|date:'Y-m-d' }}"
+                               onchange="window.location.href='?date=' + this.value">
+                        {% if total_inspections > 0 %}
+                            <button onclick="quickPrint()"
+                                    class="btn btn-outline-primary btn-sm"
+                                    title="طباعة سريعة (Ctrl+P)">
+                                <i class="fas fa-print"></i>
+                            </button>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
-                <div class="card-body p-0">
-                    {% if inspections %}
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover mb-0">
-                                <thead class="table-primary">
-                                    <tr>
-                                        <th width="5%" class="text-center">#</th>
-                                        <th width="20%">
-                                            <i class="fas fa-user me-2"></i>اسم العميل
-                                        </th>
-                                        <th width="12%">
-                                            <i class="fas fa-building me-2"></i>الفرع
-                                        </th>
-                                        <th width="20%">
-                                            <i class="fas fa-map-marker-alt me-2"></i>العنوان
-                                        </th>
-                                        <th width="12%">
-                                            <i class="fas fa-phone me-2"></i>رقم الهاتف
-                                        </th>
-                                        <th width="12%">
-                                            <i class="fas fa-user-tie me-2"></i>البائع
-                                        </th>
-                                        <th width="8%">
-                                            <i class="fas fa-clock me-2"></i>الوقت
-                                        </th>
-                                        <th width="10%">
-                                            <i class="fas fa-tools me-2"></i>الفني
-                                        </th>
-                                        <th width="11%">
-                                            <i class="fas fa-money-bill me-2"></i>المديونية
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for inspection in inspections %}
-                                    <tr>
-                                        <td class="text-center">
-                                            <span class="badge bg-primary">{{ forloop.counter }}</span>
-                                        </td>
-                                        <td>
-                                            <strong>{{ inspection.customer.name }}</strong>
-                                            {% if inspection.customer.code %}
-                                            <br><small class="text-muted">كود: {{ inspection.customer.code }}</small>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <strong>{{ inspection.branch.name|default:"غير محدد" }}</strong>
-                                        </td>
-                                        <td>
-                                            <small>{{ inspection.customer.address|default:"غير محدد"|truncatewords:8 }}</small>
-                                        </td>
-                                        <td>
-                                            <strong>{{ inspection.customer.phone }}</strong>
-                                            {% if inspection.customer.phone2 %}
-                                            <br><small class="text-muted">{{ inspection.customer.phone2 }}</small>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if inspection.responsible_employee %}
-                                                <strong>{{ inspection.responsible_employee.name|default:"غير محدد" }}</strong>
-                                            {% elif inspection.order and inspection.order.salesperson %}
-                                                <strong>{{ inspection.order.salesperson.name|default:"غير محدد" }}</strong>
-                                            {% else %}
-                                                <span class="text-muted">غير محدد</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            {% if inspection.scheduled_time %}
-                                                <span class="badge bg-info">{{ inspection.scheduled_time|time:"H:i" }}</span>
-                                            {% else %}
-                                                <span class="text-muted">غير محدد</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if inspection.inspector %}
-                                                <strong>{{ inspection.inspector.get_full_name|default:inspection.inspector.username }}</strong>
-                                            {% else %}
-                                                <span class="text-muted">غير محدد</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            {% if inspection.payment_status == 'paid' %}
-                                                <span class="badge bg-success">مكتمل السداد</span>
-                                            {% else %}
-                                                <span class="badge bg-danger">تحصيل عند العميل</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% if inspection.notes %}
-                                    <tr class="table-light">
-                                        <td></td>
-                                        <td colspan="8">
-                                            <small class="text-muted">
-                                                <i class="fas fa-sticky-note me-1"></i>
-                                                <strong>ملاحظات:</strong> {{ inspection.notes|truncatewords:25 }}
-                                            </small>
-                                        </td>
-                                    </tr>
-                                    {% endif %}
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <div class="text-center py-5">
-                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">لا توجد معاينات لهذا التاريخ</h5>
-                            <p class="text-muted">يمكنك اختيار تاريخ آخر أو جدولة معاينات جديدة</p>
-                            <div class="d-flex gap-2 justify-content-center">
-                                <a href="{% url 'inspections:inspection_create' %}" class="btn btn-primary">
-                                    <i class="fas fa-plus me-2"></i>إنشاء معاينة جديدة
-                                </a>
-                                <a href="{% url 'inspections:inspection_list' %}?status=pending" class="btn btn-outline-warning">
-                                    <i class="fas fa-clock me-2"></i>جدولة المعاينات المعلقة
+                <div class="col-md-4 text-end">
+                    <a href="?date={{ next_date }}" class="btn btn-outline-primary">
+                        اليوم التالي<i class="fas fa-chevron-left ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <!-- إحصائيات مبسطة -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-calendar-check me-2"></i><strong>{{ total_inspections }}</strong> معاينة لهذا اليوم</span>
+                    {% if total_inspections > 0 %}<span class="badge bg-success">جاهز للطباعة</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        <!-- قائمة المعاينات -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-check me-2"></i>معاينات {{ selected_date }}
+                        </h5>
+                        {% if inspections %}
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-light text-dark">{{ total_inspections }} معاينة</span>
+                                <a href="{% url 'inspections:print_daily_schedule' %}?date={{ selected_date|date:'Y-m-d' }}"
+                                   class="btn btn-sm btn-light"
+                                   target="_blank"
+                                   title="طباعة هذا الجدول">
+                                    <i class="fas fa-print me-1"></i>طباعة
                                 </a>
                             </div>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- التواريخ السريعة -->
-    {% if dates_with_inspections %}
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="fas fa-calendar-week me-2"></i>التنقل السريع للتواريخ
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex flex-wrap gap-2">
-                        {% for date in dates_with_inspections %}
-                        <a href="?date={{ date }}" 
-                           class="btn btn-sm {% if date == selected_date %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                            {{ date }}
-                        </a>
-                        {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="card-body p-0">
+                        {% if inspections %}
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover mb-0">
+                                    <thead class="table-primary">
+                                        <tr>
+                                            <th width="5%" class="text-center">#</th>
+                                            <th width="20%">
+                                                <i class="fas fa-user me-2"></i>اسم العميل
+                                            </th>
+                                            <th width="12%">
+                                                <i class="fas fa-building me-2"></i>الفرع
+                                            </th>
+                                            <th width="20%">
+                                                <i class="fas fa-map-marker-alt me-2"></i>العنوان
+                                            </th>
+                                            <th width="12%">
+                                                <i class="fas fa-phone me-2"></i>رقم الهاتف
+                                            </th>
+                                            <th width="12%">
+                                                <i class="fas fa-user-tie me-2"></i>البائع
+                                            </th>
+                                            <th width="8%">
+                                                <i class="fas fa-clock me-2"></i>الوقت
+                                            </th>
+                                            <th width="10%">
+                                                <i class="fas fa-tools me-2"></i>الفني
+                                            </th>
+                                            <th width="11%">
+                                                <i class="fas fa-money-bill me-2"></i>المديونية
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for inspection in inspections %}
+                                            <tr>
+                                                <td class="text-center">
+                                                    <span class="badge bg-primary">{{ forloop.counter }}</span>
+                                                </td>
+                                                <td>
+                                                    <strong>{{ inspection.customer.name }}</strong>
+                                                    {% if inspection.customer.code %}
+                                                        <br>
+                                                        <small class="text-muted">كود: {{ inspection.customer.code }}</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <strong>{{ inspection.branch.name|default:"غير محدد" }}</strong>
+                                                </td>
+                                                <td>
+                                                    <small>{{ inspection.customer.address|default:"غير محدد"|truncatewords:8 }}</small>
+                                                </td>
+                                                <td>
+                                                    <strong>{{ inspection.customer.phone }}</strong>
+                                                    {% if inspection.customer.phone2 %}
+                                                        <br>
+                                                        <small class="text-muted">{{ inspection.customer.phone2 }}</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if inspection.responsible_employee %}
+                                                        <strong>{{ inspection.responsible_employee.name|default:"غير محدد" }}</strong>
+                                                    {% elif inspection.order and inspection.order.salesperson %}
+                                                        <strong>{{ inspection.order.salesperson.name|default:"غير محدد" }}</strong>
+                                                    {% else %}
+                                                        <span class="text-muted">غير محدد</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if inspection.scheduled_time %}
+                                                        <span class="badge bg-info">{{ inspection.scheduled_time|time:"H:i" }}</span>
+                                                    {% else %}
+                                                        <span class="text-muted">غير محدد</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if inspection.inspector %}
+                                                        <strong>{{ inspection.inspector.get_full_name|default:inspection.inspector.username }}</strong>
+                                                    {% else %}
+                                                        <span class="text-muted">غير محدد</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if inspection.payment_status == 'paid' %}
+                                                        <span class="badge bg-success">مكتمل السداد</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">تحصيل عند العميل</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% if inspection.notes %}
+                                                <tr class="table-light">
+                                                    <td></td>
+                                                    <td colspan="8">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-sticky-note me-1"></i>
+                                                            <strong>ملاحظات:</strong> {{ inspection.notes|truncatewords:25 }}
+                                                        </small>
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">لا توجد معاينات لهذا التاريخ</h5>
+                                <p class="text-muted">يمكنك اختيار تاريخ آخر أو جدولة معاينات جديدة</p>
+                                <div class="d-flex gap-2 justify-content-center">
+                                    <a href="{% url 'inspections:inspection_create' %}"
+                                       class="btn btn-primary">
+                                        <i class="fas fa-plus me-2"></i>إنشاء معاينة جديدة
+                                    </a>
+                                    <a href="{% url 'inspections:inspection_list' %}?status=pending"
+                                       class="btn btn-outline-warning">
+                                        <i class="fas fa-clock me-2"></i>جدولة المعاينات المعلقة
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
+        <!-- التواريخ السريعة -->
+        {% if dates_with_inspections %}
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-calendar-week me-2"></i>التنقل السريع للتواريخ
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for date in dates_with_inspections %}
+                                    <a href="?date={{ date }}"
+                                       class="btn btn-sm {% if date == selected_date %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                        {{ date }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
     </div>
-    {% endif %}
-</div>
 {% endblock %}

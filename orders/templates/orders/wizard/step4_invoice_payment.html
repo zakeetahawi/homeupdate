@@ -1,233 +1,223 @@
 {% extends 'orders/wizard/base_wizard.html' %}
 {% load static decimal_filters %}
-
 {% block wizard_content %}
-
-<!-- Edit History Section -->
-{% include 'orders/wizard/partials/edit_history.html' with draft=draft %}
-
-<form method="post" id="step4-form" enctype="multipart/form-data" novalidate>
-    {% csrf_token %}
-
-    <div class="row">
-        <div class="col-md-6">
-            <h5 class="mb-3">
-                <i class="fas fa-file-invoice me-2"></i>تفاصيل المرجع
-            </h5>
-
-            <!-- Invoice Numbers -->
-            <div class="mb-3">
-                <label for="{{ form.invoice_number.id_for_label }}" class="form-label fw-bold">
-                    <i class="fas fa-receipt me-2"></i>رقم المرجع الرئيسي
-                    <span class="text-danger">*</span>
-                </label>
-                {{ form.invoice_number }}
-                <div id="invoice-number-warning" class="mt-2" style="display: none;"></div>
-                {% if form.invoice_number.errors %}
-                <div class="text-danger mt-1">{{ form.invoice_number.errors }}</div>
-                {% endif %}
-            </div>
-
-            <div class="mb-3">
-                <label for="{{ form.invoice_number_2.id_for_label }}" class="form-label">
-                    رقم مرجع إضافي 1
-                </label>
-                {{ form.invoice_number_2 }}
-            </div>
-
-            <div class="mb-3">
-                <label for="{{ form.invoice_number_3.id_for_label }}" class="form-label">
-                    رقم مرجع إضافي 2
-                </label>
-                {{ form.invoice_number_3 }}
-            </div>
-
-            <!-- Invoice Images - صور الفاتورة المتعددة -->
-            <div class="mb-3">
-                <label class="form-label fw-bold">
-                    <i class="fas fa-images me-2"></i>صور الفاتورة
-                    {% if draft.selected_type != 'inspection' %}
-                    <span class="text-danger">*</span>
-                    {% endif %}
-                </label>
-
-                <!-- عرض الصور الحالية -->
-                <div id="current-images" class="mb-3">
-                    {% if draft.invoice_image %}
-                    <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between bg-light"
-                        id="main-invoice-image">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-image me-2 text-success"></i>
-                            <span class="fw-bold">صورة الفاتورة الرئيسية</span>
-                        </div>
-                        <div>
-                            <a href="{{ draft.invoice_image.url }}" target="_blank"
-                                class="btn btn-sm btn-outline-success me-1" title="عرض الصورة">
-                                <i class="fas fa-eye me-1"></i>عرض
-                            </a>
-                            <button type="button" class="btn btn-sm btn-outline-danger"
-                                onclick="deleteMainInvoiceImage()" title="حذف الصورة">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    {% endif %}
-                    {% for img in draft.invoice_images_new.all %}
-                    <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between bg-light"
-                        id="invoice-image-{{ img.id }}">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-image me-2 text-success"></i>
-                            <span>صورة فاتورة {{ forloop.counter }}</span>
-                        </div>
-                        <div>
-                            <a href="{{ img.image.url }}" target="_blank" class="btn btn-sm btn-outline-success me-1"
-                                title="عرض الصورة">
-                                <i class="fas fa-eye me-1"></i>عرض
-                            </a>
-                            <button type="button" class="btn btn-sm btn-outline-danger"
-                                onclick="deleteInvoiceImage({{ img.id }})" title="حذف الصورة">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    {% endfor %}
-                    {% if not draft.invoice_image and not draft.invoice_images_new.exists %}
-                    <div class="alert alert-info py-2 mb-2">
-                        <i class="fas fa-info-circle me-2"></i>
-                        لا توجد صور محفوظة. يرجى رفع صورة الفاتورة.
-                    </div>
-                    {% endif %}
+    <!-- Edit History Section -->
+    {% include 'orders/wizard/partials/edit_history.html' with draft=draft %}
+    <form method="post"
+          id="step4-form"
+          enctype="multipart/form-data"
+          novalidate>
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6">
+                <h5 class="mb-3">
+                    <i class="fas fa-file-invoice me-2"></i>تفاصيل المرجع
+                </h5>
+                <!-- Invoice Numbers -->
+                <div class="mb-3">
+                    <label for="{{ form.invoice_number.id_for_label }}"
+                           class="form-label fw-bold">
+                        <i class="fas fa-receipt me-2"></i>رقم المرجع الرئيسي
+                        <span class="text-danger">*</span>
+                    </label>
+                    {{ form.invoice_number }}
+                    <div id="invoice-number-warning" class="mt-2" style="display: none;"></div>
+                    {% if form.invoice_number.errors %}<div class="text-danger mt-1">{{ form.invoice_number.errors }}</div>{% endif %}
                 </div>
-
-                <!-- حقول رفع الصور -->
-                <div id="invoice-images-container">
-                    {% if not draft.invoice_image and not draft.invoice_images_new.exists %}
-                    <!-- الحقل الأول إجباري فقط إذا لم توجد صور محفوظة -->
-                    <div class="invoice-image-input mb-2">
-                        {{ form.invoice_image }}
-                    </div>
-                    {% else %}
-                    <!-- إذا كانت هناك صور محفوظة، الحقل الأول اختياري مع زر حذف -->
-                    <div class="invoice-image-input mb-2 d-flex gap-2">
-                        <input type="file" name="invoice_image" class="form-control" accept="image/*"
-                            id="invoice_image_field">
-                        <button type="button" class="btn btn-sm btn-outline-danger"
-                            onclick="this.parentElement.remove()">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    {% endif %}
+                <div class="mb-3">
+                    <label for="{{ form.invoice_number_2.id_for_label }}" class="form-label">رقم مرجع إضافي 1</label>
+                    {{ form.invoice_number_2 }}
                 </div>
-
-                <!-- زر إضافة صورة جديدة -->
-                <button type="button" class="btn btn-sm btn-outline-primary" id="add-invoice-image"
-                    onclick="addInvoiceImageField()">
-                    <i class="fas fa-plus me-1"></i>إضافة صورة إضافية
+                <div class="mb-3">
+                    <label for="{{ form.invoice_number_3.id_for_label }}" class="form-label">رقم مرجع إضافي 2</label>
+                    {{ form.invoice_number_3 }}
+                </div>
+                <!-- Invoice Images - صور الفاتورة المتعددة -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="fas fa-images me-2"></i>صور الفاتورة
+                        {% if draft.selected_type != 'inspection' %}<span class="text-danger">*</span>{% endif %}
+                    </label>
+                    <!-- عرض الصور الحالية -->
+                    <div id="current-images" class="mb-3">
+                        {% if draft.invoice_image %}
+                            <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between bg-light"
+                                 id="main-invoice-image">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-image me-2 text-success"></i>
+                                    <span class="fw-bold">صورة الفاتورة الرئيسية</span>
+                                </div>
+                                <div>
+                                    <a href="{{ draft.invoice_image.url }}"
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-success me-1"
+                                       title="عرض الصورة">
+                                        <i class="fas fa-eye me-1"></i>عرض
+                                    </a>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger"
+                                            onclick="deleteMainInvoiceImage()"
+                                            title="حذف الصورة">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {% endif %}
+                        {% for img in draft.invoice_images_new.all %}
+                            <div class="border rounded p-2 mb-2 d-flex align-items-center justify-content-between bg-light"
+                                 id="invoice-image-{{ img.id }}">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-image me-2 text-success"></i>
+                                    <span>صورة فاتورة {{ forloop.counter }}</span>
+                                </div>
+                                <div>
+                                    <a href="{{ img.image.url }}"
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-success me-1"
+                                       title="عرض الصورة">
+                                        <i class="fas fa-eye me-1"></i>عرض
+                                    </a>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger"
+                                            onclick="deleteInvoiceImage({{ img.id }})"
+                                            title="حذف الصورة">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        {% if not draft.invoice_image and not draft.invoice_images_new.exists %}
+                            <div class="alert alert-info py-2 mb-2">
+                                <i class="fas fa-info-circle me-2"></i>
+                                لا توجد صور محفوظة. يرجى رفع صورة الفاتورة.
+                            </div>
+                        {% endif %}
+                    </div>
+                    <!-- حقول رفع الصور -->
+                    <div id="invoice-images-container">
+                        {% if not draft.invoice_image and not draft.invoice_images_new.exists %}
+                            <!-- الحقل الأول إجباري فقط إذا لم توجد صور محفوظة -->
+                            <div class="invoice-image-input mb-2">{{ form.invoice_image }}</div>
+                        {% else %}
+                            <!-- إذا كانت هناك صور محفوظة، الحقل الأول اختياري مع زر حذف -->
+                            <div class="invoice-image-input mb-2 d-flex gap-2">
+                                <input type="file"
+                                       name="invoice_image"
+                                       class="form-control"
+                                       accept="image/*"
+                                       id="invoice_image_field">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger"
+                                        onclick="this.parentElement.remove()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <!-- زر إضافة صورة جديدة -->
+                    <button type="button"
+                            class="btn btn-sm btn-outline-primary"
+                            id="add-invoice-image"
+                            onclick="addInvoiceImageField()">
+                        <i class="fas fa-plus me-1"></i>إضافة صورة إضافية
+                    </button>
+                    {% if form.invoice_image.errors %}<div class="text-danger mt-2">{{ form.invoice_image.errors }}</div>{% endif %}
+                    <div class="form-text mt-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        يُسمح بصور JPG, PNG, GIF, WEBP - أقصى حجم 10 ميجابايت لكل صورة
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h5 class="mb-3">
+                    <i class="fas fa-money-bill-wave me-2"></i>معلومات الدفع
+                </h5>
+                <!-- Payment Summary -->
+                <div class="alert alert-info mb-4">
+                    <h6 class="alert-heading">ملخص المبالغ</h6>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>المجموع قبل الخصم:</span>
+                        <strong>{{ totals.subtotal|format_currency }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 text-danger">
+                        <span>إجمالي الخصم:</span>
+                        <strong>{{ totals.total_discount|format_currency }}</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span class="h6">المجموع النهائي:</span>
+                        <strong class="h6 text-success">{{ totals.final_total|format_currency }}</strong>
+                    </div>
+                </div>
+                <!-- Payment Method -->
+                <div class="mb-3">
+                    <label for="{{ form.payment_method.id_for_label }}"
+                           class="form-label fw-bold">
+                        <i class="fas fa-credit-card me-2"></i>طريقة الدفع
+                    </label>
+                    {{ form.payment_method }}
+                </div>
+                <!-- Paid Amount -->
+                <div class="mb-3">
+                    <label for="{{ form.paid_amount.id_for_label }}" class="form-label fw-bold">
+                        <i class="fas fa-dollar-sign me-2"></i>المبلغ المدفوع
+                        <span class="text-danger">*</span>
+                    </label>
+                    {{ form.paid_amount }}
+                    {% if form.paid_amount.errors %}
+                        <div class="alert alert-danger mt-2 py-2">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            {{ form.paid_amount.errors }}
+                        </div>
+                    {% endif %}
+                    <div class="alert alert-warning mt-2 py-2">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        <strong>💡 تنبيه:</strong> يجب دفع 50% على الأقل من القيمة الإجمالية للمتابعة
+                        <br>
+                        <small>الحد الأدنى المطلوب: <strong>{{ totals.minimum_payment|format_currency }}</strong></small>
+                    </div>
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        المتبقي: <span id="remaining-amount">{{ totals.remaining|clean_decimal }}</span> {{ currency_symbol }}
+                    </div>
+                </div>
+                <!-- Payment Notes -->
+                <div class="mb-3">
+                    <label for="{{ form.payment_notes.id_for_label }}" class="form-label">
+                        <i class="fas fa-sticky-note me-2"></i>ملاحظات الدفع
+                    </label>
+                    {{ form.payment_notes }}
+                </div>
+            </div>
+        </div>
+        <!-- Actions -->
+        <div class="wizard-actions">
+            <div>
+                <a href="{% url 'orders:wizard_cancel' %}"
+                   class="btn btn-wizard btn-wizard-danger me-2">
+                    <i class="fas fa-times me-2"></i>إلغاء
+                </a>
+                <a href="{% url 'orders:wizard_step' step=3 %}"
+                   class="btn btn-wizard btn-wizard-secondary">
+                    <i class="fas fa-arrow-right me-2"></i>السابق
+                </a>
+            </div>
+            <div>
+                <button type="submit"
+                        class="btn btn-wizard btn-wizard-primary"
+                        id="submit-btn">
+                    <i class="fas fa-arrow-left me-2"></i>التالي
                 </button>
-
-                {% if form.invoice_image.errors %}
-                <div class="text-danger mt-2">{{ form.invoice_image.errors }}</div>
-                {% endif %}
-                <div class="form-text mt-2">
-                    <i class="fas fa-info-circle me-1"></i>
-                    يُسمح بصور JPG, PNG, GIF, WEBP - أقصى حجم 10 ميجابايت لكل صورة
-                </div>
             </div>
         </div>
-
-        <div class="col-md-6">
-            <h5 class="mb-3">
-                <i class="fas fa-money-bill-wave me-2"></i>معلومات الدفع
-            </h5>
-
-            <!-- Payment Summary -->
-            <div class="alert alert-info mb-4">
-                <h6 class="alert-heading">ملخص المبالغ</h6>
-                <div class="d-flex justify-content-between mb-2">
-                    <span>المجموع قبل الخصم:</span>
-                    <strong>{{ totals.subtotal|format_currency }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2 text-danger">
-                    <span>إجمالي الخصم:</span>
-                    <strong>{{ totals.total_discount|format_currency }}</strong>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between">
-                    <span class="h6">المجموع النهائي:</span>
-                    <strong class="h6 text-success">{{ totals.final_total|format_currency }}</strong>
-                </div>
-            </div>
-
-            <!-- Payment Method -->
-            <div class="mb-3">
-                <label for="{{ form.payment_method.id_for_label }}" class="form-label fw-bold">
-                    <i class="fas fa-credit-card me-2"></i>طريقة الدفع
-                </label>
-                {{ form.payment_method }}
-            </div>
-
-            <!-- Paid Amount -->
-            <div class="mb-3">
-                <label for="{{ form.paid_amount.id_for_label }}" class="form-label fw-bold">
-                    <i class="fas fa-dollar-sign me-2"></i>المبلغ المدفوع
-                    <span class="text-danger">*</span>
-                </label>
-                {{ form.paid_amount }}
-                {% if form.paid_amount.errors %}
-                <div class="alert alert-danger mt-2 py-2">
-                    <i class="fas fa-exclamation-circle me-1"></i>
-                    {{ form.paid_amount.errors }}
-                </div>
-                {% endif %}
-                <div class="alert alert-warning mt-2 py-2">
-                    <i class="fas fa-lightbulb me-1"></i>
-                    <strong>💡 تنبيه:</strong> يجب دفع 50% على الأقل من القيمة الإجمالية للمتابعة
-                    <br>
-                    <small>الحد الأدنى المطلوب: <strong>{{ totals.minimum_payment|format_currency }}</strong></small>
-                </div>
-                <div class="form-text">
-                    <i class="fas fa-info-circle me-1"></i>
-                    المتبقي: <span id="remaining-amount">{{ totals.remaining|clean_decimal }}</span> {{ currency_symbol }}
-                </div>
-            </div>
-
-            <!-- Payment Notes -->
-            <div class="mb-3">
-                <label for="{{ form.payment_notes.id_for_label }}" class="form-label">
-                    <i class="fas fa-sticky-note me-2"></i>ملاحظات الدفع
-                </label>
-                {{ form.payment_notes }}
-            </div>
-        </div>
-    </div>
-
-    <!-- Actions -->
-    <div class="wizard-actions">
-        <div>
-            <a href="{% url 'orders:wizard_cancel' %}" class="btn btn-wizard btn-wizard-danger me-2">
-                <i class="fas fa-times me-2"></i>إلغاء
-            </a>
-            <a href="{% url 'orders:wizard_step' step=3 %}" class="btn btn-wizard btn-wizard-secondary">
-                <i class="fas fa-arrow-right me-2"></i>السابق
-            </a>
-        </div>
-        <div>
-            <button type="submit" class="btn btn-wizard btn-wizard-primary" id="submit-btn">
-                <i class="fas fa-arrow-left me-2"></i>التالي
-            </button>
-        </div>
-    </div>
-</form>
-
-<!-- Sweet Alert for duplicate warning -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    </form>
+    <!-- Sweet Alert for duplicate warning -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock %}
-
 {% block extra_js %}
-{{ block.super }}
-
-<!-- JavaScript Functions - دوال عامة -->
-<script>
+    {{ block.super }}
+    <!-- JavaScript Functions - دوال عامة -->
+    <script>
     // إضافة حقل صورة جديد - دالة عامة يمكن الوصول إليها من onclick
     let imageFieldCounter = 1;
     window.addInvoiceImageField = function () {
@@ -240,8 +230,7 @@
         const newField = document.createElement('div');
         newField.className = 'invoice-image-input mb-2 d-flex gap-2';
         newField.innerHTML = `
-        <input type="file" name="additional_invoice_image_${imageFieldCounter}" 
-               class="form-control" accept="image/*">
+        <input type="file" name="additional_invoice_image_${imageFieldCounter}" class="form-control" accept="image/*">
         <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">
             <i class="fas fa-times"></i>
         </button>
@@ -342,9 +331,8 @@
             }
         });
     }
-</script>
-
-<script>
+    </script>
+    <script>
     // بيانات المسودة
     const customerId = {% if draft.customer %}{ { draft.customer.id } } {% else %} null{% endif %};
     const orderType = "{{ draft.selected_type|default:'' }}";
@@ -591,5 +579,5 @@
 
     submitWizardStep(this);
 });
-</script>
+    </script>
 {% endblock %}

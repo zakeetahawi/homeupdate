@@ -1,35 +1,51 @@
 {% load static %}
-
 <!-- Modal Bootstrap موحد لمسح الباركود (يعمل مع Orders و Wizard) -->
-<div class="modal fade" id="{{ modal_id|default:'barcodeScannerModal' }}" tabindex="-1" aria-labelledby="{{ modal_id|default:'barcodeScanner' }}Label" aria-hidden="true">
+<div class="modal fade"
+     id="{{ modal_id|default:'barcodeScannerModal' }}"
+     tabindex="-1"
+     aria-labelledby="{{ modal_id|default:'barcodeScanner' }}Label"
+     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg" style="background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(10px); border-radius: 20px;">
+        <div class="modal-content border-0 shadow-lg"
+             style="background: rgba(255, 255, 255, 0.98);
+                    backdrop-filter: blur(10px);
+                    border-radius: 20px">
             <!-- رأس الModal -->
-            <div class="modal-header border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px 20px 0 0;">
-                <h5 class="modal-title text-white fw-bold" id="{{ modal_id|default:'barcodeScanner' }}Label">
+            <div class="modal-header border-0"
+                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        border-radius: 20px 20px 0 0">
+                <h5 class="modal-title text-white fw-bold"
+                    id="{{ modal_id|default:'barcodeScanner' }}Label">
                     <i class="fas fa-barcode me-2"></i>
                     {{ title|default:"فحص باركود وإضافة للطلب" }}
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"
+                        aria-label="إغلاق"></button>
             </div>
-            
             <!-- جسم الModal -->
             <div class="modal-body p-4">
-                
                 <!-- طلب الأذونات -->
-                <div class="alert alert-info border-0 shadow-sm d-none" id="{{ modal_id|default:'barcodeScanner' }}PermissionRequest" style="border-radius: 15px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
+                <div class="alert alert-info border-0 shadow-sm d-none"
+                     id="{{ modal_id|default:'barcodeScanner' }}PermissionRequest"
+                     style="border-radius: 15px;
+                            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)">
                     <div class="text-center">
                         <i class="fas fa-camera fa-3x mb-3" style="color: #1976d2;"></i>
                         <h5 class="fw-bold" style="color: #0d47a1;">نحتاج إلى إذن الكاميرا</h5>
                         <p class="mb-3" style="color: #1565c0;">للفحص التلقائي، يرجى السماح بالوصول إلى الكاميرا</p>
-                        <button class="btn btn-primary btn-lg shadow" id="{{ modal_id|default:'barcodeScanner' }}RequestPermissionBtn" style="border-radius: 10px;">
+                        <button class="btn btn-primary btn-lg shadow"
+                                id="{{ modal_id|default:'barcodeScanner' }}RequestPermissionBtn"
+                                style="border-radius: 10px">
                             <i class="fas fa-check-circle me-2"></i> منح الإذن
                         </button>
                     </div>
                 </div>
-                
                 <!-- تحذير HTTPS -->
-                <div class="alert alert-warning border-0 shadow-sm d-none" id="{{ modal_id|default:'barcodeScanner' }}HttpsWarning" style="border-radius: 15px;">
+                <div class="alert alert-warning border-0 shadow-sm d-none"
+                     id="{{ modal_id|default:'barcodeScanner' }}HttpsWarning"
+                     style="border-radius: 15px">
                     <div class="text-center">
                         <i class="fas fa-lock fa-3x mb-3" style="color: #f57c00;"></i>
                         <h5 class="fw-bold" style="color: #e65100;">مطلوب اتصال آمن (HTTPS)</h5>
@@ -37,79 +53,105 @@
                         <p class="mt-2 mb-0" style="color: #bf360c;">يمكنك استخدام الإدخال اليدوي أدناه</p>
                     </div>
                 </div>
-                
                 <!-- منطقة الكاميرا -->
-                <div class="text-center mb-4" id="{{ modal_id|default:'barcodeScanner' }}CameraArea">
-                    <div class="position-relative d-inline-block" style="border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-                        <video id="{{ modal_id|default:'barcodeScanner' }}Video" 
-                               class="w-100" 
-                               style="max-width: 600px; max-height: 400px; border-radius: 15px; background: #000;"
-                               playsinline autoplay muted></video>
-                        
+                <div class="text-center mb-4"
+                     id="{{ modal_id|default:'barcodeScanner' }}CameraArea">
+                    <div class="position-relative d-inline-block"
+                         style="border-radius: 15px;
+                                overflow: hidden;
+                                box-shadow: 0 10px 30px rgba(0,0,0,0.2)">
+                        <video id="{{ modal_id|default:'barcodeScanner' }}Video"
+                               class="w-100"
+                               style="max-width: 600px;
+                                      max-height: 400px;
+                                      border-radius: 15px;
+                                      background: #000"
+                               playsinline
+                               autoplay
+                               muted>
+                        </video>
                         <!-- إطار الفحص -->
-                        <div class="position-absolute top-50 start-50 translate-middle" 
-                             style="width: 70%; height: 50%; border: 3px dashed rgba(255, 255, 255, 0.8); border-radius: 10px; pointer-events: none;">
+                        <div class="position-absolute top-50 start-50 translate-middle"
+                             style="width: 70%;
+                                    height: 50%;
+                                    border: 3px dashed rgba(255, 255, 255, 0.8);
+                                    border-radius: 10px;
+                                    pointer-events: none">
                             <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
-                                <span class="badge bg-dark bg-opacity-75 fs-6 px-3 py-2" style="border-radius: 10px;">
+                                <span class="badge bg-dark bg-opacity-75 fs-6 px-3 py-2"
+                                      style="border-radius: 10px">
                                     <i class="fas fa-crosshairs me-2"></i>
                                     ضع الباركود هنا
                                 </span>
                             </div>
                         </div>
                     </div>
-                    
                     <!-- زر التحكم -->
                     <div class="mt-3">
-                        <button class="btn btn-danger btn-lg shadow d-none" id="{{ modal_id|default:'barcodeScanner' }}StopBtn" style="border-radius: 10px;">
+                        <button class="btn btn-danger btn-lg shadow d-none"
+                                id="{{ modal_id|default:'barcodeScanner' }}StopBtn"
+                                style="border-radius: 10px">
                             <i class="fas fa-stop-circle me-2"></i> إيقاف الكاميرا
                         </button>
                     </div>
                 </div>
-                
                 <!-- الإدخال اليدوي -->
                 <div class="mt-4">
-                    <label for="{{ modal_id|default:'barcodeScanner' }}ManualInput" class="form-label fw-bold">
+                    <label for="{{ modal_id|default:'barcodeScanner' }}ManualInput"
+                           class="form-label fw-bold">
                         <i class="fas fa-keyboard me-2"></i>
                         أو أدخل الباركود يدويًا
                     </label>
-                    <div class="input-group input-group-lg shadow-sm" style="border-radius: 10px; overflow: hidden;">
-                        <input type="text" 
-                               class="form-control border-0" 
-                               id="{{ modal_id|default:'barcodeScanner' }}ManualInput" 
+                    <div class="input-group input-group-lg shadow-sm"
+                         style="border-radius: 10px;
+                                overflow: hidden">
+                        <input type="text"
+                               class="form-control border-0"
+                               id="{{ modal_id|default:'barcodeScanner' }}ManualInput"
                                placeholder="اكتب أو الصق الباركود هنا..."
-                               style="border-radius: 10px 0 0 10px; font-size: 1.1rem;">
-                        <button class="btn btn-primary border-0" 
-                                type="button" 
+                               style="border-radius: 10px 0 0 10px;
+                                      font-size: 1.1rem">
+                        <button class="btn btn-primary border-0"
+                                type="button"
                                 id="{{ modal_id|default:'barcodeScanner' }}ManualAddBtn"
-                                style="border-radius: 0 10px 10px 0; padding: 0 25px;">
+                                style="border-radius: 0 10px 10px 0;
+                                       padding: 0 25px">
                             <i class="fas fa-plus-circle me-2"></i> إضافة
                         </button>
                     </div>
                 </div>
-                
                 <!-- النتائج -->
-                <div class="mt-4 d-none" id="{{ modal_id|default:'barcodeScanner' }}ResultArea">
-                    <div class="alert alert-success border-0 shadow-sm" style="border-radius: 15px;">
+                <div class="mt-4 d-none"
+                     id="{{ modal_id|default:'barcodeScanner' }}ResultArea">
+                    <div class="alert alert-success border-0 shadow-sm"
+                         style="border-radius: 15px">
                         <h6 class="fw-bold mb-2">
                             <i class="fas fa-check-circle me-2"></i>
                             تم الفحص بنجاح!
                         </h6>
-                        <p class="mb-1"><strong>الباركود:</strong> <span id="{{ modal_id|default:'barcodeScanner' }}ResultCode" class="font-monospace"></span></p>
-                        <p class="mb-0"><strong>المنتج:</strong> <span id="{{ modal_id|default:'barcodeScanner' }}ResultProduct"></span></p>
+                        <p class="mb-1">
+                            <strong>الباركود:</strong> <span id="{{ modal_id|default:'barcodeScanner' }}ResultCode"
+       class="font-monospace"></span>
+                        </p>
+                        <p class="mb-0">
+                            <strong>المنتج:</strong> <span id="{{ modal_id|default:'barcodeScanner' }}ResultProduct"></span>
+                        </p>
                     </div>
                 </div>
             </div>
-            
             <!-- ذيل الModal -->
-            <div class="modal-footer border-0 bg-light" style="border-radius: 0 0 20px 20px;">
-                <button type="button" class="btn btn-secondary shadow" data-bs-dismiss="modal" style="border-radius: 10px;">
+            <div class="modal-footer border-0 bg-light"
+                 style="border-radius: 0 0 20px 20px">
+                <button type="button"
+                        class="btn btn-secondary shadow"
+                        data-bs-dismiss="modal"
+                        style="border-radius: 10px">
                     <i class="fas fa-times me-2"></i> إغلاق
                 </button>
             </div>
         </div>
     </div>
 </div>
-
 <script>
 (function() {
     const modalId = '{{ modal_id|default:"barcodeScanner" }}';

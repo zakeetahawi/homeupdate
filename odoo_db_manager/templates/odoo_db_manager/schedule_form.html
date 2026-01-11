@@ -2,196 +2,165 @@
 {% load i18n %}
 {% load static %}
 {% load widget_tweaks %}
-
 {% block title %}{{ title }} | {{ block.super }}{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header pb-0">
-                    <h6>{{ title }}</h6>
-                </div>
-                <div class="card-body">
-                    <form method="post" class="needs-validation" novalidate>
-                        {% csrf_token %}
-                        
-                        {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {% for error in form.non_field_errors %}
-                            {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.database.id_for_label }}">{{ form.database.label }}</label>
-                                    {% if database %}
-                                    <input type="text" class="form-control" value="{{ database.name }}" readonly>
-                                    <input type="hidden" name="database" value="{{ database.id }}">
-                                    {% else %}
-                                    {{ form.database|add_class:"form-control" }}
-                                    {% endif %}
-                                    {% if form.database.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.database.errors %}
-                                        {{ error }}
-                                        {% endfor %}
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card mb-4">
+                    <div class="card-header pb-0">
+                        <h6>{{ title }}</h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" class="needs-validation" novalidate>
+                            {% csrf_token %}
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.database.id_for_label }}">{{ form.database.label }}</label>
+                                        {% if database %}
+                                            <input type="text" class="form-control" value="{{ database.name }}" readonly>
+                                            <input type="hidden" name="database" value="{{ database.id }}">
+                                        {% else %}
+                                            {{ form.database|add_class:"form-control" }}
+                                        {% endif %}
+                                        {% if form.database.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.database.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                                        {{ form.name|add_class:"form-control" }}
+                                        {% if form.name.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.name.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
-                                    {{ form.name|add_class:"form-control" }}
-                                    {% if form.name.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.name.errors %}
-                                        {{ error }}
-                                        {% endfor %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.backup_type.id_for_label }}">{{ form.backup_type.label }}</label>
+                                        {{ form.backup_type|add_class:"form-control" }}
+                                        {% if form.backup_type.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.backup_type.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.frequency.id_for_label }}">{{ form.frequency.label }}</label>
+                                        {{ form.frequency|add_class:"form-control" }}
+                                        {% if form.frequency.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.frequency.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.backup_type.id_for_label }}">{{ form.backup_type.label }}</label>
-                                    {{ form.backup_type|add_class:"form-control" }}
-                                    {% if form.backup_type.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.backup_type.errors %}
-                                        {{ error }}
-                                        {% endfor %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.hour.id_for_label }}">{{ form.hour.label }}</label>
+                                        {{ form.hour|add_class:"form-control" }}
+                                        {% if form.hour.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.hour.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.minute.id_for_label }}">{{ form.minute.label }}</label>
+                                        {{ form.minute|add_class:"form-control" }}
+                                        {% if form.minute.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.minute.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.frequency.id_for_label }}">{{ form.frequency.label }}</label>
-                                    {{ form.frequency|add_class:"form-control" }}
-                                    {% if form.frequency.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.frequency.errors %}
-                                        {{ error }}
-                                        {% endfor %}
+                            <div class="row">
+                                <div class="col-md-6 weekly-options">
+                                    <div class="form-group">
+                                        <label for="{{ form.day_of_week.id_for_label }}">{{ form.day_of_week.label }}</label>
+                                        {{ form.day_of_week|add_class:"form-control" }}
+                                        {% if form.day_of_week.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.day_of_week.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 monthly-options">
+                                    <div class="form-group">
+                                        <label for="{{ form.day_of_month.id_for_label }}">{{ form.day_of_month.label }}</label>
+                                        {{ form.day_of_month|add_class:"form-control" }}
+                                        {% if form.day_of_month.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.day_of_month.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.hour.id_for_label }}">{{ form.hour.label }}</label>
-                                    {{ form.hour|add_class:"form-control" }}
-                                    {% if form.hour.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.hour.errors %}
-                                        {{ error }}
-                                        {% endfor %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.max_backups.id_for_label }}">{{ form.max_backups.label }}</label>
+                                        {{ form.max_backups|add_class:"form-control" }}
+                                        <small class="form-text text-muted">{% trans "الحد الأقصى هو 24 نسخة. سيتم حذف النسخ القديمة تلقائيًا عند تجاوز هذا العدد." %}</small>
+                                        {% if form.max_backups.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.max_backups.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
                                     </div>
-                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mt-4">
+                                        {{ form.is_active|add_class:"form-check-input" }}
+                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">{{ form.is_active.label }}</label>
+                                        {% if form.is_active.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.is_active.errors %}{{ error }}{% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.minute.id_for_label }}">{{ form.minute.label }}</label>
-                                    {{ form.minute|add_class:"form-control" }}
-                                    {% if form.minute.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.minute.errors %}
-                                        {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">{% trans "حفظ" %}</button>
+                                    <a href="{% url 'odoo_db_manager:schedule_list' %}"
+                                       class="btn btn-secondary">{% trans "إلغاء" %}</a>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 weekly-options">
-                                <div class="form-group">
-                                    <label for="{{ form.day_of_week.id_for_label }}">{{ form.day_of_week.label }}</label>
-                                    {{ form.day_of_week|add_class:"form-control" }}
-                                    {% if form.day_of_week.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.day_of_week.errors %}
-                                        {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6 monthly-options">
-                                <div class="form-group">
-                                    <label for="{{ form.day_of_month.id_for_label }}">{{ form.day_of_month.label }}</label>
-                                    {{ form.day_of_month|add_class:"form-control" }}
-                                    {% if form.day_of_month.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.day_of_month.errors %}
-                                        {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.max_backups.id_for_label }}">{{ form.max_backups.label }}</label>
-                                    {{ form.max_backups|add_class:"form-control" }}
-                                    <small class="form-text text-muted">{% trans "الحد الأقصى هو 24 نسخة. سيتم حذف النسخ القديمة تلقائيًا عند تجاوز هذا العدد." %}</small>
-                                    {% if form.max_backups.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.max_backups.errors %}
-                                        {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch mt-4">
-                                    {{ form.is_active|add_class:"form-check-input" }}
-                                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">{{ form.is_active.label }}</label>
-                                    {% if form.is_active.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.is_active.errors %}
-                                        {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary">{% trans "حفظ" %}</button>
-                                <a href="{% url 'odoo_db_manager:schedule_list' %}" class="btn btn-secondary">{% trans "إلغاء" %}</a>
-                            </div>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
     $(document).ready(function() {
         // إخفاء/إظهار حقول التكرار حسب نوع التكرار المحدد
         function toggleFrequencyOptions() {
@@ -214,5 +183,5 @@
         // تنفيذ الدالة عند تغيير نوع التكرار
         $('#{{ form.frequency.id_for_label }}').change(toggleFrequencyOptions);
     });
-</script>
+    </script>
 {% endblock %}

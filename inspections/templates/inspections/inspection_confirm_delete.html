@@ -1,42 +1,42 @@
 {% extends 'base.html' %}
 {% load i18n %}
-
-{% block title %}{% trans 'حذف معاينة' %}{% endblock %}
-
+{% block title %}
+    {% trans 'حذف معاينة' %}
+{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title mb-0">{% trans 'تأكيد الحذف' %}</h3>
-                </div>
-                <div class="card-body">
-                    <p class="text-danger">
-                        {% trans 'هل أنت متأكد من حذف المعاينة التالية؟' %}
-                    </p>
-                    
-                    <div class="alert alert-warning">
-                        <strong>{% trans 'رقم العقد' %}:</strong> {{ inspection.contract_number }}<br>
-                        <strong>{% trans 'العميل' %}:</strong> {{ inspection.customer|default:"عميل جديد" }}<br>
-                        <strong>{% trans 'تاريخ الطلب' %}:</strong> {{ inspection.request_date }}<br>
-                        <strong>{% trans 'تاريخ التنفيذ' %}:</strong> {{ inspection.scheduled_date }}
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title mb-0">{% trans 'تأكيد الحذف' %}</h3>
                     </div>
-                    
-                    <form method="post" class="mt-4">
-                        {% csrf_token %}
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'inspections:inspection_detail' inspection.pk %}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> {% trans 'إلغاء' %}
-                            </a>
-                            <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-trash"></i> {% trans 'تأكيد الحذف' %}
-                            </button>
+                    <div class="card-body">
+                        <p class="text-danger">{% trans 'هل أنت متأكد من حذف المعاينة التالية؟' %}</p>
+                        <div class="alert alert-warning">
+                            <strong>{% trans 'رقم العقد' %}:</strong> {{ inspection.contract_number }}
+                            <br>
+                            <strong>{% trans 'العميل' %}:</strong> {{ inspection.customer|default:"عميل جديد" }}
+                            <br>
+                            <strong>{% trans 'تاريخ الطلب' %}:</strong> {{ inspection.request_date }}
+                            <br>
+                            <strong>{% trans 'تاريخ التنفيذ' %}:</strong> {{ inspection.scheduled_date }}
                         </div>
-                    </form>
+                        <form method="post" class="mt-4">
+                            {% csrf_token %}
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'inspections:inspection_detail' inspection.pk %}"
+                                   class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> {% trans 'إلغاء' %}
+                                </a>
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash"></i> {% trans 'تأكيد الحذف' %}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}

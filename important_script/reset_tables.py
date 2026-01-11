@@ -4,11 +4,16 @@
 """
 
 from customers.models import Customer
-from orders.models import Order, OrderItem, Payment, OrderStatusLog, ManufacturingDeletionLog
 from inspections.models import Inspection
-from manufacturing.models import ManufacturingOrder
 from installations.models import InstallationSchedule
-
+from manufacturing.models import ManufacturingOrder
+from orders.models import (
+    ManufacturingDeletionLog,
+    Order,
+    OrderItem,
+    OrderStatusLog,
+    Payment,
+)
 
 print("[INFO] حذف جميع بيانات Inspection ...")
 Inspection.objects.all().delete()

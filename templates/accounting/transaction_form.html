@@ -1,155 +1,157 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}إنشاء قيد محاسبي{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">المحاسبة</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'accounting:transaction_list' %}">القيود</a></li>
-                    <li class="breadcrumb-item active">قيد جديد</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="mb-0">
-                <i class="fas fa-plus-circle me-2"></i>
-                إنشاء قيد محاسبي جديد
-            </h2>
-        </div>
-    </div>
-
-    <form method="post" id="transaction-form">
-        {% csrf_token %}
-        
-        <div class="row">
-            <!-- معلومات القيد -->
-            <div class="col-lg-4 mb-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-info-circle me-2"></i>
-                            معلومات القيد
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label">تاريخ القيد <span class="text-danger">*</span></label>
-                            {{ form.transaction_date }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">نوع القيد <span class="text-danger">*</span></label>
-                            {{ form.transaction_type }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">البيان <span class="text-danger">*</span></label>
-                            {{ form.description }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">ملاحظات</label>
-                            {{ form.notes }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">الفرع</label>
-                            {{ form.branch }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- سطور القيد -->
-            <div class="col-lg-8 mb-4">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-list me-2"></i>
-                            سطور القيد
-                        </h5>
-                        <button type="button" class="btn btn-sm btn-success" id="add-line">
-                            <i class="fas fa-plus me-1"></i> إضافة سطر
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        {{ formset.management_form }}
-                        
-                        <div class="table-responsive">
-                            <table class="table" id="lines-table">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th width="30%">الحساب</th>
-                                        <th width="15%">مدين</th>
-                                        <th width="15%">دائن</th>
-                                        <th width="30%">البيان</th>
-                                        <th width="10%"></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="lines-body">
-                                    {% for line_form in formset %}
-                                    <tr class="line-row">
-                                        <td>
-                                            {{ line_form.id }}
-                                            {{ line_form.account }}
-                                        </td>
-                                        <td>{{ line_form.debit_amount }}</td>
-                                        <td>{{ line_form.credit_amount }}</td>
-                                        <td>{{ line_form.description }}</td>
-                                        <td>
-                                            {{ line_form.DELETE }}
-                                            <button type="button" class="btn btn-sm btn-outline-danger remove-line">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                                <tfoot>
-                                    <tr class="table-light">
-                                        <th class="text-end">المجموع:</th>
-                                        <th id="total-debit" class="text-success">0.00</th>
-                                        <th id="total-credit" class="text-danger">0.00</th>
-                                        <th colspan="2">
-                                            <span id="balance-status" class="badge bg-warning">غير متوازن</span>
-                                        </th>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- أزرار الإجراء -->
-        <div class="row">
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
             <div class="col-12">
-                <div class="card">
-                    <div class="card-body d-flex justify-content-between">
-                        <a href="{% url 'accounting:transaction_list' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-1"></i> إلغاء
-                        </a>
-                        <div>
-                            <button type="submit" name="action" value="draft" class="btn btn-warning">
-                                <i class="fas fa-save me-1"></i> حفظ كمسودة
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'accounting:dashboard' %}">المحاسبة</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'accounting:transaction_list' %}">القيود</a>
+                        </li>
+                        <li class="breadcrumb-item active">قيد جديد</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    إنشاء قيد محاسبي جديد
+                </h2>
+            </div>
+        </div>
+        <form method="post" id="transaction-form">
+            {% csrf_token %}
+            <div class="row">
+                <!-- معلومات القيد -->
+                <div class="col-lg-4 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                معلومات القيد
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    تاريخ القيد <span class="text-danger">*</span>
+                                </label>
+                                {{ form.transaction_date }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    نوع القيد <span class="text-danger">*</span>
+                                </label>
+                                {{ form.transaction_type }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    البيان <span class="text-danger">*</span>
+                                </label>
+                                {{ form.description }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">ملاحظات</label>
+                                {{ form.notes }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">الفرع</label>
+                                {{ form.branch }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- سطور القيد -->
+                <div class="col-lg-8 mb-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-list me-2"></i>
+                                سطور القيد
+                            </h5>
+                            <button type="button" class="btn btn-sm btn-success" id="add-line">
+                                <i class="fas fa-plus me-1"></i> إضافة سطر
                             </button>
-                            <button type="submit" name="action" value="post" class="btn btn-success">
-                                <i class="fas fa-check me-1"></i> حفظ وترحيل
-                            </button>
+                        </div>
+                        <div class="card-body">
+                            {{ formset.management_form }}
+                            <div class="table-responsive">
+                                <table class="table" id="lines-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th width="30%">الحساب</th>
+                                            <th width="15%">مدين</th>
+                                            <th width="15%">دائن</th>
+                                            <th width="30%">البيان</th>
+                                            <th width="10%"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lines-body">
+                                        {% for line_form in formset %}
+                                            <tr class="line-row">
+                                                <td>
+                                                    {{ line_form.id }}
+                                                    {{ line_form.account }}
+                                                </td>
+                                                <td>{{ line_form.debit_amount }}</td>
+                                                <td>{{ line_form.credit_amount }}</td>
+                                                <td>{{ line_form.description }}</td>
+                                                <td>
+                                                    {{ line_form.DELETE }}
+                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-line">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-light">
+                                            <th class="text-end">المجموع:</th>
+                                            <th id="total-debit" class="text-success">0.00</th>
+                                            <th id="total-credit" class="text-danger">0.00</th>
+                                            <th colspan="2">
+                                                <span id="balance-status" class="badge bg-warning">غير متوازن</span>
+                                            </th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </form>
-</div>
-
-<script>
+            <!-- أزرار الإجراء -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body d-flex justify-content-between">
+                            <a href="{% url 'accounting:transaction_list' %}"
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i> إلغاء
+                            </a>
+                            <div>
+                                <button type="submit" name="action" value="draft" class="btn btn-warning">
+                                    <i class="fas fa-save me-1"></i> حفظ كمسودة
+                                </button>
+                                <button type="submit" name="action" value="post" class="btn btn-success">
+                                    <i class="fas fa-check me-1"></i> حفظ وترحيل
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     const linesBody = document.getElementById('lines-body');
     const totalDebit = document.getElementById('total-debit');
@@ -208,5 +210,5 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial calculation
     calculateTotals();
 });
-</script>
+    </script>
 {% endblock %}

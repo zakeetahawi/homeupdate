@@ -1,12 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
-
 {% block title %}طباعة خط الإنتاج - {{ production_line.name }}{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'manufacturing/css/manufacturing.css' %}">
-<style>
+    <link rel="stylesheet"
+          href="{% static 'manufacturing/css/manufacturing.css' %}">
+    <style>
 @media print {
     .no-print {
         display: none !important;
@@ -126,11 +125,10 @@
     font-size: 0.875rem;
     margin: 0.125rem;
 }
-</style>
+    </style>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 // دالة الطباعة الفورية للجدول الحالي
 function quickPrint() {
     // إنشاء نافذة طباعة جديدة
@@ -292,7 +290,7 @@ function quickPrint() {
                         border: 1px solid black !important;
                     }
                 }
-            </style>
+</style>
         </head>
         <body>
             <div class="header">
@@ -392,436 +390,436 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 });
-</script>
+    </script>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Print Controls -->
-    <div class="print-controls no-print">
-        <div class="row align-items-center mb-4">
-            <div class="col-md-8">
-                <h4 class="mb-0">
-                    <i class="fas fa-print me-2"></i>طباعة طلبات خط الإنتاج
-                </h4>
+    <div class="container-fluid">
+        <!-- Print Controls -->
+        <div class="print-controls no-print">
+            <div class="row align-items-center mb-4">
+                <div class="col-md-8">
+                    <h4 class="mb-0">
+                        <i class="fas fa-print me-2"></i>طباعة طلبات خط الإنتاج
+                    </h4>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group">
+                        <button onclick="quickPrint()" class="btn btn-success">
+                            <i class="fas fa-print me-2"></i>طباعة فورية
+                        </button>
+                        <a href="{% url 'manufacturing:production_line_pdf' production_line.id %}?{{ request.GET.urlencode }}"
+                           class="btn btn-danger">
+                            <i class="fas fa-file-pdf me-2"></i>تحميل PDF
+                        </a>
+                        <a href="{% url 'manufacturing:dashboard' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>العودة
+                        </a>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-4 text-end">
-                <div class="btn-group">
-                    <button onclick="quickPrint()" class="btn btn-success">
-                        <i class="fas fa-print me-2"></i>طباعة فورية
-                    </button>
-                    <a href="{% url 'manufacturing:production_line_pdf' production_line.id %}?{{ request.GET.urlencode }}" class="btn btn-danger">
-                        <i class="fas fa-file-pdf me-2"></i>تحميل PDF
-                    </a>
-                    <a href="{% url 'manufacturing:dashboard' %}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left me-2"></i>العودة
-                    </a>
+            <!-- Advanced Filters -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>فلاتر البحث المتقدمة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" id="filterForm">
+                        <div class="row g-3">
+                            <!-- Status Filter -->
+                            <div class="col-md-3">
+                                <label class="form-label">الحالة (اختيار متعدد)</label>
+                                <button class="btn btn-outline-secondary w-100"
+                                        type="button"
+                                        id="statusDropdownBtn">
+                                    <span class="selected-text">اختر الحالات</span>
+                                    <i class="fas fa-chevron-down float-end mt-1"></i>
+                                </button>
+                                <div id="statusDropdown"
+                                     class="custom-manufacturing-dropdown"
+                                     style="display:none">
+                                    <div class="dropdown-header fw-bold py-2 px-3 border-bottom">اختر الحالات</div>
+                                    {% for status_code, status_name in filter_options.status_choices %}
+                                        <label class="dropdown-item">
+                                            <input type="checkbox"
+                                                   name="status"
+                                                   value="{{ status_code }}"
+                                                   {% if status_code in applied_filters.status_filters %}checked{% endif %}>
+                                            {{ status_name }}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <!-- Branch Filter -->
+                            <div class="col-md-3">
+                                <label class="form-label">الفرع (اختيار متعدد)</label>
+                                <button class="btn btn-outline-secondary w-100"
+                                        type="button"
+                                        id="branchDropdownBtn">
+                                    <span class="selected-text">اختر الفروع</span>
+                                    <i class="fas fa-chevron-down float-end mt-1"></i>
+                                </button>
+                                <div id="branchDropdown"
+                                     class="custom-manufacturing-dropdown"
+                                     style="display:none">
+                                    <div class="dropdown-header fw-bold py-2 px-3 border-bottom">اختر الفروع</div>
+                                    {% for branch in filter_options.branches %}
+                                        <label class="dropdown-item">
+                                            <input type="checkbox"
+                                                   name="branch"
+                                                   value="{{ branch.id }}"
+                                                   {% if branch.id|stringformat:"s" in applied_filters.branch_filters %}checked{% endif %}>
+                                            {{ branch.name }}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <!-- Order Type Filter -->
+                            <div class="col-md-3">
+                                <label class="form-label">نوع الطلب (اختيار متعدد)</label>
+                                <button class="btn btn-outline-secondary w-100"
+                                        type="button"
+                                        id="orderTypeDropdownBtn">
+                                    <span class="selected-text">اختر الأنواع</span>
+                                    <i class="fas fa-chevron-down float-end mt-1"></i>
+                                </button>
+                                <div id="orderTypeDropdown"
+                                     class="custom-manufacturing-dropdown"
+                                     style="display:none">
+                                    <div class="dropdown-header fw-bold py-2 px-3 border-bottom">اختر أنواع الطلبات</div>
+                                    {% for type_code, type_name in filter_options.order_type_choices %}
+                                        <label class="dropdown-item">
+                                            <input type="checkbox"
+                                                   name="order_type"
+                                                   value="{{ type_code }}"
+                                                   {% if type_code in applied_filters.order_type_filters %}checked{% endif %}>
+                                            {{ type_name }}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <!-- Overdue Filter -->
+                            <div class="col-md-3">
+                                <label class="form-label">الطلبات المتأخرة</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="overdue"
+                                           value="true"
+                                           id="overdueSwitch"
+                                           {% if applied_filters.overdue_filter == 'true' %}checked{% endif %}>
+                                    <label class="form-check-label" for="overdueSwitch">عرض المتأخرة فقط</label>
+                                </div>
+                            </div>
+                            <!-- Date Filters -->
+                            <div class="col-md-3">
+                                <label for="date_from" class="form-label">من تاريخ</label>
+                                <input type="date"
+                                       name="date_from"
+                                       id="date_from"
+                                       class="form-control"
+                                       value="{{ applied_filters.date_from }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="date_to" class="form-label">إلى تاريخ</label>
+                                <input type="date"
+                                       name="date_to"
+                                       id="date_to"
+                                       class="form-control"
+                                       value="{{ applied_filters.date_to }}">
+                            </div>
+                            <!-- Action Buttons -->
+                            <div class="col-md-6">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-filter me-2"></i>تطبيق الفلاتر
+                                    </button>
+                                    <a href="{% url 'manufacturing:production_line_print' production_line.id %}"
+                                       class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-2"></i>مسح الفلاتر
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-
-        <!-- Advanced Filters -->
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-filter me-2"></i>فلاتر البحث المتقدمة
-                </h6>
-            </div>
-            <div class="card-body">
-                <form method="get" id="filterForm">
-                    <div class="row g-3">
-                        <!-- Status Filter -->
-                        <div class="col-md-3">
-                            <label class="form-label">الحالة (اختيار متعدد)</label>
-                            <button class="btn btn-outline-secondary w-100" type="button" id="statusDropdownBtn">
-                                <span class="selected-text">اختر الحالات</span>
-                                <i class="fas fa-chevron-down float-end mt-1"></i>
-                            </button>
-                            <div id="statusDropdown" class="custom-manufacturing-dropdown" style="display:none;">
-                                <div class="dropdown-header fw-bold py-2 px-3 border-bottom">اختر الحالات</div>
-                                {% for status_code, status_name in filter_options.status_choices %}
-                                <label class="dropdown-item">
-                                    <input type="checkbox" name="status" value="{{ status_code }}"
-                                           {% if status_code in applied_filters.status_filters %}checked{% endif %}>
-                                    {{ status_name }}
-                                </label>
-                                {% endfor %}
+        <!-- Production Line Header -->
+        <div class="production-line-header print-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-2">
+                        <i class="fas fa-industry me-3"></i>{{ production_line.name }}
+                    </h1>
+                    {% if production_line.description %}<p class="mb-0 opacity-75">{{ production_line.description }}</p>{% endif %}
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="stats-card"
+                         style="background: rgba(255, 255, 255, 0.9);
+                                color: #333">
+                        <div class="row text-center">
+                            <div class="col-3">
+                                <div style="font-size: 1.5rem; font-weight: bold; color: #007bff;">{{ total_orders }}</div>
+                                <div style="font-size: 0.8rem;">إجمالي</div>
                             </div>
-                        </div>
-
-                        <!-- Branch Filter -->
-                        <div class="col-md-3">
-                            <label class="form-label">الفرع (اختيار متعدد)</label>
-                            <button class="btn btn-outline-secondary w-100" type="button" id="branchDropdownBtn">
-                                <span class="selected-text">اختر الفروع</span>
-                                <i class="fas fa-chevron-down float-end mt-1"></i>
-                            </button>
-                            <div id="branchDropdown" class="custom-manufacturing-dropdown" style="display:none;">
-                                <div class="dropdown-header fw-bold py-2 px-3 border-bottom">اختر الفروع</div>
-                                {% for branch in filter_options.branches %}
-                                <label class="dropdown-item">
-                                    <input type="checkbox" name="branch" value="{{ branch.id }}"
-                                           {% if branch.id|stringformat:"s" in applied_filters.branch_filters %}checked{% endif %}>
-                                    {{ branch.name }}
-                                </label>
-                                {% endfor %}
+                            <div class="col-3">
+                                <div style="font-size: 1.5rem; font-weight: bold; color: #ffc107;">{{ active_orders }}</div>
+                                <div style="font-size: 0.8rem;">نشط</div>
                             </div>
-                        </div>
-
-                        <!-- Order Type Filter -->
-                        <div class="col-md-3">
-                            <label class="form-label">نوع الطلب (اختيار متعدد)</label>
-                            <button class="btn btn-outline-secondary w-100" type="button" id="orderTypeDropdownBtn">
-                                <span class="selected-text">اختر الأنواع</span>
-                                <i class="fas fa-chevron-down float-end mt-1"></i>
-                            </button>
-                            <div id="orderTypeDropdown" class="custom-manufacturing-dropdown" style="display:none;">
-                                <div class="dropdown-header fw-bold py-2 px-3 border-bottom">اختر أنواع الطلبات</div>
-                                {% for type_code, type_name in filter_options.order_type_choices %}
-                                <label class="dropdown-item">
-                                    <input type="checkbox" name="order_type" value="{{ type_code }}"
-                                           {% if type_code in applied_filters.order_type_filters %}checked{% endif %}>
-                                    {{ type_name }}
-                                </label>
-                                {% endfor %}
+                            <div class="col-3">
+                                <div style="font-size: 1.5rem; font-weight: bold; color: #28a745;">{{ completed_orders }}</div>
+                                <div style="font-size: 0.8rem;">مكتمل</div>
                             </div>
-                        </div>
-
-                        <!-- Overdue Filter -->
-                        <div class="col-md-3">
-                            <label class="form-label">الطلبات المتأخرة</label>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" name="overdue" value="true"
-                                       id="overdueSwitch" {% if applied_filters.overdue_filter == 'true' %}checked{% endif %}>
-                                <label class="form-check-label" for="overdueSwitch">
-                                    عرض المتأخرة فقط
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Date Filters -->
-                        <div class="col-md-3">
-                            <label for="date_from" class="form-label">من تاريخ</label>
-                            <input type="date" name="date_from" id="date_from" class="form-control"
-                                   value="{{ applied_filters.date_from }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label for="date_to" class="form-label">إلى تاريخ</label>
-                            <input type="date" name="date_to" id="date_to" class="form-control"
-                                   value="{{ applied_filters.date_to }}">
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="col-md-6">
-                            <label class="form-label">&nbsp;</label>
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-filter me-2"></i>تطبيق الفلاتر
-                                </button>
-                                <a href="{% url 'manufacturing:production_line_print' production_line.id %}"
-                                   class="btn btn-outline-secondary">
-                                    <i class="fas fa-times me-2"></i>مسح الفلاتر
-                                </a>
+                            <div class="col-3">
+                                <div style="font-size: 1.5rem; font-weight: bold; color: #dc3545;">{{ overdue_orders }}</div>
+                                <div style="font-size: 0.8rem;">متأخر</div>
                             </div>
                         </div>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
-    </div>
-
-    <!-- Production Line Header -->
-    <div class="production-line-header print-header">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="mb-2">
-                    <i class="fas fa-industry me-3"></i>{{ production_line.name }}
-                </h1>
-                {% if production_line.description %}
-                <p class="mb-0 opacity-75">{{ production_line.description }}</p>
+        <!-- Filter Summary -->
+        {% if applied_filters.status_filters or applied_filters.branch_filters or applied_filters.order_type_filters or applied_filters.overdue_filter or applied_filters.date_from or applied_filters.date_to %}
+            <div class="filter-summary no-print">
+                <h6>
+                    <i class="fas fa-filter me-2"></i>الفلاتر المطبقة:
+                </h6>
+                <div class="d-flex flex-wrap gap-1">
+                    {% for status in applied_filters.status_filters %}
+                        {% for status_code, status_name in filter_options.status_choices %}
+                            {% if status_code == status %}<span class="filter-tag">حالة: {{ status_name }}</span>{% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                    {% for branch_id in applied_filters.branch_filters %}
+                        {% for branch in filter_options.branches %}
+                            {% if branch.id|stringformat:"s" == branch_id %}<span class="filter-tag">فرع: {{ branch.name }}</span>{% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                    {% for order_type in applied_filters.order_type_filters %}
+                        {% for type_code, type_name in filter_options.order_type_choices %}
+                            {% if type_code == order_type %}<span class="filter-tag">نوع: {{ type_name }}</span>{% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                    {% if applied_filters.overdue_filter == 'true' %}<span class="filter-tag">طلبات متأخرة</span>{% endif %}
+                    {% if applied_filters.date_from %}<span class="filter-tag">من: {{ applied_filters.date_from }}</span>{% endif %}
+                    {% if applied_filters.date_to %}<span class="filter-tag">إلى: {{ applied_filters.date_to }}</span>{% endif %}
+                </div>
+            </div>
+        {% endif %}
+        <!-- Print Info -->
+        <div class="row mb-3 no-print">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>معلومات الطباعة:</strong>
+                    تاريخ الطباعة: {{ print_date|date:"Y-m-d H:i" }} |
+                    عدد الطلبات المعروضة: {{ page_obj.paginator.count }} طلب |
+                    الصفحة: {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+                </div>
+            </div>
+        </div>
+        <!-- Orders Table -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>طلبات خط الإنتاج
+                </h5>
+                <div class="text-muted">
+                    <strong>{{ page_obj.paginator.count }}</strong> طلب إجمالي |
+                    عرض <strong>{{ page_obj.start_index }}-{{ page_obj.end_index }}</strong>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if orders %}
+                    <div class="table-responsive">
+                        <table class="table table-striped print-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="sortable-header" data-sort="id">
+                                        <span class="sort-icon none"></span>#
+                                    </th>
+                                    <th class="sortable-header" data-sort="manufacturing_code">
+                                        <span class="sort-icon none"></span>رقم الطلب
+                                    </th>
+                                    <th class="sortable-header" data-sort="contract_number">
+                                        <span class="sort-icon none"></span>رقم العقد
+                                    </th>
+                                    <th class="sortable-header" data-sort="invoice_number">
+                                        <span class="sort-icon none"></span>رقم الفاتورة
+                                    </th>
+                                    <th class="sortable-header" data-sort="customer">
+                                        <span class="sort-icon none"></span>العميل
+                                    </th>
+                                    <th class="sortable-header" data-sort="order_type">
+                                        <span class="sort-icon none"></span>نوع الطلب
+                                    </th>
+                                    <th class="sortable-header" data-sort="status">
+                                        <span class="sort-icon none"></span>الحالة
+                                    </th>
+                                    <th class="sortable-header" data-sort="order_date">
+                                        <span class="sort-icon none"></span>تاريخ الطلب
+                                    </th>
+                                    <th class="sortable-header" data-sort="expected_delivery_date">
+                                        <span class="sort-icon none"></span>التسليم المتوقع
+                                    </th>
+                                    <th class="sortable-header" data-sort="branch">
+                                        <span class="sort-icon none"></span>الفرع
+                                    </th>
+                                    <th class="sortable-header" data-sort="salesperson">
+                                        <span class="sort-icon none"></span>البائع
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            <strong>{{ order.manufacturing_code }}</strong>
+                                        </td>
+                                        <td>
+                                            {% if order.contract_number %}
+                                                <span class="badge bg-info">{{ order.contract_number }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if order.invoice_number %}
+                                                <span class="badge bg-success">{{ order.invoice_number }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if order.order.customer %}
+                                                {{ order.order.customer.name }}
+                                                {% if order.order.customer.phone %}
+                                                    <br>
+                                                    <small class="text-muted">{{ order.order.customer.phone }}</small>
+                                                {% endif %}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">{{ order.get_order_type_display }}</span>
+                                        </td>
+                                        <td>
+                                            {% if order.status == 'pending_approval' %}
+                                                <span class="badge bg-warning">{{ order.get_status_display }}</span>
+                                            {% elif order.status == 'in_progress' %}
+                                                <span class="badge bg-primary">{{ order.get_status_display }}</span>
+                                            {% elif order.status == 'completed' %}
+                                                <span class="badge bg-success">{{ order.get_status_display }}</span>
+                                            {% elif order.status == 'delivered' %}
+                                                <span class="badge bg-success">{{ order.get_status_display }}</span>
+                                            {% elif order.status == 'rejected' %}
+                                                <span class="badge bg-danger">{{ order.get_status_display }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ order.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ order.order_date|date:"Y-m-d" }}</td>
+                                        <td>
+                                            {% if order.expected_delivery_date %}
+                                                {{ order.expected_delivery_date|date:"Y-m-d" }}
+                                                {% now "Y-m-d" as today %}
+                                                {% if order.expected_delivery_date|date:"Y-m-d" < today and order.status not in 'completed,ready_install,delivered' %}
+                                                    <br>
+                                                    <small class="text-danger">متأخر</small>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">غير محدد</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if order.order.branch %}
+                                                {{ order.order.branch.name }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if order.order.salesperson %}
+                                                {{ order.order.salesperson.name }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">لا توجد طلبات</h5>
+                        <p class="text-muted">لا توجد طلبات في هذا الخط تطابق معايير البحث.</p>
+                    </div>
                 {% endif %}
             </div>
-            <div class="col-md-4 text-end">
-                <div class="stats-card" style="background: rgba(255, 255, 255, 0.9); color: #333;">
-                    <div class="row text-center">
-                        <div class="col-3">
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #007bff;">{{ total_orders }}</div>
-                            <div style="font-size: 0.8rem;">إجمالي</div>
-                        </div>
-                        <div class="col-3">
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #ffc107;">{{ active_orders }}</div>
-                            <div style="font-size: 0.8rem;">نشط</div>
-                        </div>
-                        <div class="col-3">
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #28a745;">{{ completed_orders }}</div>
-                            <div style="font-size: 0.8rem;">مكتمل</div>
-                        </div>
-                        <div class="col-3">
-                            <div style="font-size: 1.5rem; font-weight: bold; color: #dc3545;">{{ overdue_orders }}</div>
-                            <div style="font-size: 0.8rem;">متأخر</div>
-                        </div>
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <div class="card-footer no-print">
+                    <nav aria-label="صفحات الطلبات">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{{ request.GET.urlencode }}&page=1">الأولى</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">السابقة</a>
+                                </li>
+                            {% endif %}
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">التالية</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?{{ request.GET.urlencode }}&page={{ page_obj.paginator.num_pages }}">الأخيرة</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    <div class="text-center mt-2">
+                        <small class="text-muted">
+                            صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+                            ({{ page_obj.paginator.count }} طلب إجمالي)
+                        </small>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filter Summary -->
-    {% if applied_filters.status_filters or applied_filters.branch_filters or applied_filters.order_type_filters or applied_filters.overdue_filter or applied_filters.date_from or applied_filters.date_to %}
-    <div class="filter-summary no-print">
-        <h6><i class="fas fa-filter me-2"></i>الفلاتر المطبقة:</h6>
-        <div class="d-flex flex-wrap gap-1">
-            {% for status in applied_filters.status_filters %}
-                {% for status_code, status_name in filter_options.status_choices %}
-                    {% if status_code == status %}
-                        <span class="filter-tag">حالة: {{ status_name }}</span>
-                    {% endif %}
-                {% endfor %}
-            {% endfor %}
-
-            {% for branch_id in applied_filters.branch_filters %}
-                {% for branch in filter_options.branches %}
-                    {% if branch.id|stringformat:"s" == branch_id %}
-                        <span class="filter-tag">فرع: {{ branch.name }}</span>
-                    {% endif %}
-                {% endfor %}
-            {% endfor %}
-
-            {% for order_type in applied_filters.order_type_filters %}
-                {% for type_code, type_name in filter_options.order_type_choices %}
-                    {% if type_code == order_type %}
-                        <span class="filter-tag">نوع: {{ type_name }}</span>
-                    {% endif %}
-                {% endfor %}
-            {% endfor %}
-
-            {% if applied_filters.overdue_filter == 'true' %}
-                <span class="filter-tag">طلبات متأخرة</span>
-            {% endif %}
-
-            {% if applied_filters.date_from %}
-                <span class="filter-tag">من: {{ applied_filters.date_from }}</span>
-            {% endif %}
-
-            {% if applied_filters.date_to %}
-                <span class="filter-tag">إلى: {{ applied_filters.date_to }}</span>
             {% endif %}
         </div>
-    </div>
-    {% endif %}
-
-    <!-- Print Info -->
-    <div class="row mb-3 no-print">
-        <div class="col-12">
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                <strong>معلومات الطباعة:</strong>
-                تاريخ الطباعة: {{ print_date|date:"Y-m-d H:i" }} |
-                عدد الطلبات المعروضة: {{ page_obj.paginator.count }} طلب |
-                الصفحة: {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
-            </div>
+        <!-- Print Footer -->
+        <div class="mt-4 text-center text-muted" style="display: none;">
+            <small>
+                تم الطباعة في {{ print_date|date:"Y-m-d H:i" }} |
+                خط الإنتاج: {{ production_line.name }} |
+                عدد الطلبات: {{ orders.count }}
+            </small>
         </div>
     </div>
-
-    <!-- Orders Table -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="fas fa-list me-2"></i>طلبات خط الإنتاج
-            </h5>
-            <div class="text-muted">
-                <strong>{{ page_obj.paginator.count }}</strong> طلب إجمالي |
-                عرض <strong>{{ page_obj.start_index }}-{{ page_obj.end_index }}</strong>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            {% if orders %}
-            <div class="table-responsive">
-                <table class="table table-striped print-table mb-0">
-                    <thead>
-                        <tr>
-                            <th class="sortable-header" data-sort="id">
-                                <span class="sort-icon none"></span>#
-                            </th>
-                            <th class="sortable-header" data-sort="manufacturing_code">
-                                <span class="sort-icon none"></span>رقم الطلب
-                            </th>
-                            <th class="sortable-header" data-sort="contract_number">
-                                <span class="sort-icon none"></span>رقم العقد
-                            </th>
-                            <th class="sortable-header" data-sort="invoice_number">
-                                <span class="sort-icon none"></span>رقم الفاتورة
-                            </th>
-                            <th class="sortable-header" data-sort="customer">
-                                <span class="sort-icon none"></span>العميل
-                            </th>
-                            <th class="sortable-header" data-sort="order_type">
-                                <span class="sort-icon none"></span>نوع الطلب
-                            </th>
-                            <th class="sortable-header" data-sort="status">
-                                <span class="sort-icon none"></span>الحالة
-                            </th>
-                            <th class="sortable-header" data-sort="order_date">
-                                <span class="sort-icon none"></span>تاريخ الطلب
-                            </th>
-                            <th class="sortable-header" data-sort="expected_delivery_date">
-                                <span class="sort-icon none"></span>التسليم المتوقع
-                            </th>
-                            <th class="sortable-header" data-sort="branch">
-                                <span class="sort-icon none"></span>الفرع
-                            </th>
-                            <th class="sortable-header" data-sort="salesperson">
-                                <span class="sort-icon none"></span>البائع
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in orders %}
-                        <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td>
-                                <strong>{{ order.manufacturing_code }}</strong>
-                            </td>
-                            <td>
-                                {% if order.contract_number %}
-                                    <span class="badge bg-info">{{ order.contract_number }}</span>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if order.invoice_number %}
-                                    <span class="badge bg-success">{{ order.invoice_number }}</span>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if order.order.customer %}
-                                    {{ order.order.customer.name }}
-                                    {% if order.order.customer.phone %}
-                                    <br><small class="text-muted">{{ order.order.customer.phone }}</small>
-                                    {% endif %}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="badge bg-info">{{ order.get_order_type_display }}</span>
-                            </td>
-                            <td>
-                                {% if order.status == 'pending_approval' %}
-                                    <span class="badge bg-warning">{{ order.get_status_display }}</span>
-                                {% elif order.status == 'in_progress' %}
-                                    <span class="badge bg-primary">{{ order.get_status_display }}</span>
-                                {% elif order.status == 'completed' %}
-                                    <span class="badge bg-success">{{ order.get_status_display }}</span>
-                                {% elif order.status == 'delivered' %}
-                                    <span class="badge bg-success">{{ order.get_status_display }}</span>
-                                {% elif order.status == 'rejected' %}
-                                    <span class="badge bg-danger">{{ order.get_status_display }}</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">{{ order.get_status_display }}</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ order.order_date|date:"Y-m-d" }}</td>
-                            <td>
-                                {% if order.expected_delivery_date %}
-                                    {{ order.expected_delivery_date|date:"Y-m-d" }}
-                                    {% now "Y-m-d" as today %}
-                                    {% if order.expected_delivery_date|date:"Y-m-d" < today and order.status not in 'completed,ready_install,delivered' %}
-                                        <br><small class="text-danger">متأخر</small>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="text-muted">غير محدد</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if order.order.branch %}
-                                    {{ order.order.branch.name }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if order.order.salesperson %}
-                                    {{ order.order.salesperson.name }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                <h5 class="text-muted">لا توجد طلبات</h5>
-                <p class="text-muted">لا توجد طلبات في هذا الخط تطابق معايير البحث.</p>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Pagination -->
-        {% if is_paginated %}
-        <div class="card-footer no-print">
-            <nav aria-label="صفحات الطلبات">
-                <ul class="pagination justify-content-center mb-0">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?{{ request.GET.urlencode }}&page=1">الأولى</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">السابقة</a>
-                        </li>
-                    {% endif %}
-
-                    {% for num in page_obj.paginator.page_range %}
-                        {% if page_obj.number == num %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ num }}</span>
-                            </li>
-                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                            <li class="page-item">
-                                <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ num }}">{{ num }}</a>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">التالية</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?{{ request.GET.urlencode }}&page={{ page_obj.paginator.num_pages }}">الأخيرة</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-
-            <div class="text-center mt-2">
-                <small class="text-muted">
-                    صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
-                    ({{ page_obj.paginator.count }} طلب إجمالي)
-                </small>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Print Footer -->
-    <div class="mt-4 text-center text-muted" style="display: none;">
-        <small>
-            تم الطباعة في {{ print_date|date:"Y-m-d H:i" }} | 
-            خط الإنتاج: {{ production_line.name }} | 
-            عدد الطلبات: {{ orders.count }}
-        </small>
-    </div>
-</div>
-
-<style>
+    <style>
 @media print {
     .mt-4.text-center.text-muted {
         display: block !important;
@@ -834,5 +832,5 @@ document.addEventListener('DOMContentLoaded', function() {
         border-top: 1px solid #ddd;
     }
 }
-</style>
+    </style>
 {% endblock %}

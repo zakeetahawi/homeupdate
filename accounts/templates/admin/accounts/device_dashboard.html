@@ -1,10 +1,8 @@
 {% extends "admin/base_site.html" %}
 {% load static %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block extrastyle %}
-<style>
+    <style>
     .dashboard-container {
         padding: 20px;
         direction: rtl;
@@ -151,172 +149,169 @@
         border: 1px solid #f5c6cb;
         color: #721c24;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="dashboard-container">
-    <h1>{{ title }}</h1>
-    <p style="color: #666; margin-bottom: 30px;">📅 آخر تحديث: {{ "now"|date:"Y-m-d H:i" }}</p>
-    
-    <!-- إحصائيات رئيسية -->
-    <div class="stats-grid">
-        <div class="stat-card success">
-            <div class="stat-label">🟢 الأجهزة النشطة</div>
-            <div class="stat-value">{{ active_devices }}</div>
-            <small>من أصل {{ total_devices }} جهاز</small>
+    <div class="dashboard-container">
+        <h1>{{ title }}</h1>
+        <p style="color: #666; margin-bottom: 30px;">📅 آخر تحديث: {{ "now"|date:"Y-m-d H:i" }}</p>
+        <!-- إحصائيات رئيسية -->
+        <div class="stats-grid">
+            <div class="stat-card success">
+                <div class="stat-label">🟢 الأجهزة النشطة</div>
+                <div class="stat-value">{{ active_devices }}</div>
+                <small>من أصل {{ total_devices }} جهاز</small>
+            </div>
+            <div class="stat-card danger">
+                <div class="stat-label">🔴 الأجهزة المحظورة</div>
+                <div class="stat-value">{{ blocked_devices }}</div>
+                {% if blocked_devices > 0 %}<small style="color: #dc3545;">يحتاج مراجعة!</small>{% endif %}
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-label">⚠️ محاولات غير مصرح بها</div>
+                <div class="stat-value">{{ unauthorized_count }}</div>
+                <small>آخر 7 أيام</small>
+            </div>
+            <div class="stat-card info">
+                <div class="stat-label">💤 أجهزة خاملة (+30 يوم)</div>
+                <div class="stat-value">{{ inactive_long_count }}</div>
+                <small>لم تُستخدم منذ شهر</small>
+            </div>
         </div>
-        
-        <div class="stat-card danger">
-            <div class="stat-label">🔴 الأجهزة المحظورة</div>
-            <div class="stat-value">{{ blocked_devices }}</div>
-            {% if blocked_devices > 0 %}
-            <small style="color: #dc3545;">يحتاج مراجعة!</small>
-            {% endif %}
+        <!-- تحذيرات -->
+        {% if devices_without_token > 0 %}
+            <div class="alert alert-warning">
+                <strong>⚠️ تحذير:</strong> يوجد {{ devices_without_token }} جهاز بدون device_token (أجهزة قديمة). يُنصح بتحديثها.
+            </div>
+        {% endif %}
+        {% if unauthorized_count > 10 %}
+            <div class="alert alert-danger">
+                <strong>🚨 تنبيه أمني:</strong> عدد كبير من محاولات الوصول غير المصرح بها ({{ unauthorized_count }}) خلال آخر 7 أيام!
+            </div>
+        {% endif %}
+        <!-- الأجهزة المستخدمة مؤخراً -->
+        <div class="section-title">🕒 آخر الأجهزة النشطة (7 أيام)</div>
+        <div class="device-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>اسم الجهاز</th>
+                        <th>الفرع</th>
+                        <th>آخر استخدام</th>
+                        <th>آخر مستخدم</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for device in recently_used %}
+                        <tr>
+                            <td>
+                                <strong>{{ device.device_name }}</strong>
+                                {% if device.manual_identifier %}
+                                    <br>
+                                    <small style="color: #666;">{{ device.manual_identifier }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ device.branch.name }}</td>
+                            <td>{{ device.last_used|date:"Y-m-d H:i" }}</td>
+                            <td>{{ device.last_used_by.get_full_name|default:"—" }}</td>
+                            <td>
+                                {% if device.is_active and not device.is_blocked %}
+                                    <span class="badge badge-success">✓ نشط</span>
+                                {% elif device.is_blocked %}
+                                    <span class="badge badge-danger">✗ محظور</span>
+                                {% else %}
+                                    <span class="badge badge-warning">معطل</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'admin:device_report' device.id %}"
+                                   class="view-details-btn">📋 تقرير تفصيلي</a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #999;">لا توجد أجهزة مستخدمة مؤخراً</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        
-        <div class="stat-card warning">
-            <div class="stat-label">⚠️ محاولات غير مصرح بها</div>
-            <div class="stat-value">{{ unauthorized_count }}</div>
-            <small>آخر 7 أيام</small>
+        <!-- محاولات الوصول غير المصرح بها -->
+        <div class="section-title">🚨 محاولات الوصول غير المصرح بها (آخر 20)</div>
+        <div class="device-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>الفرع</th>
+                        <th>المستخدم</th>
+                        <th>السبب</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attempt in unauthorized_attempts %}
+                        <tr>
+                            <td>{{ attempt.attempted_at|date:"Y-m-d H:i:s" }}</td>
+                            <td>{{ attempt.user_branch.name|default:"—" }}</td>
+                            <td>{{ attempt.user.get_full_name|default:"—" }}</td>
+                            <td>
+                                <small>{{ attempt.get_denial_reason_display }}</small>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #999;">✓ لا توجد محاولات غير مصرح بها</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        
-        <div class="stat-card info">
-            <div class="stat-label">💤 أجهزة خاملة (+30 يوم)</div>
-            <div class="stat-value">{{ inactive_long_count }}</div>
-            <small>لم تُستخدم منذ شهر</small>
+        <!-- الفروع الأكثر نشاطاً -->
+        <div class="section-title">🏢 الفروع حسب عدد الأجهزة</div>
+        <div class="device-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>اسم الفرع</th>
+                        <th>عدد الأجهزة النشطة</th>
+                        <th>الحد الأقصى</th>
+                        <th>النسبة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for branch in active_branches %}
+                        <tr>
+                            <td>
+                                <strong>{{ branch.name }}</strong>
+                            </td>
+                            <td>{{ branch.device_count }}</td>
+                            <td>{{ branch.max_devices|default:"∞" }}</td>
+                            <td>
+                                {% if branch.max_devices %}
+                                    {% widthratio branch.device_count 1 100 %}% / {% widthratio branch.max_devices 1 100 %}%
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #999;">لا توجد فروع نشطة</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="text-align: center;
+                    margin-top: 40px;
+                    padding: 20px;
+                    background: #f8f9fa;
+                    border-radius: 8px">
+            <p style="color: #666;">
+                💡 <strong>ملاحظة:</strong> هذا التقرير يتم تحديثه في الوقت الفعلي. للحصول على تقرير تفصيلي عن جهاز معين، اضغط على "تقرير تفصيلي".
+            </p>
         </div>
     </div>
-    
-    <!-- تحذيرات -->
-    {% if devices_without_token > 0 %}
-    <div class="alert alert-warning">
-        <strong>⚠️ تحذير:</strong> يوجد {{ devices_without_token }} جهاز بدون device_token (أجهزة قديمة). يُنصح بتحديثها.
-    </div>
-    {% endif %}
-    
-    {% if unauthorized_count > 10 %}
-    <div class="alert alert-danger">
-        <strong>🚨 تنبيه أمني:</strong> عدد كبير من محاولات الوصول غير المصرح بها ({{ unauthorized_count }}) خلال آخر 7 أيام!
-    </div>
-    {% endif %}
-    
-    <!-- الأجهزة المستخدمة مؤخراً -->
-    <div class="section-title">🕒 آخر الأجهزة النشطة (7 أيام)</div>
-    <div class="device-table">
-        <table>
-            <thead>
-                <tr>
-                    <th>اسم الجهاز</th>
-                    <th>الفرع</th>
-                    <th>آخر استخدام</th>
-                    <th>آخر مستخدم</th>
-                    <th>الحالة</th>
-                    <th>الإجراءات</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for device in recently_used %}
-                <tr>
-                    <td>
-                        <strong>{{ device.device_name }}</strong>
-                        {% if device.manual_identifier %}
-                        <br><small style="color: #666;">{{ device.manual_identifier }}</small>
-                        {% endif %}
-                    </td>
-                    <td>{{ device.branch.name }}</td>
-                    <td>{{ device.last_used|date:"Y-m-d H:i" }}</td>
-                    <td>{{ device.last_used_by.get_full_name|default:"—" }}</td>
-                    <td>
-                        {% if device.is_active and not device.is_blocked %}
-                        <span class="badge badge-success">✓ نشط</span>
-                        {% elif device.is_blocked %}
-                        <span class="badge badge-danger">✗ محظور</span>
-                        {% else %}
-                        <span class="badge badge-warning">معطل</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{% url 'admin:device_report' device.id %}" class="view-details-btn">📋 تقرير تفصيلي</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" style="text-align: center; color: #999;">لا توجد أجهزة مستخدمة مؤخراً</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- محاولات الوصول غير المصرح بها -->
-    <div class="section-title">🚨 محاولات الوصول غير المصرح بها (آخر 20)</div>
-    <div class="device-table">
-        <table>
-            <thead>
-                <tr>
-                    <th>التاريخ</th>
-                    <th>الفرع</th>
-                    <th>المستخدم</th>
-                    <th>السبب</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for attempt in unauthorized_attempts %}
-                <tr>
-                    <td>{{ attempt.attempted_at|date:"Y-m-d H:i:s" }}</td>
-                    <td>{{ attempt.user_branch.name|default:"—" }}</td>
-                    <td>{{ attempt.user.get_full_name|default:"—" }}</td>
-                    <td><small>{{ attempt.get_denial_reason_display }}</small></td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" style="text-align: center; color: #999;">✓ لا توجد محاولات غير مصرح بها</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- الفروع الأكثر نشاطاً -->
-    <div class="section-title">🏢 الفروع حسب عدد الأجهزة</div>
-    <div class="device-table">
-        <table>
-            <thead>
-                <tr>
-                    <th>اسم الفرع</th>
-                    <th>عدد الأجهزة النشطة</th>
-                    <th>الحد الأقصى</th>
-                    <th>النسبة</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for branch in active_branches %}
-                <tr>
-                    <td><strong>{{ branch.name }}</strong></td>
-                    <td>{{ branch.device_count }}</td>
-                    <td>{{ branch.max_devices|default:"∞" }}</td>
-                    <td>
-                        {% if branch.max_devices %}
-                            {% widthratio branch.device_count 1 100 %}% / {% widthratio branch.max_devices 1 100 %}%
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" style="text-align: center; color: #999;">لا توجد فروع نشطة</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    
-    <div style="text-align: center; margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-        <p style="color: #666;">
-            💡 <strong>ملاحظة:</strong> هذا التقرير يتم تحديثه في الوقت الفعلي. للحصول على تقرير تفصيلي عن جهاز معين، اضغط على "تقرير تفصيلي".
-        </p>
-    </div>
-</div>
 {% endblock %}

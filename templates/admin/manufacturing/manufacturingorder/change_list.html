@@ -1,8 +1,7 @@
 {% extends "admin/change_list.html" %}
-
 {% block extrahead %}
-{{ block.super }}
-<script>
+    {{ block.super }}
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     // فحص إذا كانت الصفحة تم إعادة تحميلها بعد تحديث
     const urlParams = new URLSearchParams(window.location.search);
@@ -54,9 +53,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-</script>
-
-<style>
+    </script>
+    <style>
 .alert {
     animation: slideIn 0.3s ease-in-out;
 }
@@ -71,5 +69,5 @@ document.addEventListener('DOMContentLoaded', function() {
         opacity: 1;
     }
 }
-</style>
+    </style>
 {% endblock %}

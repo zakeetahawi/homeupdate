@@ -1,72 +1,76 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block styles %}
-<style>
+    <style>
     .delete-warning {
         color: #721c24;
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="card shadow mb-4">
-        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-            <h6 class="m-0 font-weight-bold text-primary">{{ title }}</h6>
-            <a href="{% url 'accounts:role_list' %}" class="btn btn-sm btn-secondary">
-                <i class="fas fa-arrow-left"></i> العودة إلى قائمة الأدوار
-            </a>
-        </div>
-        <div class="card-body">
-            <div class="alert alert-danger">
-                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> تحذير!</h5>
-                <p>هل أنت متأكد من أنك تريد حذف الدور <strong>{{ role.name }}</strong>؟</p>
-                <p>هذا الإجراء سيؤدي إلى:</p>
-                <ul class="delete-warning">
-                    <li>حذف جميع علاقات هذا الدور بالمستخدمين ({{ role.user_roles.count }} مستخدم)</li>
-                    <li>إزالة الصلاحيات المتعلقة بهذا الدور من المستخدمين</li>
-                    <li>لا يمكن التراجع عن هذه العملية</li>
-                </ul>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">اسم الدور:</label>
-                        <input type="text" class="form-control" value="{{ role.name }}" readonly>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">عدد المستخدمين:</label>
-                        <input type="text" class="form-control" value="{{ role.user_roles.count }}" readonly>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label">وصف الدور:</label>
-                <textarea class="form-control" rows="2" readonly>{{ role.description|default:"لا يوجد وصف" }}</textarea>
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label">عدد الصلاحيات:</label>
-                <input type="text" class="form-control" value="{{ role.permissions.count }}" readonly>
-            </div>
-            
-            <form method="post" action="" class="mt-4 text-center">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger">
-                    <i class="fas fa-trash-alt"></i> تأكيد الحذف
-                </button>
-                <a href="{% url 'accounts:role_list' %}" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> إلغاء
+    <div class="container-fluid">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">{{ title }}</h6>
+                <a href="{% url 'accounts:role_list' %}"
+                   class="btn btn-sm btn-secondary">
+                    <i class="fas fa-arrow-left"></i> العودة إلى قائمة الأدوار
                 </a>
-            </form>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle"></i> تحذير!
+                    </h5>
+                    <p>
+                        هل أنت متأكد من أنك تريد حذف الدور <strong>{{ role.name }}</strong>؟
+                    </p>
+                    <p>هذا الإجراء سيؤدي إلى:</p>
+                    <ul class="delete-warning">
+                        <li>حذف جميع علاقات هذا الدور بالمستخدمين ({{ role.user_roles.count }} مستخدم)</li>
+                        <li>إزالة الصلاحيات المتعلقة بهذا الدور من المستخدمين</li>
+                        <li>لا يمكن التراجع عن هذه العملية</li>
+                    </ul>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">اسم الدور:</label>
+                            <input type="text" class="form-control" value="{{ role.name }}" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">عدد المستخدمين:</label>
+                            <input type="text"
+                                   class="form-control"
+                                   value="{{ role.user_roles.count }}"
+                                   readonly>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">وصف الدور:</label>
+                    <textarea class="form-control" rows="2" readonly>{{ role.description|default:"لا يوجد وصف" }}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">عدد الصلاحيات:</label>
+                    <input type="text"
+                           class="form-control"
+                           value="{{ role.permissions.count }}"
+                           readonly>
+                </div>
+                <form method="post" action="" class="mt-4 text-center">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> تأكيد الحذف
+                    </button>
+                    <a href="{% url 'accounts:role_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> إلغاء
+                    </a>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}

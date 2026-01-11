@@ -6,17 +6,17 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('orders', '0014_auto_20250806_1428'),
+        ("orders", "0014_auto_20250806_1428"),
     ]
 
     operations = [
         # حذف الحقول مباشرة من قاعدة البيانات باستخدام SQL
         migrations.RunSQL(
             "ALTER TABLE orders_order DROP COLUMN IF EXISTS auto_discount_amount;",
-            reverse_sql="ALTER TABLE orders_order ADD COLUMN auto_discount_amount NUMERIC(10,2) NOT NULL DEFAULT 0;"
+            reverse_sql="ALTER TABLE orders_order ADD COLUMN auto_discount_amount NUMERIC(10,2) NOT NULL DEFAULT 0;",
         ),
         migrations.RunSQL(
             "ALTER TABLE orders_order DROP COLUMN IF EXISTS auto_discount_percentage;",
-            reverse_sql="ALTER TABLE orders_order ADD COLUMN auto_discount_percentage NUMERIC(5,2) NOT NULL DEFAULT 0;"
+            reverse_sql="ALTER TABLE orders_order ADD COLUMN auto_discount_percentage NUMERIC(5,2) NOT NULL DEFAULT 0;",
         ),
     ]

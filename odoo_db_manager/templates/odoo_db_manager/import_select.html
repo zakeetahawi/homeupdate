@@ -1,91 +1,80 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load crispy_forms_tags %}
-
 {% block title %}{{ title }}{% endblock %}
-
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'odoo_db_manager/css/style.css' %}">
 {% endblock %}
-
 {% block content %}
-<div class="odoo-dashboard">
-    <div class="odoo-toolbar">
-        <div class="odoo-toolbar-left">
-            <h1>{{ title }}</h1>
-        </div>
-        <div class="odoo-toolbar-right">
-            <a href="{% url 'odoo_db_manager:import_dashboard' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> العودة
-            </a>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-body">
-            <form id="import-form" method="post" 
-                  data-preview-url="{% url 'odoo_db_manager:import_preview' %}"
-                  data-execute-url="{% url 'odoo_db_manager:import_execute' %}">
-                {% csrf_token %}
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        {{ form.sheet_name|as_crispy_field }}
-                    </div>
-                    <div class="col-md-6">
-                        {{ form.clear_existing|as_crispy_field }}
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-12">
-                        {{ form.import_all|as_crispy_field }}
-                    </div>
-                </div>
-
-                <div id="page-range-fields" class="row">
-                    <div class="col-md-6">
-                        {{ form.page_start|as_crispy_field }}
-                    </div>
-                    <div class="col-md-6">
-                        {{ form.page_end|as_crispy_field }}
-                    </div>
-                </div>
-
-                <div class="mt-4">
-                    <button type="button" class="btn btn-primary" onclick="previewData()">
-                        <i class="fas fa-eye"></i> معاينة البيانات
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- مؤشر التقدم -->
-<div class="modal fade" id="progress-modal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">جاري الاستيراد...</h5>
+    <div class="odoo-dashboard">
+        <div class="odoo-toolbar">
+            <div class="odoo-toolbar-left">
+                <h1>{{ title }}</h1>
             </div>
-            <div class="modal-body">
-                <div class="progress">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                         role="progressbar" style="width: 0%" 
-                         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+            <div class="odoo-toolbar-right">
+                <a href="{% url 'odoo_db_manager:import_dashboard' %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> العودة
+                </a>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <form id="import-form"
+                      method="post"
+                      data-preview-url="{% url 'odoo_db_manager:import_preview' %}"
+                      data-execute-url="{% url 'odoo_db_manager:import_execute' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6">{{ form.sheet_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.clear_existing|as_crispy_field }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">{{ form.import_all|as_crispy_field }}</div>
+                    </div>
+                    <div id="page-range-fields" class="row">
+                        <div class="col-md-6">{{ form.page_start|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.page_end|as_crispy_field }}</div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="button" class="btn btn-primary" onclick="previewData()">
+                            <i class="fas fa-eye"></i> معاينة البيانات
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- مؤشر التقدم -->
+    <div class="modal fade"
+         id="progress-modal"
+         tabindex="-1"
+         role="dialog"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">جاري الاستيراد...</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated"
+                             role="progressbar"
+                             style="width: 0%"
+                             aria-valuenow="0"
+                             aria-valuemin="0"
+                             aria-valuemax="100">0%</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script src="{% static 'odoo_db_manager/js/import.js' %}"></script>
-<script>
+    <script src="{% static 'odoo_db_manager/js/import.js' %}"></script>
+    <script>
     document.addEventListener('DOMContentLoaded', function() {
         updatePageRange();
     });
-</script>
+    </script>
 {% endblock %}

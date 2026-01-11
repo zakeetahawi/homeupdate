@@ -9,7 +9,7 @@ OVERRIDE_DIR="/etc/systemd/system/postgresql.service.d"
 OVERRIDE_FILE="$OVERRIDE_DIR/override.conf"
 
 if [[ $(id -u) -ne 0 ]]; then
-  cat <<'MSG'
+	cat <<'MSG'
 This script must be run as root (sudo).
 It will create a systemd drop-in override to ensure postgresql restarts on failure.
 
@@ -17,11 +17,11 @@ Run:
   sudo bash scripts/setup-postgres-systemd.sh
 
 MSG
-  exit 1
+	exit 1
 fi
 
 mkdir -p "$OVERRIDE_DIR"
-cat > "$OVERRIDE_FILE" <<'UNIT'
+cat >"$OVERRIDE_FILE" <<'UNIT'
 [Service]
 Restart=on-failure
 RestartSec=5

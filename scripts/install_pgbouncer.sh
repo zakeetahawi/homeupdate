@@ -13,27 +13,27 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 print_status() {
-    echo -e "${GREEN}✅ $1${NC}"
+	echo -e "${GREEN}✅ $1${NC}"
 }
 
 print_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
+	echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+	echo -e "${YELLOW}⚠️  $1${NC}"
 }
 
 print_error() {
-    echo -e "${RED}❌ $1${NC}"
+	echo -e "${RED}❌ $1${NC}"
 }
 
 print_info "🔧 بدء تثبيت وإعداد PgBouncer..."
 
 # التحقق من صلاحيات المستخدم
 if [[ $EUID -ne 0 ]]; then
-    print_error "يجب تشغيل هذا السكريبت كـ root (استخدم sudo)"
-    exit 1
+	print_error "يجب تشغيل هذا السكريبت كـ root (استخدم sudo)"
+	exit 1
 fi
 
 # الخطوة 1: تثبيت pgbouncer
@@ -41,11 +41,11 @@ print_info "1️⃣ تثبيت PgBouncer..."
 apt-get update
 apt-get install -y pgbouncer
 
-if command -v pgbouncer &> /dev/null; then
-    print_status "تم تثبيت PgBouncer بنجاح"
+if command -v pgbouncer &>/dev/null; then
+	print_status "تم تثبيت PgBouncer بنجاح"
 else
-    print_error "فشل في تثبيت PgBouncer"
-    exit 1
+	print_error "فشل في تثبيت PgBouncer"
+	exit 1
 fi
 
 # الخطوة 2: إنشاء ملف الإعدادات
@@ -53,12 +53,12 @@ print_info "2️⃣ إعداد ملف التكوين..."
 
 # إنشاء نسخة احتياطية من الإعدادات الحالية
 if [ -f "/etc/pgbouncer/pgbouncer.ini" ]; then
-    cp /etc/pgbouncer/pgbouncer.ini /etc/pgbouncer/pgbouncer.ini.backup.$(date +%Y%m%d_%H%M%S)
-    print_status "تم إنشاء نسخة احتياطية من الإعدادات"
+	cp /etc/pgbouncer/pgbouncer.ini /etc/pgbouncer/pgbouncer.ini.backup.$(date +%Y%m%d_%H%M%S)
+	print_status "تم إنشاء نسخة احتياطية من الإعدادات"
 fi
 
 # إنشاء ملف الإعدادات الجديد
-cat > /etc/pgbouncer/pgbouncer.ini << 'EOF'
+cat >/etc/pgbouncer/pgbouncer.ini <<'EOF'
 ;; Database name = connect string
 ;;
 ;; connect string params:
@@ -164,7 +164,7 @@ print_info "3️⃣ إعداد ملف المستخدمين..."
 # الحصول على كلمة مرور postgres المشفرة
 POSTGRES_PASSWORD_HASH=$(echo -n "5525postgres" | md5sum | cut -d' ' -f1)
 
-cat > /etc/pgbouncer/userlist.txt << EOF
+cat >/etc/pgbouncer/userlist.txt <<EOF
 "postgres" "md5$POSTGRES_PASSWORD_HASH"
 EOF
 
@@ -186,7 +186,7 @@ print_status "تم تعيين الصلاحيات"
 # الخطوة 5: إنشاء خدمة systemd
 print_info "5️⃣ إعداد خدمة systemd..."
 
-cat > /etc/systemd/system/pgbouncer.service << 'EOF'
+cat >/etc/systemd/system/pgbouncer.service <<'EOF'
 [Unit]
 Description=PgBouncer PostgreSQL connection pooler
 Documentation=https://pgbouncer.github.io/
@@ -222,9 +222,9 @@ print_info "6️⃣ تشغيل PgBouncer..."
 
 # التأكد من أن PostgreSQL يعمل
 if ! systemctl is-active --quiet postgresql; then
-    print_info "تشغيل PostgreSQL..."
-    systemctl start postgresql
-    sleep 3
+	print_info "تشغيل PostgreSQL..."
+	systemctl start postgresql
+	sleep 3
 fi
 
 # تشغيل pgbouncer
@@ -233,12 +233,12 @@ systemctl start pgbouncer
 # التحقق من حالة الخدمة
 sleep 3
 if systemctl is-active --quiet pgbouncer; then
-    print_status "PgBouncer يعمل بنجاح"
+	print_status "PgBouncer يعمل بنجاح"
 else
-    print_error "فشل في تشغيل PgBouncer"
-    print_info "فحص السجلات:"
-    journalctl -u pgbouncer --no-pager -n 20
-    exit 1
+	print_error "فشل في تشغيل PgBouncer"
+	print_info "فحص السجلات:"
+	journalctl -u pgbouncer --no-pager -n 20
+	exit 1
 fi
 
 # الخطوة 7: اختبار الاتصال
@@ -246,9 +246,9 @@ print_info "7️⃣ اختبار الاتصال..."
 
 # اختبار الاتصال عبر pgbouncer
 if psql -h 127.0.0.1 -p 6432 -U postgres -d crm_system -c "SELECT 1;" &>/dev/null; then
-    print_status "اختبار الاتصال نجح"
+	print_status "اختبار الاتصال نجح"
 else
-    print_warning "فشل اختبار الاتصال - قد تحتاج لضبط كلمة المرور"
+	print_warning "فشل اختبار الاتصال - قد تحتاج لضبط كلمة المرور"
 fi
 
 # الخطوة 8: عرض معلومات الحالة

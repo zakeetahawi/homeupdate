@@ -1,152 +1,150 @@
 {% extends 'inventory/inventory_base_custom.html' %}
 {% load static %}
-
 {% block inventory_title %}فحص المنتجات المكررة{% endblock %}
-
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a></li>
-<li class="breadcrumb-item active">فحص التكرارات</li>
+    <li class="breadcrumb-item">
+        <a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a>
+    </li>
+    <li class="breadcrumb-item active">فحص التكرارات</li>
 {% endblock %}
-
 {% block quick_actions %}
-{% if total_duplicates > 0 %}
-<button type="button" class="btn btn-warning btn-sm" onclick="mergeAllDuplicates()">
-    <i class="fas fa-object-group"></i> دمج الكل تلقائياً
-</button>
-{% endif %}
-<a href="{% url 'inventory:product_list' %}" class="btn btn-secondary btn-sm">
-    <i class="fas fa-list"></i> قائمة المنتجات
-</a>
+    {% if total_duplicates > 0 %}
+        <button type="button"
+                class="btn btn-warning btn-sm"
+                onclick="mergeAllDuplicates()">
+            <i class="fas fa-object-group"></i> دمج الكل تلقائياً
+        </button>
+    {% endif %}
+    <a href="{% url 'inventory:product_list' %}"
+       class="btn btn-secondary btn-sm">
+        <i class="fas fa-list"></i> قائمة المنتجات
+    </a>
 {% endblock %}
-
 {% block inventory_content %}
-<div class="row">
-    <div class="col-12">
-        <!-- ملخص -->
-        <div class="card mb-4">
-            <div class="card-header {% if total_duplicates > 0 %}bg-warning{% else %}bg-success{% endif %} text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-exclamation-triangle"></i> ملخص التكرارات
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-md-4">
-                        <div class="p-3 bg-light rounded">
-                            <h2 class="mb-0 {% if total_duplicates > 0 %}text-warning{% else %}text-success{% endif %}">
-                                {{ total_duplicates }}
-                            </h2>
-                            <small class="text-muted">منتج مكرر</small>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="p-3 bg-light rounded">
-                            <h2 class="mb-0 text-info">{{ total_warehouses_affected }}</h2>
-                            <small class="text-muted">مستودع متأثر</small>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="p-3 bg-light rounded">
-                            {% if total_duplicates > 0 %}
-                                <span class="badge bg-warning fs-5">يحتاج دمج</span>
-                            {% else %}
-                                <span class="badge bg-success fs-5">نظيف</span>
-                            {% endif %}
-                        </div>
-                    </div>
+    <div class="row">
+        <div class="col-12">
+            <!-- ملخص -->
+            <div class="card mb-4">
+                <div class="card-header {% if total_duplicates > 0 %}bg-warning{% else %}bg-success{% endif %} text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> ملخص التكرارات
+                    </h5>
                 </div>
-
-                {% if total_duplicates == 0 %}
-                <div class="alert alert-success text-center mt-3 mb-0">
-                    <i class="fas fa-check-circle fa-3x mb-2"></i>
-                    <h5>ممتاز! لا توجد منتجات مكررة</h5>
-                    <p class="mb-0">جميع المنتجات في مستودعاتها الصحيحة</p>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded">
+                                <h2 class="mb-0 {% if total_duplicates > 0 %}text-warning{% else %}text-success{% endif %}">{{ total_duplicates }}</h2>
+                                <small class="text-muted">منتج مكرر</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded">
+                                <h2 class="mb-0 text-info">{{ total_warehouses_affected }}</h2>
+                                <small class="text-muted">مستودع متأثر</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded">
+                                {% if total_duplicates > 0 %}
+                                    <span class="badge bg-warning fs-5">يحتاج دمج</span>
+                                {% else %}
+                                    <span class="badge bg-success fs-5">نظيف</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% if total_duplicates == 0 %}
+                        <div class="alert alert-success text-center mt-3 mb-0">
+                            <i class="fas fa-check-circle fa-3x mb-2"></i>
+                            <h5>ممتاز! لا توجد منتجات مكررة</h5>
+                            <p class="mb-0">جميع المنتجات في مستودعاتها الصحيحة</p>
+                        </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
-        </div>
-
-        <!-- قائمة المكررات -->
-        {% if total_duplicates > 0 %}
-        <div class="card">
-            <div class="card-header bg-danger text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-list"></i> المنتجات المكررة ({{ total_duplicates }})
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th width="5%">#</th>
-                                <th width="15%">الكود</th>
-                                <th width="25%">اسم المنتج</th>
-                                <th width="10%">عدد المخازن</th>
-                                <th width="30%">المستودعات والكميات</th>
-                                <th width="15%">الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for dup in duplicates %}
-                            <tr id="row-{{ dup.product.id }}">
-                                <td>{{ forloop.counter }}</td>
-                                <td><code>{{ dup.code|default:"بدون كود" }}</code></td>
-                                <td><strong>{{ dup.name }}</strong></td>
-                                <td>
-                                    <span class="badge bg-warning">{{ dup.warehouses_count }} مستودعات</span>
-                                </td>
-                                <td>
-                                    {% for warehouse, qty in dup.quantities.items %}
-                                        <span class="badge bg-secondary me-1 mb-1">
-                                            {{ warehouse }}: {{ qty|floatformat:2 }}
-                                        </span>
+            <!-- قائمة المكررات -->
+            {% if total_duplicates > 0 %}
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list"></i> المنتجات المكررة ({{ total_duplicates }})
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th width="5%">#</th>
+                                        <th width="15%">الكود</th>
+                                        <th width="25%">اسم المنتج</th>
+                                        <th width="10%">عدد المخازن</th>
+                                        <th width="30%">المستودعات والكميات</th>
+                                        <th width="15%">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dup in duplicates %}
+                                        <tr id="row-{{ dup.product.id }}">
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>
+                                                <code>{{ dup.code|default:"بدون كود" }}</code>
+                                            </td>
+                                            <td>
+                                                <strong>{{ dup.name }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-warning">{{ dup.warehouses_count }} مستودعات</span>
+                                            </td>
+                                            <td>
+                                                {% for warehouse, qty in dup.quantities.items %}
+                                                    <span class="badge bg-secondary me-1 mb-1">{{ warehouse }}: {{ qty|floatformat:2 }}</span>
+                                                {% endfor %}
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-warning"
+                                                        onclick="showMergeModal({{ dup.product.id }}, '{{ dup.name }}', {{ dup.warehouses|safe }})">
+                                                    <i class="fas fa-object-group"></i> دمج
+                                                </button>
+                                            </td>
+                                        </tr>
                                     {% endfor %}
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-warning" onclick="showMergeModal({{ dup.product.id }}, '{{ dup.name }}', {{ dup.warehouses|safe }})">
-                                        <i class="fas fa-object-group"></i> دمج
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <!-- Modal لاختيار المستودع -->
+    <div class="modal fade" id="mergeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">
+                        <i class="fas fa-object-group"></i> دمج المنتج المكرر
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>اختر المستودع الذي تريد دمج جميع الكميات فيه:</p>
+                    <input type="hidden" id="mergeProductId">
+                    <div id="warehousesList"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-warning" onclick="confirmMerge()">
+                        <i class="fas fa-check"></i> دمج الآن
+                    </button>
                 </div>
             </div>
         </div>
-        {% endif %}
     </div>
-</div>
-
-<!-- Modal لاختيار المستودع -->
-<div class="modal fade" id="mergeModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title">
-                    <i class="fas fa-object-group"></i> دمج المنتج المكرر
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>اختر المستودع الذي تريد دمج جميع الكميات فيه:</p>
-                <input type="hidden" id="mergeProductId">
-                <div id="warehousesList"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-warning" onclick="confirmMerge()">
-                    <i class="fas fa-check"></i> دمج الآن
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 let selectedWarehouse = null;
 
 function showMergeModal(productId, productName, warehouses) {
@@ -156,8 +154,7 @@ function showMergeModal(productId, productName, warehouses) {
     let html = '<div class="list-group">';
     warehouses.forEach(wh => {
         html += `
-            <button type="button" class="list-group-item list-group-item-action" 
-                    onclick="selectWarehouse('${wh}', this)">
+            <button type="button" class="list-group-item list-group-item-action" onclick="selectWarehouse('${wh}', this)">
                 <i class="fas fa-warehouse"></i> ${wh}
             </button>
         `;
@@ -271,5 +268,5 @@ function getCookie(name) {
     }
     return cookieValue;
 }
-</script>
+    </script>
 {% endblock %}

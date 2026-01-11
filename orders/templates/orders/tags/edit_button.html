@@ -2,8 +2,8 @@
 قالب زر التعديل
 Edit Button Template
 {% endcomment %}
-
-<a href="{{ edit_url }}" class="btn btn-sm {% if is_wizard %}btn-primary{% else %}btn-info{% endif %}">
+<a href="{{ edit_url }}"
+   class="btn btn-sm {% if is_wizard %}btn-primary{% else %}btn-info{% endif %}">
     {% if is_wizard %}
         <i class="fas fa-magic"></i>
     {% else %}

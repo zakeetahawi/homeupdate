@@ -23,16 +23,16 @@ pkill -f "celery.*worker" 2>/dev/null
 sleep 3
 
 # التأكد من إيقافها
-if pgrep -f "celery.*worker" > /dev/null; then
-    print_warning "⚠️ بعض العمليات لا تزال تعمل - استخدام kill -9..."
-    pkill -9 -f "celery.*worker" 2>/dev/null
-    sleep 2
+if pgrep -f "celery.*worker" >/dev/null; then
+	print_warning "⚠️ بعض العمليات لا تزال تعمل - استخدام kill -9..."
+	pkill -9 -f "celery.*worker" 2>/dev/null
+	sleep 2
 fi
 
-if pgrep -f "celery.*worker" > /dev/null; then
-    print_error "❌ فشل في إيقاف جميع عمليات Celery"
+if pgrep -f "celery.*worker" >/dev/null; then
+	print_error "❌ فشل في إيقاف جميع عمليات Celery"
 else
-    print_status "✅ تم إيقاف جميع عمليات Celery Worker"
+	print_status "✅ تم إيقاف جميع عمليات Celery Worker"
 fi
 
 # 2. تنظيف الملفات القديمة
@@ -43,7 +43,7 @@ print_status "✅ تم تنظيف الملفات"
 
 # 3. تنظيف السجلات العالقة في قاعدة البيانات
 print_status "3️⃣ تنظيف السجلات العالقة في قاعدة البيانات..."
-python << 'PYTHON_SCRIPT'
+python <<'PYTHON_SCRIPT'
 import os
 import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
@@ -82,26 +82,26 @@ print_status "5️⃣ إعادة تشغيل Celery Worker مع تحميل الم
 cd "$PROJECT_DIR"
 
 celery -A crm worker \
-    --loglevel=info \
-    --queues=celery,file_uploads \
-    --pidfile="$LOGS_DIR/celery_worker.pid" \
-    --logfile="$LOGS_DIR/celery_worker.log" \
-    --pool=solo \
-    --concurrency=2 \
-    --max-tasks-per-child=50 \
-    --detach
+	--loglevel=info \
+	--queues=celery,file_uploads \
+	--pidfile="$LOGS_DIR/celery_worker.pid" \
+	--logfile="$LOGS_DIR/celery_worker.log" \
+	--pool=solo \
+	--concurrency=2 \
+	--max-tasks-per-child=50 \
+	--detach
 
 sleep 5
 
 # 7. التحقق من نجاح التشغيل
 if [ -f "$LOGS_DIR/celery_worker.pid" ]; then
-    CELERY_PID=$(cat "$LOGS_DIR/celery_worker.pid")
-    if ps -p $CELERY_PID > /dev/null; then
-        print_status "✅ تم تشغيل Celery Worker بنجاح (PID: $CELERY_PID)"
-        
-        # 8. اختبار المهمة
-        print_status "6️⃣ اختبار تسجيل المهام..."
-        python << 'TEST_SCRIPT'
+	CELERY_PID=$(cat "$LOGS_DIR/celery_worker.pid")
+	if ps -p $CELERY_PID >/dev/null; then
+		print_status "✅ تم تشغيل Celery Worker بنجاح (PID: $CELERY_PID)"
+
+		# 8. اختبار المهمة
+		print_status "6️⃣ اختبار تسجيل المهام..."
+		python <<'TEST_SCRIPT'
 import os
 import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings')
@@ -120,12 +120,12 @@ else:
         if 'inventory' in task or 'bulk' in task:
             print(f"      - {task}")
 TEST_SCRIPT
-    else
-        print_error "❌ فشل في تشغيل Celery Worker"
-        tail -20 "$LOGS_DIR/celery_worker.log"
-    fi
+	else
+		print_error "❌ فشل في تشغيل Celery Worker"
+		tail -20 "$LOGS_DIR/celery_worker.log"
+	fi
 else
-    print_error "❌ لم يتم إنشاء ملف PID"
+	print_error "❌ لم يتم إنشاء ملف PID"
 fi
 
 print_status ""

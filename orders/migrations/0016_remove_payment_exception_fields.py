@@ -6,17 +6,17 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('orders', '0015_remove_auto_discount_fields'),
+        ("orders", "0015_remove_auto_discount_fields"),
     ]
 
     operations = [
         # حذف حقول استثناء الدفع مباشرة من قاعدة البيانات باستخدام SQL
         migrations.RunSQL(
             "ALTER TABLE orders_order DROP COLUMN IF EXISTS payment_exception_approved;",
-            reverse_sql="ALTER TABLE orders_order ADD COLUMN payment_exception_approved BOOLEAN NOT NULL DEFAULT FALSE;"
+            reverse_sql="ALTER TABLE orders_order ADD COLUMN payment_exception_approved BOOLEAN NOT NULL DEFAULT FALSE;",
         ),
         migrations.RunSQL(
             "ALTER TABLE orders_order DROP COLUMN IF EXISTS payment_exception_requested;",
-            reverse_sql="ALTER TABLE orders_order ADD COLUMN payment_exception_requested BOOLEAN NOT NULL DEFAULT FALSE;"
+            reverse_sql="ALTER TABLE orders_order ADD COLUMN payment_exception_requested BOOLEAN NOT NULL DEFAULT FALSE;",
         ),
     ]

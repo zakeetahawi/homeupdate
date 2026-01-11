@@ -15,10 +15,11 @@ Materialized Views هي جداول محسوبة مسبقاً تخزن نتائج
 """
 
 import logging
-from django.db import connection, transaction
-from django.core.cache import cache
 
-logger = logging.getLogger('performance')
+from django.core.cache import cache
+from django.db import connection, transaction
+
+logger = logging.getLogger("performance")
 
 # =============================================
 # SQL لإنشاء Materialized Views
@@ -261,42 +262,43 @@ CREATE INDEX idx_mv_inventory_category ON mv_inventory_summary (category_id);
 # Functions لإدارة Materialized Views
 # =============================================
 
+
 def create_all_views():
     """
     إنشاء جميع Materialized Views
-    
+
     يجب تشغيل هذا مرة واحدة عند الإعداد الأولي
     """
     views = [
-        ('Order Statistics', CREATE_ORDER_STATISTICS_VIEW),
-        ('Daily Order Summary', CREATE_DAILY_ORDER_SUMMARY_VIEW),
-        ('Customer Statistics', CREATE_CUSTOMER_STATISTICS_VIEW),
-        ('Installation Statistics', CREATE_INSTALLATION_STATISTICS_VIEW),
-        ('Manufacturing Statistics', CREATE_MANUFACTURING_STATISTICS_VIEW),
-        ('Product Sales', CREATE_PRODUCT_SALES_VIEW),
-        ('Salesperson Performance', CREATE_SALESPERSON_PERFORMANCE_VIEW),
-        ('Inventory Summary', CREATE_INVENTORY_SUMMARY_VIEW),
+        ("Order Statistics", CREATE_ORDER_STATISTICS_VIEW),
+        ("Daily Order Summary", CREATE_DAILY_ORDER_SUMMARY_VIEW),
+        ("Customer Statistics", CREATE_CUSTOMER_STATISTICS_VIEW),
+        ("Installation Statistics", CREATE_INSTALLATION_STATISTICS_VIEW),
+        ("Manufacturing Statistics", CREATE_MANUFACTURING_STATISTICS_VIEW),
+        ("Product Sales", CREATE_PRODUCT_SALES_VIEW),
+        ("Salesperson Performance", CREATE_SALESPERSON_PERFORMANCE_VIEW),
+        ("Inventory Summary", CREATE_INVENTORY_SUMMARY_VIEW),
     ]
-    
+
     results = []
-    
+
     with connection.cursor() as cursor:
         for name, sql in views:
             try:
                 cursor.execute(sql)
-                results.append((name, 'SUCCESS', None))
+                results.append((name, "SUCCESS", None))
                 logger.info(f"Created materialized view: {name}")
             except Exception as e:
-                results.append((name, 'FAILED', str(e)))
+                results.append((name, "FAILED", str(e)))
                 logger.error(f"Failed to create materialized view {name}: {e}")
-    
+
     return results
 
 
 def refresh_view(view_name: str, concurrently: bool = True):
     """
     تحديث Materialized View معين
-    
+
     Args:
         view_name: اسم الـ view
         concurrently: تحديث بدون قفل (يتطلب UNIQUE INDEX)
@@ -307,10 +309,10 @@ def refresh_view(view_name: str, concurrently: bool = True):
                 cursor.execute(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {view_name}")
             else:
                 cursor.execute(f"REFRESH MATERIALIZED VIEW {view_name}")
-        
+
         # مسح الكاش المرتبط
-        cache.delete_pattern(f'{view_name}:*')
-        
+        cache.delete_pattern(f"{view_name}:*")
+
         logger.info(f"Refreshed materialized view: {view_name}")
         return True
     except Exception as e:
@@ -321,34 +323,34 @@ def refresh_view(view_name: str, concurrently: bool = True):
 def refresh_all_views():
     """
     تحديث جميع Materialized Views
-    
+
     يُنصح بتشغيل هذا كل 5-15 دقيقة عبر Celery أو Cron
     """
     views = [
-        'mv_order_statistics',
-        'mv_daily_order_summary',
-        'mv_customer_statistics',
-        'mv_installation_statistics',
-        'mv_manufacturing_statistics',
-        'mv_product_sales',
-        'mv_salesperson_performance',
-        'mv_inventory_summary',
+        "mv_order_statistics",
+        "mv_daily_order_summary",
+        "mv_customer_statistics",
+        "mv_installation_statistics",
+        "mv_manufacturing_statistics",
+        "mv_product_sales",
+        "mv_salesperson_performance",
+        "mv_inventory_summary",
     ]
-    
+
     results = {}
-    
+
     for view in views:
         try:
             refresh_view(view, concurrently=True)
-            results[view] = 'SUCCESS'
+            results[view] = "SUCCESS"
         except Exception as e:
             # إذا فشل التحديث المتزامن، جرب بدونه
             try:
                 refresh_view(view, concurrently=False)
-                results[view] = 'SUCCESS (non-concurrent)'
+                results[view] = "SUCCESS (non-concurrent)"
             except Exception as e2:
-                results[view] = f'FAILED: {e2}'
-    
+                results[view] = f"FAILED: {e2}"
+
     logger.info(f"Refreshed all views: {results}")
     return results
 
@@ -356,20 +358,21 @@ def refresh_all_views():
 def get_order_statistics(branch_id=None, days=30):
     """
     الحصول على إحصائيات الطلبات من Materialized View
-    
+
     أسرع 100x من الاستعلام المباشر
     """
-    cache_key = f'mv_order_stats:{branch_id}:{days}'
+    cache_key = f"mv_order_stats:{branch_id}:{days}"
     cached = cache.get(cache_key)
-    
+
     if cached:
         return cached
-    
-    from django.utils import timezone
+
     from datetime import timedelta
-    
+
+    from django.utils import timezone
+
     cutoff_date = timezone.now().date() - timedelta(days=days)
-    
+
     with connection.cursor() as cursor:
         sql = """
             SELECT 
@@ -382,20 +385,20 @@ def get_order_statistics(branch_id=None, days=30):
             WHERE order_date >= %s
         """
         params = [cutoff_date]
-        
+
         if branch_id:
             sql += " AND branch_id = %s"
             params.append(branch_id)
-        
+
         sql += " GROUP BY order_status"
-        
+
         cursor.execute(sql, params)
         columns = [col[0] for col in cursor.description]
         results = [dict(zip(columns, row)) for row in cursor.fetchall()]
-    
+
     # تخزين في الكاش لمدة 5 دقائق
     cache.set(cache_key, results, 300)
-    
+
     return results
 
 
@@ -403,17 +406,18 @@ def get_daily_summary(branch_id=None, days=30):
     """
     الحصول على الملخص اليومي من Materialized View
     """
-    cache_key = f'mv_daily_summary:{branch_id}:{days}'
+    cache_key = f"mv_daily_summary:{branch_id}:{days}"
     cached = cache.get(cache_key)
-    
+
     if cached:
         return cached
-    
-    from django.utils import timezone
+
     from datetime import timedelta
-    
+
+    from django.utils import timezone
+
     cutoff_date = timezone.now().date() - timedelta(days=days)
-    
+
     with connection.cursor() as cursor:
         sql = """
             SELECT 
@@ -430,19 +434,19 @@ def get_daily_summary(branch_id=None, days=30):
             WHERE order_date >= %s
         """
         params = [cutoff_date]
-        
+
         if branch_id:
             sql += " AND branch_id = %s"
             params.append(branch_id)
-        
+
         sql += " ORDER BY order_date DESC"
-        
+
         cursor.execute(sql, params)
         columns = [col[0] for col in cursor.description]
         results = [dict(zip(columns, row)) for row in cursor.fetchall()]
-    
+
     cache.set(cache_key, results, 300)
-    
+
     return results
 
 
@@ -450,12 +454,12 @@ def get_top_customers(branch_id=None, limit=20):
     """
     الحصول على أفضل العملاء من Materialized View
     """
-    cache_key = f'mv_top_customers:{branch_id}:{limit}'
+    cache_key = f"mv_top_customers:{branch_id}:{limit}"
     cached = cache.get(cache_key)
-    
+
     if cached:
         return cached
-    
+
     with connection.cursor() as cursor:
         sql = """
             SELECT 
@@ -471,19 +475,19 @@ def get_top_customers(branch_id=None, limit=20):
             WHERE total_orders > 0
         """
         params = []
-        
+
         if branch_id:
             sql += " AND branch_id = %s"
             params.append(branch_id)
-        
+
         sql += f" ORDER BY total_spent DESC LIMIT {int(limit)}"
-        
+
         cursor.execute(sql, params)
         columns = [col[0] for col in cursor.description]
         results = [dict(zip(columns, row)) for row in cursor.fetchall()]
-    
+
     cache.set(cache_key, results, 300)
-    
+
     return results
 
 
@@ -491,12 +495,12 @@ def get_top_products(category_id=None, limit=20):
     """
     الحصول على أفضل المنتجات مبيعاً من Materialized View
     """
-    cache_key = f'mv_top_products:{category_id}:{limit}'
+    cache_key = f"mv_top_products:{category_id}:{limit}"
     cached = cache.get(cache_key)
-    
+
     if cached:
         return cached
-    
+
     with connection.cursor() as cursor:
         sql = """
             SELECT 
@@ -512,19 +516,19 @@ def get_top_products(category_id=None, limit=20):
             FROM mv_product_sales
         """
         params = []
-        
+
         if category_id:
             sql += " WHERE category_id = %s"
             params.append(category_id)
-        
+
         sql += f" ORDER BY total_revenue DESC LIMIT {int(limit)}"
-        
+
         cursor.execute(sql, params)
         columns = [col[0] for col in cursor.description]
         results = [dict(zip(columns, row)) for row in cursor.fetchall()]
-    
+
     cache.set(cache_key, results, 300)
-    
+
     return results
 
 
@@ -532,25 +536,27 @@ def get_inventory_status():
     """
     الحصول على حالة المخزون من Materialized View
     """
-    cache_key = 'mv_inventory_status'
+    cache_key = "mv_inventory_status"
     cached = cache.get(cache_key)
-    
+
     if cached:
         return cached
-    
+
     with connection.cursor() as cursor:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT 
                 stock_status,
                 COUNT(*) as count
             FROM mv_inventory_summary
             GROUP BY stock_status
-        """)
-        
+        """
+        )
+
         results = {row[0]: row[1] for row in cursor.fetchall()}
-    
+
     cache.set(cache_key, results, 300)
-    
+
     return results
 
 
@@ -558,14 +564,15 @@ def get_low_stock_products(limit=50):
     """
     الحصول على المنتجات منخفضة المخزون
     """
-    cache_key = f'mv_low_stock:{limit}'
+    cache_key = f"mv_low_stock:{limit}"
     cached = cache.get(cache_key)
-    
+
     if cached:
         return cached
-    
+
     with connection.cursor() as cursor:
-        cursor.execute(f"""
+        cursor.execute(
+            f"""
             SELECT 
                 product_id,
                 product_name,
@@ -582,13 +589,14 @@ def get_low_stock_products(limit=50):
                 END,
                 current_stock ASC
             LIMIT {int(limit)}
-        """)
-        
+        """
+        )
+
         columns = [col[0] for col in cursor.description]
         results = [dict(zip(columns, row)) for row in cursor.fetchall()]
-    
+
     cache.set(cache_key, results, 300)
-    
+
     return results
 
 
@@ -596,10 +604,11 @@ def get_low_stock_products(limit=50):
 # Celery Task للتحديث الدوري (اختياري)
 # =============================================
 
+
 def setup_celery_task():
     """
     إعداد مهمة Celery للتحديث الدوري
-    
+
     أضف هذا إلى ملف celery.py أو tasks.py
     """
     task_code = '''
@@ -624,23 +633,24 @@ def refresh_materialized_views_task():
 # Script للتشغيل المباشر
 # =============================================
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import django
+
     django.setup()
-    
+
     print("Creating Materialized Views...")
     results = create_all_views()
-    
+
     for name, status, error in results:
-        if status == 'SUCCESS':
+        if status == "SUCCESS":
             print(f"✅ {name}: {status}")
         else:
             print(f"❌ {name}: {status} - {error}")
-    
+
     print("\nRefreshing all views...")
     refresh_results = refresh_all_views()
-    
+
     for view, status in refresh_results.items():
         print(f"  {view}: {status}")
-    
+
     print("\nDone!")

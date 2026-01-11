@@ -5,8 +5,10 @@ from django.db import migrations
 
 def fix_null_allowed_order_types(apps, schema_editor):
     """إصلاح القيم null في حقل allowed_order_types"""
-    ManufacturingDisplaySettings = apps.get_model('manufacturing', 'ManufacturingDisplaySettings')
-    
+    ManufacturingDisplaySettings = apps.get_model(
+        "manufacturing", "ManufacturingDisplaySettings"
+    )
+
     # تحديث جميع السجلات التي تحتوي على null
     for setting in ManufacturingDisplaySettings.objects.all():
         if setting.allowed_order_types is None:
@@ -25,12 +27,11 @@ def reverse_fix_null_allowed_order_types(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('manufacturing', '0007_manufacturingdisplaysettings'),
+        ("manufacturing", "0007_manufacturingdisplaysettings"),
     ]
 
     operations = [
         migrations.RunPython(
-            fix_null_allowed_order_types,
-            reverse_fix_null_allowed_order_types
+            fix_null_allowed_order_types, reverse_fix_null_allowed_order_types
         ),
     ]

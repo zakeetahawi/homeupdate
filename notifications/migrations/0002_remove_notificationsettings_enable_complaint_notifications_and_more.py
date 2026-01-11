@@ -6,93 +6,136 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('notifications', '0001_initial'),
+        ("notifications", "0001_initial"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='notificationsettings',
-            name='enable_complaint_notifications',
+            model_name="notificationsettings",
+            name="enable_complaint_notifications",
         ),
         migrations.RemoveField(
-            model_name='notificationsettings',
-            name='enable_customer_notifications',
+            model_name="notificationsettings",
+            name="enable_customer_notifications",
         ),
         migrations.RemoveField(
-            model_name='notificationsettings',
-            name='enable_inspection_notifications',
+            model_name="notificationsettings",
+            name="enable_inspection_notifications",
         ),
         migrations.RemoveField(
-            model_name='notificationsettings',
-            name='enable_installation_notifications',
+            model_name="notificationsettings",
+            name="enable_installation_notifications",
         ),
         migrations.RemoveField(
-            model_name='notificationsettings',
-            name='enable_order_notifications',
+            model_name="notificationsettings",
+            name="enable_order_notifications",
         ),
         migrations.AddField(
-            model_name='notificationsettings',
-            name='complaint_created_enabled',
-            field=models.BooleanField(default=True, verbose_name='إشعارات الشكاوى الجديدة'),
+            model_name="notificationsettings",
+            name="complaint_created_enabled",
+            field=models.BooleanField(
+                default=True, verbose_name="إشعارات الشكاوى الجديدة"
+            ),
         ),
         migrations.AddField(
-            model_name='notificationsettings',
-            name='customer_created_enabled',
-            field=models.BooleanField(default=True, verbose_name='إشعارات العملاء الجدد'),
+            model_name="notificationsettings",
+            name="customer_created_enabled",
+            field=models.BooleanField(
+                default=True, verbose_name="إشعارات العملاء الجدد"
+            ),
         ),
         migrations.AddField(
-            model_name='notificationsettings',
-            name='inspection_created_enabled',
-            field=models.BooleanField(default=True, verbose_name='إشعارات المعاينات الجديدة'),
+            model_name="notificationsettings",
+            name="inspection_created_enabled",
+            field=models.BooleanField(
+                default=True, verbose_name="إشعارات المعاينات الجديدة"
+            ),
         ),
         migrations.AddField(
-            model_name='notificationsettings',
-            name='inspection_status_changed_enabled',
-            field=models.BooleanField(default=True, verbose_name='إشعارات تغيير حالة المعاينات'),
+            model_name="notificationsettings",
+            name="inspection_status_changed_enabled",
+            field=models.BooleanField(
+                default=True, verbose_name="إشعارات تغيير حالة المعاينات"
+            ),
         ),
         migrations.AddField(
-            model_name='notificationsettings',
-            name='installation_completed_enabled',
-            field=models.BooleanField(default=True, verbose_name='إشعارات إكمال التركيب'),
+            model_name="notificationsettings",
+            name="installation_completed_enabled",
+            field=models.BooleanField(
+                default=True, verbose_name="إشعارات إكمال التركيب"
+            ),
         ),
         migrations.AddField(
-            model_name='notificationsettings',
-            name='installation_scheduled_enabled',
-            field=models.BooleanField(default=True, verbose_name='إشعارات جدولة التركيب'),
+            model_name="notificationsettings",
+            name="installation_scheduled_enabled",
+            field=models.BooleanField(
+                default=True, verbose_name="إشعارات جدولة التركيب"
+            ),
         ),
         migrations.AddField(
-            model_name='notificationsettings',
-            name='manufacturing_status_changed_enabled',
-            field=models.BooleanField(default=True, verbose_name='إشعارات تغيير حالة التصنيع'),
+            model_name="notificationsettings",
+            name="manufacturing_status_changed_enabled",
+            field=models.BooleanField(
+                default=True, verbose_name="إشعارات تغيير حالة التصنيع"
+            ),
         ),
         migrations.AddField(
-            model_name='notificationsettings',
-            name='notifications_enabled',
-            field=models.BooleanField(default=True, help_text='تفعيل أو إلغاء تفعيل جميع الإشعارات', verbose_name='تفعيل الإشعارات'),
+            model_name="notificationsettings",
+            name="notifications_enabled",
+            field=models.BooleanField(
+                default=True,
+                help_text="تفعيل أو إلغاء تفعيل جميع الإشعارات",
+                verbose_name="تفعيل الإشعارات",
+            ),
         ),
         migrations.AddField(
-            model_name='notificationsettings',
-            name='order_created_enabled',
-            field=models.BooleanField(default=True, verbose_name='إشعارات الطلبات الجديدة'),
+            model_name="notificationsettings",
+            name="order_created_enabled",
+            field=models.BooleanField(
+                default=True, verbose_name="إشعارات الطلبات الجديدة"
+            ),
         ),
         migrations.AddField(
-            model_name='notificationsettings',
-            name='order_delivered_enabled',
-            field=models.BooleanField(default=True, verbose_name='إشعارات تسليم الطلبات'),
+            model_name="notificationsettings",
+            name="order_delivered_enabled",
+            field=models.BooleanField(
+                default=True, verbose_name="إشعارات تسليم الطلبات"
+            ),
         ),
         migrations.AddField(
-            model_name='notificationsettings',
-            name='order_status_changed_enabled',
-            field=models.BooleanField(default=True, verbose_name='إشعارات تغيير حالة الطلبات'),
+            model_name="notificationsettings",
+            name="order_status_changed_enabled",
+            field=models.BooleanField(
+                default=True, verbose_name="إشعارات تغيير حالة الطلبات"
+            ),
         ),
         migrations.AddField(
-            model_name='notificationsettings',
-            name='order_updated_enabled',
-            field=models.BooleanField(default=True, verbose_name='إشعارات تعديل الطلبات'),
+            model_name="notificationsettings",
+            name="order_updated_enabled",
+            field=models.BooleanField(
+                default=True, verbose_name="إشعارات تعديل الطلبات"
+            ),
         ),
         migrations.AlterField(
-            model_name='notification',
-            name='notification_type',
-            field=models.CharField(choices=[('customer_created', 'عميل جديد'), ('order_created', 'طلب جديد'), ('order_updated', 'تعديل طلب'), ('order_status_changed', 'تغيير حالة طلب'), ('order_delivered', 'تسليم طلب'), ('installation_scheduled', 'جدولة تركيب'), ('installation_completed', 'إكمال تركيب'), ('inspection_created', 'معاينة جديدة'), ('inspection_status_changed', 'تغيير حالة معاينة'), ('manufacturing_status_changed', 'تغيير حالة التصنيع'), ('complaint_created', 'شكوى جديدة')], db_index=True, max_length=30, verbose_name='نوع الإشعار'),
+            model_name="notification",
+            name="notification_type",
+            field=models.CharField(
+                choices=[
+                    ("customer_created", "عميل جديد"),
+                    ("order_created", "طلب جديد"),
+                    ("order_updated", "تعديل طلب"),
+                    ("order_status_changed", "تغيير حالة طلب"),
+                    ("order_delivered", "تسليم طلب"),
+                    ("installation_scheduled", "جدولة تركيب"),
+                    ("installation_completed", "إكمال تركيب"),
+                    ("inspection_created", "معاينة جديدة"),
+                    ("inspection_status_changed", "تغيير حالة معاينة"),
+                    ("manufacturing_status_changed", "تغيير حالة التصنيع"),
+                    ("complaint_created", "شكوى جديدة"),
+                ],
+                db_index=True,
+                max_length=30,
+                verbose_name="نوع الإشعار",
+            ),
         ),
     ]

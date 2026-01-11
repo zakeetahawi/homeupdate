@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}إنشاء تعيين جديد{% endblock %}
-
 {% block extra_css %}
-<meta charset="UTF-8">
-<style>
+    <meta charset="UTF-8">
+    <style>
 .step-indicator {
     display: flex;
     justify-content: space-between;
@@ -55,378 +53,389 @@
 .preview-table {
     font-size: 0.875rem;
 }
-</style>
+    </style>
 {% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h2 class="mb-1">
-                        <i class="fas fa-plus text-primary"></i>
-                        إنشاء تعيين جديد
-                    </h2>
-                    <p class="text-muted">إنشاء تعيين جديد لمزامنة Google Sheets مع النظام</p>
-                </div>
-                <div>
-                    <a href="{% url 'odoo_db_manager:advanced_sync_dashboard' %}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-right"></i> العودة
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Step Indicator -->
-    <div class="step-indicator">
-        <div class="step active" id="step1">
-            <div class="step-number">1</div>
-            <div class="step-title">المعلومات الأساسية</div>
-            <div class="step-line"></div>
-        </div>
-        <div class="step" id="step2">
-            <div class="step-number">2</div>
-            <div class="step-title">اختيار الجدول</div>
-            <div class="step-line"></div>
-        </div>
-        <div class="step" id="step3">
-            <div class="step-number">3</div>
-            <div class="step-title">تعيين الأعمدة</div>
-            <div class="step-line"></div>
-        </div>
-        <div class="step" id="step4">
-            <div class="step-number">4</div>
-            <div class="step-title">الإعدادات</div>
-        </div>
-    </div>
-
-    <!-- Form -->
-    <form method="post" id="mappingForm">
-        {% csrf_token %}
-
-        <!-- Step 1: Basic Information -->
-        <div class="step-content" id="step1-content">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">المعلومات الأساسية</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="name" class="form-label">اسم التعيين *</label>
-                                <input type="text" class="form-control" id="name" name="name" required>
-                                <div class="form-text">اسم وصفي للتعيين</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="spreadsheet_id" class="form-label">معرف جدول البيانات *</label>
-                                <input type="text" class="form-control" id="spreadsheet_id" name="spreadsheet_id" required onchange="loadSheetsFromSpreadsheet()">
-                                <div class="form-text">معرف Google Sheets من الرابط</div>
-                            </div>
-                        </div>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-1">
+                            <i class="fas fa-plus text-primary"></i>
+                            إنشاء تعيين جديد
+                        </h2>
+                        <p class="text-muted">إنشاء تعيين جديد لمزامنة Google Sheets مع النظام</p>
+                    </div>
+                    <div>
+                        <a href="{% url 'odoo_db_manager:advanced_sync_dashboard' %}"
+                           class="btn btn-secondary">
+                            <i class="fas fa-arrow-right"></i> العودة
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Step 2: Sheet Selection -->
-        <div class="step-content d-none" id="step2-content">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">اختيار الجدول والإعدادات</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="sheet_name" class="form-label">اسم الصفحة *</label>
-                                <select class="form-select" id="sheet_name" name="sheet_name" required>
-                                    <option value="">اختر الصفحة...</option>
-                                    {% for sheet in available_sheets %}
-                                    <option value="{{ sheet }}">{{ sheet }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label for="header_row" class="form-label">صف العناوين</label>
-                                <input type="number" class="form-control" id="header_row" name="header_row" value="1" min="1">
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label for="start_row" class="form-label">صف البداية</label>
-                                <input type="number" class="form-control" id="start_row" name="start_row" value="2" min="2">
-                            </div>
-                        </div>
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step active" id="step1">
+                <div class="step-number">1</div>
+                <div class="step-title">المعلومات الأساسية</div>
+                <div class="step-line"></div>
+            </div>
+            <div class="step" id="step2">
+                <div class="step-number">2</div>
+                <div class="step-title">اختيار الجدول</div>
+                <div class="step-line"></div>
+            </div>
+            <div class="step" id="step3">
+                <div class="step-number">3</div>
+                <div class="step-title">تعيين الأعمدة</div>
+                <div class="step-line"></div>
+            </div>
+            <div class="step" id="step4">
+                <div class="step-number">4</div>
+                <div class="step-title">الإعدادات</div>
+            </div>
+        </div>
+        <!-- Form -->
+        <form method="post" id="mappingForm">
+            {% csrf_token %}
+            <!-- Step 1: Basic Information -->
+            <div class="step-content" id="step1-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">المعلومات الأساسية</h5>
                     </div>
-
-                    <!-- Preview Button -->
-                    <div class="mb-3">
-                        <button type="button" class="btn btn-info" id="previewBtn">
-                            <i class="fas fa-eye"></i> معاينة البيانات
-                        </button>
-                    </div>
-
-                    <!-- Preview Area -->
-                    <div id="previewArea" class="d-none">
-                        <h6>معاينة البيانات:</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm preview-table" id="previewTable">
-                                <thead></thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- القيم الافتراضية للحقول المفقودة -->
-                    <div class="mt-4">
-                        <h6 class="text-warning">
-                            <i class="fas fa-database"></i>
-                            القيم الافتراضية للحقول المفقودة
-                        </h6>
-                        <small class="text-muted d-block mb-3">هذه القيم سيتم استخدامها عندما لا توجد بيانات مقابلة في جدول Google Sheets</small>
-
+                    <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="default_customer_category" class="form-label">تصنيف العميل الافتراضي</label>
-                                    <select class="form-select" id="default_customer_category" name="default_customer_category">
-                                        <option value="">لا يوجد تصنيف افتراضي</option>
-                                        {% for category in customer_categories %}
-                                        <option value="{{ category.id }}">{{ category.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <div class="form-text">سيتم تعيين هذا التصنيف للعملاء الجدد إذا لم يكن محدد في الجدول</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="default_customer_type" class="form-label">نوع العميل الافتراضي</label>
-                                    <select class="form-select" id="default_customer_type" name="default_customer_type">
-                                        <option value="">لا يوجد نوع افتراضي</option>
-                                        <option value="retail" {% if mapping.default_customer_type == 'retail' %}selected{% endif %}>أفراد</option>
-                                        <option value="wholesale" {% if mapping.default_customer_type == 'wholesale' %}selected{% endif %}>جملة</option>
-                                        <option value="corporate" {% if mapping.default_customer_type == 'corporate' %}selected{% endif %}>شركات</option>
-                                    </select>
-                                    <div class="form-text">سيتم تعيين هذا النوع للعملاء الجدد إذا لم يكن محدد في الجدول</div>
+                                    <label for="name" class="form-label">اسم التعيين *</label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                    <div class="form-text">اسم وصفي للتعيين</div>
                                 </div>
                             </div>
-
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="default_branch" class="form-label">الفرع الافتراضي</label>
-                                    <select class="form-select" id="default_branch" name="default_branch">
-                                        <option value="">لا يوجد فرع افتراضي</option>
-                                        {% for branch in branches %}
-                                        <option value="{{ branch.id }}">{{ branch.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <div class="form-text">سيتم تعيين هذا الفرع للعملاء والطلبات الجديدة إذا لم يكن محدد في الجدول</div>
+                                    <label for="spreadsheet_id" class="form-label">معرف جدول البيانات *</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="spreadsheet_id"
+                                           name="spreadsheet_id"
+                                           required
+                                           onchange="loadSheetsFromSpreadsheet()">
+                                    <div class="form-text">معرف Google Sheets من الرابط</div>
                                 </div>
-
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Step 2: Sheet Selection -->
+            <div class="step-content d-none" id="step2-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">اختيار الجدول والإعدادات</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
                                 <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="use_current_date_as_created" name="use_current_date_as_created" checked>
-                                        <label class="form-check-label" for="use_current_date_as_created">
-                                            استخدام التاريخ الحالي كتاريخ الإضافة
-                                        </label>
-                                        <div class="form-text">إذا لم يكن هناك تاريخ إضافة في الجدول، سيتم استخدام تاريخ المزامنة</div>
+                                    <label for="sheet_name" class="form-label">اسم الصفحة *</label>
+                                    <select class="form-select" id="sheet_name" name="sheet_name" required>
+                                        <option value="">اختر الصفحة...</option>
+                                        {% for sheet in available_sheets %}<option value="{{ sheet }}">{{ sheet }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="header_row" class="form-label">صف العناوين</label>
+                                    <input type="number"
+                                           class="form-control"
+                                           id="header_row"
+                                           name="header_row"
+                                           value="1"
+                                           min="1">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="start_row" class="form-label">صف البداية</label>
+                                    <input type="number"
+                                           class="form-control"
+                                           id="start_row"
+                                           name="start_row"
+                                           value="2"
+                                           min="2">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Preview Button -->
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-info" id="previewBtn">
+                                <i class="fas fa-eye"></i> معاينة البيانات
+                            </button>
+                        </div>
+                        <!-- Preview Area -->
+                        <div id="previewArea" class="d-none">
+                            <h6>معاينة البيانات:</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm preview-table" id="previewTable">
+                                    <thead>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- القيم الافتراضية للحقول المفقودة -->
+                        <div class="mt-4">
+                            <h6 class="text-warning">
+                                <i class="fas fa-database"></i>
+                                القيم الافتراضية للحقول المفقودة
+                            </h6>
+                            <small class="text-muted d-block mb-3">هذه القيم سيتم استخدامها عندما لا توجد بيانات مقابلة في جدول Google Sheets</small>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="default_customer_category" class="form-label">تصنيف العميل الافتراضي</label>
+                                        <select class="form-select"
+                                                id="default_customer_category"
+                                                name="default_customer_category">
+                                            <option value="">لا يوجد تصنيف افتراضي</option>
+                                            {% for category in customer_categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}
+                                        </select>
+                                        <div class="form-text">سيتم تعيين هذا التصنيف للعملاء الجدد إذا لم يكن محدد في الجدول</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="default_customer_type" class="form-label">نوع العميل الافتراضي</label>
+                                        <select class="form-select"
+                                                id="default_customer_type"
+                                                name="default_customer_type">
+                                            <option value="">لا يوجد نوع افتراضي</option>
+                                            <option value="retail"
+                                                    {% if mapping.default_customer_type == 'retail' %}selected{% endif %}>
+                                                أفراد
+                                            </option>
+                                            <option value="wholesale"
+                                                    {% if mapping.default_customer_type == 'wholesale' %}selected{% endif %}>
+                                                جملة
+                                            </option>
+                                            <option value="corporate"
+                                                    {% if mapping.default_customer_type == 'corporate' %}selected{% endif %}>
+                                                شركات
+                                            </option>
+                                        </select>
+                                        <div class="form-text">سيتم تعيين هذا النوع للعملاء الجدد إذا لم يكن محدد في الجدول</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="default_branch" class="form-label">الفرع الافتراضي</label>
+                                        <select class="form-select" id="default_branch" name="default_branch">
+                                            <option value="">لا يوجد فرع افتراضي</option>
+                                            {% for branch in branches %}<option value="{{ branch.id }}">{{ branch.name }}</option>{% endfor %}
+                                        </select>
+                                        <div class="form-text">سيتم تعيين هذا الفرع للعملاء والطلبات الجديدة إذا لم يكن محدد في الجدول</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input"
+                                                   type="checkbox"
+                                                   id="use_current_date_as_created"
+                                                   name="use_current_date_as_created"
+                                                   checked>
+                                            <label class="form-check-label" for="use_current_date_as_created">استخدام التاريخ الحالي كتاريخ الإضافة</label>
+                                            <div class="form-text">إذا لم يكن هناك تاريخ إضافة في الجدول، سيتم استخدام تاريخ المزامنة</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- إعدادات المزامنة -->
+                        <div class="mt-4">
+                            <h6 class="text-primary">
+                                <i class="fas fa-cogs"></i>
+                                إعدادات المزامنة
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>إعدادات الإنشاء التلقائي</h6>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               id="auto_create_customers"
+                                               name="auto_create_customers"
+                                               checked>
+                                        <label class="form-check-label" for="auto_create_customers">إنشاء العملاء تلقائياً</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               id="auto_create_orders"
+                                               name="auto_create_orders"
+                                               checked>
+                                        <label class="form-check-label" for="auto_create_orders">إنشاء الطلبات تلقائياً</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               id="auto_create_inspections"
+                                               name="auto_create_inspections">
+                                        <label class="form-check-label" for="auto_create_inspections">إنشاء المعاينات تلقائياً</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>إعدادات التحديث</h6>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               id="update_existing"
+                                               name="update_existing"
+                                               checked>
+                                        <label class="form-check-label" for="update_existing">تحديث السجلات الموجودة</label>
+                                        <small class="form-text text-muted d-block">سيتم تحديث السجلات الموجودة (العملاء والطلبات) في حالة وجودها</small>
+                                    </div>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               id="enable_reverse_sync"
+                                               name="enable_reverse_sync">
+                                        <label class="form-check-label" for="enable_reverse_sync">تفعيل المزامنة العكسية</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- إعدادات المزامنة -->
-                    <div class="mt-4">
-                        <h6 class="text-primary">
-                            <i class="fas fa-cogs"></i>
-                            إعدادات المزامنة
-                        </h6>
-
+                </div>
+            </div>
+            <!-- Step 3: Column Mapping -->
+            <div class="step-content d-none" id="step3-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">تعيين الأعمدة</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            قم بتعيين كل عمود من Google Sheets إلى الحقل المناسب في النظام
+                        </div>
+                        <div class="alert alert-warning d-none" id="duplicate-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>تنبيه:</strong> يوجد تعيين بالفعل لهذا الجدول والصفحة. سيتم تحديث التعيين الموجود بدلاً من إنشاء تعيين جديد.
+                        </div>
+                        <div id="columnMappings">
+                            <!-- سيتم ملء هذا القسم ديناميكياً -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Step 4: Review and Confirm -->
+            <div class="step-content d-none" id="step4-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">مراجعة وتأكيد التعيين</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            مراجعة أخيرة لإعدادات التعيين قبل الحفظ
+                        </div>
                         <div class="row">
                             <div class="col-md-6">
-                                <h6>إعدادات الإنشاء التلقائي</h6>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="auto_create_customers" name="auto_create_customers" checked>
-                                    <label class="form-check-label" for="auto_create_customers">
-                                        إنشاء العملاء تلقائياً
-                                    </label>
+                                <h6>معلومات أساسية</h6>
+                                <div class="mb-2">
+                                    <strong>اسم التعيين:</strong>
+                                    <span id="review-name"></span>
                                 </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="auto_create_orders" name="auto_create_orders" checked>
-                                    <label class="form-check-label" for="auto_create_orders">
-                                        إنشاء الطلبات تلقائياً
-                                    </label>
+                                <div class="mb-2">
+                                    <strong>معرف الجدول:</strong>
+                                    <span id="review-spreadsheet-id"></span>
                                 </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="auto_create_inspections" name="auto_create_inspections">
-                                    <label class="form-check-label" for="auto_create_inspections">
-                                        إنشاء المعاينات تلقائياً
-                                    </label>
+                                <div class="mb-2">
+                                    <strong>اسم الصفحة:</strong>
+                                    <span id="review-sheet-name"></span>
                                 </div>
-
+                                <div class="mb-2">
+                                    <strong>صف العناوين:</strong>
+                                    <span id="review-header-row"></span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>صف البداية:</strong>
+                                    <span id="review-start-row"></span>
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                <h6>إعدادات التحديث</h6>
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="update_existing" name="update_existing" checked>
-                                    <label class="form-check-label" for="update_existing">
-                                        تحديث السجلات الموجودة
-                                    </label>
-                                    <small class="form-text text-muted d-block">سيتم تحديث السجلات الموجودة (العملاء والطلبات) في حالة وجودها</small>
+                                <h6>القيم الافتراضية</h6>
+                                <div class="mb-2">
+                                    <strong>تصنيف العميل:</strong>
+                                    <span id="review-customer-category"></span>
                                 </div>
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="enable_reverse_sync" name="enable_reverse_sync">
-                                    <label class="form-check-label" for="enable_reverse_sync">
-                                        تفعيل المزامنة العكسية
-                                    </label>
+                                <div class="mb-2">
+                                    <strong>نوع العميل:</strong>
+                                    <span id="review-customer-type"></span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>الفرع:</strong>
+                                    <span id="review-branch"></span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>تاريخ الإضافة:</strong>
+                                    <span id="review-date-setting"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-12">
+                                <h6>تعيينات الأعمدة</h6>
+                                <div id="review-column-mappings" class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>عمود Google Sheets</th>
+                                                <th>حقل النظام</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="review-mappings-body">
+                                            <!-- سيتم ملؤها بواسطة JavaScript -->
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Step 3: Column Mapping -->
-        <div class="step-content d-none" id="step3-content">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">تعيين الأعمدة</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        قم بتعيين كل عمود من Google Sheets إلى الحقل المناسب في النظام
-                    </div>
-
-                    <div class="alert alert-warning d-none" id="duplicate-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>تنبيه:</strong> يوجد تعيين بالفعل لهذا الجدول والصفحة. سيتم تحديث التعيين الموجود بدلاً من إنشاء تعيين جديد.
-                    </div>
-
-                    <div id="columnMappings">
-                        <!-- سيتم ملء هذا القسم ديناميكياً -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Step 4: Review and Confirm -->
-        <div class="step-content d-none" id="step4-content">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">مراجعة وتأكيد التعيين</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        مراجعة أخيرة لإعدادات التعيين قبل الحفظ
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>معلومات أساسية</h6>
-                            <div class="mb-2">
-                                <strong>اسم التعيين:</strong>
-                                <span id="review-name"></span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>معرف الجدول:</strong>
-                                <span id="review-spreadsheet-id"></span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>اسم الصفحة:</strong>
-                                <span id="review-sheet-name"></span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>صف العناوين:</strong>
-                                <span id="review-header-row"></span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>صف البداية:</strong>
-                                <span id="review-start-row"></span>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <h6>القيم الافتراضية</h6>
-                            <div class="mb-2">
-                                <strong>تصنيف العميل:</strong>
-                                <span id="review-customer-category"></span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>نوع العميل:</strong>
-                                <span id="review-customer-type"></span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>الفرع:</strong>
-                                <span id="review-branch"></span>
-                            </div>
-                            <div class="mb-2">
-                                <strong>تاريخ الإضافة:</strong>
-                                <span id="review-date-setting"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    <div class="row">
-                        <div class="col-12">
-                            <h6>تعيينات الأعمدة</h6>
-                            <div id="review-column-mappings" class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>عمود Google Sheets</th>
-                                            <th>حقل النظام</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="review-mappings-body">
-                                        <!-- سيتم ملؤها بواسطة JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-
-                </div>
-            </div>
-        </div>
-
-        <!-- Navigation Buttons -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between">
-                    <button type="button" class="btn btn-secondary" id="prevBtn" style="display: none;">
-                        <i class="fas fa-arrow-right"></i> السابق
-                    </button>
-                    <div>
-                        <button type="button" class="btn btn-primary" id="nextBtn">
-                            التالي <i class="fas fa-arrow-left"></i>
+            <!-- Navigation Buttons -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                id="prevBtn"
+                                style="display: none">
+                            <i class="fas fa-arrow-right"></i> السابق
                         </button>
-                        <button type="submit" class="btn btn-success d-none" id="submitBtn">
-                            <i class="fas fa-save"></i> حفظ التعيين
-                        </button>
+                        <div>
+                            <button type="button" class="btn btn-primary" id="nextBtn">
+                                التالي <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <button type="submit" class="btn btn-success d-none" id="submitBtn">
+                                <i class="fas fa-save"></i> حفظ التعيين
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </form>
-</div>
+        </form>
+    </div>
 {% endblock %}
-
 {% block extra_js %}
-<script>
+    <script>
 let currentStep = 1;
 const totalSteps = 4;
 const fieldTypes = {{ field_types_json|safe }};
@@ -1026,5 +1035,5 @@ function loadColumnMappingsReview() {
 
 // Initialize
 showStep(1);
-</script>
+    </script>
 {% endblock %}

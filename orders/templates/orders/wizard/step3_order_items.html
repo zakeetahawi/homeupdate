@@ -1,181 +1,203 @@
 {% extends 'orders/wizard/base_wizard.html' %}
 {% load static decimal_filters %}
-
 {% block wizard_content %}
-
-<!-- Edit History Section -->
-{% include 'orders/wizard/partials/edit_history.html' with draft=draft %}
-
-<div class="row">
-    <div class="col-md-8">
-        <!-- Add Item Section -->
-        <div class="card mb-4">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">
-                    <i class="fas fa-plus me-2"></i>إضافة عنصر جديد
-                </h5>
-            </div>
-            <div class="card-body">
-                <!-- زر إضافة بالباركود -->
-                <div class="text-center mb-3">
-                    <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#wizardBarcodeScannerModal"
-                            style="border-radius: 12px; border-width: 2px;">
-                        <i class="fas fa-barcode me-2"></i> إضافة بالباركود
-                    </button>
+    <!-- Edit History Section -->
+    {% include 'orders/wizard/partials/edit_history.html' with draft=draft %}
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Add Item Section -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-plus me-2"></i>إضافة عنصر جديد
+                    </h5>
                 </div>
-                
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">المنتج <span class="text-danger">*</span></label>
-                        <select id="product-select" class="form-select">
-                            <option value="">-- اختر المنتج --</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label fw-bold">الكمية <span class="text-danger">*</span></label>
-                        <input type="number" id="item-quantity" class="form-control" min="0.001" step="0.001" value="1">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label fw-bold">السعر <span class="text-danger">*</span></label>
-                        <input type="number" id="item-price" class="form-control" min="0" step="0.01" 
-                               value="0" readonly style="background-color: #e9ecef;">
-                        <small class="text-muted">من النظام</small>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold">الخصم</label>
-                        <select id="item-discount" class="form-select">
-                            {% for i in "0123456789012345"|make_list %}
-                                <option value="{{ forloop.counter0 }}">{{ forloop.counter0 }}%</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-6 mb-3 d-flex align-items-end">
-                        <button type="button" class="btn btn-success w-100" onclick="addItem()">
-                            <i class="fas fa-plus me-2"></i>إضافة
+                <div class="card-body">
+                    <!-- زر إضافة بالباركود -->
+                    <div class="text-center mb-3">
+                        <button type="button"
+                                class="btn btn-outline-primary btn-lg"
+                                data-bs-toggle="modal"
+                                data-bs-target="#wizardBarcodeScannerModal"
+                                style="border-radius: 12px;
+                                       border-width: 2px">
+                            <i class="fas fa-barcode me-2"></i> إضافة بالباركود
                         </button>
                     </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">
+                                المنتج <span class="text-danger">*</span>
+                            </label>
+                            <select id="product-select" class="form-select">
+                                <option value="">-- اختر المنتج --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold">
+                                الكمية <span class="text-danger">*</span>
+                            </label>
+                            <input type="number"
+                                   id="item-quantity"
+                                   class="form-control"
+                                   min="0.001"
+                                   step="0.001"
+                                   value="1">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold">
+                                السعر <span class="text-danger">*</span>
+                            </label>
+                            <input type="number"
+                                   id="item-price"
+                                   class="form-control"
+                                   min="0"
+                                   step="0.01"
+                                   value="0"
+                                   readonly
+                                   style="background-color: #e9ecef">
+                            <small class="text-muted">من النظام</small>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">الخصم</label>
+                            <select id="item-discount" class="form-select">
+                                {% for i in "0123456789012345"|make_list %}
+                                    <option value="{{ forloop.counter0 }}">{{ forloop.counter0 }}%</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3 d-flex align-items-end">
+                            <button type="button" class="btn btn-success w-100" onclick="addItem()">
+                                <i class="fas fa-plus me-2"></i>إضافة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Items List -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>العناصر المضافة
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="items-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>المنتج</th>
+                                    <th>الكمية</th>
+                                    <th>السعر</th>
+                                    <th>الخصم</th>
+                                    <th>الإجمالي</th>
+                                    <th>النهائي</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="items-tbody">
+                                {% for item in items %}
+                                    <tr data-item-id="{{ item.id }}"
+                                        {% if item.added_by and item.added_by != draft.created_by %}class="table-warning"{% endif %}>
+                                        <td>
+                                            {{ item.product.name }}
+                                            {% if item.added_by and item.added_by != draft.created_by %}
+                                                <br>
+                                                <small class="badge bg-warning text-dark">
+                                                    <i class="fas fa-user-edit"></i> أُضيف بواسطة: {{ item.added_by.get_full_name }}
+                                                </small>
+                                            {% endif %}
+                                            {% if item.modified_by and item.modified_by != item.added_by %}
+                                                <br>
+                                                <small class="badge bg-info">
+                                                    <i class="fas fa-edit"></i> عُدل بواسطة: {{ item.modified_by.get_full_name }}
+                                                </small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item.quantity|clean_decimal:3 }}</td>
+                                        <td>{{ item.unit_price|format_currency }}</td>
+                                        <td>{{ item.discount_percentage|format_percentage }}</td>
+                                        <td>{{ item.total_price|format_currency }}</td>
+                                        <td class="fw-bold">{{ item.final_price|format_currency }}</td>
+                                        <td>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-danger"
+                                                    onclick="removeItem({{ item.id }})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr id="no-items-row">
+                                        <td colspan="7" class="text-center text-muted py-4">
+                                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                                            <p class="mb-0">لم يتم إضافة عناصر بعد</p>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Items List -->
-        <div class="card">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">
-                    <i class="fas fa-list me-2"></i>العناصر المضافة
-                </h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0" id="items-table">
-                        <thead class="table-light">
-                            <tr>
-                                <th>المنتج</th>
-                                <th>الكمية</th>
-                                <th>السعر</th>
-                                <th>الخصم</th>
-                                <th>الإجمالي</th>
-                                <th>النهائي</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="items-tbody">
-                            {% for item in items %}
-                            <tr data-item-id="{{ item.id }}" {% if item.added_by and item.added_by != draft.created_by %}class="table-warning"{% endif %}>
-                                <td>
-                                    {{ item.product.name }}
-                                    {% if item.added_by and item.added_by != draft.created_by %}
-                                    <br><small class="badge bg-warning text-dark">
-                                        <i class="fas fa-user-edit"></i> أُضيف بواسطة: {{ item.added_by.get_full_name }}
-                                    </small>
-                                    {% endif %}
-                                    {% if item.modified_by and item.modified_by != item.added_by %}
-                                    <br><small class="badge bg-info">
-                                        <i class="fas fa-edit"></i> عُدل بواسطة: {{ item.modified_by.get_full_name }}
-                                    </small>
-                                    {% endif %}
-                                </td>
-                                <td>{{ item.quantity|clean_decimal:3 }}</td>
-                                <td>{{ item.unit_price|format_currency }}</td>
-                                <td>{{ item.discount_percentage|format_percentage }}</td>
-                                <td>{{ item.total_price|format_currency }}</td>
-                                <td class="fw-bold">{{ item.final_price|format_currency }}</td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-danger" 
-                                            onclick="removeItem({{ item.id }})">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr id="no-items-row">
-                                <td colspan="7" class="text-center text-muted py-4">
-                                    <i class="fas fa-inbox fa-2x mb-2"></i>
-                                    <p class="mb-0">لم يتم إضافة عناصر بعد</p>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <!-- Summary Sidebar -->
+        <div class="col-md-4">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calculator me-2"></i>الملخص
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>المجموع قبل الخصم:</span>
+                        <strong id="subtotal">{{ totals.subtotal|format_currency }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 text-danger">
+                        <span>إجمالي الخصم:</span>
+                        <strong id="total-discount">{{ totals.total_discount|format_currency }}</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="h5">المجموع النهائي:</span>
+                        <strong class="h5 text-success" id="final-total">{{ totals.final_total|format_currency }}</strong>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Summary Sidebar -->
-    <div class="col-md-4">
-        <div class="card sticky-top" style="top: 20px;">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-calculator me-2"></i>الملخص
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between mb-2">
-                    <span>المجموع قبل الخصم:</span>
-                    <strong id="subtotal">{{ totals.subtotal|format_currency }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2 text-danger">
-                    <span>إجمالي الخصم:</span>
-                    <strong id="total-discount">{{ totals.total_discount|format_currency }}</strong>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="h5">المجموع النهائي:</span>
-                    <strong class="h5 text-success" id="final-total">{{ totals.final_total|format_currency }}</strong>
-                </div>
-            </div>
+    <!-- Actions -->
+    <div class="wizard-actions mt-4">
+        <div>
+            <a href="{% url 'orders:wizard_cancel' %}"
+               class="btn btn-wizard btn-wizard-danger me-2">
+                <i class="fas fa-times me-2"></i>إلغاء
+            </a>
+            <a href="{% url 'orders:wizard_step' step=2 %}"
+               class="btn btn-wizard btn-wizard-secondary">
+                <i class="fas fa-arrow-right me-2"></i>السابق
+            </a>
+        </div>
+        <div>
+            <button type="button"
+                    class="btn btn-wizard btn-wizard-primary"
+                    onclick="completeStep3()">
+                <i class="fas fa-arrow-left me-2"></i>التالي
+            </button>
         </div>
     </div>
-</div>
-
-<!-- Actions -->
-<div class="wizard-actions mt-4">
-    <div>
-        <a href="{% url 'orders:wizard_cancel' %}" class="btn btn-wizard btn-wizard-danger me-2">
-            <i class="fas fa-times me-2"></i>إلغاء
-        </a>
-        <a href="{% url 'orders:wizard_step' step=2 %}" class="btn btn-wizard btn-wizard-secondary">
-            <i class="fas fa-arrow-right me-2"></i>السابق
-        </a>
-    </div>
-    <div>
-        <button type="button" class="btn btn-wizard btn-wizard-primary" onclick="completeStep3()">
-            <i class="fas fa-arrow-left me-2"></i>التالي
-        </button>
-    </div>
-</div>
 {% endblock %}
-
 {% block extra_js %}
-{{ block.super }}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-<style>
+    {{ block.super }}
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+          rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css"
+          rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <style>
 /* تحسينات Select2 للمنتجات */
 .select2-container {
     width: 100% !important;
@@ -304,9 +326,8 @@
         padding: 12px 15px;
     }
 }
-</style>
-
-<script>
+    </style>
+    <script>
 $(document).ready(function() {
     console.log('تهيئة Select2 للبحث عن المنتجات في الويزارد...');
     
@@ -496,8 +517,7 @@ function searchByBarcode(barcode) {
 function showToast(type, message) {
     // إنشاء toast بسيط
     const toast = $(`
-        <div class="alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed" 
-             style="top: 80px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 300px;">
+        <div class="alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed" style="top: 80px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 300px;">
             ${message}
         </div>
     `);
@@ -861,9 +881,7 @@ window.addScannedProductToWizard = function(productId, productName, productCode,
     console.log('✅ تم إضافة المنتج للطلب:', {productId, productName, quantity, productPrice, discount});
 };
 
-</script>
-
-<!-- Modal الباركود للويزارد -->
-{% include 'includes/wizard_barcode_scanner_modal.html' %}
-
+    </script>
+    <!-- Modal الباركود للويزارد -->
+    {% include 'includes/wizard_barcode_scanner_modal.html' %}
 {% endblock %}

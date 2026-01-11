@@ -1,9 +1,8 @@
 {% extends "accounts/messages/base_messages.html" %}
 {% load static %}
-
 {% block extra_css %}
-{{ block.super }}
-<style>
+    {{ block.super }}
+    <style>
     .original-message {
         background: #f8f9fa;
         padding: 1.5rem;
@@ -73,82 +72,74 @@
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
     }
-</style>
+    </style>
 {% endblock %}
-
 {% block messages_content %}
-{% include 'components/page_header.html' with title=page_title icon='fas fa-reply' %}
-
-<!-- الرسالة الأصلية -->
-<div class="original-message">
-    <div class="original-message-header">
-        <div>
-            <strong><i class="fas fa-envelope me-1"></i>الرسالة الأصلية:</strong>
-            <span class="text-muted ms-2">{{ original_message.subject }}</span>
+    {% include 'components/page_header.html' with title=page_title icon='fas fa-reply' %}
+    <!-- الرسالة الأصلية -->
+    <div class="original-message">
+        <div class="original-message-header">
+            <div>
+                <strong><i class="fas fa-envelope me-1"></i>الرسالة الأصلية:</strong>
+                <span class="text-muted ms-2">{{ original_message.subject }}</span>
+            </div>
+            <div class="original-message-info">
+                <i class="fas fa-user me-1"></i>
+                من: {{ original_message.sender.get_full_name|default:original_message.sender.username }}
+                <span class="ms-3">
+                    <i class="fas fa-calendar me-1"></i>
+                    {{ original_message.created_at|date:"Y/m/d - h:i A" }}
+                </span>
+            </div>
         </div>
-        <div class="original-message-info">
-            <i class="fas fa-user me-1"></i>
-            من: {{ original_message.sender.get_full_name|default:original_message.sender.username }}
-            <span class="ms-3">
-                <i class="fas fa-calendar me-1"></i>
-                {{ original_message.created_at|date:"Y/m/d - h:i A" }}
-            </span>
+        <div class="original-message-body">{{ original_message.body }}</div>
+    </div>
+    <!-- نموذج الرد -->
+    <form method="post" class="compose-form">
+        {% csrf_token %}
+        <!-- الموضوع -->
+        <div class="mb-3">
+            <label for="subject" class="form-label">
+                <i class="fas fa-tag me-1"></i>
+                الموضوع:
+            </label>
+            <input type="text"
+                   class="form-control"
+                   id="subject"
+                   name="subject"
+                   value="Re: {{ original_message.subject }}"
+                   required>
         </div>
-    </div>
-    <div class="original-message-body">
-        {{ original_message.body }}
-    </div>
-</div>
-
-<!-- نموذج الرد -->
-<form method="post" class="compose-form">
-    {% csrf_token %}
-    
-    <!-- الموضوع -->
-    <div class="mb-3">
-        <label for="subject" class="form-label">
-            <i class="fas fa-tag me-1"></i>
-            الموضوع:
-        </label>
-        <input type="text" 
-               class="form-control" 
-               id="subject" 
-               name="subject" 
-               value="Re: {{ original_message.subject }}" 
-               required>
-    </div>
-    
-    <!-- المحتوى -->
-    <div class="mb-3">
-        <label for="body" class="form-label">
-            <i class="fas fa-align-right me-1"></i>
-            الرد:
-        </label>
-        <textarea class="form-control" 
-                  id="body" 
-                  name="body" 
-                  rows="10" 
-                  required 
-                  placeholder="اكتب ردك هنا..."></textarea>
-    </div>
-    
-    <!-- الأزرار -->
-    <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-send">
-            <i class="fas fa-paper-plane me-1"></i>
-            إرسال الرد
-        </button>
-        <a href="{% url 'accounts:view_message' original_message.id %}" class="btn btn-outline-secondary">
-            <i class="fas fa-times me-1"></i>
-            إلغاء
-        </a>
-    </div>
-</form>
-
-<script>
+        <!-- المحتوى -->
+        <div class="mb-3">
+            <label for="body" class="form-label">
+                <i class="fas fa-align-right me-1"></i>
+                الرد:
+            </label>
+            <textarea class="form-control"
+                      id="body"
+                      name="body"
+                      rows="10"
+                      required
+                      placeholder="اكتب ردك هنا..."></textarea>
+        </div>
+        <!-- الأزرار -->
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-send">
+                <i class="fas fa-paper-plane me-1"></i>
+                إرسال الرد
+            </button>
+            <a href="{% url 'accounts:view_message' original_message.id %}"
+               class="btn btn-outline-secondary">
+                <i class="fas fa-times me-1"></i>
+                إلغاء
+            </a>
+        </div>
+    </form>
+    <script>
 // تركيز تلقائي على حقل الرد
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('body').focus();
 });
-</script>
+    </script>
 {% endblock %}
