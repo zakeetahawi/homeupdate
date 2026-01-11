@@ -1,42 +1,44 @@
 {% comment %}
 القائمة الرئيسية الديناميكية من قاعدة البيانات
 {% endcomment %}
-
 {% if user.is_authenticated and navbar_departments %}
-{% for key, item in navbar_departments.items %}
-{% if item.units %}
-{% if item.units|length == 1 and not item.url %}
-{# عنصر واحد فقط - عرض مباشر بدون dropdown #}
-<li class="nav-item">
-    <a class="nav-link" href="{{ item.units.0.url_name }}">
-        <i class="fas {{ item.units.0.icon|default:item.icon }}"></i><span class="nav-text">{{ item.units.0.name
-            }}</span>
-    </a>
-</li>
-{% else %}
-{# عدة عناصر - عرض كـ dropdown #}
-<li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle" href="{% if item.url %}{{ item.url }}{% else %}#{% endif %}"
-        id="{{ key }}Dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="fas {{ item.icon }}"></i><span class="nav-text">{{ item.name }}</span>
-    </a>
-    <ul class="dropdown-menu" aria-labelledby="{{ key }}Dropdown">
-        {% for unit in item.units %}
-        <li>
-            <a class="dropdown-item" href="{{ unit.url_name }}">
-                {% if unit.icon %}<i class="fas {{ unit.icon }}"></i>{% endif %}
-                {{ unit.name }}
-            </a>
-        </li>
-        {% if not forloop.last and forloop.counter|divisibleby:3 %}
-        <li>
-            <hr class="dropdown-divider">
-        </li>
+    {% for key, item in navbar_departments.items %}
+        {% if item.units %}
+            {% if item.units|length == 1 and not item.url %}
+                {# عنصر واحد فقط - عرض مباشر بدون dropdown #}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ item.units.0.url_name }}">
+                        <i class="fas {{ item.units.0.icon|default:item.icon }}"></i><span class="nav-text">{{ item.units.0.name }}</span>
+                    </a>
+                </li>
+            {% else %}
+                {# عدة عناصر - عرض كـ dropdown #}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle"
+                       href="{% if item.url %}{{ item.url }}{% else %}#{% endif %}"
+                       id="{{ key }}Dropdown"
+                       role="button"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                        <i class="fas {{ item.icon }}"></i><span class="nav-text">{{ item.name }}</span>
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="{{ key }}Dropdown">
+                        {% for unit in item.units %}
+                            <li>
+                                <a class="dropdown-item" href="{{ unit.url_name }}">
+                                    {% if unit.icon %}<i class="fas {{ unit.icon }}"></i>{% endif %}
+                                    {{ unit.name }}
+                                </a>
+                            </li>
+                            {% if not forloop.last and forloop.counter|divisibleby:3 %}
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endif %}
         {% endif %}
-        {% endfor %}
-    </ul>
-</li>
-{% endif %}
-{% endif %}
-{% endfor %}
+    {% endfor %}
 {% endif %}
