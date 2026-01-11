@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <div class="card-body p-0">
                 <!-- معلومات الفلاتر المطبقة -->
-                {% if status_filter or search_query or date_from or date_to or branch_filter or order_type_filter %}
+                {% if status_filter or search_query or date_from or date_to or branch_filter or salesperson_filter or order_type_filter %}
                     <div class="alert alert-info mb-0 rounded-0" role="alert">
                         <i class="fas fa-filter me-2"></i>
                         <strong>الفلاتر المطبقة:</strong>
@@ -342,6 +342,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             {% for branch in branches %}
                                 {% if branch.id|stringformat:'s' == branch_filter %}
                                     <span class="badge bg-warning text-dark me-1">الفرع: {{ branch.name }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        {% if salesperson_filter %}
+                            {% for salesperson in salespersons %}
+                                {% if salesperson.id|stringformat:'s' == salesperson_filter %}
+                                    <span class="badge bg-info me-1">البائع: {{ salesperson.name }}</span>
                                 {% endif %}
                             {% endfor %}
                         {% endif %}

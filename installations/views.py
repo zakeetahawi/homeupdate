@@ -3738,6 +3738,13 @@ def api_upcoming_installations(request):
                 order__salesperson=request.user.salesperson
             )
 
+        # المستخدمون الذين لهم دور بائع لكن بدون salesperson مرتبط: يرون الطلبات التي أنشأوها
+        elif (
+            request.user.groups.filter(name__icontains="بائع").exists()
+            or request.user.groups.filter(name__icontains="salesperson").exists()
+        ):
+            installations = installations.filter(order__created_by=request.user)
+
         # بقية المستخدمين: لا يرون شيء
         else:
             installations = installations.none()

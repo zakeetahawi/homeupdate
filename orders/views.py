@@ -138,6 +138,11 @@ def order_list(request):
     if date_to:
         orders = orders.filter(order_date__lte=date_to)
 
+    # فلتر البائع
+    salesperson_filter = request.GET.get("salesperson", "")
+    if salesperson_filter:
+        orders = orders.filter(salesperson__id=salesperson_filter)
+
     # Order by created_at
     orders = orders.order_by("-created_at")
 
@@ -161,6 +166,11 @@ def order_list(request):
     if show_branch_filter:
         branches = Branch.objects.filter(is_active=True)
 
+    # Salespersons for filter dropdown
+    from accounts.models import Salesperson
+
+    salespersons = Salesperson.objects.filter(is_active=True).order_by("name")
+
     # حساب الفلاتر النشطة للفلتر المضغوط
     active_filters = []
     if search_query:
@@ -173,6 +183,8 @@ def order_list(request):
         active_filters.append("order_type")
     if branch_filter:
         active_filters.append("branch")
+    if salesperson_filter:
+        active_filters.append("salesperson")
     if date_from:
         active_filters.append("date_from")
     if date_to:
@@ -198,6 +210,8 @@ def order_list(request):
         "show_branch_filter": show_branch_filter,
         "branches": branches,
         "branch_filter": branch_filter,
+        "salespersons": salespersons,
+        "salesperson_filter": salesperson_filter,
         "date_from": date_from,
         "date_to": date_to,
         # سياق الفلتر المضغوط

@@ -15,6 +15,18 @@
         </div>
     {% endif %}
     <div class="filter-group">
+        <label class="filter-label">البائع</label>
+        <select name="salesperson" class="filter-select">
+            <option value="">جميع البائعين</option>
+            {% for salesperson in salespersons %}
+                <option value="{{ salesperson.id }}"
+                        {% if salesperson_filter == salesperson.id|stringformat:'s' %}selected{% endif %}>
+                    {{ salesperson.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
         <label class="filter-label">نوع الطلب</label>
         <select name="order_type" class="filter-select">
             <option value="">كل الأنواع</option>
@@ -81,6 +93,18 @@
                 <span class="filter-tag">
                     فرع: {{ branch.name }}
                     <button type="button" onclick="removeFilter('branch')" class="remove-filter">×</button>
+                </span>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+    {% if salesperson_filter %}
+        {% for salesperson in salespersons %}
+            {% if salesperson.id|stringformat:'s' == salesperson_filter %}
+                <span class="filter-tag">
+                    بائع: {{ salesperson.name }}
+                    <button type="button"
+                            onclick="removeFilter('salesperson')"
+                            class="remove-filter">×</button>
                 </span>
             {% endif %}
         {% endfor %}
