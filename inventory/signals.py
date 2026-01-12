@@ -432,6 +432,70 @@ def sync_base_product_to_cloudflare(sender, instance, **kwargs):
     transaction.on_commit(do_sync)
 
 
+@receiver(post_save, sender=BaseProduct)
+def sync_base_product_prices_to_legacy(sender, instance, **kwargs):
+    """
+    مزامنة أسعار المنتج الأساسي (قطاعي وجملة) مع المنتجات القديمة
+    عندما يتغير السعر الأساسي، نقوم بمزامنة كل المتغيرات التي تعتمد عليه.
+    """
+    # تخطي المزامنة أثناء عمليات الترحيل الجماعي
+    if getattr(instance, "_skip_legacy_sync", False):
+        return
+
+    def do_sync():
+        try:
+            from .variant_services import PricingService
+
+            # تحديث كل المتغيرات المرتبطة التي ليس لها سعر مخصص
+            variants = instance.variants.filter(
+                is_active=True,
+                price_override__isnull=True,
+                wholesale_price_override__isnull=True,
+            ).select_related("legacy_product")
+
+            for variant in variants:
+                if variant.legacy_product:
+                    PricingService._sync_legacy_product_price(variant)
+
+            logger.info(
+                f"✅ تم مزامنة أسعار {variants.count()} من المنتجات القديمة لـ {instance.code}"
+            )
+        except Exception as e:
+            logger.error(
+                f"❌ فشل في مزامنة أسعار BaseProduct {instance.code} مع القديم: {e}"
+            )
+
+    transaction.on_commit(do_sync)
+
+
+@receiver(post_save, sender=ProductVariant)
+def sync_variant_prices_to_legacy(sender, instance, **kwargs):
+    """
+    مزامنة أسعار المتغير (قطاعي وجملة) مع المنتج القديم المرتبط به مباشرة
+    """
+    # تخطي المزامنة أثناء عمليات الترحيل الجماعي
+    if getattr(instance, "_skip_legacy_sync", False):
+        return
+
+    if not instance.legacy_product:
+        return
+
+    def do_sync():
+        try:
+            from .variant_services import PricingService
+
+            PricingService._sync_legacy_product_price(instance)
+            logger.info(
+                f"✅ تم مزامنة أسعار المتغير {instance.variant_code} مع المنتج القديم {instance.legacy_product.code}"
+            )
+        except Exception as e:
+            logger.error(
+                f"❌ فشل في مزامنة أسعار Variant {instance.variant_code} مع القديم: {e}"
+            )
+
+    transaction.on_commit(do_sync)
+
+
 @receiver(post_save, sender=ProductVariant)
 def sync_variant_parent_to_cloudflare(sender, instance, **kwargs):
     """

@@ -2,6 +2,7 @@
 {% load i18n %}
 {% load static %}
 {% load unified_status_tags %}
+{% load customer_badges %}
 {% block title %}{{ customer.name }}{% endblock %}
 {% block content %}
     <div class="container-fluid mt-4">
@@ -51,9 +52,8 @@
                                 </h2>
                                 <div class="mb-3">
                                     {% get_status_badge customer.status %}
-                                    <span class="badge bg-info me-2">
-                                        <i class="fas fa-tag me-1"></i>{{ customer.get_customer_type_display }}
-                                    </span>
+                                    <!-- ✨ البادج المخصص لنوع العميل ✨ -->
+                                    {% customer_type_badge customer %}
                                     {% if customer.category %}
                                         <span class="badge bg-secondary me-2">
                                             <i class="fas fa-folder me-1"></i>{{ customer.category.name }}
@@ -189,9 +189,7 @@
                             </tr>
                             <tr>
                                 <th>{% trans 'نوع العميل' %}:</th>
-                                <td>
-                                    <span class="badge bg-info">{{ customer.get_customer_type_display }}</span>
-                                </td>
+                                <td>{% customer_type_badge customer %}</td>
                             </tr>
                             {% if customer.category %}
                                 <tr>

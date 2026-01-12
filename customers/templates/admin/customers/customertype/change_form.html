@@ -1,0 +1,487 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static %}
+{% block extrahead %}
+    {{ block.super }}
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+          integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer" />
+    <style>
+    /* ===== منتقي البادج ===== */
+    .badge-picker-compact {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 16px;
+        margin: 16px 0;
+    }
+    
+    .badge-picker-row {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+    
+    .badge-picker-col {
+        min-width: 180px;
+    }
+    
+    .picker-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #666;
+        margin-bottom: 10px;
+        display: block;
+    }
+    
+    /* ===== أشكال البادج المرئية ===== */
+    .style-options {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .style-btn {
+        padding: 8px 14px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .style-btn:hover { border-color: #007bff; background: #f0f7ff; }
+    .style-btn.active { border-color: #007bff; background: #e7f1ff; }
+    
+    .style-btn .style-demo {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+    }
+    
+    .style-btn[data-style="solid"] .style-demo {
+        background: #007bff;
+        color: white;
+    }
+    
+    .style-btn[data-style="outline"] .style-demo {
+        background: transparent;
+        color: #007bff;
+        border: 2px solid #007bff;
+    }
+    
+    .style-btn[data-style="gradient"] .style-demo {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+    }
+    
+    .style-btn[data-style="glass"] .style-demo {
+        background: rgba(0, 123, 255, 0.2);
+        color: #007bff;
+    }
+    
+    /* ===== الألوان ===== */
+    .color-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .color-input {
+        width: 40px;
+        height: 40px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        cursor: pointer;
+        padding: 2px;
+    }
+    
+    .quick-color-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .quick-color-btn:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    .quick-color-btn.active { border-color: #333; box-shadow: 0 0 0 2px white, 0 0 0 4px #333; }
+    
+    /* ===== الأيقونات ===== */
+    .icon-options {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    
+    .icon-btn {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        font-size: 16px;
+        color: #333;
+        transition: all 0.2s;
+    }
+    
+    .icon-btn:hover { border-color: #007bff; background: #f0f7ff; }
+    .icon-btn.active { border-color: #007bff; background: #007bff; color: white; }
+    
+    /* ===== المعاينة ===== */
+    .preview-box {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        min-width: 160px;
+    }
+    
+    .preview-label {
+        color: rgba(255,255,255,0.9);
+        font-size: 12px;
+        margin-bottom: 12px;
+        font-weight: 500;
+    }
+    
+    .preview-badge-wrap {
+        background: white;
+        display: inline-block;
+        padding: 16px 24px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    #badgePreview {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 15px;
+        transition: all 0.2s;
+    }
+    
+    /* إخفاء حقول البادج الأصلية */
+    .field-badge_style, .field-badge_color, .field-badge_icon {
+        display: none !important;
+    }
+    </style>
+{% endblock %}
+{% block after_related_objects %}
+    {{ block.super }}
+    <div class="badge-picker-compact" id="badgePicker">
+        <div class="badge-picker-row">
+            <!-- الشكل -->
+            <div class="badge-picker-col">
+                <span class="picker-label">🎨 الشكل</span>
+                <div class="style-options" id="styleOpts">
+                    <button type="button" class="style-btn" data-style="solid">
+                        <span class="style-demo">نموذج</span>
+                        <small>صلب</small>
+                    </button>
+                    <button type="button" class="style-btn" data-style="outline">
+                        <span class="style-demo">نموذج</span>
+                        <small>مخطط</small>
+                    </button>
+                    <button type="button" class="style-btn" data-style="gradient">
+                        <span class="style-demo">نموذج</span>
+                        <small>متدرج</small>
+                    </button>
+                    <button type="button" class="style-btn" data-style="glass">
+                        <span class="style-demo">نموذج</span>
+                        <small>زجاجي</small>
+                    </button>
+                </div>
+            </div>
+            <!-- اللون -->
+            <div class="badge-picker-col">
+                <span class="picker-label">🌈 اللون</span>
+                <div class="color-row">
+                    <input type="color" id="colorInput" class="color-input" value="#007bff">
+                    <div class="quick-color-btn"
+                         data-color="#007bff"
+                         style="background:#007bff"
+                         title="أزرق"></div>
+                    <div class="quick-color-btn"
+                         data-color="#28a745"
+                         style="background:#28a745"
+                         title="أخضر"></div>
+                    <div class="quick-color-btn"
+                         data-color="#dc3545"
+                         style="background:#dc3545"
+                         title="أحمر"></div>
+                    <div class="quick-color-btn"
+                         data-color="#ffc107"
+                         style="background:#ffc107"
+                         title="أصفر"></div>
+                    <div class="quick-color-btn"
+                         data-color="#6f42c1"
+                         style="background:#6f42c1"
+                         title="بنفسجي"></div>
+                    <div class="quick-color-btn"
+                         data-color="#fd7e14"
+                         style="background:#fd7e14"
+                         title="برتقالي"></div>
+                    <div class="quick-color-btn"
+                         data-color="#20c997"
+                         style="background:#20c997"
+                         title="أخضر فاتح"></div>
+                    <div class="quick-color-btn"
+                         data-color="#e83e8c"
+                         style="background:#e83e8c"
+                         title="وردي"></div>
+                </div>
+            </div>
+            <!-- الأيقونة -->
+            <div class="badge-picker-col">
+                <span class="picker-label">✨ الأيقونة</span>
+                <div class="icon-options" id="iconOpts">
+                    <button type="button" class="icon-btn" data-icon="" title="بدون">✕</button>
+                    <button type="button"
+                            class="icon-btn"
+                            data-icon="fa-solid fa-crown"
+                            title="تاج">👑</button>
+                    <button type="button"
+                            class="icon-btn"
+                            data-icon="fa-solid fa-star"
+                            title="نجمة">⭐</button>
+                    <button type="button"
+                            class="icon-btn"
+                            data-icon="fa-solid fa-gem"
+                            title="ألماس">💎</button>
+                    <button type="button"
+                            class="icon-btn"
+                            data-icon="fa-solid fa-user-tie"
+                            title="رجل أعمال">👔</button>
+                    <button type="button"
+                            class="icon-btn"
+                            data-icon="fa-solid fa-building"
+                            title="مبنى">🏢</button>
+                    <button type="button"
+                            class="icon-btn"
+                            data-icon="fa-solid fa-truck"
+                            title="شاحنة">🚚</button>
+                    <button type="button"
+                            class="icon-btn"
+                            data-icon="fa-solid fa-store"
+                            title="متجر">🏪</button>
+                    <button type="button"
+                            class="icon-btn"
+                            data-icon="fa-solid fa-fire"
+                            title="نار">🔥</button>
+                </div>
+            </div>
+            <!-- المعاينة -->
+            <div class="preview-box">
+                <div class="preview-label">👁️ المعاينة الحية</div>
+                <div class="preview-badge-wrap">
+                    <span id="badgePreview">
+                        <span id="prevIcon"></span>
+                        <span id="prevText">البادج</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+(function() {
+    // الحقول
+    const styleField = document.getElementById('id_badge_style');
+    const colorField = document.getElementById('id_badge_color');
+    const iconField = document.getElementById('id_badge_icon');
+    const nameField = document.getElementById('id_name');
+    
+    // العناصر
+    const styleBtns = document.querySelectorAll('.style-btn');
+    const colorInput = document.getElementById('colorInput');
+    const colorBtns = document.querySelectorAll('.quick-color-btn');
+    const iconBtns = document.querySelectorAll('.icon-btn');
+    
+    // المعاينة
+    const badge = document.getElementById('badgePreview');
+    const prevIcon = document.getElementById('prevIcon');
+    const prevText = document.getElementById('prevText');
+    
+    // القيم
+    let style = styleField?.value || 'solid';
+    let color = colorField?.value || '#007bff';
+    let icon = iconField?.value || '';
+    
+    // خريطة الإيموجي للأيقونات
+    const iconEmoji = {
+        '': '✕',
+        'fa-solid fa-crown': '👑',
+        'fa-solid fa-star': '⭐',
+        'fa-solid fa-gem': '💎',
+        'fa-solid fa-user-tie': '👔',
+        'fa-solid fa-building': '🏢',
+        'fa-solid fa-truck': '🚚',
+        'fa-solid fa-store': '🏪',
+        'fa-solid fa-fire': '🔥',
+        'fas fa-crown': '👑',
+        'fas fa-star': '⭐',
+        'fas fa-gem': '💎',
+        'fas fa-user-tie': '👔',
+        'fas fa-building': '🏢',
+        'fas fa-truck': '🚚',
+        'fas fa-store': '🏪',
+        'fas fa-fire': '🔥'
+    };
+    
+    function init() {
+        // تحديد الشكل الحالي
+        styleBtns.forEach(b => { 
+            if(b.dataset.style === style) b.classList.add('active'); 
+        });
+        
+        // تحديد اللون الحالي
+        if(color) colorInput.value = color;
+        colorBtns.forEach(b => { 
+            if(b.dataset.color.toLowerCase() === color.toLowerCase()) b.classList.add('active'); 
+        });
+        
+        // تحديد الأيقونة الحالية
+        iconBtns.forEach(b => { 
+            if(b.dataset.icon === icon || (icon && b.dataset.icon.includes(icon.split(' ').pop()))) {
+                b.classList.add('active'); 
+            }
+        });
+        
+        updateStyleDemos();
+        update();
+    }
+    
+    function updateStyleDemos() {
+        // تحديث ألوان الأشكال
+        styleBtns.forEach(btn => {
+            const demo = btn.querySelector('.style-demo');
+            const s = btn.dataset.style;
+            
+            if(s === 'solid') {
+                demo.style.background = color;
+                demo.style.color = 'white';
+                demo.style.border = 'none';
+            } else if(s === 'outline') {
+                demo.style.background = 'transparent';
+                demo.style.color = color;
+                demo.style.border = `2px solid ${color}`;
+            } else if(s === 'gradient') {
+                demo.style.background = `linear-gradient(135deg, ${color}, ${darken(color)})`;
+                demo.style.color = 'white';
+                demo.style.border = 'none';
+            } else if(s === 'glass') {
+                demo.style.background = hexToRgba(color, 0.25);
+                demo.style.color = color;
+                demo.style.border = 'none';
+            }
+        });
+    }
+    
+    function update() {
+        prevText.textContent = nameField?.value || 'البادج';
+        
+        // الأيقونة - استخدام إيموجي
+        if(icon) {
+            prevIcon.textContent = iconEmoji[icon] || '';
+            prevIcon.style.display = 'inline';
+        } else {
+            prevIcon.style.display = 'none';
+        }
+        
+        // تطبيق الشكل
+        badge.style.border = 'none';
+        if(style === 'solid') {
+            badge.style.background = color;
+            badge.style.color = 'white';
+        } else if(style === 'outline') {
+            badge.style.background = 'transparent';
+            badge.style.color = color;
+            badge.style.border = `2px solid ${color}`;
+        } else if(style === 'gradient') {
+            badge.style.background = `linear-gradient(135deg, ${color}, ${darken(color)})`;
+            badge.style.color = 'white';
+        } else if(style === 'glass') {
+            badge.style.background = hexToRgba(color, 0.25);
+            badge.style.color = color;
+        }
+    }
+    
+    // أحداث الشكل
+    styleBtns.forEach(b => b.addEventListener('click', () => {
+        styleBtns.forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        style = b.dataset.style;
+        if(styleField) styleField.value = style;
+        update();
+    }));
+    
+    // أحداث اللون
+    colorInput.addEventListener('input', () => {
+        color = colorInput.value;
+        colorBtns.forEach(x => x.classList.remove('active'));
+        if(colorField) colorField.value = color;
+        updateStyleDemos();
+        update();
+    });
+    
+    colorBtns.forEach(b => b.addEventListener('click', () => {
+        colorBtns.forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        color = b.dataset.color;
+        colorInput.value = color;
+        if(colorField) colorField.value = color;
+        updateStyleDemos();
+        update();
+    }));
+    
+    // أحداث الأيقونة
+    iconBtns.forEach(b => b.addEventListener('click', () => {
+        iconBtns.forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        icon = b.dataset.icon;
+        if(iconField) iconField.value = icon;
+        update();
+    }));
+    
+    // تحديث عند تغيير الاسم
+    nameField?.addEventListener('input', update);
+    
+    // دوال مساعدة
+    function darken(hex) {
+        const r = Math.max(0, parseInt(hex.slice(1,3), 16) - 40);
+        const g = Math.max(0, parseInt(hex.slice(3,5), 16) - 40);
+        const b = Math.max(0, parseInt(hex.slice(5,7), 16) - 40);
+        return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+    }
+    
+    function hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1,3), 16);
+        const g = parseInt(hex.slice(3,5), 16);
+        const b = parseInt(hex.slice(5,7), 16);
+        return `rgba(${r},${g},${b},${alpha})`;
+    }
+    
+    // تشغيل
+    init();
+})();
+    </script>
+{% endblock %}

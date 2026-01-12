@@ -69,7 +69,8 @@
                                     <th>الصنف</th>
                                     <th>المخزون</th>
                                     <th>الحد الأدنى</th>
-                                    <th>السعر</th>
+                                    <th>السعر (قطاعي)</th>
+                                    <th>السعر (جملة)</th>
                                     <th>الحالة</th>
                                     <th>الإجراءات</th>
                                 </tr>
@@ -85,7 +86,8 @@
                                             </span>
                                         </td>
                                         <td>{{ product.minimum_stock }}</td>
-                                        <td>{{ product.price }}</td>
+                                        <td>{{ product.price|floatformat:2 }}</td>
+                                        <td>{{ product.wholesale_price|floatformat:2 }}</td>
                                         <td>
                                             {% if product.current_stock_calc == 0 or not product.current_stock_calc %}
                                                 <span class="badge bg-danger">نفذ من المخزون</span>

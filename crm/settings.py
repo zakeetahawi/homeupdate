@@ -1686,7 +1686,7 @@ X_FRAME_OPTIONS = "DENY"
 USE_SRI = True  # للتحقق من سلامة الملفات الخارجية
 
 # Database Connection Security
-CONN_MAX_AGE = 600  # 10 دقائق max
+CONN_MAX_AGE = 0  # ⚠️ لا تغير هذا - ضروري لمنع تراكم الاتصالات
 CONN_HEALTH_CHECKS = True  # فحص صحة الاتصال
 
 # Password Validation مشدد

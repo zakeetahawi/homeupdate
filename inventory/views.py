@@ -6,8 +6,10 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.db import models
 from django.db.models import Case, Count, F, OuterRef, Q, Subquery, Sum, When
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 
 from accounts.models import SystemSettings
@@ -20,6 +22,18 @@ from .inventory_utils import (
     invalidate_product_cache,
 )
 from .models import Category, Product, PurchaseOrder, StockAlert, StockTransaction
+
+
+# ===== API لتبديل وضع عرض السعر =====
+@login_required
+@require_POST
+def toggle_price_display_mode(request):
+    """تبديل وضع عرض السعر بين قطاعي وجملة وحفظه في الجلسة"""
+    mode = request.POST.get("mode", "retail")
+    if mode in ["retail", "wholesale"]:
+        request.session["price_display_mode"] = mode
+        return JsonResponse({"success": True, "mode": mode})
+    return JsonResponse({"success": False, "error": "Invalid mode"}, status=400)
 
 
 class InventoryDashboardView(LoginRequiredMixin, TemplateView):
@@ -249,6 +263,9 @@ def product_list(request):
 
     current_year = datetime.now().year
 
+    # ===== نوع السعر المعروض (قطاعي/جملة) - محفوظ في الجلسة =====
+    price_display_mode = request.session.get("price_display_mode", "retail")
+
     context = {
         "page_obj": page_obj,
         "categories": Category.objects.only("id", "name"),
@@ -263,6 +280,7 @@ def product_list(request):
         "page_size": page_size,
         "paginator": paginator,
         "page_number": page_number,
+        "price_display_mode": price_display_mode,
     }
 
     return render(request, "inventory/product_list_new_icons.html", context)

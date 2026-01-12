@@ -305,6 +305,57 @@
 {% endblock %}
 {% block extra_js %}
     {{ block.super }}
+    <!-- Modal للتقدم اللحظي -->
+    <div class="modal fade"
+         id="uploadProgressModal"
+         tabindex="-1"
+         data-bs-backdrop="static"
+         data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-upload"></i> جاري رفع المنتجات...
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <div class="spinner-border text-primary mb-2"
+                             role="status"
+                             id="uploadSpinner"></div>
+                        <h4 id="progressPercent">0%</h4>
+                    </div>
+                    <div class="progress mb-3" style="height: 30px;">
+                        <div id="progressBar"
+                             class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                             style="width: 0%"></div>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h5 class="text-success mb-0" id="createdCount">0</h5>
+                            <small class="text-muted">جديد</small>
+                        </div>
+                        <div class="col-4">
+                            <h5 class="text-info mb-0" id="updatedCount">0</h5>
+                            <small class="text-muted">محدّث</small>
+                        </div>
+                        <div class="col-4">
+                            <h5 class="text-warning mb-0" id="skippedCount">0</h5>
+                            <small class="text-muted">متخطى</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span>⚡ السرعة: <strong id="uploadSpeed">-</strong> صف/ث</span>
+                        <span>⏱️ المتبقي: <strong id="etaTime">-</strong></span>
+                    </div>
+                    <div class="text-center mt-2 small">
+                        <span id="processedText">0</span> من <span id="totalText">0</span> صف
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('uploadForm');
@@ -336,7 +387,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const fileName = this.files[0].name;
             const fileSize = (this.files[0].size / 1024 / 1024).toFixed(2);
             
-            // إظهار معلومات الملف
             let fileInfo = document.getElementById('fileInfo');
             if (!fileInfo) {
                 fileInfo = document.createElement('div');
@@ -345,10 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.parentNode.appendChild(fileInfo);
             }
             
-            fileInfo.innerHTML = `
-                <i class="fas fa-file-excel"></i>
-                <strong>الملف المحدد:</strong> ${fileName} (${fileSize} ميجابايت)
-            `;
+            fileInfo.innerHTML = '<i class="fas fa-file-excel"></i> <strong>الملف المحدد:</strong> ' + fileName + ' (' + fileSize + ' ميجابايت)';
         }
     });
     
@@ -367,9 +414,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             const firstConfirm = confirm('⚠️ تحذير خطر!\n\nسيتم حذف جميع المنتجات والمعاملات الحالية ولا يمكن التراجع عن هذا الإجراء!\n\nهل أنت متأكد من المتابعة؟');
-            if (!firstConfirm) {
-                return;
-            }
+            if (!firstConfirm) return;
             
             const secondConfirm = prompt('للتأكيد، اكتب كلمة "حذف" بالعربي:');
             if (secondConfirm !== 'حذف') {
@@ -378,32 +423,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const finalConfirm = confirm('تأكيد نهائي: هل أنت متأكد 100% من حذف جميع البيانات القديمة؟');
-            if (!finalConfirm) {
-                return;
-            }
+            if (!finalConfirm) return;
             
-            // السماح بالإرسال
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `
-                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                جاري حذف البيانات القديمة ورفع الجديدة...
-            `;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> جاري الحذف والرفع...';
             form.submit();
             return;
         }
         
-        const confirmed = confirm('هل أنت متأكد من رفع هذا الملف؟ سيتم إضافة جميع المنتجات الموجودة فيه.');
+        const confirmed = confirm('هل أنت متأكد من رفع هذا الملف؟');
         if (!confirmed) {
             e.preventDefault();
             return;
         }
         
-        // تعطيل الزر وإظهار loader
         submitBtn.disabled = true;
-        submitBtn.innerHTML = `
-            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-            جاري المعالجة...
-        `;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> جاري الإرسال...';
     });
 });
     </script>

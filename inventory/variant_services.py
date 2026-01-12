@@ -583,18 +583,32 @@ class PricingService:
         }
 
     @classmethod
-    def _sync_legacy_product_price(cls, variant, new_price):
+    def _sync_legacy_product_price(cls, variant, new_price=None):
         """
         مزامنة السعر مع المنتج القديم (Product)
+        يشمل السعر القطاعي وسعر الجملة
         """
         try:
             legacy = variant.legacy_product
             if legacy:
-                legacy.price = Decimal(str(new_price))
-                legacy.save(update_fields=["price"])
-                logger.info(f"تم مزامنة سعر المنتج القديم {legacy.code}: {new_price}")
+                # تحديث السعر القطاعي
+                retail_price = (
+                    Decimal(str(new_price))
+                    if new_price is not None
+                    else variant.effective_price
+                )
+                legacy.price = retail_price
+
+                # تحديث سعر الجملة
+                legacy.wholesale_price = variant.effective_wholesale_price
+
+                legacy.save(update_fields=["price", "wholesale_price"])
+                logger.info(
+                    f"✅ تم مزامنة الأسعار للمنتج القديم {legacy.code}: "
+                    f"قطاعي({legacy.price}), جملة({legacy.wholesale_price})"
+                )
         except Exception as e:
-            logger.error(f"خطأ في مزامنة سعر المنتج القديم: {e}")
+            logger.error(f"❌ خطأ في مزامنة أسعار المنتج القديم: {e}")
 
     @classmethod
     def reset_variant_price(cls, variant, user=None, notes="", sync_legacy=True):

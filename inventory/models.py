@@ -89,7 +89,19 @@ class Product(models.Model):
     code = models.CharField(
         max_length=100, unique=True, null=True, blank=True
     )  # زيادة من 50 إلى 100 حرف
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(
+        _("السعر القطاعي"),
+        max_digits=10,
+        decimal_places=2,
+        help_text=_("سعر التجزئة للمنتج"),
+    )
+    wholesale_price = models.DecimalField(
+        _("سعر الجملة"),
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text=_("سعر الجملة للمنتج"),
+    )
     currency = models.CharField(
         _("العملة"), max_length=3, choices=CURRENCY_CHOICES, default="EGP"
     )
@@ -1354,14 +1366,24 @@ class BaseProduct(models.Model):
         verbose_name=_("الفئة"),
     )
 
-    # السعر الأساسي - يُطبق على جميع المتغيرات افتراضياً
+    # السعر الأساسي (القطاعي) - يُطبق على جميع المتغيرات افتراضياً
     base_price = models.DecimalField(
-        _("السعر الأساسي"),
+        _("السعر القطاعي"),
         max_digits=10,
         decimal_places=2,
         default=0,
-        help_text=_("السعر الافتراضي لجميع المتغيرات"),
+        help_text=_("السعر الافتراضي لعملاء التجزئة"),
     )
+
+    # سعر الجملة
+    wholesale_price = models.DecimalField(
+        _("سعر الجملة"),
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text=_("السعر لعملاء الجملة"),
+    )
+
     currency = models.CharField(
         _("العملة"), max_length=3, choices=Product.CURRENCY_CHOICES, default="EGP"
     )
@@ -1481,6 +1503,19 @@ class BaseProduct(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.code})"
+
+    def get_price_for_customer_type(self, customer_type_code):
+        """الحصول على السعر المناسب حسب نوع العميل"""
+        from customers.models import CustomerType
+
+        try:
+            ct = CustomerType.objects.get(code=customer_type_code)
+        except CustomerType.DoesNotExist:
+            return self.base_price
+
+        if ct.pricing_type == "wholesale":
+            return self.wholesale_price or self.base_price
+        return self.base_price
 
     @property
     def variants_count(self):
@@ -1640,14 +1675,24 @@ class ProductVariant(models.Model):
         help_text=_("يُستخدم إذا لم يكن اللون موجوداً في جدول الألوان"),
     )
 
-    # تجاوز السعر (اختياري)
+    # تجاوز السعر القطاعي (اختياري)
     price_override = models.DecimalField(
-        _("تجاوز السعر"),
+        _("تجاوز السعر القطاعي"),
         max_digits=10,
         decimal_places=2,
         null=True,
         blank=True,
-        help_text=_("اتركه فارغاً لاستخدام السعر الأساسي"),
+        help_text=_("اتركه فارغاً لاستخدام السعر القطاعي الأساسي"),
+    )
+
+    # تجاوز سعر الجملة (اختياري)
+    wholesale_price_override = models.DecimalField(
+        _("تجاوز سعر الجملة"),
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_("اتركه فارغاً لاستخدام سعر الجملة الأساسي"),
     )
 
     # الباركود الخاص بالمتغير
@@ -1687,10 +1732,30 @@ class ProductVariant(models.Model):
 
     @property
     def effective_price(self):
-        """السعر الفعلي (تجاوز أو أساسي)"""
+        """السعر القطاعي الفعلي (تجاوز أو أساسي)"""
         if self.price_override is not None:
             return self.price_override
         return self.base_product.base_price
+
+    @property
+    def effective_wholesale_price(self):
+        """سعر الجملة الفعلي (تجاوز أو أساسي)"""
+        if self.wholesale_price_override is not None:
+            return self.wholesale_price_override
+        return self.base_product.wholesale_price or self.base_product.base_price
+
+    def get_price_for_customer_type(self, customer_type_code):
+        """الحصول على السعر المناسب حسب نوع العميل"""
+        from customers.models import CustomerType
+
+        try:
+            ct = CustomerType.objects.get(code=customer_type_code)
+        except CustomerType.DoesNotExist:
+            return self.effective_price
+
+        if ct.pricing_type == "wholesale":
+            return self.effective_wholesale_price
+        return self.effective_price
 
     @property
     def has_custom_price(self):

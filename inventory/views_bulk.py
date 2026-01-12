@@ -287,14 +287,14 @@ def product_bulk_upload(request):
         form = ProductExcelUploadForm(request.POST, request.FILES)
         if form.is_valid():
             try:
-                # استخدام المعالجة السريعة دائماً
+                # استخدام المعالجة السريعة
                 from .tasks_optimized import bulk_upload_products_fast
 
                 # قراءة الملف
                 excel_file = form.cleaned_data["excel_file"]
                 file_content = excel_file.read()
                 warehouse = form.cleaned_data["warehouse"]
-                upload_mode = form.cleaned_data["upload_mode"]
+                upload_mode = form.cleaned_data.get("upload_mode", "smart_update")
 
                 # إنشاء سجل
                 upload_log = BulkUploadLog.objects.create(
@@ -307,17 +307,13 @@ def product_bulk_upload(request):
                 )
 
                 # إطلاق المهمة
-                auto_delete_empty = form.cleaned_data.get(
-                    "auto_delete_empty_warehouses", False
-                )
-
                 task = bulk_upload_products_fast.delay(
                     upload_log.id,
                     file_content,
                     warehouse.id if warehouse else None,
                     upload_mode,
                     request.user.id,
-                    auto_delete_empty=auto_delete_empty,
+                    auto_delete_empty=False,
                 )
 
                 # حفظ task_id في السجل
@@ -998,6 +994,7 @@ def download_excel_template(request):
             "الكود": ["LAP001", "PRN001", "MOU001"],
             "الفئة": ["أجهزة كمبيوتر", "طابعات", "ملحقات"],
             "السعر": [15000, 2500, 150],
+            "سعر الجملة": [14000, 2300, 130],
             "الكمية": [10, 5, 20],
             "المستودع": ["المستودع الرئيسي", "مستودع الطابعات", "مستودع الملحقات"],
             "الوصف": [

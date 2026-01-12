@@ -13,7 +13,9 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-def smart_update_product(product_data, warehouse, user, upload_mode):
+def smart_update_product(
+    product_data, warehouse, user, upload_mode, cache=None, fast_mode=True
+):
     """
     تحديث ذكي للمنتج - ينقله للمستودع الصحيح ويمنع التكرار
 
@@ -26,7 +28,13 @@ def smart_update_product(product_data, warehouse, user, upload_mode):
     Returns:
         dict - نتيجة العملية
     """
-    from .models import Product, StockTransaction, Warehouse
+    from .models import (
+        BaseProduct,
+        Product,
+        ProductVariant,
+        StockTransaction,
+        Warehouse,
+    )
 
     result = {
         "action": None,  # created, updated, moved, skipped
@@ -37,88 +45,178 @@ def smart_update_product(product_data, warehouse, user, upload_mode):
     }
 
     code = product_data.get("code")
-    name = product_data["name"]
+    name = product_data.get("name")
 
-    # البحث عن المنتج - مع دعم الأكواد التي فقدت الأصفار البادئة
+    # البحث عن المنتج - في fast_mode نعتمد على الكاش فقط للسرعة القصوى
     product = None
-    if code:
-        # محاولة 1: البحث بالكود كما هو
+
+    if cache and "products" in cache:
+        # بحث سريع في الكاش فقط
+        if code and code in cache["products"]:
+            product = cache["products"][code]
+        elif code and code.isdigit():
+            # بحث ذكي بالأصفار البادئة في الكاش
+            for padding in [3, 4, 5, 6]:
+                padded = code.zfill(padding)
+                if padded in cache["products"]:
+                    product = cache["products"][padded]
+                    break
+
+    # البحث في قاعدة البيانات إذا لم يُجد في الكاش
+    if not product and code:
         try:
             product = Product.objects.get(code=code)
         except Product.DoesNotExist:
-            # محاولة 2: إضافة أصفار بادئة (001, 0001, إلخ)
-            # Excel يحول 001 إلى 1، لذلك نحاول العكس
             if code.isdigit():
-                for padding in [3, 4, 5, 6]:  # تجربة أطوال مختلفة
+                for padding in [3, 4, 5, 6]:
                     padded_code = code.zfill(padding)
                     try:
                         product = Product.objects.get(code=padded_code)
-                        logger.info(
-                            f"✅ تم العثور على المنتج بالكود المُبطن: {code} -> {padded_code}"
-                        )
                         break
                     except Product.DoesNotExist:
                         continue
 
-        if product:
-            result["product"] = product
+    # إذا تم العثور على المنتج (سواء من الكاش أو من قاعدة البيانات)
+    if product:
+        result["product"] = product
 
-            # وضع: إضافة فقط - تجاهل الموجود
-            if upload_mode == "add_only":
-                result["action"] = "skipped"
-                result["message"] = f"منتج موجود: {code}"
-                return result
+        # وضع: إضافة فقط - تجاهل الموجود
+        if upload_mode == "add_only":
+            result["action"] = "skipped"
+            result["message"] = f"منتج موجود: {code}"
+            return result
 
-            # التحديث الذكي أو الدمج
-            if upload_mode in ["smart_update", "merge_warehouses"]:
-                # تحديث ذكي - فقط الحقول الممتلئة
+        # التحديث الذكي أو الدمج
+        if upload_mode in ["smart_update", "merge_warehouses"]:
+            # تحديث ذكي - فقط الحقول الممتلئة
 
-                # تحديث الاسم فقط إذا كان ممتلئاً (غير فارغ)
-                if name and name.strip():
-                    product.name = name
+            # تحديث الاسم فقط إذا كان ممتلئاً (غير فارغ)
+            if name and name.strip():
+                product.name = name
 
-                # تحديث السعر فقط إذا كان > 0
-                if product_data.get("price", 0) > 0:
-                    product.price = product_data["price"]
+            # تحديث السعر فقط إذا كان > 0
+            if product_data.get("price", 0) > 0:
+                product.price = product_data["price"]
 
-                # تحديث الفئة فقط إذا كانت موجودة
-                if product_data.get("category"):
-                    product.category = product_data["category"]
+            # تحديث سعر الجملة فقط إذا كان ممتلئاً
+            if (
+                "wholesale_price" in product_data
+                and product_data["wholesale_price"] is not None
+            ):
+                product.wholesale_price = Decimal(str(product_data["wholesale_price"]))
 
-                # تحديث الوصف فقط إذا كان ممتلئاً
+            # تحديث الفئة فقط إذا كانت موجودة
+            if product_data.get("category"):
+                product.category = product_data["category"]
+
+            # تحديث الوصف فقط إذا كان ممتلئاً
+            if (
+                "description" in product_data
+                and product_data["description"]
+                and product_data["description"].strip()
+            ):
+                product.description = product_data["description"]
+
+            # تحديث الحد الأدنى فقط إذا كان > 0
+            if (
+                "minimum_stock" in product_data
+                and product_data.get("minimum_stock", 0) > 0
+            ):
+                product.minimum_stock = product_data["minimum_stock"]
+
+            # تحديث العملة فقط إذا كانت ممتلئة وصحيحة
+            if (
+                "currency" in product_data
+                and product_data["currency"]
+                and product_data["currency"].strip()
+            ):
+                product.currency = product_data["currency"]
+
+            # تحديث الوحدة فقط إذا كانت ممتلئة
+            if (
+                "unit" in product_data
+                and product_data["unit"]
+                and product_data["unit"].strip()
+            ):
+                product.unit = product_data["unit"]
+
+            updated_fields = []
+            if name and name.strip():
+                updated_fields.append("name")
+            if product_data.get("price", 0) > 0:
+                updated_fields.append("price")
+            if (
+                "wholesale_price" in product_data
+                and product_data["wholesale_price"] is not None
+            ):
+                updated_fields.append("wholesale_price")
+
+            # DEBUG: طباعة ما يُحفظ
+            if product_data.get("wholesale_price") is not None:
+                logger.warning(
+                    f"💰 تحديث منتج {product.code}: wholesale_price={product_data['wholesale_price']}"
+                )
+            product.save()
+
+            # ===== مزامنة الأسعار مع النظام الجديد BaseProduct =====
+
+            # البحث عن المنتج الأساسي المرتبط
+            base_product = None
+
+            # التقاط من الكاش أولاً
+            if cache and "variants" in cache and product.id in cache["variants"]:
+                variant = cache["variants"][product.id]
+                base_product = variant.base_product
+            else:
+                variant = ProductVariant.objects.filter(legacy_product=product).first()
+                if variant and variant.base_product:
+                    base_product = variant.base_product
+
+            if not base_product:
+                # البحث مباشرة في BaseProduct بالكود (من الكاش أو قاعدة البيانات)
                 if (
-                    "description" in product_data
-                    and product_data["description"]
-                    and product_data["description"].strip()
+                    code
+                    and cache
+                    and "base_products" in cache
+                    and code in cache["base_products"]
                 ):
-                    product.description = product_data["description"]
+                    base_product = cache["base_products"][code]
+                else:
+                    base_product = BaseProduct.objects.filter(code=product.code).first()
 
-                # تحديث الحد الأدنى فقط إذا كان > 0
-                if (
-                    "minimum_stock" in product_data
-                    and product_data.get("minimum_stock", 0) > 0
-                ):
-                    product.minimum_stock = product_data["minimum_stock"]
+                if not base_product and product.code and "/" in product.code:
+                    # تجربة بدون الجزء بعد /
+                    base_code = product.code.split("/")[0]
+                    if (
+                        cache
+                        and "base_products" in cache
+                        and base_code in cache["base_products"]
+                    ):
+                        base_product = cache["base_products"][base_code]
+                    else:
+                        base_product = BaseProduct.objects.filter(
+                            code=base_code
+                        ).first()
 
-                # تحديث العملة فقط إذا كانت ممتلئة وصحيحة
-                if (
-                    "currency" in product_data
-                    and product_data["currency"]
-                    and product_data["currency"].strip()
-                ):
-                    product.currency = product_data["currency"]
+            if base_product:
+                update_fields = []
+                # مزامنة السعر القطاعي
+                price = product_data.get("price", 0)
+                if price > 0:
+                    base_product.base_price = Decimal(str(price))
+                    update_fields.append("base_price")
 
-                # تحديث الوحدة فقط إذا كانت ممتلئة
-                if (
-                    "unit" in product_data
-                    and product_data["unit"]
-                    and product_data["unit"].strip()
-                ):
-                    product.unit = product_data["unit"]
+                # مزامنة سعر الجملة
+                wholesale_price = product_data.get("wholesale_price")
+                if wholesale_price is not None:
+                    base_product.wholesale_price = Decimal(str(wholesale_price))
+                    update_fields.append("wholesale_price")
 
-                product.save()
+                if update_fields:
+                    base_product.save(update_fields=update_fields)
+                    # logger.info(f"✅ تم مزامنة الأسعار لـ {base_product.code}: {update_fields}")
 
-                # نقل المخزون للمستودع الصحيح إذا لزم الأمر (فقط إذا تم تحديد مستودع)
+                # نقل المخزون للمستودع الصحي إذا لزم الأمر (فقط إذا تم تحديد مستودع)
                 if warehouse:
                     moved = move_product_to_correct_warehouse(
                         product,
@@ -126,6 +224,7 @@ def smart_update_product(product_data, warehouse, user, upload_mode):
                         product_data.get("quantity", 0),
                         user,
                         upload_mode == "merge_warehouses",
+                        fast_mode=fast_mode,
                     )
 
                     if moved["moved"]:
@@ -145,10 +244,14 @@ def smart_update_product(product_data, warehouse, user, upload_mode):
                 return result
 
     # إنشاء منتج جديد بجميع البيانات
+    # التأكد من وجود اسم للمنتج الجديد
+    final_name = name or code or "منتج جديد بدون اسم"
+
     product = Product.objects.create(
-        name=name,
+        name=final_name,
         code=code,
         price=product_data.get("price"),
+        wholesale_price=product_data.get("wholesale_price"),
         category=product_data.get("category"),
         description=product_data.get("description", ""),
         minimum_stock=product_data.get("minimum_stock", 0),
@@ -169,7 +272,7 @@ def smart_update_product(product_data, warehouse, user, upload_mode):
 
 
 def move_product_to_correct_warehouse(
-    product, target_warehouse, new_quantity, user, merge_all=False
+    product, target_warehouse, new_quantity, user, merge_all=False, fast_mode=False
 ):
     """
     نقل المنتج للمستودع الصحيح
@@ -192,6 +295,16 @@ def move_product_to_correct_warehouse(
         "merged_warehouses": [],
         "total_merged_quantity": 0,
     }
+
+    # تخطي المنطق المعقد في الرفع السريع تماماً قبل أي استعلامات
+    if fast_mode:
+        if new_quantity > 0 and target_warehouse:
+            add_stock_transaction(
+                product, target_warehouse, new_quantity, user, "رفع سريع من Excel"
+            )
+        return result
+
+    from django.db.models import Sum
 
     # الحصول على كل المعاملات الحالية
     current_stocks = (
@@ -466,17 +579,17 @@ def clean_start_reset():
         # حذف التحويلات أولاً
         deleted_transfers = StockTransfer.objects.all().count()
         StockTransfer.objects.all().delete()
-        logger.info(f"✅ حُذف {deleted_transfers} تحويل")
+        # logger.info(f"✅ حُذف {deleted_transfers} تحويل")
 
         # حذف المعاملات
         deleted_transactions = StockTransaction.objects.all().count()
         StockTransaction.objects.all().delete()
-        logger.info(f"✅ حُذف {deleted_transactions} معاملة")
+        # logger.info(f"✅ حُذف {deleted_transactions} معاملة")
 
         # حذف المنتجات
         deleted_products = Product.objects.all().count()
         Product.objects.all().delete()
-        logger.info(f"✅ حُذف {deleted_products} منتج")
+        # logger.info(f"✅ حُذف {deleted_products} منتج")
 
     logger.warning("✅ اكتمل المسح الكامل!")
 
@@ -521,7 +634,7 @@ def update_cutting_orders_after_move(product, old_warehouse, new_warehouse, user
         updated_count = 0
         split_count = 0
 
-        logger.info(f"🔍 فحص {affected_orders.count()} أمر تقطيع متأثر...")
+        # logger.info(f"🔍 فحص {affected_orders.count()} أمر تقطيع متأثر...")
 
         for cutting_order in affected_orders:
             # فحص: هل كل المنتجات في الأمر يجب أن تكون في المستودع الجديد؟
@@ -559,9 +672,7 @@ def update_cutting_orders_after_move(product, old_warehouse, new_warehouse, user
                 cutting_order.save()
                 updated_count += 1
 
-                logger.info(
-                    f"✅ تحديث أمر تقطيع {cutting_order.cutting_code}: {old_warehouse.name} → {new_warehouse.name}"
-                )
+                # logger.info(f"✅ تحديث أمر تقطيع {cutting_order.cutting_code}: {old_warehouse.name} → {new_warehouse.name}")
             else:
                 # حالة معقدة: تقسيم الأمر
                 new_order = split_cutting_order(
@@ -610,7 +721,7 @@ def update_cutting_orders_after_move(product, old_warehouse, new_warehouse, user
             except Exception as e:
                 logger.warning(f"⚠️ فشل إرسال الإشعار: {e}")
 
-        logger.info(f"📊 نتيجة تحديث أوامر التقطيع: {result}")
+        # logger.info(f"📊 نتيجة تحديث أوامر التقطيع: {result}")
         return result
 
     except Exception as e:

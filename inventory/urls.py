@@ -82,6 +82,11 @@ urlpatterns = [
         name="transaction_create",
     ),
     path("products/search/", views.product_search_api, name="product_search_api"),
+    path(
+        "api/toggle-price-mode/",
+        views.toggle_price_display_mode,
+        name="toggle_price_mode",
+    ),
     # Categories
     path("categories/", category_list, name="category_list"),
     path("category/create/", category_create, name="category_create"),

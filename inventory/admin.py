@@ -44,6 +44,7 @@ class ProductAdmin(admin.ModelAdmin):
         "code",
         "category",
         "price",
+        "wholesale_price",
         "get_current_stock",
         "get_stock_status",
         "has_qr",
@@ -59,7 +60,10 @@ class ProductAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (_("معلومات المنتج"), {"fields": ("name", "code", "category", "description")}),
-        (_("التفاصيل"), {"fields": ("unit", "price", "minimum_stock")}),
+        (
+            _("التفاصيل"),
+            {"fields": ("unit", "price", "wholesale_price", "minimum_stock")},
+        ),
         (
             _("معلومات المخزون"),
             {
@@ -555,7 +559,14 @@ class ProductVariantInline(admin.TabularInline):
 
     model = ProductVariant
     extra = 0
-    fields = ("variant_code", "color", "color_code", "price_override", "is_active")
+    fields = (
+        "variant_code",
+        "color",
+        "color_code",
+        "price_override",
+        "wholesale_price_override",
+        "is_active",
+    )
     readonly_fields = ()
     show_change_link = True
 
@@ -619,6 +630,7 @@ class BaseProductAdmin(admin.ModelAdmin):
         "name",
         "category",
         "base_price",
+        "wholesale_price",
         "variants_count",
         "is_active",
         "has_qr",
@@ -643,7 +655,10 @@ class BaseProductAdmin(admin.ModelAdmin):
             _("معلومات المنتج الأساسي"),
             {"fields": ("name", "code", "category", "description")},
         ),
-        (_("التسعير"), {"fields": ("base_price", "currency", "unit")}),
+        (
+            _("التسعير"),
+            {"fields": ("base_price", "wholesale_price", "currency", "unit")},
+        ),
         (
             _("QR Code"),
             {
@@ -811,6 +826,7 @@ class ProductVariantAdmin(admin.ModelAdmin):
         "variant_code",
         "color",
         "effective_price",
+        "effective_wholesale_price",
         "has_custom_price",
         "is_active",
     )
@@ -821,7 +837,13 @@ class ProductVariantAdmin(admin.ModelAdmin):
         "base_product__code",
         "barcode",
     )
-    readonly_fields = ("full_code", "effective_price", "created_at", "updated_at")
+    readonly_fields = (
+        "full_code",
+        "effective_price",
+        "effective_wholesale_price",
+        "created_at",
+        "updated_at",
+    )
     raw_id_fields = ("base_product", "legacy_product")
 
     fieldsets = (
@@ -830,7 +852,17 @@ class ProductVariantAdmin(admin.ModelAdmin):
             {"fields": ("base_product", "variant_code", "full_code")},
         ),
         (_("اللون"), {"fields": ("color", "color_code")}),
-        (_("التسعير"), {"fields": ("price_override", "effective_price")}),
+        (
+            _("التسعير"),
+            {
+                "fields": (
+                    "price_override",
+                    "effective_price",
+                    "wholesale_price_override",
+                    "effective_wholesale_price",
+                )
+            },
+        ),
         (_("معلومات إضافية"), {"fields": ("barcode", "description", "is_active")}),
         (
             _("الربط بالنظام القديم"),
@@ -849,6 +881,13 @@ class ProductVariantAdmin(admin.ModelAdmin):
 
     def effective_price(self, obj):
         return obj.effective_price
+
+    effective_price.short_description = _("السعر القطاعي الفعلي")
+
+    def effective_wholesale_price(self, obj):
+        return obj.effective_wholesale_price
+
+    effective_wholesale_price.short_description = _("سعر الجملة الفعلي")
 
     effective_price.short_description = _("السعر الفعلي")
 

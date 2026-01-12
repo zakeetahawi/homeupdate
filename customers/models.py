@@ -186,11 +186,95 @@ class CustomerAccessLog(models.Model):
 
 
 class CustomerType(models.Model):
+    """نوع العميل مع إعدادات التسعير والبادج"""
+
+    PRICING_TYPE_CHOICES = [
+        ("retail", _("قطاعي")),
+        ("wholesale", _("جملة")),
+        ("discount", _("قطاعي مع خصم")),
+    ]
+
+    BADGE_STYLE_CHOICES = [
+        ("solid", _("صلب")),
+        ("outline", _("مخطط")),
+        ("gradient", _("متدرج")),
+        ("glass", _("زجاجي")),
+    ]
+
+    # ===== الحقول الأساسية =====
     code = models.CharField(_("الرمز"), max_length=20, unique=True)
     name = models.CharField(_("اسم النوع"), max_length=50, db_index=True)
     description = models.TextField(_("وصف النوع"), blank=True)
     is_active = models.BooleanField(_("نشط"), default=True)
     created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
+
+    # ===== إعدادات التسعير =====
+    pricing_type = models.CharField(
+        _("نوع التسعير"),
+        max_length=20,
+        choices=PRICING_TYPE_CHOICES,
+        default="retail",
+        help_text=_("يحدد طريقة حساب السعر للعميل"),
+    )
+
+    discount_percentage = models.DecimalField(
+        _("نسبة الخصم الثابتة"),
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        help_text=_("النسبة المئوية للخصم المطبق تلقائياً (للنوع: قطاعي مع خصم)"),
+    )
+
+    discount_warehouses = models.ManyToManyField(
+        "inventory.Warehouse",
+        blank=True,
+        related_name="discount_customer_types",
+        verbose_name=_("مستودعات الخصم"),
+        help_text=_(
+            "المستودعات التي يُطبق عليها الخصم تلقائياً - اتركها فارغة لتطبيق الخصم على جميع المستودعات"
+        ),
+    )
+
+    # ===== إعدادات البادج =====
+    badge_color = models.CharField(
+        _("لون البادج"),
+        max_length=20,
+        default="#6c757d",
+        help_text=_("لون البادج بصيغة HEX (مثال: #FF5733)"),
+    )
+
+    badge_style = models.CharField(
+        _("شكل البادج"),
+        max_length=20,
+        choices=BADGE_STYLE_CHOICES,
+        default="solid",
+    )
+
+    badge_icon = models.CharField(
+        _("أيقونة البادج"),
+        max_length=50,
+        blank=True,
+        help_text=_("أيقونة Font Awesome (مثال: fas fa-crown)"),
+    )
+
+    # ===== أنواع الطلبات المتاحة =====
+    ORDER_TYPE_CHOICES = [
+        ("fabric", _("أقمشة")),
+        ("accessory", _("إكسسوار")),
+        ("tailoring", _("تفصيل/تسليم")),
+        ("installation", _("تركيب")),
+        ("inspection", _("معاينة")),
+        ("products", _("منتجات")),
+    ]
+
+    allowed_order_types = models.JSONField(
+        _("أنواع الطلبات المتاحة"),
+        default=list,
+        blank=True,
+        help_text=_(
+            "أنواع الطلبات المسموح بها لهذا النوع من العملاء - اتركها فارغة للسماح بجميع الأنواع"
+        ),
+    )
 
     class Meta:
         verbose_name = _("نوع العميل")
@@ -199,10 +283,51 @@ class CustomerType(models.Model):
         indexes = [
             models.Index(fields=["code"], name="customer_type_code_idx"),
             models.Index(fields=["name"], name="customer_type_name_idx"),
+            models.Index(fields=["pricing_type"], name="customer_type_price_idx"),
         ]
 
     def __str__(self):
         return self.name
+
+    def get_badge_html(self):
+        """إرجاع HTML البادج"""
+        from django.utils.html import escape
+        from django.utils.safestring import mark_safe
+
+        if self.badge_style == "solid":
+            style = f"background-color: {escape(self.badge_color)}; color: white;"
+        elif self.badge_style == "outline":
+            style = f"border: 2px solid {escape(self.badge_color)}; color: {escape(self.badge_color)}; background: transparent;"
+        elif self.badge_style == "gradient":
+            style = f"background: linear-gradient(135deg, {escape(self.badge_color)}, {escape(self.badge_color)}cc); color: white;"
+        else:  # glass
+            style = f"background: {escape(self.badge_color)}33; backdrop-filter: blur(4px); color: {escape(self.badge_color)};"
+
+        icon_html = (
+            f'<i class="{escape(self.badge_icon)}" style="margin-left: 4px;"></i>'
+            if self.badge_icon
+            else ""
+        )
+
+        return mark_safe(
+            f'<span class="customer-type-badge" style="{style}; padding: 2px 8px; border-radius: 4px; font-size: 11px; display: inline-block;">{icon_html} {escape(self.name)}</span>'
+        )
+
+    def should_apply_discount_to_warehouse(self, warehouse):
+        """تحقق ما إذا كان يجب تطبيق الخصم على هذا المستودع"""
+        if self.pricing_type != "discount":
+            return False
+        if not self.discount_percentage or self.discount_percentage <= 0:
+            return False
+        # إذا لم تُحدد مستودعات، طبق على الكل
+        if not self.discount_warehouses.exists():
+            return True
+        # تحقق ما إذا كان المستودع ضمن القائمة
+        return (
+            self.discount_warehouses.filter(pk=warehouse.pk).exists()
+            if warehouse
+            else True
+        )
 
 
 class DiscountType(models.Model):

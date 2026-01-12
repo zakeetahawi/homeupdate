@@ -26,22 +26,16 @@ def bulk_upload_products_fast(
 ):
     """
     رفع المنتجات بالجملة - نظام ذكي محسّن
-    الأوضاع:
-    - smart_update: تحديث ذكي مع نقل للمستودع الصحيح
-    - merge_warehouses: دمج الأصناف المكررة
-    - add_only: إضافة الجديد فقط
-    - clean_start: مسح كامل وبدء من جديد
-
-    Args:
-        auto_delete_empty: حذف المستودعات الفارغة بعد الانتهاء
     """
     from django.contrib.auth import get_user_model
 
     from .models import (
+        BaseProduct,
         BulkUploadError,
         BulkUploadLog,
         Category,
         Product,
+        ProductVariant,
         StockTransaction,
         Warehouse,
     )
@@ -55,8 +49,22 @@ def bulk_upload_products_fast(
     User = get_user_model()
     logger.info(f"🚀 بدء الرفع الذكي - Log: {upload_log_id} - الوضع: {upload_mode}")
 
+    # تعطيل Cloudflare signals لمنع الاتصالات الزائدة
+    from django.db.models.signals import post_save, pre_save
+
+    from .models import BaseProduct, ProductVariant
+
+    # حفظ receivers الأصلية
+    original_post_save = list(post_save.receivers)
+    original_pre_save = list(pre_save.receivers)
+
+    # تعطيل كل الـ signals
+    post_save.receivers = []
+    pre_save.receivers = []
+    logger.info("⚡ تم تعطيل Signals للسرعة")
+
     try:
-        # تحميل البيانات الأساسية (بدون select_for_update)
+        # تحميل البيانات الأساسية
         upload_log = BulkUploadLog.objects.get(id=upload_log_id)
         user = User.objects.get(id=user_id)
         warehouse = Warehouse.objects.get(id=warehouse_id) if warehouse_id else None
@@ -69,7 +77,7 @@ def bulk_upload_products_fast(
         df = pd.read_excel(BytesIO(file_content), engine="openpyxl")
         total = len(df)
 
-        # تحديث total_rows مباشرة بعد القراءة - مهم للـ API!
+        # تحديث total_rows مباشرة بعد القراءة
         upload_log.total_rows = total
         upload_log.save(update_fields=["total_rows"])
 
@@ -82,12 +90,50 @@ def bulk_upload_products_fast(
             upload_log.summary = f"مسح كامل: {reset_stats['deleted_products']} منتج، {reset_stats['deleted_transactions']} معاملة"
             upload_log.save(update_fields=["summary"])
 
-        # تنظيف البيانات - فقط الاسم مطلوب (السعر اختياري للمنتجات الموجودة)
-        df = df.dropna(subset=["اسم المنتج"]).fillna("")
+        # تنظيف البيانات
+        # تنظيف البيانات - البحث عن الأعمدة المتاحة للمسح
+        subset_cols = []
+        name_cols = ["اسم المنتج", "الاسم", "product_name", "name"]
+        code_cols = ["الكود", "كود المنتج", "product_code", "code"]
 
-        # تحميل البيانات المسبقة
-        categories_cache = {c.name: c for c in Category.objects.all()}
-        warehouses_cache = {w.name: w for w in Warehouse.objects.filter(is_active=True)}
+        for col in name_cols + code_cols:
+            if col in df.columns:
+                subset_cols.append(col)
+
+        if subset_cols:
+            df = df.dropna(how="all", subset=subset_cols).fillna("")
+        else:
+            df = df.dropna(how="all").fillna("")
+
+        # تحميل البيانات المسبقة في الذاكرة لتسريع البحث (Caching)
+        # هذا يقلل عدد الاستعلامات من O(N) إلى O(1)
+        logger.info("🧠 بناء التخزين المؤقت للبيانات...")
+        categories_cache = {c.name.strip(): c for c in Category.objects.all()}
+        warehouses_cache = {
+            w.name.strip(): w for w in Warehouse.objects.filter(is_active=True)
+        }
+
+        # كاش للمنتجات (Legacy Products)
+        products_cache = {p.code: p for p in Product.objects.all() if p.code}
+
+        # كاش للمنتجات الأساسية (Base Products)
+        base_products_cache = {
+            bp.code: bp for bp in BaseProduct.objects.all() if bp.code
+        }
+
+        # كاش للمتغيرات (Variants) مفهرسة بـ legacy_product_id
+        variants_cache = {
+            v.legacy_product_id: v
+            for v in ProductVariant.objects.filter(
+                legacy_product_id__isnull=False
+            ).select_related("base_product")
+        }
+
+        data_cache = {
+            "products": products_cache,
+            "base_products": base_products_cache,
+            "variants": variants_cache,
+        }
 
         stats = {
             "created": 0,
@@ -100,332 +146,247 @@ def bulk_upload_products_fast(
             "cutting_split": 0,
         }
 
-        # معالجة بدفعات سريعة جداً - 10x أسرع!
-        batch_size = 1000  # زيادة من 100 إلى 1000
-        errors_batch = []
-        last_progress_update = 0  # لتحديث التقدم كل 5%
+        # معالجة بدفعات كبيرة للسرعة القصوى
+        batch_size = 200  # زيادة حجم الدفعة للسرعة
+        results_batch = []
+        processed_overall = 0
 
-        logger.info(f"🔄 بدء معالجة {len(df)} صف في دفعات بحجم {batch_size}")
+        logger.info(f"🔄 بدء معالجة {len(df)} صف بسعة تخزين مؤقت كاملة")
 
         for batch_start in range(0, len(df), batch_size):
             batch_end = min(batch_start + batch_size, len(df))
             batch = df.iloc[batch_start:batch_end]
 
-            logger.info(f"📦 معالجة الدفعة {batch_start}-{batch_end} ({len(batch)} صف)")
+            logger.info(f"📦 معالجة الدفعة {batch_start}-{batch_end}")
 
-            # معالجة الصفوف بسرعة - بدون atomic لكل صف
-            for idx, row in batch.iterrows():
-                try:
-                    logger.info(f"🔍 معالجة الصف {idx + 2}")
+            from django.db import transaction
 
-                    # استخراج البيانات من جميع الأعمدة
-                    name = str(row["اسم المنتج"]).strip()
-                    code = str(row.get("الكود", "")).strip() or None
-
-                    # تنظيف الكود: إزالة الأصفار البادئة لأن Excel يحذفها تلقائياً
-                    # مثال: 010100100730 في النظام → 10100100730 في Excel
-                    if code and code.isdigit():
-                        code = (
-                            code.lstrip("0") or "0"
-                        )  # إزالة الأصفار البادئة، لكن احتفظ بـ '0' إذا كان الكود كله أصفار
-
-                    # معالجة السعر بشكل آمن
+            with transaction.atomic():
+                # معالجة الصفوف
+                for i, (idx, row) in enumerate(batch.iterrows()):
+                    processed_overall += 1
                     try:
-                        price_value = row.get("السعر", "")
-                        if pd.notna(price_value) and str(price_value).strip() not in [
-                            "",
-                            "nan",
-                            "none",
-                        ]:
-                            price = float(price_value)
-                        else:
+                        # قراءة البيانات برقم العمود (من القالب المُولّد)
+                        # 0=اسم، 1=كود، 2=فئة، 3=سعر، 4=جملة، 5=كمية، 6=مستودع، 7=وصف
+
+                        def safe_get(index, default=None):
+                            """قراءة قيمة من عمود برقمه"""
+                            if index < len(row):
+                                val = row.iloc[index]
+                                if pd.notna(val):
+                                    val = str(val).strip()
+                                    if val and val.lower() not in ["nan", "none", ""]:
+                                        return val
+                            return default
+
+                        # الكود (عمود 1) - الأهم
+                        code = safe_get(1)
+                        if code and code.isdigit():
+                            code = code.lstrip("0") or "0"
+
+                        # اسم المنتج (عمود 0)
+                        name = safe_get(0, "")
+
+                        # السعر (عمود 3)
+                        try:
+                            price = float(safe_get(3, "0"))
+                        except:
                             price = 0
-                    except (ValueError, TypeError):
-                        price = 0
 
-                    # معالجة الكمية بشكل آمن
-                    try:
-                        quantity_value = row.get("الكمية", "")
-                        if pd.notna(quantity_value) and str(
-                            quantity_value
-                        ).strip() not in ["", "nan", "none"]:
-                            quantity = float(quantity_value)
-                        else:
-                            quantity = 0
-                    except (ValueError, TypeError):
-                        quantity = 0
-
-                    # الوصف
-                    description = (
-                        str(row.get("الوصف", "")).strip()
-                        if pd.notna(row.get("الوصف"))
-                        else ""
-                    )
-
-                    # الحد الأدنى للمخزون
-                    try:
-                        min_stock_value = (
-                            str(row.get("الحد الأدنى", 0)).strip()
-                            if pd.notna(row.get("الحد الأدنى"))
-                            else "0"
-                        )
-                        minimum_stock = (
-                            int(float(min_stock_value))
-                            if min_stock_value
-                            and min_stock_value.lower() not in ["", "nan", "none"]
-                            else 0
-                        )
-                    except (ValueError, TypeError):
-                        minimum_stock = 0
-
-                    # العملة والوحدة
-                    currency = str(row.get("العملة", "EGP")).strip().upper()
-                    if currency not in ["EGP", "USD", "EUR"]:
-                        currency = "EGP"
-                    unit = str(row.get("الوحدة", "piece")).strip() or "piece"
-
-                    # التحقق من البيانات الأساسية
-                    # للمنتجات الموجودة: يمكن ترك الاسم فارغاً (لتحديث حقول أخرى فقط)
-                    # للمنتجات الجديدة: الاسم مطلوب
-                    is_existing_product = False
-                    actual_code = code  # الكود الفعلي الذي سيُستخدم
-
-                    if code:
-                        # محاولة البحث بالكود كما هو
-                        is_existing_product = Product.objects.filter(code=code).exists()
-
-                        # إذا لم يُعثر عليه، جرب مع الأصفار البادئة
-                        if not is_existing_product and code.isdigit():
-                            # تجربة أطوال مختلفة (من طول الكود+1 حتى 15)
-                            max_length = max(len(code) + 5, 15)
-                            for padding in range(len(code) + 1, max_length + 1):
-                                padded_code = code.zfill(padding)
-                                if Product.objects.filter(code=padded_code).exists():
-                                    is_existing_product = True
-                                    actual_code = padded_code  # استخدم الكود المبطن
-                                    logger.info(
-                                        f"✅ تم العثور على المنتج: {code} -> {padded_code}"
-                                    )
+                        # سعر الجملة - تجربة عدة أعمدة (4 ثم 1 للملفات بعمودين)
+                        wholesale_price = None
+                        for ws_col in [4, 1]:  # القالب = 4، ملف بعمودين = 1
+                            try:
+                                ws_val = safe_get(ws_col)
+                                if ws_val:
+                                    wholesale_price = float(ws_val)
                                     break
+                            except:
+                                continue
 
-                    # إذا كان منتج جديد بدون اسم، رفض
-                    if not is_existing_product and not name:
-                        stats["errors"] += 1
-                        errors_batch.append(
-                            BulkUploadError(
-                                upload_log=upload_log,
-                                row_number=idx + 2,
-                                error_type="missing_data",
-                                result_status="failed",
-                                error_message="منتج جديد يتطلب اسم",
-                                row_data=row.to_dict(),
+                        # الكمية (عمود 5)
+                        try:
+                            quantity = float(safe_get(5, "0"))
+                        except:
+                            quantity = 0
+
+                        # الوصف (عمود 7)
+                        description = safe_get(7, "")
+
+                        # DEBUG: طباعة أول 3 صفوف
+                        if processed_overall <= 3:
+                            logger.warning(f"🔍 DEBUG صف {processed_overall}:")
+                            logger.warning(f"   أعمدة الملف: {list(row.index)}")
+                            logger.warning(
+                                f"   كود={code}, سعر={price}, جملة={wholesale_price}"
                             )
-                        )
-                        continue
 
-                    # التحقق من السعر - فقط للمنتجات الجديدة
-                    # إذا كان منتج جديد بدون سعر، رفض
-                    if not is_existing_product and price <= 0:
-                        stats["errors"] += 1
-                        errors_batch.append(
-                            BulkUploadError(
-                                upload_log=upload_log,
-                                row_number=idx + 2,
-                                error_type="missing_data",
-                                result_status="failed",
-                                error_message="منتج جديد يتطلب سعر صحيح (> 0)",
-                                row_data=row.to_dict(),
-                            )
-                        )
-                        continue
+                        # التحقق من المنتج باستخدام الكاش
+                        is_existing = False
+                        actual_code = code
+                        if code and "products" in data_cache:
+                            if code in data_cache["products"]:
+                                is_existing = True
+                                actual_code = code
+                            elif code.isdigit():
+                                for p in range(len(code), 15):
+                                    padded = code.zfill(p)
+                                    if padded in data_cache["products"]:
+                                        is_existing = True
+                                        actual_code = padded
+                                        break
 
-                    # الفئة
-                    cat_name = str(row.get("الفئة", "")).strip()
-                    category = None
-                    if cat_name:
-                        if cat_name in categories_cache:
-                            category = categories_cache[cat_name]
-                        else:
-                            category = Category.objects.create(name=cat_name)
-                            categories_cache[cat_name] = category
-
-                    # المستودع المستهدف
-                    wh_name = str(row.get("المستودع", "")).strip()
-                    target_wh = warehouse  # من صفحة الرفع
-
-                    # إذا تم تحديد مستودع في الملف، استخدمه
-                    if wh_name:
-                        if wh_name in warehouses_cache:
-                            target_wh = warehouses_cache[wh_name]
-                        else:
-                            # إنشاء/الحصول على المستودع
-                            from .views_bulk import get_or_create_warehouse
-
-                            target_wh = get_or_create_warehouse(wh_name, user)
-                            if target_wh:
-                                warehouses_cache[wh_name] = target_wh
-                            else:
-                                raise ValueError(
-                                    f"فشل في إنشاء/الحصول على المستودع: {wh_name}"
+                        if not is_existing and not name:
+                            stats["errors"] += 1
+                            results_batch.append(
+                                BulkUploadError(
+                                    upload_log=upload_log,
+                                    row_number=idx + 2,
+                                    error_type="missing_data",
+                                    result_status="failed",
+                                    error_message="منتج جديد ولكن الاسم مفقود - يرجى إضافة الاسم ليتمكن النظام من إنشائه",
+                                    row_data={"code": actual_code},
                                 )
+                            )
+                            continue
 
-                    # استخدام المنطق الذكي مع جميع البيانات
-                    product_data = {
-                        "name": name,
-                        "code": actual_code,  # استخدام الكود الفعلي (المبطن إذا لزم الأمر)
-                        "price": price,
-                        "category": category,
-                        "quantity": quantity,
-                        "description": description,
-                        "minimum_stock": minimum_stock,
-                        "currency": currency,
-                        "unit": unit,
-                    }
+                        # تجميع
+                        product_data = {
+                            "name": name,
+                            "code": actual_code,
+                            "price": price,
+                            "wholesale_price": wholesale_price,
+                            "quantity": quantity,
+                        }
 
-                    result = smart_update_product(
-                        product_data, target_wh, user, upload_mode
-                    )
+                        # تحديث الفئة والمستودع إذا وجدا
+                        cat_name = str(row.get("الفئة", "")).strip()
+                        if cat_name:
+                            if cat_name in categories_cache:
+                                product_data["category"] = categories_cache[cat_name]
+                            else:
+                                cat = Category.objects.create(name=cat_name)
+                                categories_cache[cat_name] = cat
+                                product_data["category"] = cat
 
-                    # تحديث الإحصائيات
-                    if result["action"] == "created":
-                        stats["created"] += 1
-                    elif result["action"] == "updated":
-                        stats["updated"] += 1
-                    elif result["action"] == "moved":
-                        stats["moved"] += 1
-                        stats["updated"] += 1
-                    elif result["action"] == "skipped":
-                        stats["skipped"] += 1
-                        errors_batch.append(
+                        wh_name = str(row.get("المستودع", "")).strip()
+                        target_wh = warehouse
+                        if wh_name:
+                            if wh_name in warehouses_cache:
+                                target_wh = warehouses_cache[wh_name]
+                            else:
+                                from .views_bulk import get_or_create_warehouse
+
+                                target_wh = get_or_create_warehouse(wh_name, user)
+                                if target_wh:
+                                    warehouses_cache[wh_name] = target_wh
+
+                        # حفظ
+                        result = smart_update_product(
+                            product_data,
+                            target_wh,
+                            user,
+                            upload_mode,
+                            cache=data_cache,
+                            fast_mode=True,
+                        )
+
+                        action = result["action"]
+                        if action == "created":
+                            stats["created"] += 1
+                        elif action == "updated":
+                            stats["updated"] += 1
+                        elif action == "moved":
+                            stats["moved"] += 1
+                            stats["updated"] += 1
+                        elif action == "skipped":
+                            stats["skipped"] += 1
+
+                        # تسجيل النتيجة في التقرير (ثمن معنوي بسيط للأداء مقابل دقة التقارير)
+                        results_batch.append(
                             BulkUploadError(
                                 upload_log=upload_log,
                                 row_number=idx + 2,
-                                error_type="duplicate",
-                                result_status="skipped",
-                                error_message=result["message"],
+                                error_type="other",
+                                result_status=(
+                                    action if action != "moved" else "updated"
+                                ),
+                                error_message=result.get("message", ""),
+                                row_data={
+                                    "name": name or code or "بدون اسم",
+                                    "code": actual_code,
+                                },
+                            )
+                        )
+
+                    except Exception as e:
+                        stats["errors"] += 1
+                        results_batch.append(
+                            BulkUploadError(
+                                upload_log=upload_log,
+                                row_number=idx + 2,
+                                error_type="processing",
+                                result_status="failed",
+                                error_message=str(e),
                                 row_data=row.to_dict(),
                             )
                         )
 
-                    # تتبع تحديثات أوامر التقطيع
-                    if "cutting_orders_updated" in result:
-                        stats["cutting_updated"] += result["cutting_orders_updated"]
-                    if "cutting_orders_split" in result:
-                        stats["cutting_split"] += result["cutting_orders_split"]
+                if results_batch:
+                    BulkUploadError.objects.bulk_create(results_batch)
+                    results_batch = []
 
-                except Exception as e:
-                    logger.error(f"خطأ صف {idx + 2}: {e}")
-                    stats["errors"] += 1
-                    errors_batch.append(
-                        BulkUploadError(
-                            upload_log=upload_log,
-                            row_number=idx + 2,
-                            error_type="processing",
-                            result_status="failed",
-                            error_message=str(e),
-                            row_data=row.to_dict() if hasattr(row, "to_dict") else {},
-                        )
-                    )
+            # تحديث التقدم *خارج* المعاملة لضمان ظهوره للواجهة فوراً
+            percent = int((processed_overall / total) * 100)
+            upload_log.processed_count = processed_overall
+            upload_log.created_count = stats["created"]
+            upload_log.updated_count = stats["updated"]
+            upload_log.skipped_count = stats["skipped"]
+            upload_log.error_count = stats["errors"]
+            upload_log.save(
+                update_fields=[
+                    "processed_count",
+                    "created_count",
+                    "updated_count",
+                    "skipped_count",
+                    "error_count",
+                ]
+            )
 
-            # حفظ الأخطاء بالدفعة (أسرع)
-            if errors_batch:
-                BulkUploadError.objects.bulk_create(errors_batch, batch_size=500)
-                errors_batch = []
-
-            # تحديث التقدم - فقط كل 5% لتقليل العمليات
-            processed = batch_end
-            percent = int((processed / total) * 100)
-
-            if percent >= last_progress_update + 5 or processed == total:
-                upload_log.processed_count = processed
-                upload_log.created_count = stats["created"]
-                upload_log.updated_count = stats["updated"]
-                upload_log.skipped_count = stats["skipped"]
-                upload_log.error_count = stats["errors"]
-                upload_log.save(
-                    update_fields=[
-                        "processed_count",
-                        "created_count",
-                        "updated_count",
-                        "skipped_count",
-                        "error_count",
-                    ]
-                )
-
-                # تحديث حالة المهمة
-                self.update_state(
-                    state="PROGRESS",
-                    meta={
-                        "current": processed,
-                        "total": total,
-                        "percent": percent,
-                        "created": stats["created"],
-                        "updated": stats["updated"],
-                        "skipped": stats["skipped"],
-                        "errors": stats["errors"],
-                        "speed": int(
-                            processed
-                            / max(
-                                1,
-                                (
-                                    timezone.now().timestamp()
-                                    - upload_log.created_at.timestamp()
-                                ),
-                            )
-                        ),
-                    },
-                )
-
-                logger.info(f"⚡ {percent}% - {processed}/{total}")
-                last_progress_update = percent
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": processed_overall,
+                    "total": total,
+                    "percent": percent,
+                    "created": stats["created"],
+                    "updated": stats["updated"],
+                    "skipped": stats["skipped"],
+                    "errors": stats["errors"],
+                },
+            )
 
         # إكمال
         summary_parts = []
         if stats["created"] > 0:
-            summary_parts.append(f"✅ {stats['created']} منتج جديد")
+            summary_parts.append(f"✅ {stats['created']} جديد")
         if stats["updated"] > 0:
             summary_parts.append(f"🔄 {stats['updated']} محدث")
-        if stats["moved"] > 0:
-            summary_parts.append(f"📦 {stats['moved']} نُقل للمستودع الصحيح")
-        if stats["cutting_updated"] > 0:
-            summary_parts.append(f"🔪 {stats['cutting_updated']} أمر تقطيع محدث")
-        if stats["cutting_split"] > 0:
-            summary_parts.append(f"🔀 {stats['cutting_split']} أمر تقطيع منقسم")
-        if stats["skipped"] > 0:
-            summary_parts.append(f"⏭️ {stats['skipped']} متخطى")
         if stats["errors"] > 0:
             summary_parts.append(f"❌ {stats['errors']} خطأ")
 
-        summary = " | ".join(summary_parts) if summary_parts else "لا توجد بيانات"
-
-        upload_log.complete(summary=summary)
-
-        logger.info("🎉 اكتمل الرفع بنجاح!")
-
-        # حذف المستودعات الفارغة إذا طُلب ذلك
-        deleted_warehouses = []
-        if auto_delete_empty:
-            logger.info("🗑️ بدء حذف المستودعات الفارغة...")
-            delete_result = delete_empty_warehouses(user)
-            deleted_warehouses = delete_result.get("warehouses", [])
-
-            if deleted_warehouses:
-                logger.info(
-                    f"✅ تم حذف {len(deleted_warehouses)} مستودع: {', '.join(deleted_warehouses)}"
-                )
-                upload_log.summary = (
-                    summary + f" | 🗑️ حُذف {len(deleted_warehouses)} مستودع فارغ"
-                )
-                upload_log.save(update_fields=["summary"])
-
-        return {
-            "status": "success",
-            "stats": stats,
-            "upload_log_id": upload_log_id,
-            "deleted_warehouses": deleted_warehouses,
-        }
+        upload_log.complete(
+            summary=" | ".join(summary_parts) if summary_parts else "مكتمل"
+        )
+        return {"status": "success", "stats": stats}
 
     except Exception as e:
-        logger.error(f"💥 خطأ كارثي: {e}")
-        upload_log.fail(error_message=str(e))
+        if "upload_log" in locals():
+            upload_log.fail(error_message=str(e))
         raise
+
+    finally:
+        # إعادة تفعيل الـ signals
+        post_save.receivers = original_post_save
+        pre_save.receivers = original_pre_save
+        logger.info("⚡ تم إعادة تفعيل Signals")

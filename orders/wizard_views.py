@@ -783,12 +783,89 @@ def wizard_add_item(request):
 
         product = get_object_or_404(Product, pk=product_id)
 
-        # التحقق من السعر
+        # ===== منطق التسعير حسب نوع العميل =====
         unit_price = data.get("unit_price")
+        discount_percentage = data.get("discount_percentage", 0)
+        warehouse_id = data.get("warehouse_id")
+
         if unit_price is None or unit_price == "":
-            unit_price = product.price if product.price else Decimal("0.00")
+            # الحصول على نوع العميل وتحديد السعر المناسب
+            from customers.models import CustomerType
+
+            customer = draft.customer
+            customer_type = None
+
+            if customer and customer.customer_type:
+                try:
+                    customer_type = CustomerType.objects.get(
+                        code=customer.customer_type
+                    )
+                except CustomerType.DoesNotExist:
+                    pass
+
+            if customer_type and customer_type.pricing_type == "wholesale":
+                # عميل جملة - استخدام سعر الجملة إذا كان متاحاً
+                # ملاحظة: Product القديم لا يحتوي على wholesale_price
+                # سنحاول البحث عن BaseProduct/ProductVariant المرتبط
+                from inventory.models import ProductVariant
+
+                variant = ProductVariant.objects.filter(
+                    base_product__code=product.code
+                ).first()
+                if variant:
+                    unit_price = variant.effective_wholesale_price
+                else:
+                    unit_price = product.price if product.price else Decimal("0.00")
+            else:
+                unit_price = product.price if product.price else Decimal("0.00")
         else:
             unit_price = Decimal(str(unit_price))
+
+        # ===== تطبيق الخصم التلقائي =====
+        if (
+            discount_percentage is None
+            or discount_percentage == ""
+            or discount_percentage == 0
+        ):
+            # التحقق من الخصم التلقائي حسب نوع العميل والمستودع
+            from customers.models import CustomerType
+            from inventory.models import Warehouse
+
+            customer = draft.customer
+            if customer and customer.customer_type:
+                try:
+                    customer_type = CustomerType.objects.get(
+                        code=customer.customer_type
+                    )
+                    if (
+                        customer_type.pricing_type == "discount"
+                        and customer_type.discount_percentage > 0
+                    ):
+                        # التحقق من المستودع
+                        if warehouse_id:
+                            try:
+                                warehouse = Warehouse.objects.get(pk=warehouse_id)
+                                if customer_type.should_apply_discount_to_warehouse(
+                                    warehouse
+                                ):
+                                    discount_percentage = (
+                                        customer_type.discount_percentage
+                                    )
+                            except Warehouse.DoesNotExist:
+                                pass
+                        else:
+                            # لا يوجد مستودع محدد - تطبيق الخصم (إذا لم تُحدد مستودعات)
+                            if not customer_type.discount_warehouses.exists():
+                                discount_percentage = customer_type.discount_percentage
+                except CustomerType.DoesNotExist:
+                    pass
+
+            if discount_percentage is None or discount_percentage == "":
+                discount_percentage = Decimal("0.00")
+            else:
+                discount_percentage = Decimal(str(discount_percentage))
+        else:
+            discount_percentage = Decimal(str(discount_percentage))
 
         # التحقق من الكمية
         quantity = data.get("quantity", 1)
@@ -796,13 +873,6 @@ def wizard_add_item(request):
             quantity = Decimal("1")
         else:
             quantity = Decimal(str(quantity))
-
-        # التحقق من نسبة الخصم
-        discount_percentage = data.get("discount_percentage", 0)
-        if discount_percentage is None or discount_percentage == "":
-            discount_percentage = Decimal("0.00")
-        else:
-            discount_percentage = Decimal(str(discount_percentage))
 
         # حساب مبلغ الخصم
         total_price = quantity * unit_price

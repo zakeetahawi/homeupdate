@@ -196,18 +196,22 @@ def base_product_update(request, pk):
     """تحديث منتج أساسي"""
     base_product = get_object_or_404(BaseProduct, pk=pk)
     old_base_price = base_product.base_price  # حفظ السعر القديم للمقارنة
+    old_wholesale_price = base_product.wholesale_price
 
     if request.method == "POST":
         form = BaseProductForm(request.POST, instance=base_product)
         if form.is_valid():
             updated_product = form.save()
 
-            # مزامنة السعر مع المنتجات القديمة إذا تغير السعر الأساسي
-            if updated_product.base_price != old_base_price:
+            # مزامنة السعر مع المنتجات القديمة إذا تغير السعر الأساسي أو سعر الجملة
+            if (
+                updated_product.base_price != old_base_price
+                or updated_product.wholesale_price != old_wholesale_price
+            ):
                 synced_count = 0
                 # تحديث كل المتغيرات التي ليس لها سعر مخصص
                 variants = updated_product.variants.filter(
-                    price_override__isnull=True
+                    price_override__isnull=True, wholesale_price_override__isnull=True
                 ).select_related("legacy_product")
 
                 for variant in variants:
@@ -218,20 +222,25 @@ def base_product_update(request, pk):
                         new_price=updated_product.base_price,
                         change_type="base_update",
                         changed_by=request.user,
-                        notes=_("تحديث السعر الأساسي للمنتج"),
+                        notes=_("تحديث السعر الأساسي للمنتج (قطاعي وجملة)"),
                     )
 
                     # مزامنة مع المنتج القديم
                     if variant.legacy_product:
                         variant.legacy_product.price = updated_product.base_price
-                        variant.legacy_product.save(update_fields=["price"])
+                        variant.legacy_product.wholesale_price = (
+                            updated_product.wholesale_price
+                        )
+                        variant.legacy_product.save(
+                            update_fields=["price", "wholesale_price"]
+                        )
                         synced_count += 1
 
                 messages.success(
                     request,
-                    _(
-                        "تم تحديث المنتج الأساسي بنجاح (تم تسجيل التغيير لـ {} متغير)"
-                    ).format(variants.count()),
+                    _("تم تحديث المنتج الأساسي بنجاح (تم مزامنة {} منتج قديم)").format(
+                        synced_count
+                    ),
                 )
             else:
                 messages.success(request, _("تم تحديث المنتج الأساسي بنجاح"))

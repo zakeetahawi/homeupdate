@@ -351,9 +351,32 @@ class ProductForm(forms.ModelForm):
                 "required": True,
             }
         ),
-        help_text=_("السعر الافتراضي للمنتج (مطلوب)"),
+        help_text=_(
+            "السعر للمنتج (مطلوب) - استخدم نموذج المنتجات الأساسية للتسعير الكامل"
+        ),
         error_messages={
             "required": "يجب إدخال سعر المنتج",
+            "invalid": "الرجاء إدخال سعر صحيح",
+        },
+    )
+
+    # حقل سعر الجملة
+    wholesale_price = forms.DecimalField(
+        label=_("سعر الجملة"),
+        required=True,
+        min_value=0,
+        decimal_places=2,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-control",
+                "step": "0.01",
+                "placeholder": "0.00",
+                "required": True,
+            }
+        ),
+        help_text=_("سعر الجملة للمنتج (مطلوب)"),
+        error_messages={
+            "required": "يجب إدخال سعر الجملة",
             "invalid": "الرجاء إدخال سعر صحيح",
         },
     )
@@ -392,18 +415,25 @@ class ProductForm(forms.ModelForm):
                 del self.fields["warehouse"]
             if "initial_quantity" in self.fields:
                 del self.fields["initial_quantity"]
-            # إزالة حقل السعر - يُدار من نظام المتغيرات فقط
+            # إزالة حقول السعر - يُدار من نظام المتغيرات فقط (لإصدار الإضافة الجديد)
+            # ولكن نبقيها للقراءة فقط إذا كانت موجودة (سيتم التعامل معها في القالب)
             if "price" in self.fields:
-                del self.fields["price"]
+                self.fields["price"].required = False
+            if "wholesale_price" in self.fields:
+                self.fields["wholesale_price"].required = False
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        # إذا كان منتج جديد، يجب إدخال السعر
+        # إذا كان منتج جديد، يجب إدخال الأسعار
         if not instance.pk:
             price = self.cleaned_data.get("price")
+            wholesale_price = self.cleaned_data.get("wholesale_price")
             if price is None:
                 raise forms.ValidationError("يجب إدخال سعر المنتج")
+            if wholesale_price is None:
+                raise forms.ValidationError("يجب إدخال سعر الجملة")
             instance.price = price
+            instance.wholesale_price = wholesale_price
         if commit:
             instance.save()
         return instance

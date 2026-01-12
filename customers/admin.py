@@ -78,12 +78,190 @@ class CustomerNoteAdmin(admin.ModelAdmin):
 
 @admin.register(CustomerType)
 class CustomerTypeAdmin(admin.ModelAdmin):
-    list_per_page = 50  # عرض 50 صف كافتراضي
-    list_display = ["code", "name", "description", "is_active", "created_at"]
-    list_filter = ["is_active", "created_at"]
+    """إدارة أنواع العملاء مع إعدادات التسعير والبادج"""
+
+    change_form_template = "admin/customers/customertype/change_form.html"
+    list_per_page = 50
+    list_display = [
+        "code",
+        "name",
+        "pricing_type_display",
+        "discount_display",
+        "badge_preview",
+        "is_active",
+        "created_at",
+    ]
+    list_filter = ["is_active", "pricing_type", "created_at"]
     search_fields = ["code", "name", "description"]
     readonly_fields = ["created_at"]
     ordering = ["name"]
+    filter_horizontal = ["discount_warehouses"]
+
+    fieldsets = (
+        (
+            _("المعلومات الأساسية"),
+            {"fields": ("code", "name", "description", "is_active")},
+        ),
+        (
+            _("إعدادات التسعير"),
+            {
+                "fields": (
+                    "pricing_type",
+                    "discount_percentage",
+                    "discount_warehouses",
+                ),
+                "description": _("يُحدد سلوك التسعير لهذا النوع من العملاء"),
+            },
+        ),
+        (
+            _("أنواع الطلبات المتاحة"),
+            {
+                "fields": ("allowed_order_types",),
+                "description": _(
+                    "حدد أنواع الطلبات المسموحة لهذا النوع من العملاء - اتركها فارغة للسماح بجميع الأنواع"
+                ),
+            },
+        ),
+        (
+            _("إعدادات البادج"),
+            {
+                "fields": (
+                    "badge_style",
+                    "badge_color",
+                    "badge_icon",
+                ),
+                "classes": ("collapse",),  # مُخفي - يستخدم المنتقي التفاعلي
+                "description": _("يتم التحكم عبر المنتقي التفاعلي أعلاه"),
+            },
+        ),
+    )
+
+    def pricing_type_display(self, obj):
+        """عرض نوع التسعير مع أيقونة"""
+        icons = {
+            "retail": "🏪",
+            "wholesale": "🏭",
+            "discount": "💰",
+        }
+        return format_html(
+            "{} {}",
+            icons.get(obj.pricing_type, ""),
+            obj.get_pricing_type_display(),
+        )
+
+    pricing_type_display.short_description = _("نوع التسعير")
+    pricing_type_display.admin_order_field = "pricing_type"
+
+    def discount_display(self, obj):
+        """عرض نسبة الخصم"""
+        if obj.pricing_type == "discount" and obj.discount_percentage:
+            return format_html(
+                '<span style="background: #28a745; color: white; padding: 2px 8px; '
+                'border-radius: 4px; font-weight: bold;">{}%</span>',
+                obj.discount_percentage,
+            )
+        return "-"
+
+    discount_display.short_description = _("الخصم")
+
+    def badge_preview(self, obj):
+        """معاينة البادج في القائمة"""
+        return obj.get_badge_html()
+
+    badge_preview.short_description = _("البادج")
+
+    def badge_styles_preview(self, obj):
+        """معاينة مرئية لجميع أنماط البادج"""
+        sample_name = obj.name if obj and obj.name else "نوع العميل"
+        colors = [
+            "#007bff",
+            "#28a745",
+            "#dc3545",
+            "#ffc107",
+            "#17a2b8",
+            "#6f42c1",
+            "#fd7e14",
+            "#20c997",
+        ]
+
+        html = (
+            """
+        <div style="padding: 15px; background: #f8f9fa; border-radius: 12px; margin-bottom: 10px;">
+            <p style="margin-bottom: 15px; font-weight: bold; font-size: 14px;">💡 اختر الشكل والون من الخيارات أدناه:</p>
+            
+            <!-- أنماط البادج -->
+            <div style="margin-bottom: 20px;">
+                <p style="margin-bottom: 10px; color: #666;">الأنماط المتاحة:</p>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div style="text-align: center;">
+                        <span style="background-color: #007bff; color: white; padding: 6px 14px; border-radius: 6px; display: inline-block;">"""
+            + sample_name
+            + """</span>
+                        <p style="margin-top: 5px; font-size: 11px; color: #666;">صلب (solid)</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <span style="border: 2px solid #007bff; color: #007bff; background: transparent; padding: 6px 14px; border-radius: 6px; display: inline-block;">"""
+            + sample_name
+            + """</span>
+                        <p style="margin-top: 5px; font-size: 11px; color: #666;">مخطط (outline)</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <span style="background: linear-gradient(135deg, #007bff, #007bffcc); color: white; padding: 6px 14px; border-radius: 6px; display: inline-block;">"""
+            + sample_name
+            + """</span>
+                        <p style="margin-top: 5px; font-size: 11px; color: #666;">متدرج (gradient)</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <span style="background: #007bff33; backdrop-filter: blur(4px); color: #007bff; padding: 6px 14px; border-radius: 6px; display: inline-block;">"""
+            + sample_name
+            + """</span>
+                        <p style="margin-top: 5px; font-size: 11px; color: #666;">زجاجي (glass)</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ألوان مقترحة -->
+            <div>
+                <p style="margin-bottom: 10px; color: #666;">ألوان مقترحة (انسخ الكود):</p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">"""
+        )
+
+        for color in colors:
+            html += f"""
+                    <div style="text-align: center; cursor: pointer;" title="انقر للنسخ: {color}">
+                        <div style="width: 40px; height: 40px; background: {color}; border-radius: 8px; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>
+                        <p style="margin-top: 3px; font-size: 9px; color: #666;">{color}</p>
+                    </div>"""
+
+        html += """
+                </div>
+            </div>
+        </div>
+        """
+        from django.utils.safestring import mark_safe
+
+        return mark_safe(html)
+
+    badge_styles_preview.short_description = _("دليل الأنماط والألوان")
+
+    def badge_preview_live(self, obj):
+        """معاينة البادج الحالي"""
+        if obj.pk:
+            return format_html(
+                '<div style="padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); '
+                'border-radius: 12px; text-align: center;">'
+                '<p style="color: white; margin-bottom: 10px; font-weight: bold;">✨ المعاينة الحالية:</p>'
+                '<div style="background: white; padding: 20px; border-radius: 8px; display: inline-block;">{}</div>'
+                "</div>",
+                obj.get_badge_html(),
+            )
+        return format_html(
+            '<div style="padding: 15px; background: #fff3cd; border-radius: 8px; text-align: center;">'
+            '<p style="color: #856404;">💾 احفظ أولاً لمعاينة البادج</p>'
+            "</div>"
+        )
+
+    badge_preview_live.short_description = _("معاينة البادج الحالي")
 
 
 class CustomerResponsibleInline(admin.TabularInline):

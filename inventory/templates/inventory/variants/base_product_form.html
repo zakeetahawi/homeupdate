@@ -99,14 +99,27 @@
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="{{ form.base_price.id_for_label }}" class="form-label">
-                                        {{ form.base_price.label }} <span class="text-danger">*</span>
+                                        السعر القطاعي <span class="text-danger">*</span>
                                     </label>
                                     <div class="input-group">
                                         {{ form.base_price }}
                                         <span class="input-group-text">{{ currency_symbol }}</span>
                                     </div>
                                     {% if form.base_price.errors %}<div class="invalid-feedback d-block">{{ form.base_price.errors.0 }}</div>{% endif %}
-                                    <div class="form-text">السعر الذي سيُطبق على جميع المتغيرات افتراضياً</div>
+                                    <div class="form-text">سعر التجزئة للعملاء العاديين</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.wholesale_price.id_for_label }}" class="form-label">
+                                        سعر الجملة <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        {{ form.wholesale_price }}
+                                        <span class="input-group-text">{{ currency_symbol }}</span>
+                                    </div>
+                                    {% if form.wholesale_price.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.wholesale_price.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">سعر الجملة لعملاء الجملة</div>
                                 </div>
                             </div>
                             <!-- Stock Settings Section -->

@@ -87,6 +87,17 @@
             <h4 class="data-table-title">
                 المنتجات
                 {% if page_obj.paginator.count %}<span class="badge bg-primary">{{ page_obj.paginator.count }}</span>{% endif %}
+                <!-- ===== أزرار تبديل السعر ===== -->
+                <div class="btn-group ms-3" role="group" id="priceToggleGroup">
+                    <button type="button"
+                            class="btn btn-sm {% if price_display_mode == 'retail' %}btn-success{% else %}btn-outline-success{% endif %}"
+                            data-mode="retail"
+                            id="btnRetail">🏪 قطاعي</button>
+                    <button type="button"
+                            class="btn btn-sm {% if price_display_mode == 'wholesale' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                            data-mode="wholesale"
+                            id="btnWholesale">🏭 جملة</button>
+                </div>
             </h4>
             <div class="data-table-actions">
                 <!-- QR Actions -->
@@ -126,7 +137,13 @@
                             <th>الاسم</th>
                             <th>الكود</th>
                             <th>الفئة</th>
-                            <th>السعر</th>
+                            <th id="priceHeader">
+                                {% if price_display_mode == 'wholesale' %}
+                                    سعر الجملة
+                                {% else %}
+                                    السعر
+                                {% endif %}
+                            </th>
                             <th>المخزون</th>
                             <th>المستودعات</th>
                             <th>الحد الأدنى</th>
@@ -144,7 +161,22 @@
                                     <code>{{ product.code }}</code>
                                 </td>
                                 <td>{{ product.category }}</td>
-                                <td>{{ product.price }} {{ product.currency }}</td>
+                                <td class="product-price"
+                                    data-retail="{{ product.price }}"
+                                    data-wholesale="{{ product.wholesale_price }}">
+                                    {% if price_display_mode == 'wholesale' %}
+                                        {% if product.wholesale_price %}
+                                            {{ product.wholesale_price }} {{ product.currency }}
+                                        {% else %}
+                                            <span class="text-warning" title="سعر الجملة غير محدد">
+                                                {{ product.price }} {{ product.currency }}
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        {{ product.price }} {{ product.currency }}
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if product.current_stock_calc <= 0 %}
                                         <span class="badge bg-danger">نفذ من
@@ -278,4 +310,45 @@
     </div>
 </div>
 {% endblock %}
-{% block extra_js %}<script>// Generate All QR functionality</script>{% endblock %}
+{% block extra_js %}
+    <script>
+// ===== تبديل وضع عرض السعر =====
+document.addEventListener('DOMContentLoaded', function() {
+    const btnRetail = document.getElementById('btnRetail');
+    const btnWholesale = document.getElementById('btnWholesale');
+    const priceHeader = document.getElementById('priceHeader');
+    
+    function togglePriceMode(mode) {
+        fetch("{% url 'inventory:toggle_price_mode' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: 'mode=' + mode
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // تحديث زر التبديل
+                if (mode === 'retail') {
+                    btnRetail.className = 'btn btn-sm btn-success';
+                    btnWholesale.className = 'btn btn-sm btn-outline-primary';
+                    priceHeader.textContent = 'السعر';
+                } else {
+                    btnRetail.className = 'btn btn-sm btn-outline-success';
+                    btnWholesale.className = 'btn btn-sm btn-primary';
+                    priceHeader.textContent = 'سعر الجملة';
+                }
+                // إعادة تحميل الصفحة لتحديث الأسعار
+                window.location.reload();
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    
+    if (btnRetail) btnRetail.addEventListener('click', () => togglePriceMode('retail'));
+    if (btnWholesale) btnWholesale.addEventListener('click', () => togglePriceMode('wholesale'));
+});
+    </script>
+{% endblock %}

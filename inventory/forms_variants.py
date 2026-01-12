@@ -29,6 +29,7 @@ class BaseProductForm(forms.ModelForm):
             "description",
             "category",
             "base_price",
+            "wholesale_price",
             "unit",
             "minimum_stock",
             "is_active",
@@ -48,11 +49,18 @@ class BaseProductForm(forms.ModelForm):
             "base_price": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.01", "min": "0"}
             ),
+            "wholesale_price": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.01", "min": "0"}
+            ),
             "unit": forms.Select(attrs={"class": "form-select"}),
             "minimum_stock": forms.NumberInput(
                 attrs={"class": "form-control", "min": "0"}
             ),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            "base_price": _("السعر القطاعي"),
+            "wholesale_price": _("سعر الجملة"),
         }
 
     def __init__(self, *args, **kwargs):
