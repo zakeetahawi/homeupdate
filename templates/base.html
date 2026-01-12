@@ -2947,7 +2947,6 @@
 <!-- نافذة فحص الباركود (للمستخدمين المسجلين فقط) -->
 {% if user.is_authenticated %}
     {% include 'barcode_scanner_modal.html' %}
-    {% include 'includes/transfer_notification_modal.html' %}
 {% endif %}
 </body>
 </html>

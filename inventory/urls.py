@@ -403,7 +403,7 @@ urlpatterns = [
     path("api/product-stock/", get_product_stock, name="api_product_stock"),
     path("api/similar-products/", get_similar_products, name="api_similar_products"),
     path(
-        "api/pending-transfers/",
+        "api/warehouse/pending-transfers/",
         get_pending_transfers_for_warehouse,
         name="api_pending_transfers",
     ),
@@ -473,7 +473,7 @@ urlpatterns = [
     ),
     # Stock Transfers API
     path(
-        "api/pending-transfers/",
+        "api/global/pending-transfers/",
         api_views.pending_transfers_api,
         name="pending_transfers_api",
     ),
