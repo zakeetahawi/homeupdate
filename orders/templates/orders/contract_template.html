@@ -205,7 +205,7 @@
             background: #f8f5f0;
             border: 1.5px solid #a67c52;
             border-radius: 4px;
-            padding: 1px 2px;
+            padding: 3px 4px;
             width: 100%;
             box-sizing: border-box;
         }
@@ -214,16 +214,17 @@
             font-size: 13px;
             font-weight: 700;
             color: #a67c52;
-            margin-bottom: 0;
+            margin-bottom: 2px;
             border-bottom: 1px solid #d4a574;
-            padding-bottom: 0;
+            padding-bottom: 2px;
         }
 
         .card-row {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 0;
+            margin-bottom: 2px;
+            gap: 4px;
         }
 
         .card-row:last-child {
@@ -242,10 +243,11 @@
             font-size: 13px;
             color: #000;
             font-weight: 700;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            max-width: 100%;
         }
+
 
         .curtain-count-badge {
             background: #a67c52;
@@ -257,6 +259,14 @@
             display: inline-block;
         }
 
+        .customer-name-blue {
+            color: #2980b9 !important;
+        }
+
+        .customer-phone-blue {
+            color: #2980b9 !important;
+        }
+
         .salesperson-phone {
             font-size: 11px;
             color: #666;
@@ -264,6 +274,7 @@
             display: block;
             margin-top: 0px;
         }
+
 
 
         /* === CURTAINS SECTION === */
@@ -537,6 +548,10 @@
             padding: 1px 3px;
             border-radius: 3px;
             border-right: 2px solid #f39c12;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+            max-width: 100%;
         }
 
         /* Accessories Section */
@@ -628,23 +643,18 @@
             background: #fffbf0;
             border: 1px solid #f39c12;
             border-radius: 3px;
-            padding: 1px 3px;
+            padding: 3px 5px;
             margin-top: 1px;
             width: 100%;
             box-sizing: border-box;
-            display: flex;
-            align-items: center;
-            gap: 3px;
         }
 
         .notes-header {
             font-size: 13px;
             font-weight: 700;
             color: #f39c12;
-            display: flex;
-            align-items: center;
-            gap: 2px;
-            white-space: nowrap;
+            margin-bottom: 2px;
+            display: inline-block;
         }
 
         .notes-icon {
@@ -654,11 +664,12 @@
         .notes-content {
             font-size: 13px;
             color: #333;
-            line-height: 1.3;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            flex: 1;
+            line-height: 1.4;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+            max-width: 100%;
+            display: block;
         }
 
         /* === FOOTER === */
@@ -803,15 +814,26 @@
                             <span class="card-label">رقم الفاتورة</span>
                             <span class="card-value">{{ order.invoice_number|default:"--" }}</span>
                         </div>
-                        <div style="text-align: left;">
+                        <div>
                             <span class="card-label">عدد الستائر</span>
                             <span class="curtain-count-badge">{{ curtains.count }}</span>
+                        </div>
+                        <div style="text-align: left;">
+                            <span class="card-label">تاريخ الطلب</span>
+                            <span class="card-value">{{ order.created_at|date:"Y/m/d" }}</span>
                         </div>
                     </div>
                     <div class="card-row">
                         <div>
-                            <span class="card-label">تاريخ الطلب</span>
-                            <span class="card-value">{{ order.created_at|date:"Y/m/d" }}</span>
+                            <span class="card-label">عدد أيام التشغيل</span>
+                            <span class="card-value">
+                                {% if working_days %}
+                                    {{ working_days }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                                يوم
+                            </span>
                         </div>
                         <div style="text-align: left;">
                             <span class="card-label">التسليم المتوقع</span>
@@ -824,31 +846,21 @@
                             </span>
                         </div>
                     </div>
-                    <div class="card-row">
-                        <div style="width: 100%;">
-                            <span class="card-label">عدد أيام التشغيل</span>
-                            <span class="card-value">
-                                {% if working_days %}
-                                    {{ working_days }}
-                                {% else %}
-                                    --
-                                {% endif %}
-                                يوم
-                            </span>
-                        </div>
-                    </div>
                 </div>
-                <!-- Customer Card -->
                 <div class="info-card">
                     <div class="card-title">بيانات العميل</div>
                     <div class="card-row">
                         <div>
                             <span class="card-label">العميل</span>
-                            <span class="card-value">{{ order.customer.name }}</span>
+                            <span class="card-value customer-name-blue">{{ order.customer.name }}</span>
+                        </div>
+                        <div>
+                            <span class="card-label">الهاتف</span>
+                            <span class="card-value customer-phone-blue">{{ order.customer.phone|default:"--" }}</span>
                         </div>
                         <div style="text-align: left;">
-                            <span class="card-label">الهاتف</span>
-                            <span class="card-value">{{ order.customer.phone|default:"--" }}</span>
+                            <span class="card-label">الفرع</span>
+                            <span class="card-value">{{ order.branch.name|default:"--" }}</span>
                         </div>
                     </div>
                     <div class="card-row">
@@ -863,29 +875,20 @@
                                     {{ order.created_by.username }}
                                 {% endif %}
                             </span>
-                            {% if order.salesperson.phone %}<span class="salesperson-phone">{{ order.salesperson.phone }}</span>{% endif %}
                         </div>
                         <div style="text-align: left;">
-                            <span class="card-label">الفرع</span>
-                            <span class="card-value">{{ order.branch.name|default:"--" }}</span>
+                            <span class="card-label">هاتف البائع</span>
+                            <span class="card-value">
+                                {% if order.salesperson.phone %}
+                                    {{ order.salesperson.phone }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </span>
                         </div>
                     </div>
                     <div class="card-row">
-                        <div style="width: 100%;">
-                            <span class="card-label">نوع العميل</span>
-                            <span class="card-value">{{ order.customer.get_customer_type_display }}</span>
-                        </div>
-                    </div>
-                    {% if order.delivery_location %}
-                        <div class="card-row">
-                            <div style="width: 100%;">
-                                <span class="card-label">مكان التسليم</span>
-                                <span class="card-value">{{ order.delivery_location }}</span>
-                            </div>
-                        </div>
-                    {% endif %}
-                    <div class="card-row">
-                        <div style="width: 100%;">
+                        <div style="width: 100%; text-align: center;">
                             <span class="card-label">العنوان</span>
                             <span class="card-value">{{ order.customer.address|default:"غير محدد" }}</span>
                         </div>
