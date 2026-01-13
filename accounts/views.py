@@ -258,25 +258,24 @@ def login_view(request):
                         denial_reason_key = ""
                         device_check_performed = False
 
-                        # السوبر يوزر والمدير العام ومستخدمي "الجملة فقط" يمكنهم الدخول من أي جهاز
-                        is_pure_wholesale = getattr(
-                            user, "is_wholesale", False
-                        ) and not getattr(user, "is_retail", False)
-                        if (
-                            user.is_superuser
-                            or getattr(user, "is_sales_manager", False)
-                            or is_pure_wholesale
-                        ):
+                        # منطق تجاوز قفل الأجهزة المخفف:
+                        # 1. السوبر يوزر دائماً مستثنى
+                        # 2. بائعو الجملة مستثنون بناءً على طلب العميل ليتمكنوا من العمل بحرية
+                        # 3. المديرين ومن هم أعلى (مثل مدير المنطقة أو المبيعات) يجب أن يدخلوا من أجهزة مسجلة فقط
+                        
+                        is_wholesale_salesperson = getattr(user, 'is_salesperson', False) and getattr(user, 'is_wholesale', False)
+                        
+                        if user.is_superuser:
                             device_authorized = True
-                            logger.info(
-                                f"✅ {'Superuser' if user.is_superuser else 'General/Wholesale Manager'} {username} authorized from any device (bypass device lock)"
-                            )
+                            logger.info(f"✅ Superuser {username} authorized from any device (Security Bypass)")
+                        elif is_wholesale_salesperson:
+                            # بائع جملة: يسمح له بالتجاوز
+                            device_authorized = True
+                            logger.info(f"✅ Wholesale Salesperson {username} authorized bypass (Custom Policy)")
                         else:
-                            # فحص الجهاز دائماً لجميع المستخدمين (للمراقبة والتسجيل)
-                            device_check_performed = True
-                            logger.info(
-                                f"🔍 Checking device (User branch restriction: {'enabled' if device_restriction_enabled else 'disabled'})..."
-                            )
+                            # أي شخص آخر (بما في ذلك المديرين) يجب أن يخضع لفحص الجهاز
+                             device_check_performed = True
+                             logger.info(f"🔍 Checking device for {username} (Manager/Retail User - Restriction Enabled: {device_restriction_enabled})...")
                             try:
                                 # 1. الحصول على device_token من الطلب
                                 device_token_str = request.POST.get(

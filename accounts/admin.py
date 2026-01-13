@@ -153,6 +153,8 @@ class CustomUserAdmin(UserAdmin):
         "has_manufacturing_approval",
         "is_warehouse_staff",
         "assigned_warehouse",
+        "is_wholesale",
+        "is_retail",
         "can_export",
     )
 
@@ -181,6 +183,8 @@ class CustomUserAdmin(UserAdmin):
         "is_inspection_manager",
         "is_installation_manager",
         "is_warehouse_staff",
+        "is_wholesale",
+        "is_retail",
         "user_roles__role",
         "can_export",
     )
@@ -234,6 +238,8 @@ class CustomUserAdmin(UserAdmin):
                     "is_installation_manager",
                     "managed_branches",
                     "can_export",
+                    "is_wholesale",
+                    "is_retail",
                     "groups",
                     "user_permissions",
                 ),
@@ -280,6 +286,8 @@ class CustomUserAdmin(UserAdmin):
                     "phone",
                     "image",
                     "branch",
+                    "is_wholesale",
+                    "is_retail",
                     "departments",
                     "default_theme",
                 ),
