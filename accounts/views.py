@@ -262,20 +262,28 @@ def login_view(request):
                         # 1. السوبر يوزر دائماً مستثنى
                         # 2. بائعو الجملة مستثنون بناءً على طلب العميل ليتمكنوا من العمل بحرية
                         # 3. المديرين ومن هم أعلى (مثل مدير المنطقة أو المبيعات) يجب أن يدخلوا من أجهزة مسجلة فقط
-                        
-                        is_wholesale_salesperson = getattr(user, 'is_salesperson', False) and getattr(user, 'is_wholesale', False)
-                        
+
+                        is_wholesale_salesperson = getattr(
+                            user, "is_salesperson", False
+                        ) and getattr(user, "is_wholesale", False)
+
                         if user.is_superuser:
                             device_authorized = True
-                            logger.info(f"✅ Superuser {username} authorized from any device (Security Bypass)")
+                            logger.info(
+                                f"✅ Superuser {username} authorized from any device (Security Bypass)"
+                            )
                         elif is_wholesale_salesperson:
                             # بائع جملة: يسمح له بالتجاوز
                             device_authorized = True
-                            logger.info(f"✅ Wholesale Salesperson {username} authorized bypass (Custom Policy)")
+                            logger.info(
+                                f"✅ Wholesale Salesperson {username} authorized bypass (Custom Policy)"
+                            )
                         else:
                             # أي شخص آخر (بما في ذلك المديرين) يجب أن يخضع لفحص الجهاز
-                             device_check_performed = True
-                             logger.info(f"🔍 Checking device for {username} (Manager/Retail User - Restriction Enabled: {device_restriction_enabled})...")
+                            device_check_performed = True
+                            logger.info(
+                                f"🔍 Checking device for {username} (Manager/Retail User - Restriction Enabled: {device_restriction_enabled})..."
+                            )
                             try:
                                 # 1. الحصول على device_token من الطلب
                                 device_token_str = request.POST.get(
