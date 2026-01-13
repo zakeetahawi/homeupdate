@@ -3,6 +3,85 @@
 {% block title %}المنتجات الأساسية{% endblock %}
 {% block content %}
     <div class="container-fluid">
+        <style>
+            #warehousePrintModal .hover-bg-light:hover { background-color: #f8f9fa !important; }
+            #warehousePrintModal .cursor-pointer { cursor: pointer; }
+        </style>
+        <script>
+        // نقل الموديل لضمان التوسيط ومنع مشاكل التداخل
+        document.addEventListener("DOMContentLoaded", function() {
+            const modal = document.getElementById('warehousePrintModal');
+            if (modal && modal.parentElement !== document.body) {
+                document.body.appendChild(modal);
+            }
+        });
+        </script>
+        <!-- Warehouse Selection Modal -->
+        <div class="modal fade"
+             id="warehousePrintModal"
+             tabindex="-1"
+             aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-dark text-white p-3">
+                        <h5 class="modal-title fs-6 fw-bold">
+                            <i class="fas fa-warehouse me-2"></i>
+                            تحديد المخازن للطباعة
+                        </h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <form action="{% url 'inventory:all_products_label_cards' %}"
+                          method="get"
+                          target="_blank">
+                        <div class="modal-body p-4 text-start" dir="rtl">
+                            <p class="text-muted mb-4 small">اختر المخازن لطباعة الأصناف المتوفرة بها فقط.</p>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0 fw-bold small text-dark">قائمة المخازن</h6>
+                                <button type="button"
+                                        class="btn btn-sm btn-link text-decoration-none p-0"
+                                        id="toggleAllWHBtn"
+                                        onclick="toggleAllWarehouses(this)">تحديد الكل</button>
+                            </div>
+                            <div class="warehouse-list border rounded p-2 bg-white"
+                                 style="max-height: 250px;
+                                        overflow-y: auto">
+                                {% for wh in all_warehouses %}
+                                    <div class="form-check mb-1 p-2 rounded hover-bg-light d-flex align-items-center">
+                                        <input class="form-check-input ms-0 me-2 warehouse-checkbox"
+                                               type="checkbox"
+                                               name="warehouses"
+                                               value="{{ wh.id }}"
+                                               id="wh_{{ wh.id }}">
+                                        <label class="form-check-label w-100 cursor-pointer text-dark"
+                                               for="wh_{{ wh.id }}">{{ wh.name }}</label>
+                                    </div>
+                                {% empty %}
+                                    <div class="text-center py-3 text-muted small">
+                                        <i class="fas fa-exclamation-circle mb-2"></i>
+                                        <br>
+                                        لا توجد مخازن معرفة أو لم يتم تمرير البيانات
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light p-2">
+                            <button type="button"
+                                    class="btn btn-sm btn-secondary"
+                                    data-bs-dismiss="modal">إلغاء</button>
+                            <button type="submit"
+                                    class="btn btn-sm btn-dark px-4"
+                                    {% if not all_warehouses %}disabled{% endif %}>
+                                <i class="fas fa-print me-2"></i>
+                                طباعة
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
         <!-- Header Section -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
@@ -25,11 +104,13 @@
                     <i class="fas fa-sync-alt me-1"></i>
                     ترحيل المنتجات
                 </a>
-                <a href="{% url 'inventory:all_products_label_cards' %}"
-                   class="btn btn-dark">
+                <button type="button"
+                        class="btn btn-dark"
+                        data-bs-toggle="modal"
+                        data-bs-target="#warehousePrintModal">
                     <i class="fas fa-tags me-1"></i>
                     طباعة كل البطاقات
-                </a>
+                </button>
                 <a href="{% url 'inventory:base_product_create' %}"
                    class="btn btn-primary">
                     <i class="fas fa-plus me-1"></i>
@@ -483,5 +564,12 @@
                 Swal.fire('خطأ!', 'فشل الاتصال بالخادم', 'error');
             });
     }
-        </script>
-    {% endblock %}
+        <script>
+            function toggleAllWarehouses(btn) {
+                const checkboxes = document.querySelectorAll('.warehouse-checkbox');
+                const isSelectAll = btn.textContent.includes('تحديد الكل');
+                checkboxes.forEach(cb => cb.checked = isSelectAll);
+                btn.textContent = isSelectAll ? 'إلغاء التحديد' : 'تحديد الكل';
+            }
+</script>
+{% endblock %}
