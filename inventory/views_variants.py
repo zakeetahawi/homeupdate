@@ -1049,3 +1049,36 @@ def api_search_variants(request):
         )
 
     return JsonResponse({"results": results})
+
+
+@login_required
+def product_label_card(request, pk):
+    """عرض بطاقة صنف قابلة للطباعة (A4)"""
+    base_product = get_object_or_404(BaseProduct, pk=pk)
+    legacy_code = base_product.get_first_legacy_code()
+
+    context = {
+        "base_product": base_product,
+        "legacy_code": legacy_code,
+        "active_menu": "variants",
+    }
+    return render(request, "inventory/variants/product_label_card.html", context)
+
+
+@login_required
+def all_products_label_cards(request):
+    """عرض بطاقة لكل الأصناف المفعلة (مرة واحدة لكل صنف)"""
+    products = BaseProduct.objects.filter(is_active=True).order_by("-id")
+
+    product_list = []
+    for p in products:
+        product_list.append(
+            {"base_product": p, "legacy_code": p.get_first_legacy_code()}
+        )
+
+    context = {
+        "product_list": product_list,
+        "bulk_mode": True,
+        "active_menu": "variants",
+    }
+    return render(request, "inventory/variants/product_label_card.html", context)

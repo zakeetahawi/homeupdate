@@ -314,6 +314,11 @@ urlpatterns = [
         views_variants.base_product_delete,
         name="base_product_delete",
     ),
+    path(
+        "base-product/<int:pk>/label-card/",
+        views_variants.product_label_card,
+        name="base_product_label_card",
+    ),
     # Variants
     path(
         "base-product/<int:base_product_id>/variant/create/",

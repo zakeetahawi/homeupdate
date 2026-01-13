@@ -1410,6 +1410,20 @@ class BaseProduct(models.Model):
         help_text=_("آخر مرة تم فيها مزامنة المنتج مع Cloudflare"),
     )
 
+    # نوع القماش والعرض
+    material = models.CharField(
+        _("نوع القماش (Material)"),
+        max_length=100,
+        default="Linen",
+        blank=True,
+    )
+    width = models.CharField(
+        _("العرض (Width)"),
+        max_length=50,
+        default="280 cm",
+        blank=True,
+    )
+
     is_active = models.BooleanField(_("نشط"), default=True)
 
     def generate_qr(self, force=False):
@@ -1503,6 +1517,17 @@ class BaseProduct(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.code})"
+
+    def get_first_legacy_code(self):
+        """الحصول على أول كود Onyx من المتغيرات المرتبطة بالنظام القديم"""
+        variant = (
+            self.variants.filter(legacy_product__isnull=False)
+            .select_related("legacy_product")
+            .first()
+        )
+        if variant and variant.legacy_product:
+            return variant.legacy_product.code
+        return None
 
     def get_price_for_customer_type(self, customer_type_code):
         """الحصول على السعر المناسب حسب نوع العميل"""
