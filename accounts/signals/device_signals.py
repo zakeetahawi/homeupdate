@@ -90,6 +90,11 @@ def authorize_device_for_branch_users(sender, instance, created, **kwargs):
     if kwargs.get("raw", False):
         return
 
+    # التحقق من أن التحديث ليس مجرد تحديث لبيانات الاستخدام (أداء)
+    update_fields = kwargs.get("update_fields")
+    if update_fields and not any(f in update_fields for f in ["is_active", "branch"]):
+        return
+
     # فقط عند إنشاء جهاز جديد أو تفعيل جهاز
     if created or instance.is_active:
         branch_users = User.objects.filter(branch=instance.branch, is_active=True)

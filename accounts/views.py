@@ -348,14 +348,32 @@ def login_view(request):
                                         logger.warning(
                                             f"❌ Blocked device attempted login: {device_obj.device_name}. Reason: {device_obj.blocked_reason}"
                                         )
-                                    # التحقق من authorized_devices بدلاً من الفرع
-                                    elif device_obj in user.authorized_devices.all():
-                                        device_authorized = True
-                                        # تحديث معلومات آخر استخدام
-                                        device_obj.mark_used(user=user, ip_address=ip)
-                                        logger.info(
-                                            f"✅ User {username} authorized for device: {device_obj.device_name} - Branch: {device_obj.branch.name}"
-                                        )
+                                    # تحقق إضافي: هل فرع الجهاز هو نفس فرع المستخدم؟
+                                    # نمنع الدخول من أجهزة فروع أخرى حتى لو كان مصرحاً بها يدوياً (للمديرين وموظفي القطاعي)
+                                    user_branch = getattr(user, "branch", None)
+                                    device_branch = getattr(device_obj, "branch", None)
+
+                                    if device_obj in user.authorized_devices.all():
+                                        if (
+                                            user_branch == device_branch
+                                            or not device_branch
+                                        ):
+                                            device_authorized = True
+                                            # تحديث معلومات آخر استخدام
+                                            device_obj.mark_used(
+                                                user=user, ip_address=ip
+                                            )
+                                            logger.info(
+                                                f"✅ User {username} authorized for device: {device_obj.device_name} - Branch: {device_obj.branch.name}"
+                                            )
+                                        else:
+                                            # محاولة دخول من جهاز فرع آخر
+                                            device_authorized = False
+                                            denial_reason = f"⛔ هذا الجهاز ينتمي لفرع {device_branch.name}، وأنت تتبع فرع {user_branch.name}"
+                                            denial_reason_key = "cross_branch_device"
+                                            logger.warning(
+                                                f"❌ CROSS-BRANCH ACCESS BLOCKED: User {username} ({user_branch}) attempted login from device '{device_obj.device_name}' ({device_branch})"
+                                            )
                                     else:
                                         # الجهاز غير مصرح للمستخدم
                                         device_authorized = False
@@ -365,7 +383,7 @@ def login_view(request):
                                             f"❌ DEVICE NOT AUTHORIZED: User {username} attempted login from device '{device_obj.device_name}' (Branch: {device_obj.branch.name})"
                                         )
                                         logger.warning(
-                                            f"   User's branch: {user.branch.name if user.branch else 'None'}"
+                                            f"   User's branch: {user_branch.name if user_branch else 'None'}"
                                         )
                                         logger.warning(
                                             f"   User's authorized devices: {user.authorized_devices.count()}"
@@ -388,7 +406,7 @@ def login_view(request):
                             if device_obj:
                                 if device_authorized:
                                     logger.info(
-                                        f"✅ LOGIN ALLOWED - User and device from same branch: {device_obj.branch.name}"
+                                        f"✅ LOGIN ALLOWED - User and device authorized in branch: {device_obj.branch.name}"
                                     )
                                 else:
                                     logger.error(
