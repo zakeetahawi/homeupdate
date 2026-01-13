@@ -247,26 +247,55 @@ def smart_update_product(
     # التأكد من وجود اسم للمنتج الجديد
     final_name = name or code or "منتج جديد بدون اسم"
 
-    product = Product.objects.create(
-        name=final_name,
-        code=code,
-        price=product_data.get("price"),
-        wholesale_price=product_data.get("wholesale_price"),
-        category=product_data.get("category"),
-        description=product_data.get("description", ""),
-        minimum_stock=product_data.get("minimum_stock", 0),
-        currency=product_data.get("currency", "EGP"),
-        unit=product_data.get("unit", "piece"),
-    )
+    # استخدام get_or_create لتجنب IntegrityError
+    from django.db import IntegrityError
+    
+    try:
+        # محاولة الحصول على المنتج أولاً
+        product = Product.objects.filter(code=code).first()
+        
+        if product:
+            # المنتج موجود - تحديثه
+            logger.warning(f"⚠️ منتج موجود بالكود {code} - سيتم تحديثه")
+            if name and name.strip():
+                product.name = name
+            if product_data.get("price", 0) > 0:
+                product.price = product_data["price"]
+            if product_data.get("wholesale_price") is not None:
+                product.wholesale_price = product_data["wholesale_price"]
+            if product_data.get("category"):
+                product.category = product_data["category"]
+            if product_data.get("description"):
+                product.description = product_data["description"]
+            product.save()
+            result["action"] = "updated"
+            result["message"] = "تم التحديث (كان موجوداً)"
+        else:
+            # المنتج غير موجود - إنشاؤه
+            product = Product.objects.create(
+                name=final_name,
+                code=code,
+                price=product_data.get("price"),
+                wholesale_price=product_data.get("wholesale_price"),
+                category=product_data.get("category"),
+                description=product_data.get("description", ""),
+                minimum_stock=product_data.get("minimum_stock", 0),
+                currency=product_data.get("currency", "EGP"),
+                unit=product_data.get("unit", "piece"),
+            )
+            result["action"] = "created"
+            result["message"] = "تم الإنشاء"
+            
+    except Exception as e:
+        logger.error(f"❌ خطأ في إنشاء/تحديث المنتج {code}: {e}")
+        raise
 
     # إضافة الكمية الأولية للمنتج الجديد
     quantity = product_data.get("quantity", 0)
-    if quantity > 0 and warehouse:
+    if quantity > 0 and warehouse and result["action"] == "created":
         add_stock_transaction(product, warehouse, quantity, user, "إنشاء من Excel")
 
-    result["action"] = "created"
     result["product"] = product
-    result["message"] = "تم الإنشاء"
 
     return result
 
