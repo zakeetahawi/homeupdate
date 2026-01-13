@@ -52,17 +52,57 @@ def products_search_api(request):
         total_count = products.count()
         products_page = products[start:end]
 
+        # ===== تحديد السعر المناسب حسب نوع العميل =====
+        use_wholesale_price = False
+        draft_id = request.session.get("wizard_draft_id")
+
+        if draft_id:
+            from customers.models import CustomerType
+
+            from .wizard_models import DraftOrder
+
+            try:
+                draft = DraftOrder.objects.select_related("customer").get(pk=draft_id)
+                if draft.customer and draft.customer.customer_type:
+                    customer_type_obj = CustomerType.objects.filter(
+                        code=draft.customer.customer_type
+                    ).first()
+                    if (
+                        customer_type_obj
+                        and customer_type_obj.pricing_type == "wholesale"
+                    ):
+                        use_wholesale_price = True
+            except DraftOrder.DoesNotExist:
+                pass
+
         # تحضير النتائج
         results = []
         for product in products_page:
+            # تحديد السعر المناسب
+            if (
+                use_wholesale_price
+                and product.wholesale_price
+                and product.wholesale_price > 0
+            ):
+                price = float(product.wholesale_price)
+            else:
+                price = float(product.price) if product.price else 0.0
+
             results.append(
                 {
                     "id": product.id,
                     "text": product.name,
                     "name": product.name,
                     "code": product.code if product.code else "",
-                    "price": float(product.price) if product.price else 0.0,
+                    "price": price,
+                    "retail_price": float(product.price) if product.price else 0.0,
+                    "wholesale_price": (
+                        float(product.wholesale_price)
+                        if product.wholesale_price
+                        else 0.0
+                    ),
                     "category": product.category.name if product.category else "",
+                    "is_wholesale": use_wholesale_price,
                 }
             )
 

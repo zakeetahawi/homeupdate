@@ -71,9 +71,7 @@
                                                 </span>
                                             {% endif %}
                                         </td>
-                                        <td>
-                                            <span class="badge bg-info">{{ customer.get_customer_type_display }}</span>
-                                        </td>
+                                        <td>{{ customer.get_customer_type_badge_html }}</td>
                                         <td>
                                             {% if customer.category %}
                                                 <span class="badge bg-secondary">{{ customer.category.name }}</span>

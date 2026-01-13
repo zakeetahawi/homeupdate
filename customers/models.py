@@ -546,6 +546,29 @@ class Customer(models.Model):
     def __str__(self):
         return f"{self.code} - {self.name}"
 
+    def get_customer_type_badge_html(self):
+        """الحصول على HTML بادج نوع العميل"""
+        from django.utils.safestring import mark_safe
+
+        if self.customer_type:
+            try:
+                customer_type_obj = CustomerType.objects.get(code=self.customer_type)
+                return customer_type_obj.get_badge_html()
+            except CustomerType.DoesNotExist:
+                pass
+        # بادج افتراضي إذا لم يوجد نوع
+        return mark_safe('<span class="badge bg-secondary">غير محدد</span>')
+
+    def get_customer_type_display(self):
+        """الحصول على اسم نوع العميل"""
+        if self.customer_type:
+            try:
+                customer_type_obj = CustomerType.objects.get(code=self.customer_type)
+                return customer_type_obj.name
+            except CustomerType.DoesNotExist:
+                pass
+        return self.customer_type or "غير محدد"
+
     def clean(self):
         if self.created_by and not self.created_by.is_superuser:
             if self.branch != self.created_by.branch:

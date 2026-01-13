@@ -17,6 +17,42 @@ from .models import (
 )
 
 
+class CustomerTypeAdminForm(forms.ModelForm):
+    """نموذج مخصص لـ CustomerType مع مربعات اختيار لأنواع الطلبات"""
+
+    # مربعات اختيار لأنواع الطلبات المتاحة
+    allowed_order_types_choices = forms.MultipleChoiceField(
+        label=_("أنواع الطلبات المتاحة"),
+        choices=CustomerType.ORDER_TYPE_CHOICES,
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
+        required=False,
+        help_text=_("اختر أنواع الطلبات المسموحة - اتركها فارغة للسماح بجميع الأنواع"),
+    )
+
+    class Meta:
+        model = CustomerType
+        fields = "__all__"
+        exclude = ["allowed_order_types"]  # نستخدم الحقل المخصص بدلاً منه
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # تحميل القيم الحالية
+        if self.instance and self.instance.pk:
+            current_types = self.instance.allowed_order_types or []
+            self.fields["allowed_order_types_choices"].initial = current_types
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # تحويل الاختيارات إلى قائمة JSON
+        instance.allowed_order_types = self.cleaned_data.get(
+            "allowed_order_types_choices", []
+        )
+        if commit:
+            instance.save()
+            self._save_m2m()
+        return instance
+
+
 class CustomerAdminForm(forms.ModelForm):
     """نموذج مخصص لإدارة العملاء مع قائمة منسدلة ديناميكية لأنواع العملاء"""
 
@@ -80,6 +116,7 @@ class CustomerNoteAdmin(admin.ModelAdmin):
 class CustomerTypeAdmin(admin.ModelAdmin):
     """إدارة أنواع العملاء مع إعدادات التسعير والبادج"""
 
+    form = CustomerTypeAdminForm  # استخدام النموذج المخصص
     change_form_template = "admin/customers/customertype/change_form.html"
     list_per_page = 50
     list_display = [
@@ -87,6 +124,7 @@ class CustomerTypeAdmin(admin.ModelAdmin):
         "name",
         "pricing_type_display",
         "discount_display",
+        "allowed_types_display",
         "badge_preview",
         "is_active",
         "created_at",
@@ -116,7 +154,7 @@ class CustomerTypeAdmin(admin.ModelAdmin):
         (
             _("أنواع الطلبات المتاحة"),
             {
-                "fields": ("allowed_order_types",),
+                "fields": ("allowed_order_types_choices",),
                 "description": _(
                     "حدد أنواع الطلبات المسموحة لهذا النوع من العملاء - اتركها فارغة للسماح بجميع الأنواع"
                 ),
@@ -163,6 +201,25 @@ class CustomerTypeAdmin(admin.ModelAdmin):
         return "-"
 
     discount_display.short_description = _("الخصم")
+
+    def allowed_types_display(self, obj):
+        """عرض أنواع الطلبات المتاحة"""
+        from django.utils.safestring import mark_safe
+
+        if obj.allowed_order_types:
+            # تحويل الترجمات لنص عادي
+            type_names = {k: str(v) for k, v in CustomerType.ORDER_TYPE_CHOICES}
+            types = [type_names.get(t, t) for t in obj.allowed_order_types]
+            return format_html(
+                '<span style="background: #17a2b8; color: white; padding: 2px 8px; '
+                'border-radius: 4px; font-size: 11px;">{}</span>',
+                "، ".join(types),
+            )
+        return mark_safe(
+            '<span style="color: #6c757d; font-style: italic;">الكل</span>'
+        )
+
+    allowed_types_display.short_description = _("أنواع الطلبات")
 
     def badge_preview(self, obj):
         """معاينة البادج في القائمة"""

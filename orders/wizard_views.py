@@ -804,17 +804,11 @@ def wizard_add_item(request):
                     pass
 
             if customer_type and customer_type.pricing_type == "wholesale":
-                # عميل جملة - استخدام سعر الجملة إذا كان متاحاً
-                # ملاحظة: Product القديم لا يحتوي على wholesale_price
-                # سنحاول البحث عن BaseProduct/ProductVariant المرتبط
-                from inventory.models import ProductVariant
-
-                variant = ProductVariant.objects.filter(
-                    base_product__code=product.code
-                ).first()
-                if variant:
-                    unit_price = variant.effective_wholesale_price
+                # عميل جملة - استخدام سعر الجملة مباشرة من المنتج
+                if product.wholesale_price and product.wholesale_price > 0:
+                    unit_price = product.wholesale_price
                 else:
+                    # fallback للسعر القطاعي إذا لم يكن سعر الجملة محدداً
                     unit_price = product.price if product.price else Decimal("0.00")
             else:
                 unit_price = product.price if product.price else Decimal("0.00")

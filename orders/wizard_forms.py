@@ -240,18 +240,24 @@ class Step2OrderTypeForm(forms.ModelForm):
             ).order_by("-created_at")
 
             # ⚡ تصفية أنواع الطلبات المتاحة بناءً على نوع العميل
-            if hasattr(customer, "customer_type") and customer.customer_type:
-                allowed_types = getattr(
-                    customer.customer_type, "allowed_order_types", []
-                )
-                if allowed_types:  # إذا تم تحديد أنواع معينة (ليست قائمة فارغة)
-                    current_choices = list(self.fields["selected_type"].choices)
-                    # تصفية الخيارات الموجودة أصلاً في النموذج
-                    filtered_choices = [
-                        c for c in current_choices if c[0] in allowed_types
-                    ]
-                    if filtered_choices:
-                        self.fields["selected_type"].choices = filtered_choices
+            if customer.customer_type:
+                from customers.models import CustomerType
+
+                try:
+                    customer_type_obj = CustomerType.objects.get(
+                        code=customer.customer_type
+                    )
+                    allowed_types = customer_type_obj.allowed_order_types or []
+                    if allowed_types:  # إذا تم تحديد أنواع معينة (ليست قائمة فارغة)
+                        current_choices = list(self.fields["selected_type"].choices)
+                        # تصفية الخيارات الموجودة أصلاً في النموذج
+                        filtered_choices = [
+                            c for c in current_choices if c[0] in allowed_types
+                        ]
+                        if filtered_choices:
+                            self.fields["selected_type"].choices = filtered_choices
+                except CustomerType.DoesNotExist:
+                    pass  # إذا لم يوجد نوع العميل، السماح بجميع الأنواع
         else:
             self.fields["related_inspection"].queryset = Inspection.objects.none()
 
