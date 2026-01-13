@@ -317,7 +317,12 @@ urlpatterns = [
     path(
         "base-product/<int:pk>/label-card/",
         views_variants.product_label_card,
-        name="base_product_label_card",
+        name="product_label_card",
+    ),
+    path(
+        "base-products/all-labels/",
+        views_variants.all_products_label_cards,
+        name="all_products_label_cards",
     ),
     # Variants
     path(
