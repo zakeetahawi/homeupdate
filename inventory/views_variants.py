@@ -92,6 +92,7 @@ def base_product_list(request):
         "base_products": page_obj,  # للقالب
         "page_obj": page_obj,  # للـ pagination
         "categories": Category.objects.all(),
+        "all_warehouses": Warehouse.objects.filter(is_active=True),
         "search": search,
         "selected_category": category_id,
         "selected_status": status,
@@ -103,6 +104,7 @@ def base_product_list(request):
         "inactive_base_products": inactive_base_products,
         "total_inventory_value": total_inventory_value,
         "filtered_count": filtered_count,
+        "all_warehouses": Warehouse.objects.all(),
     }
 
     return render(request, "inventory/variants/base_product_list.html", context)
@@ -1067,18 +1069,54 @@ def product_label_card(request, pk):
 
 @login_required
 def all_products_label_cards(request):
-    """عرض بطاقة لكل الأصناف المفعلة (مرة واحدة لكل صنف)"""
-    products = BaseProduct.objects.filter(is_active=True).order_by("-id")
+    """عرض بطاقة لكل الأصناف المفعلة (مرة واحدة لكل صنف) مع خيار الفلترة حسب المخزن"""
+    warehouse_ids = request.GET.getlist("warehouses")
+    products = BaseProduct.objects.filter(is_active=True)
 
+    if warehouse_ids:
+        # فلترة الأصناف التي تملك مخزون فعلي في المخازن المختارة
+        # نتحقق من النظام الجديد والقديم (Transactions) لضمان عدم ظهور صفحة فارغة
+        q_new = Q(
+            variants__warehouse_stocks__warehouse_id__in=warehouse_ids,
+            variants__warehouse_stocks__current_quantity__gt=0,
+        )
+        q_old = Q(
+            variants__legacy_product__transactions__warehouse_id__in=warehouse_ids,
+            variants__legacy_product__transactions__running_balance__gt=0,
+        )
+        products = products.filter(q_new | q_old).distinct()
+
+    products = products.order_by("-id")
+
+    # نجهز القائمة مع بيانات المخازن لكل صنف للفلترة الديناميكية
     product_list = []
     for p in products:
+        # الحصول على أرقام المخازن التي يتوفر فيها الصنف (من كلا النظامين)
+        wh_new = p.variants.filter(
+            warehouse_stocks__current_quantity__gt=0
+        ).values_list("warehouse_stocks__warehouse_id", flat=True)
+        wh_old = p.variants.filter(
+            legacy_product__transactions__running_balance__gt=0
+        ).values_list("legacy_product__transactions__warehouse_id", flat=True)
+
+        available_whs = list(set(list(wh_new) + list(wh_old)))
+
         product_list.append(
-            {"base_product": p, "legacy_code": p.get_first_legacy_code()}
+            {
+                "base_product": p,
+                "legacy_code": p.get_first_legacy_code(),
+                "available_warehouses": available_whs,
+            }
         )
 
+    # تجهيز محصول الطباعة (8 بطاقات في كل صفحة A4 - مقاس 10.1 سم)
+    chunked_list = [product_list[i : i + 8] for i in range(0, len(product_list), 8)]
+
     context = {
-        "product_list": product_list,
+        "product_list": chunked_list,
         "bulk_mode": True,
         "active_menu": "variants",
+        "selected_warehouses": [int(idx) for idx in warehouse_ids],
+        "all_warehouses": Warehouse.objects.filter(is_active=True),
     }
     return render(request, "inventory/variants/product_label_card.html", context)
