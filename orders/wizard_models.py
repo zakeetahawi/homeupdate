@@ -190,6 +190,9 @@ class DraftOrder(models.Model):
     contract_number_3 = models.CharField(
         max_length=100, blank=True, null=True, verbose_name="رقم عقد إضافي 2"
     )
+    delivery_location = models.CharField(
+        max_length=255, blank=True, null=True, verbose_name="موقع التسليم"
+    )
     # صورة الفاتورة (إجبارية)
     invoice_image = models.ImageField(
         upload_to="invoices/images/drafts/%Y/%m/",

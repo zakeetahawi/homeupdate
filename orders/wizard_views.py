@@ -577,6 +577,7 @@ def wizard_step_1_basic_info(request, draft):
             "id": draft.customer.id,
             "name": draft.customer.name,
             "phone": draft.customer.phone or "",
+            "customer_type": draft.customer.customer_type,
         }
 
     context = {
@@ -1488,6 +1489,7 @@ def wizard_finalize(request):
                 order.contract_number = draft.contract_number
                 order.contract_number_2 = draft.contract_number_2
                 order.contract_number_3 = draft.contract_number_3
+                order.delivery_location = draft.delivery_location
 
                 order.total_amount = draft.subtotal
                 order.final_price = draft.final_total
@@ -1888,6 +1890,7 @@ def wizard_finalize(request):
                 contract_number=draft.contract_number,
                 contract_number_2=draft.contract_number_2,
                 contract_number_3=draft.contract_number_3,
+                delivery_location=draft.delivery_location,
                 total_amount=draft.subtotal,
                 final_price=draft.final_total,
                 paid_amount=draft.paid_amount,

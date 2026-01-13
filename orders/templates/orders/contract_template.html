@@ -872,6 +872,20 @@
                     </div>
                     <div class="card-row">
                         <div style="width: 100%;">
+                            <span class="card-label">نوع العميل</span>
+                            <span class="card-value">{{ order.customer.get_customer_type_display }}</span>
+                        </div>
+                    </div>
+                    {% if order.delivery_location %}
+                        <div class="card-row">
+                            <div style="width: 100%;">
+                                <span class="card-label">مكان التسليم</span>
+                                <span class="card-value">{{ order.delivery_location }}</span>
+                            </div>
+                        </div>
+                    {% endif %}
+                    <div class="card-row">
+                        <div style="width: 100%;">
                             <span class="card-label">العنوان</span>
                             <span class="card-value">{{ order.customer.address|default:"غير محدد" }}</span>
                         </div>

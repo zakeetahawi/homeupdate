@@ -383,6 +383,16 @@
                             <span class="detail-label">الفرع:</span>
                             <span class="detail-value">{{ order.branch.name }}</span>
                         </div>
+                        <div class="detail-row">
+                            <span class="detail-label">نوع العميل:</span>
+                            <span class="detail-value">{{ order.customer.get_customer_type_display }}</span>
+                        </div>
+                        {% if order.delivery_location %}
+                            <div class="detail-row">
+                                <span class="detail-label">مكان التسليم:</span>
+                                <span class="detail-value">{{ order.delivery_location }}</span>
+                            </div>
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>

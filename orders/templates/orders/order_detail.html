@@ -798,6 +798,14 @@
                     <div class="card-body">
                         <table class="table table-bordered table-sm">
                             <tr>
+                                <th style="width: 40%">نوع العميل</th>
+                                <td>
+                                    <span class="badge {% if order.customer.customer_type == 'wholesale' %}bg-primary{% else %}bg-info{% endif %}">
+                                        {{ order.customer.get_customer_type_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
                                 <th style="width: 40%">الاسم</th>
                                 <td>
                                     <a href="{% url 'customers:customer_detail' order.customer.pk %}"
@@ -806,6 +814,14 @@
                                     </a>
                                 </td>
                             </tr>
+                            {% if order.delivery_location %}
+                                <tr>
+                                    <th>مكان التسليم</th>
+                                    <td class="text-success fw-bold">
+                                        <i class="fas fa-truck me-1"></i>{{ order.delivery_location }}
+                                    </td>
+                                </tr>
+                            {% endif %}
                             <tr>
                                 <th>رقم الهاتف</th>
                                 <td>{{ order.customer.phone }}</td>

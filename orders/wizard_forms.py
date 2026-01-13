@@ -24,27 +24,37 @@ class Step1BasicInfoForm(forms.ModelForm):
 
     class Meta:
         model = DraftOrder
-        fields = ["customer", "branch", "salesperson", "status", "notes"]
+        fields = [
+            "customer",
+            "branch",
+            "salesperson",
+            "status",
+            "delivery_location",
+            "notes",
+        ]
         widgets = {
             "customer": forms.Select(
                 attrs={
                     "class": "form-select select2-customer",
-                    # لا نضع required هنا - التحقق يتم بـ JavaScript
                 }
             ),
             "branch": forms.Select(
                 attrs={
                     "class": "form-select",
-                    # لا نضع required هنا - التحقق يتم بـ JavaScript
                 }
             ),
             "salesperson": forms.Select(
                 attrs={
                     "class": "form-select",
-                    # لا نضع required هنا - التحقق يتم بـ JavaScript
                 }
             ),
             "status": forms.Select(attrs={"class": "form-select"}),
+            "delivery_location": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "موقع التسليم (مثال: مستودع، فرع، عنوان خاص)",
+                }
+            ),
             "notes": forms.Textarea(
                 attrs={
                     "class": "form-control",

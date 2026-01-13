@@ -448,6 +448,27 @@
                                         <small><strong>التاريخ:</strong> {{ order.created_at|date:"d/m/Y" }}</small>
                                     </div>
                                 </div>
+                                <div class="row mt-1">
+                                    <div class="col-md-4">
+                                        <small><strong>اسم العميل:</strong> {{ order.order.customer.name }}</small>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small><strong>الهاتف:</strong> {{ order.order.customer.phone|default:"-" }}</small>
+                                    </div>
+                                    <div class="col-md-4 text-start">
+                                        <small><strong>مكان التسليم:</strong>
+                                            {% if order.order.customer.customer_type == 'wholesale' and order.order.delivery_location %}
+                                                <span class="badge bg-dark text-white shadow-sm"
+                                                      style="font-size: 0.85rem;
+                                                             padding: 0.4rem 0.6rem">
+                                                    <i class="fas fa-truck-loading me-1"></i> {{ order.order.delivery_location }}
+                                                </span>
+                                            {% else %}
+                                                {{ order.order.delivery_location|default:order.order.customer.address|default:"-" }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">

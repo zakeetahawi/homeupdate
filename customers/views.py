@@ -1106,6 +1106,7 @@ def customer_api(request):
                 "email": customer.email or "",
                 "address": customer.address or "",
                 "branch": customer.branch.name if customer.branch else "",
+                "customer_type": customer.customer_type,
             }
         )
 

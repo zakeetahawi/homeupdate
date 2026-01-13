@@ -163,6 +163,9 @@ class Order(models.Model):
     delivery_address = models.TextField(
         blank=True, null=True, verbose_name="عنوان التسليم"
     )
+    delivery_location = models.CharField(
+        max_length=255, blank=True, null=True, verbose_name="موقع التسليم"
+    )
     location_type = models.CharField(
         max_length=20,
         choices=[

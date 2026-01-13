@@ -73,6 +73,21 @@
                         حدد ما إذا كان العميل VIP أم عادي
                     </div>
                 </div>
+                <!-- Delivery Location (Conditional) -->
+                <div id="delivery_location_wrapper" class="mb-4" style="display: none;">
+                    <label for="{{ form.delivery_location.id_for_label }}"
+                           class="form-label fw-bold text-success">
+                        <i class="fas fa-truck me-2"></i>مكان التسليم
+                    </label>
+                    {{ form.delivery_location }}
+                    {% if form.delivery_location.errors %}
+                        <div class="text-danger mt-1">{{ form.delivery_location.errors }}</div>
+                    {% endif %}
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        أدخل تفاصيل العنوان أو مكان التسليم لطلبات الجملة
+                    </div>
+                </div>
                 <!-- Notes -->
                 <div class="mb-4">
                     <label for="{{ form.notes.id_for_label }}" class="form-label fw-bold">
@@ -428,26 +443,66 @@ $(document).ready(function() {
             customerField.trigger('change');
             
             console.log('✅ تم تعيين العميل في الحقل المخفي:', customerField.val());
+
+            // تحديث ظهور حقل موقع التسليم
+            const customerType = data.customer_type || (data.customer && data.customer.customer_type) || null;
+            updateDeliveryLocationVisibility(customerType);
         }
+    });
+
+    // دالة لتحديث ظهور حقل موقع التسليم
+    const isWholesaleUser = {{ request.user.is_wholesale|yesno:"true,false" }};
+    function updateDeliveryLocationVisibility(customerType) {
+        console.log('🔍 [DeliveryLocation] تحديث الحالة - نوع العميل:', customerType, '| مستخدم جملة:', isWholesaleUser);
+        const deliveryWrapper = $('#delivery_location_wrapper');
+        
+        // التحقق من أن القيمة هي 'wholesale' أو أن المستخدم نفسه مستخدم جملة
+        const shouldShow = isWholesaleUser || (customerType && String(customerType).toLowerCase() === 'wholesale');
+        
+        if (shouldShow) {
+            console.log('✅ [DeliveryLocation] إظهار الحقل');
+            deliveryWrapper.show(); // استخدم show() مباشرة لضمان الظهور الفوري
+            deliveryWrapper.slideDown();
+        } else {
+            console.log('❌ [DeliveryLocation] إخفاء الحقل');
+            deliveryWrapper.slideUp();
+        }
+    }
+
+    // تحديث الحالة الأولية عند تحميل الصفحة
+    $(document).ready(function() {
+        {% if selected_customer %}
+            console.log('ℹ️ [DeliveryLocation] عميل محدد مسبقاً:', '{{ selected_customer.customer_type }}');
+            updateDeliveryLocationVisibility('{{ selected_customer.customer_type }}');
+        {% elif request.user.is_wholesale %}
+            console.log('ℹ️ [DeliveryLocation] مستخدم جملة - إظهار الحقل تلقائياً');
+            updateDeliveryLocationVisibility('wholesale');
+        {% endif %}
     });
 
     // عند إزالة اختيار العميل
     searchSelect.on('select2:clear', function (e) {
-        console.log('⚠️ تم إزالة اختيار العميل');
+        console.log('⚠️ [DeliveryLocation] تم إزالة اختيار العميل');
         
         const customerField = $('#{{ form.customer.id_for_label }}');
         customerField.val('');
         customerField.removeClass('is-valid').addClass('is-invalid');
         customerField.trigger('change');
+        
+        // إخفاء حقل موقع التسليم عند إزالة العميل (إلا إذا كان المستخدم نفسه جملة)
+        if (!isWholesaleUser) {
+            updateDeliveryLocationVisibility(null);
+        }
     });
-    
+
     // استعادة القيمة المحددة مسبقاً (في حالة التعديل أو عند القدوم من صفحة العميل)
     {% if selected_customer %}
     // العميل محدد من السيرفر
     const preSelectedCustomer = {
         id: '{{ selected_customer.id }}',
         name: '{{ selected_customer.name|escapejs }}',
-        phone: '{{ selected_customer.phone|escapejs }}'
+        phone: '{{ selected_customer.phone|escapejs }}',
+        customer_type: '{{ selected_customer.customer_type }}'
     };
     const displayText = preSelectedCustomer.name + ' - ' + preSelectedCustomer.phone;
     const preOption = new Option(displayText, preSelectedCustomer.id, true, true);
@@ -495,6 +550,10 @@ $(document).ready(function() {
         const newOption = new Option(selectedText, selectedValue, true, true);
         searchSelect.append(newOption).trigger('change');
         console.log('✅ تم استعادة القيمة المحددة مسبقاً:', selectedValue);
+        
+        // تحديث الظهور عند الاستعادة
+        const customerType = '{{ selected_customer.customer_type }}';
+        updateDeliveryLocationVisibility(customerType);
     }
     {% endif %}
     

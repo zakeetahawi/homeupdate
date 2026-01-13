@@ -157,6 +157,8 @@ class User(AbstractUser):
     is_warehouse_staff = models.BooleanField(
         default=False, verbose_name=_("موظف مستودع")
     )
+    is_wholesale = models.BooleanField(default=False, verbose_name=_("عمليات جملة"))
+    is_retail = models.BooleanField(default=True, verbose_name=_("عمليات قطاعي"))
     assigned_warehouse = models.ForeignKey(
         "inventory.Warehouse",
         on_delete=models.SET_NULL,
@@ -221,8 +223,9 @@ class User(AbstractUser):
         ]
 
         active_roles = sum(roles)
+        # السماح بتعدد الأدوار إذا كان أحدهم Wholesale أو Retail (هذه حقول نوع تعامل وليست أدوار وظيفية)
         if active_roles > 1:
-            raise ValidationError(_("لا يمكن اختيار أكثر من دور واحد للمستخدم"))
+            raise ValidationError(_("لا يمكن اختيار أكثر من دور وظيفي واحد للمستخدم"))
 
         # التحقق من أن موظف المستودع لديه مستودع مخصص
         if self.is_warehouse_staff and not self.assigned_warehouse:

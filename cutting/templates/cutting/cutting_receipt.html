@@ -163,7 +163,15 @@
                                                 {{ cutting_order.cutting_code }}
                                             </a>
                                         </td>
-                                        <td>{{ cutting_order.order.customer.name }}</td>
+                                        <td>
+                                            {{ cutting_order.order.customer.name }}
+                                            <div>
+                                                <span class="badge {% if cutting_order.order.customer.customer_type == 'wholesale' %}bg-primary{% else %}bg-info{% endif %}"
+                                                      style="font-size: 0.65rem">
+                                                    {{ cutting_order.order.customer.get_customer_type_display }}
+                                                </span>
+                                            </div>
+                                        </td>
                                         <td>
                                             <div class="d-flex flex-wrap gap-1">
                                                 {% with all_invoices=cutting_order.order.get_all_invoice_numbers %}

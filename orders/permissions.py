@@ -79,15 +79,19 @@ def get_user_orders_queryset(user):
             # إذا لم يكن له فروع مُدارة، لا يرى أي طلبات
             return Order.objects.none()
 
-    # مدير الفرع يرى طلبات فرعه فقط
+    # مدير الفرع يرى جميع طلبات الجملة في فرعه، وطلباته الشخصية
     if hasattr(user, "is_branch_manager") and user.is_branch_manager:
         if hasattr(user, "branch") and user.branch:
-            return Order.objects.filter(branch=user.branch)
+            from django.db.models import Q
+
+            return Order.objects.filter(
+                Q(branch=user.branch, customer__customer_type="wholesale")
+                | Q(branch=user.branch, created_by=user)
+            )
         else:
-            # إذا لم يكن له فرع، لا يرى أي طلبات
             return Order.objects.none()
 
-    # البائع يرى طلباته فقط
+    # البائع يرى طلباته الشخصية فقط
     if hasattr(user, "is_salesperson") and user.is_salesperson:
         return Order.objects.filter(created_by=user)
 

@@ -33,13 +33,12 @@ def get_user_customers_queryset(user, search_term=None):
             # إذا لم يكن له فروع مُدارة، لا يرى أي عملاء
             return Customer.objects.none()
 
-    # إذا كان هناك بحث بكود العميل أو رقم الهاتف، السماح بالوصول لجميع العملاء
+    # إذا كان هناك بحث بكود العميل أو رقم الهاتف، السماح بالوصول للعملاء المطابقين
     if search_term and search_term.strip():
         search_term = search_term.strip()
 
         # التحقق من أن البحث هو كود عميل أو رقم هاتف
         is_customer_code = "-" in search_term and len(search_term.split("-")) == 2
-        # تحسين التحقق من رقم الهاتف ليشمل أرقام مصرية وعربية
         is_phone_number = (
             search_term.isdigit()
             or "+" in search_term
@@ -47,30 +46,31 @@ def get_user_customers_queryset(user, search_term=None):
         )
 
         if is_customer_code or is_phone_number:
-            # البحث في جميع العملاء إذا كان البحث بكود أو رقم هاتف
             if is_customer_code:
+                # كود العميل يسمح بالوصول (حسب السياسة القديمة)
                 cross_branch_customers = Customer.objects.filter(code=search_term)
             else:
-                # البحث المحسن برقم الهاتف
+                # البحث برقم الهاتف - يسمح بالوصول للعملاء من نوع "جملة" فقط إذا لم يكن المستخدم هو المنشئ
                 phone_clean = (
                     search_term.replace("+", "").replace(" ", "").replace("-", "")
                 )
-                cross_branch_customers = Customer.objects.filter(
-                    models.Q(phone__icontains=search_term)
-                    | models.Q(phone2__icontains=search_term)
-                    | models.Q(phone__icontains=phone_clean)
-                    | models.Q(phone2__icontains=phone_clean)
-                    | models.Q(phone=search_term)
+
+                # البحث عن العميل المطابق
+                matching_customers = Customer.objects.filter(
+                    models.Q(phone=search_term)
                     | models.Q(phone2=search_term)
+                    | models.Q(phone=phone_clean)
+                    | models.Q(phone2=phone_clean)
+                )
+
+                # السماح بالوصول إذا كان العميل جملة أو إذا كان المستخدم هو المنشئ
+                # (البحث بـ icontains قد يكون واسعاً جداً، نستخدم المطابقة التامة كما طُلب)
+                cross_branch_customers = matching_customers.filter(
+                    models.Q(customer_type="wholesale") | models.Q(created_by=user)
                 )
 
             if cross_branch_customers.exists():
-                # إذا وُجد عملاء، إرجاع queryset يحتوي على العملاء المطلوبين + عملاء الفرع العادية
-                base_queryset = get_user_base_customers_queryset(user)
-                return Customer.objects.filter(
-                    models.Q(pk__in=cross_branch_customers.values_list("pk", flat=True))
-                    | models.Q(pk__in=base_queryset.values_list("pk", flat=True))
-                ).distinct()
+                return cross_branch_customers
 
     # الصلاحيات العادية
     return get_user_base_customers_queryset(user)
@@ -80,24 +80,22 @@ def get_user_base_customers_queryset(user):
     """الحصول على queryset العملاء الأساسي حسب صلاحيات المستخدم (بدون البحث المتقدم)"""
     from .models import Customer
 
-    # مدير الفرع يرى عملاء فرعه فقط
+    # مدير الفرع يرى عملاء فرعه
     if hasattr(user, "is_branch_manager") and user.is_branch_manager:
         if hasattr(user, "branch") and user.branch:
             return Customer.objects.filter(branch=user.branch)
         else:
-            # إذا لم يكن له فرع، لا يرى أي عملاء
             return Customer.objects.none()
 
-    # البائع يرى عملاء فرعه أو العملاء الذين أنشأهم
+    # البائع يرى العملاء الذين أنشأهم فقط (التزاماً بالمتطلبات الجديدة)
     if hasattr(user, "is_salesperson") and user.is_salesperson:
-        if hasattr(user, "branch") and user.branch:
-            # يرى عملاء فرعه والعملاء الذين أنشأهم
-            return Customer.objects.filter(
-                models.Q(branch=user.branch) | models.Q(created_by=user)
-            )
-        else:
-            # إذا لم يكن له ف��ع، يرى العملاء الذين أنشأهم فقط
-            return Customer.objects.filter(created_by=user)
+        return Customer.objects.filter(created_by=user)
+
+    # بشكل افتراضي للمستخدمين الآخرين
+    if hasattr(user, "branch") and user.branch:
+        return Customer.objects.filter(branch=user.branch)
+
+    return Customer.objects.filter(created_by=user)
 
     # فني المعاينة يرى عملاء فرعه فقط (للقراءة)
     if hasattr(user, "is_inspection_technician") and user.is_inspection_technician:

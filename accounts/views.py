@@ -258,11 +258,18 @@ def login_view(request):
                         denial_reason_key = ""
                         device_check_performed = False
 
-                        # السوبر يوزر والمدير العام يمكنهما الدخول من أي جهاز
-                        if user.is_superuser or user.is_sales_manager:
+                        # السوبر يوزر والمدير العام ومستخدمي "الجملة فقط" يمكنهم الدخول من أي جهاز
+                        is_pure_wholesale = getattr(
+                            user, "is_wholesale", False
+                        ) and not getattr(user, "is_retail", False)
+                        if (
+                            user.is_superuser
+                            or getattr(user, "is_sales_manager", False)
+                            or is_pure_wholesale
+                        ):
                             device_authorized = True
                             logger.info(
-                                f"✅ {'Superuser' if user.is_superuser else 'General Manager'} {username} authorized from any device (bypass device lock)"
+                                f"✅ {'Superuser' if user.is_superuser else 'General/Wholesale Manager'} {username} authorized from any device (bypass device lock)"
                             )
                         else:
                             # فحص الجهاز دائماً لجميع المستخدمين (للمراقبة والتسجيل)
