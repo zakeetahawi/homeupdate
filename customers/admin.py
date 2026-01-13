@@ -358,6 +358,34 @@ class CustomerResponsibleInline(admin.TabularInline):
         return CustomFormSet
 
 
+class CustomerTypeListFilter(admin.SimpleListFilter):
+    """فلتر مخصص لأنواع العملاء مع خيارات ديناميكية من جدول CustomerType"""
+
+    title = _("نوع العميل")
+    parameter_name = "customer_type"
+
+    def lookups(self, request, model_admin):
+        """إرجاع قائمة الخيارات من CustomerType"""
+        try:
+            return [
+                (ct.code, ct.name)
+                for ct in CustomerType.objects.filter(is_active=True).order_by("name")
+            ]
+        except Exception:
+            # Fallback في حالة عدم توفر CustomerType
+            return [
+                ("retail", "قطاعي"),
+                ("wholesale", "جملة"),
+                ("corporate", "شركات"),
+            ]
+
+    def queryset(self, request, queryset):
+        """تطبيق الفلتر على الاستعلام"""
+        if self.value():
+            return queryset.filter(customer_type=self.value())
+        return queryset
+
+
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
     form = CustomerAdminForm
@@ -394,7 +422,7 @@ class CustomerAdmin(admin.ModelAdmin):
 
     list_filter = [
         "status",
-        "customer_type",
+        CustomerTypeListFilter,  # فلتر مخصص لأنواع العملاء
         "category",
         "branch",
         "birth_date",

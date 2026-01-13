@@ -120,8 +120,16 @@ def customer_list(request):
     # تحسين الأداء عن طريق حساب العدد الإجمالي مرة واحدة فقط
     total_customers = customers.count()
 
-    # Pagination
-    paginator = Paginator(customers, 10)  # Show 10 customers per page
+    # Pagination مع دعم page_size ديناميكي من الفلتر
+    page_size = request.GET.get("page_size", "25")  # القيمة الافتراضية 25 كما في الفلتر
+    try:
+        page_size = int(page_size)
+        # تحديد الحد الأقصى بـ 100 لتجنب مشاكل الأداء
+        page_size = min(max(page_size, 10), 100)
+    except (ValueError, TypeError):
+        page_size = 25
+
+    paginator = Paginator(customers, page_size)
     page_number = request.GET.get("page")
 
     # إصلاح مشكلة pagination عندما يكون page parameter array
@@ -214,6 +222,7 @@ def customer_list(request):
         "active_filters_count": len(active_filters),
         "categories": categories,
         "branches": branches,
+        "page_size": page_size,  # عدد الصفوف في الصفحة الحالية
         # إضافة سياق الفلترة الشهرية
         **monthly_filter_context,
     }

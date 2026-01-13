@@ -28,10 +28,12 @@
         <label class="filter-label">نوع العميل</label>
         <select name="customer_type" class="filter-select">
             <option value="">كل الأنواع</option>
-            <option value="individual"
-                    {% if form.customer_type.value == 'individual' %}selected{% endif %}>فرد</option>
-            <option value="company"
-                    {% if form.customer_type.value == 'company' %}selected{% endif %}>شركة</option>
+            {% for value, label in form.customer_type.field.choices %}
+                {% if value %}
+                    <option value="{{ value }}"
+                            {% if form.customer_type.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endif %}
+            {% endfor %}
         </select>
     </div>
     <div class="filter-group">
@@ -85,11 +87,9 @@
     {% if form.customer_type.value %}
         <span class="filter-tag">
             نوع:
-            {% if form.customer_type.value == 'individual' %}
-                فرد
-            {% else %}
-                شركة
-            {% endif %}
+            {% for value, label in form.customer_type.field.choices %}
+                {% if value == form.customer_type.value %}{{ label }}{% endif %}
+            {% endfor %}
             <button type="button"
                     onclick="removeFilter('customer_type')"
                     class="remove-filter">×</button>
