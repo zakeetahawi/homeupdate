@@ -263,9 +263,12 @@ def login_view(request):
                         # 2. بائعو الجملة مستثنون بناءً على طلب العميل ليتمكنوا من العمل بحرية
                         # 3. المديرين ومن هم أعلى (مثل مدير المنطقة أو المبيعات) يجب أن يدخلوا من أجهزة مسجلة فقط
 
-                        is_wholesale_salesperson = getattr(
-                            user, "is_salesperson", False
-                        ) and getattr(user, "is_wholesale", False)
+                        # بائع جملة "نقي" فقط هو من يتجاوز القفل
+                        is_wholesale_salesperson = (
+                            getattr(user, "is_salesperson", False)
+                            and getattr(user, "is_wholesale", False)
+                            and not getattr(user, "is_retail", False)
+                        )
 
                         if user.is_superuser:
                             device_authorized = True
