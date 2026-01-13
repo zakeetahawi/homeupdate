@@ -168,7 +168,16 @@
                                 <span class="badge bg-info">{{ product.category }}</span>
                             </div>
                             <div class="product-price mt-3">
-                                <h4>{{ product.price }} {{ currency_symbol }}</h4>
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <small class="text-muted d-block">السعر القطاعي</small>
+                                        <h4 class="text-success mb-0">{{ product.price|floatformat:2 }} {{ currency_symbol }}</h4>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted d-block">سعر الجملة</small>
+                                        <h4 class="text-info mb-0">{{ product.wholesale_price|floatformat:2 }} {{ currency_symbol }}</h4>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <hr>

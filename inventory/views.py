@@ -507,7 +507,7 @@ def product_detail(request, pk):
         "currency_symbol": currency_symbol,
         "warehouses_stock": warehouses_stock,
     }
-    return render(request, "inventory/product_detail_new_icons.html", context)
+    return render(request, "inventory/product_detail.html", context)
 
 
 @login_required

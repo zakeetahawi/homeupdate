@@ -144,18 +144,29 @@
                     </div>
                     <div class="card-body">
                         <div class="row text-center">
-                            <div class="col-6">
+                            <div class="col-md-4">
                                 <h6 class="text-muted">السعر الأساسي</h6>
                                 <h3 class="text-success">{{ variant.base_product.base_price|floatformat:2 }}</h3>
                                 <small class="text-muted">{{ currency_symbol }}</small>
                             </div>
-                            <div class="col-6">
-                                <h6 class="text-muted">السعر الفعلي</h6>
+                            <div class="col-md-4">
+                                <h6 class="text-muted">السعر القطاعي الفعلي</h6>
                                 <h3 class="{% if variant.has_custom_price %}text-warning{% else %}text-success{% endif %}">
                                     {{ variant.effective_price|floatformat:2 }}
                                 </h3>
                                 <small class="text-muted">{{ currency_symbol }}</small>
                                 {% if variant.has_custom_price %}
+                                    <br>
+                                    <span class="badge bg-warning text-dark mt-1">سعر مخصص</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="text-muted">سعر الجملة الفعلي</h6>
+                                <h3 class="{% if variant.wholesale_price_override %}text-warning{% else %}text-info{% endif %}">
+                                    {{ variant.effective_wholesale_price|floatformat:2 }}
+                                </h3>
+                                <small class="text-muted">{{ currency_symbol }}</small>
+                                {% if variant.wholesale_price_override %}
                                     <br>
                                     <span class="badge bg-warning text-dark mt-1">سعر مخصص</span>
                                 {% endif %}

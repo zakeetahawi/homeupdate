@@ -98,6 +98,13 @@
                                 </td>
                             </tr>
                             <tr>
+                                <th>سعر الجملة:</th>
+                                <td>
+                                    <strong class="text-info fs-5">{{ base_product.wholesale_price|floatformat:2 }}</strong>
+                                    <span class="text-muted">{{ currency_symbol }}</span>
+                                </td>
+                            </tr>
+                            <tr>
                                 <th>الوحدة:</th>
                                 <td>{{ base_product.unit }}</td>
                             </tr>
@@ -178,7 +185,8 @@
                                 <tr>
                                     <th>الكود الكامل</th>
                                     <th>اللون</th>
-                                    <th class="text-center">السعر</th>
+                                    <th class="text-center">السعر القطاعي</th>
+                                    <th class="text-center">سعر الجملة</th>
                                     <th class="text-center">المخزون</th>
                                     <th class="text-center">الحالة</th>
                                     <th>الإجراءات</th>
@@ -219,6 +227,15 @@
                                                 {{ variant.effective_price|floatformat:2 }}
                                             </strong>
                                             {% if variant.has_custom_price %}
+                                                <br>
+                                                <small class="badge bg-warning text-dark">سعر مخصص</small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <strong class="{% if variant.wholesale_price_override %}text-warning{% else %}text-info{% endif %}">
+                                                {{ variant.effective_wholesale_price|floatformat:2 }}
+                                            </strong>
+                                            {% if variant.wholesale_price_override %}
                                                 <br>
                                                 <small class="badge bg-warning text-dark">سعر مخصص</small>
                                             {% endif %}
