@@ -117,6 +117,21 @@ class Product(models.Model):
     )
     description = models.TextField(_("الوصف"), blank=True)
     minimum_stock = models.PositiveIntegerField(_("الحد الأدنى للمخزون"), default=0)
+    # نوع القماش والعرض
+    material = models.CharField(
+        _("Material"),
+        max_length=100,
+        blank=True,
+        default="",
+        help_text=_("نوع الخامة مثل: Linen, Cotton, Polyester"),
+    )
+    width = models.CharField(
+        _("Width"),
+        max_length=50,
+        blank=True,
+        default="",
+        help_text=_("عرض القماش مثل: 280 cm, 140 cm"),
+    )
     # QR Code Cache - تخزين رمز QR لتحسين الأداء
     qr_code_base64 = models.TextField(_("رمز QR (مخزن)"), blank=True, null=True)
     created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)

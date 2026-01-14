@@ -32,6 +32,8 @@ class BaseProductForm(forms.ModelForm):
             "wholesale_price",
             "unit",
             "minimum_stock",
+            "material",
+            "width",
             "is_active",
         ]
         widgets = {
@@ -55,6 +57,15 @@ class BaseProductForm(forms.ModelForm):
             "unit": forms.Select(attrs={"class": "form-select"}),
             "minimum_stock": forms.NumberInput(
                 attrs={"class": "form-control", "min": "0"}
+            ),
+            "material": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "e.g. Linen, Cotton, Polyester",
+                }
+            ),
+            "width": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "e.g. 280 cm, 140 cm"}
             ),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }

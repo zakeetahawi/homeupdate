@@ -383,7 +383,16 @@ class ProductForm(forms.ModelForm):
 
     class Meta:
         model = Product
-        fields = ["name", "code", "category", "description", "unit", "minimum_stock"]
+        fields = [
+            "name",
+            "code",
+            "category",
+            "description",
+            "unit",
+            "minimum_stock",
+            "material",
+            "width",
+        ]
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "code": forms.TextInput(
@@ -393,6 +402,15 @@ class ProductForm(forms.ModelForm):
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "unit": forms.Select(attrs={"class": "form-select"}),
             "minimum_stock": forms.NumberInput(attrs={"class": "form-control"}),
+            "material": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "e.g. Linen, Cotton, Polyester",
+                }
+            ),
+            "width": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "e.g. 280 cm, 140 cm"}
+            ),
         }
 
     def __init__(self, *args, **kwargs):

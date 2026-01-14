@@ -139,6 +139,18 @@
                                     <div class="form-text">سيتم إنشاء تنبيه عند وصول المخزون لهذا الحد</div>
                                 </div>
                                 <div class="col-md-6 mb-3">
+                                    <label for="{{ form.material.id_for_label }}" class="form-label">{{ form.material.label }}</label>
+                                    {{ form.material }}
+                                    {% if form.material.errors %}<div class="invalid-feedback d-block">{{ form.material.errors.0 }}</div>{% endif %}
+                                    <div class="form-text">مثل: Linen, Cotton, Polyester</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.width.id_for_label }}" class="form-label">{{ form.width.label }}</label>
+                                    {{ form.width }}
+                                    {% if form.width.errors %}<div class="invalid-feedback d-block">{{ form.width.errors.0 }}</div>{% endif %}
+                                    <div class="form-text">مثل: 280 cm, 140 cm</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
                                     <div class="form-check mt-4">
                                         {{ form.is_active }}
                                         <label class="form-check-label" for="{{ form.is_active.id_for_label }}">{{ form.is_active.label }}</label>

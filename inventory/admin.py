@@ -62,7 +62,16 @@ class ProductAdmin(admin.ModelAdmin):
         (_("معلومات المنتج"), {"fields": ("name", "code", "category", "description")}),
         (
             _("التفاصيل"),
-            {"fields": ("unit", "price", "wholesale_price", "minimum_stock")},
+            {
+                "fields": (
+                    "unit",
+                    "price",
+                    "wholesale_price",
+                    "minimum_stock",
+                    "material",
+                    "width",
+                )
+            },
         ),
         (
             _("معلومات المخزون"),
@@ -666,7 +675,7 @@ class BaseProductAdmin(admin.ModelAdmin):
                 "description": _("رمز QR الذي يوجه لصفحة المنتج بكافة متغيراته"),
             },
         ),
-        (_("المخزون"), {"fields": ("minimum_stock", "is_active")}),
+        (_("المخزون"), {"fields": ("minimum_stock", "material", "width", "is_active")}),
         (
             _("معلومات النظام"),
             {

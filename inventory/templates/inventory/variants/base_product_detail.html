@@ -118,6 +118,22 @@
                                 <th>الحد الأدنى:</th>
                                 <td>{{ base_product.minimum_stock }}</td>
                             </tr>
+                            {% if base_product.material %}
+                                <tr>
+                                    <th>Material:</th>
+                                    <td>
+                                        <strong>{{ base_product.material }}</strong>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                            {% if base_product.width %}
+                                <tr>
+                                    <th>Width:</th>
+                                    <td>
+                                        <strong>{{ base_product.width }}</strong>
+                                    </td>
+                                </tr>
+                            {% endif %}
                             <tr>
                                 <th>تاريخ الإنشاء:</th>
                                 <td>{{ base_product.created_at|date:"Y-m-d H:i" }}</td>
