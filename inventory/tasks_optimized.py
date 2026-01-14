@@ -76,10 +76,11 @@ def bulk_upload_products_fast(
         logger.info("📊 قراءة Excel...")
         df = pd.read_excel(BytesIO(file_content), engine="openpyxl")
         total = len(df)
-
-        # تحديث total_rows مباشرة بعد القراءة
+        # تحديث total_rows مباشرة بعد القراءة لضمان ظهور الـ 0% كبداية حقيقية
         upload_log.total_rows = total
-        upload_log.save(update_fields=["total_rows"])
+        upload_log.processed_count = 0
+        upload_log.status = "processing"
+        upload_log.save(update_fields=["total_rows", "processed_count", "status"])
 
         logger.info(f"📋 {total} صف للمعالجة")
 
@@ -175,12 +176,12 @@ def bulk_upload_products_fast(
             for mini_start in range(0, len(batch), mini_batch_size):
                 mini_end = min(mini_start + mini_batch_size, len(batch))
                 mini_batch = batch.iloc[mini_start:mini_end]
-                
+
                 try:
                     with transaction.atomic():
                         for i, (idx, row) in enumerate(mini_batch.iterrows()):
                             processed_overall += 1
-                            
+
                             # قراءة البيانات برقم العمود (من القالب المُولّد)
                             # 0=اسم، 1=كود، 2=فئة، 3=سعر، 4=جملة، 5=كمية، 6=مستودع، 7=وصف
 
@@ -190,7 +191,11 @@ def bulk_upload_products_fast(
                                     val = row.iloc[index]
                                     if pd.notna(val):
                                         val = str(val).strip()
-                                        if val and val.lower() not in ["nan", "none", ""]:
+                                        if val and val.lower() not in [
+                                            "nan",
+                                            "none",
+                                            "",
+                                        ]:
                                             return val
                                 return default
 
@@ -199,25 +204,47 @@ def bulk_upload_products_fast(
                             if code and code.isdigit():
                                 code = code.lstrip("0") or "0"
 
-                            # اسم المنتج (عمود 0)
-                            name = safe_get(0, "")
+                            # اسم المنتج (عمود 0 أو الاسم)
+                            name = row.get(
+                                "اسم المنتج",
+                                row.get(
+                                    "الاسم", row.get("product_name", safe_get(0, ""))
+                                ),
+                            )
 
-                            # السعر (عمود 3)
+                            # السعر (عمود 3 أو السعر)
+                            price_val = row.get(
+                                "السعر", row.get("price", safe_get(3, None))
+                            )
                             try:
-                                price = float(safe_get(3, "0"))
+                                if (
+                                    price_val is not None
+                                    and str(price_val).strip() != ""
+                                ):
+                                    price = float(price_val)
+                                else:
+                                    price = 0
                             except:
                                 price = 0
 
-                            # سعر الجملة - تجربة عدة أعمدة (4 ثم 1 للملفات بعمودين)
-                            wholesale_price = None
-                            for ws_col in [4, 1]:  # القالب = 4، ملف بعمودين = 1
-                                try:
-                                    ws_val = safe_get(ws_col)
-                                    if ws_val:
-                                        wholesale_price = float(ws_val)
-                                        break
-                                except:
-                                    continue
+                            # سعر الجملة - تجربة عدة أعمدة (4 ثم 1 للملفات بعمودين أو بالاسم)
+                            wholesale_price = row.get(
+                                "سعر الجملة", row.get("wholesale_price")
+                            )
+                            if pd.isna(wholesale_price) or wholesale_price == "":
+                                for ws_col in [4, 1]:  # القالب = 4، ملف بعمودين = 1
+                                    try:
+                                        ws_val = safe_get(ws_col)
+                                        if ws_val:
+                                            wholesale_price = float(ws_val)
+                                            break
+                                    except:
+                                        continue
+                            try:
+                                if wholesale_price is not None:
+                                    wholesale_price = float(wholesale_price)
+                            except:
+                                wholesale_price = None
 
                             # الكمية (عمود 5)
                             try:
@@ -227,6 +254,20 @@ def bulk_upload_products_fast(
 
                             # الوصف (عمود 7)
                             description = safe_get(7, "")
+
+                            # Material (عمود 9 أو حسب الاسم)
+                            material = row.get(
+                                "Material", row.get("الخامة", safe_get(9, None))
+                            )
+                            if pd.isna(material):
+                                material = ""
+
+                            # Width (عمود 10 أو حسب الاسم)
+                            width = row.get(
+                                "Width", row.get("العرض", safe_get(10, None))
+                            )
+                            if pd.isna(width):
+                                width = ""
 
                             # DEBUG: طباعة أول 3 صفوف
                             if processed_overall <= 3:
@@ -272,13 +313,17 @@ def bulk_upload_products_fast(
                                 "price": price,
                                 "wholesale_price": wholesale_price,
                                 "quantity": quantity,
+                                "material": material,
+                                "width": width,
                             }
 
                             # تحديث الفئة والمستودع إذا وجدا
                             cat_name = str(row.get("الفئة", "")).strip()
                             if cat_name:
                                 if cat_name in categories_cache:
-                                    product_data["category"] = categories_cache[cat_name]
+                                    product_data["category"] = categories_cache[
+                                        cat_name
+                                    ]
                                 else:
                                     cat = Category.objects.create(name=cat_name)
                                     categories_cache[cat_name] = cat
@@ -333,7 +378,7 @@ def bulk_upload_products_fast(
                                     },
                                 )
                             )
-                            
+
                 except Exception as mini_batch_error:
                     # فشل المعاملة الصغيرة - تسجيل كل الصفوف كأخطاء
                     logger.error(f"❌ فشل mini-batch: {mini_batch_error}")
