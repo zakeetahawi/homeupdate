@@ -4581,33 +4581,33 @@ def export_manufacturing_orders(request):
 
     # --- رسم البطاقات (الصف 2-4) ---
 
-    # بطاقة الإجمالي (A2:C4)
-    ws.merge_cells("A2:C4")
+    # بطاقة الإجمالي (A2:B4)
+    ws.merge_cells("A2:B4")
     cell = ws["A2"]
     cell.value = f"إجمالي الأوامر\n{total_count}"
     cell.fill = blue_fill
     cell.font = card_value_font
     cell.alignment = card_alignment
 
-    # بطاقة المتأخرات (E2:G4)
-    ws.merge_cells("E2:G4")
-    cell = ws["E2"]
+    # بطاقة المتأخرات (C2:E4)
+    ws.merge_cells("C2:E4")
+    cell = ws["C2"]
     cell.value = f"المتأخرات\n{overdue_count}"
     cell.fill = red_fill
     cell.font = card_value_font
     cell.alignment = card_alignment
 
-    # بطاقة الفلتر النشط (I2:K4)
-    ws.merge_cells("I2:K4")
-    cell = ws["I2"]
+    # بطاقة الفلتر النشط (F2:H4)
+    ws.merge_cells("F2:H4")
+    cell = ws["F2"]
     cell.value = f"الفلتر الحالي\n{active_filter_name}"
     cell.fill = green_fill
     cell.font = card_value_font
     cell.alignment = card_alignment
 
-    # بطاقة إجمالي الأمتار (M2:O4)
-    ws.merge_cells("M2:O4")
-    cell = ws["M2"]
+    # بطاقة إجمالي الأمتار (I2:K4)
+    ws.merge_cells("I2:K4")
+    cell = ws["I2"]
     # تنسيق الرقم بفاصلة عشرية واحدة
     formatted_meters = "{:,.1f}".format(grand_total_meters)
     # إزالة .0 اذا كان رقماً صحيحاً
