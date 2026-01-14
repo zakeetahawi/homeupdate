@@ -4673,13 +4673,17 @@ def export_manufacturing_orders(request):
                 fabric_status = "غير مقطوع"
         else:
             # استخدام خصائص الموديل
-            if order.is_fabric_receipt_needed:
+            total = order.total_items_count
+            received = order.received_items_count
+            cut = order.cut_items_count
+
+            if total > 0 and received == 0 and cut == total:
                 fabric_status = "بحاجة استلام"
-            elif order.is_fabric_partial:
+            elif total > 0 and (received < total or cut < total):
                 fabric_status = "ناقص"
-            elif order.is_fabric_completed:
+            elif total > 0 and received == total and cut == total:
                 fabric_status = "كامل"
-            elif order.is_fabric_not_cut:
+            elif cut == 0:
                 fabric_status = "غير مقطوع"
 
         row_data = [
