@@ -202,49 +202,126 @@ class ManufacturingOrderListView(
                 order_type__in=["installation", "custom", "delivery"],
             )
 
-        # فلتر حالة الأقمشة للعناصر
+        # فلتر حالة الأقمشة - تحسين الأداء باستخدام SQL Annotations
         fabric_status_filter = self.request.GET.get("fabric_status")
         if fabric_status_filter:
-            from django.db.models import Exists, OuterRef
+            from django.db.models import Case, Count, F, IntegerField, Q, When
 
-            from manufacturing.models import ManufacturingOrderItem
+            from manufacturing.models import ManufacturingSettings
 
+            # الحصول على المستودعات المحددة للعرض
+            try:
+                settings = ManufacturingSettings.get_settings()
+                display_warehouses = list(settings.warehouses_for_display.all())
+            except Exception:
+                display_warehouses = []
+
+            # إعداد فلاتر العد
+            # إعداد فلاتر العد باستخدام items (OrderItem) من الطلب الأصلي
+            # لأن ManufacturingOrderItem قد لا تكون موجودة للعناصر غير المقطوعة
+
+            if display_warehouses:
+                # في حالة تحديد مستودعات:
+
+                # 1. Total: جميع عناصر الطلب المرتبطة بطلب تقطيع في هذه المستودعات
+                total_filter = Q(
+                    order__items__cutting_items__cutting_order__warehouse__in=display_warehouses
+                )
+
+                # تعريف حالة القطع الفعلي (مكتمل أو لديه بيانات استلام)
+                is_actually_cut = Q(order__items__cutting_items__status="completed") | (
+                    Q(order__items__cutting_items__receiver_name__isnull=False)
+                    & ~Q(order__items__cutting_items__receiver_name="")
+                    & Q(order__items__cutting_items__permit_number__isnull=False)
+                    & ~Q(order__items__cutting_items__permit_number="")
+                )
+
+                # 2. Cut: عناصر من الـ Total ولكن تم قطعها فعلياً في المستودع المحدد
+                cut_filter = total_filter & is_actually_cut
+
+                # 3. Received: عناصر من الـ Total ولكن تم استلامها (يوجد ManufacturingOrderItem مرتبط ومستلم)
+                # يجب تصفية ManufacturingOrderItem للتأكد من أنه مرتبط بنفس الطلب والمستودع؟
+                # البادج في الموديل يفحص: items.filter(order_item=order_item, fabric_received=True)
+                # وبما أننا داخل نفس الطلب، يكفي التحقق من manufacturing_items المرتبطة بـ OrderItem
+                received_filter = total_filter & Q(
+                    order__items__manufacturing_items__fabric_received=True
+                )
+
+            else:
+                # بدون تحديد مستودعات:
+
+                # 1. Total: جميع عناصر الطلب
+                total_filter = Q()
+
+                # تعريف حالة القطع الفعلي
+                is_actually_cut = Q(order__items__cutting_items__status="completed") | (
+                    Q(order__items__cutting_items__receiver_name__isnull=False)
+                    & ~Q(order__items__cutting_items__receiver_name="")
+                    & Q(order__items__cutting_items__permit_number__isnull=False)
+                    & ~Q(order__items__cutting_items__permit_number="")
+                )
+
+                # 2. Cut: عناصر لديها cutting_item وحالته مكتملة
+                cut_filter = (
+                    Q(order__items__cutting_items__isnull=False) & is_actually_cut
+                )
+
+                # 3. Received: عناصر لديها manufacturing_item مستلم
+                received_filter = Q(
+                    order__items__manufacturing_items__fabric_received=True
+                )
+
+            # تطبيق Annotations للحساب
+            queryset = queryset.annotate(
+                # عدد العناصر الكلي (من OrderItem)
+                calc_total=Count("order__items", filter=total_filter, distinct=True),
+                # عدد العناصر المستلمة
+                calc_received=Count(
+                    "order__items", filter=received_filter, distinct=True
+                ),
+                # عدد العناصر المقطوعة
+                calc_cut=Count("order__items", filter=cut_filter, distinct=True),
+            )
+
+            # تطبيق الفلاتر
             if fabric_status_filter == "needs_receipt":
-                # بحاجة استلام: لديه عناصر غير مستلمة
+                # بحاجة استلام: يوجد عناصر، وجميعها غير مستلمة
+                # (calc_total > 0 AND calc_received = 0)
+                # وأيضاً يجب أن يكون "مقطوعاً بالكامل" حسب طلب المستخدم
+                # (calc_cut > 0 AND calc_cut = calc_total)
                 queryset = queryset.filter(
-                    Exists(
-                        ManufacturingOrderItem.objects.filter(
-                            manufacturing_order=OuterRef("pk"), fabric_received=False
-                        )
+                    calc_total__gt=0,
+                    calc_received=0,
+                    calc_cut__gt=0,
+                    calc_cut=F(
+                        "calc_total"
+                    ),  # شرط عدم وجود عناصر غير مقطوعة (في حالة عدم تحديد مستودعات)
+                )
+
+            elif fabric_status_filter == "partial":
+                # ناقص: يوجد عناصر، وبعضها مستلم (ليس الكل صفر وليس الكل كامل)
+                # أو يوجد عناصر غير مقطوعة (calc_cut < calc_total)
+                queryset = queryset.filter(
+                    Q(calc_total__gt=0)
+                    & (
+                        Q(
+                            calc_received__gt=0, calc_received__lt=F("calc_total")
+                        )  # استلام جزئي
+                        | Q(calc_cut__lt=F("calc_total"))  # وجود عناصر غير مقطوعة
                     )
                 )
+
             elif fabric_status_filter == "complete":
-                # قماش كامل: جميع العناصر مستلمة
-                queryset = queryset.annotate(
-                    total_items=Count("items"),
-                    received_items=Count(
-                        "items", filter=Q(items__fabric_received=True)
-                    ),
-                ).filter(total_items__gt=0, total_items=F("received_items"))
-            elif fabric_status_filter == "partial":
-                # ناقص: بعض العناصر مستلمة وبعضها لا
-                queryset = queryset.annotate(
-                    total_items=Count("items"),
-                    received_items=Count(
-                        "items", filter=Q(items__fabric_received=True)
-                    ),
-                ).filter(
-                    total_items__gt=0,
-                    received_items__gt=0,
-                    received_items__lt=F("total_items"),
-                )
-            elif fabric_status_filter == "not_cut":
-                # غير مقطوع: لا يوجد عناصر تصنيع أصلاً
-                queryset = queryset.annotate(total_items=Count("items")).filter(
-                    total_items=0
+                # كامل: يوجد عناصر، وجميعها مستلمة، وجميعها مقطوعة
+                queryset = queryset.filter(
+                    calc_total__gt=0,
+                    calc_received=F("calc_total"),
+                    calc_cut=F("calc_total"),
                 )
 
-        # البحث النصي مع اختيار أعمدة البحث
+            elif fabric_status_filter == "not_cut":
+                # غير مقطوع: لا يوجد عناصر مقطوعة
+                queryset = queryset.filter(calc_cut=0)
         search = self.request.GET.get("search")
         search_columns = self.request.GET.getlist("search_columns")
 
