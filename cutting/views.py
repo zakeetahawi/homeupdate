@@ -462,7 +462,20 @@ def update_cutting_item(request, pk):
         try:
             data = json.loads(request.body)
 
-            # تحديث البيانات
+            # التحقق من إعادة التعيين إلى حالة الانتظار
+            requested_status = data.get("status", "")
+            if requested_status == "pending" and item.status == "rejected":
+                # استخدام دالة النموذج لإعادة التعيين
+                item.reset_to_pending(request.user)
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "message": "تم إعادة تعيين العنصر إلى حالة الانتظار",
+                        "status": item.get_status_display(),
+                    }
+                )
+
+            # تحديث البيانات العادية
             item.cutter_name = data.get("cutter_name", "")
             item.permit_number = data.get("permit_number", "")
             item.receiver_name = data.get("receiver_name", "")
