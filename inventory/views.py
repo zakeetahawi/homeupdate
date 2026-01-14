@@ -1062,7 +1062,9 @@ def generate_all_qr_api(request):
         try:
             if bp.generate_qr():
                 # استخدام update_fields للتحديث السريع والآمن
-                BaseProduct.objects.filter(pk=bp.pk).update(qr_code_base64=bp.qr_code_base64)
+                BaseProduct.objects.filter(pk=bp.pk).update(
+                    qr_code_base64=bp.qr_code_base64
+                )
                 generated += 1
         except Exception as e:
             errors += 1
@@ -1150,13 +1152,23 @@ def export_products_excel(request):
 
     # إضافة العناوين
     headers = [
-        "الكود",
-        "اسم المنتج",
-        "الفئة",
-        "السعر",
-        "المخزون الحالي",
-        "الحد الأدنى",
-        "الحالة",
+        "Code",
+        "Product Name",
+        "Category",
+        "Price",
+        "Wholesale Price",
+        "Currency",
+        "Unit",
+        "Width",
+        "Material",
+        "Description",
+        "Total Stock",
+        "Warehouse",
+        "Quantity",
+        "Min Stock",
+        "Date Added",
+        "Last Updated",
+        "Status",
     ]
     ws.append(headers)
 
@@ -1184,26 +1196,94 @@ def export_products_excel(request):
         .order_by("code")
     )
 
+    # تجهيز قائمة المستودعات النشطة
+    from .models import Warehouse
+
+    active_warehouses = list(Warehouse.objects.filter(is_active=True))
+
+    # تحسين الأداء: جلب أرصدة المستودعات دفعة واحدة لتجنب N+1 queries
+    # سنقوم بجلب أحدث حركة لكل (منتج، مستودع)
+    # ملاحظة: هذا يتطلب استعلاماً معقداً قليلاً، لذا للتبسيط والسرعة سنقوم بجلب كل الأرصدة الحالية
+    # ونقوم بتجميعها في القاموس.
+
+    # 1. جلب معرفات المنتجات
+    product_ids = [p.id for p in products]
+
+    # 2. جلب أحدث الحركات لكل منتج ومستودع
+    # نستخدم Subquery للحصول على ID أحدث حركة
+    from django.db.models import Max
+
+    latest_tx_ids = (
+        StockTransaction.objects.filter(
+            product_id__in=product_ids, warehouse__in=active_warehouses
+        )
+        .values("product_id", "warehouse_id")
+        .annotate(max_id=Max("id"))
+        .values("max_id")
+    )
+
+    stock_data = StockTransaction.objects.filter(id__in=latest_tx_ids).values(
+        "product_id", "warehouse__name", "running_balance"
+    )
+
+    # 3. تحويل البيانات إلى قاموس للوصول السريع
+    # structure: {product_id: [{'name': warehouse_name, 'qty': balance}, ...]}
+    product_stock_map = {}
+    for item in stock_data:
+        p_id = item["product_id"]
+        w_name = item["warehouse__name"]
+        balance = item["running_balance"]
+
+        if balance > 0:
+            if p_id not in product_stock_map:
+                product_stock_map[p_id] = []
+            product_stock_map[p_id].append({"name": w_name, "qty": balance})
+
     # إضافة البيانات
     for product in products:
         # تحديد الحالة
         if product.current_stock_calc == 0:
-            status = "نفذ من المخزون"
+            status = "Out of Stock"
         elif product.current_stock_calc <= product.minimum_stock:
-            status = "مخزون منخفض"
+            status = "Low Stock"
         else:
-            status = "متوفر"
+            status = "Available"
 
-        row = [
-            product.code or "غير محدد",
-            product.name,
-            product.category.name if product.category else "غير مصنف",
+        # البيانات الأساسية للمنتج
+        base_row = [
+            str(product.code or "-"),
+            str(product.name),
+            str(product.category.name if product.category else "Uncategorized"),
             float(product.price),
+            float(product.wholesale_price),
+            str(product.currency),
+            str(product.get_unit_display()),
+            str(product.width),
+            str(product.material),
+            str(product.description),
             product.current_stock_calc,
+        ]
+
+        # البيانات الختامية
+        end_row = [
             product.minimum_stock,
+            product.created_at.strftime("%Y-%m-%d"),
+            product.updated_at.strftime("%Y-%m-%d %H:%M"),
             status,
         ]
-        ws.append(row)
+
+        # تفاصيل المستودعات (صفوف متعددة)
+        wh_entries = product_stock_map.get(product.id, [])
+
+        if wh_entries:
+            for entry in wh_entries:
+                # دمج: أساسي + مستودع + كمية + ختامي
+                full_row = base_row + [entry["name"], entry["qty"]] + end_row
+                ws.append(full_row)
+        else:
+            # صف واحد ببيانات فارغة للمستودع إذا لم يوجد مخزون
+            full_row = base_row + ["-", 0] + end_row
+            ws.append(full_row)
 
     # تنسيق الأعمدة
     for col_num in range(1, len(headers) + 1):
@@ -1215,6 +1295,14 @@ def export_products_excel(request):
         elif col_num == 2:  # اسم المنتج
             ws.column_dimensions[column_letter].width = 40
         elif col_num == 3:  # الفئة
+            ws.column_dimensions[column_letter].width = 20
+        elif col_num == 10:  # Description
+            ws.column_dimensions[column_letter].width = 50
+        elif col_num == 12:  # Warehouse Name
+            ws.column_dimensions[column_letter].width = 25
+        elif col_num == 13:  # Quantity
+            ws.column_dimensions[column_letter].width = 15
+        elif col_num in [15, 16]:  # Dates
             ws.column_dimensions[column_letter].width = 20
         else:
             ws.column_dimensions[column_letter].width = 15
