@@ -4617,7 +4617,7 @@ def export_manufacturing_orders(request):
                 fabric_status = "غير مقطوع"
 
         row_data = [
-            order.order_number,
+            order.order.order_number if order.order else "-",
             order.order.customer.name if order.order.customer else "-",
             order.production_line.name if order.production_line else "-",
             order.order_date.strftime("%Y-%m-%d") if order.order_date else "-",
