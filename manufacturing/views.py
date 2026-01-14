@@ -205,7 +205,7 @@ class ManufacturingOrderListView(
         # فلتر حالة الأقمشة - تحسين الأداء باستخدام SQL Annotations
         fabric_status_filter = self.request.GET.get("fabric_status")
         if fabric_status_filter:
-            from django.db.models import Case, Count, F, IntegerField, Q, When
+            # from django.db.models import Case, Count, F, IntegerField, Q, When (Removed to fix UnboundLocalError)
 
             from manufacturing.models import ManufacturingSettings
 
@@ -4451,3 +4451,213 @@ class ManufacturingItemStatusReportView(
         context["filter_type"] = filter_type
 
         return context
+
+
+@login_required
+def export_manufacturing_orders(request):
+    """
+    تصدير أوامر التصنيع إلى ملف Excel مع بطاقات ملخص وتنسيق احترافي
+    """
+    # 1. التحقق من الصلاحية
+    if not hasattr(request.user, "can_export") or not request.user.can_export:
+        from django.http import HttpResponseForbidden
+
+        return HttpResponseForbidden("ليس لديك صلاحية لتصدير البيانات")
+
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Color, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+
+    # 2. الحصول على البيانات المفلترة باستخدام View Class الموجود
+    # نستخدم نفس منطق ManufacturingOrderListView لضمان تطابق النتائج
+    view = ManufacturingOrderListView()
+    view.request = request
+    view.kwargs = {}
+
+    # الحصول على QuerySet المفلتر
+    queryset = view.get_queryset()
+
+    # 3. حساب الإحصائيات للبطاقات
+    total_count = queryset.count()
+
+    # عدد المتأخرات داخل النتائج المفلترة
+    from django.utils import timezone
+
+    today = timezone.now().date()
+    overdue_count = queryset.filter(
+        expected_delivery_date__lt=today,
+        status__in=["pending_approval", "pending", "in_progress", "under_execution"],
+    ).count()
+
+    # تحديد اسم الفلتر النشط
+    active_filter_name = "الكل"
+    status_filter = request.GET.getlist("status")
+    if status_filter:
+        status_map = dict(ManufacturingOrder.STATUS_CHOICES)
+        filter_names = [str(status_map.get(s, s)) for s in status_filter if s]
+        if filter_names:
+            active_filter_name = ", ".join(filter_names)
+
+    # 4. إعداد ملف Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "أوامر التصنيع"
+    ws.sheet_view.rightToLeft = True  # اتجاه الورقة من اليمين لليسار
+
+    # --- تنسيقات ---
+    # حدود الخلايا
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+
+    # أنماط البطاقات
+    card_title_font = Font(name="Arial", size=12, bold=True, color="FFFFFF")
+    card_value_font = Font(name="Arial", size=14, bold=True, color="FFFFFF")
+    card_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    # ألوان البطاقات
+    # الأزرق (Total)
+    blue_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    # الأحمر (Overdue)
+    red_fill = PatternFill(start_color="C00000", end_color="C00000", fill_type="solid")
+    # الأخضر (Active Filter)
+    green_fill = PatternFill(
+        start_color="548235", end_color="548235", fill_type="solid"
+    )
+
+    # --- رسم البطاقات (الصف 2-4) ---
+
+    # بطاقة الإجمالي (A2:C4)
+    ws.merge_cells("A2:C4")
+    cell = ws["A2"]
+    cell.value = f"إجمالي الأوامر\n{total_count}"
+    cell.fill = blue_fill
+    cell.font = card_value_font
+    cell.alignment = card_alignment
+
+    # بطاقة المتأخرات (E2:G4)
+    ws.merge_cells("E2:G4")
+    cell = ws["E2"]
+    cell.value = f"المتأخرات\n{overdue_count}"
+    cell.fill = red_fill
+    cell.font = card_value_font
+    cell.alignment = card_alignment
+
+    # بطاقة الفلتر النشط (I2:K4)
+    ws.merge_cells("I2:K4")
+    cell = ws["I2"]
+    cell.value = f"الفلتر الحالي\n{active_filter_name}"
+    cell.fill = green_fill
+    cell.font = card_value_font
+    cell.alignment = card_alignment
+
+    # --- جدول البيانات (يبدأ من الصف 6) ---
+    headers = [
+        "رقم الطلب",
+        "العميل",
+        "خط الإنتاج",
+        "التاريخ",
+        "تاريخ التسليم",
+        "النوع",
+        "الفرع",
+        "الحالة",
+        "البائع",
+        "حالة القماش",
+    ]
+
+    header_row = 6
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=header_row, column=col_num)
+        cell.value = header
+        cell.font = Font(bold=True, size=11, color="FFFFFF")
+        cell.fill = PatternFill(
+            start_color="808080", end_color="808080", fill_type="solid"
+        )
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = thin_border
+
+    # تعبئة البيانات
+    data_row = 7
+    for order in queryset:
+        # ترجمة الحالة
+        status_display = order.get_status_display()
+        type_display = order.get_order_type_display()
+
+        # حالة القماش (من Bages) - استخدام الخصائص الموجودة في الموديل أو القيم المحسوبة
+        # نستخدم القيم المحسوبة إذا كانت متوفرة لضمان تطابق الفلتر، وإلا نستخدم الخصائص
+
+        fabric_status = "غير محدد"
+        if hasattr(order, "calc_total"):
+            # استخدام القيم المحسوبة من الـ annotation
+            total = order.calc_total
+            received = order.calc_received
+            cut = order.calc_cut
+
+            if total > 0 and received == 0 and cut == total:
+                fabric_status = "بحاجة استلام"
+            elif total > 0 and (received < total or cut < total):
+                fabric_status = "ناقص"
+            elif total > 0 and received == total and cut == total:
+                fabric_status = "كامل"
+            elif cut == 0:
+                fabric_status = "غير مقطوع"
+        else:
+            # استخدام خصائص الموديل
+            if order.is_fabric_receipt_needed:
+                fabric_status = "بحاجة استلام"
+            elif order.is_fabric_partial:
+                fabric_status = "ناقص"
+            elif order.is_fabric_completed:
+                fabric_status = "كامل"
+            elif order.is_fabric_not_cut:
+                fabric_status = "غير مقطوع"
+
+        row_data = [
+            order.order_number,
+            order.order.customer.name if order.order.customer else "-",
+            order.production_line.name if order.production_line else "-",
+            order.order_date.strftime("%Y-%m-%d") if order.order_date else "-",
+            (
+                order.expected_delivery_date.strftime("%Y-%m-%d")
+                if order.expected_delivery_date
+                else "-"
+            ),
+            type_display,
+            order.order.branch.name if order.order.branch else "-",
+            status_display,
+            order.order.salesperson.username if order.order.salesperson else "-",
+            fabric_status,
+        ]
+
+        for col_num, value in enumerate(row_data, 1):
+            cell = ws.cell(row=data_row, column=col_num)
+            cell.value = value
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = thin_border
+
+            # تلوين صف المتأخرات
+            if order.is_overdue:
+                cell.fill = PatternFill(
+                    start_color="FFEBEE", end_color="FFEBEE", fill_type="solid"
+                )
+
+        data_row += 1
+
+    # ضبط عرض الأعمدة تلقائياً
+    column_widths = [15, 25, 20, 15, 15, 15, 15, 15, 20, 15]
+    for i, width in enumerate(column_widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+
+    # إعداد الاستجابة
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    filename = f"manufacturing_orders_{timezone.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    wb.save(response)
+    return response

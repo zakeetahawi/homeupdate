@@ -1253,6 +1253,17 @@
                             <i class="fas fa-check"></i>
                             تطبيق
                         </button>
+                        {% if user.can_export %}
+                            <a href="{% url 'manufacturing:export_excel' %}?{{ request.GET.urlencode }}"
+                               class="hf-apply-btn"
+                               style="background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
+                                      border-color: #17a2b8;
+                                      text-decoration: none;
+                                      margin-right: 5px">
+                                <i class="fas fa-file-excel"></i>
+                                تصدير
+                            </a>
+                        {% endif %}
                         {% if status_filters or search_query or date_from or date_to or branch_filters or order_type_filters or production_line_filters or fabric_status or overdue_filter == 'true' or selected_year or selected_month %}
                             <button type="button" class="hf-clear-btn" id="clearFiltersBtn">
                                 <i class="fas fa-times"></i>

@@ -11,6 +11,11 @@ urlpatterns = [
     path(
         "orders/overdue/", views.OverdueOrdersListView.as_view(), name="overdue_orders"
     ),
+    path(
+        "orders/export/excel/",
+        views.export_manufacturing_orders,
+        name="export_excel",
+    ),
     path("orders/vip/", views.VIPOrdersListView.as_view(), name="vip_orders"),
     path(
         "orders/item-status-report/",
