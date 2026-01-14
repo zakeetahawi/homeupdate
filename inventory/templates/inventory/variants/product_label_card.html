@@ -1,20 +1,23 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Product Label Card -
-            {% if bulk_mode %}
-                All Products
-            {% else %}
-                {{ base_product.code }}
-            {% endif %}
-        </title>
-        <style>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Product Label Card -
+        {% if bulk_mode %}
+        All Products
+        {% else %}
+        {{ base_product.code }}
+        {% endif %}
+    </title>
+    <style>
         @page {
             size: A4 landscape;
-            margin: 0; /* Zero margin to control everything via CSS */
+            margin: 0;
+            /* Zero margin to control everything via CSS */
         }
+
         body {
             margin: 0;
             padding: 0;
@@ -32,6 +35,7 @@
             flex-direction: column;
             gap: 12px;
         }
+
         .btn-ui {
             background: #fff;
             color: #333;
@@ -41,7 +45,7 @@
             font-weight: 600;
             font-size: 13px;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -50,17 +54,20 @@
             justify-content: flex-start;
             min-width: 160px;
         }
+
         .btn-ui:hover {
             border-color: #3498db;
             color: #3498db;
             transform: translateY(-2px);
         }
+
         .btn-export {
             background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
             color: white !important;
             border: none;
             box-shadow: 0 10px 20px rgba(231, 76, 60, 0.3);
         }
+
         .btn-export:hover {
             box-shadow: 0 15px 25px rgba(231, 76, 60, 0.4);
         }
@@ -69,16 +76,19 @@
         .page {
             width: 297mm;
             height: 210mm;
-            padding: 4mm; /* Balanced 4mm margin on the alignment side */
+            padding: 4mm;
+            /* Balanced 4mm margin on the alignment side */
             margin: 0 auto;
             background: white;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
             display: flex;
             align-items: center;
-            justify-content: flex-start; /* Aligned to one side as requested */
+            justify-content: flex-start;
+            /* Aligned to one side as requested */
             box-sizing: border-box;
             page-break-after: always;
         }
+
         .grid-container {
             display: grid;
             grid-template-columns: repeat(4, 60mm);
@@ -92,8 +102,16 @@
         }
 
         @media print {
-            body { background: none; margin: 0; padding: 0; }
-            .no-print { display: none !important; }
+            body {
+                background: none;
+                margin: 0;
+                padding: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
             .page {
                 margin: 0;
                 box-shadow: none;
@@ -105,6 +123,7 @@
                 justify-content: flex-start;
                 page-break-after: always;
             }
+
             .card {
                 page-break-inside: avoid;
             }
@@ -113,7 +132,8 @@
         .card {
             width: 60mm;
             height: 101mm;
-            border: 1.5mm double #4E342E; /* Luxury Brown Double Border */
+            border: 1.5mm double #4E342E;
+            /* Luxury Brown Double Border */
             position: relative;
             background: #fff;
             overflow: hidden;
@@ -147,7 +167,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-end; /* Align to the QR code at the bottom */
+            justify-content: flex-end;
+            /* Align to the QR code at the bottom */
         }
 
         /* Stabilized Vertical Edges */
@@ -163,11 +184,13 @@
             font-weight: 500;
             width: 4mm;
         }
+
         .left-edge {
             left: 0.8mm;
             writing-mode: vertical-rl;
             transform: rotate(180deg);
         }
+
         .right-edge {
             right: 0.8mm;
             writing-mode: vertical-rl;
@@ -179,11 +202,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-top: -15mm; /* Overlap into 45mm blank */
+            margin-top: -15mm;
+            /* Overlap into 45mm blank */
             z-index: 5;
         }
+
         .logo-container img {
-            max-width: 54mm; /* Adjusted for 60mm card */
+            max-width: 54mm;
+            /* Adjusted for 60mm card */
             max-height: 35mm;
             object-fit: contain;
         }
@@ -195,6 +221,7 @@
             margin-bottom: 2mm;
             z-index: 2;
         }
+
         .info-row {
             font-size: 10pt;
             font-weight: 700;
@@ -205,7 +232,8 @@
         /* Bottom Layout: Centered QR with closely positioned icons */
         .bottom-layout {
             width: 100%;
-            margin-top: 2mm; /* Consistent spacing after info */
+            margin-top: 2mm;
+            /* Consistent spacing after info */
             margin-bottom: 2.5mm;
             display: flex;
             justify-content: center;
@@ -220,12 +248,14 @@
             align-items: center;
             z-index: 2;
         }
+
         .qr-box img {
             width: 18.5mm;
             height: 18.5mm;
             border: 0.1mm solid #000;
             background: white;
         }
+
         .scan-text {
             font-size: 5.5pt;
             margin-top: 1.5mm;
@@ -251,129 +281,141 @@
             height: 4.8mm;
             fill: #000;
         }
+    </style>
+</head>
 
-        </style>
-    </head>
-    <body>
-        <div class="no-print">
-            <button id="toggle-details-btn" onclick="toggleDetails()" class="btn-ui">
-                <svg id="toggle-icon"
-                     width="18"
-                     height="18"
-                     viewBox="0 0 24 24"
-                     fill="none"
-                     stroke="currentColor"
-                     stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                </svg>
-                <span id="btn-text">Hide Details</span>
-            </button>
-            <button onclick="window.print()" class="btn-ui btn-export">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                    <path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 4.5h1v-3h-1v3z" />
-                </svg>
-                Export to PDF
-            </button>
-        </div>
-        <div id="main-page-container">
-            {% if bulk_mode %}
-                {% for chunk in product_list %}
-                    <div class="page">
-                        <div class="grid-container">
-                            {% for item in chunk %}
-                                <div class="card {% if forloop.counter <= 4 %}row-top{% else %}row-bottom{% endif %}">
-                                    <div class="top-blank"></div>
-                                    <div class="content-section">
-                                        <div class="vertical-text-container left-edge">{{ item.legacy_code|default:item.base_product.code }}</div>
-                                        <div class="vertical-text-container right-edge">{{ item.base_product.name }}</div>
-                                        <div class="logo-container">
-                                            <img src="{% static 'img/logo.png' %}" alt="Elkhawaga">
-                                        </div>
-                                        <div class="center-info">
-                                            <div class="info-row">Material: {{ item.base_product.material|default:"Linen" }}</div>
-                                            <div class="info-row">Width: {{ item.base_product.width|default:"280 cm" }}</div>
-                                        </div>
-                                        <div class="bottom-layout">
-                                            <div class="qr-box">
-                                                {% if item.base_product.qr_code_base64 %}
-                                                    <img src="data:image/png;base64,{{ item.base_product.qr_code_base64 }}"
-                                                         alt="QR">
-                                                {% endif %}
-                                                <div class="scan-text">Scan for Price</div>
-                                            </div>
-                                            <div class="care-symbols">
-                                                <svg class="care-icon-monochrome" viewBox="0 0 100 100">
-                                                    <path d="M10,40 L90,40 L82,85 L18,85 Z" fill="none" stroke="#000" stroke-width="6" />
-                                                    <path d="M10,40 Q10,32 20,32 T30,40 T40,32 T50,40 T60,32 T70,40 T80,32 T90,40" fill="none" stroke="#000" stroke-width="4" />
-                                                    <text x="50" y="70" font-family="Arial" font-size="28" fill="#000" text-anchor="middle" font-weight="900">30</text>
-                                                </svg>
-                                                <svg class="care-icon-monochrome" viewBox="0 0 100 100">
-                                                    <path d="M15,75 L85,75 L85,60 Q85,35 55,35 L40,35 Q15,35 15,60 Z" fill="none" stroke="#000" stroke-width="6" />
-                                                    <path d="M40,35 L40,25 L75,25" fill="none" stroke="#000" stroke-width="6" />
-                                                    <circle cx="28" cy="55" r="5" fill="#000" /><circle cx="15" cy="85" r="3" fill="#000" /><circle cx="35" cy="85" r="3" fill="#000" /><circle cx="55" cy="85" r="3" fill="#000" />
-                                                </svg>
-                                                <svg class="care-icon-monochrome" viewBox="0 0 100 100">
-                                                    <circle cx="50" cy="50" r="45" fill="none" stroke="#000" stroke-width="6" /><text x="50" y="68" font-family="Arial Black" font-size="52" fill="#000" text-anchor="middle">P</text>
-                                                </svg>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
+<body>
+    <div class="no-print">
+        <button id="toggle-details-btn" onclick="toggleDetails()" class="btn-ui">
+            <svg id="toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+            </svg>
+            <span id="btn-text">Hide Details</span>
+        </button>
+        <button onclick="window.print()" class="btn-ui btn-export">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                <path
+                    d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 4.5h1v-3h-1v3z" />
+            </svg>
+            Export to PDF
+        </button>
+    </div>
+    <div id="main-page-container">
+        {% if bulk_mode %}
+        {% for chunk in product_list %}
+        <div class="page">
+            <div class="grid-container">
+                {% for item in chunk %}
+                <div class="card {% if forloop.counter <= 4 %}row-top{% else %}row-bottom{% endif %}">
+                    <div class="top-blank"></div>
+                    <div class="content-section">
+                        <div class="vertical-text-container left-edge">{{ item.legacy_code|default:item.base_product.code }}</div>
+                        <div class="vertical-text-container right-edge">{{ item.base_product.name }}</div>
+                        <div class="logo-container">
+                            <img src="{% static 'img/logo.png' %}" alt="Elkhawaga">
+                        </div>
+                        <div class="center-info">
+                            <div class="info-row">Material: {{ item.base_product.material|default:"Linen" }}</div>
+                            <div class="info-row">Width: {{ item.base_product.width|default:"280 cm" }}</div>
+                        </div>
+                        <div class="bottom-layout">
+                            <div class="qr-box">
+                                {% if item.base_product.qr_code_base64 %}
+                                <img src="data:image/png;base64,{{ item.base_product.qr_code_base64 }}" alt="QR">
+                                {% endif %}
+                                <div class="scan-text">Scan for Price</div>
+                            </div>
+                            <div class="care-symbols">
+                                <svg class="care-icon-monochrome" viewBox="0 0 100 100">
+                                    <path d="M10,40 L90,40 L82,85 L18,85 Z" fill="none" stroke="#000"
+                                        stroke-width="6" />
+                                    <path d="M10,40 Q10,32 20,32 T30,40 T40,32 T50,40 T60,32 T70,40 T80,32 T90,40"
+                                        fill="none" stroke="#000" stroke-width="4" />
+                                    <text x="50" y="70" font-family="Arial" font-size="28" fill="#000"
+                                        text-anchor="middle" font-weight="900">30</text>
+                                </svg>
+                                <svg class="care-icon-monochrome" viewBox="0 0 100 100">
+                                    <path d="M15,75 L85,75 L85,60 Q85,35 55,35 L40,35 Q15,35 15,60 Z" fill="none"
+                                        stroke="#000" stroke-width="6" />
+                                    <path d="M40,35 L40,25 L75,25" fill="none" stroke="#000" stroke-width="6" />
+                                    <circle cx="28" cy="55" r="5" fill="#000" />
+                                    <circle cx="15" cy="85" r="3" fill="#000" />
+                                    <circle cx="35" cy="85" r="3" fill="#000" />
+                                    <circle cx="55" cy="85" r="3" fill="#000" />
+                                </svg>
+                                <svg class="care-icon-monochrome" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="#000" stroke-width="6" /><text
+                                        x="50" y="68" font-family="Arial Black" font-size="52" fill="#000"
+                                        text-anchor="middle">P</text>
+                                </svg>
+                            </div>
                         </div>
                     </div>
+                </div>
                 {% endfor %}
-            {% else %}
-                <div class="page">
-                    <div class="grid-container">
-                        {% for i in "12345678" %}
-                            <div class="card {% if forloop.counter <= 4 %}row-top{% else %}row-bottom{% endif %}">
-                                <div class="top-blank"></div>
-                                <div class="content-section">
-                                    <div class="vertical-text-container left-edge">{{ legacy_code|default:base_product.code }}</div>
-                                    <div class="vertical-text-container right-edge">{{ base_product.name }}</div>
-                                    <div class="logo-container">
-                                        <img src="{% static 'img/logo.png' %}" alt="Elkhawaga">
-                                    </div>
-                                    <div class="center-info">
-                                        <div class="info-row">Material: {{ base_product.material|default:"Linen" }}</div>
-                                        <div class="info-row">Width: {{ base_product.width|default:"280 cm" }}</div>
-                                    </div>
-                                    <div class="bottom-layout">
-                                        <div class="qr-box">
-                                            {% if base_product.qr_code_base64 %}
-                                                <img src="data:image/png;base64,{{ base_product.qr_code_base64 }}"
-                                                     alt="QR">
-                                            {% endif %}
-                                            <div class="scan-text">Scan for Price</div>
-                                        </div>
-                                        <div class="care-symbols">
-                                            <svg class="care-icon-monochrome" viewBox="0 0 100 100">
-                                                <path d="M10,40 L90,40 L82,85 L18,85 Z" fill="none" stroke="#000" stroke-width="6" />
-                                                <path d="M10,40 Q10,32 20,32 T30,40 T40,32 T50,40 T60,32 T70,40 T80,32 T90,40" fill="none" stroke="#000" stroke-width="4" />
-                                                <text x="50" y="70" font-family="Arial" font-size="28" fill="#000" text-anchor="middle" font-weight="900">30</text>
-                                            </svg>
-                                            <svg class="care-icon-monochrome" viewBox="0 0 100 100">
-                                                <path d="M15,75 L85,75 L85,60 Q85,35 55,35 L40,35 Q15,35 15,60 Z" fill="none" stroke="#000" stroke-width="6" />
-                                                <path d="M40,35 L40,25 L75,25" fill="none" stroke="#000" stroke-width="6" />
-                                                <circle cx="28" cy="55" r="5" fill="#000" /><circle cx="15" cy="85" r="3" fill="#000" /><circle cx="35" cy="85" r="3" fill="#000" /><circle cx="55" cy="85" r="3" fill="#000" />
-                                            </svg>
-                                            <svg class="care-icon-monochrome" viewBox="0 0 100 100">
-                                                <circle cx="50" cy="50" r="45" fill="none" stroke="#000" stroke-width="6" /><text x="50" y="68" font-family="Arial Black" font-size="52" fill="#000" text-anchor="middle">P</text>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="page">
+            <div class="grid-container">
+                {% for i in "12345678" %}
+                <div class="card {% if forloop.counter <= 4 %}row-top{% else %}row-bottom{% endif %}">
+                    <div class="top-blank"></div>
+                    <div class="content-section">
+                        <div class="vertical-text-container left-edge">{{ legacy_code|default:base_product.code }}</div>
+                        <div class="vertical-text-container right-edge">{{ base_product.name }}</div>
+                        <div class="logo-container">
+                            <img src="{% static 'img/logo.png' %}" alt="Elkhawaga">
+                        </div>
+                        <div class="center-info">
+                            <div class="info-row">Material: {{ base_product.material|default:"Linen" }}</div>
+                            <div class="info-row">Width: {{ base_product.width|default:"280 cm" }}</div>
+                        </div>
+                        <div class="bottom-layout">
+                            <div class="qr-box">
+                                {% if base_product.qr_code_base64 %}
+                                <img src="data:image/png;base64,{{ base_product.qr_code_base64 }}" alt="QR">
+                                {% endif %}
+                                <div class="scan-text">Scan for Price</div>
                             </div>
-                        {% endfor %}
+                            <div class="care-symbols">
+                                <svg class="care-icon-monochrome" viewBox="0 0 100 100">
+                                    <path d="M10,40 L90,40 L82,85 L18,85 Z" fill="none" stroke="#000"
+                                        stroke-width="6" />
+                                    <path d="M10,40 Q10,32 20,32 T30,40 T40,32 T50,40 T60,32 T70,40 T80,32 T90,40"
+                                        fill="none" stroke="#000" stroke-width="4" />
+                                    <text x="50" y="70" font-family="Arial" font-size="28" fill="#000"
+                                        text-anchor="middle" font-weight="900">30</text>
+                                </svg>
+                                <svg class="care-icon-monochrome" viewBox="0 0 100 100">
+                                    <path d="M15,75 L85,75 L85,60 Q85,35 55,35 L40,35 Q15,35 15,60 Z" fill="none"
+                                        stroke="#000" stroke-width="6" />
+                                    <path d="M40,35 L40,25 L75,25" fill="none" stroke="#000" stroke-width="6" />
+                                    <circle cx="28" cy="55" r="5" fill="#000" />
+                                    <circle cx="15" cy="85" r="3" fill="#000" />
+                                    <circle cx="35" cy="85" r="3" fill="#000" />
+                                    <circle cx="55" cy="85" r="3" fill="#000" />
+                                </svg>
+                                <svg class="care-icon-monochrome" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="#000" stroke-width="6" /><text
+                                        x="50" y="68" font-family="Arial Black" font-size="52" fill="#000"
+                                        text-anchor="middle">P</text>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            {% endif %}
+                {% endfor %}
+            </div>
         </div>
-        <script>
+        {% endif %}
+    </div>
+    <script>
         function toggleDetails() {
-            const page = document.getElementById('main-page');
+            const page = document.getElementById('main-page-container');
             const btnText = document.getElementById('btn-text');
             const icon = document.getElementById('toggle-icon');
             const isHidden = page.classList.toggle('hide-details-css');
@@ -385,6 +427,7 @@
                 icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />';
             }
         }
-        </script>
-    </body>
+    </script>
+</body>
+
 </html>

@@ -564,8 +564,9 @@
                 Swal.fire('خطأ!', 'فشل الاتصال بالخادم', 'error');
             });
     }
-        <script>
-            function toggleAllWarehouses(btn) {
+    </script>
+    <script>
+        function toggleAllWarehouses(btn) {
                 const checkboxes = document.querySelectorAll('.warehouse-checkbox');
                 const isSelectAll = btn.textContent.includes('تحديد الكل');
                 checkboxes.forEach(cb => cb.checked = isSelectAll);

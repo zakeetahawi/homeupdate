@@ -1023,7 +1023,7 @@ def generate_single_qr_api(request, pk):
 @login_required
 def generate_all_qr_api(request):
     """
-    API لتوليد QR لجميع المنتجات الأساسية والمنتجات القديمة
+    API لتوليد QR للمنتجات الأساسية (النظام الجديد)
     POST /inventory/api/generate-all-qr/
     """
     if request.method != "POST":
@@ -1031,25 +1031,16 @@ def generate_all_qr_api(request):
             {"success": False, "error": "Method not allowed"}, status=405
         )
 
-    from .models import BaseProduct, Product
+    from .models import BaseProduct
 
-    # 1. Base Products without QR
+    # الحصول على المنتجات الأساسية التي ليس لها QR ولديها كود
     base_products_no_qr = (
         BaseProduct.objects.filter(qr_code_base64__isnull=True)
         .exclude(code__isnull=True)
         .exclude(code="")
     )
 
-    # 2. Legacy Products without QR (active only)
-    products_no_qr = (
-        Product.objects.filter(qr_code_base64__isnull=True, is_active=True)
-        .exclude(code__isnull=True)
-        .exclude(code="")
-    )
-
-    total_base = base_products_no_qr.count()
-    total_products = products_no_qr.count()
-    total = total_base + total_products
+    total = base_products_no_qr.count()
 
     if total == 0:
         return JsonResponse(
@@ -1063,29 +1054,19 @@ def generate_all_qr_api(request):
 
     generated = 0
     errors = 0
+    error_list = []
 
-    # Limit processing to avoid timeout
+    # معالجة المنتجات (بحد أقصى 500 لتجنب التوقف)
     LIMIT = 500
-
-    # Process Base Products first
     for bp in base_products_no_qr[:LIMIT]:
         try:
             if bp.generate_qr():
-                bp.save(update_fields=["qr_code_base64"])
+                # استخدام update_fields للتحديث السريع والآمن
+                BaseProduct.objects.filter(pk=bp.pk).update(qr_code_base64=bp.qr_code_base64)
                 generated += 1
-        except Exception:
+        except Exception as e:
             errors += 1
-
-    # Process remaining limit on Products
-    remaining_limit = LIMIT - generated
-    if remaining_limit > 0:
-        for p in products_no_qr[:remaining_limit]:
-            try:
-                if p.generate_qr():
-                    p.save(update_fields=["qr_code_base64"])
-                    generated += 1
-            except Exception:
-                errors += 1
+            error_list.append(f"{bp.code}: {str(e)}")
 
     remaining = total - generated - errors
 
