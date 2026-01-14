@@ -4478,6 +4478,22 @@ def export_manufacturing_orders(request):
     # الحصول على QuerySet المفلتر
     queryset = view.get_queryset()
 
+    # تحسين الأداء لحساب الأمتار
+    from django.db.models import Prefetch
+
+    queryset = queryset.prefetch_related(
+        "items__cutting_item__cutting_order__warehouse"
+    )
+
+    # إعدادات حساب الأمتار
+    from manufacturing.models import ManufacturingSettings
+
+    try:
+        settings = ManufacturingSettings.get_settings()
+        warehouses_for_meters = list(settings.warehouses_for_meters_calculation.all())
+    except Exception:
+        warehouses_for_meters = []
+
     # 3. حساب الإحصائيات للبطاقات
     total_count = queryset.count()
 
@@ -4489,6 +4505,36 @@ def export_manufacturing_orders(request):
         expected_delivery_date__lt=today,
         status__in=["pending_approval", "pending", "in_progress", "under_execution"],
     ).count()
+
+    # حساب إجمالي الأمتار
+    grand_total_meters = 0
+    # سنقوم بحساب الأمتار لكل طلب وتخزينها لاستخدامها لاحقاً
+    # هذا لتجنب إعادة الحساب مرتين
+    orders_with_meters = []
+
+    for order in queryset:
+        order_meters = 0
+        # حساب أمتار كل طلب
+        for item in order.items.all():
+            quantity = item.quantity or 0
+            if not warehouses_for_meters:
+                # إذا لم تكن هناك مستودعات محددة، نجمع الكل
+                order_meters += quantity
+            else:
+                # التحقق من المستودع
+                # نتأكد من وجود سلسلة العلاقات كاملة
+                if (
+                    item.cutting_item
+                    and item.cutting_item.cutting_order
+                    and item.cutting_item.cutting_order.warehouse
+                    in warehouses_for_meters
+                ):
+                    order_meters += quantity
+
+        grand_total_meters += order_meters
+        # تخزين الطلب مع أمتاره
+        order.calculated_meters = order_meters
+        orders_with_meters.append(order)
 
     # تحديد اسم الفلتر النشط
     active_filter_name = "الكل"
@@ -4528,6 +4574,10 @@ def export_manufacturing_orders(request):
     green_fill = PatternFill(
         start_color="548235", end_color="548235", fill_type="solid"
     )
+    # البنفسجي (Total Meters)
+    purple_fill = PatternFill(
+        start_color="7030A0", end_color="7030A0", fill_type="solid"
+    )
 
     # --- رسم البطاقات (الصف 2-4) ---
 
@@ -4555,6 +4605,20 @@ def export_manufacturing_orders(request):
     cell.font = card_value_font
     cell.alignment = card_alignment
 
+    # بطاقة إجمالي الأمتار (M2:O4)
+    ws.merge_cells("M2:O4")
+    cell = ws["M2"]
+    # تنسيق الرقم بفاصلة عشرية واحدة
+    formatted_meters = "{:,.1f}".format(grand_total_meters)
+    # إزالة .0 اذا كان رقماً صحيحاً
+    if formatted_meters.endswith(".0"):
+        formatted_meters = formatted_meters[:-2]
+
+    cell.value = f"إجمالي الأمتار\n{formatted_meters} م"
+    cell.fill = purple_fill
+    cell.font = card_value_font
+    cell.alignment = card_alignment
+
     # --- جدول البيانات (يبدأ من الصف 6) ---
     headers = [
         "رقم الطلب",
@@ -4567,6 +4631,7 @@ def export_manufacturing_orders(request):
         "الحالة",
         "البائع",
         "حالة القماش",
+        "الأمتار",
     ]
 
     header_row = 6
@@ -4582,7 +4647,8 @@ def export_manufacturing_orders(request):
 
     # تعبئة البيانات
     data_row = 7
-    for order in queryset:
+    # نستخدم القائمة المحسوبة مسبقاً بدلاً من queryset
+    for order in orders_with_meters:
         # ترجمة الحالة
         status_display = order.get_status_display()
         type_display = order.get_order_type_display()
@@ -4629,8 +4695,9 @@ def export_manufacturing_orders(request):
             type_display,
             order.order.branch.name if order.order.branch else "-",
             status_display,
-            order.order.salesperson.username if order.order.salesperson else "-",
+            order.order.salesperson.name if order.order.salesperson else "-",
             fabric_status,
+            order.calculated_meters,  # استخدام القيمة المحسوبة مسبقاً
         ]
 
         for col_num, value in enumerate(row_data, 1):
@@ -4640,7 +4707,12 @@ def export_manufacturing_orders(request):
             cell.border = thin_border
 
             # تلوين صف المتأخرات
-            if order.is_overdue:
+            is_overdue = False
+            if order.expected_delivery_date and order.expected_delivery_date < today:
+                if order.status in ["pending_approval", "pending", "in_progress"]:
+                    is_overdue = True
+
+            if is_overdue:
                 cell.fill = PatternFill(
                     start_color="FFEBEE", end_color="FFEBEE", fill_type="solid"
                 )
@@ -4648,7 +4720,7 @@ def export_manufacturing_orders(request):
         data_row += 1
 
     # ضبط عرض الأعمدة تلقائياً
-    column_widths = [15, 25, 20, 15, 15, 15, 15, 15, 20, 15]
+    column_widths = [15, 25, 20, 15, 15, 15, 15, 15, 20, 15, 10]
     for i, width in enumerate(column_widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = width
 
