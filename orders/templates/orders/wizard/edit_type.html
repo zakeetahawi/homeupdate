@@ -77,7 +77,6 @@
         width: 20px;
         height: 20px;
         cursor: pointer;
-        pointer-events: none; /* منع التداخل مع click events */
     }
     
     .type-option label {
@@ -87,7 +86,6 @@
         display: flex;
         align-items: center;
         font-size: 16px;
-        pointer-events: none; /* منع التداخل مع click events */
     }
     
     .type-option input[type="radio"]:checked + label {
@@ -297,46 +295,39 @@
     <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('editTypeForm');
+    const radios = document.querySelectorAll('input[name="selected_type"]');
     const typeOptions = document.querySelectorAll('.type-option');
     
-    // تحسين اللمس على الموبايل - استخدام touchend بدلاً من click
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    // دالة تحديث التحديد البصري
+    function updateSelection() {
+        typeOptions.forEach(opt => opt.classList.remove('selected'));
+        const checkedRadio = document.querySelector('input[name="selected_type"]:checked');
+        if (checkedRadio) {
+            checkedRadio.closest('.type-option').classList.add('selected');
+        }
+    }
     
+    // استماع لتغيير الراديو
+    radios.forEach(radio => {
+        radio.addEventListener('change', updateSelection);
+    });
+    
+    // عند النقر على الـ div، قم بتفعيل الراديو (بدون preventDefault)
     typeOptions.forEach(option => {
-        // منع السلوك الافتراضي للنقر المتعدد
-        option.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-        }, { passive: false });
-        
-        const eventType = isTouchDevice ? 'touchend' : 'click';
-        
-        option.addEventListener(eventType, function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // تفعيل الراديو بوتون
-            const radio = this.querySelector('input[type="radio"]');
-            if (radio && !radio.checked) {
-                radio.checked = true;
-                
-                // إزالة التحديد من باقي الخيارات
-                typeOptions.forEach(opt => opt.classList.remove('selected'));
-                this.classList.add('selected');
-                
-                // تأثير بصري للمسة
-                this.style.transform = 'scale(0.98)';
-                setTimeout(() => {
-                    this.style.transform = '';
-                }, 150);
+        option.addEventListener('click', function(e) {
+            // إذا لم يكن النقر مباشرة على الراديو
+            if (e.target.type !== 'radio') {
+                const radio = this.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change'));
+                }
             }
-        }, { passive: false });
+        });
     });
     
     // تحديد الخيار المفعّل عند التحميل
-    const checkedRadio = document.querySelector('input[name="selected_type"]:checked');
-    if (checkedRadio) {
-        checkedRadio.closest('.type-option').classList.add('selected');
-    }
+    updateSelection();
     
     // تأكيد عند التغيير
     form.addEventListener('submit', function(e) {
