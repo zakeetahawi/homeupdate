@@ -55,15 +55,193 @@ class ContractGenerationService:
 
         # حساب إجمالي الأمتار من جميع الأقمشة
         total_meters = 0
+        # تعريف ترتيب الأولويات للأقمشة
+        fabric_priority = {
+            "heavy": 1,
+            "light": 2,
+            "blackout": 3,
+            "additional": 4,
+            "extra": 4,
+        }
+
+        # حساب إجمالي الأمتار وترتيب الأقمشة
+        total_meters = 0
+        for curtain in curtains:
+            fabrics_list = list(curtain.fabrics.all())
+
+            # دالة مساعدة للحصول على الأولوية
+            def get_priority(fabric):
+                return fabric_priority.get(
+                    fabric.fabric_type, 99
+                )  # 99 للأنواع غير المعروفة لتظهر في النهاية
+
+            # ترتيب الأقمشة
+            curtain.sorted_fabrics = sorted(fabrics_list, key=get_priority)
+
+            for fabric in fabrics_list:
+                # تجاهل الأحزمة من إجمالي الأمتار لأنها تظهر كقطع في الجدول
+                if "حزام" in fabric.display_name:
+                    continue
+                total_meters += float(fabric.meters) if fabric.meters else 0
+
+        # تجميع المواد لملخص المواد (Material Summary)
+        materials_map = {}
+
+        # 1. تجميع الأقمشة
         for curtain in curtains:
             for fabric in curtain.fabrics.all():
-                total_meters += float(fabric.meters) if fabric.meters else 0
+                name = fabric.display_name
+                # تحديد المفتاح (الاسم)
+                if not name:
+                    continue
+
+                # تخطي الأحزمة
+                if "حزام" in name:
+                    continue
+
+                if name not in materials_map:
+                    materials_map[name] = {
+                        "name": name,
+                        "type": "fabric",
+                        "total_quantity": 0.0,
+                        "sewing_quantity": 0.0,
+                        "unit": "متر" if fabric.meters > 0 else "قطعة",
+                        "usages": [],
+                    }
+
+                # حساب الكمية
+                fabric_qty = float(fabric.meters)
+                materials_map[name]["total_quantity"] += fabric_qty
+
+                # حساب كمية الخياطة بناءً على نوع التفصيل
+                # الأنواع التي تحسب الضعف
+                DOUBLE_QTY_TYPES = [
+                    "ويف كبسولة",
+                    "تكسير يمين شمال",
+                    "تكسير يمين",
+                    "تكسير شمال",
+                    "كالونات 9 سنتم",
+                ]
+
+                t_type_display = fabric.get_tailoring_type_display()
+                multiplier = 1
+                if t_type_display in DOUBLE_QTY_TYPES:
+                    multiplier = 2
+
+                materials_map[name]["sewing_quantity"] += fabric_qty * multiplier
+
+                # إضافة وصف الاستخدام (الشرح الذكي)
+                type_display = fabric.get_fabric_type_display()
+                usage_desc = f"{type_display} في {curtain.room_name}"
+                materials_map[name]["usages"].append(usage_desc)
+
+                # تخزين نوع القماش لاستخدامه في البادج (نأخذ أول نوع نجده لهذا الاسم)
+                if "fabric_type" not in materials_map[name] and fabric.fabric_type:
+                    materials_map[name]["fabric_type"] = fabric.fabric_type
+
+                # محاولة الحصول على بيانات التصنيع (رقم الإذن والشنطة)
+                # نحتاج الوصول إلى OrderItem المرتبط
+                try:
+                    # استيراد هنا لتجنب Circular Import
+                    from manufacturing.models import ManufacturingOrderItem
+
+                    order_item = fabric.order_item
+                    if order_item:
+                        # البحث عن عنصر تصنيع مرتبط
+                        mf_items = ManufacturingOrderItem.objects.filter(
+                            order_item=order_item
+                        )
+
+                        for mf_item in mf_items:
+                            if mf_item.permit_number:
+                                if "permits" not in materials_map[name]:
+                                    materials_map[name]["permits"] = set()
+                                materials_map[name]["permits"].add(
+                                    mf_item.permit_number
+                                )
+
+                            if mf_item.bag_number:
+                                if "bags" not in materials_map[name]:
+                                    materials_map[name]["bags"] = set()
+                                materials_map[name]["bags"].add(mf_item.bag_number)
+                except Exception as e:
+                    pass
+
+                # تجميع أنواع التفصيل
+                if fabric.tailoring_type:
+                    if "tailoring_types" not in materials_map[name]:
+                        materials_map[name]["tailoring_types"] = set()
+                    materials_map[name]["tailoring_types"].add(t_type_display)
+
+        # لا تفعل شيئًا للإكسسوارات (User requested to exclude accessories)
+        # تم إزالة كود تجميع الإكسسوارات
+
+        # معالجة الشرح الذكي النهائي وحساب المجموع
+        materials_summary = []
+        grand_total_quantity = 0
+        grand_total_sewing = 0
+
+        for key, item in materials_map.items():
+            # تجميع الاستخدامات: "ثقيل في : مجلس، صالة"
+            usage_by_type = {}
+            for usage in item["usages"]:
+                if " في " in usage:
+                    u_type, u_room = usage.split(" في ", 1)
+                else:
+                    u_type, u_room = "استخدام", usage
+
+                if u_type not in usage_by_type:
+                    usage_by_type[u_type] = []
+                usage_by_type[u_type].append(u_room)
+
+            final_descriptions = []
+            for u_type, rooms in usage_by_type.items():
+                unique_rooms = sorted(list(set(rooms)))
+                rooms_str = "، ".join(unique_rooms)
+                final_descriptions.append(f"{u_type} في: {rooms_str}")
+
+            item["smart_description"] = " - ".join(final_descriptions)
+
+            # تنسيق أرقام الأذونات والشنط
+            if "permits" in item and item["permits"]:
+                item["permits_str"] = "، ".join(sorted(list(item["permits"])))
+
+            if "bags" in item and item["bags"]:
+                item["bags_str"] = "، ".join(sorted(list(item["bags"])))
+
+            # المجاميع الكلية
+            grand_total_quantity += item["total_quantity"]
+            grand_total_sewing += item["sewing_quantity"]
+
+            # تحويل أنواع التفصيل لقائمة
+            if "tailoring_types" in item:
+                item["tailoring_types_list"] = sorted(list(item["tailoring_types"]))
+            else:
+                item["tailoring_types_list"] = []
+
+            materials_summary.append(item)
+
+        # ترتيب الملخص
+        materials_summary.sort(key=lambda x: x["name"])
+
+        # جلب خط الإنتاج
+        production_line_name = ""
+        try:
+            mfg_order = self.order.manufacturing_orders.first()
+            if mfg_order and mfg_order.production_line:
+                production_line_name = mfg_order.production_line.name
+        except Exception:
+            pass
 
         # تجهيز البيانات للقالب
         context = {
             "order": self.order,
             "customer": self.order.customer,
+            "production_line_name": production_line_name,
             "curtains": curtains,
+            "materials_summary": materials_summary,
+            "grand_total_quantity": grand_total_quantity,
+            "grand_total_sewing": grand_total_sewing,
             "template": self.template,
             "settings": self.template,  # إضافة settings للوصول إلى بيانات الشركة
             "working_days": working_days,  # إضافة عدد أيام التشغيل
