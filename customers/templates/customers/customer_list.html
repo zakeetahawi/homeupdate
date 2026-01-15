@@ -124,7 +124,7 @@
                                                            style="font-size: 0.7em;
                                                                   padding: 0.15rem 0.3rem"><i class="fas fa-edit" style="font-size: 0.7em;"></i></a>
                                                     {% endif %}
-                                                    {% if perms.customers.delete_customer %}
+                                                    {% if user.is_superuser or perms.customers.delete_customer %}
                                                         <a href="{% url 'customers:customer_delete' customer.pk %}"
                                                            class="btn btn-danger"
                                                            title="حذف"

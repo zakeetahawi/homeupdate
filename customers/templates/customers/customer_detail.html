@@ -115,11 +115,13 @@
                                             </button>
                                         {% endif %}
                                     {% endif %}
-                                    {% if user.is_superuser and not is_cross_branch %}
-                                        <a href="{% url 'customers:customer_delete' customer.pk %}"
-                                           class="btn btn-outline-danger btn-sm">
-                                            <i class="fas fa-trash"></i> {% trans 'حذف' %}
-                                        </a>
+                                    {% if user.is_superuser or perms.customers.delete_customer %}
+                                        {% if not is_cross_branch or perms.customers.delete_customer %}
+                                            <a href="{% url 'customers:customer_delete' customer.pk %}"
+                                               class="btn btn-outline-danger btn-sm">
+                                                <i class="fas fa-trash"></i> {% trans 'حذف' %}
+                                            </a>
+                                        {% endif %}
                                     {% endif %}
                                     <a href="{% url 'customers:customer_list' %}"
                                        class="btn btn-outline-secondary btn-sm">

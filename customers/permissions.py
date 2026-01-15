@@ -209,19 +209,22 @@ def can_user_delete_customer(user, customer):
 
     # المدير العام يمكنه حذف جميع العملاء
     # Sales Manager restriction
-    # if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
-    #    return True
+    if hasattr(user, "is_sales_manager") and user.is_sales_manager:
+        return False
 
+    # تحديث: منع مدراء المناطق والفروع من حذف العملاء
     # مدير المنطقة يمكنه حذف عملاء الفروع المُدارة
     if hasattr(user, "is_region_manager") and user.is_region_manager:
-        managed_branches = user.managed_branches.all()
-        return customer.branch in managed_branches
+        # managed_branches = user.managed_branches.all()
+        # return customer.branch in managed_branches
+        return False
 
     # مدير الفرع يمكنه حذف عملاء فرعه
     if hasattr(user, "is_branch_manager") and user.is_branch_manager:
-        return (
-            hasattr(user, "branch") and user.branch and customer.branch == user.branch
-        )
+        # return (
+        #    hasattr(user, "branch") and user.branch and customer.branch == user.branch
+        # )
+        return False
 
     # البائع وفني المعاينة لا يمكنهم حذف العملاء
     return False

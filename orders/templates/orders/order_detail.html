@@ -30,7 +30,7 @@
                         onclick="printInvoice('{{ order.order_number }}')">
                     <i class="fas fa-print"></i> طباعة الفاتورة
                 </button>
-                {% if user.is_superuser %}
+                {% if user.is_superuser or perms.orders.delete_order %}
                     <a href="{% url 'orders:order_delete' order.pk %}"
                        class="btn btn-danger">
                         <i class="fas fa-trash"></i> حذف الطلب

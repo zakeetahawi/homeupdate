@@ -220,10 +220,14 @@ def can_user_delete_order(user, order):
     if user.is_superuser:
         return True
 
+    # Check for delete permission
+    if user.has_perm("orders.delete_order"):
+        return True
+
     # المدير العام يمكنه حذف جميع الطلبات
     # Sales Manager restriction
-    # if hasattr(user, 'is_sales_manager') and user.is_sales_manager:
-    #    return True
+    if hasattr(user, "is_sales_manager") and user.is_sales_manager:
+        return False
 
     # مسؤول المصنع يمكنه حذف جميع الطلبات
     if hasattr(user, "is_factory_manager") and user.is_factory_manager:
@@ -237,14 +241,17 @@ def can_user_delete_order(user, order):
     if hasattr(user, "is_installation_manager") and user.is_installation_manager:
         return "installation" in order.get_selected_types_list()
 
+    # تحديث: منع مدراء المناطق والفروع من حذف الطلبات
     # مدير المنطقة يمكنه حذف طلبات الفروع المُدارة
     if hasattr(user, "is_region_manager") and user.is_region_manager:
-        managed_branches = user.managed_branches.all()
-        return order.branch in managed_branches
+        # managed_branches = user.managed_branches.all()
+        # return order.branch in managed_branches
+        return False
 
     # مدير الفرع يمكنه حذف طلبات فرعه
     if hasattr(user, "is_branch_manager") and user.is_branch_manager:
-        return hasattr(user, "branch") and user.branch and order.branch == user.branch
+        # return hasattr(user, "branch") and user.branch and order.branch == user.branch
+        return False
 
     # البائع والفني لا يمكنهم حذف الطلبات
     return False

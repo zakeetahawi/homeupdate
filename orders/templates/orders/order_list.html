@@ -674,13 +674,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                                           padding: 0.15rem 0.3rem">
                                                     <i class="fas fa-edit" style="font-size: 0.7em;"></i>
                                                 </a>
-                                                <a href="{% url 'orders:order_delete' order.pk %}"
-                                                   class="btn btn-danger"
-                                                   title="حذف"
-                                                   style="font-size: 0.7em;
-                                                          padding: 0.15rem 0.3rem">
-                                                    <i class="fas fa-trash" style="font-size: 0.7em;"></i>
-                                                </a>
+                                                {% if user.is_superuser or perms.orders.delete_order %}
+                                                    <a href="{% url 'orders:order_delete' order.pk %}"
+                                                       class="btn btn-danger"
+                                                       title="حذف"
+                                                       style="font-size: 0.7em;
+                                                              padding: 0.15rem 0.3rem">
+                                                        <i class="fas fa-trash" style="font-size: 0.7em;"></i>
+                                                    </a>
+                                                {% endif %}
                                             </div>
                                         </td>
                                     </tr>
