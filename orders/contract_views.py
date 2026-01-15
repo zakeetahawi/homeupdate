@@ -160,8 +160,14 @@ def regenerate_contract_pdf(request, order_id):
             # إضافة timestamp للرابط لتجنب مشكلة cache المتصفح
             import time
 
+            from django.urls import reverse
+
             cache_buster = int(time.time())
-            contract_url_with_timestamp = f"{order.contract_file.url}?v={cache_buster}"
+            # Use secure URL instead of direct media URL
+            contract_url = reverse(
+                "orders:preview_contract", kwargs={"order_id": order.id}
+            )
+            contract_url_with_timestamp = f"{contract_url}?v={cache_buster}"
 
             return JsonResponse(
                 {

@@ -21,6 +21,7 @@ from django.views.generic import (
 )
 
 from core.mixins import PaginationFixMixin
+from core.utils.secure_files import serve_protected_file
 
 from .forms import (
     InspectionEvaluationForm,
@@ -34,6 +35,34 @@ from .models import (
     InspectionNotification,
     InspectionReport,
 )
+
+
+@login_required
+def preview_inspection_file(request, inspection_id):
+    """
+    Serve inspection file inline (Preview) for authorized users.
+    """
+    inspection = get_object_or_404(Inspection, pk=inspection_id)
+
+    # Permission check using logic similar to InspectionDetailView/UpdateView
+    user = request.user
+    has_permission = (
+        user.is_superuser
+        or user.is_staff
+        or user.has_perm("inspections.view_inspection")
+        or inspection.created_by == user
+        or inspection.inspector == user
+        or (hasattr(user, "is_inspection_technician") and user.is_inspection_technician)
+        or (hasattr(user, "is_branch_manager") and user.is_branch_manager)
+    )
+
+    if not has_permission:
+        messages.error(request, "ليس لديك صلاحية لعرض هذا الملف.")
+        return redirect("inspections:inspection_list")  # Redirect to list or safe page
+
+    return serve_protected_file(
+        request, inspection.inspection_file, as_attachment=False
+    )
 
 
 class CompletedInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, ListView):

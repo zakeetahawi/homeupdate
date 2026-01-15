@@ -74,7 +74,7 @@
                                             <th>ملف العقد</th>
                                             <td>
                                                 {% if order.contract_file %}
-                                                    <a href="{{ order.contract_file.url }}"
+                                                    <a href="{% url 'orders:preview_contract' order.id %}"
                                                        target="_blank"
                                                        class="btn btn-sm btn-success">
                                                         <i class="fas fa-file-pdf"></i> عرض ملف العقد
@@ -95,7 +95,7 @@
                                                     <small class="text-muted">تم تحديد المعاينة كطرف العميل</small>
                                                 {% elif order.related_inspection %}
                                                     {% if order.related_inspection.inspection_file %}
-                                                        <a href="{{ order.related_inspection.inspection_file.url }}"
+                                                        <a href="{% url 'inspections:preview_inspection_file' order.related_inspection.id %}"
                                                            target="_blank"
                                                            class="btn btn-sm btn-success">
                                                             <i class="fas fa-file-pdf me-1"></i>عرض ملف المعاينة
@@ -135,7 +135,7 @@
                                         <th>ملف العقد</th>
                                         <td>
                                             {% if order.contract_file %}
-                                                <a href="{{ order.contract_file.url }}"
+                                                <a href="{% url 'orders:preview_contract' order.id %}"
                                                    target="_blank"
                                                    class="btn btn-sm btn-success">
                                                     <i class="fas fa-file-pdf"></i> عرض ملف العقد
@@ -156,7 +156,7 @@
                                                 <small class="text-muted">تم تحديد المعاينة كطرف العميل</small>
                                             {% elif order.related_inspection %}
                                                 {% if order.related_inspection.inspection_file %}
-                                                    <a href="{{ order.related_inspection.inspection_file.url }}"
+                                                    <a href="{% url 'inspections:preview_inspection_file' order.related_inspection.id %}"
                                                        target="_blank"
                                                        class="btn btn-sm btn-success">
                                                         <i class="fas fa-file-pdf me-1"></i>عرض ملف المعاينة
@@ -1128,7 +1128,7 @@
                                         <th>ملف العقد</th>
                                         <td>
                                             {% if order.contract_file %}
-                                                <a href="{{ order.contract_file.url }}"
+                                                <a href="{% url 'orders:preview_contract' order.id %}"
                                                    target="_blank"
                                                    class="btn btn-sm btn-primary"
                                                    rel="noopener noreferrer">
@@ -2020,15 +2020,15 @@
                                                  style="max-height: 500px;
                                                         width: auto;
                                                         cursor: pointer"
-                                                 onclick="window.open('{{ order.invoice_image.url }}', '_blank')">
+                                                 onclick="window.open('{% url 'orders:download_invoice' order.id %}', '_blank')">
                                         </div>
                                         <div class="card-footer text-center">
-                                            <a href="{{ order.invoice_image.url }}"
+                                            <a href="{% url 'orders:download_invoice' order.id %}"
                                                target="_blank"
                                                class="btn btn-sm btn-primary">
                                                 <i class="fas fa-external-link-alt me-1"></i>فتح
                                             </a>
-                                            <a href="{{ order.invoice_image.url }}"
+                                            <a href="{% url 'orders:download_invoice' order.id %}"
                                                download
                                                class="btn btn-sm btn-success">
                                                 <i class="fas fa-download me-1"></i>تحميل
@@ -2044,21 +2044,25 @@
                                             <i class="fas fa-image me-2"></i>صورة {{ forloop.counter }}
                                         </div>
                                         <div class="card-body text-center p-2">
-                                            <img src="{{ img.image.url }}"
-                                                 alt="صورة الفاتورة {{ forloop.counter }}"
-                                                 class="img-fluid rounded"
-                                                 style="max-height: 400px;
-                                                        width: auto;
-                                                        cursor: pointer"
-                                                 onclick="window.open('{{ img.image.url }}', '_blank')">
+                                            <a href="{% url 'orders:download_invoice_image' img.id %}"
+                                               target="_blank">
+                                                <img src="{% url 'orders:download_invoice_image' img.id %}"
+                                                     alt="صورة الفاتورة {{ forloop.counter }}"
+                                                     class="img-fluid rounded"
+                                                     style="max-height: 400px;
+                                                            width: auto;
+                                                            cursor: pointer">
+                                            </a>
                                         </div>
                                         <div class="card-footer text-center">
-                                            <a href="{{ img.image.url }}"
+                                            <a href="{% url 'orders:download_invoice_image' img.id %}"
                                                target="_blank"
                                                class="btn btn-sm btn-primary">
                                                 <i class="fas fa-external-link-alt me-1"></i>فتح
                                             </a>
-                                            <a href="{{ img.image.url }}" download class="btn btn-sm btn-success">
+                                            <a href="{% url 'orders:download_invoice_image' img.id %}"
+                                               download
+                                               class="btn btn-sm btn-success">
                                                 <i class="fas fa-download me-1"></i>تحميل
                                             </a>
                                         </div>

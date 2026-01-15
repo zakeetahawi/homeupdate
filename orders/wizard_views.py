@@ -1340,6 +1340,11 @@ def wizard_step_5_contract(request, draft):
         "currency_symbol": currency["currency_symbol"],
         "currency_code": currency["currency_code"],
         "is_accessory_only": is_accessory_only,
+        "contract_file_url": (
+            reverse("orders:preview_draft_contract", args=[draft.id])
+            if draft.contract_file
+            else None
+        ),
     }
 
     return render(request, "orders/wizard/step5_contract.html", context)
@@ -1358,7 +1363,7 @@ def wizard_step_6_review(request, draft):
     # الحصول على ملف العقد إذا كان موجوداً
     contract_file_url = None
     if draft.contract_file:
-        contract_file_url = draft.contract_file.url
+        contract_file_url = reverse("orders:preview_draft_contract", args=[draft.id])
 
     # الحصول على المعاينة المرتبطة إن وُجدت
     inspection = None
@@ -1367,7 +1372,13 @@ def wizard_step_6_review(request, draft):
         inspection = draft.related_inspection
         # البحث عن ملف المعاينة
         if hasattr(inspection, "inspection_file") and inspection.inspection_file:
-            inspection_file_url = inspection.inspection_file.url
+            try:
+                inspection_file_url = reverse(
+                    "inspections:preview_inspection_file", args=[inspection.id]
+                )
+            except Exception:
+                # Fallback if reverse fails (e.g. app not installed or url not found)
+                inspection_file_url = None
 
     # حساب رقم الخطوة الفعلي (5 أو 6)
     needs_contract = draft.selected_type in ["installation", "tailoring", "accessory"]
@@ -2933,7 +2944,11 @@ def wizard_upload_contract(request):
                 "success": True,
                 "message": "تم رفع ملف العقد بنجاح",
                 "file_name": contract_file.name,
-                "file_url": draft.contract_file.url if draft.contract_file else None,
+                "file_url": (
+                    reverse("orders:preview_draft_contract", args=[draft.id])
+                    if draft.contract_file
+                    else None
+                ),
             }
         )
 

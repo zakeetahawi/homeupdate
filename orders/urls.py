@@ -311,4 +311,25 @@ urlpatterns = [
         contract_views.regenerate_contract_pdf,
         name="regenerate_contract_pdf",
     ),
+    # Secure Files
+    path(
+        "secure/contract/<int:order_id>/",
+        views.preview_contract,
+        name="preview_contract",
+    ),
+    path(
+        "secure/draft/contract/<int:draft_id>/",
+        views.preview_draft_contract,
+        name="preview_draft_contract",
+    ),
+    path(
+        "secure/invoice/<int:order_id>/",
+        views.download_invoice,
+        name="download_invoice",
+    ),
+    path(
+        "secure/invoice-image/<int:image_id>/",
+        views.download_invoice_image,
+        name="download_invoice_image",
+    ),
 ]

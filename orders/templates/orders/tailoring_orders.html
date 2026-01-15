@@ -229,7 +229,7 @@
                                             {% endif %}
                                             {% if order.contract_file %}
                                                 <br>
-                                                <a href="{{ order.contract_file.url }}"
+                                                <a href="{% url 'orders:preview_contract' order.id %}"
                                                    target="_blank"
                                                    class="btn btn-sm btn-outline-info">
                                                     <i class="fas fa-file-pdf"></i>

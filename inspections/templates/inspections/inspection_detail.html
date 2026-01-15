@@ -104,7 +104,7 @@
                                     <div class="d-flex flex-column gap-3">
                                         <!-- الملف المحلي -->
                                         <div>
-                                            <a href="{{ inspection.inspection_file.url }}"
+                                            <a href="{% url 'inspections:preview_inspection_file' inspection.pk %}"
                                                target="_blank"
                                                class="btn btn-outline-primary btn-lg"
                                                title="عرض ملف المعاينة محلياً">

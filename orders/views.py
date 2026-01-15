@@ -38,23 +38,94 @@ from .permissions import (
     order_delete_permission_required,
     order_edit_permission_required,
 )
+from .wizard_models import DraftOrder
 
 logger = logging.getLogger(__name__)
 from django.utils.translation import gettext_lazy as _
+
+from core.monthly_filter_utils import apply_monthly_filter
+from core.utils.secure_files import serve_protected_file
+
+from .permissions import can_user_view_order
+
+
+@login_required
+def preview_contract(request, order_id):
+    """
+    Serve contract file inline (Preview) for authorized users.
+    """
+    order = get_object_or_404(Order, pk=order_id)
+    if not can_user_view_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لعرض هذا العقد.")
+        return redirect("orders:order_detail", pk=order.id)
+
+    return serve_protected_file(request, order.contract_file, as_attachment=False)
+
+
+@login_required
+def preview_draft_contract(request, draft_id):
+    """
+    Serve draft contract file inline (Preview) for authorized users.
+    """
+    draft = get_object_or_404(DraftOrder, pk=draft_id)
+
+    # Check permissions: owner or manager
+    # Assuming User model has can_manage_user method as seen in wizard_views.py
+    if draft.created_by != request.user:
+        if hasattr(request.user, "can_manage_user"):
+            if not request.user.can_manage_user(draft.created_by):
+                messages.error(request, "ليس لديك صلاحية لعرض هذا العقد.")
+                return redirect("orders:wizard_drafts_list")
+        else:
+            # Fallback if method doesn't exist
+            if not request.user.is_superuser:
+                messages.error(request, "ليس لديك صلاحية لعرض هذا العقد.")
+                return redirect("orders:wizard_drafts_list")
+
+    return serve_protected_file(request, draft.contract_file, as_attachment=False)
+
+
+@login_required
+def download_invoice(request, order_id):
+    """
+    Download invoice image as attachment for authorized users.
+    """
+    order = get_object_or_404(Order, pk=order_id)
+    # Check permissions (same as viewing order for now, or stricter if needed)
+    if not can_user_view_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لتحميل هذه الفاتورة.")
+        return redirect("orders:order_detail", pk=order.id)
+
+    return serve_protected_file(request, order.invoice_image, as_attachment=True)
+
+
+@login_required
+def download_invoice_image(request, image_id):
+    """
+    Download additional invoice image as attachment.
+    """
+    from .models import OrderInvoiceImage
+
+    invoice_image = get_object_or_404(OrderInvoiceImage, pk=image_id)
+    order = invoice_image.order
+
+    if not can_user_view_order(request.user, order):
+        messages.error(request, "ليس لديك صلاحية لتحميل هذه الصورة.")
+        return redirect("orders:order_detail", pk=order.id)
+
+    return serve_protected_file(request, invoice_image.image, as_attachment=True)
 
 
 @login_required
 def order_list(request):
     """
-    View for displaying the list of orders with search and filtering
-    مع إضافة الفلترة الشهرية
+    View for listing orders with filtering and pagination
     """
-    from core.monthly_filter_utils import apply_monthly_filter, get_available_years
-
     search_query = request.GET.get("search", "")
-    status_filter = request.GET.get("order_status", "")
-    status_param = request.GET.get("status", "")
+    status_filter = request.GET.get("status", "")
+    status_param = request.GET.get("status_param", "")
     page_size = request.GET.get("page_size", "25")
+
     try:
         page_size = int(page_size)
         if page_size > 100:

@@ -103,4 +103,10 @@ urlpatterns = [
     # Schedule
     path("schedule/", views.inspection_schedule_view, name="inspection_schedule"),
     path("schedule/print/", views.print_daily_schedule, name="print_daily_schedule"),
+    # Secure Files
+    path(
+        "secure/file/<int:inspection_id>/",
+        views.preview_inspection_file,
+        name="preview_inspection_file",
+    ),
 ]
