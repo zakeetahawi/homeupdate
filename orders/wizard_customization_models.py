@@ -21,6 +21,10 @@ class WizardFieldOption(models.Model):
         ("payment_method", "طريقة الدفع"),
         ("order_status", "حالة الطلب"),
         ("service_type", "نوع الخدمة"),
+        ("fabric_type", "نوع القماش"),
+        ("order_type", "نوع الطلب الرئيسي"),
+        ("curtain_style", "موديل الستارة"),
+        ("accessory_type", "نوع الإكسسوار"),
     ]
 
     field_type = models.CharField(

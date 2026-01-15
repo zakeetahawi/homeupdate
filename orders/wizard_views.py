@@ -1320,6 +1320,7 @@ def wizard_step_5_contract(request, draft):
 
     tailoring_options = WizardFieldOption.get_active_options("tailoring_type")
     installation_options = WizardFieldOption.get_active_options("installation_type")
+    fabric_types = WizardFieldOption.get_active_options("fabric_type")
 
     total_steps = get_total_steps(draft)
     currency = get_currency_context()
@@ -1333,6 +1334,7 @@ def wizard_step_5_contract(request, draft):
         "order_items": items_with_usage,
         "tailoring_options": tailoring_options,
         "installation_options": installation_options,
+        "fabric_types": fabric_types,
         "current_step": 5,
         "total_steps": total_steps,
         "step_title": "العقد",

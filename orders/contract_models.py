@@ -638,9 +638,7 @@ class CurtainFabric(models.Model):
         help_text="القماش من عناصر مسودة الطلب",
     )
 
-    fabric_type = models.CharField(
-        max_length=20, choices=FABRIC_TYPES, verbose_name="نوع القماش"
-    )
+    fabric_type = models.CharField(max_length=50, verbose_name="نوع القماش")
     fabric_name = models.CharField(
         max_length=200, blank=True, verbose_name="اسم القماش"
     )
@@ -715,6 +713,32 @@ class CurtainFabric(models.Model):
             "tab_top": "عروة علوية",
         }
         return default_display.get(self.tailoring_type, self.tailoring_type)
+
+    def get_fabric_type_display(self):
+        """الحصول على نوع القماش المعروض"""
+        if not self.fabric_type:
+            return "-"
+
+        try:
+            from .wizard_customization_models import WizardFieldOption
+
+            option = WizardFieldOption.objects.filter(
+                field_type="fabric_type", value=self.fabric_type, is_active=True
+            ).first()
+
+            if option:
+                return option.display_name
+        except Exception:
+            pass
+
+        # القيم الافتراضية
+        default_display = {
+            "light": "خفيف",
+            "heavy": "ثقيل",
+            "blackout": "بلاك أوت",
+            "additional": "إضافي",
+        }
+        return default_display.get(self.fabric_type, self.fabric_type)
 
     def clean(self):
         """التحقق من صحة البيانات"""

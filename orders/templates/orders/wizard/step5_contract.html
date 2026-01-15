@@ -481,10 +481,7 @@ body.modal-open {
                                             </label>
                                             <select id="fabric-type" class="form-select">
                                                 <option value="">اختر النوع</option>
-                                                <option value="light">خفيف</option>
-                                                <option value="heavy">ثقيل</option>
-                                                <option value="blackout">بلاك أوت</option>
-                                                <option value="additional">إضافي</option>
+                                                {% for type in fabric_types %}<option value="{{ type.value }}">{{ type.display_name }}</option>{% endfor %}
                                             </select>
                                         </div>
                                         <div class="col-md-3">
