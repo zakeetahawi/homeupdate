@@ -291,8 +291,10 @@ def api_bulk_pay_cards(request):
                 )
 
             # Update cards status
+            now = timezone.now()
             for card in cards:
                 card.status = "paid"
+                card.payment_date = now
                 card.save()
 
                 # Mark all splits as paid

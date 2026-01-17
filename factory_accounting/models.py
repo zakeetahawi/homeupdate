@@ -267,6 +267,14 @@ class FactoryCard(models.Model):
         help_text=_("التاريخ الذي أصبح فيه الأمر جاهزاً أو مكتملاً"),
     )
 
+    payment_date = models.DateTimeField(
+        _("تاريخ الدفع"),
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text=_("تاريخ سداد المستحقات"),
+    )
+
     notes = models.TextField(_("ملاحظات"), blank=True)
 
     created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)

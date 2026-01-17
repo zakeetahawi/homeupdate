@@ -269,6 +269,7 @@ def export_production_report(request):
         "تكلفة الخياطين",
         "حالة الطلب",
         "حالة الدفع",
+        "تاريخ الدفع",
     ]
 
     # Specific column widths
@@ -284,6 +285,7 @@ def export_production_report(request):
         9: 15,  # Tailor Cost
         10: 15,  # Status
         11: 15,  # Pay Status
+        12: 18,  # Payment Date
     }
 
     for col, header in enumerate(headers, 1):
@@ -298,7 +300,7 @@ def export_production_report(request):
         ws.column_dimensions[col_letter].width = col_widths.get(col, 15)
 
     # Enable AutoFilter
-    ws.auto_filter.ref = f"A{start_row}:K{start_row}"
+    ws.auto_filter.ref = f"A{start_row}:L{start_row}"
 
     # 2. Main Table Data
     sum_meters = Decimal("0.00")
@@ -333,6 +335,7 @@ def export_production_report(request):
             float(card_tailor_cost),
             card.manufacturing_order.get_status_display(),
             "مدفوع" if card.status == "paid" else "غير مدفوع",
+            card.payment_date.strftime("%Y-%m-%d") if card.payment_date else "-",
         ]
 
         for col_idx, val in enumerate(vals, 1):

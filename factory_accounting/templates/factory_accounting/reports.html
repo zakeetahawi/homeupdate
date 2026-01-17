@@ -146,6 +146,7 @@
                                         <th>الخياطين</th>
                                         <th>تكلفة الخياطين</th>
                                         <th>الحالة</th>
+                                        <th>تاريخ الدفع</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -200,10 +201,11 @@
                                                     <div class="text-muted small">غير مدفوع</div>
                                                 {% endif %}
                                             </td>
+                                            <td>{{ card.payment_date|date:"Y-m-d"|default:"-" }}</td>
                                         </tr>
                                     {% empty %}
                                         <tr>
-                                            <td colspan="11" class="text-center py-4 text-muted">لا توجد سجلات</td>
+                                            <td colspan="12" class="text-center py-4 text-muted">لا توجد سجلات</td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
@@ -213,6 +215,7 @@
                                         <td id="total-cutter-cost">{{ total_cutter_cost|floatformat:2 }}</td>
                                         <td></td>
                                         <td id="total-tailor-cost">{{ total_tailor_cost|floatformat:2 }}</td>
+                                        <td></td>
                                         <td></td>
                                     </tr>
                                 </tfoot>

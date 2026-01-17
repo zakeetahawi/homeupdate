@@ -4,7 +4,7 @@
 {% if user.is_authenticated and navbar_departments %}
     {% for key, item in navbar_departments.items %}
         {% if item.units %}
-            {% if item.units|length == 1 and not item.url %}
+            {% if item.units|length == 1 and not item.url and key != 'reports' %}
                 {# عنصر واحد فقط - عرض مباشر بدون dropdown #}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ item.units.0.url_name }}">

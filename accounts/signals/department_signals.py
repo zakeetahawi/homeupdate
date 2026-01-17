@@ -238,7 +238,7 @@ def create_default_departments_structure(sender, **kwargs):
         {
             "parent_code": "reports",
             "code": "factory_accounting_reports",
-            "name": "حسابات المصنع",
+            "name": "تقرير إنتاج",
             "url_name": "/factory-accounting/reports/",
             "icon": "fa-industry",
             "order": 1,
