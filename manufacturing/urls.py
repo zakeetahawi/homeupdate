@@ -48,6 +48,11 @@ urlpatterns = [
         views.manufacturing_order_detail_by_code,
         name="order_detail_by_code",
     ),
+    path(
+        "order/<int:pk>/material-summary/",
+        views.material_summary_view,
+        name="material_summary_print",
+    ),
     # URLs القديمة مع إعادة توجيه
     path(
         "orders/<int:pk>/",

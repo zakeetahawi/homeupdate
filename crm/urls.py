@@ -98,6 +98,11 @@ urlpatterns = [
     path("backup-system/", include("backup_system.urls", namespace="backup_system")),
     # النظام المحاسبي المتكامل
     path("accounting/", include("accounting.urls", namespace="accounting")),
+    # حسابات المصنع - الخياطين والقصاصين
+    path(
+        "factory-accounting/",
+        include("factory_accounting.urls", namespace="factory_accounting"),
+    ),
     # نظام WhatsApp - Webhooks
     path("whatsapp/", include("whatsapp.urls", namespace="whatsapp")),
     # لوحة مراقبة النظام

@@ -380,6 +380,7 @@ INSTALLED_APPS = [
     "complaints.apps.ComplaintsConfig",  # نظام إدارة الشكاوى
     "notifications.apps.NotificationsConfig",  # نظام الإشعارات المتكامل
     "accounting.apps.AccountingConfig",  # النظام المحاسبي المتكامل
+    "factory_accounting.apps.FactoryAccountingConfig",  # حسابات المصنع - الخياطين والقصاصين
     "odoo_db_manager.apps.OdooDbManagerConfig",
     "backup_system.apps.BackupSystemConfig",  # نظام النسخ الاحتياطي والاستعادة الجديد
     "public",  # صفحات عامة للمنتجات (QR Code)

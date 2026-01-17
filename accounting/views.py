@@ -752,11 +752,9 @@ def register_customer_advance(request, customer_id):
 @login_required
 def reports_index(request):
     """
-    صفحة التقارير الرئيسية
+    صفحة التقارير الرئيسية - تحويل مباشر لتقارير حسابات المصنع
     """
-    context = {}
-    context.update(get_currency_context())
-    return render(request, "accounting/reports/index.html", context)
+    return redirect("factory_accounting:reports")
 
 
 @login_required

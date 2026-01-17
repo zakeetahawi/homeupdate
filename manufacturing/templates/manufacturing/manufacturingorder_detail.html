@@ -384,6 +384,7 @@
                                                            target="_blank"
                                                            class="btn btn-success">
                                                             <i class="fas fa-file-pdf"></i> عرض ملف العقد (PDF)
+                                                            ```
                                                         </a>
                                                     </div>
                                                     {% if manufacturing_order.order.is_contract_uploaded_to_drive and manufacturing_order.order.contract_google_drive_file_url %}
@@ -655,6 +656,28 @@
                                 </div>
                             </div>
                         {% endif %}
+                        <!-- Factory Accounting Section - حسابات المصنع -->
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <div class="card border-warning">
+                                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-calculator me-2"></i>حسابات المصنع - تعيين الخياطين
+                                        </h5>
+                                        <button type="button"
+                                                class="btn btn-sm btn-dark btn-material-summary"
+                                                data-url="{% url 'manufacturing:material_summary_print' manufacturing_order.pk %}?partial=true">
+                                            <i class="fas fa-list-alt me-1"></i> تفاصيل البطاقة
+                                        </button>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="factory-card-section">
+                                            <p class="text-muted">جاري التحميل...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -842,5 +865,449 @@
             }, 500);
         };
     }
+    
+    // Factory Card JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+        const factorySection = document.getElementById('factory-card-section');
+        if (!factorySection) return;
+        
+        const manufacturingOrderId = {{ manufacturing_order.id }};
+        
+        // Load factory card data
+        fetch(`/factory-accounting/api/card/${manufacturingOrderId}/`)
+            .then(response => response.json())
+            .then(data => {
+                renderFactoryCard(data);
+            })
+            .catch(error => {
+                factorySection.innerHTML = `<div class="alert alert-danger">خطأ في تحميل البيانات: ${error.message}</div>`;
+            });
+        
+        function renderFactoryCard(data) {
+            const { factory_card, production_line, tailors, splits } = data;
+            const production_info = factory_card.production_info;
+            
+            // Build production info table
+            // Build production info table
+            let productionInfoHtml = '';
+            if (production_info) {
+                // Status mapping (Arabic)
+                // Status mapping (Arabic)
+                const statusMap = {
+                    'new': 'جديد',
+                    'in_progress': 'قيد التنفيذ',
+                    'completed': 'مكتمل',
+                    'paused': 'متوقف',
+                    'ready': 'جاهز'
+                };
+                
+                // Primary Status: Manufacturing Order Status
+                const orderStatusDisplay = factory_card.manufacturing_order_status_display || statusMap[factory_card.status] || factory_card.status;
+                let orderStatusBadge = 'bg-secondary';
+                if (factory_card.manufacturing_order_status_display === 'مكتمل' || factory_card.status === 'completed') {
+                    orderStatusBadge = 'bg-success';
+                } else if (factory_card.status === 'new') {
+                   orderStatusBadge = 'bg-primary'; 
+                }
+
+                // Secondary Status: Payment Status
+                let paymentStatusHtml = '';
+                if (factory_card.status === 'paid') {
+                    paymentStatusHtml = '<div class="badge bg-success mt-1 d-block">مدفوع</div>';
+                } else {
+                    paymentStatusHtml = '<div class="badge bg-light text-muted border mt-1 d-block">غير مدفوع</div>';
+                }
+                
+                productionInfoHtml = `
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-center" style="width: 33%;">تاريخ الإنتاج</th>
+                                    <th class="text-center" style="width: 33%;">تم بواسطة</th>
+                                    <th class="text-center" style="width: 33%;">حالة البطاقة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="text-center">
+                                        ${(() => {
+                                            if (!factory_card.production_date) return '<span class="text-muted">-</span>';
+                                            const pDetails = factory_card.production_details;
+                                            const dateStr = factory_card.production_date.split('T')[0];
+                                            let html = `<span class="badge bg-light text-dark border"><i class="fas fa-calendar-alt me-1"></i>${dateStr}</span>`;
+                                            
+                                            if (pDetails) {
+                                                html += `<div class="mt-1 small text-muted" dir="ltr"><i class="far fa-clock me-1"></i>${pDetails.time}</div>`;
+                                                const badgeClass = pDetails.is_completed ? 'bg-success' : 'bg-info text-dark';
+                                                html += `<div class="mt-1"><span class="badge ${badgeClass}" style="font-size: 0.75rem;">${pDetails.status_text}</span></div>`;
+                                            }
+                                            return html;
+                                        })()}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="fas fa-user me-1"></i>${production_info.user || production_info.user_name || '-'}
+                                        </span>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <span class="badge ${orderStatusBadge}">
+                                            ${orderStatusDisplay}
+                                        </span>
+                                        ${paymentStatusHtml}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            // Production line section removed (shown as badge)
+            let productionLineHtml = ''; 
+            
+            // Build badges for saved tailors and cutter
+            let assignmentBadges = '';
+            
+            // Add cutter badge if exists
+            // Fix: Check for 'name' as production_line object usually has name, id
+            if (production_line && production_line.name) {
+                assignmentBadges += `<span class="badge bg-secondary ms-2" title="القصاص">
+                    <i class="fas fa-cut me-1"></i>${production_line.name}
+                </span>`;
+            }
+            
+            // Add tailor badges if splits exist
+            if (splits && splits.length > 0) {
+                splits.forEach(split => {
+                    const tailor = tailors.find(t => t.id === split.tailor_id);
+                    if (tailor) {
+                        assignmentBadges += `<span class="badge bg-success ms-2" title="خياط - ${split.share_amount} متر">
+                            <i class="fas fa-user me-1"></i>${tailor.name}: ${split.share_amount} متر
+                        </span>`;
+                    }
+                });
+            }
+            
+            // Hide production line section (now handled by badges)
+            // No changes needed here as we removed {productionLineHtml} below
+            
+            // Calculate if we should show add button
+            let totalAssigned = 0;
+            if (splits) {
+                splits.forEach(split => totalAssigned += split.share_amount);
+            }
+            // Fix: Use double meters if available
+            const totalMetersHelper = factory_card.total_double_meters > 0 ? factory_card.total_double_meters : factory_card.total_billable_meters;
+            const remainingMeters = totalMetersHelper - totalAssigned;
+            const showAddButton = remainingMeters > 0.01;
+
+            let html = `
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <h6 class="mb-2">
+                            <i class="fas fa-ruler me-2"></i>إجمالي الأمتار المستحقة
+                            <span class="badge bg-primary fs-5 ms-2">${factory_card.total_billable_meters} متر</span>
+                            ${factory_card.total_double_meters > 0 ? `<span class="badge bg-info fs-5 ms-2" title="الضعف">${factory_card.total_double_meters} متر (مضاعف)</span>` : ''}
+                            ${assignmentBadges}
+                        </h6>
+                        <small class="text-muted">يتم حسابها تلقائياً من بيانات العقد</small>
+                    </div>
+                </div>
+                
+                ${productionInfoHtml}
+                
+                <div id="splits-container">
+                    <!-- New split rows will be added here -->
+                </div>
+                
+                ${showAddButton ? `
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addSplitRow()">
+                    <i class="fas fa-plus"></i> إضافة خياط
+                </button>
+                ` : ''}
+                
+                <div class="mt-4" id="save-btn-container" style="display: none;">
+                    <button type="button" class="btn btn-success" onclick="saveFactoryCard()">
+                        <i class="fas fa-save"></i> حفظ التوزيع
+                    </button>
+                </div>
+            `;
+            
+            factorySection.innerHTML = html;
+            
+            // Store data globally
+            window.factoryCardData = data;
+        }
+        
+        function renderSplitRow(split, index, tailors, isReadonly = false) {
+            const tailorOptions = tailors.map(t => 
+                `<option value="${t.id}" data-rate="${t.default_rate}" ${split && split.tailor_id === t.id ? 'selected' : ''}>${t.name}</option>`
+            ).join('');
+            
+            const disabledAttr = isReadonly ? 'disabled' : '';
+            
+            const deleteButton = !isReadonly ? `
+                <div class="col-md-1 text-center pt-4">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSplitRow(${index})" title="حذف">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            ` : '';
+            
+            return `
+                <div class="row mb-3 split-row align-items-center border-bottom pb-2" data-index="${index}">
+                    <div class="col-md-${isReadonly ? 6 : 5}">
+                        <label class="form-label small text-muted">الخياط:</label>
+                        <select class="form-select tailor-select" ${disabledAttr} required onchange="updateTailorBadge(${index})">
+                            <option value="">اختر الخياط...</option>
+                            ${tailorOptions}
+                        </select>
+                    </div>
+                    <div class="col-md-${isReadonly ? 6 : 4}">
+                        <label class="form-label small text-muted">عدد الأمتار:</label>
+                        <input type="number" step="0.01" class="form-control meters-input" 
+                               placeholder="الأمتار" value="${split ? split.share_amount : ''}" 
+                               ${disabledAttr} required onchange="updateTailorBadge(${index})" />
+                        ${isReadonly ? '<small class="text-muted">محفوظ - للتعديل استخدم لوحة التحكم</small>' : ''}
+                    </div>
+                    ${!isReadonly ? `
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted">&nbsp;</label>
+                        <div class="tailor-badge-display"></div>
+                    </div>
+                    ` : ''}
+                    ${deleteButton}
+                </div>
+            `;
+        }
+        
+        // Update tailor badge when selection or meters change
+        window.updateTailorBadge = function(index) {
+            const row = document.querySelector(`.split-row[data-index="${index}"]`);
+            if (!row) return;
+            
+            const select = row.querySelector('.tailor-select');
+            const metersInput = row.querySelector('.meters-input');
+            const badgeDisplay = row.querySelector('.tailor-badge-display');
+            
+            const selectedOption = select.options[select.selectedIndex];
+            const tailorName = selectedOption.text;
+            const meters = parseFloat(metersInput.value) || 0;
+            
+            if (select.value && meters > 0) {
+                badgeDisplay.innerHTML = `<span class="badge bg-success">${tailorName}: ${meters} متر</span>`;
+            } else {
+                badgeDisplay.innerHTML = '';
+            }
+        };
+        
+        // Make functions global
+        window.addSplitRow = function() {
+            const container = document.getElementById('splits-container');
+            const index = container.children.length;
+            
+            // Calculate remaining meters
+            // Use double meters if available, otherwise standard meters
+            const factory_card = window.factoryCardData.factory_card;
+            const totalMeters = factory_card.total_double_meters > 0 ? factory_card.total_double_meters : factory_card.total_billable_meters;
+            
+            let assignedMeters = 0;
+            document.querySelectorAll('.meters-input').forEach(input => {
+                assignedMeters += parseFloat(input.value) || 0;
+            });
+            
+            const remainingMeters = totalMeters - assignedMeters;
+            
+            if (remainingMeters <= 0.01) {
+                alert('تم توزيع إجمالي الأمتار بالكامل.');
+                return;
+            }
+            
+            // Create new row with remaining meters pre-filled
+            const newRow = document.createElement('div');
+            const splitData = remainingMeters > 0 ? { share_amount: remainingMeters.toFixed(2) } : null;
+            newRow.innerHTML = renderSplitRow(splitData, index, window.factoryCardData.tailors, false);
+            container.appendChild(newRow.firstElementChild);
+            
+            // Show save button
+            document.getElementById('save-btn-container').style.display = 'block';
+        };
+        
+        window.removeSplitRow = function(index) {
+            const row = document.querySelector(`.split-row[data-index="${index}"]`);
+            if (row) {
+                row.remove();
+                
+                // Check if any rows remain
+                const remainingRows = document.querySelectorAll('.split-row');
+                if (remainingRows.length === 0) {
+                    document.getElementById('save-btn-container').style.display = 'none';
+                }
+            }
+        };
+        
+        window.saveFactoryCard = function() {
+            const splitRows = document.querySelectorAll('.split-row');
+            const splits = [];
+            let totalAssigned = 0;
+            
+            splitRows.forEach(row => {
+                const tailorId = row.querySelector('.tailor-select').value;
+                const meters = parseFloat(row.querySelector('.meters-input').value) || 0;
+                
+                if (tailorId && meters > 0) {
+                    splits.push({
+                        tailor_id: parseInt(tailorId),
+                        share_amount: meters
+                    });
+                }
+                totalAssigned += meters;
+            });
+        
+            // Get total billable meters from the badge
+            const factory_card = window.factoryCardData.factory_card;
+            const totalMeters = factory_card.total_double_meters > 0 ? factory_card.total_double_meters : factory_card.total_billable_meters;
+            
+            // Validate totals
+            if (Math.abs(totalAssigned - totalMeters) > 0.01) {
+                const diff = Math.abs(totalMeters - totalAssigned).toFixed(2);
+                const type = totalAssigned > totalMeters ? 'زيادة' : 'ناقص';
+                alert(`خطأ: إجمالي الأمتار الموزعة (${totalAssigned.toFixed(2)}) لا يساوي إجمالي الأمتار المستحقة (${totalMeters.toFixed(2)})!\nالفرق: ${diff} متر (${type})`);
+                return;
+            }
+
+            // Strict validation - must match exactly
+            if (splits.length === 0) {
+                alert('يجب إضافة خياط واحد على الأقل');
+                return;
+            }
+            
+            // Save via AJAX
+            const url = `/factory-accounting/api/card/${factory_card.id}/save/`;
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ splits: splits })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('تم حفظ التوزيع بنجاح!');
+                    location.reload();
+                } else {
+                    alert('خطأ: ' + (data.error || 'فشل الحفظ'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('حدث خطأ أثناء الاتصال بالخادم');
+            });
+        };
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+    </script>
+    <!-- Material Summary Modal -->
+    <div class="modal fade"
+         id="materialSummaryModal"
+         tabindex="-1"
+         aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">بطاقة عناصر الطلب</h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="materialSummaryBody">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button"
+                            class="btn btn-primary"
+                            onclick="printMaterialSummary()">طباعة</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Material Summary Modal Logic
+        const summaryModal = new bootstrap.Modal(document.getElementById('materialSummaryModal'));
+        const summaryBody = document.getElementById('materialSummaryBody');
+
+        document.querySelectorAll('.btn-material-summary').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const url = this.getAttribute('data-url');
+                
+                // Show loading
+                summaryBody.innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                    </div>
+                `;
+                
+                summaryModal.show();
+                
+                // Fetch content
+                fetch(url)
+                    .then(response => response.text())
+                    .then(html => {
+                        summaryBody.innerHTML = html;
+                    })
+                    .catch(err => {
+                        summaryBody.innerHTML = '<div class="alert alert-danger">حدث خطأ أثناء تحميل البيانات</div>';
+                        console.error(err);
+                    });
+            });
+        });
+
+        // Global print function for the modal content
+        window.printMaterialSummary = function() {
+            const content = summaryBody.innerHTML;
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.write('<html><head><title>بطاقة عناصر الطلب</title>');
+            printWindow.document.write('<link href="/static/css/bootstrap.rtl.min.css" rel="stylesheet">');
+            printWindow.document.write('<style>body{font-family: Tajawal; padding: 20px;} @media print { .no-print { display: none; } body { direction: rtl; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .badge { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }</style>');
+            printWindow.document.write('</head><body dir="rtl">');
+            printWindow.document.write(content);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            // Wait for styles/images to load slightly
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        };
+    });
     </script>
 {% endblock %}

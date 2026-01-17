@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>بطاقة عناصر الطلب - {{ order.order_number }}</title>
+        <!-- Bootstrap -->
+        <link href="{% static 'css/bootstrap.rtl.min.css' %}" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap"
+              rel="stylesheet">
+        <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
+        <style>
+        body { 
+            background: #f8f9fa; 
+            font-family: 'Tajawal', sans-serif;
+            padding: 20px;
+        }
+        @media print {
+            body { 
+                background: white; 
+                padding: 0;
+            }
+            .no-print { display: none !important; }
+            .card { border: none !important; box-shadow: none !important; }
+        }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="row no-print mb-4">
+                <div class="col-12 text-center">
+                    <button class="btn btn-primary" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i> طباعة
+                    </button>
+                    <button class="btn btn-secondary ms-2" onclick="window.close()">
+                        <i class="fas fa-times me-1"></i> إغلاق
+                    </button>
+                </div>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-md-10">{% include 'manufacturing/partials/material_summary_content.html' %}</div>
+            </div>
+        </div>
+    </body>
+</html>

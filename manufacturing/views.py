@@ -50,6 +50,7 @@ from .models import (
     ManufacturingOrderItem,
     ProductionLine,
 )
+from .utils import get_material_summary_context  # تم إضافة هذا السطر
 
 # ...existing code...
 
@@ -4737,3 +4738,55 @@ def export_manufacturing_orders(request):
 
     wb.save(response)
     return response
+
+
+@login_required
+def material_summary_view(request, pk):
+    """
+    عرض بطاقة عناصر الطلب (Material Summary)
+    """
+    manufacturing_order = get_object_or_404(ManufacturingOrder, pk=pk)
+    order = manufacturing_order.order
+
+    # Check if partial render requested
+    is_partial = request.GET.get("partial") == "true"
+
+    # استخدام الدالة المساعدة لتوليد البيانات
+    summary_context = get_material_summary_context(order)
+
+    # الحصول على أسماء الخياطين من البطاقة المصنعية
+    tailors_list = []
+    try:
+        if hasattr(manufacturing_order, "factory_card"):
+            card = manufacturing_order.factory_card
+            # Get tailor names from split distributions
+            splits = card.splits.all().select_related("tailor")
+            tailors_list = [split.tailor.name for split in splits]
+    except Exception:
+        pass
+
+    tailors_display = "، ".join(tailors_list) if tailors_list else ""
+
+    context = {
+        "order": order,
+        "materials_summary": summary_context["materials_summary"],
+        "grand_total_quantity": summary_context["grand_total_quantity"],
+        "grand_total_sewing": summary_context["grand_total_sewing"],
+        "production_line_name": (
+            manufacturing_order.production_line.name
+            if manufacturing_order.production_line
+            else ""
+        ),
+        "tailors_display": tailors_display,  # تم إضافة أسماء الخياطين
+        "double_meter_types": summary_context.get(
+            "double_meter_types", []
+        ),  # تمرير أنواع الضعف للقالب
+    }
+
+    # Check if partial render requested (for Modal)
+    if is_partial:
+        return render(
+            request, "manufacturing/partials/material_summary_content.html", context
+        )
+
+    return render(request, "manufacturing/material_summary_print.html", context)

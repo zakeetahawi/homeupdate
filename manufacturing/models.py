@@ -7,6 +7,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.urls import reverse
 from django.utils import timezone
+from model_utils import FieldTracker
 
 User = get_user_model()
 
@@ -226,6 +227,9 @@ class ManufacturingOrder(models.Model):
         blank=True,
         verbose_name="تم الإنشاء بواسطة",
     )
+
+    # Tracker for status changes
+    tracker = FieldTracker(fields=["status"])
 
     created_at = models.DateTimeField(
         default=timezone.now, editable=True, verbose_name="تاريخ الإنشاء"

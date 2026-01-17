@@ -30,6 +30,7 @@
         @page {
             size: A4 portrait;
             margin: 0.5cm;
+            margin-top: 1.5cm;
         }
 
         @page {
@@ -764,6 +765,9 @@
                 {% endif %}
                 <!-- Service Types (Right) -->
                 <div class="header-right">
+                    {% if order.order_type %}
+                        <span class="service-badge badge-{{ order.order_type }}">{{ order.get_order_type_display }}</span>
+                    {% endif %}
                     {% if order.service_types and order.service_types|length > 0 %}
                         {% for service in order.service_types %}
                             <span class="service-badge badge-{{ service }}">
@@ -1082,207 +1086,6 @@
             {% empty %}
                 <div style="text-align: center; padding: 20px; color: #999;">لم يتم إضافة ستائر لهذا العقد</div>
             {% endfor %}
-            <!-- MATERIAL SUMMARY CARD -->
-            {% if materials_summary %}
-                <div style="page-break-inside: avoid;
-                            margin-top: 30px;
-                            border: 3px solid #8B4513;
-                            border-radius: 6px;
-                            background: white;
-                            overflow: hidden;
-                            box-shadow: 0 4px 8px rgba(0,0,0,0.15)">
-                    <div style="background: #8B4513;
-                                color: white;
-                                padding: 10px;
-                                border-bottom: 2px solid #5e2c0b;
-                                text-align: center">
-                        <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">بطاقة عناصر الطلب (Material Summary) 📦</div>
-                        <div style="font-size: 11px;
-                                    color: #f0e6dc;
-                                    text-align: center;
-                                    font-weight: normal;
-                                    margin-top: 5px;
-                                    line-height: 1.6">
-                            <span style="display: inline-block; margin: 0 10px;">رقم الطلب: {{ order.order_number }}</span>
-                            <span style="opacity: 0.7;">|</span>
-                            <span style="display: inline-block; margin: 0 10px;">العميل: {{ order.customer.name }}</span>
-                            {% if order.invoice_number %}
-                                <span style="opacity: 0.7;">|</span>
-                                <span style="display: inline-block; margin: 0 10px;">فاتورة: {{ order.invoice_number }}</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div style="padding: 0;">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                            <thead>
-                                <tr style="background: #f8f5f0; color: #8B4513;">
-                                    <th style="padding: 10px;
-                                               text-align: right;
-                                               border-bottom: 2px solid #d4a574;
-                                               width: 25%">الصنف / العنصر</th>
-                                    <th style="padding: 10px;
-                                               text-align: center;
-                                               border-bottom: 2px solid #d4a574;
-                                               width: 15%">الكمية الإجمالية</th>
-                                    <th style="padding: 10px;
-                                               text-align: center;
-                                               border-bottom: 2px solid #d4a574;
-                                               width: 20%">الخياطة</th>
-                                    <th style="padding: 10px;
-                                               text-align: right;
-                                               border-bottom: 2px solid #d4a574;
-                                               width: 40%">تفاصيل الاستخدام</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in materials_summary %}
-                                    <tr style="border-bottom: 1px solid #eee;">
-                                        <td style="padding: 8px; font-weight: bold; color: #333;">{{ item.name }}</td>
-                                        <td style="padding: 8px;
-                                                   text-align: center;
-                                                   font-weight: bold;
-                                                   font-size: 13px;
-                                                   color: #2c3e50">
-                                            {{ item.total_quantity|floatformat:2 }} {{ item.unit }}
-                                        </td>
-                                        <td style="padding: 8px;
-                                                   text-align: center;
-                                                   font-weight: bold;
-                                                   font-size: 13px;
-                                                   color: #333">
-                                            <!-- الكمية المضاعفة -->
-                                            {{ item.sewing_quantity|floatformat:2 }} {{ item.unit }}
-                                            <!-- بادجات أنواع التفصيل -->
-                                            {% if item.tailoring_types_list %}
-                                                <div style="margin-top: 4px;
-                                                            display: flex;
-                                                            flex-wrap: wrap;
-                                                            justify-content: center;
-                                                            gap: 4px">
-                                                    {% for t_type in item.tailoring_types_list %}
-                                                        {% if "تكسير" in t_type or "كالونات" in t_type or "ويفي" in t_type or "ويف" in t_type %}
-                                                            <span style="font-size: 9px;
-                                                                         background: #e74c3c;
-                                                                         color: white;
-                                                                         padding: 2px 5px;
-                                                                         border-radius: 3px">{{ t_type }}</span>
-                                                        {% else %}
-                                                            <span style="font-size: 9px;
-                                                                         background: #95a5a6;
-                                                                         color: white;
-                                                                         padding: 2px 5px;
-                                                                         border-radius: 3px">{{ t_type }}</span>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </td>
-                                        <td style="padding: 10px;
-                                                   color: #333;
-                                                   line-height: 1.6;
-                                                   font-weight: bold;
-                                                   font-size: 14px">
-                                            <div style="margin-bottom: 4px;">
-                                                {% if item.type == 'fabric' %}
-                                                    {% if item.fabric_type == 'heavy' %}
-                                                        <span style="font-size: 10px;
-                                                                     background: linear-gradient(135deg, #009933 0%, #008000 100%);
-                                                                     padding: 2px 6px;
-                                                                     border-radius: 4px;
-                                                                     color: white;
-                                                                     display: inline-block;
-                                                                     margin-left: 5px">ثقيل</span>
-                                                    {% elif item.fabric_type == 'light' %}
-                                                        <span style="font-size: 10px;
-                                                                     background: linear-gradient(135deg, #FFD700 0%, #FFC107 100%);
-                                                                     padding: 2px 6px;
-                                                                     border-radius: 44px;
-                                                                     color: #000;
-                                                                     font-weight: bold;
-                                                                     display: inline-block;
-                                                                     margin-left: 5px">خفيف</span>
-                                                    {% elif item.fabric_type == 'blackout' %}
-                                                        <span style="font-size: 10px;
-                                                                     background: linear-gradient(135deg, #000000 0%, #2c3e50 100%);
-                                                                     padding: 2px 6px;
-                                                                     border-radius: 4px;
-                                                                     color: white;
-                                                                     display: inline-block;
-                                                                     margin-left: 5px">بلاك أوت</span>
-                                                    {% endif %}
-                                                {% elif item.type == 'accessory' %}
-                                                    <span style="font-size: 9px;
-                                                                 background: #fff3e0;
-                                                                 padding: 1px 4px;
-                                                                 border-radius: 3px;
-                                                                 color: #e67e22;
-                                                                 margin-left: 5px">إكسسوار</span>
-                                                {% endif %}
-                                                {{ item.smart_description }}
-                                            </div>
-                                            {% if item.permits_str %}
-                                                <div style="font-size: 10px; color: #27ae60; font-weight: bold;">
-                                                    <span style="border: 1px solid #27ae60; padding: 0 3px; border-radius: 3px">إذن: {{ item.permits_str }}</span>
-                                                </div>
-                                            {% endif %}
-                                            {% if item.bags_str %}
-                                                <div style="font-size: 10px;
-                                                            color: #8e44ad;
-                                                            font-weight: bold;
-                                                            margin-top: 2px">
-                                                    <span style="border: 1px solid #8e44ad; padding: 0 3px; border-radius: 3px">شنطة: {{ item.bags_str }}</span>
-                                                </div>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot>
-                                <tr style="background: #f8f5f0;
-                                           border-top: 2px solid #8B4513;
-                                           font-weight: bold;
-                                           color: #8B4513">
-                                    <td style="padding: 8px; text-align: right;">المجموع الكلي</td>
-                                    <td style="padding: 8px; text-align: center;">{{ grand_total_quantity|floatformat:2 }} م</td>
-                                    <td style="padding: 8px; text-align: center;">{{ grand_total_sewing|floatformat:2 }} م</td>
-                                    <td style="padding: 8px;"></td>
-                                </tr>
-                                <!-- توقيع القصاص واسم الخياط -->
-                                <tr style="border-top: 1px solid #d4a574; background: #fff;">
-                                    <td colspan="4" style="padding: 15px;">
-                                        <div style="display: flex;
-                                                    justify-content: space-between;
-                                                    align-items: flex-start">
-                                            <!-- اسم خط الإنتاج -->
-                                            <div style="text-align: center; width: 45%;">
-                                                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 5px;">اسم خط الإنتاج</div>
-                                                <div style="height: 30px;
-                                                            line-height: 30px;
-                                                            font-weight: bold;
-                                                            color: #2c3e50;
-                                                            font-size: 14px">{{ production_line_name }}</div>
-                                                <!-- مساحة للاسم -->
-                                                <div style="border-bottom: 1px dashed #bdc3c7;
-                                                            width: 100%;
-                                                            margin-top: 5px"></div>
-                                            </div>
-                                            <!-- اسم الخياط -->
-                                            <div style="text-align: center; width: 45%;">
-                                                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 5px;">اسم الخياط</div>
-                                                <div style="height: 30px;"></div>
-                                                <!-- مساحة للاسم -->
-                                                <div style="border-bottom: 1px dashed #bdc3c7;
-                                                            width: 100%;
-                                                            margin-top: 5px"></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            {% endif %}
             <div class="page-number">
                 <script>
                 document.write('صفحة ' + '<span class="page"></span>' + ' من ' + '<span class="pages"></span>');
