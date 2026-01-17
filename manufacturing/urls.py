@@ -9,9 +9,6 @@ urlpatterns = [
     path("", ImprovedDashboardView.as_view(), name="dashboard"),
     path("orders/", views.ManufacturingOrderListView.as_view(), name="order_list"),
     path(
-        "orders/overdue/", views.OverdueOrdersListView.as_view(), name="overdue_orders"
-    ),
-    path(
         "orders/export/excel/",
         views.export_manufacturing_orders,
         name="export_excel",

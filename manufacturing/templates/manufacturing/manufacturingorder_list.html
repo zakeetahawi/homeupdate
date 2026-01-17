@@ -1368,7 +1368,7 @@
                                        value="in_progress"
                                        class="auto-submit-filter"
                                        {% if 'in_progress' in status_filters %}checked{% endif %}>
-                                قيد التنفيذ
+                                قيد التصنيع
                             </label>
                             <label class="hf-checkbox-item {% if 'ready_install' in status_filters %}selected{% endif %}">
                                 <input type="checkbox"
@@ -2825,7 +2825,7 @@ window.showStatusModal = function(orderId, currentStatus, currentStatusDisplay, 
     const statusOptions = {
         'pending_approval': 'قيد الموافقة',
         'pending': 'قيد الانتظار',
-        'in_progress': 'قيد التنفيذ',
+        'in_progress': 'قيد التصنيع',
         'ready_install': 'جاهز للتركيب',
         'completed': 'مكتمل',
         'delivered': 'تم التسليم',

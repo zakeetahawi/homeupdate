@@ -291,43 +291,70 @@
             </div>
         </div>
         <!-- Alert Cards -->
+        <!-- Alert Cards & Pending Row -->
         <div class="row mb-4">
-            {% if pending_approval_count > 0 %}
-                <div class="col-md-6">
-                    <div class="alert-card">
+            <!-- 1. Pending Approval -->
+            <div class="col-md-4">
+                {% if pending_approval_count > 0 %}
+                    <div class="alert-card clickable-card"
+                         style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%)"
+                         onclick="window.location.href='{% url 'manufacturing:order_list' %}?status=pending_approval'">
                         <div class="d-flex align-items-center">
-                            <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                            <i class="fas fa-exclamation-circle fa-2x me-3"></i>
                             <div>
                                 <h5 class="mb-1">{{ pending_approval_count }} طلب يحتاج موافقة</h5>
                                 <small>يرجى مراجعة الطلبات المعلقة</small>
                             </div>
                         </div>
                     </div>
+                {% else %}
+                    <div class="metric-card h-100 d-flex align-items-center justify-content-center">
+                        <div class="text-muted">
+                            <i class="fas fa-check-circle me-2"></i> لا توجد طلبات تحتاج موافقة
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            <!-- 2. Pending Orders (Moved Here) -->
+            <div class="col-md-4">
+                <div class="alert-card clickable-card"
+                     style="background: linear-gradient(135deg, #ffc107 0%, #ffca2c 100%) !important;
+                            color: #000"
+                     onclick="window.location.href='{% url 'manufacturing:order_list' %}?status=pending'">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-hourglass-half fa-2x me-3"></i>
+                        <div>
+                            <h5 class="mb-1">{{ pending_orders|intcomma }} طلب قيد الانتظار</h5>
+                            <small>بانتظار البدء بالتنفيذ</small>
+                        </div>
+                    </div>
                 </div>
-            {% endif %}
-            {% if overdue_orders > 0 %}
-                <div class="col-md-6">
-                    <a href="{% url 'manufacturing:overdue_orders' %}"
-                       class="text-decoration-none">
-                        <div class="alert-card clickable-card">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-clock fa-2x me-3"></i>
-                                <div>
-                                    <h5 class="mb-1">{{ overdue_orders }} طلب متأخر</h5>
-                                    <small>تجاوز موعد التسليم المتوقع (لا يشمل الطلبات الجاهزة للتركيب)</small>
-                                </div>
-                                <div class="ms-auto">
-                                    <i class="fas fa-arrow-left fa-lg"></i>
-                                </div>
+            </div>
+            <!-- 3. Overdue Orders (Non-clickable) -->
+            <div class="col-md-4">
+                {% if overdue_orders > 0 %}
+                    <div class="alert-card clickable-card"
+                         onclick="window.location.href='{% url 'manufacturing:order_list' %}?overdue=true'">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-clock fa-2x me-3"></i>
+                            <div>
+                                <h5 class="mb-1">{{ overdue_orders }} طلب متأخر</h5>
+                                <small>تجاوز موعد التسليم المتوقع</small>
                             </div>
                         </div>
-                    </a>
-                </div>
-            {% endif %}
+                    </div>
+                {% else %}
+                    <div class="metric-card h-100 d-flex align-items-center justify-content-center">
+                        <div class="text-muted">
+                            <i class="fas fa-check-circle me-2"></i> لا توجد طلبات متأخرة
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
         </div>
-        <!-- Main Statistics Cards -->
+        <!-- Main Statistics Cards (Total, Delivered, In Progress) -->
         <div class="row mb-4">
-            <div class="col-xl-3 col-md-6">
+            <div class="col-md-4">
                 <div class="stat-card">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -340,7 +367,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-xl-3 col-md-6">
+            <div class="col-md-4">
                 <div class="stat-card">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -353,7 +380,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-xl-3 col-md-6">
+            <div class="col-md-4">
                 <div class="stat-card">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -362,19 +389,6 @@
                             </div>
                             <div class="number">{{ in_progress_orders|intcomma }}</div>
                             <div class="label">قيد التنفيذ</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <div class="stat-card">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="icon">
-                                <i class="fas fa-hourglass-half"></i>
-                            </div>
-                            <div class="number">{{ pending_orders|intcomma }}</div>
-                            <div class="label">قيد الانتظار</div>
                         </div>
                     </div>
                 </div>
