@@ -1598,8 +1598,12 @@
                                                     {% for item in cutting_order.items.all %}
                                                         <div class="mb-1">
                                                             <span class="badge bg-primary me-1">{{ forloop.counter }}</span>
-                                                            <strong>{{ item.order_item.product.name|default:"منتج غير محدد" }}</strong>
-                                                            {% if item.order_item.product.code %}<small class="text-muted">({{ item.order_item.product.code }})</small>{% endif %}
+                                                            {% if item.is_external %}
+                                                                <strong>{{ item.external_fabric_name }}</strong> <span class="badge bg-danger">قماش خارجي</span>
+                                                            {% else %}
+                                                                <strong>{{ item.order_item.product.name|default:"منتج غير محدد" }}</strong>
+                                                                {% if item.order_item.product.code %}<small class="text-muted">({{ item.order_item.product.code }})</small>{% endif %}
+                                                            {% endif %}
                                                         </div>
                                                     {% empty %}
                                                         <span class="text-muted">لا توجد عناصر</span>

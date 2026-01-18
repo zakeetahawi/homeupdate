@@ -616,6 +616,7 @@ def wizard_step_2_order_type(request, draft):
                     "installation": "تركيب",
                     "inspection": "معاينة",
                     "tailoring": "تسليم",
+                    "deli": "تسليم فرع /او تفصيل",
                     "products": "منتجات",
                 }
                 old_name = (
@@ -1572,8 +1573,8 @@ def wizard_finalize(request):
                 # قائمة العناصر التي تم تحديثها (للمزامنة مع التصنيع)
                 updated_order_items = []
 
-                # خريطة لربط الـ ID القديم بالمنتج الجديد (للستائر)
-                item_mapping = {}  # {old_order_item_id: new_order_item}
+                # خريطة لربط DraftOrderItem ID بالمنتج النهائي (للستائر)
+                draft_item_map = {}  # {draft_item_id: order_item}
 
                 # 2. معالجة عناصر المسودة
                 for draft_item in draft_items_list:
@@ -1605,7 +1606,10 @@ def wizard_finalize(request):
                         original_item.save()
 
                         updated_order_items.append(original_item)
-                        item_mapping[original_item.id] = original_item
+                        draft_item_map[draft_item.id] = original_item
+                        logger.info(
+                            f"🔗 Mapped draft_item {draft_item.id} ({draft_item.product.name}) -> order_item {original_item.id} (updated)"
+                        )
 
                         # إزالة من قائمة الحذف
                         del current_order_items[draft_item.original_item_id]
@@ -1649,7 +1653,15 @@ def wizard_finalize(request):
                     order_items_to_create.append(new_item)
 
                 if order_items_to_create:
-                    OrderItem.objects.bulk_create(order_items_to_create, batch_size=200)
+                    # ⚡ Replace bulk_create with loop to guarantee IDs are returned (safe for all DBs)
+                    for draft_item, new_item in zip(
+                        new_draft_items, order_items_to_create
+                    ):
+                        new_item.save()
+                        draft_item_map[draft_item.id] = new_item
+                        logger.info(
+                            f"🔗 Mapped draft_item {draft_item.id} ({draft_item.product.name}) -> order_item {new_item.id}"
+                        )
 
                 # ⚡ إعادة حساب إجماليات الطلب فوراً لضمان الدقة (خاصة وأن عمليات bulk تتخطى signals)
                 try:
@@ -1769,15 +1781,16 @@ def wizard_finalize(request):
                     for fabric in draft_curtain.fabrics.all():
                         linked_order_item = None
                         if fabric.draft_order_item:
-                            if (
-                                fabric.draft_order_item.original_item_id
-                                and fabric.draft_order_item.original_item_id
-                                in item_mapping
-                            ):
-                                linked_order_item = item_mapping[
-                                    fabric.draft_order_item.original_item_id
-                                ]
-                            else:
+                            linked_order_item = draft_item_map.get(
+                                fabric.draft_order_item.id
+                            )
+
+                            logger.info(
+                                f"🧵 Fabric {fabric.fabric_name or fabric.display_name}: draft_item_id={fabric.draft_order_item.id}, linked_order_item={linked_order_item}"
+                            )
+
+                            # Fallback just in case (e.g. direct modification)
+                            if not linked_order_item:
                                 linked_order_item = OrderItem.objects.filter(
                                     order=order,
                                     product=fabric.draft_order_item.product,
@@ -1888,6 +1901,7 @@ def wizard_finalize(request):
 
         if not order:
             # ⚡ وضع الإنشاء - إنشاء طلب جديد بأقل عمليات ممكنة
+            logger.info(f"🆕 [NEW ORDER PATH] Creating new order for draft {draft.id}")
             order = Order.objects.create(
                 customer=draft.customer,
                 salesperson=draft.salesperson,
@@ -1934,36 +1948,63 @@ def wizard_finalize(request):
                     curtains, ["order", "draft_order"], batch_size=200
                 )
 
-            # ⚡ نقل العناصر - bulk_create محسّن (استخدام القائمة المحملة مسبقاً)
-            order_items_to_create = [
-                OrderItem(
-                    order=order,
-                    product=item.product,
-                    quantity=item.quantity,
-                    unit_price=item.unit_price,
-                    discount_percentage=item.discount_percentage,
-                    # ⚡ FIX: حساب discount_amount من discount_percentage بدلاً من الاعتماد على item.discount_amount
-                    discount_amount=(
-                        (
-                            item.quantity
-                            * item.unit_price
-                            * item.discount_percentage
-                            / Decimal("100.0")
-                        )
-                        if item.discount_percentage and item.discount_percentage > 0
-                        else Decimal("0.00")
-                    ),
-                    item_type=item.item_type,
-                    notes=item.notes or "",
+            # ⚡ نقل العناصر - استخدام save loop بدلاً من bulk_create لضمان الحصول على IDs
+            # وإنشاء draft_item_map للربط مع CurtainFabric
+            draft_item_map = {}
+            for draft_item in draft_items_list:
+                discount_amt = (
+                    (
+                        draft_item.quantity
+                        * draft_item.unit_price
+                        * draft_item.discount_percentage
+                        / Decimal("100.0")
+                    )
+                    if draft_item.discount_percentage
+                    and draft_item.discount_percentage > 0
+                    else Decimal("0.00")
                 )
-                for item in draft_items_list
-            ]
-            OrderItem.objects.bulk_create(order_items_to_create, batch_size=200)
+
+                new_item = OrderItem(
+                    order=order,
+                    product=draft_item.product,
+                    quantity=draft_item.quantity,
+                    unit_price=draft_item.unit_price,
+                    discount_percentage=draft_item.discount_percentage,
+                    discount_amount=discount_amt,
+                    item_type=draft_item.item_type,
+                    notes=draft_item.notes or "",
+                )
+                new_item.save()
+                draft_item_map[draft_item.id] = new_item
+                logger.info(
+                    f"🔗 [NEW ORDER] Mapped draft_item {draft_item.id} ({draft_item.product.name}) -> order_item {new_item.id}"
+                )
 
             # ⚡ تحديث Order triggering signals - هام لإنشاء أوامر التقطيع
-            # bulk_create لا يطلق signals، لذلك نحتاج لحفظ الطلب يدوياً
             # لإطلاق signal create_cutting_orders_on_order_save
             order.save()
+
+            # ⚡ ربط CurtainFabric بـ OrderItem باستخدام draft_item_map
+            for curtain in curtains:
+                for fabric in curtain.fabrics.all():
+                    if fabric.draft_order_item:
+                        linked_order_item = draft_item_map.get(
+                            fabric.draft_order_item.id
+                        )
+                        if linked_order_item:
+                            fabric.order_item = linked_order_item
+                            fabric.save(update_fields=["order_item"])
+                            logger.info(
+                                f"🧵 [NEW ORDER] Linked fabric {fabric.fabric_name or fabric.display_name} to order_item {linked_order_item.id}"
+                            )
+                        else:
+                            logger.warning(
+                                f"⚠️ [NEW ORDER] Could not find order_item for draft_item {fabric.draft_order_item.id}"
+                            )
+                    else:
+                        logger.info(
+                            f"🧵 [NEW ORDER] Fabric {fabric.fabric_name or fabric.display_name} has no draft_order_item - treating as external"
+                        )
 
         # ⚡ إنشاء الدفعة (مشترك - لأن التعديل قد يحذف الدفعات القديمة)
         if draft.paid_amount > 0:
@@ -1980,6 +2021,27 @@ def wizard_finalize(request):
         DraftOrder.objects.filter(pk=draft.pk).update(
             is_completed=True, completed_at=timezone.now(), final_order=order
         )
+
+        # ⚡ معالجة الأقمشة الخارجية (External Fabrics)
+        # يجب استدعاؤها هنا لأن الإشارة (Signal) انطلقت قبل نقل الستائر للطلب
+        try:
+            from cutting.models import CuttingOrderItem
+            from cutting.signals import process_external_fabrics
+
+            # ⚠️ حذف العناصر الخارجية القديمة أولاً (لتجنب التكرار عند إعادة المعالجة)
+            old_external_items = CuttingOrderItem.objects.filter(
+                cutting_order__order=order, is_external=True
+            )
+            deleted_count = old_external_items.count()
+            if deleted_count > 0:
+                old_external_items.delete()
+                logger.info(
+                    f"🗑️ تم حذف {deleted_count} عنصر خارجي قديم للطلب {order.order_number}"
+                )
+
+            process_external_fabrics(order)
+        except Exception as e:
+            logger.error(f"❌ خطأ في معالجة الأقمشة الخارجية: {e}")
 
         # مسح الجلسة
         request.session.pop("editing_order_id", None)
@@ -2043,6 +2105,27 @@ def wizard_finalize(request):
             logger.info(
                 f"⏭️ تخطي توليد العقد للطلب {order.order_number} - نوع الطلب: {selected_type}"
             )
+
+        # ✅ معالجة الأقمشة الخارجية بعد اكتمال جميع العمليات
+        try:
+            from cutting.models import CuttingOrderItem
+            from cutting.signals import process_external_fabrics
+
+            # ⚠️ حذف العناصر الخارجية القديمة أولاً (لتجنب التكرار)
+            old_external_items = CuttingOrderItem.objects.filter(
+                cutting_order__order=order, is_external=True
+            )
+            deleted_count = old_external_items.count()
+            if deleted_count > 0:
+                old_external_items.delete()
+                logger.info(
+                    f"🗑️ تم حذف {deleted_count} عنصر خارجي قديم للطلب {order.order_number}"
+                )
+
+            process_external_fabrics(order)
+            logger.info(f"✅ تمت معالجة الأقمشة الخارجية للطلب {order.order_number}")
+        except Exception as e:
+            logger.error(f"❌ خطأ في معالجة الأقمشة الخارجية: {e}", exc_info=True)
 
         return JsonResponse(
             {
@@ -3160,13 +3243,20 @@ def _create_draft_from_order(order, user):
 
         # نسخ الأقمشة
         for fabric in curtain.fabrics.all():
+            # ⚡ FIX: استخدام order_item بدلاً من draft_order_item
+            # لأن الطلب الأصلي يحتوي على order_item وليس draft_order_item
+            linked_draft_item = None
+            if fabric.order_item_id:
+                # قماش عادي - ربطه بـ DraftOrderItem المناسب
+                linked_draft_item = item_mapping.get(fabric.order_item_id)
+            elif fabric.draft_order_item_id:
+                # Fallback: إذا كان draft_order_item موجود (نادر)
+                linked_draft_item = item_mapping.get(fabric.draft_order_item_id)
+            # else: قماش خارجي - يبقى None
+
             CurtainFabric.objects.create(
                 curtain=new_curtain,
-                draft_order_item=(
-                    item_mapping.get(fabric.draft_order_item_id)
-                    if fabric.draft_order_item_id
-                    else None
-                ),
+                draft_order_item=linked_draft_item,
                 fabric_type=fabric.fabric_type,
                 fabric_name=fabric.fabric_name,
                 pieces=fabric.pieces,

@@ -207,12 +207,27 @@ class CuttingOrderItem(models.Model):
         verbose_name="أمر التقطيع",
     )
 
-    # عنصر الطلب الأصلي
+    # عنصر الطلب الأصلي (يمكن أن يكون فارغاً للأقمشة الخارجية)
     order_item = models.ForeignKey(
         "orders.OrderItem",
         on_delete=models.CASCADE,
         related_name="cutting_items",
         verbose_name="عنصر الطلب",
+        null=True,
+        blank=True,
+    )
+
+    # حقول القماش الخارجي
+    is_external = models.BooleanField(default=False, verbose_name="قماش خارجي")
+    external_fabric_name = models.CharField(
+        max_length=200, blank=True, verbose_name="اسم القماش الخارجي"
+    )
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        default=0,
+        verbose_name="الكمية",
+        help_text="الكمية المطلوبة (يتم تعبئتها تلقائياً للأقمشة الخارجية)",
     )
 
     # حالة التقطيع
@@ -325,12 +340,18 @@ class CuttingOrderItem(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.order_item.product.name} - {self.get_status_display()}"
+        if self.is_external:
+            return f"{self.external_fabric_name} (خارجي) - {self.get_status_display()}"
+        return f"{self.order_item.product.name if self.order_item and self.order_item.product else 'منتج غير محدد'} - {self.get_status_display()}"
 
     @property
     def total_quantity(self):
         """الكمية الإجمالية (الأصلية + الإضافية)"""
-        return self.order_item.quantity + self.additional_quantity
+        if self.is_external:
+            return self.quantity + self.additional_quantity
+        return (
+            self.order_item.quantity if self.order_item else 0
+        ) + self.additional_quantity
 
     def mark_as_completed(
         self,
@@ -523,6 +544,8 @@ class CuttingOrderItem(models.Model):
         return (
             self.status == "completed"
             and not self.inventory_deducted
+            and not self.is_external  # الأقمشة الخارجية لا تخصم من المخزون
+            and self.order_item
             and self.order_item.product
         )
 

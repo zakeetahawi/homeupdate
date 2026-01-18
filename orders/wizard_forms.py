@@ -243,6 +243,17 @@ class Step2OrderTypeForm(forms.ModelForm):
         customer = kwargs.pop("customer", None)
         super().__init__(*args, **kwargs)
 
+        # ⚡ تصفية أنواع الطلبات لعرض النشطة فقط
+        from .wizard_customization_models import WizardFieldOption
+
+        active_order_types = WizardFieldOption.objects.filter(
+            field_type="order_type", is_active=True
+        ).values_list("value", "display_name")
+
+        if active_order_types:
+            # استخدام الأنواع النشطة فقط
+            self.fields["selected_type"].choices = list(active_order_types)
+
         # تحميل المعاينات المرتبطة بالعميل
         if customer:
             self.fields["related_inspection"].queryset = Inspection.objects.filter(

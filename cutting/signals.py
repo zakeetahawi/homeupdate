@@ -7,6 +7,8 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from inventory.models import StockTransaction, Warehouse
+from manufacturing.models import ManufacturingSettings
+from orders.contract_models import CurtainFabric
 from orders.models import Order, OrderItem
 
 from .models import CuttingOrder, CuttingOrderItem
@@ -47,93 +49,90 @@ def create_cutting_orders_on_order_save(sender, instance, created, **kwargs):
             )
             return
 
-            try:
-                with transaction.atomic():
-                    # الحصول على جميع المستودعات النشطة
-                    active_warehouses = Warehouse.objects.filter(is_active=True)
-                    logger.info(f"📦 المستودعات النشطة: {active_warehouses.count()}")
+        try:
+            with transaction.atomic():
+                # الحصول على جميع المستودعات النشطة
+                active_warehouses = Warehouse.objects.filter(is_active=True)
+                logger.info(f"📦 المستودعات النشطة: {active_warehouses.count()}")
 
-                    if not active_warehouses.exists():
-                        logger.warning(
-                            f"❌ لا توجد مستودعات نشطة لإنشاء أوامر تقطيع للطلب {instance.order_number}"
-                        )
-                        return
+                if not active_warehouses.exists():
+                    logger.warning(
+                        f"❌ لا توجد مستودعات نشطة لإنشاء أوامر تقطيع للطلب {instance.order_number}"
+                    )
+                    return
 
-                    # التحقق من عدم وجود أوامر تقطيع مسبقاً
-                    if CuttingOrder.objects.filter(order=instance).exists():
-                        logger.info(
-                            f"⏭️ يوجد أمر تقطيع مسبق للطلب {instance.order_number}"
-                        )
-                        return
+                # التحقق من عدم وجود أوامر تقطيع مسبقاً
+                if CuttingOrder.objects.filter(order=instance).exists():
+                    logger.info(f"⏭️ يوجد أمر تقطيع مسبق للطلب {instance.order_number}")
+                    return
 
-                    # إنشاء أمر تقطيع لكل مستودع نشط (فارغ - ستُضاف العناصر لاحقاً)
-                    created_count = 0
-                    for warehouse in active_warehouses:
-                        cutting_order = CuttingOrder.objects.create(
-                            order=instance,
-                            warehouse=warehouse,
-                            status="pending",
-                            notes=f"أمر تقطيع تلقائي للطلب {instance.contract_number or instance.order_number} - مستودع {warehouse.name}",
-                        )
-                        created_count += 1
-                        logger.info(
-                            f"✅ تم إنشاء أمر تقطيع {cutting_order.cutting_code} للمستودع {warehouse.name}"
-                        )
-
+                # إنشاء أمر تقطيع لكل مستودع نشط (فارغ - ستُضاف العناصر لاحقاً)
+                created_count = 0
+                for warehouse in active_warehouses:
+                    cutting_order = CuttingOrder.objects.create(
+                        order=instance,
+                        warehouse=warehouse,
+                        status="pending",
+                        notes=f"أمر تقطيع تلقائي للطلب {instance.contract_number or instance.order_number} - مستودع {warehouse.name}",
+                    )
+                    created_count += 1
                     logger.info(
-                        f"📋 تم إنشاء {created_count} أمر تقطيع للطلب {instance.order_number}"
+                        f"✅ تم إنشاء أمر تقطيع {cutting_order.cutting_code} للمستودع {warehouse.name}"
                     )
 
-                    # ✅ توزيع العناصر الموجودة (إذا تم إنشاؤها قبل الطلب)
-                    # هذا يحدث عندما يتم إنشاء العناصر عبر wizard/formset
-                    if instance.items.exists():
-                        logger.info(
-                            f"📦 توزيع {instance.items.count()} عنصر موجود على أوامر التقطيع..."
-                        )
-
-                        for order_item in instance.items.all():
-                            # تحقق من عدم توزيع العنصر مسبقاً
-                            if CuttingOrderItem.objects.filter(
-                                order_item=order_item
-                            ).exists():
-                                continue
-
-                            target_warehouse = determine_warehouse_for_item(
-                                order_item, active_warehouses
-                            )
-
-                            if target_warehouse:
-                                cutting_order = CuttingOrder.objects.filter(
-                                    order=instance, warehouse=target_warehouse
-                                ).first()
-
-                                if cutting_order:
-                                    CuttingOrderItem.objects.create(
-                                        cutting_order=cutting_order,
-                                        order_item=order_item,
-                                        status="pending",
-                                    )
-                                    logger.info(
-                                        f"✅ تم توزيع {order_item.product.name[:30]} على {target_warehouse.name}"
-                                    )
-
-                        # حذف أوامر التقطيع الفارغة
-                        empty_orders = CuttingOrder.objects.filter(
-                            order=instance, items__isnull=True
-                        )
-                        deleted = empty_orders.count()
-                        if deleted > 0:
-                            empty_orders.delete()
-                            logger.info(f"🗑️ تم حذف {deleted} أمر تقطيع فارغ")
-
-            except Exception as e:
-                logger.error(
-                    f"❌ خطأ في إنشاء أوامر التقطيع للطلب {instance.id}: {str(e)}"
+                logger.info(
+                    f"📋 تم إنشاء {created_count} أمر تقطيع للطلب {instance.order_number}"
                 )
 
-        from django.db import transaction
+                # ✅ توزيع العناصر الموجودة (إذا تم إنشاؤها قبل الطلب)
+                # هذا يحدث عندما يتم إنشاء العناصر عبر wizard/formset
+                if instance.items.exists():
+                    logger.info(
+                        f"📦 توزيع {instance.items.count()} عنصر موجود على أوامر التقطيع..."
+                    )
 
-        transaction.on_commit(create_cutting_orders)
+                    for order_item in instance.items.all():
+                        # تحقق من عدم توزيع العنصر مسبقاً
+                        if CuttingOrderItem.objects.filter(
+                            order_item=order_item
+                        ).exists():
+                            continue
+
+                        target_warehouse = determine_warehouse_for_item(
+                            order_item, active_warehouses
+                        )
+
+                        if target_warehouse:
+                            cutting_order = CuttingOrder.objects.filter(
+                                order=instance, warehouse=target_warehouse
+                            ).first()
+
+                            if cutting_order:
+                                CuttingOrderItem.objects.create(
+                                    cutting_order=cutting_order,
+                                    order_item=order_item,
+                                    status="pending",
+                                )
+                                logger.info(
+                                    f"✅ تم توزيع {order_item.product.name[:30]} على {target_warehouse.name}"
+                                )
+
+                    # حذف أوامر التقطيع الفارغة
+                    empty_orders = CuttingOrder.objects.filter(
+                        order=instance, items__isnull=True
+                    )
+                    deleted = empty_orders.count()
+                    if deleted > 0:
+                        empty_orders.delete()
+                        logger.info(f"🗑️ تم حذف {deleted} أمر تقطيع فارغ")
+
+        except Exception as e:
+            logger.error(f"❌ خطأ في إنشاء أوامر التقطيع للطلب {instance.id}: {str(e)}")
+
+        # ⚠️ ملاحظة: تمت إزالة استدعاء process_external_fabrics من هنا
+        # لأنه يتم استدعاؤها في نهاية wizard_finalize بعد ربط CurtainFabric
+
+    transaction.on_commit(create_cutting_orders)
 
     # ✅ جديد: معالجة حالة التعديل - توزيع العناصر الجديدة
     if not created and instance.items.exists():
@@ -236,8 +235,6 @@ def create_cutting_orders_on_order_save(sender, instance, created, **kwargs):
             finally:
                 # تحرير القفل
                 _cutting_signal_lock.processing = False
-
-        from django.db import transaction
 
         transaction.on_commit(distribute_new_items)
 
@@ -958,3 +955,81 @@ def auto_fix_on_stock_change(sender, instance, created, **kwargs):
                 logger.error(f"❌ خطأ في إنشاء قطع للطلب {order_id}: {str(e)}")
 
     transaction.on_commit(run_bulk_fix)
+
+
+def process_external_fabrics(order):
+    """
+    البحث عن الأقمشة الخارجية (التي لا ترتبط بمنتج مخزني)
+    وإنشاء أوامر تقطيع لها في المستودع المحدد في الإعدادات
+    """
+    try:
+        # الحصول على إعدادات التصنيع لمعرفة مستودع الأقمشة الخارجية
+        settings = ManufacturingSettings.get_settings()
+        target_warehouse = settings.external_fabric_warehouse
+
+        if not target_warehouse:
+            logger.warning(
+                f"⚠️ لم يتم تحديد مستودع للأقمشة الخارجية في إعدادات التصنيع. لن يتم إنشاء أوامر تقطيع لها."
+            )
+            return
+
+        # البحث عن الأقمشة الخارجية المرتبطة بهذا الطلب
+        # الأقمشة الخارجية هي التي لا تملك order_item ولها اسم
+        # نستخدم order_item لأنه الأدق للطلبات النهائية، بينما draft_order_item قد يبقى موجوداً أو لا
+        external_fabrics = CurtainFabric.objects.filter(
+            curtain__order=order,
+            order_item__isnull=True,
+        ).exclude(fabric_name__in=["", "غير محدد", None])
+
+        if not external_fabrics.exists():
+            return
+
+        logger.info(
+            f"🔍 تم العثور على {external_fabrics.count()} قماش خارجي للطلب {order.order_number}"
+        )
+
+        # التأكد من وجود/إنشاء أمر تقطيع للمستودع المحدد
+        cutting_order, created = CuttingOrder.objects.get_or_create(
+            order=order,
+            warehouse=target_warehouse,
+            defaults={
+                "status": "pending",
+                "notes": f"أمر تقطيع تلقائي للأقمشة الخارجية - طلب {order.order_number}",
+            },
+        )
+
+        if created:
+            logger.info(
+                f"✅ تم إنشاء أمر تقطيع للأقمشة الخارجية {cutting_order.cutting_code}"
+            )
+
+        # إضافة العناصر
+        count = 0
+        for fabric in external_fabrics:
+            # التحقق من عدم التكرار (بناءً على الاسم والكمية لأن ليس لدينا ID طلب)
+            exists = CuttingOrderItem.objects.filter(
+                cutting_order=cutting_order,
+                is_external=True,
+                external_fabric_name=fabric.fabric_name,
+                quantity=fabric.meters,  # مقارنة الكمية أيضاً للتأكد
+            ).exists()
+
+            if not exists:
+                CuttingOrderItem.objects.create(
+                    cutting_order=cutting_order,
+                    order_item=None,
+                    is_external=True,
+                    external_fabric_name=fabric.fabric_name,
+                    quantity=fabric.meters,
+                    status="pending",
+                    notes=f"قماش خارجي: {fabric.fabric_type} - {fabric.pieces} قطعة",
+                )
+                count += 1
+
+        if count > 0:
+            logger.info(
+                f"✅ تم إضافة {count} عنصر خارجي لأمر التقطيع {cutting_order.cutting_code}"
+            )
+
+    except Exception as e:
+        logger.error(f"❌ خطأ في معالجة الأقمشة الخارجية للطلب {order.id}: {str(e)}")

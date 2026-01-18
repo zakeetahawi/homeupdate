@@ -36,6 +36,17 @@ class ManufacturingSettings(models.Model):
         help_text="المستودعات التي تظهر عناصرها في تفاصيل أمر التصنيع",
     )
 
+    # مستودع الأقمشة الخارجية (للتقطيع التلقائي)
+    external_fabric_warehouse = models.ForeignKey(
+        "inventory.Warehouse",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="external_fabric_settings",
+        verbose_name="مستودع الأقمشة الخارجية",
+        help_text="المستودع الذي سيتم تعيين أوامر تقطيع الأقمشة الخارجية إليه تلقائياً",
+    )
+
     # حقل singleton للتأكد من وجود سجل واحد فقط
     is_active = models.BooleanField(default=True, verbose_name="نشط", editable=False)
 

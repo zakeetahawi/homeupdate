@@ -72,7 +72,6 @@ class Order(models.Model):
         ("vip", "VIP"),
     ]
     ORDER_TYPES = [
-        ("accessory", "إكسسوار"),
         ("installation", "تركيب"),
         ("inspection", "معاينة"),
         ("tailoring", "تسليم"),

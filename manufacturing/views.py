@@ -1139,6 +1139,129 @@ class ManufacturingOrderDetailView(
                     if not meters_warehouses:
                         total_meters += order_item.quantity
 
+            # --- إضافة الأقمشة الخارجية (External Fabrics) ---
+            try:
+                from cutting.models import CuttingOrderItem
+
+                external_cutting_items = CuttingOrderItem.objects.filter(
+                    cutting_order__order=self.object.order, is_external=True
+                )
+
+                for cutting_item in external_cutting_items:
+                    # التحقق من وجود manufacturing item
+                    mfg_item = self.object.items.filter(
+                        cutting_item=cutting_item
+                    ).first()
+
+                    warehouse = (
+                        cutting_item.cutting_order.warehouse
+                        if cutting_item.cutting_order
+                        else None
+                    )
+
+                    # التحقق من الفلترة
+                    should_display = True
+                    if display_warehouses:
+                        should_display = warehouse and warehouse in display_warehouses
+
+                    if should_display:
+                        # تجهيز كائن وهمي يحاكي order_item لاستخدامه في القالب
+                        # القالب يتوقع: order_item.product.name, order_item.quantity, etc.
+                        class FakeProduct:
+                            def __init__(self, name):
+                                self.name = name
+                                self.code = ""
+
+                        class FakeOrderItem:
+                            def __init__(self, item):
+                                self.product = FakeProduct(
+                                    f"{item.external_fabric_name} (خارجي)"
+                                )
+                                self.quantity = item.quantity
+                                self.fabric_type = "قماش خارجي"
+                                self.fabric_color = ""
+                                self.fabric_meters = item.quantity
+
+                        fake_order_item = FakeOrderItem(cutting_item)
+
+                        if mfg_item:
+                            item_data = {
+                                "manufacturing_item": mfg_item,
+                                "order_item": fake_order_item,
+                                "cutting_receiver_name": mfg_item.receiver_name
+                                or cutting_item.receiver_name,
+                                "cutting_permit_number": mfg_item.permit_number
+                                or cutting_item.permit_number,
+                                "cutting_date": mfg_item.cutting_date
+                                or cutting_item.cutting_date,
+                                "cutting_status": mfg_item.cutting_status_display,
+                                "cutting_status_color": mfg_item.get_cutting_status_color(),
+                                "has_cutting_data": mfg_item.has_cutting_data,
+                                "is_cut": mfg_item.is_cut,
+                                "warehouse_name": warehouse.name if warehouse else None,
+                                "warehouse": warehouse,
+                                "fabric_received": mfg_item.fabric_received,
+                                "bag_number": mfg_item.bag_number,
+                                "fabric_received_date": mfg_item.fabric_received_date,
+                                "fabric_receiver_name": (
+                                    mfg_item.fabric_received_by.get_full_name()
+                                    if mfg_item.fabric_received_by
+                                    else None
+                                ),
+                                "fabric_status": mfg_item.get_fabric_status_display(),
+                                "fabric_status_color": mfg_item.get_fabric_status_color(),
+                            }
+                        else:
+                            # لم يتم إنشاء عنصر تصنيع بعد (أو لم يكتمل التقطيع)
+                            has_actual_cutting_data = bool(
+                                cutting_item.receiver_name
+                                and cutting_item.permit_number
+                            )
+
+                            item_data = {
+                                "manufacturing_item": None,
+                                "order_item": fake_order_item,
+                                "cutting_receiver_name": cutting_item.receiver_name,
+                                "cutting_permit_number": cutting_item.permit_number,
+                                "cutting_date": cutting_item.cutting_date,
+                                "cutting_status": cutting_item.get_status_display(),
+                                "cutting_status_color": (
+                                    "success"
+                                    if cutting_item.status == "completed"
+                                    else (
+                                        "info"
+                                        if cutting_item.status == "in_progress"
+                                        else "secondary"
+                                    )
+                                ),
+                                "has_cutting_data": has_actual_cutting_data,
+                                "is_cut": cutting_item.status == "completed"
+                                and has_actual_cutting_data,
+                                "warehouse_name": warehouse.name if warehouse else None,
+                                "warehouse": warehouse,
+                                "fabric_received": False,
+                                "bag_number": None,
+                                "fabric_received_date": None,
+                                "fabric_receiver_name": None,
+                                "fabric_status": "لم يتم الاستلام",
+                                "fabric_status_color": "warning",
+                            }
+
+                        items_data.append(item_data)
+
+                        # حساب الأمتار
+                        should_count = True
+                        if meters_warehouses:
+                            should_count = warehouse and warehouse in meters_warehouses
+
+                        if should_count:
+                            total_meters += cutting_item.quantity
+
+            except Exception as e:
+                logger.error(
+                    f"Error processing external fabrics in manufacturing detail: {e}"
+                )
+
             context["items_data"] = items_data
 
             # حساب إجمالي الكمية من المستودعات المحددة فقط

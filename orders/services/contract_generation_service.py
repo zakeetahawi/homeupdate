@@ -99,6 +99,31 @@ class ContractGenerationService:
                 if "حزام" in name:
                     continue
 
+                # تمييز الأقمشة الخارجية
+                # تمييز الأقمشة الخارجية
+                is_external = False
+
+                # التحقق إذا كان العقد لطلب نهائي أو مسودة
+                if curtain.order:  # طلب نهائي
+                    # في الطلب النهائي، القماش الخارجي ليس له order_item
+                    if not fabric.order_item and fabric.fabric_name:
+                        is_external = True
+                elif curtain.draft_order:  # مسودة
+                    # في المسودة، القماش الخارجي ليس له draft_order_item
+                    if not fabric.draft_order_item and fabric.fabric_name:
+                        is_external = True
+                else:
+                    # حالة احتياطية (Check fallback)
+                    if (
+                        not fabric.order_item
+                        and not fabric.draft_order_item
+                        and fabric.fabric_name
+                    ):
+                        is_external = True
+
+                if is_external:
+                    name = f"{name} (خارجي)"
+
                 if name not in materials_map:
                     materials_map[name] = {
                         "name": name,

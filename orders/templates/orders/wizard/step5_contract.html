@@ -485,24 +485,51 @@ body.modal-open {
                                             </select>
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">
-                                                اسم القماش <span class="text-danger">*</span>
-                                            </label>
-                                            <select id="fabric-name"
-                                                    class="form-select"
-                                                    onchange="updateFabricQuantityInfo(this)">
-                                                <option value="">اختر القماش من المرجع</option>
-                                                {% for item in draft.items.all %}
-                                                    <option value="{{ item.id }}"
-                                                            data-available="{{ item.quantity|stringformat:'f' }}"
-                                                            data-name="{{ item.product.name }}">
-                                                        {{ item.product.name }} - متوفر: <span class="available-qty-{{ item.id }}">{{ item.quantity|floatformat:"-3" }}</span> متر
-                                                    </option>
-                                                {% endfor %}
-                                            </select>
-                                            <small class="text-muted mt-1" id="fabric-qty-hint" style="display:none;">
-                                                <i class="fas fa-info-circle"></i> المتبقي للاختيار: <span id="remaining-qty">0</span> متر
-                                            </small>
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <label class="form-label mb-0">
+                                                    اسم القماش <span class="text-danger">*</span>
+                                                </label>
+                                                <div class="form-check form-switch cursor-pointer"
+                                                     title="تفعيل لإدخال اسم قماش خارجي يدوياً">
+                                                    <input class="form-check-input bg-danger border-danger cursor-pointer"
+                                                           type="checkbox"
+                                                           id="externalFabricToggle"
+                                                           onchange="toggleExternalFabric()">
+                                                    <label class="form-check-label text-danger small fw-bold cursor-pointer"
+                                                           for="externalFabricToggle"
+                                                           style="font-size: 0.8rem">قماش خارجي</label>
+                                                </div>
+                                            </div>
+                                            <!-- Select Dropdown (Default) -->
+                                            <div id="fabric-select-container">
+                                                <select id="fabric-name"
+                                                        class="form-select"
+                                                        onchange="updateFabricQuantityInfo(this)">
+                                                    <option value="">اختر القماش من المرجع</option>
+                                                    {% for item in draft.items.all %}
+                                                        <option value="{{ item.id }}"
+                                                                data-available="{{ item.quantity|stringformat:'f' }}"
+                                                                data-name="{{ item.product.name }}">
+                                                            {{ item.product.name }} - متوفر: <span class="available-qty-{{ item.id }}">{{ item.quantity|floatformat:"-3" }}</span> متر
+                                                        </option>
+                                                    {% endfor %}
+                                                </select>
+                                                <small class="text-muted mt-1" id="fabric-qty-hint" style="display:none;">
+                                                    <i class="fas fa-info-circle"></i> المتبقي للاختيار: <span id="remaining-qty">0</span> متر
+                                                </small>
+                                            </div>
+                                            <!-- Text Input (External) -->
+                                            <div id="fabric-input-container" style="display: none;">
+                                                <input type="text"
+                                                       id="fabric-name-external"
+                                                       class="form-control border-danger"
+                                                       placeholder="أدخل اسم القماش الخارجي يدوياً..."
+                                                       style="color: #dc3545;
+                                                              font-weight: bold">
+                                                <small class="text-danger fw-bold mt-1 d-block">
+                                                    <i class="fas fa-exclamation-triangle"></i> قماش خارجي - لا يتم خصمه من المخزون
+                                                </small>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
                                             <label class="form-label">
@@ -2067,11 +2094,59 @@ function skipFabricsSection() {
 }
 
 // Add fabric to temporary list
+// Toggle External Fabric Mode
+function toggleExternalFabric() {
+    const isExternal = document.getElementById('externalFabricToggle').checked;
+    const selectContainer = document.getElementById('fabric-select-container');
+    const inputContainer = document.getElementById('fabric-input-container');
+    const fabricSelect = document.getElementById('fabric-name');
+    const fabricInput = document.getElementById('fabric-name-external');
+    
+    if (isExternal) {
+        selectContainer.style.display = 'none';
+        inputContainer.style.display = 'block';
+        fabricSelect.value = ''; // Clear select
+        fabricInput.focus();
+        // Remove error styles
+        fabricSelect.classList.remove('field-required-error');
+        const wrapper = fabricSelect.closest('.mb-3, .col-md-4, .col-md-3, .col-md-6, #fabric-select-container');
+        if (wrapper) {
+            const errorIcon = wrapper.querySelector('.field-error-icon');
+            const errorMsg = wrapper.querySelector('.field-error-message');
+            if (errorIcon) errorIcon.remove();
+            if (errorMsg) errorMsg.remove();
+        }
+    } else {
+        selectContainer.style.display = 'block';
+        inputContainer.style.display = 'none';
+        fabricInput.value = ''; // Clear input
+        // Remove error styles
+        fabricInput.classList.remove('field-required-error');
+        const wrapper = fabricInput.closest('.mb-3, .col-md-4, .col-md-3, .col-md-6, #fabric-input-container');
+        if (wrapper) {
+            const errorIcon = wrapper.querySelector('.field-error-icon');
+            const errorMsg = wrapper.querySelector('.field-error-message');
+            if (errorIcon) errorIcon.remove();
+            if (errorMsg) errorMsg.remove();
+        }
+    }
+}
+
+// Add fabric to temporary list
 function addFabricToList() {
     const fabricTypeSelect = document.getElementById('fabric-type');
     const fabricType = fabricTypeSelect.value;
+    
+    const isExternal = document.getElementById('externalFabricToggle').checked;
+    
+    // Default mode fields
     const fabricSelect = document.getElementById('fabric-name');
     const fabricItemId = fabricSelect.value;
+    
+    // External mode fields
+    const fabricExternalInput = document.getElementById('fabric-name-external');
+    const fabricExternalName = fabricExternalInput.value.trim();
+    
     const metersInput = document.getElementById('fabric-meters');
     const meters = parseFloat(metersInput.value);
     const piecesInput = document.getElementById('fabric-pieces');
@@ -2080,10 +2155,17 @@ function addFabricToList() {
     const tailoring = tailoringSelect.value;
     
     // إزالة الأخطاء السابقة
-    [fabricTypeSelect, fabricSelect, metersInput, piecesInput, tailoringSelect].forEach(field => {
+    const fieldsToCheck = [fabricTypeSelect, metersInput, piecesInput, tailoringSelect];
+    if (isExternal) {
+        fieldsToCheck.push(fabricExternalInput);
+    } else {
+        fieldsToCheck.push(fabricSelect);
+    }
+    
+    fieldsToCheck.forEach(field => {
         if (field) {
             field.classList.remove('field-required-error');
-            const wrapper = field.closest('.mb-3, .col-md-4, .col-md-3, .col-md-6');
+            const wrapper = field.closest('.mb-3, .col-md-4, .col-md-3, .col-md-6, #fabric-select-container, #fabric-input-container');
             if (wrapper) {
                 const errorIcon = wrapper.querySelector('.field-error-icon');
                 const errorMsg = wrapper.querySelector('.field-error-message');
@@ -2105,11 +2187,20 @@ function addFabricToList() {
     }
     
     // التحقق من اسم القماش
-    if (!fabricItemId) {
-        hasErrors = true;
-        missingFields.push('اسم القماش');
-        fabricSelect.classList.add('field-required-error');
-        addFieldErrorIcon(fabricSelect, 'اسم القماش مطلوب');
+    if (isExternal) {
+        if (!fabricExternalName) {
+            hasErrors = true;
+            missingFields.push('اسم القماش الخارجي');
+            fabricExternalInput.classList.add('field-required-error');
+            addFieldErrorIcon(fabricExternalInput, 'اسم القماش مطلوب');
+        }
+    } else {
+        if (!fabricItemId) {
+            hasErrors = true;
+            missingFields.push('اسم القماش');
+            fabricSelect.classList.add('field-required-error');
+            addFieldErrorIcon(fabricSelect, 'اسم القماش مطلوب');
+        }
     }
     
     // التحقق من الكمية
@@ -2159,24 +2250,31 @@ function addFabricToList() {
         return;
     }
     
-    // Validate quantity against available
-    calculateUsedQuantities();
-    const tracker = fabricUsageTracker[fabricItemId];
-    const remaining = tracker.total - tracker.used;
+    // Validate quantity against available (ONLY if not external)
+    let fabricName = "";
     
-    // Use epsilon for floating point comparison
-    if (meters > remaining + 0.001) {
-        alert(`الكمية المطلوبة (${meters.toFixed(3)} متر) أكبر من المتوفر (${remaining.toFixed(3)} متر)\nالمتبقي من ${tracker.name}: ${remaining.toFixed(3)} متر`);
-        return;
+    if (!isExternal) {
+        calculateUsedQuantities();
+        const tracker = fabricUsageTracker[fabricItemId];
+        const remaining = tracker.total - tracker.used;
+        
+        // Use epsilon for floating point comparison
+        if (meters > remaining + 0.001) {
+            alert(`الكمية المطلوبة (${meters.toFixed(3)} متر) أكبر من المتوفر (${remaining.toFixed(3)} متر)\nالمتبقي من ${tracker.name}: ${remaining.toFixed(3)} متر`);
+            return;
+        }
+        
+        fabricName = fabricSelect.options[fabricSelect.selectedIndex].getAttribute('data-name');
+    } else {
+        fabricName = fabricExternalName;
     }
-    
-    const fabricName = fabricSelect.options[fabricSelect.selectedIndex].getAttribute('data-name');
     
     const fabric = {
         type: fabricType,
         type_display: document.getElementById('fabric-type').options[document.getElementById('fabric-type').selectedIndex].text,
         name: fabricName,
-        item_id: fabricItemId,
+        item_id: isExternal ? null : fabricItemId,
+        is_external: isExternal,
         meters: meters,
         pieces: pieces,
         tailoring: tailoring,
@@ -2189,6 +2287,7 @@ function addFabricToList() {
     // Clear form - إعادة تعيين جميع الحقول بدون قيم افتراضية
     document.getElementById('fabric-type').value = '';
     document.getElementById('fabric-name').value = '';
+    document.getElementById('fabric-name-external').value = '';
     metersInput.value = '';
     document.getElementById('fabric-pieces').value = '';
     document.getElementById('fabric-tailoring').value = '';
@@ -2205,7 +2304,7 @@ function addFabricToList() {
         });
         Toast.fire({
             icon: 'success',
-            title: 'تم إضافة القماش بنجاح'
+            title: isExternal ? 'تم إضافة القماش الخارجي بنجاح' : 'تم إضافة القماش بنجاح'
         });
     }
     
@@ -2244,12 +2343,17 @@ function updateFabricsList() {
             quantityDisplay = `${metersFormatted}م × ${piecesCount} قطعة`;
         }
         
+        // الشارة الخاصة بالقماش الخارجي
+        const externalBadge = fabric.is_external ? 
+            '<span class="badge bg-danger ms-1"><i class="fas fa-external-link-alt me-1"></i>خارجي</span>' : '';
+        
         html += `
             <div class="card mb-2 border-${colorClass}">
                 <div class="card-body py-2">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <span class="badge bg-${colorClass}">${fabric.type_display}</span>
+                            ${externalBadge}
                             <strong>${fabric.name}</strong> - 
                             ${quantityDisplay}
                             ${fabric.tailoring ? ' - ' + fabric.tailoring_display : ''}

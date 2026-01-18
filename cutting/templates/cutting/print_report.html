@@ -490,14 +490,20 @@
                                                 <tr>
                                                     <td>{{ forloop.counter }}</td>
                                                     <td>
-                                                        {% if item.order_item.product %}
+                                                        {% if item.is_external %}
+                                                            {{ item.external_fabric_name }} <span class="badge bg-danger">خارجي</span>
+                                                        {% elif item.order_item.product %}
                                                             {{ item.order_item.product.name }}
                                                         {% else %}
                                                             غير محدد
                                                         {% endif %}
                                                     </td>
                                                     <td>
-                                                        <strong>{{ item.order_item.quantity|floatformat:2 }}</strong> متر
+                                                        {% if item.is_external %}
+                                                            <strong>{{ item.quantity }}</strong> متر
+                                                        {% else %}
+                                                            <strong>{{ item.order_item.quantity|floatformat:2 }}</strong> متر
+                                                        {% endif %}
                                                     </td>
                                                     <td>{{ item.receiver_name|default:"—" }}</td>
                                                     <td>{{ item.permit_number|default:"—" }}</td>

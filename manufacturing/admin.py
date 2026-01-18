@@ -1464,6 +1464,10 @@ class ManufacturingSettingsAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (
+            "إعدادات عامة",
+            {"fields": ("external_fabric_warehouse",)},
+        ),
+        (
             "إعدادات حساب الأمتار",
             {
                 "fields": ("warehouses_for_meters_calculation",),
@@ -1598,3 +1602,6 @@ class ManufacturingStatusLogAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """منع الحذف للحفاظ على سجل التتبع"""
         return request.user.is_superuser
+
+
+# Force Reload

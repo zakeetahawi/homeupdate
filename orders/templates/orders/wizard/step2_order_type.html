@@ -39,7 +39,7 @@
                                             <i class="fas fa-tools fa-3x text-success"></i>
                                         {% elif choice.0 == 'inspection' %}
                                             <i class="fas fa-eye fa-3x text-info"></i>
-                                        {% elif choice.0 == 'tailoring' %}
+                                        {% elif choice.0 == 'tailoring' or choice.0 == 'deli' %}
                                             <i class="fas fa-cut fa-3x text-warning"></i>
                                         {% elif choice.0 == 'products' %}
                                             <i class="fas fa-boxes fa-3x text-secondary"></i>
@@ -51,7 +51,7 @@
                                             🔧 موجه إلى ورشة الإكسسوار
                                         {% elif choice.0 == 'installation' %}
                                             🏭 موجه إلى المصنع
-                                        {% elif choice.0 == 'tailoring' %}
+                                        {% elif choice.0 == 'tailoring' or choice.0 == 'deli' %}
                                             📦 موجه إلى المصنع
                                         {% elif choice.0 == 'inspection' %}
                                             👁️ موجه لقسم المعاينات
@@ -400,7 +400,7 @@ function selectOrderType(type) {
     
     // إظهار/إخفاء قسم المعاينة المرتبطة
     const relatedInspectionSection = document.getElementById('related-inspection-section');
-    if (['installation', 'tailoring', 'accessory'].includes(type)) {
+    if (['installation', 'tailoring', 'deli', 'accessory'].includes(type)) {
         relatedInspectionSection.style.display = 'block';
     } else {
         relatedInspectionSection.style.display = 'none';
@@ -592,7 +592,7 @@ document.getElementById('step2-form').addEventListener('submit', function(e) {
     console.log('✅ نوع الطلب:', selectedType.value);
     
     // التحقق من اختيار المعاينة للأنواع المطلوبة
-    const typesRequiringInspection = ['installation', 'tailoring', 'accessory'];
+    const typesRequiringInspection = ['installation', 'tailoring', 'deli', 'accessory'];
     if (typesRequiringInspection.includes(selectedType.value)) {
         console.log('⚠️ هذا النوع يتطلب معاينة أو طرف العميل');
         

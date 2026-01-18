@@ -1028,7 +1028,18 @@
                                             {% elif fabric.fabric_type %}
                                                 <span class="fabric-type-badge light">{{ fabric.get_fabric_type_display }}</span>
                                             {% endif %}
-                                            <span class="fabric-name-bold">{{ fabric.display_name }}</span>
+                                            <span class="fabric-name-bold">
+                                                {{ fabric.display_name }}
+                                                {% if not fabric.order_item and fabric.fabric_name %}
+                                                    <span style="background-color: #dc3545;
+                                                                 color: white;
+                                                                 padding: 2px 6px;
+                                                                 border-radius: 4px;
+                                                                 font-size: 10px;
+                                                                 margin-right: 5px;
+                                                                 vertical-align: middle">قماش خارجي مرسل من الفرع</span>
+                                                {% endif %}
+                                            </span>
                                             {% if 'حزام' in fabric.display_name or fabric.meters == 0 %}
                                                 <span class="fabric-meters">{{ fabric.pieces }} قطعة</span>
                                             {% else %}
