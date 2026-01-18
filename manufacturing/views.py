@@ -128,12 +128,13 @@ class ManufacturingOrderListView(
         # استثناء طلبات المنتجات (products) من أوامر التصنيع - لا يجب أن تظهر هنا أبداً
         queryset = queryset.exclude(order__selected_types__contains=["products"])
 
-        # استثناء طلبات التعديل افتراضياً (إلا إذا تم اختيارها يدوياً في فلتر نوع الطلب)
+        # استثناء طلبات التعديل افتراضياً (إلا إذا تم اختيارها يدوياً في فلتر نوع الطلب أو show_all=1)
         order_type_filters = self.request.GET.getlist("order_type")
         order_type_filters = [f for f in order_type_filters if f and f.strip()]
+        show_all = self.request.GET.get("show_all") == "1"
 
-        # إذا لم يكن هناك فلتر يدوي لنوع الطلب، استثني طلبات التعديل
-        if not order_type_filters:
+        # إذا لم يكن هناك فلتر يدوي لنوع الطلب ولا show_all، استثني طلبات التعديل
+        if not order_type_filters and not show_all:
             queryset = queryset.exclude(order_type="modification")
 
         # تطبيق الفلترة الشهرية (بناءً على تاريخ الطلب)
@@ -464,6 +465,10 @@ class ManufacturingOrderListView(
         """تطبيق فلترة بناءً على إعدادات العرض للمستخدم الحالي"""
         try:
             from .models import ManufacturingDisplaySettings
+
+            # إذا كان هناك معامل show_all=1، تجاوز جميع الفلاتر
+            if self.request.GET.get("show_all") == "1":
+                return queryset
 
             # التحقق من وجود فلاتر يدوية في الطلب
             manual_filters = self.has_manual_filters()

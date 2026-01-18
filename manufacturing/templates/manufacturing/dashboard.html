@@ -320,12 +320,12 @@
                 <div class="alert-card clickable-card"
                      style="background: linear-gradient(135deg, #ffc107 0%, #ffca2c 100%) !important;
                             color: #000"
-                     onclick="window.location.href='{% url 'manufacturing:order_list' %}?status=pending'">
+                     onclick="window.location.href='{% url 'manufacturing:order_list' %}?status=pending&month=all&show_all=1'">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-hourglass-half fa-2x me-3"></i>
                         <div>
                             <h5 class="mb-1">{{ pending_orders|intcomma }} طلب قيد الانتظار</h5>
-                            <small>بانتظار البدء بالتنفيذ</small>
+                            <small>بانتظار البدء بالتنفيذ (جميع الأنواع)</small>
                         </div>
                     </div>
                 </div>

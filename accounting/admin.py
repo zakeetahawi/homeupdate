@@ -194,9 +194,11 @@ class AccountAdmin(admin.ModelAdmin):
     get_level.short_description = "المستوى"
 
     def customer_linked(self, obj):
+        from django.utils.safestring import mark_safe
+
         if obj.customer:
-            return format_html('<span style="color: green;">✓</span>')
-        return format_html('<span style="color: gray;">-</span>')
+            return mark_safe('<span style="color: green;">✓</span>')
+        return mark_safe('<span style="color: gray;">-</span>')
 
     customer_linked.short_description = "عميل مرتبط"
 
@@ -209,7 +211,9 @@ class AccountAdmin(admin.ModelAdmin):
         else:
             color = "gray"
         return format_html(
-            '<span style="color: {}; font-weight: bold;">{:,.2f}</span>', color, balance
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            f"{balance:,.2f}",
         )
 
     colored_balance.short_description = "الرصيد"
@@ -287,7 +291,7 @@ class TransactionAdmin(admin.ModelAdmin):
 
     def total_amount_display(self, obj):
         total = obj.lines.aggregate(total=Sum("debit"))["total"] or 0
-        return format_html("<strong>{:,.2f}</strong>", total)
+        return format_html("<strong>{}</strong>", f"{total:,.2f}")
 
     total_amount_display.short_description = "المبلغ"
 
@@ -304,9 +308,11 @@ class TransactionAdmin(admin.ModelAdmin):
     status_badge.admin_order_field = "status"
 
     def is_balanced_display(self, obj):
+        from django.utils.safestring import mark_safe
+
         if obj.is_balanced:
-            return format_html('<span style="color: green;">✓ متوازن</span>')
-        return format_html('<span style="color: red;">✗ غير متوازن</span>')
+            return mark_safe('<span style="color: green;">✓ متوازن</span>')
+        return mark_safe('<span style="color: red;">✗ غير متوازن</span>')
 
     is_balanced_display.short_description = "التوازن"
     is_balanced_display.boolean = True
@@ -375,14 +381,18 @@ class TransactionLineAdmin(admin.ModelAdmin):
 
     def debit_display(self, obj):
         if obj.debit > 0:
-            return format_html('<span style="color: green;">{:,.2f}</span>', obj.debit)
+            return format_html(
+                '<span style="color: green;">{}</span>', f"{obj.debit:,.2f}"
+            )
         return "-"
 
     debit_display.short_description = "مدين"
 
     def credit_display(self, obj):
         if obj.credit > 0:
-            return format_html('<span style="color: red;">{:,.2f}</span>', obj.credit)
+            return format_html(
+                '<span style="color: red;">{}</span>', f"{obj.credit:,.2f}"
+            )
         return "-"
 
     credit_display.short_description = "دائن"
@@ -469,10 +479,12 @@ class CustomerAdvanceAdmin(admin.ModelAdmin):
         remaining = obj.remaining_amount
         if remaining > 0:
             return format_html(
-                '<span style="color: green; font-weight: bold;">{:,.2f}</span>',
-                remaining,
+                '<span style="color: green; font-weight: bold;">{}</span>',
+                f"{remaining:,.2f}",
             )
-        return format_html('<span style="color: gray;">0.00</span>')
+        from django.utils.safestring import mark_safe
+
+        return mark_safe('<span style="color: gray;">0.00</span>')
 
     remaining_display.short_description = "المتبقي"
 
@@ -632,15 +644,17 @@ class CustomerFinancialSummaryAdmin(admin.ModelAdmin):
     def debt_display(self, obj):
         if obj.total_debt > 0:
             return format_html(
-                '<span style="color: red; font-weight: bold;">{:,.2f}</span>',
-                obj.total_debt,
+                '<span style="color: red; font-weight: bold;">{}</span>',
+                f"{obj.total_debt:,.2f}",
             )
         elif obj.total_debt < 0:
             return format_html(
-                '<span style="color: green; font-weight: bold;">{:,.2f}</span>',
-                abs(obj.total_debt),
+                '<span style="color: green; font-weight: bold;">{}</span>',
+                f"{abs(obj.total_debt):,.2f}",
             )
-        return format_html('<span style="color: gray;">0.00</span>')
+        from django.utils.safestring import mark_safe
+
+        return mark_safe('<span style="color: gray;">0.00</span>')
 
     debt_display.short_description = "المديونية"
     debt_display.admin_order_field = "total_debt"
@@ -648,9 +662,11 @@ class CustomerFinancialSummaryAdmin(admin.ModelAdmin):
     def remaining_advances_display(self, obj):
         if obj.remaining_advances > 0:
             return format_html(
-                '<span style="color: blue;">{:,.2f}</span>', obj.remaining_advances
+                '<span style="color: blue;">{}</span>', f"{obj.remaining_advances:,.2f}"
             )
-        return format_html('<span style="color: gray;">0.00</span>')
+        from django.utils.safestring import mark_safe
+
+        return mark_safe('<span style="color: gray;">0.00</span>')
 
     remaining_advances_display.short_description = "رصيد العربون"
 
