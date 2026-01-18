@@ -761,6 +761,15 @@
                                     </ul>
                                 </div>
                             {% endif %}
+                            <!-- لوحة تحكم فني المعاينات -->
+                            {% if user.is_inspection_technician or user.is_superuser or user.is_inspection_manager %}
+                                <a href="{% url 'inspections:technician_dashboard' %}"
+                                   class="btn btn-outline-light me-2"
+                                   title="لوحة تحكم فني المعاينات">
+                                    <i class="fas fa-clipboard-check"></i>
+                                    <span class="d-none d-lg-inline ms-1">معايناتي</span>
+                                </a>
+                            {% endif %}
                             <!-- أيقونة الرسائل الداخلية والمستخدمين النشطين -->
                             <div class="dropdown me-2">
                                 <button class="btn btn-outline-light position-relative"
@@ -849,165 +858,167 @@
                                 </ul>
                             </div>
                             <!-- أيقونة الإشعارات العامة -->
-                            <div class="dropdown me-3">
-                                <button class="btn btn-outline-light position-relative"
-                                        type="button"
-                                        id="notificationsDropdown"
-                                        data-bs-toggle="dropdown"
-                                        aria-expanded="false"
-                                        title="الإشعارات العامة">
-                                    <i class="fas fa-bell"></i>
-                                    {% if notifications_unread_count > 0 %}
-                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                              id="notification-count-badge">{{ notifications_unread_count }}</span>
-                                    {% else %}
-                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                              id="notification-count-badge"
-                                              style="display: none">0</span>
-                                    {% endif %}
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-lg"
-                                    aria-labelledby="notificationsDropdown"
-                                    style="width: 500px;
-                                           max-height: 600px;
-                                           overflow-y: auto;
-                                           overflow-x: hidden">
-                                    <li>
-                                        <h6 class="dropdown-header d-flex justify-content-between align-items-center py-3 px-4 bg-light border-bottom">
-                                            <span class="fw-bold text-dark">
-                                                <i class="fas fa-bell me-2 text-primary"></i>
-                                                الإشعارات
+                            {% if not user.is_inspection_technician or user.is_superuser %}
+                                <div class="dropdown me-3">
+                                    <button class="btn btn-outline-light position-relative"
+                                            type="button"
+                                            id="notificationsDropdown"
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false"
+                                            title="الإشعارات العامة">
+                                        <i class="fas fa-bell"></i>
+                                        {% if notifications_unread_count > 0 %}
+                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                                  id="notification-count-badge">{{ notifications_unread_count }}</span>
+                                        {% else %}
+                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                                  id="notification-count-badge"
+                                                  style="display: none">0</span>
+                                        {% endif %}
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-lg"
+                                        aria-labelledby="notificationsDropdown"
+                                        style="width: 500px;
+                                               max-height: 600px;
+                                               overflow-y: auto;
+                                               overflow-x: hidden">
+                                        <li>
+                                            <h6 class="dropdown-header d-flex justify-content-between align-items-center py-3 px-4 bg-light border-bottom">
+                                                <span class="fw-bold text-dark">
+                                                    <i class="fas fa-bell me-2 text-primary"></i>
+                                                    الإشعارات
+                                                    {% if notifications_unread_count > 0 %}
+                                                        <span class="badge bg-primary ms-2">{{ notifications_unread_count }}</span>
+                                                    {% endif %}
+                                                </span>
                                                 {% if notifications_unread_count > 0 %}
-                                                    <span class="badge bg-primary ms-2">{{ notifications_unread_count }}</span>
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-primary"
+                                                            onclick="markAllNotificationsRead()"
+                                                            title="تحديد جميع الإشعارات كمقروءة">
+                                                        <i class="fas fa-check-double"></i>
+                                                        تحديد الكل
+                                                    </button>
                                                 {% endif %}
-                                            </span>
-                                            {% if notifications_unread_count > 0 %}
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-primary"
-                                                        onclick="markAllNotificationsRead()"
-                                                        title="تحديد جميع الإشعارات كمقروءة">
-                                                    <i class="fas fa-check-double"></i>
-                                                    تحديد الكل
-                                                </button>
-                                            {% endif %}
-                                        </h6>
-                                    </li>
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    {% if recent_notifications %}
-                                        {% for notification in recent_notifications %}
-                                            {% with visibility=notification.visibility_records.all|first %}
-                                                <li>
-                                                    <a class="dropdown-item py-3 px-3 notification-dropdown-item {% if not visibility.is_read %}bg-light border-start border-primary border-3{% endif %}"
-                                                       href="{{ notification.get_absolute_url }}"
-                                                       data-notification-id="{{ notification.pk }}"
-                                                       data-is-read="{% if visibility.is_read %}true{% else %}false{% endif %}"
-                                                       style="border-radius: 8px;
-                                                              margin: 2px 8px;
-                                                              white-space: normal;
-                                                              word-wrap: break-word;
-                                                              transition: all 0.3s ease"
-                                                       onmouseover="this.style.backgroundColor='#f8f9fa'"
-                                                       onmouseout="this.style.backgroundColor='{% if not visibility.is_read %}#f8f9fa{% else %}transparent{% endif %}'">
-                                                        <div class="d-flex align-items-start">
-                                                            <div class="me-3 flex-shrink-0">
-                                                                {% with icon_data=notification.get_icon_and_color %}
-                                                                    <div class="notification-icon-wrapper d-flex align-items-center justify-content-center"
-                                                                         style="width: 45px;
-                                                                                height: 45px;
-                                                                                border-radius: 50%;
-                                                                                background-color: {{ icon_data.bg }};
-                                                                                border: 2px solid {{ icon_data.color }}">
-                                                                        <i class="{{ icon_data.icon }}"
-                                                                           style="color: {{ icon_data.color }};
-                                                                                  font-size: 18px"></i>
-                                                                    </div>
-                                                                {% endwith %}
-                                                            </div>
-                                                            <div class="flex-grow-1 min-width-0">
-                                                                <div class="d-flex justify-content-between align-items-start mb-1">
-                                                                    <div class="d-flex align-items-center gap-2"
-                                                                         style="white-space: nowrap;
-                                                                                overflow: hidden;
-                                                                                width: 100%">
-                                                                        <h6 class="mb-0 text-truncate {% if not visibility.is_read %}fw-bold text-dark{% else %}text-muted{% endif %}"
-                                                                            style="line-height: 1.2;
-                                                                                   font-size: 0.85rem;
-                                                                                   max-width: 280px">
-                                                                            {% if not visibility.is_read %}<i class="fas fa-circle text-primary me-1" style="font-size: 6px;"></i>{% endif %}
-                                                                            <span class="text-decoration-underline text-primary">{{ notification.title }}</span>
-                                                                        </h6>
-                                                                        {% if notification.created_by %}
-                                                                            <span class="badge bg-light text-dark border flex-shrink-0"
-                                                                                  style="font-weight: normal;
-                                                                                         font-size: 0.75em">
-                                                                                <i class="fas fa-user-tie text-primary me-1"></i>{# fmt:off #}{{ notification.created_by.get_full_name|default:notification.created_by.username }}{# fmt:on #}
-                                                                            </span>
-                                                                            {# fmt:off #}{% elif notification.extra_data and notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}{# fmt:on #}
-                                                                            <span class="badge bg-light text-dark border flex-shrink-0"
-                                                                                  style="font-weight: normal;
-                                                                                         font-size: 0.75em">
-                                                                                <i class="fas fa-user-tie text-primary me-1"></i>{{ notification.extra_data.changed_by }}
-                                                                            </span>
-                                                                        {% endif %}
-                                                                        <small class="text-muted flex-shrink-0 ms-auto" style="font-size: 0.7em;">
-                                                                            <i class="far fa-clock me-1"></i>{{ notification.created_at|timesince }}
-                                                                        </small>
-                                                                    </div>
-                                                                    {% if not visibility.is_read %}
-                                                                        <span class="badge bg-primary rounded-pill ms-2 flex-shrink-0"
-                                                                              style="font-size: 0.6em">جديد</span>
-                                                                    {% endif %}
-                                                                </div>
-                                                                <div class="notification-details mb-1 ms-1">
-                                                                    {% if notification.extra_data.customer_name %}
-                                                                        <div class="small text-muted">
-                                                                            <i class="fas fa-user me-1 text-info"></i>
-                                                                            {{ notification.extra_data.customer_name }}
-                                                                        </div>
-                                                                    {% endif %}
-                                                                </div>
-                                                                <p class="mb-1 text-muted small"
-                                                                   style="line-height: 1.3;
-                                                                          font-size: 0.75rem;
-                                                                          display: -webkit-box;
-                                                                          -webkit-line-clamp: 2;
-                                                                          -webkit-box-orient: vertical;
-                                                                          overflow: hidden">
-                                                                    {{ notification.message }}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </a>
-                                                </li>
-                                                {% if not forloop.last %}
-                                                    <li>
-                                                        <hr class="dropdown-divider">
-                                                    </li>
-                                                {% endif %}
-                                            {% endwith %}
-                                        {% endfor %}
+                                            </h6>
+                                        </li>
                                         <li>
                                             <hr class="dropdown-divider">
                                         </li>
-                                        <li>
-                                            <a class="dropdown-item text-center"
-                                               href="{% url 'notifications:list' %}">
-                                                <i class="fas fa-eye"></i> عرض جميع الإشعارات
-                                            </a>
-                                        </li>
-                                    {% else %}
-                                        <li>
-                                            <div class="dropdown-item text-center text-muted">
-                                                <i class="fas fa-bell-slash"></i>
-                                                <br>
-                                                لا توجد إشعارات
-                                            </div>
-                                        </li>
-                                    {% endif %}
-                                </ul>
-                            </div>
+                                        {% if recent_notifications %}
+                                            {% for notification in recent_notifications %}
+                                                {% with visibility=notification.visibility_records.all|first %}
+                                                    <li>
+                                                        <a class="dropdown-item py-3 px-3 notification-dropdown-item {% if not visibility.is_read %}bg-light border-start border-primary border-3{% endif %}"
+                                                           href="{{ notification.get_absolute_url }}"
+                                                           data-notification-id="{{ notification.pk }}"
+                                                           data-is-read="{% if visibility.is_read %}true{% else %}false{% endif %}"
+                                                           style="border-radius: 8px;
+                                                                  margin: 2px 8px;
+                                                                  white-space: normal;
+                                                                  word-wrap: break-word;
+                                                                  transition: all 0.3s ease"
+                                                           onmouseover="this.style.backgroundColor='#f8f9fa'"
+                                                           onmouseout="this.style.backgroundColor='{% if not visibility.is_read %}#f8f9fa{% else %}transparent{% endif %}'">
+                                                            <div class="d-flex align-items-start">
+                                                                <div class="me-3 flex-shrink-0">
+                                                                    {% with icon_data=notification.get_icon_and_color %}
+                                                                        <div class="notification-icon-wrapper d-flex align-items-center justify-content-center"
+                                                                             style="width: 45px;
+                                                                                    height: 45px;
+                                                                                    border-radius: 50%;
+                                                                                    background-color: {{ icon_data.bg }};
+                                                                                    border: 2px solid {{ icon_data.color }}">
+                                                                            <i class="{{ icon_data.icon }}"
+                                                                               style="color: {{ icon_data.color }};
+                                                                                      font-size: 18px"></i>
+                                                                        </div>
+                                                                    {% endwith %}
+                                                                </div>
+                                                                <div class="flex-grow-1 min-width-0">
+                                                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                                                        <div class="d-flex align-items-center gap-2"
+                                                                             style="white-space: nowrap;
+                                                                                    overflow: hidden;
+                                                                                    width: 100%">
+                                                                            <h6 class="mb-0 text-truncate {% if not visibility.is_read %}fw-bold text-dark{% else %}text-muted{% endif %}"
+                                                                                style="line-height: 1.2;
+                                                                                       font-size: 0.85rem;
+                                                                                       max-width: 280px">
+                                                                                {% if not visibility.is_read %}<i class="fas fa-circle text-primary me-1" style="font-size: 6px;"></i>{% endif %}
+                                                                                <span class="text-decoration-underline text-primary">{{ notification.title }}</span>
+                                                                            </h6>
+                                                                            {% if notification.created_by %}
+                                                                                <span class="badge bg-light text-dark border flex-shrink-0"
+                                                                                      style="font-weight: normal;
+                                                                                             font-size: 0.75em">
+                                                                                    <i class="fas fa-user-tie text-primary me-1"></i>{# fmt:off #}{{ notification.created_by.get_full_name|default:notification.created_by.username }}{# fmt:on #}
+                                                                                </span>
+                                                                                {# fmt:off #}{% elif notification.extra_data and notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}{# fmt:on #}
+                                                                                <span class="badge bg-light text-dark border flex-shrink-0"
+                                                                                      style="font-weight: normal;
+                                                                                             font-size: 0.75em">
+                                                                                    <i class="fas fa-user-tie text-primary me-1"></i>{{ notification.extra_data.changed_by }}
+                                                                                </span>
+                                                                            {% endif %}
+                                                                            <small class="text-muted flex-shrink-0 ms-auto" style="font-size: 0.7em;">
+                                                                                <i class="far fa-clock me-1"></i>{{ notification.created_at|timesince }}
+                                                                            </small>
+                                                                        </div>
+                                                                        {% if not visibility.is_read %}
+                                                                            <span class="badge bg-primary rounded-pill ms-2 flex-shrink-0"
+                                                                                  style="font-size: 0.6em">جديد</span>
+                                                                        {% endif %}
+                                                                    </div>
+                                                                    <div class="notification-details mb-1 ms-1">
+                                                                        {% if notification.extra_data.customer_name %}
+                                                                            <div class="small text-muted">
+                                                                                <i class="fas fa-user me-1 text-info"></i>
+                                                                                {{ notification.extra_data.customer_name }}
+                                                                            </div>
+                                                                        {% endif %}
+                                                                    </div>
+                                                                    <p class="mb-1 text-muted small"
+                                                                       style="line-height: 1.3;
+                                                                              font-size: 0.75rem;
+                                                                              display: -webkit-box;
+                                                                              -webkit-line-clamp: 2;
+                                                                              -webkit-box-orient: vertical;
+                                                                              overflow: hidden">
+                                                                        {{ notification.message }}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </a>
+                                                    </li>
+                                                    {% if not forloop.last %}
+                                                        <li>
+                                                            <hr class="dropdown-divider">
+                                                        </li>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            {% endfor %}
+                                            <li>
+                                                <hr class="dropdown-divider">
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item text-center"
+                                                   href="{% url 'notifications:list' %}">
+                                                    <i class="fas fa-eye"></i> عرض جميع الإشعارات
+                                                </a>
+                                            </li>
+                                        {% else %}
+                                            <li>
+                                                <div class="dropdown-item text-center text-muted">
+                                                    <i class="fas fa-bell-slash"></i>
+                                                    <br>
+                                                    لا توجد إشعارات
+                                                </div>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            {% endif %}
                             <!-- زر المستخدم -->
                             <button class="btn btn-outline-light dropdown-toggle"
                                     id="customUserBtn"

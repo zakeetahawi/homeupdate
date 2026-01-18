@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_http_methods
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -1134,6 +1134,327 @@ def inspection_delete_redirect(request, pk):
         "inspections:inspection_delete_by_code",
         inspection_code=inspection.inspection_code,
     )
+
+
+# ============================================================================
+# لوحة تحكم فني المعاينات
+# ============================================================================
+
+
+class InspectionTechnicianDashboardView(LoginRequiredMixin, ListView):
+    """
+    لوحة تحكم خاصة لفني المعاينات
+    تعرض المعاينات المخصصة له مع إمكانية تحديث الحالة ورفع الملف
+    """
+
+    model = Inspection
+    template_name = "inspections/technician_dashboard.html"
+    context_object_name = "inspections"
+    paginate_by = 20
+
+    def dispatch(self, request, *args, **kwargs):
+        # التحقق من أن المستخدم فني معاينات أو مدير نظام أو مدير معاينات
+        if not (
+            getattr(request.user, "is_inspection_technician", False)
+            or request.user.is_superuser
+            or getattr(request.user, "is_inspection_manager", False)
+        ):
+            messages.error(request, "ليس لديك صلاحية الوصول لهذه الصفحة")
+            return redirect("home")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        # المدراء يرون جميع المعاينات، الفنيون يرون معايناتهم فقط
+        if self.request.user.is_superuser or getattr(
+            self.request.user, "is_inspection_manager", False
+        ):
+            queryset = Inspection.objects.all()
+        else:
+            queryset = Inspection.objects.filter(
+                inspector=self.request.user  # المعاينات المخصصة للفني فقط
+            )
+
+        queryset = queryset.select_related(
+            "customer", "branch", "order", "responsible_employee"
+        )
+
+        # إخفاء المعاينات المكتملة التي تم رفع ملفها
+        queryset = queryset.exclude(status="completed", inspection_file__isnull=False)
+
+        # الفلترة حسب التاريخ
+        date_filter = self.request.GET.get("date_filter", "today")
+        today = timezone.now().date()
+
+        if date_filter == "today":
+            queryset = queryset.filter(scheduled_date=today)
+        elif date_filter == "week":
+            week_start = today - timedelta(days=today.weekday())
+            week_end = week_start + timedelta(days=6)
+            queryset = queryset.filter(
+                scheduled_date__gte=week_start, scheduled_date__lte=week_end
+            )
+        elif date_filter == "month":
+            queryset = queryset.filter(
+                scheduled_date__year=today.year, scheduled_date__month=today.month
+            )
+        elif date_filter == "custom":
+            date_from = self.request.GET.get("date_from")
+            date_to = self.request.GET.get("date_to")
+            if date_from:
+                queryset = queryset.filter(scheduled_date__gte=date_from)
+            if date_to:
+                queryset = queryset.filter(scheduled_date__lte=date_to)
+
+        # الترتيب حسب تاريخ التنفيذ
+        queryset = queryset.order_by("scheduled_date", "scheduled_time")
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["date_filter"] = self.request.GET.get("date_filter", "today")
+        context["date_from"] = self.request.GET.get("date_from", "")
+        context["date_to"] = self.request.GET.get("date_to", "")
+
+        # إحصائيات سريعة - المدراء يرون جميع المعاينات
+        today = timezone.now().date()
+        if self.request.user.is_superuser or getattr(
+            self.request.user, "is_inspection_manager", False
+        ):
+            all_inspections = Inspection.objects.all()
+        else:
+            all_inspections = Inspection.objects.filter(inspector=self.request.user)
+
+        context["stats"] = {
+            "today_count": all_inspections.filter(scheduled_date=today).count(),
+            "pending_count": all_inspections.filter(status="pending").count(),
+            "scheduled_count": all_inspections.filter(status="scheduled").count(),
+            "completed_count": all_inspections.filter(status="completed").count(),
+        }
+
+        return context
+
+
+class TechnicianCompletedInspectionsView(
+    LoginRequiredMixin, UserPassesTestMixin, ListView
+):
+    model = Inspection
+    template_name = "inspections/technician_completed_inspections.html"
+    context_object_name = "inspections"
+    paginate_by = 20
+
+    def test_func(self):
+        return (
+            getattr(self.request.user, "is_inspection_technician", False)
+            or self.request.user.is_superuser
+            or getattr(self.request.user, "is_inspection_manager", False)
+        )
+
+    def dispatch(self, request, *args, **kwargs):
+        if not self.test_func():
+            return redirect("home")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        queryset = Inspection.objects.filter(status="completed")
+
+        # إذا لم يكن مشرفاً أو مديراً، يرى فقط معايناته
+        if not (
+            self.request.user.is_superuser
+            or getattr(self.request.user, "is_inspection_manager", False)
+        ):
+            queryset = queryset.filter(inspector=self.request.user)
+
+        # ترتيب النتائج بالأحدث أولاً
+        return queryset.order_by("-completed_at", "-updated_at")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # حساب عدد المعاينات المكتملة في الشهر الحالي
+        today = timezone.now().date()
+        month_start = today.replace(day=1)
+
+        # استعلام مستقل للعدد الشهري
+        monthly_qs = Inspection.objects.filter(
+            status="completed", completed_at__gte=month_start
+        )
+
+        if not (
+            self.request.user.is_superuser
+            or getattr(self.request.user, "is_inspection_manager", False)
+        ):
+            monthly_qs = monthly_qs.filter(inspector=self.request.user)
+
+        context["monthly_completed_count"] = monthly_qs.count()
+        context["current_month_name"] = today.strftime("%B %Y")
+        return context
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_inspection_status_api(request, pk):
+    """
+    API لتحديث حالة المعاينة
+    """
+    try:
+        inspection = get_object_or_404(Inspection, pk=pk)
+
+        # التحقق من أن المستخدم هو الفني المخصص أو مدير
+        if not (
+            inspection.inspector == request.user
+            or request.user.is_superuser
+            or getattr(request.user, "is_inspection_manager", False)
+        ):
+            return JsonResponse(
+                {"success": False, "error": "ليس لديك صلاحية تعديل هذه المعاينة"},
+                status=403,
+            )
+
+        new_status = request.POST.get("status")
+        if new_status not in dict(Inspection.STATUS_CHOICES):
+            return JsonResponse(
+                {"success": False, "error": "حالة غير صالحة"}, status=400
+            )
+
+        # معالجة التحصيل
+        collected_amount = request.POST.get("collected_amount")
+        collection_notes = request.POST.get("collection_notes", "")
+
+        if collected_amount and float(collected_amount) > 0:
+            try:
+                from orders.models import Payment
+
+                # التأكد من وجود طلب مرتبط
+                if not inspection.order:
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "error": "لا يمكن التحصيل لمعاينة غير مرتبطة بطلب",
+                        },
+                        status=400,
+                    )
+
+                # إنشاء الدفعة
+                Payment.objects.create(
+                    order=inspection.order,
+                    amount=collected_amount,
+                    payment_method="cash",  # افتراضي نقدي للفني
+                    notes=f"تحصيل معاينة: {collection_notes}",
+                    created_by=request.user,
+                )
+
+                # تحديث حالة المديونية للمعاينة
+                inspection.payment_status = "paid"
+                inspection.save(update_fields=["payment_status"])
+
+            except Exception as e:
+                return JsonResponse(
+                    {"success": False, "error": f"فشل تسجيل الدفعة: {str(e)}"},
+                    status=500,
+                )
+
+        old_status = inspection.status
+        inspection.status = new_status
+
+        # إذا تم إكمال المعاينة ولم تكن النتيجة محددة، اجعلها "ناجحة" تلقائياً
+        if new_status == "completed" and not inspection.result:
+            inspection.result = "passed"
+            inspection.save(update_fields=["status", "result"])
+        else:
+            inspection.save(update_fields=["status"])
+
+        # إنشاء سجل تغيير الحالة
+        if inspection.order:
+            from orders.models import OrderStatusLog
+
+            status_dict = dict(Inspection.STATUS_CHOICES)
+            OrderStatusLog.objects.create(
+                order=inspection.order,
+                old_status=old_status,
+                new_status=new_status,
+                changed_by=request.user,
+                change_type="inspection",
+                notes=f"تغيير حالة المعاينة من {status_dict.get(old_status, old_status)} إلى {status_dict.get(new_status, new_status)}",
+            )
+
+        # تحضير رسالة النجاح
+        success_message = "تم تحديث حالة المعاينة بنجاح"
+        if new_status == "completed" and inspection.result == "passed":
+            success_message += " (النتيجة: ناجحة)"
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": success_message,
+                "new_status": new_status,
+                "new_status_display": inspection.get_status_display(),
+                "result": inspection.result,
+                "result_display": (
+                    inspection.get_result_display() if inspection.result else None
+                ),
+            }
+        )
+
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "error": f"حدث خطأ: {str(e)}"}, status=500
+        )
+
+
+@login_required
+@require_http_methods(["POST"])
+def upload_inspection_file_api(request, pk):
+    """
+    API لرفع ملف المعاينة
+    """
+    try:
+        inspection = get_object_or_404(Inspection, pk=pk)
+
+        # التحقق من أن المستخدم هو الفني المخصص أو مدير
+        if not (
+            inspection.inspector == request.user
+            or request.user.is_superuser
+            or getattr(request.user, "is_inspection_manager", False)
+        ):
+            return JsonResponse(
+                {"success": False, "error": "ليس لديك صلاحية تعديل هذه المعاينة"},
+                status=403,
+            )
+
+        inspection_file = request.FILES.get("inspection_file")
+        if not inspection_file:
+            return JsonResponse(
+                {"success": False, "error": "لم يتم اختيار ملف"}, status=400
+            )
+
+        # التحقق من نوع الملف - قبول .pdf و .PDF
+        file_name = inspection_file.name.lower()
+        if not file_name.endswith(".pdf"):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"يجب أن يكون الملف من نوع PDF. الملف المرفوع: {inspection_file.name}",
+                },
+                status=400,
+            )
+
+        # حفظ الملف
+        inspection.inspection_file = inspection_file
+        inspection.save(update_fields=["inspection_file"])
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "تم رفع الملف بنجاح وسيتم رفعه إلى Google Drive في الخلفية",
+                "file_name": inspection_file.name,
+            }
+        )
+
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "error": f"حدث خطأ: {str(e)}"}, status=500
+        )
 
 
 @login_required

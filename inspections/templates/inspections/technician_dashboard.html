@@ -1,0 +1,676 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+{% block title %}لوحة تحكم فني المعاينات{% endblock %}
+{% block extra_css %}
+    <style>
+.dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+.stats-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.stats-card .icon {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.stats-card .number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.stats-card .label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.inspection-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s;
+}
+
+.inspection-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.inspection-card .customer-name {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.inspection-card .info-row {
+    display: flex;
+    align-items: center;
+    margin: 8px 0;
+    color: #6c757d;
+}
+
+.inspection-card .info-row i {
+    width: 20px;
+    margin-left: 10px;
+}
+
+.filter-buttons .btn {
+    margin: 5px;
+}
+
+.action-buttons .btn {
+    margin: 5px;
+}
+
+.badge-status {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+}
+
+.mark-complete-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="container-fluid mt-4">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <h1 class="mb-3">
+                <i class="fas fa-clipboard-check"></i> لوحة تحكم فني المعاينات
+            </h1>
+            <p class="mb-0">مرحباً {{ user.get_full_name|default:user.username }}، هذه هي المعاينات المخصصة لك</p>
+        </div>
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <div class="icon text-primary">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
+                    <div class="number text-primary">{{ stats.today_count }}</div>
+                    <div class="label">معاينات اليوم</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <div class="icon text-warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="number text-warning">{{ stats.pending_count }}</div>
+                    <div class="label">قيد الانتظار</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <div class="icon text-info">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="number text-info">{{ stats.scheduled_count }}</div>
+                    <div class="label">مجدولة</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <a href="{% url 'inspections:technician_completed_inspections' %}"
+                   class="text-decoration-none">
+                    <div class="stats-card text-center h-100 folder-card border-left-success">
+                        <div class="icon text-success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="number text-success">{{ stats.completed_count }}</div>
+                        <div class="label text-success font-weight-bold">مكتملة</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-filter"></i> فلترة المعاينات
+                </h5>
+                <form method="get" id="filter-form">
+                    <div class="row align-items-end">
+                        <div class="col-md-8">
+                            <div class="filter-buttons">
+                                <button type="button"
+                                        class="btn btn-outline-primary filter-btn"
+                                        data-filter="today">
+                                    <i class="fas fa-calendar-day"></i> اليوم
+                                </button>
+                                <button type="button"
+                                        class="btn btn-outline-primary filter-btn"
+                                        data-filter="week">
+                                    <i class="fas fa-calendar-week"></i> هذا الأسبوع
+                                </button>
+                                <button type="button"
+                                        class="btn btn-outline-primary filter-btn"
+                                        data-filter="month">
+                                    <i class="fas fa-calendar-alt"></i> هذا الشهر
+                                </button>
+                                <button type="button"
+                                        class="btn btn-outline-primary filter-btn"
+                                        data-filter="custom">
+                                    <i class="fas fa-calendar"></i> مخصص
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> تطبيق الفلتر
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Custom Date Range -->
+                    <div class="row mt-3" id="custom-date-range" style="display: none;">
+                        <div class="col-md-6">
+                            <label class="form-label">من تاريخ</label>
+                            <input type="date"
+                                   name="date_from"
+                                   class="form-control"
+                                   value="{{ date_from }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">إلى تاريخ</label>
+                            <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                        </div>
+                    </div>
+                    <input type="hidden"
+                           name="date_filter"
+                           id="date_filter"
+                           value="{{ date_filter }}">
+                </form>
+            </div>
+        </div>
+        <!-- Inspections List -->
+        <div class="row">
+            {% if inspections %}
+                {% for inspection in inspections %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="inspection-card">
+                            <!-- Customer Name -->
+                            <div class="customer-name">
+                                <i class="fas fa-user text-primary"></i>
+                                {{ inspection.customer.name|default:"غير محدد" }}
+                            </div>
+                            <!-- Status Badge -->
+                            <div class="mb-3">
+                                <span class="badge badge-status {% if inspection.status == 'completed' %}bg-success{% elif inspection.status == 'scheduled' %}bg-info{% elif inspection.status == 'pending' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                    {{ inspection.get_status_display }}
+                                </span>
+                            </div>
+                            <!-- Info Rows -->
+                            <div class="info-row">
+                                <i class="fas fa-calendar"></i>
+                                <span>{{ inspection.scheduled_date|date:"Y-m-d" }}</span>
+                            </div>
+                            {% if inspection.scheduled_time %}
+                                <div class="info-row">
+                                    <i class="fas fa-clock"></i>
+                                    <span>{{ inspection.scheduled_time }}</span>
+                                </div>
+                            {% endif %}
+                            <div class="info-row">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>{{ inspection.customer.address|default:"لا يوجد عنوان"|truncatewords:10 }}</span>
+                            </div>
+                            {% if inspection.windows_count %}
+                                <div class="info-row">
+                                    <i class="fas fa-th-large"></i>
+                                    <span>{{ inspection.windows_count }} شباك</span>
+                                </div>
+                            {% endif %}
+                            {% if inspection.notes %}
+                                <div class="info-row">
+                                    <i class="fas fa-sticky-note"></i>
+                                    <span>{{ inspection.notes|truncatewords:15 }}</span>
+                                </div>
+                            {% endif %}
+                            <!-- Payment Status -->
+                            <div class="info-row">
+                                <i class="fas fa-money-bill-wave"></i>
+                                {% if inspection.payment_status == 'collect_on_visit' %}
+                                    <span class="text-danger fw-bold">
+                                        <i class="fas fa-exclamation-triangle"></i> تحصيل عند العميل
+                                    </span>
+                                {% else %}
+                                    <span class="text-success">
+                                        <i class="fas fa-check-circle"></i> مكتمل السداد
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <!-- File Status -->
+                            <div class="info-row">
+                                <i class="fas fa-file-pdf"></i>
+                                {% if inspection.inspection_file %}
+                                    <span class="text-success">
+                                        <i class="fas fa-check-circle"></i> تم رفع الملف
+                                    </span>
+                                {% else %}
+                                    <span class="text-danger">
+                                        <i class="fas fa-times-circle"></i> لم يتم رفع الملف
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <!-- Action Buttons -->
+                            <div class="action-buttons mt-3 d-flex justify-content-between">
+                                <a href="{% url 'inspections:inspection_detail_by_code' inspection.inspection_code %}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> عرض
+                                </a>
+                                {% if inspection.status != 'completed' %}
+                                    <button class="btn btn-sm btn-success mark-complete-btn"
+                                            data-id="{{ inspection.pk }}"
+                                            data-payment-status="{{ inspection.payment_status }}"
+                                            {% if not inspection.inspection_file %}disabled title="يجب رفع الملف أولاً"{% endif %}>
+                                        <i class="fas fa-check"></i> إكمال
+                                    </button>
+                                {% endif %}
+                                {% if not inspection.inspection_file %}
+                                    <button class="btn btn-sm btn-primary upload-file-btn"
+                                            data-id="{{ inspection.pk }}">
+                                        <i class="fas fa-upload"></i> رفع ملف
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle fa-3x mb-3"></i>
+                        <h4>لا توجد معاينات</h4>
+                        <p>لا توجد معاينات مخصصة لك في الفترة المحددة</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        <!-- Pagination -->
+        {% if is_paginated %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="?page=1&date_filter={{ date_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">الأولى</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="?page={{ page_obj.previous_page_number }}&date_filter={{ date_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">السابقة</a>
+                        </li>
+                    {% endif %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="?page={{ page_obj.next_page_number }}&date_filter={{ date_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">التالية</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="?page={{ page_obj.paginator.num_pages }}&date_filter={{ date_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">الأخيرة</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    </div>
+    <!-- Upload File Modal -->
+    <div class="modal fade" id="uploadFileModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-upload"></i> رفع ملف المعاينة
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="upload-file-form" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">اختر ملف PDF</label>
+                            <input type="file"
+                                   class="form-control"
+                                   name="inspection_file"
+                                   accept=".pdf"
+                                   required>
+                        </div>
+                        <input type="hidden" id="upload-inspection-id" name="inspection_id">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="submit-upload-btn">
+                        <i class="fas fa-upload"></i> رفع الملف
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Collection Modal -->
+    <div class="modal fade" id="collectionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-money-bill-wave"></i> تحصيل المديونية
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>تنبيه:</strong> يجب تحصيل المديونية قبل إكمال المعاينة
+                    </div>
+                    <form id="collection-form">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">
+                                المبلغ المحصل <span class="text-danger">*</span>
+                            </label>
+                            <input type="number"
+                                   class="form-control"
+                                   name="collected_amount"
+                                   step="0.01"
+                                   min="0"
+                                   required
+                                   placeholder="أدخل المبلغ المحصل">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">ملاحظات التحصيل</label>
+                            <textarea class="form-control"
+                                      name="collection_notes"
+                                      rows="3"
+                                      placeholder="ملاحظات إضافية (اختياري)"></textarea>
+                        </div>
+                        <input type="hidden" id="collection-inspection-id" name="inspection_id">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-success" id="submit-collection-btn">
+                        <i class="fas fa-check"></i> تأكيد التحصيل وإكمال المعاينة
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const dateFilterInput = document.getElementById('date_filter');
+    const customDateRange = document.getElementById('custom-date-range');
+    const currentFilter = "{{ date_filter }}";
+
+    filterButtons.forEach(btn => {
+        if (btn.dataset.filter === currentFilter) {
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-primary');
+        }
+
+        btn.addEventListener('click', function() {
+            filterButtons.forEach(b => {
+                b.classList.remove('btn-primary');
+                b.classList.add('btn-outline-primary');
+            });
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('btn-primary');
+
+            const filter = this.dataset.filter;
+            dateFilterInput.value = filter;
+
+            if (filter === 'custom') {
+                customDateRange.style.display = 'flex';
+            } else {
+                customDateRange.style.display = 'none';
+                document.getElementById('filter-form').submit();
+            }
+        });
+    });
+
+    if (currentFilter === 'custom') {
+        customDateRange.style.display = 'flex';
+    }
+
+    const completeButtons = document.querySelectorAll('.mark-complete-btn');
+    completeButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const inspectionId = this.dataset.id;
+            const paymentStatus = this.dataset.paymentStatus;
+            
+            // إذا كانت الحالة "تحصيل عند العميل"، افتح modal التحصيل
+            if (paymentStatus === 'collect_on_visit') {
+                document.getElementById('collection-inspection-id').value = inspectionId;
+                const modal = new bootstrap.Modal(document.getElementById('collectionModal'));
+                modal.show();
+            } else {
+                // إذا كان مكتمل السداد، أكمل مباشرة
+                markAsComplete(inspectionId);
+            }
+        });
+    });
+
+    // معالج زر تأكيد التحصيل
+    document.getElementById('submit-collection-btn').addEventListener('click', function() {
+        const form = document.getElementById('collection-form');
+        const collectedAmount = form.querySelector('[name="collected_amount"]').value;
+        const collectionNotes = form.querySelector('[name="collection_notes"]').value;
+        const inspectionId = document.getElementById('collection-inspection-id').value;
+
+        if (!collectedAmount || parseFloat(collectedAmount) <= 0) {
+            Swal.fire('تنبيه!', 'يرجى إدخال المبلغ المحصل', 'warning');
+            return;
+        }
+
+        // إغلاق modal التحصيل
+        const modalElement = document.getElementById('collectionModal');
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+        }
+
+        // إكمال المعاينة مع بيانات التحصيل
+        markAsCompleteWithCollection(inspectionId, collectedAmount, collectionNotes);
+    });
+
+    const uploadButtons = document.querySelectorAll('.upload-file-btn');
+    uploadButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const inspectionId = this.dataset.id;
+            document.getElementById('upload-inspection-id').value = inspectionId;
+            const modal = new bootstrap.Modal(document.getElementById('uploadFileModal'));
+            modal.show();
+        });
+    });
+
+    document.getElementById('submit-upload-btn').addEventListener('click', function() {
+        const form = document.getElementById('upload-file-form');
+        const fileInput = form.querySelector('input[type="file"]');
+        const inspectionId = document.getElementById('upload-inspection-id').value;
+
+        // التحقق من اختيار ملف
+        if (!fileInput.files || fileInput.files.length === 0) {
+            Swal.fire('تنبيه!', 'يرجى اختيار ملف PDF', 'warning');
+            return;
+        }
+
+        const file = fileInput.files[0];
+        
+        // التحقق من نوع الملف
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+            Swal.fire('خطأ!', 'يجب أن يكون الملف من نوع PDF', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('inspection_file', file);
+
+        uploadFile(inspectionId, formData);
+    });
+});
+
+function markAsComplete(inspectionId) {
+    Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'سيتم تغيير حالة المعاينة إلى مكتملة',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، إكمال',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            fetch(`/inspections/api/update-status/${inspectionId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'status=completed'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'تم بنجاح!',
+                        text: data.message,
+                        icon: 'success',
+                        confirmButtonText: 'حسناً'
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire('خطأ!', data.error, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+            });
+        }
+    });
+}
+
+function markAsCompleteWithCollection(inspectionId, collectedAmount, collectionNotes) {
+    Swal.fire({
+        title: 'هل أنت متأكد؟',
+        html: `سيتم:<br>
+               - تحصيل مبلغ: <strong>${collectedAmount}</strong> ريال<br>
+               - إكمال المعاينة`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، إكمال',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            const formData = new FormData();
+            formData.append('status', 'completed');
+            formData.append('collected_amount', collectedAmount);
+            formData.append('collection_notes', collectionNotes);
+            
+            fetch(`/inspections/api/update-status/${inspectionId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'تم بنجاح!',
+                        html: `${data.message}<br><small class="text-muted">تم تحصيل ${collectedAmount} ريال</small>`,
+                        icon: 'success',
+                        confirmButtonText: 'حسناً'
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire('خطأ!', data.error, 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+            });
+        }
+    });
+}
+
+function uploadFile(inspectionId, formData) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // إغلاق الـ modal
+    const modalElement = document.getElementById('uploadFileModal');
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    if (modal) {
+        modal.hide();
+    }
+
+    Swal.fire({
+        title: 'جاري الرفع...',
+        text: 'يرجى الانتظار',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    fetch(`/inspections/api/upload-file/${inspectionId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                title: 'تم بنجاح!',
+                text: data.message,
+                icon: 'success',
+                confirmButtonText: 'حسناً'
+            }).then(() => {
+                location.reload();
+            });
+        } else {
+            Swal.fire('خطأ!', data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Upload error:', error);
+        Swal.fire('خطأ!', 'حدث خطأ في الاتصال', 'error');
+    });
+}
+    </script>
+{% endblock %}

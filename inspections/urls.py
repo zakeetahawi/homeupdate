@@ -7,6 +7,28 @@ app_name = "inspections"
 urlpatterns = [
     # Dashboard removed
     path("", views.InspectionListView.as_view(), name="inspection_list"),
+    # Technician Dashboard
+    path(
+        "technician/dashboard/",
+        views.InspectionTechnicianDashboardView.as_view(),
+        name="technician_dashboard",
+    ),
+    path(
+        "technician/completed/",
+        views.TechnicianCompletedInspectionsView.as_view(),
+        name="technician_completed_inspections",
+    ),
+    # API Endpoints for Technician
+    path(
+        "api/update-status/<int:pk>/",
+        views.update_inspection_status_api,
+        name="update_status_api",
+    ),
+    path(
+        "api/upload-file/<int:pk>/",
+        views.upload_inspection_file_api,
+        name="upload_file_api",
+    ),
     path(
         "completed-details/",
         views.CompletedInspectionsDetailView.as_view(),
