@@ -135,7 +135,6 @@ class DraftOrder(models.Model):
             ("installation", "تركيب"),
             ("inspection", "معاينة"),
             ("tailoring", "تسليم"),
-            ("deli", "تسليم فرع /او تفصيل"),
             ("products", "منتجات"),
         ],
         blank=True,

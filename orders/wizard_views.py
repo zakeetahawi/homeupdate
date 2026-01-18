@@ -616,7 +616,6 @@ def wizard_step_2_order_type(request, draft):
                     "installation": "تركيب",
                     "inspection": "معاينة",
                     "tailoring": "تسليم",
-                    "deli": "تسليم فرع /او تفصيل",
                     "products": "منتجات",
                 }
                 old_name = (
