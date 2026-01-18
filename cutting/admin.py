@@ -1,9 +1,41 @@
 from django.contrib import admin
+from django.db.models import Count
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from .models import CuttingOrder, CuttingOrderFixLog, CuttingOrderItem, CuttingReport
+
+
+class ItemsCountFilter(admin.SimpleListFilter):
+    """فلتر مخصص لعدد العناصر في أمر التقطيع"""
+    
+    title = "عدد العناصر"
+    parameter_name = "items_count"
+    
+    def lookups(self, request, model_admin):
+        return (
+            ("empty", "فارغة (0 عناصر)"),
+            ("has_items", "بها عناصر"),
+            ("1-5", "1-5 عناصر"),
+            ("6-10", "6-10 عناصر"),
+            ("11+", "أكثر من 10 عناصر"),
+        )
+    
+    def queryset(self, request, queryset):
+        queryset = queryset.annotate(items_count=Count("items"))
+        
+        if self.value() == "empty":
+            return queryset.filter(items_count=0)
+        elif self.value() == "has_items":
+            return queryset.filter(items_count__gt=0)
+        elif self.value() == "1-5":
+            return queryset.filter(items_count__gte=1, items_count__lte=5)
+        elif self.value() == "6-10":
+            return queryset.filter(items_count__gte=6, items_count__lte=10)
+        elif self.value() == "11+":
+            return queryset.filter(items_count__gt=10)
+        return queryset
 
 
 class CuttingOrderItemInline(admin.TabularInline):
@@ -47,7 +79,7 @@ class CuttingOrderAdmin(admin.ModelAdmin):
         "created_at",
         "assigned_to",
     ]
-    list_filter = ["status", "warehouse", "created_at", "assigned_to"]
+    list_filter = ["status", "warehouse", ItemsCountFilter, "created_at", "assigned_to"]
     search_fields = [
         "cutting_code",
         "order__contract_number",
