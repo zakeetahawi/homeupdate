@@ -1682,34 +1682,18 @@ def wizard_finalize(request):
                 # لإطلاق signal create_cutting_orders_on_order_save
                 order.save()
 
-                # 5. مزامنة أوامر التصنيع والتقطيع للعناصر المحدثة
+                # 5. مزامنة أوامر التصنيع للعناصر المحدثة
+                # ملاحظة: عناصر التقطيع لا تحتاج تحديث - signals تتعامل مع العناصر الجديدة
+                # و CASCADE يحذف العناصر المحذوفة تلقائياً
                 if updated_order_items:
                     try:
-                        from cutting.models import CuttingOrderItem
                         from manufacturing.models import ManufacturingOrderItem
 
                         for updated_item in updated_order_items:
-                            # تحديث كميات التصنيع
+                            # تحديث كميات التصنيع فقط
                             ManufacturingOrderItem.objects.filter(
                                 order_item=updated_item
                             ).update(quantity=updated_item.quantity)
-                            # تحديث كميات التقطيع (الإضافية تبقى كما هي، فقط الأصلية تتحدث عبر العلاقة)
-                            # ولكن قد نحتاج لإعادة حساب الإجمالي
-                            # تحديث عناصر التقطيع
-                            cutting_items = CuttingOrderItem.objects.filter(
-                                order_item=updated_item
-                            )
-                            if cutting_items.exists():
-                                # إعادة تعيين الحالة إلى 'pending' لضمان مراجعة التغييرات
-                                # وتحديث الملاحظات
-                                cutting_items.update(
-                                    status="pending",
-                                    notes=updated_item.notes or "",
-                                    updated_at=timezone.now(),
-                                )
-                                logger.info(
-                                    f"🔄 Reset cutting items for updated order item {updated_item.id}"
-                                )
                     except Exception as e:
                         print(f"Error syncing manufacturing items: {e}")
 
