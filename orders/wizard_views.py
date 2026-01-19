@@ -1813,15 +1813,13 @@ def wizard_finalize(request):
                     for accessory in draft_curtain.accessories.all():
                         linked_acc_order_item = None
                         if accessory.draft_order_item:
-                            if (
-                                accessory.draft_order_item.original_item_id
-                                and accessory.draft_order_item.original_item_id
-                                in item_mapping
-                            ):
-                                linked_acc_order_item = item_mapping[
-                                    accessory.draft_order_item.original_item_id
-                                ]
-                            else:
+                            # استخدام draft_item_map بدلاً من item_mapping
+                            linked_acc_order_item = draft_item_map.get(
+                                accessory.draft_order_item.id
+                            )
+
+                            # Fallback: البحث المباشر إذا لم يتم العثور في الخريطة
+                            if not linked_acc_order_item:
                                 linked_acc_order_item = OrderItem.objects.filter(
                                     order=order,
                                     product=accessory.draft_order_item.product,
