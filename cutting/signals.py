@@ -976,10 +976,14 @@ def process_external_fabrics(order):
         # البحث عن الأقمشة الخارجية المرتبطة بهذا الطلب
         # الأقمشة الخارجية هي التي لا تملك order_item ولها اسم
         # نستخدم order_item لأنه الأدق للطلبات النهائية، بينما draft_order_item قد يبقى موجوداً أو لا
-        external_fabrics = CurtainFabric.objects.filter(
-            curtain__order=order,
-            order_item__isnull=True,
-        ).exclude(fabric_name__in=["", "غير محدد", None])
+        external_fabrics = (
+            CurtainFabric.objects.filter(
+                curtain__order=order,
+                order_item__isnull=True,
+            )
+            .exclude(fabric_name__in=["", "غير محدد", None])
+            .exclude(fabric_type="belt")  # استثناء الأحزمة - ليست أقمشة خارجية
+        )
 
         if not external_fabrics.exists():
             return
