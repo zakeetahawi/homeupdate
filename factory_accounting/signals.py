@@ -47,6 +47,9 @@ def create_factory_card_on_completion(sender, instance, created, **kwargs):
                 created_by=getattr(instance, "_changed_by", None),
             )
 
+        # Calculate total meters and cutter costs automatically
+        card.calculate_total_meters()
+
         # Sync dates
         card.update_production_date()
 

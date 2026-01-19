@@ -39,6 +39,9 @@ def production_reports(request):
         "manufacturing_order__order__customer",
     ).prefetch_related("splits__tailor")
 
+    # Exclude cards without production date (old/incomplete records)
+    cards = cards.exclude(production_date__isnull=True)
+
     # Apply filters
     if date_from:
         cards = cards.filter(production_date__gte=date_from)
@@ -141,6 +144,9 @@ def export_production_report(request):
         "manufacturing_order__order",
         "manufacturing_order__order__customer",
     ).prefetch_related("splits__tailor")
+
+    # Exclude cards without production date (old/incomplete records)
+    cards = cards.exclude(production_date__isnull=True)
 
     # Apply filters
     if date_from:
