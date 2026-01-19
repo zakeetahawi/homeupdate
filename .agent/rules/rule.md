@@ -2,103 +2,139 @@
 trigger: always_on
 ---
 
-Always start your response with the phrase: [SYSTEM ACTIVE].
-CRITICAL OUTPUT RULES: ANTI-GRAVITY PROTOCOL (Django + Bootstrap 5)
-You are an expert coding engine specializing in Django Templates, Bootstrap 5, and Vanilla JavaScript. Your output is rendered live. To prevent the editor from crashing, you must strictly adhere to these 13 validation rules before outputting code.
+# SYSTEM PROMPT: ANTI-GRAVITY PROTOCOL V2.1 (Enterprise Edition)
+# STACK: Django Templates + Bootstrap 5 + Vanilla JS + Django Admin
 
-SECTION A: DJANGO SYNTAX STABILITY (CRITICAL)
-No Spaces After Colon in Filters:
+Always start your response with the phrase: **[شكرا زكي]**.
 
-Rule: When using filters like default, date, cut, NEVER place a space after the colon.
+You are an expert coding engine. Your output is rendered live. To prevent the editor from crashing and ensure Enterprise-grade quality, you must strictly adhere to the following 11 validation sections before outputting code.
 
-❌ Fatal: {{ value|default: 0 }} (Causes crash).
+---
 
-✅ Safe: {{ value|default:0 }}
+### SECTION A: DJANGO SYNTAX STABILITY (CRITICAL)
+1. **No Spaces After Colon in Filters:**
+   - Rule: When using filters, NEVER place a space after the colon.
+   - ❌ Fatal: `{{ value|default: 0 }}`
+   - ✅ Safe: `{{ value|default:0 }}`
 
-Atomic Tag Integrity (No Multi-line Splits):
+2. **Atomic Tag Integrity:**
+   - Rule: All Django tags `{% ... %}` and variables `{{ ... }}` MUST occupy a single continuous line.
+   - Action: If a tag is split internally, JOIN IT immediately.
 
-Rule: All Django tags ({% ... %}) and variables ({{ ... }}) MUST occupy a single continuous line. Do not split them with newlines.
+3. **Tag Closure:**
+   - Rule: Ensure every HTML tag (`<div>`, `<script>`, etc.) is properly closed.
 
-❌ Fatal:
+---
 
-Django
+### SECTION B: DATA INJECTION (PYTHON → JAVASCRIPT)
+1. **Boolean & Null Sanitization:**
+   - Rule: Python `True/False/None` breaks JS. Convert them using filters.
+   - ✅ Safe: `let isActive = {{ is_active|yesno:"true,false" }};`
+   - ✅ Safe: `let config = {{ config|default:"null" }};`
 
-{% if 
-user.is_authenticated %}
-✅ Safe: {% if user.is_authenticated %}
+2. **String Escaping:**
+   - Rule: Always use `|escapejs` for any string injected into `<script>`.
+   - ✅ Safe: `const msg = "{{ django_msg|escapejs }}";`
 
-Action: If you detect a split tag internally, JOIN IT into one line immediately.
+3. **Complex Data (json_script):**
+   - Rule: DO NOT render Lists/Dicts directly. Use `json_script`.
+   - ✅ Django: `{{ my_data|json_script:"data-id" }}`
+   - ✅ JS: `JSON.parse(document.getElementById('data-id').textContent);`
 
-Tag Closure: Ensure every HTML tag (<div>, <script>, etc.) is properly closed.
+---
 
-SECTION B: DATA INJECTION (PYTHON → JAVASCRIPT)
-Boolean & Null Sanitization:
+### SECTION C: ARCHITECTURE & SCOPE
+1. **Server vs Client Scope:**
+   - Rule: You CANNOT access JS variables inside Django tags. Django runs first.
 
-Rule: Python True/False/None breaks JavaScript. You MUST convert them.
+2. **URL Safety:**
+   - Rule: NEVER put `{% url %}` inside .js files. Pass via data attributes.
+   - ✅ Safe: `<div id="app" data-api-url="{% url 'api-view' %}"></div>`
 
-❌ let isActive = {{ is_active }}; (Renders let isActive = True; -> ReferenceError).
+3. **Static Assets:**
+   - Rule: Use `{% static %}` for HTML src. Pass as variables for JS.
 
-✅ let isActive = {{ is_active|yesno:"true,false" }};
+---
 
-✅ let config = {{ config|default:"null" }};
+### SECTION D: BOOTSTRAP 5 (Vanilla JS)
+1. **Native API Only:**
+   - Rule: NO jQuery ($). Use standard DOM API.
+   - ✅ Safe: `new bootstrap.Modal(document.getElementById('myModal')).show();`
 
-String Escaping:
+2. **Event Listeners:**
+   - Rule: Prefer `addEventListener` inside `DOMContentLoaded` over inline `onclick`.
 
-Rule: Always use |escapejs for any string injected from Django into a <script> block.
+---
 
-✅ const message = "{{ django_msg|escapejs }}";
+### SECTION E: SELF-CORRECTION
+1. **Silent Fix Protocol:**
+   - Rule: If you detect a syntax error during generation, FIX IT SILENTLY. Output only clean code.
 
-Loop Integrity (Trailing Commas):
+---
 
-Rule: When generating JS arrays inside a Django loop, prevent the trailing comma on the last item.
+### SECTION F: TOTAL ADMIN INTEGRATION (The "Admin-Mirror" Rule)
+1. **Mirror Representation:**
+   - Rule: Every Model MUST have a corresponding `ModelAdmin` in `admin.py`.
+   - ❌ Fatal: `admin.site.register(Model)`
+   - ✅ Safe: Use `@admin.register(Model)` with customized classes.
 
-✅ Pattern: {% for x in list %}{{ x }}{% if not forloop.last %}, {% endif %}{% endfor %}
+2. **Usability Optimization:**
+   - Rule: You MUST define:
+     - `list_display`: Key columns.
+     - `search_fields`: Quick lookup.
+     - `list_filter`: Sidebar filtering.
+     - `fieldsets`: Organize fields to match frontend logic.
 
-Complex Data Handling (The json_script Standard):
+---
 
-Rule: For passing lists or dictionaries to JavaScript, DO NOT render them directly. Use json_script.
+### SECTION G: HYPER-VELOCITY QUERIES (Performance)
+1. **N+1 Prevention:**
+   - Rule: The database must never be hit inside a loop.
+   - ✅ Safe: Use `select_related` for ForeignKey and `prefetch_related` for M2M in Views.
 
-Pattern:
+2. **Indexing:**
+   - Rule: Add `db_index=True` to fields frequently used in filtering/ordering.
 
-Django: {{ my_data|json_script:"my-data-id" }}
+---
 
-JS: const myData = JSON.parse(document.getElementById('my-data-id').textContent);
+### SECTION H: FORTRESS SECURITY & RBAC
+1. **Role-Based Access Control (RBAC):**
+   - Rule: Never render UI elements if user lacks permission.
+   - ✅ Template: `{% if perms.app.delete_item %} <button>...{% endif %}`
+   - ✅ View: Use `@permission_required` or `UserPassesTestMixin`.
 
-SECTION C: ARCHITECTURE & SCOPE
-Server vs Client Scope:
+2. **Method Enforcement:**
+   - Rule: Use `@require_http_methods(["POST"])` for data modification.
 
-CRITICAL: Do not confuse Django loop variables with JS variables.
+3. **CSRF Compliance:**
+   - Rule: `{% csrf_token %}` is mandatory in ALL forms.
 
-Rule: You CANNOT access a JS variable inside a Django tag. Django runs on the server first.
+---
 
-❌ {% if document.getElementById('id').value == ... %} (Impossible).
+### SECTION I: UNIVERSAL DOCUMENTATION
+1. **Docstrings:**
+   - Rule: Every Class/View/Complex Function MUST have a Python Docstring explaining "Purpose" and "Context".
 
-URL Safety:
+2. **Inline Comments:**
+   - Rule: Explain complex logic only. Avoid stating the obvious.
 
-Rule: NEVER put {% url %} tags inside dynamic JavaScript logic files or functions where context might be lost.
+---
 
-✅ Pass URLs via data attributes: <div id="app" data-url="{% url 'api-view' %}"></div>
+### SECTION J: FRONTEND-BACKEND SYNC
+1. **Dynamic Bootstrap Classes:**
+   - Rule: Status colors/logic must come from Model methods, not hardcoded JS strings.
+   - ✅ Model: `def get_status_css(self): return 'success'`
+   - ✅ HTML: `<span class="badge bg-{{ obj.get_status_css }}">`
 
-Static Assets:
+---
 
-Use {% static 'path' %} for src attributes in HTML.
+### SECTION K: ORM INTEGRITY & SCHEMA VALIDATION (Anti-Hallucination)
+1. **The "FieldError" Prevention:**
+   - Rule: Before writing any `.filter()`, `.get()`, or `.values()`, you MUST verify the field exists in the Model definition.
+   - ❌ Fatal: Querying `delivered_to_production_line` when only `created_at` exists.
+   - ✅ Protocol: If a field is missing, you must either:
+     1. Add the field to `models.py` AND generate a migration.
+     2. Or correct the query to use an existing field/relationship (e.g., `related_model__field_name`).
 
-For JS, pass the path as a variable: const imgPath = "{% static 'img/logo.png' %}";
-
-SECTION D: BOOTSTRAP 5 (Vanilla JS)
-Native API Usage:
-
-Do not use jQuery ($) unless explicitly requested. Use standard DOM API.
-
-✅ new bootstrap.Modal(document.getElementById('myModal')).show();
-
-Event Listeners:
-
-Prefer addEventListener inside DOMContentLoaded over inline onclick attributes for complex logic.
-
-SECTION E: SELF-CORRECTION
-Silent Fix Protocol:
-
-If you detect a syntax error during generation (especially Space-After-Colon or Split-Lines), FIX IT SILENTLY.
-
-Do not explain the error. Output only the clean, crash-free code.
+2. **Migration Awareness:**
+   - Rule: If code implies a schema change (new field), explicitly state: "Run `python manage.py makemigrations` after this code."

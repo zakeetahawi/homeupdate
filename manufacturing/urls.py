@@ -147,6 +147,16 @@ urlpatterns = [
         name="fabric_receipt_list",
     ),
     path(
+        "pending-items-report/",
+        views.PendingItemsReportView.as_view(),
+        name="pending_items_report",
+    ),
+    path(
+        "pending-items/auto-deliver/",
+        views.AutoDeliverPendingItemsView.as_view(),
+        name="auto_deliver_pending_items",
+    ),
+    path(
         "deliver-to-production-line/",
         views.deliver_to_production_line,
         name="deliver_to_production_line",

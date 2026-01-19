@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% block title %}تقرير النواقص - خط الإنتاج{% endblock %}
+{% block extra_css %}
+    <style>
+.report-header {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    border-radius: 15px;
+}
+
+.stat-card {
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.pending-table {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.filter-btn-group .btn {
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.filter-btn-group .btn:hover {
+    transform: translateY(-2px);
+}
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="container-fluid">
+        <!-- العنوان -->
+        <div class="report-header p-4 mb-4 shadow">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="h3 mb-2">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        تقرير النواقص
+                    </h1>
+                    <p class="mb-0">الأصناف غير المسلمة لخط الإنتاج</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    {% if request.user.is_superuser %}
+                        <form action="{% url 'manufacturing:auto_deliver_pending_items' %}"
+                              method="POST"
+                              class="d-inline-block me-2"
+                              onsubmit="return confirm('هل أنت متأكد؟ سيتم تسليم جميع النواقص التابعة لأوامر مكتملة أو جاهزة للتركيب تلقائياً.')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-warning text-dark">
+                                <i class="fas fa-magic me-1"></i> تسليم تلقائي للمكتمل
+                            </button>
+                        </form>
+                    {% endif %}
+                    <a href="{% url 'manufacturing:fabric_receipt' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-right me-1"></i> العودة
+                    </a>
+                </div>
+            </div>
+            {% if messages %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show"
+                                 role="alert">
+                                {{ message }}
+                                <button type="button"
+                                        class="btn-close"
+                                        data-bs-dismiss="alert"
+                                        aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        <!-- الإحصائيات -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stat-card bg-warning text-dark shadow">
+                    <div class="card-body text-center">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <h5>إجمالي النواقص</h5>
+                        <h2 class="mb-0">{{ total_pending }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card bg-success text-white shadow">
+                    <div class="card-body text-center">
+                        <i class="fas fa-check-double fa-2x mb-2"></i>
+                        <h5>مقطع ومستلم</h5>
+                        <h2 class="mb-0">{{ cut_and_received }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card bg-info text-white shadow">
+                    <div class="card-body text-center">
+                        <i class="fas fa-cut fa-2x mb-2"></i>
+                        <h5>مقطع فقط</h5>
+                        <h2 class="mb-0">{{ cut_only }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card bg-secondary text-white shadow">
+                    <div class="card-body text-center">
+                        <i class="fas fa-times fa-2x mb-2"></i>
+                        <h5>غير مقطع</h5>
+                        <h2 class="mb-0">{{ not_cut }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- الفلتر -->
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <div class="filter-btn-group btn-group" role="group">
+                    <button type="button"
+                            class="btn {% if not filter %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                            onclick="applyFilter('')">
+                        <i class="fas fa-list me-1"></i> الكل ({{ total_pending }})
+                    </button>
+                    <button type="button"
+                            class="btn {% if filter == 'cut_and_received' %}btn-success{% else %}btn-outline-success{% endif %}"
+                            onclick="applyFilter('cut_and_received')">
+                        <i class="fas fa-check-double me-1"></i> مقطع ومستلم ({{ cut_and_received }})
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- ملخص المخازن -->
+        {% if warehouses_summary %}
+            <div class="card shadow mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-warehouse me-1"></i> ملخص حسب المخزن
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for warehouse, count in warehouses_summary.items %}
+                            <div class="col-md-3 mb-2">
+                                <div class="d-flex justify-content-between align-items-center p-3 border rounded bg-white h-100">
+                                    <span class="font-weight-bold text-gray-800">{{ warehouse }}</span>
+                                    <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        <!-- الجدول -->
+        <div class="card shadow pending-table">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>رقم الطلب</th>
+                                <th>العميل</th>
+                                <th>الصنف</th>
+                                <th>المخزن</th>
+                                <th class="text-center">الكمية</th>
+                                <th class="text-center">حالة التقطيع</th>
+                                <th class="text-center">حالة الاستلام</th>
+                                <th>خط الإنتاج</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in pending_items %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ item.manufacturing_order.order.order_number }}</strong>
+                                    </td>
+                                    <td>{{ item.manufacturing_order.order.customer.name }}</td>
+                                    <td>{{ item.product_name }}</td>
+                                    <td>
+                                        {% if item.cutting_item and item.cutting_item.cutting_order.warehouse %}
+                                            <span class="badge bg-secondary">{{ item.cutting_item.cutting_order.warehouse.name }}</span>
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary">{{ item.quantity }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if item.cutting_item and item.cutting_item.status == 'completed' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i> مقطع
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times me-1"></i> غير مقطع
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if item.fabric_received %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i> مستلم
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-clock me-1"></i> غير مستلم
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ item.manufacturing_order.production_line.name }}</span>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-5">
+                                        <i class="fas fa-check-circle fa-3x text-success mb-3 d-block"></i>
+                                        <h5 class="text-muted">لا توجد نواقص!</h5>
+                                        <p class="text-muted mb-0">جميع الأصناف تم تسليمها لخط الإنتاج.</p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+function applyFilter(filterType) {
+    const url = new URL(window.location.href);
+    if (filterType) {
+        url.searchParams.set('filter', filterType);
+    } else {
+        url.searchParams.delete('filter');
+    }
+    window.location.href = url.toString();
+}
+    </script>
+{% endblock %}

@@ -681,6 +681,21 @@
                 </div>
             </div>
         </div>
+        <!-- تنبيه النواقص -->
+        {% if total_pending > 0 %}
+            <div class="alert alert-warning d-flex align-items-center justify-content-between shadow mb-4"
+                 role="alert">
+                <div>
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    لديك <strong class="text-danger">{{ total_pending }}</strong> صنف ناقص لم يُسلم لخط الإنتاج
+                    <span class="text-muted">(منها {{ cut_and_received_count }} مقطع ومستلم)</span>
+                </div>
+                <a href="{% url 'manufacturing:pending_items_report' %}"
+                   class="btn btn-warning">
+                    <i class="fas fa-file-alt me-1"></i> عرض تقرير النواقص
+                </a>
+            </div>
+        {% endif %}
         <!-- فلتر البحث -->
         <div class="card shadow mb-4">
             <div class="card-body">

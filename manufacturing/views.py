@@ -9,7 +9,11 @@ from django.contrib.auth.decorators import (
     permission_required,
     user_passes_test,
 )
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.auth.mixins import (
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    UserPassesTestMixin,
+)
 from django.core.paginator import Paginator
 from django.db import models, transaction
 from django.db.models import Case, Count, F, IntegerField, Q, Sum, Value, When
@@ -3401,7 +3405,66 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
         context["total_available_orders"] = len(orders_dict)
         context["search_query"] = search
 
+        # حساب النواقص (العناصر غير المسلمة لخط الإنتاج)
+        pending_stats = self.get_pending_items_stats()
+        context["total_pending"] = pending_stats["total"]
+        context["cut_and_received_count"] = pending_stats["cut_and_received"]
+
         return context
+
+    def get_pending_items_stats(self):
+        """حساب إحصائيات النواقص"""
+        from .models import ManufacturingSettings
+
+        # الحصول على المستودعات المعروضة من الإعدادات
+        settings = ManufacturingSettings.get_settings()
+        display_warehouses = list(
+            settings.warehouses_for_display.values_list("id", flat=True)
+        )
+
+        # جميع العناصر غير المسلمة
+        candidate_items = ManufacturingOrderItem.objects.filter(
+            delivered_to_production=False,
+            manufacturing_order__production_line__isnull=False,
+        ).select_related(
+            "manufacturing_order",
+            "cutting_item__cutting_order__warehouse",  # لجلب المخزن
+        )
+
+        total_pending = 0
+        cut_and_received = 0
+
+        # فلترة: فقط العناصر التي خط إنتاجها له عناصر مسلمة
+        for item in candidate_items:
+            # التحقق من المخزن (إذا كان هناك مخازن محددة للعرض)
+            if display_warehouses:
+                item_warehouse_id = None
+                if item.cutting_item and item.cutting_item.cutting_order.warehouse:
+                    item_warehouse_id = item.cutting_item.cutting_order.warehouse.id
+
+                # إذا لم يكن المخزن ضمن القائمة المعروضة، نتجاهل العنصر
+                if item_warehouse_id not in display_warehouses:
+                    continue
+
+            order = item.manufacturing_order
+
+            # التحقق من وجود عناصر مسلمة
+            has_delivered = ManufacturingOrderItem.objects.filter(
+                manufacturing_order=order,
+                delivered_to_production=True,
+            ).exists()
+
+            if has_delivered:
+                total_pending += 1
+                # التحقق من حالة التقطيع والاستلام
+                if (
+                    item.cutting_item
+                    and item.cutting_item.status == "completed"
+                    and item.fabric_received
+                ):
+                    cut_and_received += 1
+
+        return {"total": total_pending, "cut_and_received": cut_and_received}
 
 
 @login_required
@@ -4797,3 +4860,175 @@ def material_summary_view(request, pk):
         )
 
     return render(request, "manufacturing/material_summary_print.html", context)
+
+
+class PendingItemsReportView(LoginRequiredMixin, TemplateView):
+    """صفحة تقرير النواقص - العناصر غير المسلمة لخط الإنتاج"""
+
+    template_name = "manufacturing/pending_items_report.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # الحصول على جميع النواقص
+        all_pending = self.get_all_pending_items()
+
+        # الفلتر
+        filter_type = self.request.GET.get("filter")
+        if filter_type == "cut_and_received":
+            pending_items = [
+                item
+                for item in all_pending
+                if item.cutting_item
+                and item.cutting_item.status == "completed"
+                and item.fabric_received
+            ]
+        else:
+            pending_items = all_pending
+
+        context["pending_items"] = pending_items
+        context["filter"] = filter_type
+
+        # الإحصائيات
+        context["total_pending"] = len(all_pending)
+        context["cut_and_received"] = len(
+            [
+                i
+                for i in all_pending
+                if i.cutting_item
+                and i.cutting_item.status == "completed"
+                and i.fabric_received
+            ]
+        )
+        context["cut_only"] = len(
+            [
+                i
+                for i in all_pending
+                if i.cutting_item
+                and i.cutting_item.status == "completed"
+                and not i.fabric_received
+            ]
+        )
+        context["not_cut"] = len(
+            [
+                i
+                for i in all_pending
+                if not i.cutting_item or i.cutting_item.status != "completed"
+            ]
+        )
+
+        # تجميع حسب المخزن (من أمر التقطيع)
+        warehouses_summary = {}
+        for item in all_pending:
+            warehouse_name = "غير محدد"
+            if item.cutting_item and item.cutting_item.cutting_order.warehouse:
+                warehouse_name = item.cutting_item.cutting_order.warehouse.name
+
+            if warehouse_name not in warehouses_summary:
+                warehouses_summary[warehouse_name] = 0
+            warehouses_summary[warehouse_name] += 1
+
+        context["warehouses_summary"] = warehouses_summary
+
+        return context
+
+    def get_all_pending_items(self):
+        """
+        الحصول على جميع العناصر غير المسلمة
+        عندما يكون خط الإنتاج له عناصر مسلمة
+        مع مراعاة فلتر المخازن من الإعدادات
+        """
+        from .models import ManufacturingSettings
+
+        # الحصول على المستودعات المعروضة من الإعدادات
+        settings = ManufacturingSettings.get_settings()
+        display_warehouses = list(
+            settings.warehouses_for_display.values_list("id", flat=True)
+        )
+
+        # جميع العناصر غير المسلمة
+        candidate_items = ManufacturingOrderItem.objects.filter(
+            delivered_to_production=False,
+            manufacturing_order__production_line__isnull=False,
+        ).select_related(
+            "manufacturing_order__production_line",
+            "manufacturing_order__order__customer",
+            "cutting_item__cutting_order__warehouse",  # لجلب المخزن
+            "production_line",
+        )
+
+        # فلترة: فقط العناصر التي خط إنتاجها له عناصر مسلمة
+        pending_items = []
+        for item in candidate_items:
+            # التحقق من المخزن (إذا كان هناك مخازن محددة للعرض)
+            if display_warehouses:
+                item_warehouse_id = None
+                if item.cutting_item and item.cutting_item.cutting_order.warehouse:
+                    item_warehouse_id = item.cutting_item.cutting_order.warehouse.id
+
+                # إذا لم يكن المخزن ضمن القائمة المعروضة، نتجاهل العنصر
+                if item_warehouse_id not in display_warehouses:
+                    continue
+
+            order = item.manufacturing_order
+
+            # التحقق من وجود عناصر مسلمة
+            has_delivered = ManufacturingOrderItem.objects.filter(
+                manufacturing_order=order,
+                delivered_to_production=True,
+            ).exists()
+
+            if has_delivered:
+                pending_items.append(item)
+
+        return pending_items
+
+
+class AutoDeliverPendingItemsView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.is_superuser
+
+    def post(self, request, *args, **kwargs):
+        """
+        تسليم تلقائي لجميع النواقص التابعة لأوامر مكتملة
+        """
+        try:
+            # الحالات التي نعتبر الطلب فيها منتهياً
+            COMPLETED_STATUSES = ["completed", "ready_to_install", "delivered"]
+
+            # العثور على العناصر المستهدفة
+            # 1. غير مسلمة للإنتاج
+            # 2. تابعة لأوامر تصنيع في حالة مكتملة
+            pending_items = ManufacturingOrderItem.objects.filter(
+                delivered_to_production=False,
+                manufacturing_order__status__in=COMPLETED_STATUSES,
+            )
+
+            count = pending_items.count()
+
+            if count > 0:
+                current_time = timezone.now()
+
+                # تحديث العناصر
+                updated = pending_items.update(
+                    # استلام المصنع
+                    fabric_received=True,
+                    fabric_received_date=current_time,
+                    fabric_received_by=request.user,
+                    # تسليم الإنتاج
+                    delivered_to_production=True,
+                    production_delivery_date=current_time,
+                    production_delivered_by=request.user,
+                    production_delivery_notes="تسليم تلقائي - أمر مكتمل",
+                )
+
+                messages.success(
+                    request, f"تم تحديث {updated} عنصر بنجاح وتسليمها تلقائياً."
+                )
+            else:
+                messages.info(request, "لا توجد عناصر معلقة تابعة لأوامر مكتملة.")
+
+        except Exception as e:
+            messages.error(request, f"حدث خطأ أثناء التحديث: {str(e)}")
+
+        return redirect("manufacturing:pending_items_report")
