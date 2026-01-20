@@ -73,6 +73,10 @@ def production_reports(request):
     # Get splits for payment status filtering
     splits = CardMeasurementSplit.objects.filter(factory_card__in=cards)
 
+    # IMPORTANT: If filtering by tailor, only show that tailor's splits and costs
+    if tailor_id:
+        splits = splits.filter(tailor_id=tailor_id)
+
     if payment_status == "paid":
         splits = splits.filter(is_paid=True)
         # Also filter cards that are 'paid' for cutter calculation context
@@ -123,6 +127,9 @@ def production_reports(request):
             "tailor": tailor_id,
             "cutter": cutter_id,
         },
+        "filtered_tailor_id": (
+            int(tailor_id) if tailor_id else None
+        ),  # For conditional display
     }
 
     return render(request, "factory_accounting/reports.html", context)
@@ -324,7 +331,20 @@ def export_production_report(request):
     current_row = start_row + 1
     for card in cards:
         card_splits = card.splits.all()
-        tailors_names = ", ".join([s.tailor.name for s in card_splits])
+
+        # Filter splits if tailor is selected
+        if tailor_id:
+            tailor_id_int = int(tailor_id)
+            card_splits = [s for s in card_splits if s.tailor_id == tailor_id_int]
+
+        # Build detailed tailor information
+        tailors_details = (
+            "\n".join(
+                [f"{s.tailor.name}: {float(s.share_amount)} متر" for s in card_splits]
+            )
+            if card_splits
+            else "-"
+        )
 
         # Calculate tailor cost dynamically
         card_tailor_cost = Decimal("0.00")
@@ -347,7 +367,7 @@ def export_production_report(request):
             float(card.total_double_meters) if card.total_double_meters > 0 else "-",
             cutter_name,
             float(card.get_current_cutter_cost()),  # Use dynamic calculation
-            tailors_names,
+            tailors_details,  # Use detailed split information
             float(card_tailor_cost),
             card.manufacturing_order.get_status_display(),
             "مدفوع" if card.status == "paid" else "غير مدفوع",

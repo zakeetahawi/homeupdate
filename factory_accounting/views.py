@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from manufacturing.models import ManufacturingOrder
@@ -274,6 +275,11 @@ def api_bulk_pay_cards(request):
     try:
         data = json.loads(request.body)
         card_ids = data.get("card_ids", [])
+        tailor_id_raw = data.get("tailor_id")
+
+        tailor_id = None
+        if tailor_id_raw:
+            tailor_id = int(tailor_id_raw)
 
         if not card_ids:
             return JsonResponse(
@@ -281,28 +287,48 @@ def api_bulk_pay_cards(request):
             )
 
         with transaction.atomic():
+            # Get cards (excluding those already fully paid)
             cards = FactoryCard.objects.filter(id__in=card_ids).exclude(status="paid")
             count = cards.count()
 
-            if count == 0:
+            if count == 0 and not tailor_id:
                 return JsonResponse(
                     {"success": False, "error": "جميع البطاقات المحددة مدفوعة مسبقاً"},
                     status=400,
                 )
 
-            # Update cards status
+            # Update logic
+            updated_count = 0
             now = timezone.now()
+
             for card in cards:
-                card.status = "paid"
-                card.payment_date = now
-                card.save()
+                if tailor_id:
+                    # PARTIAL PAYMENT: Update only specific tailor's splits
+                    splits = card.splits.filter(tailor_id=tailor_id, is_paid=False)
+                    if splits.exists():
+                        splits.update(is_paid=True)
+                        updated_count += 1
 
-                # Mark all splits as paid
-                card.splits.update(is_paid=True)
+                    # Check if ALL splits are now paid
+                    if not card.splits.filter(is_paid=False).exists():
+                        card.status = "paid"
+                        card.payment_date = now
+                        card.save()
 
-        return JsonResponse(
-            {"success": True, "message": f"تم إتمام الدفع لـ {count} بطاقة بنجاح"}
+                else:
+                    # FULL PAYMENT
+                    card.status = "paid"
+                    card.payment_date = now
+                    card.save()
+                    card.splits.update(is_paid=True)
+                    updated_count += 1
+
+        msg = (
+            f"تم إتمام الدفع للخياط المحدد في {updated_count} بطاقة"
+            if tailor_id
+            else f"تم إتمام الدفع لـ {updated_count} بطاقة بالكامل"
         )
+        return JsonResponse({"success": True, "message": msg})
 
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=400)

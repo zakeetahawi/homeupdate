@@ -143,7 +143,7 @@
                                         <th>مضاعف</th>
                                         <th>القصاص</th>
                                         <th>تكلفة القصاص</th>
-                                        <th>الخياطين</th>
+                                        <th style="min-width: 280px;">الخياطين (التفاصيل)</th>
                                         <th>تكلفة الخياطين</th>
                                         <th>الحالة</th>
                                         <th>تاريخ الدفع</th>
@@ -185,14 +185,33 @@
                                             </td>
                                             <td>{{ card.cutter_name }}</td>
                                             <td>{{ card.total_cutter_cost|floatformat:2 }}</td>
-                                            <td>
+                                            <td class="text-start">
                                                 {% for split in card.splits.all %}
-                                                    <div class="small">{{ split.tailor.name }}</div>
+                                                    {% if not filtered_tailor_id or split.tailor_id == filtered_tailor_id %}
+                                                        <div class="small mb-1">
+                                                            <strong>{{ split.tailor.name }}:</strong>
+                                                            <span class="badge bg-light text-dark border ms-1">{{ split.share_amount }} متر</span>
+                                                            {% if split.is_paid %}
+                                                                <i class="fas fa-check-circle text-success ms-1"
+                                                                   title="تم الدفع لهذا الخياط"></i>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% endif %}
                                                 {% empty %}
-                                                    -
+                                                    <span class="text-muted">-</span>
                                                 {% endfor %}
                                             </td>
-                                            <td class="fw-bold">{{ card.total_cost|floatformat:2 }}</td>
+                                            <td class="fw-bold">
+                                                {% if filtered_tailor_id %}
+                                                    {# Show only filtered tailor's cost #}
+                                                    {% for split in card.splits.all %}
+                                                        {% if split.tailor_id == filtered_tailor_id %}{{ split.get_current_monetary_value|floatformat:2 }}{% endif %}
+                                                    {% endfor %}
+                                                {% else %}
+                                                    {# Show total cost for all tailors #}
+                                                    {{ card.total_cost|floatformat:2 }}
+                                                {% endif %}
+                                            </td>
                                             <td>
                                                 <span class="badge bg-secondary mb-1">{{ card.manufacturing_order.get_status_display }}</span>
                                                 {% if card.status == 'paid' %}
@@ -258,21 +277,37 @@
             if (bulkPayBtn) {
                 bulkPayBtn.addEventListener('click', function() {
                     const selected = Array.from(document.querySelectorAll('.card-check:checked')).map(cb => cb.value);
-                    if (confirm('هل أنت متأكد من تغيير حالة ' + selected.length + ' بطاقات إلى "مدفوعة"؟')) {
+                    
+                    // Check if tailor filter is active
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const tailorId = urlParams.get('tailor');
+                    const tailorName = tailorId ? " للخياط المحدد" : " بالكامل";
+
+                    if (confirm('هل أنت متأكد من إتمام الدفع لـ ' + selected.length + ' بطاقات' + tailorName + '؟')) {
+                        
+                        // Prepare clean payload
+                        const payload = { 
+                            card_ids: selected 
+                        };
+                        if (tailorId) {
+                            payload.tailor_id = tailorId;
+                        }
+
                         fetch("{% url 'factory_accounting:bulk_pay' %}", {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                             },
-                            body: JSON.stringify({ card_ids: selected })
+                            body: JSON.stringify(payload)
                         })
                         .then(response => response.json())
                         .then(data => {
-                            if (data.status === 'success') {
+                            if (data.success) {
+                                alert(data.message);
                                 location.reload();
                             } else {
-                                alert('حدث خطأ: ' + data.message);
+                                alert('حدث خطأ: ' + (data.error || data.message));
                             }
                         })
                         .catch(err => {
