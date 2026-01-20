@@ -42,6 +42,9 @@ def production_reports(request):
     # Exclude cards without production date (old/incomplete records)
     cards = cards.exclude(production_date__isnull=True)
 
+    # Exclude Accessories Line (ID 4)
+    cards = cards.exclude(manufacturing_order__production_line_id=4)
+
     # Apply filters
     if date_from:
         cards = cards.filter(production_date__gte=date_from)
@@ -105,7 +108,9 @@ def production_reports(request):
     # Import ProductionLine here to avoid circular import if placed at top
     from manufacturing.models import ProductionLine
 
-    cutters = ProductionLine.objects.filter(is_active=True).order_by("name")
+    cutters = (
+        ProductionLine.objects.filter(is_active=True).exclude(id=4).order_by("name")
+    )
 
     context = {
         "cards": cards.order_by("-production_date")[
@@ -159,6 +164,9 @@ def export_production_report(request):
 
     # Exclude cards without production date (old/incomplete records)
     cards = cards.exclude(production_date__isnull=True)
+
+    # Exclude Accessories Line (ID 4)
+    cards = cards.exclude(manufacturing_order__production_line_id=4)
 
     # Apply filters
     if date_from:
