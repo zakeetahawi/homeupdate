@@ -365,6 +365,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
+    "axes",  # Django Axes - Brute Force Protection
     "core",  # التطبيق الأساسي للـ template tags المشتركة
     "crm.apps.CrmConfig",
     "accounts",
@@ -396,6 +397,7 @@ INSTALLED_APPS = [
 
 # Authentication backends
 AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",  # Django Axes - must be first
     "accounts.backends.CustomModelBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
@@ -412,6 +414,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "axes.middleware.AxesMiddleware",  # Django Axes - must be after AuthenticationMiddleware
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # ضروري للنظام
@@ -698,8 +701,8 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "100/hour",
-        "user": "1000/hour",
+        "anon": "20/hour",  # Reduced from 100/hour
+        "user": "200/hour",  # Reduced from 1000/hour
     },
     "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
 }
@@ -1760,3 +1763,36 @@ TWO_FACTOR_AUTH_REQUIRED_FOR_ADMIN = True
 WHATSAPP_VERIFY_TOKEN = os.getenv(
     "WHATSAPP_VERIFY_TOKEN", "elkhawaga-whatsapp-webhook-2026"
 )
+
+# ============================================
+# 🔒 Django Axes - Brute Force Protection
+# Added: 2026-01-20
+# ============================================
+
+# عدد المحاولات الفاشلة المسموح بها قبل الحظر
+AXES_FAILURE_LIMIT = 5
+
+# مدة الحظر (بالساعات)
+AXES_COOLOFF_TIME = 1  # ساعة واحدة
+
+# نوع الحظر: حظر بناءً على IP والـ Username
+AXES_LOCKOUT_PARAMETERS = ["ip_address", "username"]  # Fixed: 'ip' → 'ip_address'
+
+# رسالة الحظر - صفحة مخصصة
+AXES_LOCKOUT_TEMPLATE = "axes/lockout.html"
+
+# تفعيل الرسائل التفصيلية في Logs
+AXES_VERBOSE = True
+
+# تفعيل النظام
+AXES_ENABLED = True
+AXES_LOCK_OUT_AT_FAILURE = True
+
+# تسجيل المحاولات الفاشلة في قاعدة البيانات
+AXES_ENABLE_ACCESS_FAILURE_LOG = True
+
+# إعادة تعيين العداد بعد تسجيل دخول ناجح
+AXES_RESET_ON_SUCCESS = True
+
+# Handler للحظر
+AXES_FAILURE_HANDLER = "axes.handlers.database.AxesDatabaseHandler"

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>تم حظر الوصول - Access Denied</title>
+        <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .icon { font-size: 80px; margin-bottom: 20px; }
+        h1 { color: #e74c3c; font-size: 32px; margin-bottom: 20px; }
+        p { color: #555; font-size: 18px; line-height: 1.6; margin-bottom: 15px; }
+        .details {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: right;
+        }
+        .details p { font-size: 16px; margin: 10px 0; }
+        .details strong { color: #2c3e50; }
+        .btn {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 18px;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        .btn:hover { background: #2980b9; }
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            color: #856404;
+        }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="icon">🔒</div>
+            <h1>تم حظر الوصول مؤقتاً</h1>
+            <h2 style="color: #7f8c8d; margin-bottom: 30px;">Access Temporarily Blocked</h2>
+            <p>تم اكتشاف عدة محاولات فاشلة لتسجيل الدخول من عنوان IP الخاص بك.</p>
+            <p>Multiple failed login attempts have been detected from your IP address.</p>
+            <div class="details">
+                <p>
+                    <strong>السبب:</strong> تجاوز الحد الأقصى للمحاولات الفاشلة (5 محاولات)
+                </p>
+                <p>
+                    <strong>Reason:</strong> Exceeded maximum failed attempts (5 attempts)
+                </p>
+                <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+                <p>
+                    <strong>مدة الحظر:</strong> ساعة واحدة من آخر محاولة
+                </p>
+                <p>
+                    <strong>Lockout Duration:</strong> 1 hour from last attempt
+                </p>
+                <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+                <p>
+                    <strong>عنوان IP:</strong> {{ request.META.REMOTE_ADDR|default:"غير متاح" }}
+                </p>
+            </div>
+            <div class="warning">
+                <p>
+                    <strong>⚠️ تحذير أمني | Security Warning</strong>
+                </p>
+                <p>إذا لم تكن أنت من حاول تسجيل الدخول، فقد يكون حسابك مستهدفاً. يرجى تغيير كلمة المرور فوراً.</p>
+                <p>If you didn't attempt to log in, your account may be targeted. Please change your password immediately.</p>
+            </div>
+            <a href="/" class="btn">العودة للصفحة الرئيسية | Go Home</a>
+            <p style="margin-top: 30px; font-size: 14px; color: #95a5a6;">
+                للمساعدة، تواصل مع الدعم الفني
+                <br>
+                For assistance, contact technical support
+            </p>
+        </div>
+    </body>
+</html>
