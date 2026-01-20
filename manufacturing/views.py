@@ -4882,24 +4882,28 @@ class PendingItemsReportView(LoginRequiredMixin, TemplateView):
         # الحصول على جميع النواقص
         all_pending = self.get_all_pending_items()
 
-        # الفلتر
+        # Get filter parameters
         filter_type = self.request.GET.get("filter")
-        if filter_type == "cut_and_received":
-            pending_items = [
-                item
-                for item in all_pending
-                if item.cutting_item
-                and item.cutting_item.status == "completed"
-                and item.fabric_received
-            ]
-        else:
-            pending_items = all_pending
+        warehouse_filter = self.request.GET.get("warehouse")
+        branch_filter = self.request.GET.get("branch")
+        bag_filter = self.request.GET.get("bag_number")
+
+        # Apply filters
+        pending_items = self.apply_filters(
+            all_pending, filter_type, warehouse_filter, branch_filter, bag_filter
+        )
 
         context["pending_items"] = pending_items
         context["filter"] = filter_type
 
-        # الإحصائيات
+        # الإحصائيات - من جميع العناصر
         context["total_pending"] = len(all_pending)
+        context["received_only_count"] = len(
+            [i for i in all_pending if i.fabric_received]
+        )
+        context["not_received_count"] = len(
+            [i for i in all_pending if not i.fabric_received]
+        )
         context["cut_and_received"] = len(
             [
                 i
@@ -4926,6 +4930,21 @@ class PendingItemsReportView(LoginRequiredMixin, TemplateView):
             ]
         )
 
+        # Get unique values for dropdowns
+        from accounts.models import Branch
+        from inventory.models import Warehouse
+
+        context["warehouses"] = Warehouse.objects.all().order_by("name")
+        context["branches"] = Branch.objects.all().order_by("name")
+        context["bag_numbers"] = sorted(
+            set(i.bag_number for i in all_pending if i.bag_number)
+        )
+
+        # Current filter values
+        context["warehouse_filter"] = warehouse_filter
+        context["branch_filter"] = branch_filter
+        context["bag_filter"] = bag_filter
+
         # تجميع حسب المخزن (من أمر التقطيع)
         warehouses_summary = {}
         for item in all_pending:
@@ -4940,6 +4959,61 @@ class PendingItemsReportView(LoginRequiredMixin, TemplateView):
         context["warehouses_summary"] = warehouses_summary
 
         return context
+
+    def apply_filters(self, items, filter_type, warehouse, branch, bag):
+        """Apply all filters to pending items"""
+        filtered = items
+
+        # Status filter
+        if filter_type == "received_only":
+            filtered = [i for i in filtered if i.fabric_received]
+        elif filter_type == "not_received":
+            filtered = [i for i in filtered if not i.fabric_received]
+        elif filter_type == "cut_and_received":
+            filtered = [
+                i
+                for i in filtered
+                if i.cutting_item
+                and i.cutting_item.status == "completed"
+                and i.fabric_received
+            ]
+        elif filter_type == "cut_only":
+            filtered = [
+                i
+                for i in filtered
+                if i.cutting_item
+                and i.cutting_item.status == "completed"
+                and not i.fabric_received
+            ]
+        elif filter_type == "not_cut":
+            filtered = [
+                i
+                for i in filtered
+                if not i.cutting_item or i.cutting_item.status != "completed"
+            ]
+
+        # Warehouse filter
+        if warehouse:
+            filtered = [
+                i
+                for i in filtered
+                if i.cutting_item
+                and i.cutting_item.cutting_order.warehouse_id == int(warehouse)
+            ]
+
+        # Branch filter
+        if branch:
+            filtered = [
+                i
+                for i in filtered
+                if i.manufacturing_order.order.branch_id == int(branch)
+            ]
+
+        # Bag number filter
+        if bag:
+            filtered = [i for i in filtered if i.bag_number == bag]
+
+        return filtered
 
     def get_all_pending_items(self):
         """

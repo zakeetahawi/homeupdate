@@ -58,14 +58,17 @@ def production_reports(request):
     if cutter_id:
         cards = cards.filter(manufacturing_order__production_line_id=cutter_id)
 
-    # Calculate totals
+    # Calculate totals DYNAMICALLY based on payment status
+    # For unpaid items: use current settings
+    # For paid items: preserve original prices
     total_meters = cards.aggregate(total=Sum("total_billable_meters"))[
         "total"
     ] or Decimal("0.00")
 
-    total_cutter_cost = cards.aggregate(total=Sum("total_cutter_cost"))[
-        "total"
-    ] or Decimal("0.00")
+    # Calculate cutter cost dynamically
+    total_cutter_cost = Decimal("0.00")
+    for card in cards:
+        total_cutter_cost += card.get_current_cutter_cost()
 
     # Get splits for payment status filtering
     splits = CardMeasurementSplit.objects.filter(factory_card__in=cards)
@@ -80,14 +83,16 @@ def production_reports(request):
         splits = splits.filter(is_paid=False)
         cards = cards.exclude(status="paid")
 
-    total_amount = splits.aggregate(total=Sum("monetary_value"))["total"] or Decimal(
-        "0.00"
-    )
+    # Calculate tailor cost dynamically
+    total_amount = Decimal("0.00")
+    for split in splits:
+        total_amount += split.get_current_monetary_value()
     # total_amount here represents TOTAL TAILOR COST because splits are tailor payments
 
-    paid_amount = splits.filter(is_paid=True).aggregate(total=Sum("monetary_value"))[
-        "total"
-    ] or Decimal("0.00")
+    paid_amount = Decimal("0.00")
+    for split in splits.filter(is_paid=True):
+        paid_amount += split.get_current_monetary_value()
+
     unpaid_amount = total_amount - paid_amount
 
     # Get filter lists
@@ -182,13 +187,15 @@ def export_production_report(request):
     elif payment_status == "unpaid":
         cards = cards.exclude(status="paid")
 
-    # Calculate Totals for the Summary Cards in Excel
+    # Calculate Totals for the Summary Cards in Excel - DYNAMICALLY
     total_meters = cards.aggregate(total=Sum("total_billable_meters"))[
         "total"
     ] or Decimal("0.00")
-    total_cutter_cost = cards.aggregate(total=Sum("total_cutter_cost"))[
-        "total"
-    ] or Decimal("0.00")
+
+    # Calculate cutter cost dynamically
+    total_cutter_cost = Decimal("0.00")
+    for card in cards:
+        total_cutter_cost += card.get_current_cutter_cost()
 
     # Get tailor splits for total tailor cost
     splits_totals = CardMeasurementSplit.objects.filter(factory_card__in=cards)
@@ -197,9 +204,10 @@ def export_production_report(request):
     elif payment_status == "unpaid":
         splits_totals = splits_totals.filter(is_paid=False)
 
-    total_tailor_cost = splits_totals.aggregate(total=Sum("monetary_value"))[
-        "total"
-    ] or Decimal("0.00")
+    # Calculate tailor cost dynamically
+    total_tailor_cost = Decimal("0.00")
+    for split in splits_totals:
+        total_tailor_cost += split.get_current_monetary_value()
 
     # Create workbook
     wb = Workbook()
@@ -317,9 +325,11 @@ def export_production_report(request):
     for card in cards:
         card_splits = card.splits.all()
         tailors_names = ", ".join([s.tailor.name for s in card_splits])
-        card_tailor_cost = sum([s.monetary_value for s in card_splits]) or Decimal(
-            "0.00"
-        )
+
+        # Calculate tailor cost dynamically
+        card_tailor_cost = Decimal("0.00")
+        for split in card_splits:
+            card_tailor_cost += split.get_current_monetary_value()
 
         # Cutter
         cutter_name = "-"
@@ -336,7 +346,7 @@ def export_production_report(request):
             float(card.total_billable_meters),
             float(card.total_double_meters) if card.total_double_meters > 0 else "-",
             cutter_name,
-            float(card.total_cutter_cost),
+            float(card.get_current_cutter_cost()),  # Use dynamic calculation
             tailors_names,
             float(card_tailor_cost),
             card.manufacturing_order.get_status_display(),
@@ -351,7 +361,7 @@ def export_production_report(request):
             cell.border = thin_border
 
         sum_meters += card.total_billable_meters
-        sum_cutter_cost += card.total_cutter_cost
+        sum_cutter_cost += card.get_current_cutter_cost()  # Use dynamic calculation
         sum_tailor_cost += card_tailor_cost
 
         current_row += 1

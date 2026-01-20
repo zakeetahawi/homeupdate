@@ -122,21 +122,98 @@
                 </div>
             </div>
         </div>
-        <!-- الفلتر -->
+        <!-- الفلاتر الشاملة -->
         <div class="card shadow mb-4">
             <div class="card-body">
-                <div class="filter-btn-group btn-group" role="group">
-                    <button type="button"
-                            class="btn {% if not filter %}btn-primary{% else %}btn-outline-primary{% endif %}"
-                            onclick="applyFilter('')">
-                        <i class="fas fa-list me-1"></i> الكل ({{ total_pending }})
-                    </button>
-                    <button type="button"
-                            class="btn {% if filter == 'cut_and_received' %}btn-success{% else %}btn-outline-success{% endif %}"
-                            onclick="applyFilter('cut_and_received')">
-                        <i class="fas fa-check-double me-1"></i> مقطع ومستلم ({{ cut_and_received }})
-                    </button>
-                </div>
+                <form method="GET" id="filterForm">
+                    <!-- Status Filters -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold">حالة الاستلام والتقطيع:</label>
+                            <div class="btn-group flex-wrap" role="group">
+                                <button type="button"
+                                        class="btn btn-sm {% if not filter %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                                        onclick="setFilter('')">
+                                    <i class="fas fa-list me-1"></i> الكل ({{ total_pending }})
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm {% if filter == 'received_only' %}btn-success{% else %}btn-outline-success{% endif %}"
+                                        onclick="setFilter('received_only')">
+                                    <i class="fas fa-check me-1"></i> مستلم فقط ({{ received_only_count }})
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm {% if filter == 'not_received' %}btn-warning text-dark{% else %}btn-outline-warning{% endif %}"
+                                        onclick="setFilter('not_received')">
+                                    <i class="fas fa-clock me-1"></i> غير مستلم ({{ not_received_count }})
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm {% if filter == 'cut_and_received' %}btn-info{% else %}btn-outline-info{% endif %}"
+                                        onclick="setFilter('cut_and_received')">
+                                    <i class="fas fa-check-double me-1"></i> مقطع ومستلم ({{ cut_and_received }})
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm {% if filter == 'cut_only' %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
+                                        onclick="setFilter('cut_only')">
+                                    <i class="fas fa-cut me-1"></i> مقطع فقط ({{ cut_only }})
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm {% if filter == 'not_cut' %}btn-danger{% else %}btn-outline-danger{% endif %}"
+                                        onclick="setFilter('not_cut')">
+                                    <i class="fas fa-times me-1"></i> غير مقطع ({{ not_cut }})
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Dropdown Filters -->
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label small">المخزن:</label>
+                            <select name="warehouse"
+                                    class="form-select form-select-sm"
+                                    onchange="this.form.submit()">
+                                <option value="">جميع المخازن</option>
+                                {% for wh in warehouses %}
+                                    <option value="{{ wh.id }}"
+                                            {% if warehouse_filter == wh.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ wh.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">الفرع:</label>
+                            <select name="branch"
+                                    class="form-select form-select-sm"
+                                    onchange="this.form.submit()">
+                                <option value="">جميع الفروع</option>
+                                {% for br in branches %}
+                                    <option value="{{ br.id }}"
+                                            {% if branch_filter == br.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ br.name|remove_branch_prefix }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">رقم الشنطة:</label>
+                            <select name="bag_number"
+                                    class="form-select form-select-sm"
+                                    onchange="this.form.submit()">
+                                <option value="">جميع الشنط</option>
+                                {% for bag in bag_numbers %}
+                                    <option value="{{ bag }}" {% if bag_filter == bag %}selected{% endif %}>{{ bag }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <a href="{% url 'manufacturing:pending_items_report' %}"
+                               class="btn btn-outline-secondary btn-sm w-100">
+                                <i class="fas fa-times me-1"></i> مسح الفلاتر
+                            </a>
+                        </div>
+                    </div>
+                    <input type="hidden" name="filter" id="filterInput" value="{{ filter }}">
+                </form>
             </div>
         </div>
         <!-- ملخص المخازن -->
@@ -256,14 +333,9 @@
         </div>
     </div>
     <script>
-function applyFilter(filterType) {
-    const url = new URL(window.location.href);
-    if (filterType) {
-        url.searchParams.set('filter', filterType);
-    } else {
-        url.searchParams.delete('filter');
-    }
-    window.location.href = url.toString();
+function setFilter(filterValue) {
+    document.getElementById('filterInput').value = filterValue;
+    document.getElementById('filterForm').submit();
 }
     </script>
 {% endblock %}

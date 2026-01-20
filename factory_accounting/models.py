@@ -488,6 +488,33 @@ class FactoryCard(models.Model):
             }
         return None
 
+    def get_current_cutter_price(self):
+        """
+        Get current cutter price based on payment status
+        إذا مدفوع: استخدم السعر المخزن
+        إذا غير مدفوع: استخدم السعر الحالي من الإعدادات
+        """
+        if self.status == "paid":
+            # Preserve original price for paid items
+            return self.cutter_price
+
+        # Use current settings for unpaid items
+        settings = FactoryAccountingSettings.get_settings()
+        return settings.default_cutter_rate
+
+    def get_current_cutter_cost(self):
+        """
+        Calculate current cutter cost based on payment status
+        التكلفة الحالية للقصاص حسب حالة الدفع
+        """
+        if self.status == "paid":
+            # Preserve original cost for paid items
+            return self.total_cutter_cost
+
+        # Recalculate using current price for unpaid items
+        current_price = self.get_current_cutter_price()
+        return self.total_billable_meters * current_price
+
 
 class CardMeasurementSplit(models.Model):
     """
@@ -552,6 +579,32 @@ class CardMeasurementSplit(models.Model):
 
     def __str__(self):
         return f"{self.tailor.name} - {self.share_amount}م @ {self.factory_card.order_number}"
+
+    def get_current_unit_rate(self):
+        """
+        Get current unit rate based on payment status
+        إذا مدفوع: استخدم السعر المخزن
+        إذا غير مدفوع: استخدم السعر الحالي
+        """
+        if self.is_paid:
+            # Preserve original price for paid items
+            return self.unit_rate
+
+        # Use current tailor rate for unpaid items
+        return self.tailor.get_rate()
+
+    def get_current_monetary_value(self):
+        """
+        Calculate current monetary value based on payment status
+        القيمة المالية الحالية حسب حالة الدفع
+        """
+        if self.is_paid:
+            # Preserve original value for paid items
+            return self.monetary_value
+
+        # Recalculate using current rate for unpaid items
+        current_rate = self.get_current_unit_rate()
+        return self.share_amount * current_rate
 
     def save(self, *args, **kwargs):
         """Calculate monetary value: meters × rate"""
