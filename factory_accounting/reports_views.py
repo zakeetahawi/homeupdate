@@ -45,6 +45,9 @@ def production_reports(request):
     # Exclude Accessories Line (ID 4)
     cards = cards.exclude(manufacturing_order__production_line_id=4)
 
+    # Exclude modification orders (تعديلات) to avoid duplicates
+    cards = cards.exclude(manufacturing_order__order_type='modification')
+
     # Apply filters
     if date_from:
         cards = cards.filter(production_date__gte=date_from)
@@ -167,6 +170,9 @@ def export_production_report(request):
 
     # Exclude Accessories Line (ID 4)
     cards = cards.exclude(manufacturing_order__production_line_id=4)
+
+    # Exclude modification orders (تعديلات) to avoid duplicates
+    cards = cards.exclude(manufacturing_order__order_type='modification')
 
     # Apply filters
     if date_from:
