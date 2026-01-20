@@ -17,13 +17,15 @@ def log_status_change(sender, instance, created, **kwargs):
     Log status changes for manufacturing orders
     تسجيل تغييرات حالة أوامر التصنيع
     """
-    # Log initial status on creation
+    # Log initial status only if it's a production-ready status
+    # فقط: جاهز للتركيب أو مكتمل
     if created:
-        ProductionStatusLog.objects.create(
-            manufacturing_order=instance,
-            status=instance.status,
-            changed_by=getattr(instance, "_changed_by", None),
-        )
+        if instance.status in ["ready_install", "completed"]:
+            ProductionStatusLog.objects.create(
+                manufacturing_order=instance,
+                status=instance.status,
+                changed_by=getattr(instance, "_changed_by", None),
+            )
     else:
         # Check if status changed using tracker
         if instance.tracker.has_changed("status"):

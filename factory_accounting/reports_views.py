@@ -23,8 +23,18 @@ def production_reports(request):
     Production reports with filtering
     تقارير الإنتاج مع الفلترة
     """
-    # Get filter parameters
-    date_from = request.GET.get("date_from")
+    # Get filter parameters with default date: 25th of previous month
+    today = timezone.now().date()
+    
+    # Calculate 25th of previous month
+    if today.month == 1:
+        # If January, go to December of previous year
+        default_date_from = today.replace(year=today.year - 1, month=12, day=25).strftime("%Y-%m-%d")
+    else:
+        # Otherwise, go to previous month
+        default_date_from = today.replace(month=today.month - 1, day=25).strftime("%Y-%m-%d")
+    
+    date_from = request.GET.get("date_from", default_date_from)
     date_to = request.GET.get("date_to")
     payment_status = request.GET.get("payment_status", "all")
     card_status = request.GET.get("card_status", "all")
