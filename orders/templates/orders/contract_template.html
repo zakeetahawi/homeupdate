@@ -1021,6 +1021,8 @@
                                                       style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%)">ثقيل</span>
                                             {% elif fabric.fabric_type == 'blackout' %}
                                                 <span class="fabric-type-badge blackout">بلاك أوت</span>
+                                            {% elif fabric.fabric_type == 'belt' %}
+                                                <span class="fabric-type-badge extra" style="background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%)">حزام</span>
                                             {% elif fabric.fabric_type == 'additional' %}
                                                 <span class="fabric-type-badge extra">إضافي</span>
                                             {% elif fabric.fabric_type == 'extra' %}
@@ -1040,7 +1042,7 @@
                                                                  vertical-align: middle">قماش خارجي مرسل من الفرع</span>
                                                 {% endif %}
                                             </span>
-                                            {% if 'حزام' in fabric.display_name or fabric.meters == 0 %}
+                                            {% if 'حزام' in fabric.display_name or fabric.fabric_type == 'belt' or fabric.meters == 0 %}
                                                 <span class="fabric-meters">{{ fabric.pieces }} قطعة</span>
                                             {% else %}
                                                 <span class="fabric-meters">{{ fabric.meters }}م × {{ fabric.pieces }} قطعة</span>

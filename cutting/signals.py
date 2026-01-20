@@ -983,6 +983,7 @@ def process_external_fabrics(order):
             )
             .exclude(fabric_name__in=["", "غير محدد", None])
             .exclude(fabric_type="belt")  # استثناء الأحزمة - ليست أقمشة خارجية
+            .exclude(fabric_name__icontains="حزام")  # استثناء إضافي: أي شيء اسمه حزام
         )
 
         if not external_fabrics.exists():

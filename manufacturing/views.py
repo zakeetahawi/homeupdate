@@ -3107,10 +3107,16 @@ def manufacturing_order_detail_by_code(request, manufacturing_code):
     # البحث بطريقة محسنة للأداء
     if "-M" in manufacturing_code:
         order_number = manufacturing_code.replace("-M", "")
-        manufacturing_order = get_object_or_404(
-            ManufacturingOrder.objects.select_related("order", "order__customer"),
-            order__order_number=order_number,
-        )
+        # قد يكون هناك عدة أوامر تصنيع لنفس الطلب - نأخذ الأحدث
+        manufacturing_orders = ManufacturingOrder.objects.filter(
+            order__order_number=order_number
+        ).select_related("order", "order__customer").order_by("-created_at")
+        
+        if not manufacturing_orders.exists():
+            from django.http import Http404
+            raise Http404(f"لم يتم العثور على أمر تصنيع للطلب {order_number}")
+        
+        manufacturing_order = manufacturing_orders.first()
     else:
         # للأكواد القديمة
         manufacturing_id = manufacturing_code.replace("#", "").replace("-M", "")

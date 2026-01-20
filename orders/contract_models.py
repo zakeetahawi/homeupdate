@@ -584,6 +584,7 @@ class CurtainFabric(models.Model):
         ("heavy", "ثقيل"),
         ("blackout", "بلاك أوت"),
         ("additional", "إضافي"),
+        ("belt", "حزام"),
     ]
 
     # ملاحظة: TAILORING_TYPES تم نقلها لنظام التخصيص

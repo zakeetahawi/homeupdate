@@ -2324,7 +2324,8 @@ function updateFabricsList() {
     tempFabrics.forEach((fabric, index) => {
         const colorClass = fabric.type === 'light' ? 'warning' : 
                           fabric.type === 'heavy' ? 'danger' : 
-                          fabric.type === 'blackout' ? 'dark' : 'secondary';
+                          fabric.type === 'blackout' ? 'dark' : 
+                          fabric.type === 'belt' ? 'info' : 'secondary';
         
         // تحديد إذا كان حزام (من اسم القماش أو source أو unit)
         const isBelt = fabric.source === 'belt' || fabric.unit === 'piece' || 
@@ -3176,10 +3177,10 @@ function addBeltToFabrics() {
     }
     qtyInput.classList.remove('field-required-error');
     
-    // إضافة الحزام كقماش إضافي - بالقطعة فقط (بدون أمتار)
+    // إضافة الحزام - بالقطعة فقط (بدون أمتار)
     const fabric = {
-        type: 'additional',
-        type_display: 'إضافي',
+        type: 'belt',          // نوع حزام لتمييزه عن القماش الخارجي
+        type_display: 'حزام',
         name: beltName,
         meters: qty,           // العدد فقط (قطع)
         pieces: qty,           // نفس العدد
