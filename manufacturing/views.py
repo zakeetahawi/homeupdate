@@ -3108,14 +3108,17 @@ def manufacturing_order_detail_by_code(request, manufacturing_code):
     if "-M" in manufacturing_code:
         order_number = manufacturing_code.replace("-M", "")
         # قد يكون هناك عدة أوامر تصنيع لنفس الطلب - نأخذ الأحدث
-        manufacturing_orders = ManufacturingOrder.objects.filter(
-            order__order_number=order_number
-        ).select_related("order", "order__customer").order_by("-created_at")
-        
+        manufacturing_orders = (
+            ManufacturingOrder.objects.filter(order__order_number=order_number)
+            .select_related("order", "order__customer")
+            .order_by("-created_at")
+        )
+
         if not manufacturing_orders.exists():
             from django.http import Http404
+
             raise Http404(f"لم يتم العثور على أمر تصنيع للطلب {order_number}")
-        
+
         manufacturing_order = manufacturing_orders.first()
     else:
         # للأكواد القديمة
@@ -4959,7 +4962,9 @@ class PendingItemsReportView(LoginRequiredMixin, TemplateView):
         ).select_related(
             "manufacturing_order__production_line",
             "manufacturing_order__order__customer",
+            "manufacturing_order__order__branch",  # لجلب الفرع
             "cutting_item__cutting_order__warehouse",  # لجلب المخزن
+            "cutting_item",  # لجلب رقم الشنطة
             "production_line",
         )
 

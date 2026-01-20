@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
+{% load manufacturing_filters %}
 {% block title %}تقرير النواقص - خط الإنتاج{% endblock %}
 {% block extra_css %}
     <style>
@@ -170,8 +171,10 @@
                                 <th>#</th>
                                 <th>رقم الطلب</th>
                                 <th>العميل</th>
+                                <th>الفرع</th>
                                 <th>الصنف</th>
                                 <th>المخزن</th>
+                                <th class="text-center">رقم الشنطة</th>
                                 <th class="text-center">الكمية</th>
                                 <th class="text-center">حالة التقطيع</th>
                                 <th class="text-center">حالة الاستلام</th>
@@ -186,12 +189,26 @@
                                         <strong>{{ item.manufacturing_order.order.order_number }}</strong>
                                     </td>
                                     <td>{{ item.manufacturing_order.order.customer.name }}</td>
+                                    <td>
+                                        {% if item.manufacturing_order.order.branch %}
+                                            {{ item.manufacturing_order.order.branch.name|remove_branch_prefix }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ item.product_name }}</td>
                                     <td>
                                         {% if item.cutting_item and item.cutting_item.cutting_order.warehouse %}
                                             <span class="badge bg-secondary">{{ item.cutting_item.cutting_order.warehouse.name }}</span>
                                         {% else %}
                                             <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if item.bag_number %}
+                                            <span class="badge bg-info">{{ item.bag_number }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-center">
@@ -225,7 +242,7 @@
                                 </tr>
                             {% empty %}
                                 <tr>
-                                    <td colspan="8" class="text-center py-5">
+                                    <td colspan="11" class="text-center py-5">
                                         <i class="fas fa-check-circle fa-3x text-success mb-3 d-block"></i>
                                         <h5 class="text-muted">لا توجد نواقص!</h5>
                                         <p class="text-muted mb-0">جميع الأصناف تم تسليمها لخط الإنتاج.</p>
