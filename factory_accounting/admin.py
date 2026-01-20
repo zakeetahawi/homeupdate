@@ -55,6 +55,19 @@ class FactoryAccountingSettingsAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Prevent deletion
         return False
+    
+    def save_model(self, request, obj, form, change):
+        """Save and notify about auto-recalculations"""
+        from django.contrib import messages
+        
+        super().save_model(request, obj, form, change)
+        
+        # Notify user about automatic recalculations
+        if change:
+            messages.success(
+                request,
+                "✅ تم حفظ الإعدادات بنجاح. تم إعادة حساب جميع العناصر غير المدفوعة تلقائياً باستخدام الأسعار الجديدة."
+            )
 
 
 @admin.register(Tailor)
@@ -98,6 +111,14 @@ class TailorAdmin(admin.ModelAdmin):
         # Always set role to tailor (cutter comes from production line)
         obj.role = "tailor"
         super().save_model(request, obj, form, change)
+        
+        # Notify user about automatic recalculations
+        if change and ('use_custom_rate' in form.changed_data or 'default_rate' in form.changed_data):
+            from django.contrib import messages
+            messages.success(
+                request,
+                f"✅ تم تحديث {obj.name} بنجاح. تم إعادة حساب جميع التقسيمات غير المدفوعة تلقائياً باستخدام السعر الجديد."
+            )
 
 
 @admin.register(ProductionStatusLog)
@@ -122,11 +143,37 @@ class CardMeasurementSplitInline(admin.TabularInline):
         "tailor",
         "share_amount",
         "unit_rate",
+        "current_rate_display",
         "monetary_value",
+        "current_value_display",
         "is_paid",
         "paid_date",
     ]
-    readonly_fields = ["monetary_value"]
+    readonly_fields = ["monetary_value", "current_rate_display", "current_value_display"]
+    
+    def current_rate_display(self, obj):
+        """Display current rate based on payment status"""
+        if obj.pk:  # Only for existing objects
+            current_rate = obj.get_current_unit_rate()
+            if obj.is_paid:
+                return format_html('<span style="color: green;">{} ج.م (مدفوع - محفوظ)</span>', current_rate)
+            else:
+                return format_html('<span style="color: orange;">{} ج.م (حالي)</span>', current_rate)
+        return "-"
+    
+    current_rate_display.short_description = _("السعر الحالي")
+    
+    def current_value_display(self, obj):
+        """Display current monetary value based on payment status"""
+        if obj.pk:  # Only for existing objects
+            current_value = obj.get_current_monetary_value()
+            if obj.is_paid:
+                return format_html('<span style="color: green;">{} ج.م (مدفوع - محفوظ)</span>', current_value)
+            else:
+                return format_html('<span style="color: orange;">{} ج.م (سيتم التحديث)</span>', current_value)
+        return "-"
+    
+    current_value_display.short_description = _("القيمة الحالية")
 
 
 @admin.register(FactoryCard)
@@ -137,6 +184,8 @@ class FactoryCardAdmin(admin.ModelAdmin):
         "invoice_number",
         "production_date",
         "total_billable_meters",
+        "cutter_price_display",
+        "cutter_cost_display",
         "status",
         "created_at",
     ]
@@ -149,6 +198,8 @@ class FactoryCardAdmin(admin.ModelAdmin):
     readonly_fields = [
         "manufacturing_order",
         "production_date",
+        "cutter_price_display",
+        "cutter_cost_display",
         "created_at",
         "updated_at",
         "created_by",
@@ -161,7 +212,16 @@ class FactoryCardAdmin(admin.ModelAdmin):
             _("معلومات الطلب"),
             {"fields": ("manufacturing_order", "status", "production_date")},
         ),
-        (_("الحسابات"), {"fields": ("total_billable_meters",)}),
+        (
+            _("الحسابات"), 
+            {
+                "fields": (
+                    "total_billable_meters", 
+                    "cutter_price_display", 
+                    "cutter_cost_display"
+                )
+            }
+        ),
         (_("ملاحظات"), {"fields": ("notes",)}),
         (
             _("معلومات النظام"),
@@ -171,6 +231,26 @@ class FactoryCardAdmin(admin.ModelAdmin):
             },
         ),
     )
+    
+    def cutter_price_display(self, obj):
+        """Display current cutter price based on payment status"""
+        current_price = obj.get_current_cutter_price()
+        if obj.status == "paid":
+            return format_html('<span style="color: green;">{} ج.م (مدفوع - محفوظ)</span>', current_price)
+        else:
+            return format_html('<span style="color: orange;">{} ج.م (حالي)</span>', current_price)
+    
+    cutter_price_display.short_description = _("سعر القصاص للمتر")
+    
+    def cutter_cost_display(self, obj):
+        """Display current cutter cost based on payment status"""
+        current_cost = obj.get_current_cutter_cost()
+        if obj.status == "paid":
+            return format_html('<span style="color: green;">{} ج.م (مدفوع - محفوظ)</span>', current_cost)
+        else:
+            return format_html('<span style="color: orange;">{} ج.م (سيتم التحديث)</span>', current_cost)
+    
+    cutter_cost_display.short_description = _("تكلفة القصاص الإجمالية")
 
     def save_model(self, request, obj, form, change):
         if not change:
@@ -185,7 +265,9 @@ class CardMeasurementSplitAdmin(admin.ModelAdmin):
         "tailor",
         "share_amount",
         "unit_rate",
+        "current_rate_display",
         "monetary_value",
+        "current_value_display",
         "is_paid",
         "paid_date",
     ]
@@ -194,7 +276,7 @@ class CardMeasurementSplitAdmin(admin.ModelAdmin):
         "factory_card__manufacturing_order__order__order_number",
         "tailor__name",
     ]
-    readonly_fields = ["monetary_value", "created_at", "updated_at"]
+    readonly_fields = ["monetary_value", "current_rate_display", "current_value_display", "created_at", "updated_at"]
     date_hierarchy = "paid_date"
 
     fieldsets = (
@@ -206,7 +288,9 @@ class CardMeasurementSplitAdmin(admin.ModelAdmin):
                     "tailor",
                     "share_amount",
                     "unit_rate",
+                    "current_rate_display",
                     "monetary_value",
+                    "current_value_display",
                 )
             },
         ),
@@ -217,3 +301,23 @@ class CardMeasurementSplitAdmin(admin.ModelAdmin):
             {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
         ),
     )
+    
+    def current_rate_display(self, obj):
+        """Display current rate based on payment status"""
+        current_rate = obj.get_current_unit_rate()
+        if obj.is_paid:
+            return format_html('<span style="color: green;">{} ج.م (مدفوع - محفوظ)</span>', current_rate)
+        else:
+            return format_html('<span style="color: orange;">{} ج.م (حالي - سيتم التحديث)</span>', current_rate)
+    
+    current_rate_display.short_description = _("السعر الحالي للمتر")
+    
+    def current_value_display(self, obj):
+        """Display current monetary value based on payment status"""
+        current_value = obj.get_current_monetary_value()
+        if obj.is_paid:
+            return format_html('<span style="color: green;">{} ج.م (مدفوع - محفوظ)</span>', current_value)
+        else:
+            return format_html('<span style="color: orange;">{} ج.م (حالي - سيتم التحديث)</span>', current_value)
+    
+    current_value_display.short_description = _("القيمة المالية الحالية")
