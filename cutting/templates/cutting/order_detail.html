@@ -442,9 +442,6 @@
                                                 <button class="btn btn-success btn-sm" onclick="completeItem({{ item.id }})">
                                                     <i class="fas fa-check"></i> إكمال
                                                 </button>
-                                                <button class="btn btn-warning btn-sm" onclick="editItem({{ item.id }})">
-                                                    <i class="fas fa-edit"></i> تعديل
-                                                </button>
                                             {% elif item.status == 'completed' %}
                                                 <span class="badge bg-success">
                                                     <i class="fas fa-check-circle"></i> مكتمل
