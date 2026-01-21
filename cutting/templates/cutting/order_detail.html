@@ -445,9 +445,6 @@
                                                 <button class="btn btn-warning btn-sm" onclick="editItem({{ item.id }})">
                                                     <i class="fas fa-edit"></i> تعديل
                                                 </button>
-                                                <button class="btn btn-danger btn-sm" onclick="rejectItem({{ item.id }})">
-                                                    <i class="fas fa-times"></i> رفض
-                                                </button>
                                             {% elif item.status == 'completed' %}
                                                 <span class="badge bg-success">
                                                     <i class="fas fa-check-circle"></i> مكتمل
