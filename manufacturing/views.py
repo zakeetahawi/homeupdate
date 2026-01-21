@@ -5079,7 +5079,7 @@ class AutoDeliverPendingItemsView(LoginRequiredMixin, UserPassesTestMixin, View)
         """
         try:
             # الحالات التي نعتبر الطلب فيها منتهياً
-            COMPLETED_STATUSES = ["completed", "ready_to_install", "delivered"]
+            COMPLETED_STATUSES = ["completed", "ready_install", "delivered"]
 
             # العثور على العناصر المستهدفة
             # 1. غير مسلمة للإنتاج
