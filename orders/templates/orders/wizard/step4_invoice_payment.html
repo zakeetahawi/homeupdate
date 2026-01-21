@@ -172,7 +172,11 @@
                     {% endif %}
                     <div class="alert alert-warning mt-2 py-2">
                         <i class="fas fa-lightbulb me-1"></i>
-                        <strong>💡 تنبيه:</strong> يجب دفع 50% على الأقل من القيمة الإجمالية للمتابعة
+                        {% if draft.customer.customer_type == 'wholesale' %}
+                            <strong>💡 تنبيه:</strong> يجب دفع 50% على الأقل من القيمة الإجمالية (أو 0 للدفع لاحقاً) للمتابعة
+                        {% else %}
+                            <strong>💡 تنبيه:</strong> يجب دفع 50% على الأقل من القيمة الإجمالية للمتابعة
+                        {% endif %}
                         <br>
                         <small>الحد الأدنى المطلوب: <strong>{{ totals.minimum_payment|format_currency }}</strong></small>
                     </div>
@@ -522,11 +526,25 @@
 
     const paidAmount = parseFloat(paidAmountInput.value) || 0;
 
+    // نوع العميل (تم تمريره من الـ View أو المسودة)
+    const customerType = "{{ draft.customer.customer_type|default:'retail' }}";
+    const isWholesale = customerType === 'wholesale';
+
     // التحقق من المبلغ المدفوع
-    if (paidAmount <= 0) {
-        hasErrors = true;
-        missingFields.push('المبلغ المدفوع');
-        markFieldAsError(paidAmountInput, 'يرجى إدخال المبلغ المدفوع');
+    if (isWholesale) {
+        // عميل جملة - يسمح بالصفر
+        if (paidAmount < 0) {
+            hasErrors = true;
+            missingFields.push('المبلغ المدفوع');
+            markFieldAsError(paidAmountInput, 'المبلغ لا يمكن أن يكون سالباً');
+        }
+    } else {
+        // عميل عادي - يجب أن يكون أكبر من صفر
+        if (paidAmount <= 0) {
+            hasErrors = true;
+            missingFields.push('المبلغ المدفوع');
+            markFieldAsError(paidAmountInput, 'يرجى إدخال المبلغ المدفوع');
+        }
     }
 
     // إذا كانت هناك أخطاء أولية، عرضها
@@ -536,13 +554,29 @@
     }
 
     // التحقق من الحد الأدنى
-    if (paidAmount < minimumPayment) {
-        markFieldAsError(paidAmountInput, `الحد الأدنى المطلوب: ${minimumPayment.toFixed(2)} جنيه`);
+    // لعملاء الجملة: التحقق فقط إذا كان هناك مبلغ مدفوع (> 0)
+    // للعملاء العاديين: التحقق دائماً (لأننا تأكدنا أصلاً أنه > 0 أعلاه)
+    
+    let checkMinimum = true;
+    if (isWholesale && paidAmount === 0) {
+        checkMinimum = false; // تجاوز فحص الحد الأدنى إذا كان المبلغ 0 لعميل جملة
+    }
+
+    if (checkMinimum && paidAmount < minimumPayment) {
+        let msg = `الحد الأدنى المطلوب: ${minimumPayment.toFixed(2)} جنيه`;
+        let desc = `يجب دفع 50% على الأقل من المبلغ الإجمالي`;
+        
+        if (isWholesale) {
+            msg += ` (أو 0 للدفع لاحقاً)`;
+            desc += ` (أو ترك المبلغ 0 للدفع لاحقاً)`;
+        }
+
+        markFieldAsError(paidAmountInput, msg);
 
         Swal.fire({
             icon: 'warning',
             title: 'المبلغ المدفوع غير كافٍ',
-            html: `يجب دفع 50% على الأقل من المبلغ الإجمالي<br>
+            html: `${desc}<br>
                    <strong>الحد الأدنى المطلوب:</strong> ${minimumPayment.toFixed(2)} جنيه<br>
                    <strong>المبلغ المدفوع:</strong> ${paidAmount.toFixed(2)} جنيه`,
             confirmButtonText: 'حسناً',

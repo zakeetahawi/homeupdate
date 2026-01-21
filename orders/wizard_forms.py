@@ -622,13 +622,32 @@ class Step4InvoicePaymentForm(forms.ModelForm):
         if self.draft_order:
             final_total = self.draft_order.final_total or Decimal("0")
 
-            # التحقق من الحد الأدنى للدفع (50%) فقط
+            # التحقق من الحد الأدنى للدفع (50%)
+            # لعملاء الجملة: يسمح بعدم الدفع (0) أو دفع 50% كحد أدنى
+            # لغيرهم: يجب دفع 50% كحد أدنى
             minimum_payment = final_total * Decimal("0.5")
-            if paid_amount < minimum_payment:
-                raise ValidationError(
-                    f"💡 يجب دفع 50% على الأقل من القيمة الإجمالية. "
-                    f"المبلغ المطلوب: {minimum_payment:.2f} جنيه (المدفوع: {paid_amount:.2f} جنيه)"
-                )
+
+            is_wholesale = False
+            if (
+                self.draft_order.customer
+                and self.draft_order.customer.customer_type == "wholesale"
+            ):
+                is_wholesale = True
+
+            if is_wholesale:
+                # عميل جملة - يسمح بـ 0 أو >= 50%
+                if paid_amount > 0 and paid_amount < minimum_payment:
+                    raise ValidationError(
+                        f"💡 عميل جملة: يجب دفع 50% على الأقل من القيمة الإجمالية في حال الدفع (أو ترك المبلغ 0). "
+                        f"المبلغ المطلوب: {minimum_payment:.2f} جنيه (المدفوع: {paid_amount:.2f} جنيه)"
+                    )
+            else:
+                # عميل عادي - يجب دفع >= 50%
+                if paid_amount < minimum_payment:
+                    raise ValidationError(
+                        f"💡 يجب دفع 50% على الأقل من القيمة الإجمالية للمتابعة. "
+                        f"المبلغ المطلوب: {minimum_payment:.2f} جنيه (المدفوع: {paid_amount:.2f} جنيه)"
+                    )
 
         return paid_amount
 
