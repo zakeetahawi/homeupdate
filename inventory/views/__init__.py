@@ -21,6 +21,37 @@ from .transaction_views import (
     get_product_stock_api,
 )
 
+# استيراد الدوال المتبقية من الملف القديم
+# (سيتم نقلها لاحقاً إلى وحدات منفصلة)
+import sys
+import os
+# إضافة المسار للملف القديم مؤقتاً
+old_views_path = os.path.join(os.path.dirname(__file__), '..')
+sys.path.insert(0, old_views_path)
+
+try:
+    from inventory.views import (
+        dashboard_view,
+        bulk_upload_products,
+        bulk_stock_update,
+        stock_transfer_list,
+        stock_transfer_create,
+        stock_transfer_detail,
+        stock_transfer_receive,
+        stock_transfer_cancel,
+    )
+except ImportError:
+    # إذا فشل الاستيراد، نستخدم placeholders
+    dashboard_view = None
+    bulk_upload_products = None
+    bulk_stock_update = None
+    stock_transfer_list = None
+    stock_transfer_create = None
+    stock_transfer_detail = None
+    stock_transfer_receive = None
+    stock_transfer_cancel = None
+
+
 __all__ = [
     # Product Views
     "product_list",
@@ -33,6 +64,16 @@ __all__ = [
     "transaction_create",
     "transfer_stock",
     "get_product_stock_api",
+    
+    # Other Views (from old file)
+    "dashboard_view",
+    "bulk_upload_products",
+    "bulk_stock_update",
+    "stock_transfer_list",
+    "stock_transfer_create",
+    "stock_transfer_detail",
+    "stock_transfer_receive",
+    "stock_transfer_cancel",
 ]
 
 # معلومات الوحدة
