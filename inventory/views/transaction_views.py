@@ -12,9 +12,9 @@ from django.db import transaction as db_transaction
 from django.utils import timezone
 
 from inventory.models import Product, Warehouse, StockTransaction
-from inventory.forms import StockTransactionForm
 from inventory.permissions import can_transfer_stock
 from inventory.inventory_utils import invalidate_product_cache
+
 
 
 @login_required
@@ -30,64 +30,86 @@ def transaction_create(request: HttpRequest) -> HttpResponse:
         HttpResponse: نموذج إنشاء المعاملة
     """
     if request.method == "POST":
-        form = StockTransactionForm(request.POST)
-        if form.is_valid():
-            try:
-                with db_transaction.atomic():
-                    stock_transaction = form.save(commit=False)
-                    stock_transaction.created_by = request.user
-                    stock_transaction.transaction_date = timezone.now()
+        try:
+            with db_transaction.atomic():
+                # الحصول على البيانات من POST
+                product_id = request.POST.get("product")
+                warehouse_id = request.POST.get("warehouse")
+                transaction_type = request.POST.get("transaction_type")
+                reason = request.POST.get("reason", "manual")
+                quantity = float(request.POST.get("quantity", 0))
+                reference = request.POST.get("reference", "")
+                notes = request.POST.get("notes", "")
 
-                    # حساب الرصيد الجاري
-                    product = stock_transaction.product
-                    warehouse = stock_transaction.warehouse
+                # التحقق من البيانات
+                if not all([product_id, warehouse_id, transaction_type, quantity]):
+                    messages.error(request, "جميع الحقول مطلوبة")
+                    return redirect("inventory:transaction_create")
 
-                    # الحصول على آخر معاملة
-                    last_transaction = (
-                        StockTransaction.objects.filter(
-                            product=product, warehouse=warehouse
-                        )
-                        .order_by("-transaction_date", "-id")
-                        .first()
+                product = get_object_or_404(Product, pk=product_id)
+                warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
+
+                # الحصول على آخر معاملة
+                last_transaction = (
+                    StockTransaction.objects.filter(
+                        product=product, warehouse=warehouse
                     )
+                    .order_by("-transaction_date", "-id")
+                    .first()
+                )
 
-                    previous_balance = (
-                        last_transaction.running_balance if last_transaction else 0
+                previous_balance = (
+                    last_transaction.running_balance if last_transaction else 0
+                )
+
+                # حساب الرصيد الجديد
+                if transaction_type == "in":
+                    new_balance = previous_balance + quantity
+                else:  # out
+                    new_balance = previous_balance - quantity
+
+                # التحقق من عدم وجود رصيد سالب
+                if new_balance < 0:
+                    messages.error(
+                        request,
+                        f"لا يمكن إجراء العملية. الكمية المتاحة: {previous_balance}",
                     )
+                    return redirect("inventory:transaction_create")
 
-                    # حساب الرصيد الجديد
-                    if stock_transaction.transaction_type == "in":
-                        new_balance = previous_balance + stock_transaction.quantity
-                    else:  # out
-                        new_balance = previous_balance - stock_transaction.quantity
+                # إنشاء المعاملة
+                StockTransaction.objects.create(
+                    product=product,
+                    warehouse=warehouse,
+                    transaction_type=transaction_type,
+                    reason=reason,
+                    quantity=quantity,
+                    running_balance=new_balance,
+                    reference=reference,
+                    notes=notes,
+                    created_by=request.user,
+                    transaction_date=timezone.now(),
+                )
 
-                    # التحقق من عدم وجود رصيد سالب
-                    if new_balance < 0:
-                        messages.error(
-                            request,
-                            f"لا يمكن إجراء العملية. الكمية المتاحة: {previous_balance}",
-                        )
-                        return render(
-                            request,
-                            "inventory/transaction_form.html",
-                            {"form": form},
-                        )
+                # تحديث current_stock في المنتج
+                invalidate_product_cache(product.id)
 
-                    stock_transaction.running_balance = new_balance
-                    stock_transaction.save()
+                messages.success(request, "تم إضافة المعاملة بنجاح.")
+                return redirect("inventory:product_detail", pk=product.id)
 
-                    # تحديث current_stock في المنتج
-                    invalidate_product_cache(product.id)
+        except Exception as e:
+            messages.error(request, f"حدث خطأ أثناء إضافة المعاملة: {str(e)}")
 
-                    messages.success(request, "تم إضافة المعاملة بنجاح.")
-                    return redirect("inventory:product_detail", pk=product.id)
+    # عرض النموذج
+    products = Product.objects.only("id", "name", "code")
+    warehouses = Warehouse.objects.filter(is_active=True).only("id", "name")
 
-            except Exception as e:
-                messages.error(request, f"حدث خطأ أثناء إضافة المعاملة: {str(e)}")
-    else:
-        form = StockTransactionForm()
+    context = {
+        "products": products,
+        "warehouses": warehouses,
+        "active_menu": "inventory",
+    }
 
-    return render(request, "inventory/transaction_form.html", {"form": form})
+    return render(request, "inventory/transaction_form.html", context)
 
 
 @login_required
