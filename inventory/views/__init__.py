@@ -21,36 +21,43 @@ from .transaction_views import (
     get_product_stock_api,
 )
 
-# استيراد الدوال المتبقية من الملف القديم
-# (سيتم نقلها لاحقاً إلى وحدات منفصلة)
-import sys
-import os
-# إضافة المسار للملف القديم مؤقتاً
-old_views_path = os.path.join(os.path.dirname(__file__), '..')
-sys.path.insert(0, old_views_path)
+# استيراد لوحة التحكم
+from .dashboard_views import dashboard_view
 
-try:
-    from inventory.views import (
-        dashboard_view,
-        bulk_upload_products,
-        bulk_stock_update,
-        stock_transfer_list,
-        stock_transfer_create,
-        stock_transfer_detail,
-        stock_transfer_receive,
-        stock_transfer_cancel,
-    )
-except ImportError:
-    # إذا فشل الاستيراد، نستخدم placeholders
-    dashboard_view = None
-    bulk_upload_products = None
-    bulk_stock_update = None
-    stock_transfer_list = None
-    stock_transfer_create = None
-    stock_transfer_detail = None
-    stock_transfer_receive = None
-    stock_transfer_cancel = None
+# استيراد InventoryDashboardView من الملف القديم
+from ..views import InventoryDashboardView
 
+# Placeholder functions for views not yet migrated
+# These will return a simple message until they are properly migrated
+from django.http import HttpResponse
+
+def bulk_upload_products(request):
+    """Placeholder - to be migrated"""
+    return HttpResponse("This view is being migrated. Please use the old inventory.views for now.")
+
+def bulk_stock_update(request):
+    """Placeholder - to be migrated"""
+    return HttpResponse("This view is being migrated. Please use the old inventory.views for now.")
+
+def stock_transfer_list(request):
+    """Placeholder - to be migrated"""
+    return HttpResponse("This view is being migrated. Please use the old inventory.views for now.")
+
+def stock_transfer_create(request):
+    """Placeholder - to be migrated"""
+    return HttpResponse("This view is being migrated. Please use the old inventory.views for now.")
+
+def stock_transfer_detail(request, pk):
+    """Placeholder - to be migrated"""
+    return HttpResponse("This view is being migrated. Please use the old inventory.views for now.")
+
+def stock_transfer_receive(request, pk):
+    """Placeholder - to be migrated"""
+    return HttpResponse("This view is being migrated. Please use the old inventory.views for now.")
+
+def stock_transfer_cancel(request, pk):
+    """Placeholder - to be migrated"""
+    return HttpResponse("This view is being migrated. Please use the old inventory.views for now.")
 
 __all__ = [
     # Product Views
@@ -65,8 +72,11 @@ __all__ = [
     "transfer_stock",
     "get_product_stock_api",
     
-    # Other Views (from old file)
+    # Dashboard
     "dashboard_view",
+    "InventoryDashboardView",
+    
+    # Placeholders (to be migrated)
     "bulk_upload_products",
     "bulk_stock_update",
     "stock_transfer_list",
@@ -80,8 +90,3 @@ __all__ = [
 __version__ = "2.0.0"
 __author__ = "ERP Development Team"
 __description__ = "Modular inventory views for better maintainability"
-
-# ملاحظة: تم تقسيم الملف الأصلي (1336 سطر) إلى:
-# - product_views.py: 280 سطر (CRUD + detail)
-# - transaction_views.py: 250 سطر (stock movements)
-# المجموع: 530 سطر (تقليل 60% في حجم الملف الواحد)

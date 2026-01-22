@@ -12,8 +12,8 @@ from rest_framework_simplejwt.views import (
 
 from accounts.api_views import dashboard_stats
 from accounts.views import admin_logout_view
-from customers.views import customer_detail, customer_list
-from inventory.views import dashboard_view
+from customers.views import customer_list, customer_detail
+
 
 from . import api_monitoring, views
 from .csrf_views import csrf_debug_view, get_csrf_token_view, test_csrf_view
@@ -33,7 +33,7 @@ urlpatterns = [
     path("about/", views.about, name="about"),
     path("contact/", views.contact, name="contact"),
     # مسارات API
-    path("api/dashboard/", dashboard_view, name="dashboard"),
+    path("api/dashboard/", lambda request: __import__('inventory.views', fromlist=['dashboard_view']).dashboard_view(request), name="dashboard"),
     path("api/dashboard/stats/", dashboard_stats, name="dashboard_stats"),
     # مسارات API للعملاء
     path("api/customers/", customer_list, name="customer_list"),
