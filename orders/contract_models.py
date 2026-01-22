@@ -6,8 +6,10 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from core.soft_delete import SoftDeleteMixin
 
-class ContractTemplate(models.Model):
+
+class ContractTemplate(SoftDeleteMixin, models.Model):
     """نموذج قالب العقد"""
 
     TEMPLATE_TYPES = [
@@ -173,7 +175,7 @@ class ContractTemplate(models.Model):
         self.save(update_fields=["usage_count", "last_used"])
 
 
-class ContractCurtain(models.Model):
+class ContractCurtain(SoftDeleteMixin, models.Model):
     """نموذج تفاصيل الستارة في العقد"""
 
     TAILORING_TYPE_CHOICES = [
@@ -573,7 +575,7 @@ class ContractCurtain(models.Model):
 # تم حذف ContractPrintLog - يرجى استخدام نظام الويزارد
 
 
-class CurtainFabric(models.Model):
+class CurtainFabric(SoftDeleteMixin, models.Model):
     """
     نموذج مبسط للأقمشة المرتبطة بالستارة
     يدعم كلاً من الطلبات النهائية والمسودات
@@ -797,7 +799,7 @@ class CurtainFabric(models.Model):
             raise ValidationError(errors)
 
 
-class CurtainAccessory(models.Model):
+class CurtainAccessory(SoftDeleteMixin, models.Model):
     """
     نموذج مبسط للإكسسوارات المرتبطة بالستارة
     """

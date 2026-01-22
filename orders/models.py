@@ -13,6 +13,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from model_utils import FieldTracker
 
+from core.soft_delete import SoftDeleteMixin
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,7 +43,7 @@ def validate_invoice_image(value):
             raise ValidationError("حجم الصورة يجب أن يكون أقل من 10 ميجابايت")
 
 
-class OrderInvoiceImage(models.Model):
+class OrderInvoiceImage(SoftDeleteMixin, models.Model):
     """صور الفاتورة المتعددة للطلب"""
 
     order = models.ForeignKey(
@@ -66,7 +68,7 @@ class OrderInvoiceImage(models.Model):
         return f"صورة فاتورة {self.order.invoice_number} - {self.uploaded_at.strftime('%Y-%m-%d')}"
 
 
-class Order(models.Model):
+class Order(SoftDeleteMixin, models.Model):
     STATUS_CHOICES = [
         ("normal", "عادي"),
         ("vip", "VIP"),
@@ -702,34 +704,9 @@ class Order(models.Model):
             )
             raise
 
-    def delete(self, *args, **kwargs):
-        """حذف الطلب مع حذف السجلات المرتبطة بشكل آمن"""
-        from django.db import connection, transaction
-        from django.db.models.signals import post_delete
-
-        from . import signals as order_signals
-
-        # تعيين علامة لتجنب تشغيل signals أثناء الحذف
-        self._is_being_deleted = True
-
-        # تعطيل signal حذف عناصر الطلب مؤقتاً
-        post_delete.disconnect(order_signals.log_order_item_deletion, sender=OrderItem)
-
-        try:
-            # استخدام معاملة واحدة لحذف السجلات والطلب
-            with transaction.atomic():
-                # حذف سجلات OrderStatusLog أولاً باستخدام raw SQL
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        "DELETE FROM orders_orderstatuslog WHERE order_id = %s",
-                        [self.pk],
-                    )
-
-                # حذف الطلب (سيتم حذف العناصر المرتبطة تلقائياً بسبب CASCADE)
-                super().delete(*args, **kwargs)
-        finally:
-            # إعادة تفعيل signal حذف عناصر الطلب
-            post_delete.connect(order_signals.log_order_item_deletion, sender=OrderItem)
+    # Custom delete method removed to allow SoftDeleteMixin to handle soft deletion.
+    # The original implementation was performing hard deletes on logs and potentially unnecessary transaction logic.
+    # SoftDeleteMixin handles cascade soft deletes correctly via the cascade=True/False flag.
 
     # (وصل الإشارات يتم بعد تعريف الكلاس في أسفل الملف)
     # تم إزالة دالة create_order_notifications
@@ -1919,7 +1896,7 @@ def order_item_deleted(sender, instance, **kwargs):
             pass
 
 
-class OrderItem(models.Model):
+class OrderItem(SoftDeleteMixin, models.Model):
     order = models.ForeignKey(
         Order, on_delete=models.CASCADE, related_name="items", verbose_name="الطلب"
     )
@@ -2222,7 +2199,7 @@ oi_post_save.connect(order_item_saved, sender=OrderItem)
 oi_post_delete.connect(order_item_deleted, sender=OrderItem)
 
 
-class Payment(models.Model):
+class Payment(SoftDeleteMixin, models.Model):
     PAYMENT_METHOD_CHOICES = [
         ("cash", "نقداً"),
         ("bank_transfer", "تحويل بنكي"),

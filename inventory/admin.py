@@ -3,6 +3,8 @@ from django.db.models import Sum
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
+from core.admin_mixins import SoftDeleteAdminMixin
+
 from .models import (  # Variant System Models
     BaseProduct,
     BulkUploadError,
@@ -36,7 +38,7 @@ class CategoryAdmin(admin.ModelAdmin):
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
     show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
     list_display = (
@@ -174,14 +176,14 @@ class StockTransactionAdmin(admin.ModelAdmin):
 
 
 @admin.register(Supplier)
-class SupplierAdmin(admin.ModelAdmin):
+class SupplierAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ("name", "contact_person", "phone", "email")
     search_fields = ("name", "contact_person", "phone", "email", "address")
 
 
 @admin.register(PurchaseOrder)
-class PurchaseOrderAdmin(admin.ModelAdmin):
+class PurchaseOrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ("order_number", "supplier", "status", "order_date", "total_amount")
     list_filter = ("status", "order_date")
@@ -220,7 +222,7 @@ class PurchaseOrderItemAdmin(admin.ModelAdmin):
 
 
 @admin.register(Warehouse)
-class WarehouseAdmin(admin.ModelAdmin):
+class WarehouseAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ("name", "code", "branch", "manager", "is_active")
     list_filter = ("branch", "is_active")
@@ -236,7 +238,7 @@ class WarehouseLocationAdmin(admin.ModelAdmin):
 
 
 @admin.register(ProductBatch)
-class ProductBatchAdmin(admin.ModelAdmin):
+class ProductBatchAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_per_page = 50
     list_display = ("product", "batch_number", "location", "quantity", "expiry_date")
     list_filter = ("location__warehouse", "manufacturing_date", "expiry_date")

@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from .audit import AuditLog, SecurityEvent
+from .models import RecycleBin
 
 
 @admin.register(AuditLog)
@@ -353,6 +354,41 @@ class SecurityEventAdmin(admin.ModelAdmin):
         extra_context["top_suspicious_ips"] = top_ips
 
         return super().changelist_view(request, extra_context)
+
+
+@admin.register(RecycleBin)
+class RecycleBinAdmin(admin.ModelAdmin):
+    """
+    Global Recycle Bin Dashboard - عرض جميع العناصر المحذوفة من جميع الأقسام
+    """
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_queryset(self, request):
+        """
+        Return empty queryset since this is an unmanaged model.
+        We don't want Django to query the database.
+        """
+        return RecycleBin.objects.none()
+
+    def changelist_view(self, request, extra_context=None):
+        """
+        Redirect to the Deleted Orders list view.
+        The user prefers a table view of deleted orders to manage cascade deletions.
+        """
+        from django.shortcuts import redirect
+        from django.urls import reverse
+
+        # Redirect to Order changelist with is_deleted=True filter
+        url = reverse("admin:orders_order_changelist") + "?is_deleted__exact=1"
+        return redirect(url)
 
 
 # تخصيص عنوان Admin

@@ -9,6 +9,8 @@ from django.urls import reverse
 from django.utils import timezone
 from model_utils import FieldTracker
 
+from core.soft_delete import SoftDeleteManager, SoftDeleteMixin
+
 User = get_user_model()
 
 # تمت إزالة استيراد Order لتجنب الاعتماد الدائري
@@ -75,7 +77,7 @@ class ManufacturingSettings(models.Model):
         return settings
 
 
-class ManufacturingOrderManager(models.Manager):
+class ManufacturingOrderManager(SoftDeleteManager):
     """Manager محسن لأوامر التصنيع"""
 
     def with_items_count(self):
@@ -87,7 +89,7 @@ class ManufacturingOrderManager(models.Manager):
         )
 
 
-class ManufacturingOrder(models.Model):
+class ManufacturingOrder(SoftDeleteMixin, models.Model):
     description = models.TextField(
         blank=True,
         null=True,
@@ -281,6 +283,16 @@ class ManufacturingOrder(models.Model):
 
     def __str__(self):
         return f"طلب تصنيع {self.manufacturing_code} - {self.get_status_display()}"
+
+    def is_order_deleted(self):
+        """Check if the related order is soft-deleted"""
+        return self.order and self.order.is_deleted
+
+    def get_order_status_badge(self):
+        """Get HTML badge for order status"""
+        if self.is_order_deleted():
+            return '<span style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px; font-weight: bold; font-size: 11px;">طلب محذوف</span>'
+        return ""
 
     def save(self, *args, **kwargs):
         """حفظ أمر التصنيع وتسجيل حالات الرفض"""

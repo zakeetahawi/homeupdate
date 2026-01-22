@@ -190,7 +190,10 @@
                                 <table class="table table-sm">
                                     <tr>
                                         <th width="30%">رقم الطلب:</th>
-                                        <td>{{ manufacturing_order.order.order_number|default:manufacturing_order.order.id }}</td>
+                                        <td>
+                                            {{ manufacturing_order.order.order_number|default:manufacturing_order.order.id }}
+                                            {{ manufacturing_order.get_order_status_badge|safe }}
+                                        </td>
                                     </tr>
                                     <tr>
                                         <th>رقم العقد:</th>

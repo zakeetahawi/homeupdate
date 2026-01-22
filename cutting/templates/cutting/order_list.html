@@ -249,35 +249,49 @@
             <div class="row">
                 {% for cutting_order in cutting_orders %}
                     <div class="col-lg-4 col-md-4 mb-3">
-                        <div class="card cutting-card shadow-sm h-100">
+                        <div class="card cutting-card shadow-sm h-100"
+                             style="{% if cutting_order.is_deleted or cutting_order.order.is_deleted %}background-color: #fff3cd !important;
+                                    border-left: 5px solid #dc3545 !important;
+                                    opacity: 0.7;
+                                    {% endif %}">
                             <div class="card-body p-2">
                                 <div class="row align-items-center">
                                     <!-- القسم الأيمن: المعلومات الأساسية -->
                                     <div class="col-md-8">
                                         <div class="d-flex align-items-center mb-1">
                                             <small class="mb-0 me-2">
-                                                <a href="{% url 'cutting:order_detail' cutting_order.id %}"
-                                                   class="text-primary font-weight-bold">
-                                                    <i class="fas fa-cut"></i> {{ cutting_order.cutting_code }}
-                                                </a>
+                                                {% if cutting_order.is_deleted or cutting_order.order.is_deleted %}
+                                                    <span class="text-muted" style="text-decoration: line-through;">
+                                                        <i class="fas fa-cut"></i> {{ cutting_order.cutting_code }}
+                                                    </span>
+                                                    <span class="badge bg-danger ms-1" style="font-size: 0.65rem;">محذوف</span>
+                                                {% else %}
+                                                    <a href="{% url 'cutting:order_detail' cutting_order.id %}"
+                                                       class="text-primary font-weight-bold">
+                                                        <i class="fas fa-cut"></i> {{ cutting_order.cutting_code }}
+                                                    </a>
+                                                    {{ cutting_order.get_order_status_badge|safe }}
+                                                {% endif %}
                                             </small>
-                                            {% if cutting_order.status == 'pending' %}
-                                                <span class="badge badge-warning text-dark" style="font-size: 0.65rem;"><i class="fas fa-clock"></i> انتظار</span>
-                                            {% elif cutting_order.status == 'in_progress' %}
-                                                <span class="badge badge-info text-white" style="font-size: 0.65rem;"><i class="fas fa-cut"></i> تقطيع</span>
-                                            {% elif cutting_order.status == 'completed' %}
-                                                <span class="badge badge-success text-white" style="font-size: 0.65rem;"><i class="fas fa-check-circle"></i> مكتمل</span>
-                                            {% elif cutting_order.status == 'partially_completed' %}
-                                                <span class="badge badge-primary text-white" style="font-size: 0.65rem;"><i class="fas fa-tasks"></i> جزئي</span>
-                                            {% else %}
-                                                <span class="badge badge-danger text-white" style="font-size: 0.65rem;"><i class="fas fa-times-circle"></i> ملغي</span>
-                                            {% endif %}
-                                            {% if cutting_order.needs_fix %}
-                                                <span class="badge bg-danger text-white pulse-animation ms-1"
-                                                      style="font-size: 0.65rem"
-                                                      title="يحتاج لإصلاح تلقائي">
-                                                    <i class="fas fa-wrench"></i> إصلاح
-                                                </span>
+                                            {% if not cutting_order.is_deleted and not cutting_order.order.is_deleted %}
+                                                {% if cutting_order.status == 'pending' %}
+                                                    <span class="badge badge-warning text-dark" style="font-size: 0.65rem;"><i class="fas fa-clock"></i> انتظار</span>
+                                                {% elif cutting_order.status == 'in_progress' %}
+                                                    <span class="badge badge-info text-white" style="font-size: 0.65rem;"><i class="fas fa-cut"></i> تقطيع</span>
+                                                {% elif cutting_order.status == 'completed' %}
+                                                    <span class="badge badge-success text-white" style="font-size: 0.65rem;"><i class="fas fa-check-circle"></i> مكتمل</span>
+                                                {% elif cutting_order.status == 'partially_completed' %}
+                                                    <span class="badge badge-primary text-white" style="font-size: 0.65rem;"><i class="fas fa-tasks"></i> جزئي</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger text-white" style="font-size: 0.65rem;"><i class="fas fa-times-circle"></i> ملغي</span>
+                                                {% endif %}
+                                                {% if cutting_order.needs_fix %}
+                                                    <span class="badge bg-danger text-white pulse-animation ms-1"
+                                                          style="font-size: 0.65rem"
+                                                          title="يحتاج لإصلاح تلقائي">
+                                                        <i class="fas fa-wrench"></i> إصلاح
+                                                    </span>
+                                                {% endif %}
                                             {% endif %}
                                         </div>
                                         <div class="row text-muted" style="font-size: 0.75rem;">
@@ -351,12 +365,22 @@
                                         <span><i class="fas fa-calendar"></i> {{ cutting_order.created_at|date:"d/m/Y" }}</span>
                                     </div>
                                     <div class="col-md-5 text-end">
-                                        <a href="{% url 'cutting:order_detail' cutting_order.pk %}"
-                                           class="btn btn-primary btn-sm"
-                                           style="font-size: 0.7rem;
-                                                  padding: 0.2rem 0.5rem">
-                                            <i class="fas fa-eye"></i> تفاصيل
-                                        </a>
+                                        {% if cutting_order.is_deleted or cutting_order.order.is_deleted %}
+                                            <span class="btn btn-secondary btn-sm disabled"
+                                                  style="font-size: 0.7rem;
+                                                         padding: 0.2rem 0.5rem;
+                                                         pointer-events: none;
+                                                         cursor: not-allowed">
+                                                <i class="fas fa-ban"></i> معطل
+                                            </span>
+                                        {% else %}
+                                            <a href="{% url 'cutting:order_detail' cutting_order.pk %}"
+                                               class="btn btn-primary btn-sm"
+                                               style="font-size: 0.7rem;
+                                                      padding: 0.2rem 0.5rem">
+                                                <i class="fas fa-eye"></i> تفاصيل
+                                            </a>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>

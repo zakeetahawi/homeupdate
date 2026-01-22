@@ -11,6 +11,8 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
+from core.admin_mixins import SoftDeleteAdminMixin
+
 # استيراد إدارة تخصيص الويزارد
 # استيراد إدارة الويزارد
 from . import wizard_admin, wizard_customization_admin
@@ -192,7 +194,7 @@ class PaymentInline(admin.TabularInline):
 
 
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     form = OrderAdminForm
     list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
     list_max_show_all = 50  # تقليل من 100 إلى 50
@@ -682,48 +684,6 @@ class OrderAdmin(admin.ModelAdmin):
         return str(obj.quantity) if obj.quantity else "0"
 
     quantity_display.short_description = "الكمية"
-
-    def delete_queryset(self, request, queryset):
-        """
-        حذف مجموعة من الطلبات بشكل آمن
-        يستدعي دالة delete() لكل طلب لضمان حذف السجلات المرتبطة
-        """
-        from django.db import connection, transaction
-
-        deleted_count = 0
-        failed_count = 0
-
-        for order in queryset:
-            try:
-                # استخدام transaction لضمان الحذف الآمن
-                with transaction.atomic():
-                    # حذف سجلات OrderStatusLog أولاً
-                    with connection.cursor() as cursor:
-                        cursor.execute(
-                            "DELETE FROM orders_orderstatuslog WHERE order_id = %s",
-                            [order.pk],
-                        )
-
-                    # حذف الطلب (سيحذف العناصر المرتبطة تلقائياً)
-                    order.delete()
-                    deleted_count += 1
-
-            except Exception as e:
-                failed_count += 1
-                self.message_user(
-                    request,
-                    f"خطأ في حذف الطلب {order.order_number}: {str(e)}",
-                    level="ERROR",
-                )
-
-        # رسالة نجاح
-        if deleted_count > 0:
-            self.message_user(
-                request, f"تم حذف {deleted_count} طلب بنجاح", level="SUCCESS"
-            )
-
-        if failed_count > 0:
-            self.message_user(request, f"فشل حذف {failed_count} طلب", level="WARNING")
 
 
 @admin.register(DeliveryTimeSettings)
