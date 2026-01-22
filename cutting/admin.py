@@ -4,15 +4,17 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from core.admin_mixins import SoftDeleteAdminMixin
+
 from .models import CuttingOrder, CuttingOrderFixLog, CuttingOrderItem, CuttingReport
 
 
 class ItemsCountFilter(admin.SimpleListFilter):
     """فلتر مخصص لعدد العناصر في أمر التقطيع"""
-    
+
     title = "عدد العناصر"
     parameter_name = "items_count"
-    
+
     def lookups(self, request, model_admin):
         return (
             ("empty", "فارغة (0 عناصر)"),
@@ -21,10 +23,10 @@ class ItemsCountFilter(admin.SimpleListFilter):
             ("6-10", "6-10 عناصر"),
             ("11+", "أكثر من 10 عناصر"),
         )
-    
+
     def queryset(self, request, queryset):
         queryset = queryset.annotate(items_count=Count("items"))
-        
+
         if self.value() == "empty":
             return queryset.filter(items_count=0)
         elif self.value() == "has_items":
@@ -68,7 +70,7 @@ class CuttingOrderItemInline(admin.TabularInline):
 
 
 @admin.register(CuttingOrder)
-class CuttingOrderAdmin(admin.ModelAdmin):
+class CuttingOrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = [
         "cutting_code",
         "order_link",
@@ -165,16 +167,19 @@ class CuttingOrderAdmin(admin.ModelAdmin):
     completion_progress.short_description = "نسبة الإنجاز"
 
     def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .select_related("order", "order__customer", "warehouse", "assigned_to")
-            .prefetch_related("items")
-        )
+        # Use all_objects to include deleted items
+        qs = self.model.all_objects.get_queryset()
+        ordering = self.get_ordering(request)
+        if ordering:
+            qs = qs.order_by(*ordering)
+
+        return qs.select_related(
+            "order", "order__customer", "warehouse", "assigned_to"
+        ).prefetch_related("items")
 
 
 @admin.register(CuttingOrderItem)
-class CuttingOrderItemAdmin(admin.ModelAdmin):
+class CuttingOrderItemAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = [
         "cutting_order_code",
         "product_name",
@@ -259,12 +264,13 @@ class CuttingOrderItemAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
     def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .select_related(
-                "cutting_order", "order_item", "order_item__product", "updated_by"
-            )
+        qs = self.model.all_objects.get_queryset()
+        ordering = self.get_ordering(request)
+        if ordering:
+            qs = qs.order_by(*ordering)
+
+        return qs.select_related(
+            "cutting_order", "order_item", "order_item__product", "updated_by"
         )
 
 

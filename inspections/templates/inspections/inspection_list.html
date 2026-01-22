@@ -245,19 +245,30 @@
                             </thead>
                             <tbody>
                                 {% for inspection in inspections %}
-                                    <tr>
+                                    <tr {% if inspection.order and inspection.order.is_deleted %}style="background-color: #fff3cd; opacity: 0.7;"{% endif %}>
                                         <td>
                                             {% if inspection.order %}
-                                                <a href="{% url 'orders:order_detail' inspection.order.pk %}"
-                                                   style="font-weight: bold;
-                                                          color: var(--primary);
-                                                          text-decoration: none">
-                                                    {% if inspection.order.order_number %}
-                                                        {{ inspection.order.order_number }}
-                                                    {% else %}
-                                                        {{ inspection.order.pk }}
-                                                    {% endif %}
-                                                </a>
+                                                {% if inspection.order.is_deleted %}
+                                                    <span class="text-muted" style="text-decoration: line-through;">
+                                                        {% if inspection.order.order_number %}
+                                                            {{ inspection.order.order_number }}
+                                                        {% else %}
+                                                            {{ inspection.order.pk }}
+                                                        {% endif %}
+                                                    </span>
+                                                    <span class="badge bg-danger ms-1" style="font-size: 0.7rem;">محذوف</span>
+                                                {% else %}
+                                                    <a href="{% url 'orders:order_detail' inspection.order.pk %}"
+                                                       style="font-weight: bold;
+                                                              color: var(--primary);
+                                                              text-decoration: none">
+                                                        {% if inspection.order.order_number %}
+                                                            {{ inspection.order.order_number }}
+                                                        {% else %}
+                                                            {{ inspection.order.pk }}
+                                                        {% endif %}
+                                                    </a>
+                                                {% endif %}
                                             {% endif %}
                                         </td>
                                         <td>

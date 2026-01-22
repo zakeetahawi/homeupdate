@@ -9,6 +9,8 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_http_methods
 
+from core.admin_mixins import SoftDeleteAdminMixin
+
 from .models import (
     FabricReceipt,
     FabricReceiptItem,
@@ -83,17 +85,25 @@ class ManufacturingOrderItemInline(admin.TabularInline):
 
 
 @admin.register(ManufacturingOrder)
-class ManufacturingOrderAdmin(admin.ModelAdmin):
+class ManufacturingOrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_per_page = 15  # تقليل من 25 إلى 15 لتحسين الأداء
     list_max_show_all = 50  # تقليل من 100 إلى 50
     show_full_result_count = False  # تعطيل عدد النتائج لتحسين الأداء
 
     def get_queryset(self, request):
         """تحسين الاستعلامات لتقليل N+1 queries"""
+        # CRITICAL: Use SoftDeleteAdminMixin's queryset (all_objects) as base
+        # instead of super() which would use the default manager (objects)
+        qs = self.model.all_objects.get_queryset()
+
+        # Apply ordering from admin
+        ordering = self.get_ordering(request)
+        if ordering:
+            qs = qs.order_by(*ordering)
+
+        # Apply optimizations
         return (
-            super()
-            .get_queryset(request)
-            .select_related(
+            qs.select_related(
                 "order__customer", "order__branch", "production_line", "created_by"
             )
             .with_items_count()

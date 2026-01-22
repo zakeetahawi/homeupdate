@@ -8,6 +8,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
 from accounts.models import Branch, User
+from core.soft_delete import SoftDeleteMixin
 
 from .managers import ProductManager
 
@@ -60,7 +61,7 @@ class Category(models.Model):
         return total_count
 
 
-class Product(models.Model):
+class Product(SoftDeleteMixin, models.Model):
     """
     Model for products
     """
@@ -284,7 +285,7 @@ class Product(models.Model):
         cache.delete_many(cache_keys)
 
 
-class Supplier(models.Model):
+class Supplier(SoftDeleteMixin, models.Model):
     """
     Model for suppliers
     """
@@ -306,7 +307,7 @@ class Supplier(models.Model):
         return self.name
 
 
-class Warehouse(models.Model):
+class Warehouse(SoftDeleteMixin, models.Model):
     """
     Model for warehouses
     """
@@ -383,7 +384,7 @@ class Warehouse(models.Model):
         return "غير متوفر"
 
 
-class WarehouseLocation(models.Model):
+class WarehouseLocation(SoftDeleteMixin, models.Model):
     """
     Model for specific locations within warehouses
     """
@@ -439,7 +440,7 @@ class WarehouseLocation(models.Model):
         return 0
 
 
-class ProductBatch(models.Model):
+class ProductBatch(SoftDeleteMixin, models.Model):
     """
     Model for tracking product batches
     """
@@ -639,7 +640,7 @@ class StockTransaction(models.Model):
                     super(StockTransaction, trans).save()
 
 
-class PurchaseOrder(models.Model):
+class PurchaseOrder(SoftDeleteMixin, models.Model):
     """
     Model for purchase orders
     """
@@ -706,7 +707,7 @@ class PurchaseOrder(models.Model):
         super().save(*args, **kwargs)
 
 
-class PurchaseOrderItem(models.Model):
+class PurchaseOrderItem(SoftDeleteMixin, models.Model):
     """
     Model for items in a purchase order
     """

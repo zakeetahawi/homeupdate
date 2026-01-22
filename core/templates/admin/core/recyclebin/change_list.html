@@ -1,0 +1,102 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+{% block content %}
+    <div class="module" id="changelist">
+        <div class="results">
+            <div style="padding: 15px;
+                        background-color: #f8f9fa;
+                        border-bottom: 1px solid #dee2e6;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center">
+                <h1 style="margin: 0; font-size: 18px; color: #333;">
+                    <i class="fas fa-trash-restore"
+                       style="margin-left: 10px;
+                              color: #dc3545"></i>
+                    سلة المحذوفات العامة
+                </h1>
+                <div style="font-weight: bold;">
+                    الإجمالي: <span style="color: #dc3545;">{{ total_deleted|default:0 }}</span>
+                </div>
+            </div>
+            <table id="result_list"
+                   class="table table-striped"
+                   style="width: 100%;
+                          border-collapse: collapse">
+                <thead>
+                    <tr style="background-color: #ffffff; border-bottom: 2px solid #eaeaea;">
+                        <th scope="col" style="padding: 12px; text-align: right; width: 40%;">نوع العنصر</th>
+                        <th scope="col" style="padding: 12px; text-align: center; width: 20%;">عدد المحذوفات</th>
+                        <th scope="col" style="padding: 12px; text-align: center; width: 40%;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in deleted_items %}
+                        <tr style="border-bottom: 1px solid #f0f0f0;">
+                            <td style="padding: 12px; vertical-align: middle;">
+                                <a href="{{ item.url|default:'#' }}"
+                                   style="font-weight: bold;
+                                          font-size: 14px;
+                                          text-decoration: none;
+                                          color: #444">{{ item.verbose_name_plural }}</a>
+                                <span style="color: #888; font-size: 12px; margin-right: 5px;">({{ item.app_label }})</span>
+                            </td>
+                            <td style="padding: 12px; text-align: center; vertical-align: middle;">
+                                <span style="background: #dc3545;
+                                             color: white;
+                                             padding: 4px 10px;
+                                             border-radius: 12px;
+                                             font-weight: bold;
+                                             font-size: 12px">{{ item.count }}</span>
+                            </td>
+                            <td style="padding: 12px; text-align: center; vertical-align: middle;">
+                                {% if item.url %}
+                                    <a href="{{ item.url }}"
+                                       class="button"
+                                       style="background-color: #4e73df;
+                                              color: white;
+                                              padding: 6px 15px;
+                                              text-decoration: none;
+                                              border-radius: 4px;
+                                              font-size: 13px">
+                                        <i class="fas fa-eye"></i> عرض
+                                    </a>
+                                {% else %}
+                                    <span style="color: #999; font-size: 12px;">غير متاح</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="3" style="text-align: center; padding: 40px; color: #666;">
+                                <div style="font-size: 30px; margin-bottom: 10px; opacity: 0.2;">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                لا توجد عناصر محذوفة
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <style>
+/* Hide default Django admin elements */
+#changelist-filter,
+#changelist-form,
+.paginator,
+.actions {
+    display: none !important;
+}
+
+/* Adjust content area */
+#content-main {
+    padding: 0 !important;
+}
+
+/* Custom Table Styles */
+table tr:hover {
+    background-color: #f8f9fa;
+}
+    </style>
+{% endblock %}

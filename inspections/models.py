@@ -9,6 +9,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from model_utils.tracker import FieldTracker
 
+from core.soft_delete import SoftDeleteMixin
+
 
 def validate_inspection_pdf_file(value):
     """التحقق من أن ملف المعاينة المرفوع هو PDF"""
@@ -199,7 +201,7 @@ class InspectionReport(models.Model):
         self.save()
 
 
-class Inspection(models.Model):
+class Inspection(SoftDeleteMixin, models.Model):
     STATUS_CHOICES = [
         ("not_scheduled", _("غير مجدولة")),
         ("pending", _("قيد الانتظار")),

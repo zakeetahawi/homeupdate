@@ -2008,23 +2008,34 @@
                             <tbody>
                                 {% for order in manufacturing_orders %}
                                     <tr data-order-id="{{ order.id }}"
+                                        class="{% if order.is_deleted or order.order.is_deleted %}table-warning{% endif %}"
+                                        style="{% if order.is_deleted or order.order.is_deleted %}opacity: 0.7;
+                                               {% endif %}"
                                         data-order-type="{% if 'installation' in order.order.get_selected_types_list %}installation{% elif 'tailoring' in order.order.get_selected_types_list %}tailoring{% elif 'accessory' in order.order.get_selected_types_list %}accessory{% else %}manufacturing{% endif %}">
                                         <td class="column-id" data-column="id">{{ forloop.counter }}</td>
                                         <td class="column-order_number" data-column="order_number">
-                                            <a href="{% url 'orders:order_detail' order.order.id %}"
-                                               style="color: #6c757d;
-                                                      text-decoration: none;
-                                                      margin-left: 0.3rem"
-                                               title="تفاصيل الطلب الأساسي">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a href="{% url 'manufacturing:order_detail' order.id %}"
-                                               style="color: var(--primary);
-                                                      text-decoration: none;
-                                                      font-weight: bold"
-                                               title="تفاصيل أمر التصنيع">
-                                                {{ order.order.order_number|default:order.order.id }}
-                                            </a>
+                                            {% if order.is_deleted or order.order.is_deleted %}
+                                                <span class="text-muted" style="text-decoration: line-through;">
+                                                    {{ order.order.order_number|default:order.order.id }}
+                                                </span>
+                                                <span class="badge bg-danger ms-1" style="font-size: 0.7rem;">محذوف</span>
+                                            {% else %}
+                                                <a href="{% url 'orders:order_detail' order.order.id %}"
+                                                   style="color: #6c757d;
+                                                          text-decoration: none;
+                                                          margin-left: 0.3rem"
+                                                   title="تفاصيل الطلب الأساسي">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{% url 'manufacturing:order_detail' order.id %}"
+                                                   style="color: var(--primary);
+                                                          text-decoration: none;
+                                                          font-weight: bold"
+                                                   title="تفاصيل أمر التصنيع">
+                                                    {{ order.order.order_number|default:order.order.id }}
+                                                </a>
+                                                {{ order.get_order_status_badge|safe }}
+                                            {% endif %}
                                         </td>
                                         <td class="column-order_type" data-column="order_type">
                                             {% if order.order_type == 'modification' or order.modification_request %}
@@ -2072,7 +2083,9 @@
                                             {% endif %}
                                         </td>
                                         <td class="column-production_line" data-column="production_line">
-                                            {% if perms.manufacturing.change_manufacturingorder %}
+                                            {% if order.is_deleted or order.order.is_deleted %}
+                                                <span class="badge bg-secondary">-</span>
+                                            {% elif perms.manufacturing.change_manufacturingorder %}
                                                 <div class="dropdown">
                                                     <button class="btn btn-sm badge text-white dropdown-toggle production-line-{{ order.production_line.id|default:'0' }}"
                                                             type="button"
@@ -2218,7 +2231,9 @@
                                             {% endwith %}
                                         </td>
                                         <td class="column-status" data-column="status">
-                                            {% if order.status == 'pending_approval' %}
+                                            {% if order.is_deleted or order.order.is_deleted %}
+                                                <span class="badge bg-secondary">-</span>
+                                            {% elif order.status == 'pending_approval' %}
                                                 <div class="dropdown">
                                                     <button class="btn btn-sm unified-badge status-pending_approval dropdown-toggle"
                                                             type="button"

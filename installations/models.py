@@ -7,6 +7,8 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from core.soft_delete import SoftDeleteMixin
+
 
 def installation_receipt_path(instance, filename):
     """مسار حفظ مذكرة استلام التركيب"""
@@ -61,7 +63,7 @@ class CustomerDebt(models.Model):
         super().save(*args, **kwargs)
 
 
-class Technician(models.Model):
+class Technician(SoftDeleteMixin, models.Model):
     """نموذج الفنيين"""
 
     DEPARTMENT_CHOICES = [
@@ -97,7 +99,7 @@ class Technician(models.Model):
         super().save(*args, **kwargs)
 
 
-class Driver(models.Model):
+class Driver(SoftDeleteMixin, models.Model):
     """نموذج السائقين"""
 
     name = models.CharField(_("اسم السائق"), max_length=100)
@@ -126,7 +128,7 @@ class Driver(models.Model):
         super().save(*args, **kwargs)
 
 
-class InstallationTeam(models.Model):
+class InstallationTeam(SoftDeleteMixin, models.Model):
     """نموذج فرق التركيب"""
 
     name = models.CharField(_("اسم الفريق"), max_length=100)
@@ -151,7 +153,7 @@ class InstallationTeam(models.Model):
         return self.name
 
 
-class InstallationSchedule(models.Model):
+class InstallationSchedule(SoftDeleteMixin, models.Model):
     """نموذج جدولة التركيب"""
 
     STATUS_CHOICES = [
@@ -458,7 +460,7 @@ class InstallationSchedule(models.Model):
         return self.status in ["needs_scheduling", "scheduled"]
 
 
-class ModificationRequest(models.Model):
+class ModificationRequest(SoftDeleteMixin, models.Model):
     """نموذج طلب التعديل"""
 
     PRIORITY_CHOICES = [
@@ -514,7 +516,7 @@ class ModificationImage(models.Model):
         return f"صورة تعديل - {self.modification.installation.order.order_number}"
 
 
-class ManufacturingOrder(models.Model):
+class ManufacturingOrder(SoftDeleteMixin, models.Model):
     """نموذج أمر التصنيع للتعديلات"""
 
     ORDER_TYPE_CHOICES = [

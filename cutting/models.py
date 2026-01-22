@@ -7,6 +7,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from accounts.models import Branch, User
+from core.soft_delete import SoftDeleteMixin
 from inventory.models import Warehouse
 
 
@@ -30,7 +31,7 @@ class Section(models.Model):
         return self.name
 
 
-class CuttingOrder(models.Model):
+class CuttingOrder(SoftDeleteMixin, models.Model):
     """نموذج أمر التقطيع"""
 
     STATUS_CHOICES = [
@@ -188,8 +189,18 @@ class CuttingOrder(models.Model):
         """التحقق من وجود عناصر مرفوضة"""
         return self.items.filter(status="rejected").exists()
 
+    def is_order_deleted(self):
+        """Check if the related order is soft-deleted"""
+        return self.order and self.order.is_deleted
 
-class CuttingOrderItem(models.Model):
+    def get_order_status_badge(self):
+        """Get HTML badge for order status"""
+        if self.is_order_deleted():
+            return '<span style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px; font-weight: bold; font-size: 11px;">طلب محذوف</span>'
+        return ""
+
+
+class CuttingOrderItem(SoftDeleteMixin, models.Model):
     """نموذج عنصر أمر التقطيع"""
 
     STATUS_CHOICES = [

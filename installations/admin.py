@@ -9,6 +9,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
 from accounts.models import SystemSettings
+from core.admin_mixins import SoftDeleteAdminMixin
 from manufacturing.models import ManufacturingOrder
 
 from . import admin_filters
@@ -621,7 +622,7 @@ class CustomerDebtAdmin(admin.ModelAdmin):
 
 
 @admin.register(Technician)
-class TechnicianAdmin(admin.ModelAdmin):
+class TechnicianAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ["name", "phone", "specialization", "is_active", "created_at"]
     list_filter = ["is_active", "specialization", "created_at"]
@@ -631,7 +632,7 @@ class TechnicianAdmin(admin.ModelAdmin):
 
 
 @admin.register(Driver)
-class DriverAdmin(admin.ModelAdmin):
+class DriverAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         "name",
@@ -648,7 +649,7 @@ class DriverAdmin(admin.ModelAdmin):
 
 
 @admin.register(InstallationTeam)
-class InstallationTeamAdmin(admin.ModelAdmin):
+class InstallationTeamAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = ["name", "driver", "technicians_count", "is_active", "created_at"]
     list_filter = ["is_active", "created_at"]
@@ -664,7 +665,7 @@ class InstallationTeamAdmin(admin.ModelAdmin):
 
 
 @admin.register(InstallationSchedule)
-class InstallationScheduleAdmin(admin.ModelAdmin):
+class InstallationScheduleAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         "installation_code",
@@ -875,7 +876,7 @@ class InstallationScheduleAdmin(admin.ModelAdmin):
 
 
 @admin.register(ModificationRequest)
-class ModificationRequestAdmin(admin.ModelAdmin):
+class ModificationRequestAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
     list_display = [
         "installation",

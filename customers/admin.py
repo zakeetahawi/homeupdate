@@ -6,6 +6,8 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
+from core.admin_mixins import SoftDeleteAdminMixin
+
 from .models import (
     Customer,
     CustomerCategory,
@@ -387,7 +389,7 @@ class CustomerTypeListFilter(admin.SimpleListFilter):
 
 
 @admin.register(Customer)
-class CustomerAdmin(admin.ModelAdmin):
+class CustomerAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     form = CustomerAdminForm
     list_per_page = 20  # تقليل من 50 إلى 20 لتحسين الأداء
     list_max_show_all = 50  # تقليل من 100 إلى 50
@@ -599,69 +601,6 @@ class CustomerAdmin(admin.ModelAdmin):
             return True
         # السماح بالحذف فقط للعملاء في نفس فرع المستخدم
         return obj.branch == request.user.branch
-
-    def delete_model(self, request, obj):
-        """حذف عميل واحد مع حذف السجلات المرتبطة بشكل آمن"""
-        from django.db import connection, transaction
-        from django.db.models.signals import post_delete
-
-        from orders import signals as order_signals
-        from orders.models import OrderItem
-
-        # تعطيل signal حذف عناصر الطلب مؤقتاً
-        post_delete.disconnect(order_signals.log_order_item_deletion, sender=OrderItem)
-
-        try:
-            with transaction.atomic():
-                # حذف سجلات OrderStatusLog لجميع طلبات العميل
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        """
-                        DELETE FROM orders_orderstatuslog
-                        WHERE order_id IN (
-                            SELECT id FROM orders_order WHERE customer_id = %s
-                        )
-                    """,
-                        [obj.pk],
-                    )
-
-                # حذف العميل (سيتم حذف الطلبات تلقائياً بسبب CASCADE)
-                obj.delete()
-        finally:
-            # إعادة تفعيل signal حذف عناصر الطلب
-            post_delete.connect(order_signals.log_order_item_deletion, sender=OrderItem)
-
-    def delete_queryset(self, request, queryset):
-        """حذف عدة عملاء مع حذف السجلات المرتبطة بشكل آمن"""
-        from django.db import connection, transaction
-        from django.db.models.signals import post_delete
-
-        from orders import signals as order_signals
-        from orders.models import OrderItem
-
-        # تعطيل signal حذف عناصر الطلب مؤقتاً
-        post_delete.disconnect(order_signals.log_order_item_deletion, sender=OrderItem)
-
-        try:
-            with transaction.atomic():
-                # حذف سجلات OrderStatusLog لجميع طلبات العملاء
-                customer_ids = list(queryset.values_list("id", flat=True))
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        """
-                        DELETE FROM orders_orderstatuslog
-                        WHERE order_id IN (
-                            SELECT id FROM orders_order WHERE customer_id = ANY(%s)
-                        )
-                    """,
-                        [customer_ids],
-                    )
-
-                # حذف العملاء (سيتم حذف الطلبات تلقائياً بسبب CASCADE)
-                queryset.delete()
-        finally:
-            # إعادة تفعيل signal حذف عناصر الطلب
-            post_delete.connect(order_signals.log_order_item_deletion, sender=OrderItem)
 
     def save_model(self, request, obj, form, change):
         if not change:

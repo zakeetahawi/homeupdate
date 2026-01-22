@@ -5,6 +5,8 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
+from core.admin_mixins import SoftDeleteAdminMixin
+
 from .models import (
     Inspection,
     InspectionEvaluation,
@@ -14,7 +16,7 @@ from .models import (
 
 
 @admin.register(Inspection)
-class InspectionAdmin(admin.ModelAdmin):
+class InspectionAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_display = [
         "inspection_code",
         "customer",

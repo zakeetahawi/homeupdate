@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 User = get_user_model()
+from core.soft_delete import SoftDeleteMixin
 
 
 def get_customer_types():
@@ -416,7 +417,7 @@ class CustomerResponsible(models.Model):
         super().save(*args, **kwargs)
 
 
-class Customer(models.Model):
+class Customer(SoftDeleteMixin, models.Model):
     STATUS_CHOICES = [
         ("active", _("نشط")),
         ("inactive", _("غير نشط")),
