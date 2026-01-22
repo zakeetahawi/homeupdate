@@ -5,12 +5,14 @@
 
 import base64
 import os
+from typing import Optional, Union
+
+from django.conf import settings
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
-from django.conf import settings
 
 
 class DataEncryption:
@@ -18,30 +20,51 @@ class DataEncryption:
     نظام تشفير البيانات الحساسة
     """
 
-    def __init__(self):
-        self.cipher = self._get_cipher()
+    def __init__(self) -> None:
+        """
+        تهيئة نظام التشفير
+        ✅ إصلاح أمني: استخدام ملح عشوائي فريد بدلاً من SECRET_KEY
+        """
+        try:
+            # ✅ الحصول على أو إنشاء ملح آمن
+            self.salt = self._get_or_create_salt()
 
-    def _get_cipher(self):
-        """إنشاء cipher من المفتاح"""
-        # الحصول على المفتاح من البيئة أو إنشاء واحد
-        encryption_key = os.environ.get("ENCRYPTION_KEY")
-
-        if not encryption_key:
             # إنشاء مفتاح من SECRET_KEY
             kdf = PBKDF2(
                 algorithm=hashes.SHA256(),
                 length=32,
-                salt=settings.SECRET_KEY[:16].encode(),
+                salt=self.salt,  # ✅ ملح عشوائي فريد
                 iterations=100000,
-                backend=default_backend(),
+                backend=default_backend(),  # Added backend for PBKDF2HMAC
             )
             key = base64.urlsafe_b64encode(kdf.derive(settings.SECRET_KEY.encode()))
+            self.fernet = Fernet(key)
+        except Exception as e:
+            raise Exception(f"فشل تهيئة نظام التشفير: {str(e)}")
+
+    def _get_or_create_salt(self) -> bytes:
+        """
+        الحصول على أو إنشاء ملح التشفير من ملف آمن
+
+        Returns:
+            bytes: الملح (16 بايت)
+        """
+        salt_file = os.path.join(settings.BASE_DIR, ".encryption_salt")
+
+        if os.path.exists(salt_file):
+            # قراءة الملح الموجود
+            with open(salt_file, "rb") as f:
+                return f.read()
         else:
-            key = encryption_key.encode()
+            # إنشاء ملح جديد
+            salt = os.urandom(16)
+            with open(salt_file, "wb") as f:
+                f.write(salt)
+            # تأمين الملف (قراءة/كتابة للمالك فقط)
+            os.chmod(salt_file, 0o600)
+            return salt
 
-        return Fernet(key)
-
-    def encrypt(self, data):
+    def encrypt(self, data: Union[str, bytes, None]) -> Optional[str]:
         """
         تشفير البيانات
 
@@ -57,10 +80,10 @@ class DataEncryption:
         if isinstance(data, str):
             data = data.encode()
 
-        encrypted = self.cipher.encrypt(data)
+        encrypted = self.fernet.encrypt(data)
         return encrypted.decode()
 
-    def decrypt(self, encrypted_data):
+    def decrypt(self, encrypted_data: Union[str, bytes, None]) -> Optional[str]:
         """
         فك تشفير البيانات
 

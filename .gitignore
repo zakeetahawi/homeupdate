@@ -131,3 +131,4 @@ tmp/
 dump.rdb
 .env
 *.rdb
+.encryption_salt

@@ -209,45 +209,41 @@ from django.utils.deprecation import MiddlewareMixin
 class QueryPerformanceLoggingMiddleware(MiddlewareMixin):
     def process_view(self, request, view_func, view_args, view_kwargs):
         request._start_time = time.time()
-        # تفعيل مراقبة الاستعلامات - مع التأكد من تفعيل queries logging
-        from django.conf import settings
-        from django.db import connection, reset_queries
-
-        # تفعيل queries logging حتى في حالة DEBUG=False
-        if not settings.DEBUG:
+        # ✅ إصلاح أمني: تفعيل queries logging فقط في DEBUG
+        if settings.DEBUG:
+            from django.conf import settings
+            from django.db import connection, reset_queries
+            # تفعيل queries logging فقط في التطوير
             connection.force_debug_cursor = True
-
-        reset_queries()
-        request._queries_before = len(connection.queries)
+            reset_queries()
+            request._queries_before = len(connection.queries)
 
     def process_response(self, request, response):
         # حساب الوقت المستغرق
         total_time = (time.time() - getattr(request, "_start_time", time.time())) * 1000
 
-        # حساب عدد الاستعلامات
-        from django.conf import settings
-        from django.db import connection
-
-        queries_count = len(connection.queries) - getattr(request, "_queries_before", 0)
-
         # تسجيل الصفحات البطيئة (أكثر من ثانية)
         if total_time > 1000:
             logger = logging.getLogger("performance")
             logger.warning(
-                f"SLOW_PAGE: {request.path} | {int(total_time)}ms | {queries_count} queries | user={getattr(request, 'user', None)}"
+                f"SLOW_PAGE: {request.path} | {int(total_time)}ms | user={getattr(request, 'user', None)}"
             )
 
-        # تسجيل الاستعلامات البطيئة (أكثر من 100ms)
-        if hasattr(connection, "queries") and connection.queries:
-            slow_queries_logger = logging.getLogger("websocket_blocker")
-            for query in connection.queries[getattr(request, "_queries_before", 0) :]:
-                if "time" in query and float(query["time"]) > 0.1:  # 100ms
-                    slow_queries_logger.warning(
-                        f"SLOW_QUERY: {query['time']}s | {query['sql'][:200]}..."
-                    )
-
-        # إعادة ضبط force_debug_cursor
-        if not settings.DEBUG:
+        # ✅ تسجيل الاستعلامات البطيئة فقط في DEBUG
+        if settings.DEBUG and hasattr(request, '_queries_before'):
+            from django.db import connection
+            queries_count = len(connection.queries) - request._queries_before
+            
+            # تسجيل الاستعلامات البطيئة (أكثر من 100ms)
+            if hasattr(connection, "queries") and connection.queries:
+                slow_queries_logger = logging.getLogger("websocket_blocker")
+                for query in connection.queries[request._queries_before:]:
+                    if "time" in query and float(query["time"]) > 0.1:  # 100ms
+                        slow_queries_logger.warning(
+                            f"SLOW_QUERY: {query['time']}s | {query['sql'][:200]}..."
+                        )
+            
+            # إعادة ضبط force_debug_cursor
             connection.force_debug_cursor = False
 
         return response
@@ -530,11 +526,11 @@ CACHES = {
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "crm_system",
-        "USER": "postgres",
-        "PASSWORD": "5525",
-        "HOST": "localhost",
-        "PORT": "5432",
+        "NAME": os.environ.get("DB_NAME", "crm_system"),
+        "USER": os.environ.get("DB_USER", "postgres"),
+        "PASSWORD": os.environ.get("DB_PASSWORD"),  # ✅ من متغيرات البيئة
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "5432"),
         # ✅ تحسين: إبقاء الاتصالات مفتوحة لمدة 5 دقائق (تقليل من 10 دقائق)
         # يوفر موارد الذاكرة مع الحفاظ على الأداء
         "CONN_MAX_AGE": 300,
@@ -711,10 +707,10 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=7),  # زيادة مدة صلاحية التوكن إلى 7 أيام
-    "REFRESH_TOKEN_LIFETIME": timedelta(
-        days=30
-    ),  # زيادة مدة صلاحية توكن التحديث إلى 30 يوم
+    # ✅ تحسين أمني: تقليل مدة الصلاحية من 7 أيام إلى 15 دقيقة
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    # ✅ تقليل refresh token من 30 إلى 7 أيام
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
@@ -879,19 +875,8 @@ CORS_ALLOW_HEADERS = [
     "x-request-id",
 ]
 
-# Disable CSRF for /api/ endpoints in development
-if DEBUG:
-
-    class DisableCSRFMiddleware:
-        def __init__(self, get_response):
-            self.get_response = get_response
-
-        def __call__(self, request):
-            if request.path.startswith("/api/"):
-                setattr(request, "_dont_enforce_csrf_checks", True)
-            return self.get_response(request)
-
-    MIDDLEWARE.insert(0, "crm.settings.DisableCSRFMiddleware")
+# ✅ تم إزالة DisableCSRFMiddleware لأسباب أمنية
+# استخدم JWT authentication للـ API بدلاً من تعطيل CSRF
 
 # Security and Session Settings - CSRF Trusted Origins محسن
 CSRF_TRUSTED_ORIGINS = [

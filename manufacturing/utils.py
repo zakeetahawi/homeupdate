@@ -1,13 +1,43 @@
+from typing import Dict, List, Any, Tuple
+
 from manufacturing.models import ManufacturingOrderItem
 from orders.contract_models import ContractCurtain
 
 
-def get_material_summary_context(order):
+def get_material_summary_context(order: Any) -> Dict[str, Any]:
     """
     Generate material summary context for a given order.
-    Returns the summary list and grand totals.
+    
+    Args:
+        order: Order instance containing contract curtains
+        
+    Returns:
+        Dict containing:
+            - materials_summary: List of material dictionaries
+            - grand_total_quantity: Total quantity across all materials
+            - grand_total_price: Total price across all materials
+    
+    ✅ تحسين الأداء: تم إصلاح استعلام N+1
     """
     materials_map = {}
+
+    # ✅ إصلاح N+1: جلب الإعدادات مرة واحدة قبل الحلقة
+    from factory_accounting.models import FactoryAccountingSettings
+
+    try:
+        settings = FactoryAccountingSettings.objects.first()
+        if settings:
+            double_types = list(
+                settings.double_meter_tailoring_types.values_list("value", flat=True)
+            ) + list(
+                settings.double_meter_tailoring_types.values_list(
+                    "display_name", flat=True
+                )
+            )
+        else:
+            double_types = []
+    except Exception:
+        double_types = []
 
     # 1. Fabrics Logic
     # Use related_name 'contract_curtains' from Order to ContractCurtain
@@ -47,24 +77,7 @@ def get_material_summary_context(order):
             materials_map[name]["total_quantity"] += qty
 
             # Sewing Quantity (Multiplier) - Based on Factory Accounting Settings
-            from factory_accounting.models import FactoryAccountingSettings
-
-            try:
-                settings = FactoryAccountingSettings.objects.first()
-                if settings:
-                    double_types = list(
-                        settings.double_meter_tailoring_types.values_list(
-                            "value", flat=True
-                        )
-                    ) + list(
-                        settings.double_meter_tailoring_types.values_list(
-                            "display_name", flat=True
-                        )
-                    )
-                else:
-                    double_types = []
-            except Exception:
-                double_types = []
+            # ✅ استخدام double_types المحفوظة مسبقاً (تم جلبها قبل الحلقة)
 
             t_type_display = fabric.get_tailoring_type_display()
             # Also check the raw value as it might be stored in English

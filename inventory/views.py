@@ -1,15 +1,17 @@
+import json
+import logging
 from datetime import datetime, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Case, Count, F, OuterRef, Q, Subquery, Sum, When
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods, require_POST
 from django.views.generic import TemplateView
 
 from accounts.models import SystemSettings
@@ -22,6 +24,13 @@ from .inventory_utils import (
     invalidate_product_cache,
 )
 from .models import Category, Product, PurchaseOrder, StockAlert, StockTransaction
+from .permissions import (
+    add_product,
+    can_transfer_stock,
+    change_product,
+    delete_product,
+    view_product,
+)
 
 
 # ===== API لتبديل وضع عرض السعر =====
@@ -178,6 +187,7 @@ class InventoryDashboardView(LoginRequiredMixin, TemplateView):
 
 
 @login_required
+@view_product
 def product_list(request):
     # البحث والتصفية
     search_query = request.GET.get("search", "")
@@ -287,6 +297,7 @@ def product_list(request):
 
 
 @login_required
+@add_product
 def product_create(request):
     if request.method == "POST":
         form = ProductForm(request.POST)
@@ -331,6 +342,7 @@ def product_create(request):
 
 
 @login_required
+@change_product
 def product_update(request, pk):
     product = get_object_or_404(Product, pk=pk)
     if request.method == "POST":
@@ -359,6 +371,7 @@ def product_update(request, pk):
 
 
 @login_required
+@delete_product
 def product_delete(request, pk):
     product = get_object_or_404(Product, pk=pk)
     if request.method == "POST":
@@ -511,6 +524,7 @@ def product_detail(request, pk):
 
 
 @login_required
+@can_transfer_stock
 def transaction_create(request, product_pk):
     product = get_object_or_404(Product, pk=product_pk)
 
@@ -1134,6 +1148,7 @@ def export_products_excel(request):
     from django.db.models import IntegerField, OuterRef, Subquery
     from django.db.models.functions import Coalesce
     from django.http import HttpResponse
+
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font, PatternFill
     from openpyxl.utils import get_column_letter
