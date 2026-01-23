@@ -1,0 +1,45 @@
+# Error Handler Worker Configuration
+# This worker handles server downtime and displays custom error pages
+
+name = "elkhawaga-error-handler"
+main = "src/error-handler.js"
+compatibility_date = "2024-01-01"
+workers_dev = false
+
+# KV Namespace for design settings (background image, etc.)
+[[kv_namespaces]]
+binding = "PRODUCTS_KV"
+id = "5dad2f4d72b246758bdafa17dfe4eb10"
+
+# Routes configuration
+routes = [
+  { pattern = "elkhawaga.uk/*", zone_name = "elkhawaga.uk" },
+  { pattern = "www.elkhawaga.uk/*", zone_name = "elkhawaga.uk" },
+  { pattern = "crm.elkhawaga.uk/*", zone_name = "elkhawaga.uk" },
+  { pattern = "api.elkhawaga.uk/*", zone_name = "elkhawaga.uk" },
+  { pattern = "admin.elkhawaga.uk/*", zone_name = "elkhawaga.uk" },
+]
+
+# Environment variables
+[vars]
+SITE_NAME = "ELKHAWAGA"
+COMPANY_EMAIL = "info@elkhawaga.uk"
+
+# Production environment
+[env.production]
+name = "elkhawaga-error-handler"
+workers_dev = false
+
+# Routes - This worker should handle ALL traffic to detect server downtime
+# Configure these routes in Cloudflare Dashboard:
+# Priority: Higher than Tunnel routes
+# Pattern examples:
+# - elkhawaga.uk/*
+# - www.elkhawaga.uk/*
+# - crm.elkhawaga.uk/*
+# - api.elkhawaga.uk/*
+# - admin.elkhawaga.uk/*
+
+[env.production.vars]
+SITE_NAME = "الخواجة"
+COMPANY_EMAIL = "support@elkhawaga.uk"
