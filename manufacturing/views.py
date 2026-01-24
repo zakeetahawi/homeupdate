@@ -2327,20 +2327,26 @@ def sync_manufacturing_items(request, pk):
     try:
         mfg_order = get_object_or_404(ManufacturingOrder, pk=pk)
         order = mfg_order.order
-        
+
         if not order:
-            return JsonResponse({"success": False, "error": "الطلب الأصلي غير موجود"}, status=404)
-        
+            return JsonResponse(
+                {"success": False, "error": "الطلب الأصلي غير موجود"}, status=404
+            )
+
         with transaction.atomic():
             # Get existing linked item IDs
-            existing_order_item_ids = set(mfg_order.items.values_list('order_item_id', flat=True))
-            
+            existing_order_item_ids = set(
+                mfg_order.items.values_list("order_item_id", flat=True)
+            )
+
             new_items_count = 0
             for item in order.items.all():
                 if item.id not in existing_order_item_ids:
                     ManufacturingOrderItem.objects.create(
                         manufacturing_order=mfg_order,
-                        product_name=item.product.name if item.product else f"منتج #{item.id}",
+                        product_name=(
+                            item.product.name if item.product else f"منتج #{item.id}"
+                        ),
                         quantity=item.quantity or 1,
                         specifications=getattr(item, "specifications", None)
                         or getattr(item, "notes", None)
@@ -2348,21 +2354,63 @@ def sync_manufacturing_items(request, pk):
                         order_item=item,
                     )
                     new_items_count += 1
-            
+
             # Refresh Factory Card meters
+            meters_before = 0
+            meters_after = 0
+            tailors_count = 0
+            tailor_names = []
+
             try:
                 from factory_accounting.models import FactoryCard
-                card, _ = FactoryCard.objects.get_or_create(manufacturing_order=mfg_order)
+
+                card, created = FactoryCard.objects.get_or_create(
+                    manufacturing_order=mfg_order
+                )
+                meters_before = float(card.total_billable_meters or 0)
+
+                # Calculate and save
                 card.calculate_total_meters()
-                card.save()
+                card.refresh_from_db()
+
+                meters_after = float(card.total_billable_meters or 0)
+
+                # Get tailor info
+                tailors_count = card.splits.count()
+                tailor_names = list(card.splits.values_list("tailor__name", flat=True))
+
             except Exception as e:
                 print(f"Error updating factory card during sync: {e}")
 
-        return JsonResponse({
-            "success": True, 
-            "message": f"تمت المزامنة بنجاح. تم إضافة {new_items_count} عناصر جديدة.",
-            "new_count": new_items_count
-        })
+        # Build response message
+        messages = []
+        if new_items_count > 0:
+            messages.append(f"تم إضافة {new_items_count} عناصر جديدة")
+
+        if meters_after != meters_before:
+            messages.append(f"تم تحديث الأمتار: {meters_before} → {meters_after}")
+        elif meters_after > 0:
+            messages.append(f"الأمتار: {meters_after} متر")
+        else:
+            messages.append("لا توجد أمتار مسجلة")
+
+        if tailors_count > 0:
+            messages.append(f"الخياطون ({tailors_count}): {', '.join(tailor_names)}")
+        else:
+            messages.append(
+                "⚠️ لا يوجد خياط مُعيَّن - يرجى إضافة خياط من تفاصيل أمر التصنيع"
+            )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": " | ".join(messages),
+                "new_count": new_items_count,
+                "meters": meters_after,
+                "tailors_count": tailors_count,
+                "tailors": tailor_names,
+            }
+        )
 
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
