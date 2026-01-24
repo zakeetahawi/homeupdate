@@ -139,9 +139,7 @@ def production_reports(request):
         filtered_tailor_id = int(tailor_id)
 
     context = {
-        "cards": cards.order_by("-production_date")[
-            :100
-        ],  # Limit to 100 for performance
+        "cards": cards.order_by("-production_date"),  # Show all records
         "total_meters": total_meters,
         "total_amount": total_amount,
         "total_tailor_cost": total_amount,  # Alias for template compatibility

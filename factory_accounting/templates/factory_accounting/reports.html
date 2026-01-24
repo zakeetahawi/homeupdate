@@ -219,10 +219,7 @@
                                                 {% if filtered_tailor_id %}
                                                     {# Show only filtered tailor's cost #}
                                                     {% for split in card.splits.all %}
-                                                        {% if split.tailor_id == filtered_tailor_id %}
-                                                            {{
-                                                            split.get_current_monetary_value|floatformat:2 }}
-                                                        {% endif %}
+                                                        {% if split.tailor_id == filtered_tailor_id %}{{ split.get_current_monetary_value|floatformat:2 }}{% endif %}
                                                     {% endfor %}
                                                 {% else %}
                                                     {# Show total cost for all tailors #}
