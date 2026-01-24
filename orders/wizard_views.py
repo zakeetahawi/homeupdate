@@ -883,6 +883,7 @@ def wizard_add_item(request):
             discount_amount=discount_amount,  # إضافة مبلغ الخصم المحسوب
             item_type=data.get("item_type", "product") or "product",
             notes=data.get("notes", "") or "",
+            is_manual_price=data.get("is_manual_price", False),
             added_by=request.user,  # تسجيل من أضاف العنصر
         )
 
@@ -1587,6 +1588,7 @@ def wizard_finalize(request):
                         # تحديث البيانات
                         original_item.quantity = draft_item.quantity
                         original_item.unit_price = draft_item.unit_price
+                        original_item.is_manual_price = draft_item.is_manual_price
                         original_item.discount_percentage = (
                             draft_item.discount_percentage
                         )
@@ -1647,6 +1649,7 @@ def wizard_finalize(request):
                         discount_percentage=draft_item.discount_percentage,
                         discount_amount=discount_amt,
                         item_type=draft_item.item_type,
+                        is_manual_price=draft_item.is_manual_price,
                         notes=draft_item.notes or "",  # Fix for nullable constraints
                     )
                     order_items_to_create.append(new_item)
@@ -1953,6 +1956,7 @@ def wizard_finalize(request):
                     discount_percentage=draft_item.discount_percentage,
                     discount_amount=discount_amt,
                     item_type=draft_item.item_type,
+                    is_manual_price=draft_item.is_manual_price,
                     notes=draft_item.notes or "",
                 )
                 new_item.save()
@@ -3208,6 +3212,7 @@ def _create_draft_from_order(order, user):
             discount_percentage=item.discount_percentage,
             item_type=item.item_type,
             notes=item.notes,
+            is_manual_price=item.is_manual_price,
             original_item_id=item.id,
         )
         item_mapping[item.id] = new_item

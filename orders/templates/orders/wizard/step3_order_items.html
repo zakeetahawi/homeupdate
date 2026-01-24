@@ -48,15 +48,27 @@
                             <label class="form-label fw-bold">
                                 السعر <span class="text-danger">*</span>
                             </label>
-                            <input type="number"
-                                   id="item-price"
-                                   class="form-control"
-                                   min="0"
-                                   step="0.01"
-                                   value="0"
-                                   readonly
-                                   style="background-color: #e9ecef">
-                            <small class="text-muted">من النظام</small>
+                            <div class="input-group">
+                                <input type="number"
+                                       id="item-price"
+                                       class="form-control"
+                                       min="0"
+                                       step="0.01"
+                                       value="0"
+                                       readonly
+                                       style="background-color: #e9ecef">
+                                {% if request.user.is_superuser or request.user.can_edit_price %}
+                                    <div class="input-group-text"
+                                         data-bs-toggle="tooltip"
+                                         title="تعديل السعر يدوياً">
+                                        <input class="form-check-input mt-0"
+                                               type="checkbox"
+                                               id="manual-price-check"
+                                               onchange="toggleManualPrice(this)">
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted" id="price-source-text">من النظام</small>
                         </div>
                     </div>
                     <div class="row">
@@ -117,7 +129,16 @@
                                             {% endif %}
                                         </td>
                                         <td>{{ item.quantity|clean_decimal:3 }}</td>
-                                        <td>{{ item.unit_price|format_currency }}</td>
+                                        <td>
+                                            {% if item.is_manual_price %}
+                                                <span style="color: #d35400; font-weight: bold;">{{ item.unit_price|format_currency }}</span>
+                                                <span class="badge bg-warning text-dark ms-1"
+                                                      style="font-size: 0.65rem"
+                                                      title="سعر يدوي"><i class="fas fa-pen"></i></span>
+                                            {% else %}
+                                                {{ item.unit_price|format_currency }}
+                                            {% endif %}
+                                        </td>
                                         <td>{{ item.discount_percentage|format_percentage }}</td>
                                         <td>{{ item.total_price|format_currency }}</td>
                                         <td class="fw-bold">{{ item.final_price|format_currency }}</td>
@@ -433,6 +454,13 @@ $(document).ready(function() {
         
         // التركيز على حقل الكمية
         $('#item-quantity').focus().select();
+        
+        // إعادة تعيين حالة السعر اليدوي عند تغيير المنتج
+        const manualCheck = document.getElementById('manual-price-check');
+        if (manualCheck && manualCheck.checked) {
+            manualCheck.checked = false;
+            toggleManualPrice(manualCheck);
+        }
     });
     
     // عند إزالة اختيار المنتج
@@ -557,6 +585,9 @@ function addItem() {
         return;
     }
     
+    // التحقق من خيار السعر اليدوي
+    const isManualPrice = document.getElementById('manual-price-check')?.checked || false;
+    
     // الحصول على CSRF token - أولاً من الكوكي المخصص، ثم من Django template
     const csrfToken = getCookie('elkhawaga_csrftoken') || '{{ csrf_token }}';
     
@@ -571,7 +602,8 @@ function addItem() {
             product_id: productId,
             quantity: quantity,
             unit_price: unitPrice,
-            discount_percentage: discountPercentage
+            discount_percentage: discountPercentage,
+            is_manual_price: isManualPrice
         })
     })
     .then(response => {
@@ -643,6 +675,14 @@ function addItemToTable(item) {
             </button>
         </td>
     `;
+    // إضافة علامة السعر اليدوي إذا وجدت وتلوين السعر
+    if (item.is_manual_price) {
+        // البحث عن خلية السعر
+        const priceCell = row.children[2];
+        if (priceCell) {
+            priceCell.innerHTML = `<span style="color: #d35400; font-weight: bold;">${formatPrice(item.unit_price)}</span> <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;" title="سعر يدوي"><i class="fas fa-pen"></i></span>`;
+        }
+    }
     tbody.appendChild(row);
 }
 
@@ -726,6 +766,39 @@ function clearForm() {
     $('#item-quantity').val('1');
     $('#item-price').val('0');
     $('#item-discount').val('0');
+    
+    const manualCheck = document.getElementById('manual-price-check');
+    if (manualCheck && manualCheck.checked) {
+        manualCheck.checked = false;
+        toggleManualPrice(manualCheck);
+    }
+}
+
+function toggleManualPrice(checkbox) {
+    const priceInput = document.getElementById('item-price');
+    const sourceText = document.getElementById('price-source-text');
+    
+    if (checkbox.checked) {
+        priceInput.readOnly = false;
+        priceInput.style.backgroundColor = '#fff';
+        sourceText.textContent = 'سعر يدوي';
+        sourceText.classList.remove('text-muted');
+        sourceText.classList.add('text-warning', 'fw-bold');
+        priceInput.focus();
+        priceInput.select();
+    } else {
+        priceInput.readOnly = true;
+        priceInput.style.backgroundColor = '#e9ecef';
+        sourceText.textContent = 'من النظام';
+        sourceText.classList.add('text-muted');
+        sourceText.classList.remove('text-warning', 'fw-bold');
+        
+        // إعادة السعر الأصلي للمنتج المحدد
+        const data = $('#product-select').select2('data')[0];
+        if (data && (data.price !== null && data.price !== undefined)) {
+            priceInput.value = data.price;
+        }
+    }
 }
 
 function completeStep3() {

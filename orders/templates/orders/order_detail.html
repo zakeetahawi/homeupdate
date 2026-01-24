@@ -1472,7 +1472,19 @@
                                                 <td>{{ forloop.counter }}</td>
                                                 <td>{{ item.product.name }}</td>
                                                 <td>{{ item.quantity|clean_decimal }}</td>
-                                                <td>{{ item.unit_price|clean_decimal_currency:currency_symbol }}</td>
+                                                <td>
+                                                    {% if item.is_manual_price %}
+                                                        <span style="color: #d35400; font-weight: bold;">{{ item.unit_price|clean_decimal_currency:currency_symbol }}</span>
+                                                        <span class="badge bg-warning text-dark ms-1"
+                                                              style="font-size: 0.65rem"
+                                                              data-bs-toggle="tooltip"
+                                                              title="تم تعديل السعر يدوياً">
+                                                            <i class="fas fa-pen"></i>
+                                                        </span>
+                                                    {% else %}
+                                                        {{ item.unit_price|clean_decimal_currency:currency_symbol }}
+                                                    {% endif %}
+                                                </td>
                                                 <td>
                                                     {% if item.discount_percentage and item.discount_percentage > 0 %}
                                                         <span class="badge bg-warning text-dark">{{ item.get_clean_discount_display }}%</span>

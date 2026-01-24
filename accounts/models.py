@@ -183,6 +183,11 @@ class User(AbstractUser):
         verbose_name=_("إمكانية التصدير"),
         help_text=_("السماح للمستخدم بتصدير البيانات إلى Excel"),
     )
+    can_edit_price = models.BooleanField(
+        default=False,
+        verbose_name=_("تعديل الأسعار"),
+        help_text=_("السماح للمستخدم بتعديل أسعار المنتجات في الطلبات يدوياً"),
+    )
     authorized_devices = models.ManyToManyField(
         "BranchDevice",
         blank=True,

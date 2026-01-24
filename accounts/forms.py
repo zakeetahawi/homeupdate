@@ -110,6 +110,7 @@ class UserUpdateForm(forms.ModelForm):
             "phone",
             "branch",
             "default_theme",
+            "can_edit_price",
         )
         widgets = {
             "username": forms.TextInput(
@@ -128,6 +129,7 @@ class UserUpdateForm(forms.ModelForm):
                 attrs={"class": "form-control", "placeholder": _("رقم الهاتف")}
             ),
             "branch": forms.Select(attrs={"class": "form-select"}),
+            "can_edit_price": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
 
