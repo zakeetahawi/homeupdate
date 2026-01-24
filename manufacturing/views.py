@@ -2306,6 +2306,7 @@ def create_from_order(request, order_id):
                 specifications=getattr(item, "specifications", None)
                 or getattr(item, "notes", None)
                 or "لا توجد مواصفات",
+                order_item=item,  # Ensure relationship is set
             )
 
         messages.success(request, "تم إنشاء أمر التصنيع بنجاح")
@@ -2314,6 +2315,57 @@ def create_from_order(request, order_id):
     except Exception as e:
         messages.error(request, f"حدث خطأ أثناء إنشاء أمر التصنيع: {str(e)}")
         return redirect("orders:order_detail", pk=order_id)
+
+
+@login_required
+@require_POST
+def sync_manufacturing_items(request, pk):
+    """
+    API endpoint to sync/refresh manufacturing items from the original order.
+    جلب العناصر المفقودة من الطلب الأصلي وتحديث بيانات المصنع.
+    """
+    try:
+        mfg_order = get_object_or_404(ManufacturingOrder, pk=pk)
+        order = mfg_order.order
+        
+        if not order:
+            return JsonResponse({"success": False, "error": "الطلب الأصلي غير موجود"}, status=404)
+        
+        with transaction.atomic():
+            # Get existing linked item IDs
+            existing_order_item_ids = set(mfg_order.items.values_list('order_item_id', flat=True))
+            
+            new_items_count = 0
+            for item in order.items.all():
+                if item.id not in existing_order_item_ids:
+                    ManufacturingOrderItem.objects.create(
+                        manufacturing_order=mfg_order,
+                        product_name=item.product.name if item.product else f"منتج #{item.id}",
+                        quantity=item.quantity or 1,
+                        specifications=getattr(item, "specifications", None)
+                        or getattr(item, "notes", None)
+                        or "لا توجد مواصفات",
+                        order_item=item,
+                    )
+                    new_items_count += 1
+            
+            # Refresh Factory Card meters
+            try:
+                from factory_accounting.models import FactoryCard
+                card, _ = FactoryCard.objects.get_or_create(manufacturing_order=mfg_order)
+                card.calculate_total_meters()
+                card.save()
+            except Exception as e:
+                print(f"Error updating factory card during sync: {e}")
+
+        return JsonResponse({
+            "success": True, 
+            "message": f"تمت المزامنة بنجاح. تم إضافة {new_items_count} عناصر جديدة.",
+            "new_count": new_items_count
+        })
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
 def print_manufacturing_order(request, pk):

@@ -15,7 +15,6 @@
                 <div class="card-body">
                     <!-- Filters -->
                     <form method="get" class="mb-4">
-                        {% csrf_token %}
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">من تاريخ:</label>
@@ -29,13 +28,13 @@
                             <div class="col-md-2">
                                 <label class="form-label">حالة الدفع:</label>
                                 <select name="payment_status" class="form-select">
-                                    <option value="all" {% if filters.payment_status == 'all' %}selected{% endif %}>
+                                    <option value="all" {% if filters.payment_status=='all' %}selected{% endif %}>
                                         الكل
                                     </option>
-                                    <option value="paid" {% if filters.payment_status == 'paid' %}selected{% endif %}>
+                                    <option value="paid" {% if filters.payment_status=='paid' %}selected{% endif %}>
                                         مدفوع
                                     </option>
-                                    <option value="unpaid" {% if filters.payment_status == 'unpaid' %}selected{% endif %}>
+                                    <option value="unpaid" {% if filters.payment_status=='unpaid' %}selected{% endif %}>
                                         غير مدفوع
                                     </option>
                                 </select>
@@ -45,7 +44,7 @@
                                 <select name="tailor" class="form-select">
                                     <option value="">الكل</option>
                                     {% for tailor in tailors %}
-                                    <option value="{{ tailor.id }}" {% if filters.tailor == tailor.id|stringformat:"s"
+                                    <option value="{{ tailor.id }}" {% if filters.tailor==tailor.id|stringformat:"s"
                                         %}selected{% endif %}>
                                         {{ tailor.name }}
                                     </option>
@@ -57,7 +56,7 @@
                                 <select name="cutter" class="form-select">
                                     <option value="">الكل</option>
                                     {% for cutter in cutters %}
-                                    <option value="{{ cutter.id }}" {% if filters.cutter == cutter.id|stringformat:"s"
+                                    <option value="{{ cutter.id }}" {% if filters.cutter==cutter.id|stringformat:"s"
                                         %}selected{% endif %}>
                                         {{ cutter.name }}
                                     </option>

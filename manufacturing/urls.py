@@ -204,4 +204,9 @@ urlpatterns = [
         views.get_cutting_order_data,
         name="get_cutting_order_data",
     ),
+    path(
+        "api/sync-items/<int:pk>/",
+        views.sync_manufacturing_items,
+        name="sync_mfg_items_api",
+    ),
 ]
