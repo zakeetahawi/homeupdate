@@ -1,3 +1,11 @@
+# Cloudflare Workers Configuration
+# This file configures two workers:
+# 1. QR Scanner Worker (existing)
+# 2. Error Handler Worker (new - for custom error pages)
+
+# ═══════════════════════════════════════════════════════════════════
+# QR Scanner Worker (Existing)
+# ═══════════════════════════════════════════════════════════════════
 name = "elkhawaga-qr"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
@@ -13,7 +21,7 @@ id = "5dad2f4d72b246758bdafa17dfe4eb10"
 SITE_NAME = "الخواجة"
 MAIN_SITE_URL = "https://www.elkhawaga.uk"
 
-# Production environment
+# Production environment for QR Scanner
 [env.production]
 name = "elkhawaga-qr"
 workers_dev = false
@@ -27,3 +35,10 @@ id = "5dad2f4d72b246758bdafa17dfe4eb10"
 [env.production.vars]
 SITE_NAME = "الخواجة"
 MAIN_SITE_URL = "https://www.elkhawaga.uk"
+
+# ═══════════════════════════════════════════════════════════════════
+# Error Handler Worker (New)
+# ═══════════════════════════════════════════════════════════════════
+# Note: This worker should be deployed separately
+# Use: npx wrangler deploy --config wrangler-error.toml
+# Or deploy via Cloudflare Dashboard and configure routes manually
