@@ -2946,9 +2946,15 @@ def wizard_remove_curtain(request, curtain_id):
                 status=404,
             )
 
-        # حذف الستارة
+        # حذف الستارة - استخدام Hard Delete للمسودات
         curtain = get_object_or_404(ContractCurtain, id=curtain_id, draft_order=draft)
-        curtain.delete()
+        
+        # استخدام hard_delete() بدلاً من delete() لأن المسودة لا تزال قيد التحرير
+        # ولا حاجة للاحتفاظ بالستائر المحذوفة (Soft Delete مفيد فقط للطلبات النهائية)
+        if hasattr(curtain, 'hard_delete'):
+            curtain.hard_delete()  # حذف حقيقي
+        else:
+            curtain.delete()  # fallback للنماذج التي لا تدعم soft delete
 
         return JsonResponse({"success": True, "message": "تم حذف الستارة بنجاح"})
 
