@@ -52,6 +52,10 @@
                                     <label class="form-label">الخياط:</label>
                                     <select name="tailor" class="form-select">
                                         <option value="">الكل</option>
+                                        <option value="without"
+                                                {% if filters.tailor == 'without' %}selected{% endif %}>
+                                            بدون خياط
+                                        </option>
                                         {% for tailor in tailors %}
                                             <option value="{{ tailor.id }}"
                                                     {% if filters.tailor == tailor.id|stringformat:"s" %}selected{% endif %}>
