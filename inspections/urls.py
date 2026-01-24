@@ -13,6 +13,9 @@ urlpatterns = [
         views.InspectionTechnicianDashboardView.as_view(),
         name="technician_dashboard",
     ),
+    # Schedule (Moved to top to avoid conflict with <str:inspection_code>)
+    path("schedule/", views.inspection_schedule_view, name="inspection_schedule"),
+    path("schedule/print/", views.print_daily_schedule, name="print_daily_schedule"),
     path(
         "technician/completed/",
         views.TechnicianCompletedInspectionsView.as_view(),
@@ -123,8 +126,7 @@ urlpatterns = [
         name="mark_notification_read",
     ),
     # Schedule
-    path("schedule/", views.inspection_schedule_view, name="inspection_schedule"),
-    path("schedule/print/", views.print_daily_schedule, name="print_daily_schedule"),
+    # Schedule removed from here (moved to top)
     # Secure Files
     path(
         "secure/file/<int:inspection_id>/",

@@ -20,7 +20,6 @@ from .models import (
     BranchMessage,
     CompanyInfo,
     ContactFormSettings,
-    DashboardYearSettings,
     Department,
     Employee,
     FooterSettings,
@@ -33,7 +32,6 @@ from .models import (
     UnauthorizedDeviceAttempt,
     User,
     UserRole,
-    YearFilterExemption,
 )
 from .widgets import ColorPickerWidget, DurationRangeWidget, IconPickerWidget
 
@@ -995,89 +993,7 @@ class BranchMessageAdmin(admin.ModelAdmin):
         }
 
 
-@admin.register(YearFilterExemption)
-class YearFilterExemptionAdmin(admin.ModelAdmin):
-    """إدارة استثناءات فلتر السنة للأقسام"""
-
-    list_display = [
-        "section",
-        "get_section_display",
-        "is_exempt",
-        "description",
-        "updated_at",
-    ]
-    list_filter = ["is_exempt", "section"]
-    search_fields = ["section", "description"]
-    list_editable = ["is_exempt", "description"]
-    ordering = ["section"]
-
-    fieldsets = (
-        ("معلومات القسم", {"fields": ("section", "is_exempt")}),
-        ("تفاصيل إضافية", {"fields": ("description",), "classes": ("collapse",)}),
-    )
-
-    def get_section_display(self, obj):
-        """عرض اسم القسم بالعربية"""
-        return obj.get_section_display()
-
-    get_section_display.short_description = "اسم القسم"
-
-    def save_model(self, request, obj, form, change):
-        """حفظ النموذج مع رسالة تأكيد"""
-        super().save_model(request, obj, form, change)
-        if obj.is_exempt:
-            messages.success(
-                request,
-                f"تم إعفاء قسم {obj.get_section_display()} من فلتر السنة الافتراضية",
-            )
-        else:
-            messages.success(
-                request,
-                f"تم إلغاء إعفاء قسم {obj.get_section_display()} - سيطبق فلتر السنة الافتراضية",
-            )
-
-
-@admin.register(DashboardYearSettings)
-class DashboardYearSettingsAdmin(admin.ModelAdmin):
-    """إدارة إعدادات السنوات في داش بورد الإدارة"""
-
-    list_display = ("year", "is_active", "is_default", "description")
-    list_filter = ("is_active", "is_default")
-    search_fields = ("year", "description")
-    actions = ["activate_years", "deactivate_years", "set_as_default"]
-
-    def activate_years(self, request, queryset):
-        """تفعيل السنوات المحددة"""
-        updated = queryset.update(is_active=True)
-        self.message_user(request, f"تم تفعيل {updated} سنة بنجاح")
-
-    activate_years.short_description = "تفعيل السنوات المحددة"
-
-    def deactivate_years(self, request, queryset):
-        """إلغاء تفعيل السنوات المحددة"""
-        updated = queryset.update(is_active=False)
-        self.message_user(request, f"تم إلغاء تفعيل {updated} سنة بنجاح")
-
-    deactivate_years.short_description = "إلغاء تفعيل السنوات المحددة"
-
-    def set_as_default(self, request, queryset):
-        """تعيين السنة المحددة كافتراضية"""
-        if queryset.count() != 1:
-            self.message_user(request, "يرجى تحديد سنة واحدة فقط", level=messages.ERROR)
-            return
-
-        year = queryset.first()
-        year.is_default = True
-        year.save()
-        self.message_user(request, f"تم تعيين سنة {year.year} كافتراضية بنجاح")
-
-    set_as_default.short_description = "تعيين كافتراضية"
-
-    def has_delete_permission(self, request, obj=None):
-        """منع حذف السنة الافتراضية"""
-        if obj and getattr(obj, "is_default", False):
-            return False
-        return super().has_delete_permission(request, obj)
+# YearFilterExemptionAdmin removed completely.
 
 
 @admin.register(InternalMessage)
