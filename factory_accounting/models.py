@@ -72,7 +72,7 @@ class FactoryAccountingSettings(models.Model):
         is_new = self._state.adding
         old_cutter_rate = None
         old_tailor_rate = None
-        
+
         # Track old values for recalculation
         if not is_new:
             try:
@@ -81,9 +81,9 @@ class FactoryAccountingSettings(models.Model):
                 old_tailor_rate = old_obj.default_rate_per_meter
             except FactoryAccountingSettings.DoesNotExist:
                 pass
-        
+
         super().save(*args, **kwargs)
-        
+
         # Auto-recalculate unpaid items if prices changed
         if not is_new:
             if old_cutter_rate != self.default_cutter_rate:
@@ -104,50 +104,52 @@ class FactoryAccountingSettings(models.Model):
     def is_fabric_type_excluded(self, fabric_type_value):
         """Check if a fabric type should be excluded"""
         return self.excluded_fabric_types.filter(value=fabric_type_value).exists()
-    
+
     def recalculate_unpaid_cutter_costs(self):
         """إعادة حساب تكاليف القصاص للعناصر غير المدفوعة"""
         from django.db.models import Q
-        
+
         # Get all unpaid factory cards
         unpaid_cards = FactoryCard.objects.filter(
-            Q(status='pending') | Q(status='in_production')
-        ).exclude(status='paid')
-        
+            Q(status="pending") | Q(status="in_production")
+        ).exclude(status="paid")
+
         updated_count = 0
         for card in unpaid_cards:
             old_price = card.cutter_price
             old_cost = card.total_cutter_cost
-            
+
             # Update with current rate
             card.cutter_price = self.default_cutter_rate
-            card.total_cutter_cost = card.total_billable_meters * self.default_cutter_rate
-            card.save(update_fields=['cutter_price', 'total_cutter_cost'])
+            card.total_cutter_cost = (
+                card.total_billable_meters * self.default_cutter_rate
+            )
+            card.save(update_fields=["cutter_price", "total_cutter_cost"])
             updated_count += 1
-        
+
         return updated_count
-    
+
     def recalculate_unpaid_tailor_costs(self):
         """إعادة حساب تكاليف الخياطين للعناصر غير المدفوعة التي تستخدم السعر العام"""
         from django.db.models import Q
-        
+
         # Get splits that are unpaid and use global rate (tailor doesn't use custom rate)
         unpaid_splits = CardMeasurementSplit.objects.filter(
             is_paid=False,
-            tailor__use_custom_rate=False  # Only update those using global rate
+            tailor__use_custom_rate=False,  # Only update those using global rate
         )
-        
+
         updated_count = 0
         for split in unpaid_splits:
             old_rate = split.unit_rate
             old_value = split.monetary_value
-            
+
             # Update with current global rate
             split.unit_rate = self.default_rate_per_meter
             split.monetary_value = split.share_amount * self.default_rate_per_meter
-            split.save(update_fields=['unit_rate', 'monetary_value'])
+            split.save(update_fields=["unit_rate", "monetary_value"])
             updated_count += 1
-        
+
         return updated_count
 
     def __str__(self):
@@ -218,7 +220,7 @@ class Tailor(models.Model):
     def save(self, *args, **kwargs):
         is_new = self._state.adding
         old_rate = None
-        
+
         # Track old rate if updating
         if not is_new:
             try:
@@ -226,9 +228,9 @@ class Tailor(models.Model):
                 old_rate = old_obj.get_rate()
             except Tailor.DoesNotExist:
                 pass
-        
+
         super().save(*args, **kwargs)
-        
+
         # Auto-recalculate unpaid splits if rate changed
         if not is_new and old_rate is not None:
             new_rate = self.get_rate()
@@ -242,20 +244,20 @@ class Tailor(models.Model):
         # Use global rate from settings
         settings = FactoryAccountingSettings.get_settings()
         return settings.default_rate_per_meter
-    
+
     def recalculate_unpaid_splits(self):
         """إعادة حساب التقسيمات غير المدفوعة لهذا الخياط"""
         unpaid_splits = self.assignments.filter(is_paid=False)
-        
+
         current_rate = self.get_rate()
         updated_count = 0
-        
+
         for split in unpaid_splits:
             split.unit_rate = current_rate
             split.monetary_value = split.share_amount * current_rate
-            split.save(update_fields=['unit_rate', 'monetary_value'])
+            split.save(update_fields=["unit_rate", "monetary_value"])
             updated_count += 1
-        
+
         return updated_count
 
 
@@ -484,7 +486,8 @@ class FactoryCard(models.Model):
             )
 
             # Always exclude belts and accessories (hardcoded)
-            ALWAYS_EXCLUDED = {"belt", "accessory", "additional"}
+            # Note: 'additional' removed - can be controlled via admin settings
+            ALWAYS_EXCLUDED = {"belt", "accessory"}
             excluded_fabric_type_values.update(ALWAYS_EXCLUDED)
 
             total_actual = Decimal("0.00")

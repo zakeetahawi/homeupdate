@@ -31,30 +31,39 @@ def save_factory_card_splits(request, factory_card_id):
     try:
         factory_card = get_object_or_404(FactoryCard, id=factory_card_id)
         mfg_order = factory_card.manufacturing_order
-        
+
         # [NEW] Handle Redirection for Modification Orders
-        if mfg_order.order_type == 'modification':
-            print(f"DEBUG: Redirecting save from modification order {mfg_order.id} to base order")
+        if mfg_order.order_type == "modification":
+            print(
+                f"DEBUG: Redirecting save from modification order {mfg_order.id} to base order"
+            )
             # Find base order (installation or custom) for the same contract
-            base_order = ManufacturingOrder.objects.filter(
-                contract_number=mfg_order.contract_number,
-                order_type__in=['installation', 'custom', 'detail']
-            ).exclude(id=mfg_order.id).first()
-            
+            base_order = (
+                ManufacturingOrder.objects.filter(
+                    contract_number=mfg_order.contract_number,
+                    order_type__in=["installation", "custom", "detail"],
+                )
+                .exclude(id=mfg_order.id)
+                .first()
+            )
+
             if base_order:
                 # Redirect to the card of the base order
                 factory_card, created = FactoryCard.objects.get_or_create(
                     manufacturing_order=base_order,
-                    defaults={'created_by': request.user}
+                    defaults={"created_by": request.user},
                 )
                 print(f"DEBUG: Redirected to Base Card {factory_card.id}")
             else:
-                # If no base order found, allow saving to modification card but warn? 
+                # If no base order found, allow saving to modification card but warn?
                 # User asked to prevent it, but we need a fallback or clear error.
-                return JsonResponse({
-                    "success": False, 
-                    "error": "لا يمكن إضافة خياط لطلب تعديل بدون وجود طلب تركيب أساسي. يرجى التأكد من وجود سجل تركيب لهذا العقد."
-                }, status=400)
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": "لا يمكن إضافة خياط لطلب تعديل بدون وجود طلب تركيب أساسي. يرجى التأكد من وجود سجل تركيب لهذا العقد.",
+                    },
+                    status=400,
+                )
 
         data = json.loads(request.body)
         splits_data = data.get("splits", [])
@@ -124,7 +133,9 @@ def save_factory_card_splits(request, factory_card_id):
                     monetary_value=amount * rate,
                 )
 
-        return JsonResponse({"success": True, "message": "تم حفظ التوزيع في الطلب الأساسي بنجاح"})
+        return JsonResponse(
+            {"success": True, "message": "تم حفظ التوزيع في الطلب الأساسي بنجاح"}
+        )
 
     except Exception as e:
         import traceback
@@ -189,6 +200,8 @@ def get_factory_card_data(request, manufacturing_order_id):
 
     # Auto-calculate total meters
     factory_card.calculate_total_meters()
+    # Refresh to get updated values after save
+    factory_card.refresh_from_db()
 
     # Get all active tailors
     tailors = Tailor.objects.filter(is_active=True).order_by("name")
