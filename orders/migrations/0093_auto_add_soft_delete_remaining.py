@@ -5,7 +5,7 @@ from django.conf import settings
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("orders", "0091_add_soft_delete_fields_manual"),
+        ("orders", "0092_add_soft_delete_fields_manual"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

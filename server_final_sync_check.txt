@@ -1,0 +1,82 @@
+Watching for file changes with StatReloader
+High CPU usage: 109.3%
+[26/Jan/2026 17:57:58] "HEAD / HTTP/1.1" 200 0
+[26/Jan/2026 17:58:10] "GET / HTTP/1.1" 200 10748
+[26/Jan/2026 17:58:10] "GET /static/css/style.css?v=1769443090 HTTP/1.1" 200 29595
+[26/Jan/2026 17:58:10] "GET /static/css/extra-dark-fixes.css?v=1769443090 HTTP/1.1" 200 2979
+[26/Jan/2026 17:58:10] "GET /static/css/custom-theme-enhancements.css?v=1769443090 HTTP/1.1" 200 18459
+[26/Jan/2026 17:58:10] "GET /static/css/ornamental-theme.css?v=1769443090 HTTP/1.1" 200 19485
+[26/Jan/2026 17:58:10] "GET /media/company_logos/header/White_Logo_1080_mO7qPyj.png?v=55 HTTP/1.1" 304 0
+[26/Jan/2026 17:58:10] "GET /media/company_logos/Logo_1080_4IpGSRV.png?v=42 HTTP/1.1" 304 0
+[26/Jan/2026 17:58:11] "GET /accounts/login/ HTTP/1.1" 200 12034
+[26/Jan/2026 17:58:11] "GET /static/css/style.css?v=1769443091 HTTP/1.1" 200 29595
+[26/Jan/2026 17:58:11] "GET /static/css/extra-dark-fixes.css?v=1769443091 HTTP/1.1" 200 2979
+[26/Jan/2026 17:58:11] "GET /static/css/ornamental-theme.css?v=1769443091 HTTP/1.1" 200 19485
+[26/Jan/2026 17:58:11] "GET /static/css/custom-theme-enhancements.css?v=1769443091 HTTP/1.1" 200 18459
+🖥️ Direct IP (localhost): 127.0.0.1
+Login attempt for user: zakee.tahawi
+🏢 User branch: الادارة
+💻 User branch has registered devices: False
+✅ Device restriction enabled: False
+📍 User branch: الادارة
+✅ Superuser zakee.tahawi authorized from any device (Security Bypass)
+🔍 Check logging conditions: device_check=False, denial_key=, superuser=True, sales_manager=False
+✅ Successful login for user: zakee.tahawi from IP: 127.0.0.1
+[26/Jan/2026 17:58:12] "POST /accounts/login/ HTTP/1.1" 302 0
+[26/Jan/2026 17:58:12] "GET / HTTP/1.1" 200 30264
+[26/Jan/2026 17:58:12] "GET /static/css/style.css?v=1769443092 HTTP/1.1" 200 29595
+[26/Jan/2026 17:58:12] "GET /static/css/extra-dark-fixes.css?v=1769443092 HTTP/1.1" 200 2979
+[26/Jan/2026 17:58:12] "GET /static/css/ornamental-theme.css?v=1769443092 HTTP/1.1" 200 19485
+[26/Jan/2026 17:58:12] "GET /static/css/custom-theme-enhancements.css?v=1769443092 HTTP/1.1" 200 18459
+[26/Jan/2026 17:58:12] "GET /notifications/ajax/count/?_=1769443092760 HTTP/1.1" 200 31
+[26/Jan/2026 17:58:12] "GET /complaints/api/unresolved-stats/?_=1769443092761 HTTP/1.1" 200 193
+[26/Jan/2026 17:58:12] "GET /complaints/api/assignment-notifications/ HTTP/1.1" 200 63
+[26/Jan/2026 17:58:12] "GET /complaints/api/notifications/?_=1769443092761 HTTP/1.1" 200 75
+[26/Jan/2026 17:58:13] "GET /notifications/ajax/recent/?limit=10&_=1769443092761 HTTP/1.1" 200 1696
+[26/Jan/2026 17:58:14] "GET /complaints/api/assigned/?_=1769443094762 HTTP/1.1" 200 47
+[26/Jan/2026 17:58:15] "GET /complaints/api/escalated/?_=1769443095762 HTTP/1.1" 200 63
+[26/Jan/2026 17:58:15] "HEAD / HTTP/1.1" 200 0
+/home/zakee/homeupdate/venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1670: RuntimeWarning: DateTimeField FactoryCard.production_date received a naive datetime (2025-12-25 00:00:00) while time zone support is active.
+  warnings.warn(
+[26/Jan/2026 17:58:17] "GET /factory-accounting/reports/ HTTP/1.1" 200 33274
+[26/Jan/2026 17:58:17] "GET /static/css/style.css?v=1769443096 HTTP/1.1" 200 29595
+[26/Jan/2026 17:58:17] "GET /static/css/ornamental-theme.css?v=1769443096 HTTP/1.1" 200 19485
+[26/Jan/2026 17:58:17] "GET /static/css/extra-dark-fixes.css?v=1769443096 HTTP/1.1" 200 2979
+[26/Jan/2026 17:58:17] "GET /static/css/custom-theme-enhancements.css?v=1769443096 HTTP/1.1" 200 18459
+[26/Jan/2026 17:58:17] "GET /notifications/ajax/count/?_=1769443097140 HTTP/1.1" 200 31
+[26/Jan/2026 17:58:17] "GET /complaints/api/notifications/?_=1769443097140 HTTP/1.1" 200 75
+[26/Jan/2026 17:58:17] "GET /complaints/api/assignment-notifications/ HTTP/1.1" 200 63
+[26/Jan/2026 17:58:17] "GET /complaints/api/unresolved-stats/?_=1769443097140 HTTP/1.1" 200 193
+[26/Jan/2026 17:58:17] "GET /notifications/ajax/recent/?limit=10&_=1769443097141 HTTP/1.1" 200 1699
+[26/Jan/2026 17:58:19] "GET /complaints/api/assigned/?_=1769443099141 HTTP/1.1" 200 47
+[26/Jan/2026 17:58:19] "GET /manufacturing/orders/16044/ HTTP/1.1" 302 0
+[26/Jan/2026 17:58:19] "GET /manufacturing/order/16-0538-0002-M/ HTTP/1.1" 200 40798
+[26/Jan/2026 17:58:19] "GET /static/css/ornamental-theme.css?v=1769443099 HTTP/1.1" 200 19485
+[26/Jan/2026 17:58:19] "GET /static/css/style.css?v=1769443099 HTTP/1.1" 200 29595
+[26/Jan/2026 17:58:19] "GET /static/css/extra-dark-fixes.css?v=1769443099 HTTP/1.1" 200 2979
+[26/Jan/2026 17:58:19] "GET /static/css/custom-theme-enhancements.css?v=1769443099 HTTP/1.1" 200 18459
+[26/Jan/2026 17:58:19] "GET /notifications/ajax/count/?_=1769443099664 HTTP/1.1" 200 31
+[26/Jan/2026 17:58:19] "GET /complaints/api/assignment-notifications/ HTTP/1.1" 200 63
+[26/Jan/2026 17:58:19] "GET /complaints/api/notifications/?_=1769443099664 HTTP/1.1" 200 75
+[26/Jan/2026 17:58:19] "GET /complaints/api/unresolved-stats/?_=1769443099664 HTTP/1.1" 200 193
+[26/Jan/2026 17:58:19] "GET /factory-accounting/api/card/16044/ HTTP/1.1" 200 348
+[26/Jan/2026 17:58:20] "GET /notifications/ajax/recent/?limit=10&_=1769443099664 HTTP/1.1" 200 1655
+[26/Jan/2026 17:58:21] "GET /complaints/api/assigned/?_=1769443101665 HTTP/1.1" 200 47
+[26/Jan/2026 17:58:22] "GET /complaints/api/escalated/?_=1769443102664 HTTP/1.1" 200 63
+[26/Jan/2026 17:58:29] "GET /accounts/api/messages/unread-count/ HTTP/1.1" 200 19
+[26/Jan/2026 17:58:39] "GET /accounts/api/messages/unread-count/ HTTP/1.1" 200 19
+[26/Jan/2026 17:58:45] "POST /notifications/mark-all-read/ HTTP/1.1" 200 161
+[26/Jan/2026 17:58:45] "GET /notifications/ajax/count/?_=1769443125157 HTTP/1.1" 200 29
+[26/Jan/2026 17:58:45] "GET /notifications/ajax/recent/?limit=10&_=1769443125157 HTTP/1.1" 200 1681
+[26/Jan/2026 17:58:46] "GET /manufacturing/ HTTP/1.1" 200 36381
+[26/Jan/2026 17:58:46] "GET /static/css/style.css?v=1769443126 HTTP/1.1" 200 29595
+[26/Jan/2026 17:58:46] "GET /static/css/extra-dark-fixes.css?v=1769443126 HTTP/1.1" 200 2979
+[26/Jan/2026 17:58:46] "GET /static/css/custom-theme-enhancements.css?v=1769443126 HTTP/1.1" 200 18459
+[26/Jan/2026 17:58:46] "GET /static/css/ornamental-theme.css?v=1769443126 HTTP/1.1" 200 19485
+[26/Jan/2026 17:58:46] "GET /notifications/ajax/count/?_=1769443126925 HTTP/1.1" 200 29
+[26/Jan/2026 17:58:46] "GET /complaints/api/unresolved-stats/?_=1769443126925 HTTP/1.1" 200 193
+[26/Jan/2026 17:58:46] "GET /complaints/api/assignment-notifications/ HTTP/1.1" 200 63
+[26/Jan/2026 17:58:46] "GET /complaints/api/notifications/?_=1769443126925 HTTP/1.1" 200 75
+[26/Jan/2026 17:58:47] "GET /notifications/ajax/recent/?limit=10&_=1769443126925 HTTP/1.1" 200 1644
+[26/Jan/2026 17:58:48] "GET /complaints/api/assigned/?_=1769443128926 HTTP/1.1" 200 47
+[26/Jan/2026 17:58:49] "GET /complaints/api/escalated/?_=1769443129926 HTTP/1.1" 200 63
