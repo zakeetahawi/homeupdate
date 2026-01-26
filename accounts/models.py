@@ -183,6 +183,11 @@ class User(AbstractUser):
         verbose_name=_("إمكانية التصدير"),
         help_text=_("السماح للمستخدم بتصدير البيانات إلى Excel"),
     )
+    can_edit_price = models.BooleanField(
+        default=False,
+        verbose_name=_("تعديل الأسعار"),
+        help_text=_("السماح للمستخدم بتعديل أسعار المنتجات في الطلبات يدوياً"),
+    )
     authorized_devices = models.ManyToManyField(
         "BranchDevice",
         blank=True,
@@ -1096,53 +1101,7 @@ class BranchMessage(models.Model):
         return self.display_duration * 1000
 
 
-class DashboardYearSettings(models.Model):
-    """
-    إعدادات السنوات المتاحة في داش بورد الإدارة
-    """
-
-    year = models.IntegerField(_("السنة"), unique=True)
-    is_active = models.BooleanField(_("نشط"), default=True)
-    is_default = models.BooleanField(_("افتراضي"), default=False)
-    description = models.CharField(_("الوصف"), max_length=200, blank=True)
-    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
-    updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
-
-    class Meta:
-        verbose_name = _("إعدادات سنة الداش بورد")
-        verbose_name_plural = _("إعدادات سنوات الداش بورد")
-        ordering = ["-year"]
-
-    def __str__(self):
-        return f"{self.year} - {'نشط' if self.is_active else 'غير نشط'}"
-
-    def save(self, *args, **kwargs):
-        # إذا تم تعيين هذه السنة كافتراضية، إلغاء الافتراضية من السنوات الأخرى
-        if self.is_default:
-            DashboardYearSettings.objects.exclude(pk=self.pk).update(is_default=False)
-        super().save(*args, **kwargs)
-
-    @classmethod
-    def get_available_years(cls):
-        """الحصول على السنوات المتاحة للداش بورد"""
-        return (
-            cls.objects.filter(is_active=True)
-            .values_list("year", flat=True)
-            .order_by("-year")
-        )
-
-    @classmethod
-    def get_default_year(cls):
-        """الحصول على السنة الافتراضية"""
-        default = cls.objects.filter(is_default=True).first()
-        if default:
-            return default.year
-        # إذا لم تكن هناك سنة افتراضية، استخدم السنة الحالية
-        from django.utils import timezone
-
-        return timezone.now().year
-
-
+# DashboardYearSettings and YearFilterExemption models deleted.
 class InternalMessage(models.Model):
     """
     نموذج الرسائل الداخلية بين المستخدمين

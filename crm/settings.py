@@ -286,6 +286,7 @@ if DEBUG:
             "127.0.0.1",
             "[::1]",
             "192.168.1.38",
+            "0.0.0.0",
         ]
     )
 
@@ -342,6 +343,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "widget_tweaks",
+    "board_dashboard.apps.BoardDashboardConfig",
 ]
 
 # Authentication backends

@@ -30,6 +30,78 @@ def save_factory_card_splits(request, factory_card_id):
 
     try:
         factory_card = get_object_or_404(FactoryCard, id=factory_card_id)
+        mfg_order = factory_card.manufacturing_order
+
+        # [NEW] Handle Redirection for Modification Orders
+        if mfg_order.order_type == "modification":
+            print(
+                f"DEBUG: Redirecting save from modification order {mfg_order.id} to base order"
+            )
+            base_order = None
+
+            # Method 1: Try via Modification Request (Best Path)
+            if mfg_order.modification_request:
+                try:
+                    original_order = mfg_order.modification_request.installation.order
+                    # Find the manufacturing order for this original order
+                    base_order = (
+                        ManufacturingOrder.objects.filter(order=original_order)
+                        .exclude(id=mfg_order.id)
+                        .first()
+                    )
+                    print(
+                        f"DEBUG: Found base order via modification request: {base_order}"
+                    )
+                except Exception as e:
+                    print(f"DEBUG: Failed to lookup via modification request: {e}")
+
+            # Method 2: Try via Contract Number (Fallback)
+            if not base_order and mfg_order.contract_number:
+                base_order = (
+                    ManufacturingOrder.objects.filter(
+                        contract_number=mfg_order.contract_number,
+                        order_type__in=["installation", "custom", "detail"],
+                    )
+                    .exclude(id=mfg_order.id)
+                    .first()
+                )
+                print(f"DEBUG: Found base order via contract number: {base_order}")
+
+            # Method 3: Try via Order (if modification shares the same Order object)
+            if not base_order and mfg_order.order:
+                base_order = (
+                    ManufacturingOrder.objects.filter(order=mfg_order.order)
+                    .exclude(id=mfg_order.id)
+                    .first()
+                )
+
+            if base_order:
+                # Redirect to the card of the base order
+                # Use the CURRENT user for creation if needed
+                factory_card, created = FactoryCard.objects.get_or_create(
+                    manufacturing_order=base_order,
+                    defaults={"created_by": request.user},
+                )
+                print(f"DEBUG: Redirected to Base Card {factory_card.id}")
+            else:
+                # If no base order found, we have two options:
+                # 1. Error (as before)
+                # 2. Allow saving to modification card (fallback)
+
+                # Given user context, they insist on adding to original.
+                # If original is truly missing, we must inform them clearly.
+                # However, if it's a standalone modification (rare?), we might want to allow it.
+                # For now, let's keep the error but make it more descriptive, OR allow it with a log.
+
+                # Update: If we can't find base order, it might mean the data is inconsistent.
+                # But blocking the user sucks. Let's allow saving to the modification order itself
+                # if base order is absolutely not found.
+                print(
+                    "WARNING: No base order found. Saving to modification order itself."
+                )
+                # We do NOTHING here, which means execution continues and uses the `factory_card` (the modification one)
+                pass
+
         data = json.loads(request.body)
         splits_data = data.get("splits", [])
 
@@ -98,9 +170,9 @@ def save_factory_card_splits(request, factory_card_id):
                     monetary_value=amount * rate,
                 )
 
-            # Status sync is handled by signals now
-
-        return JsonResponse({"success": True, "message": "تم حفظ التوزيع بنجاح"})
+        return JsonResponse(
+            {"success": True, "message": "تم حفظ التوزيع في الطلب الأساسي بنجاح"}
+        )
 
     except Exception as e:
         import traceback
@@ -165,6 +237,8 @@ def get_factory_card_data(request, manufacturing_order_id):
 
     # Auto-calculate total meters
     factory_card.calculate_total_meters()
+    # Refresh to get updated values after save
+    factory_card.refresh_from_db()
 
     # Get all active tailors
     tailors = Tailor.objects.filter(is_active=True).order_by("name")

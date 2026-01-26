@@ -54,6 +54,8 @@ def get_user_orders_queryset(user):
     if user.is_superuser:
         return Order.objects.all()
 
+    from django.db.models import Q
+
     # المدير العام يرى جميع الطلبات
     if hasattr(user, "is_sales_manager") and user.is_sales_manager:
         return Order.objects.all()
@@ -62,56 +64,63 @@ def get_user_orders_queryset(user):
     if hasattr(user, "is_factory_manager") and user.is_factory_manager:
         return Order.objects.all()
 
-    # مسؤول المعاينات يرى جميع الطلبات التي تحتوي على معاينة
+    # مسؤول المعاينات يرى جميع الطلبات التي تحتوي على معاينة + طلباته الخاصة
     if hasattr(user, "is_inspection_manager") and user.is_inspection_manager:
-        return Order.objects.filter(selected_types__icontains="inspection")
+        return Order.objects.filter(
+            Q(selected_types__icontains="inspection") | Q(created_by=user)
+        )
 
-    # مسؤول التركيبات يرى جميع الطلبات التي تحتوي على تركيب
+    # مسؤول التركيبات يرى جميع الطلبات التي تحتوي على تركيب + طلباته الخاصة
     if hasattr(user, "is_installation_manager") and user.is_installation_manager:
-        return Order.objects.filter(selected_types__icontains="installation")
+        return Order.objects.filter(
+            Q(selected_types__icontains="installation") | Q(created_by=user)
+        )
 
-    # مدير المنطقة يرى طلبات الفروع المُدارة
+    # مدير المنطقة يرى طلبات الفروع المُدارة + طلباته الخاصة
     if hasattr(user, "is_region_manager") and user.is_region_manager:
         managed_branches = user.managed_branches.all()
         if managed_branches.exists():
-            return Order.objects.filter(branch__in=managed_branches)
+            return Order.objects.filter(
+                Q(branch__in=managed_branches) | Q(created_by=user)
+            )
         else:
-            # إذا لم يكن له فروع مُدارة، لا يرى أي طلبات
-            return Order.objects.none()
+            return Order.objects.filter(created_by=user)
 
-    # مدير الفرع يرى طلبات فرعه حسب صلاحيات نوع العميل
+    # مدير الفرع يرى طلبات فرعه حسب صلاحيات نوع العميل + طلباته الخاصة
     if hasattr(user, "is_branch_manager") and user.is_branch_manager:
         if hasattr(user, "branch") and user.branch:
-            from django.db.models import Q
-
             # فحص صلاحيات نوع العميل
             has_wholesale = getattr(user, "is_wholesale", False)
             has_retail = getattr(user, "is_retail", True)  # القيمة الافتراضية True
 
             # إذا كان لديه صلاحية واحدة فقط، فلتر حسبها
             if has_wholesale and not has_retail:
-                # جملة فقط
+                # جملة فقط أو طلباته الخاصة
                 return Order.objects.filter(
-                    branch=user.branch, customer__customer_type="wholesale"
+                    Q(branch=user.branch, customer__customer_type="wholesale")
+                    | Q(created_by=user)
                 )
             elif has_retail and not has_wholesale:
-                # قطاعي فقط
+                # قطاعي فقط أو طلباته الخاصة
                 return Order.objects.filter(
-                    branch=user.branch, customer__customer_type="retail"
+                    Q(branch=user.branch, customer__customer_type="retail")
+                    | Q(created_by=user)
                 )
             else:
-                # كلاهما أو لا شيء = جميع الطلبات
-                return Order.objects.filter(branch=user.branch)
+                # كلاهما أو لا شيء = جميع الطلبات في الفرع أو طلباته الخاصة
+                return Order.objects.filter(Q(branch=user.branch) | Q(created_by=user))
         else:
-            return Order.objects.none()
+            return Order.objects.filter(created_by=user)
 
     # البائع يرى طلباته الشخصية فقط
     if hasattr(user, "is_salesperson") and user.is_salesperson:
         return Order.objects.filter(created_by=user)
 
-    # فني المعاينة يرى طلبات المعاينة فقط
+    # فني المعاينة يرى طلبات المعاينة فقط + طلباته الخاصة (إذا كان يمكنه إنشاء طلبات)
     if hasattr(user, "is_inspection_technician") and user.is_inspection_technician:
-        return Order.objects.filter(selected_types__icontains="inspection")
+        return Order.objects.filter(
+            Q(selected_types__icontains="inspection") | Q(created_by=user)
+        )
 
     # مدير النظام بدون دور محدد يرى طلباته فقط
     if user.is_superuser:

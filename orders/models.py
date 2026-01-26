@@ -1942,6 +1942,11 @@ class OrderItem(SoftDeleteMixin, models.Model):
         verbose_name="مبلغ الخصم",
         help_text="المبلغ المحسوب للخصم",
     )
+    is_manual_price = models.BooleanField(
+        default=False,
+        verbose_name="سعر يدوي",
+        help_text="هل تم تعديل سعر هذا العنصر يدوياً؟",
+    )
     notes = models.TextField(blank=True, verbose_name="ملاحظات")
 
     # حقول التقطيع الجديدة

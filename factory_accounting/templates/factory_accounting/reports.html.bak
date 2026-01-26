@@ -1,0 +1,432 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% block title %}تقارير حسابات المصنع{% endblock %}
+{% block content %}
+<div class="container" style="margin-top: 100px;">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>تقارير حسابات المصنع
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Filters -->
+                    <form method="get" class="mb-4">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">من تاريخ:</label>
+                                <input type="date" name="date_from" class="form-control"
+                                    value="{{ filters.date_from }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">إلى تاريخ:</label>
+                                <input type="date" name="date_to" class="form-control" value="{{ filters.date_to }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">حالة الدفع:</label>
+                                <select name="payment_status" class="form-select">
+                                    <option value="all" {% if filters.payment_status=='all' %}selected{% endif %}>
+                                        الكل
+                                    </option>
+                                    <option value="paid" {% if filters.payment_status=='paid' %}selected{% endif %}>
+                                        مدفوع
+                                    </option>
+                                    <option value="unpaid" {% if filters.payment_status=='unpaid' %}selected{% endif %}>
+                                        غير مدفوع
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">الخياط:</label>
+                                <select name="tailor" class="form-select">
+                                    <option value="">الكل</option>
+                                    {% for tailor in tailors %}
+                                    <option value="{{ tailor.id }}" {% if filters.tailor==tailor.id|stringformat:"s"
+                                        %}selected{% endif %}>
+                                        {{ tailor.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">القصاص:</label>
+                                <select name="cutter" class="form-select">
+                                    <option value="">الكل</option>
+                                    {% for cutter in cutters %}
+                                    <option value="{{ cutter.id }}" {% if filters.cutter==cutter.id|stringformat:"s"
+                                        %}selected{% endif %}>
+                                        {{ cutter.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter"></i> فلترة
+                                </button>
+                                <a href="{% url 'factory_accounting:reports' %}" class="btn btn-secondary">
+                                    <i class="fas fa-redo"></i> إعادة تعيين
+                                </a>
+                                <a href="{% url 'factory_accounting:export_report' %}?{{ request.GET.urlencode }}"
+                                    class="btn btn-success">
+                                    <i class="fas fa-file-excel"></i> تصدير Excel
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                    <!-- Summary Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card bg-primary text-white h-100">
+                                <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                                    <h6 class="text-uppercase mb-2 opacity-75">إجمالي الأمتار</h6>
+                                    <h2 class="mb-0 fw-bold">{{ total_meters|floatformat:2 }}</h2>
+                                    <small class="mt-1">متر</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-info text-white h-100">
+                                <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                                    <h6 class="text-uppercase mb-2 opacity-75">إجمالي حساب القصاص</h6>
+                                    <h2 class="mb-0 fw-bold">{{ total_cutter_cost|floatformat:2 }}</h2>
+                                    <small class="mt-1">{{ currency_symbol }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-success text-white h-100">
+                                <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                                    <h6 class="text-uppercase mb-2 opacity-75">إجمالي حساب الخياطين</h6>
+                                    <h2 class="mb-0 fw-bold">{{ total_tailor_cost|floatformat:2 }}</h2>
+                                    <small class="mt-1">{{ currency_symbol }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Data Table -->
+                    <div class="table-responsive">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="mb-0">التفاصيل</h5>
+                            <button type="button" class="btn btn-sm btn-success" id="btn-bulk-pay"
+                                style="display: none">
+                                <i class="fas fa-check-double me-1"></i> إتمام الدفع للمحدد
+                            </button>
+                        </div>
+                        <table class="table table-bordered table-hover align-middle" style="border-color: #dee2e6">
+                            <thead class="table-dark text-center align-middle">
+                                <tr>
+                                    <th style="width: 40px;">
+                                        <input type="checkbox" class="form-check-input" id="check-all">
+                                    </th>
+                                    <th>رقم الأمر</th>
+                                    <th>العميل</th>
+                                    <th>تاريخ الإنتاج</th>
+                                    <th>الأمتار</th>
+                                    <th>مضاعف</th>
+                                    <th>القصاص</th>
+                                    <th>تكلفة القصاص</th>
+                                    <th style="min-width: 280px;">الخياطين (التفاصيل)</th>
+                                    <th>تكلفة الخياطين</th>
+                                    <th>الحالة</th>
+                                    <th>تاريخ الدفع</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for card in cards %}
+                                <tr class="{% if card.status == 'paid' %}table-success{% endif %} text-center">
+                                    <td>
+                                        {% if card.status != 'paid' %}
+                                        <input type="checkbox" class="form-check-input card-check"
+                                            value="{{ card.id }}">
+                                        {% else %}
+                                        <i class="fas fa-check-circle text-success"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <a href="{% url 'manufacturing:order_detail' card.manufacturing_order.pk %}"
+                                                class="fw-bold text-decoration-none">{{ card.order_number }}</a>
+                                            <div class="ms-2 d-flex gap-1">
+                                                <button type="button"
+                                                    class="btn btn-sm btn-outline-warning py-0 px-1 btn-sync-card"
+                                                    data-id="{{ card.manufacturing_order.pk }}"
+                                                    title="مزامنة المقاسات والأمتار">
+                                                    <i class="fas fa-sync-alt"></i>
+                                                </button>
+                                                <button type="button"
+                                                    class="btn btn-sm btn-outline-secondary py-0 px-1 btn-material-summary"
+                                                    data-url="{% url 'manufacturing:material_summary_print' card.manufacturing_order.pk %}?partial=true"
+                                                    title="بطاقة العناصر (تفاصيل)">
+                                                    <i class="fas fa-file-alt"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="fw-bold">{{ card.customer_name }}</td>
+                                    <td>{{ card.production_date|date:"Y-m-d"|default:"-" }}</td>
+                                    <td class="fw-bold">{{ card.total_billable_meters }}</td>
+                                    <td>
+                                        {% if card.total_double_meters > 0 %}
+                                        <span class="badge bg-info text-dark">{{ card.total_double_meters }}</span>
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ card.cutter_name }}</td>
+                                    <td>{{ card.total_cutter_cost|floatformat:2 }}</td>
+                                    <td class="text-start">
+                                        {% for split in card.splits.all %}
+                                        {% if not filtered_tailor_id or split.tailor_id == filtered_tailor_id %}
+                                        <div class="small mb-1">
+                                            <strong>{{ split.tailor.name }}:</strong>
+                                            <span class="badge bg-light text-dark border ms-1">{{ split.share_amount }}
+                                                متر</span>
+                                            {% if split.is_paid %}
+                                            <i class="fas fa-check-circle text-success ms-1"
+                                                title="تم الدفع لهذا الخياط"></i>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                        {% empty %}
+                                        <span class="text-muted">-</span>
+                                        {% endfor %}
+                                    </td>
+                                    <td class="fw-bold">
+                                        {% if filtered_tailor_id %}
+                                        {# Show only filtered tailor's cost #}
+                                        {% for split in card.splits.all %}
+                                        {% if split.tailor_id == filtered_tailor_id %}{{
+                                        split.get_current_monetary_value|floatformat:2 }}{% endif %}
+                                        {% endfor %}
+                                        {% else %}
+                                        {# Show total cost for all tailors #}
+                                        {{ card.total_cost|floatformat:2 }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary mb-1">{{
+                                            card.manufacturing_order.get_status_display }}</span>
+                                        {% if card.status == 'paid' %}
+                                        <div class="text-success small fw-bold">مدفوع</div>
+                                        {% else %}
+                                        <div class="text-muted small">غير مدفوع</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ card.payment_date|date:"Y-m-d"|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="12" class="text-center py-4 text-muted">لا توجد سجلات</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light fw-bold text-center">
+                                <tr>
+                                    <td colspan="7" class="text-end">الإجمالي:</td>
+                                    <td id="total-cutter-cost">{{ total_cutter_cost|floatformat:2 }}</td>
+                                    <td></td>
+                                    <td id="total-tailor-cost">{{ total_tailor_cost|floatformat:2 }}</td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const checkAll = document.getElementById('check-all');
+        const checkboxes = document.querySelectorAll('.card-check');
+        const bulkPayBtn = document.getElementById('btn-bulk-pay');
+
+        function updateBulkBtn() {
+            const checked = document.querySelectorAll('.card-check:checked');
+            if (checked.length > 0) {
+                bulkPayBtn.style.display = 'inline-block';
+                bulkPayBtn.innerHTML = `<i class="fas fa-check-double me-1"></i> إتمام الدفع للمحدد (${checked.length})`;
+            } else {
+                bulkPayBtn.style.display = 'none';
+            }
+        }
+
+        if (checkAll) {
+            checkAll.addEventListener('change', function () {
+                checkboxes.forEach(cb => cb.checked = checkAll.checked);
+                updateBulkBtn();
+            });
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateBulkBtn);
+        });
+
+        if (bulkPayBtn) {
+            bulkPayBtn.addEventListener('click', function () {
+                const selected = Array.from(document.querySelectorAll('.card-check:checked')).map(cb => cb.value);
+
+                // Check if tailor filter is active
+                const urlParams = new URLSearchParams(window.location.search);
+                const tailorId = urlParams.get('tailor');
+                const tailorName = tailorId ? " للخياط المحدد" : " بالكامل";
+
+                if (confirm('هل أنت متأكد من إتمام الدفع لـ ' + selected.length + ' بطاقات' + tailorName + '؟')) {
+
+                    // Prepare clean payload
+                    const payload = {
+                        card_ids: selected
+                    };
+                    if (tailorId) {
+                        payload.tailor_id = tailorId;
+                    }
+
+                    fetch("{% url 'factory_accounting:bulk_pay' %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: JSON.stringify(payload)
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert(data.message);
+                                location.reload();
+                            } else {
+                                alert('حدث خطأ: ' + (data.error || data.message));
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            alert('حدث خطأ في الاتصال');
+                        });
+                }
+            });
+        }
+
+        // Sync Logic
+        document.querySelectorAll('.btn-sync-card').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const mfgId = this.getAttribute('data-id');
+                const originalHtml = this.innerHTML;
+
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                fetch(`/manufacturing/api/sync-items/${mfgId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            location.reload();
+                        } else {
+                            alert('خطأ: ' + (data.error || 'فشلت المزامنة'));
+                            this.disabled = false;
+                            this.innerHTML = originalHtml;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('حدث خطأ أثناء الاتصال بالخادم');
+                        this.disabled = false;
+                        this.innerHTML = originalHtml;
+                    });
+            });
+        });
+    });
+</script>
+<!-- Material Summary Modal -->
+<div class="modal fade" id="materialSummaryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">بطاقة عناصر الطلب</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="materialSummaryBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-primary" onclick="printMaterialSummary()">طباعة</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Material Summary Modal Logic
+        const summaryModal = new bootstrap.Modal(document.getElementById('materialSummaryModal'));
+        const summaryBody = document.getElementById('materialSummaryBody');
+
+        document.querySelectorAll('.btn-material-summary').forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const url = this.getAttribute('data-url');
+
+                // Show loading
+                summaryBody.innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                    </div>
+                `;
+
+                summaryModal.show();
+
+                // Fetch content
+                fetch(url)
+                    .then(response => response.text())
+                    .then(html => {
+                        summaryBody.innerHTML = html;
+                    })
+                    .catch(err => {
+                        summaryBody.innerHTML = '<div class="alert alert-danger">حدث خطأ أثناء تحميل البيانات</div>';
+                        console.error(err);
+                    });
+            });
+        });
+
+        // Global print function for the modal content
+        window.printMaterialSummary = function () {
+            const content = summaryBody.innerHTML;
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.write('<html><head><title>بطاقة عناصر الطلب</title>');
+            printWindow.document.write('<link href="/static/css/bootstrap.rtl.min.css" rel="stylesheet">');
+            printWindow.document.write('<style>body{font-family: Tajawal; padding: 20px;} @media print { .no-print { display: none; } document.body.style.direction = "rtl"; }</style>');
+            printWindow.document.write('</head><body dir="rtl">');
+            printWindow.document.write(content);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            // Wait for styles/images to load slightly
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        };
+    });
+</script>
+{% endblock %}

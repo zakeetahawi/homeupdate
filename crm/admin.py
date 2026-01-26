@@ -227,13 +227,7 @@ admin.site.get_urls = (
 )
 
 
-def admin_dashboard_view(request):
-    """عرض لوحة تحكم مخصصة"""
-    if not request.user.is_staff:
-        return HttpResponseRedirect(reverse("admin:login"))
-
-    # إعادة توجيه إلى الصفحة الرئيسية للإدارة
-    return HttpResponseRedirect(reverse("admin:index"))
+# admin_dashboard_view removed
 
 
 # تخصيص إضافي للـ admin site

@@ -139,14 +139,18 @@ def update_related_orders(installation, new_status, old_status, user=None):
                 new_manufacturing_status
                 and manufacturing_order.status != new_manufacturing_status
             ):
-                # تحديث حالة أمر التصنيع
-                old_manufacturing_status = manufacturing_order.status
-                manufacturing_order.status = new_manufacturing_status
-                manufacturing_order.save()
+                # تم تعطيل التحديث التلقائي بناءً على طلب العميل
+                # يجب أن تكون حالة المصنع منفصلة تماماً عن التركيبات
+                # old_manufacturing_status = manufacturing_order.status
+                # manufacturing_order.status = new_manufacturing_status
+                # if user:
+                #     manufacturing_order._changed_by = user
+                # manufacturing_order.save()
 
-                print(
-                    f"تم تحديث أمر التصنيع {manufacturing_order.manufacturing_code} من {old_manufacturing_status} إلى {new_manufacturing_status}"
-                )
+                # print(
+                #     f"تم تحديث أمر التصنيع {manufacturing_order.manufacturing_code} من {old_manufacturing_status} إلى {new_manufacturing_status}"
+                # )
+                pass
 
         except ManufacturingOrder.DoesNotExist:
             # لا يوجد أمر تصنيع مقابل لهذا الطلب

@@ -2306,6 +2306,7 @@ def create_from_order(request, order_id):
                 specifications=getattr(item, "specifications", None)
                 or getattr(item, "notes", None)
                 or "لا توجد مواصفات",
+                order_item=item,  # Ensure relationship is set
             )
 
         messages.success(request, "تم إنشاء أمر التصنيع بنجاح")
@@ -2314,6 +2315,181 @@ def create_from_order(request, order_id):
     except Exception as e:
         messages.error(request, f"حدث خطأ أثناء إنشاء أمر التصنيع: {str(e)}")
         return redirect("orders:order_detail", pk=order_id)
+
+
+@login_required
+@require_POST
+def sync_manufacturing_items(request, pk):
+    """
+    API endpoint to sync/refresh manufacturing items from the original order.
+    جلب العناصر المفقودة من الطلب الأصلي وتحديث بيانات المصنع.
+    كما يقوم بنسخ الخياطين من طلبات التعديل إلى الطلب الأصلي.
+    """
+    try:
+        from factory_accounting.models import CardMeasurementSplit, FactoryCard
+
+        mfg_order = get_object_or_404(ManufacturingOrder, pk=pk)
+        order = mfg_order.order
+
+        if not order:
+            return JsonResponse(
+                {"success": False, "error": "الطلب الأصلي غير موجود"}, status=404
+            )
+
+        messages = []
+        tailors_copied = 0
+
+        with transaction.atomic():
+            # Get existing linked item IDs
+            existing_order_item_ids = set(
+                mfg_order.items.values_list("order_item_id", flat=True)
+            )
+
+            new_items_count = 0
+            for item in order.items.all():
+                if item.id not in existing_order_item_ids:
+                    ManufacturingOrderItem.objects.create(
+                        manufacturing_order=mfg_order,
+                        product_name=(
+                            item.product.name if item.product else f"منتج #{item.id}"
+                        ),
+                        quantity=item.quantity or 1,
+                        specifications=getattr(item, "specifications", None)
+                        or getattr(item, "notes", None)
+                        or "لا توجد مواصفات",
+                        order_item=item,
+                    )
+                    new_items_count += 1
+
+            # Get or create factory card for this order
+            card, _ = FactoryCard.objects.get_or_create(manufacturing_order=mfg_order)
+            meters_before = float(card.total_billable_meters or 0)
+
+            # Calculate and save meters
+            card.calculate_total_meters()
+            card.refresh_from_db()
+            meters_after = float(card.total_billable_meters or 0)
+
+            # === NEW: Copy tailors from modification orders to base order ===
+            # Find all related orders for the same customer
+            related_orders = ManufacturingOrder.objects.filter(
+                order__customer=order.customer
+            ).exclude(id=mfg_order.id)
+
+            # Determine if this is the base order (installation/tailoring/custom)
+            is_base_order = mfg_order.order_type in [
+                "installation",
+                "custom",
+                "detail",
+                "tailoring",
+            ]
+
+            if is_base_order:
+                # This is the base order - look for modification orders with tailors
+                for related in related_orders:
+                    if related.order_type == "modification":
+                        try:
+                            mod_card = FactoryCard.objects.get(
+                                manufacturing_order=related
+                            )
+                            mod_splits = mod_card.splits.all()
+
+                            for split in mod_splits:
+                                # Check if this tailor is already in base order
+                                existing = card.splits.filter(
+                                    tailor=split.tailor
+                                ).first()
+                                if not existing:
+                                    # Copy the split to base order
+                                    CardMeasurementSplit.objects.create(
+                                        factory_card=card,
+                                        tailor=split.tailor,
+                                        share_amount=split.share_amount,
+                                        unit_rate=split.unit_rate,
+                                        monetary_value=split.monetary_value,
+                                        is_paid=split.is_paid,
+                                        notes=f"منسوخ من طلب التعديل {related.order.order_number}",
+                                    )
+                                    tailors_copied += 1
+                        except FactoryCard.DoesNotExist:
+                            pass
+            else:
+                # This is a modification order - copy tailors TO the base order
+                for related in related_orders:
+                    if related.order_type in [
+                        "installation",
+                        "custom",
+                        "detail",
+                        "tailoring",
+                    ]:
+                        try:
+                            base_card, _ = FactoryCard.objects.get_or_create(
+                                manufacturing_order=related
+                            )
+                            my_splits = card.splits.all()
+
+                            for split in my_splits:
+                                # Check if this tailor is already in base order
+                                existing = base_card.splits.filter(
+                                    tailor=split.tailor
+                                ).first()
+                                if not existing:
+                                    # Copy the split to base order
+                                    CardMeasurementSplit.objects.create(
+                                        factory_card=base_card,
+                                        tailor=split.tailor,
+                                        share_amount=split.share_amount,
+                                        unit_rate=split.unit_rate,
+                                        monetary_value=split.monetary_value,
+                                        is_paid=split.is_paid,
+                                        notes=f"منسوخ من طلب التعديل {order.order_number}",
+                                    )
+                                    tailors_copied += 1
+                        except Exception as e:
+                            print(f"Error copying to base order: {e}")
+
+            # Refresh tailor info
+            tailors_count = card.splits.count()
+            tailor_names = list(card.splits.values_list("tailor__name", flat=True))
+
+        # Build response message
+        if new_items_count > 0:
+            messages.append(f"تم إضافة {new_items_count} عناصر جديدة")
+
+        if meters_after != meters_before:
+            messages.append(f"تم تحديث الأمتار: {meters_before} → {meters_after}")
+        elif meters_after > 0:
+            messages.append(f"الأمتار: {meters_after} متر")
+        else:
+            messages.append("لا توجد أمتار مسجلة")
+
+        if tailors_copied > 0:
+            messages.append(f"✅ تم نسخ {tailors_copied} خياط إلى الطلب الأصلي")
+
+        if tailors_count > 0:
+            messages.append(f"الخياطون ({tailors_count}): {', '.join(tailor_names)}")
+        else:
+            messages.append(
+                "⚠️ لا يوجد خياط مُعيَّن - يرجى إضافة خياط من تفاصيل أمر التصنيع"
+            )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": " | ".join(messages),
+                "new_count": new_items_count,
+                "meters": meters_after,
+                "tailors_count": tailors_count,
+                "tailors": tailor_names,
+                "tailors_copied": tailors_copied,
+            }
+        )
+
+    except Exception as e:
+        import traceback
+
+        traceback.print_exc()
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
 def print_manufacturing_order(request, pk):

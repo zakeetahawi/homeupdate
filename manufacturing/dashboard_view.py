@@ -7,7 +7,7 @@ from django.db.models.functions import ExtractMonth, ExtractYear
 from django.utils import timezone
 from django.views.generic import TemplateView
 
-from accounts.models import DashboardYearSettings
+# DashboardYearSettings import removed
 from accounts.utils import apply_default_year_filter
 
 from .models import ManufacturingOrder

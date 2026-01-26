@@ -15,6 +15,7 @@
                     <div class="card-body">
                         <!-- Filters -->
                         <form method="get" class="mb-4">
+                            {% csrf_token %}
                             <div class="row g-3">
                                 <div class="col-md-3">
                                     <label class="form-label">من تاريخ:</label>
@@ -51,6 +52,10 @@
                                     <label class="form-label">الخياط:</label>
                                     <select name="tailor" class="form-select">
                                         <option value="">الكل</option>
+                                        <option value="without"
+                                                {% if filters.tailor == 'without' %}selected{% endif %}>
+                                            بدون خياط
+                                        </option>
                                         {% for tailor in tailors %}
                                             <option value="{{ tailor.id }}"
                                                     {% if filters.tailor == tailor.id|stringformat:"s" %}selected{% endif %}>
@@ -165,12 +170,20 @@
                                                 <div class="d-flex align-items-center justify-content-center">
                                                     <a href="{% url 'manufacturing:order_detail' card.manufacturing_order.pk %}"
                                                        class="fw-bold text-decoration-none">{{ card.order_number }}</a>
-                                                    <button type="button"
-                                                            class="btn btn-sm btn-outline-secondary ms-2 py-0 px-1 btn-material-summary"
-                                                            data-url="{% url 'manufacturing:material_summary_print' card.manufacturing_order.pk %}?partial=true"
-                                                            title="بطاقة العناصر (تفاصيل)">
-                                                        <i class="fas fa-file-alt"></i>
-                                                    </button>
+                                                    <div class="ms-2 d-flex gap-1">
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-warning py-0 px-1 btn-sync-card"
+                                                                data-id="{{ card.manufacturing_order.pk }}"
+                                                                title="مزامنة المقاسات والأمتار">
+                                                            <i class="fas fa-sync-alt"></i>
+                                                        </button>
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-secondary py-0 px-1 btn-material-summary"
+                                                                data-url="{% url 'manufacturing:material_summary_print' card.manufacturing_order.pk %}?partial=true"
+                                                                title="بطاقة العناصر (تفاصيل)">
+                                                            <i class="fas fa-file-alt"></i>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td class="fw-bold">{{ card.customer_name }}</td>
@@ -190,7 +203,8 @@
                                                     {% if not filtered_tailor_id or split.tailor_id == filtered_tailor_id %}
                                                         <div class="small mb-1">
                                                             <strong>{{ split.tailor.name }}:</strong>
-                                                            <span class="badge bg-light text-dark border ms-1">{{ split.share_amount }} متر</span>
+                                                            <span class="badge bg-light text-dark border ms-1">{{ split.share_amount }}
+                                                            متر</span>
                                                             {% if split.is_paid %}
                                                                 <i class="fas fa-check-circle text-success ms-1"
                                                                    title="تم الدفع لهذا الخياط"></i>
@@ -248,59 +262,59 @@
 {% endblock %}
 {% block extra_js %}
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const checkAll = document.getElementById('check-all');
-            const checkboxes = document.querySelectorAll('.card-check');
-            const bulkPayBtn = document.getElementById('btn-bulk-pay');
-            
-            function updateBulkBtn() {
-                const checked = document.querySelectorAll('.card-check:checked');
-                if (checked.length > 0) {
-                    bulkPayBtn.style.display = 'inline-block';
-                    bulkPayBtn.innerHTML = `<i class="fas fa-check-double me-1"></i> إتمام الدفع للمحدد (${checked.length})`;
-                } else {
-                    bulkPayBtn.style.display = 'none';
-                }
+    document.addEventListener('DOMContentLoaded', function () {
+        const checkAll = document.getElementById('check-all');
+        const checkboxes = document.querySelectorAll('.card-check');
+        const bulkPayBtn = document.getElementById('btn-bulk-pay');
+
+        function updateBulkBtn() {
+            const checked = document.querySelectorAll('.card-check:checked');
+            if (checked.length > 0) {
+                bulkPayBtn.style.display = 'inline-block';
+                bulkPayBtn.innerHTML = `<i class="fas fa-check-double me-1"></i> إتمام الدفع للمحدد (${checked.length})`;
+            } else {
+                bulkPayBtn.style.display = 'none';
             }
-            
-            if (checkAll) {
-                checkAll.addEventListener('change', function() {
-                    checkboxes.forEach(cb => cb.checked = checkAll.checked);
-                    updateBulkBtn();
-                });
-            }
-            
-            checkboxes.forEach(cb => {
-                cb.addEventListener('change', updateBulkBtn);
+        }
+
+        if (checkAll) {
+            checkAll.addEventListener('change', function () {
+                checkboxes.forEach(cb => cb.checked = checkAll.checked);
+                updateBulkBtn();
             });
-            
-            if (bulkPayBtn) {
-                bulkPayBtn.addEventListener('click', function() {
-                    const selected = Array.from(document.querySelectorAll('.card-check:checked')).map(cb => cb.value);
-                    
-                    // Check if tailor filter is active
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const tailorId = urlParams.get('tailor');
-                    const tailorName = tailorId ? " للخياط المحدد" : " بالكامل";
+        }
 
-                    if (confirm('هل أنت متأكد من إتمام الدفع لـ ' + selected.length + ' بطاقات' + tailorName + '؟')) {
-                        
-                        // Prepare clean payload
-                        const payload = { 
-                            card_ids: selected 
-                        };
-                        if (tailorId) {
-                            payload.tailor_id = tailorId;
-                        }
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateBulkBtn);
+        });
 
-                        fetch("{% url 'factory_accounting:bulk_pay' %}", {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                            },
-                            body: JSON.stringify(payload)
-                        })
+        if (bulkPayBtn) {
+            bulkPayBtn.addEventListener('click', function () {
+                const selected = Array.from(document.querySelectorAll('.card-check:checked')).map(cb => cb.value);
+
+                // Check if tailor filter is active
+                const urlParams = new URLSearchParams(window.location.search);
+                const tailorId = urlParams.get('tailor');
+                const tailorName = tailorId ? " للخياط المحدد" : " بالكامل";
+
+                if (confirm('هل أنت متأكد من إتمام الدفع لـ ' + selected.length + ' بطاقات' + tailorName + '؟')) {
+
+                    // Prepare clean payload
+                    const payload = {
+                        card_ids: selected
+                    };
+                    if (tailorId) {
+                        payload.tailor_id = tailorId;
+                    }
+
+                    fetch("{% url 'factory_accounting:bulk_pay' %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: JSON.stringify(payload)
+                    })
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
@@ -314,10 +328,45 @@
                             console.error(err);
                             alert('حدث خطأ في الاتصال');
                         });
+                }
+            });
+        }
+
+        // Sync Logic
+        document.querySelectorAll('.btn-sync-card').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const mfgId = this.getAttribute('data-id');
+                const originalHtml = this.innerHTML;
+
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                fetch(`/manufacturing/api/sync-items/${mfgId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                     }
-                });
-            }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            location.reload();
+                        } else {
+                            alert('خطأ: ' + (data.error || 'فشلت المزامنة'));
+                            this.disabled = false;
+                            this.innerHTML = originalHtml;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('حدث خطأ أثناء الاتصال بالخادم');
+                        this.disabled = false;
+                        this.innerHTML = originalHtml;
+                    });
+            });
         });
+    });
     </script>
     <!-- Material Summary Modal -->
     <div class="modal fade"
@@ -350,16 +399,16 @@
         </div>
     </div>
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Material Summary Modal Logic
         const summaryModal = new bootstrap.Modal(document.getElementById('materialSummaryModal'));
         const summaryBody = document.getElementById('materialSummaryBody');
 
         document.querySelectorAll('.btn-material-summary').forEach(btn => {
-            btn.addEventListener('click', function(e) {
+            btn.addEventListener('click', function (e) {
                 e.preventDefault();
                 const url = this.getAttribute('data-url');
-                
+
                 // Show loading
                 summaryBody.innerHTML = `
                     <div class="text-center py-5">
@@ -368,9 +417,9 @@
                         </div>
                     </div>
                 `;
-                
+
                 summaryModal.show();
-                
+
                 // Fetch content
                 fetch(url)
                     .then(response => response.text())
@@ -385,7 +434,7 @@
         });
 
         // Global print function for the modal content
-        window.printMaterialSummary = function() {
+        window.printMaterialSummary = function () {
             const content = summaryBody.innerHTML;
             const printWindow = window.open('', '', 'height=600,width=800');
             printWindow.document.write('<html><head><title>بطاقة عناصر الطلب</title>');

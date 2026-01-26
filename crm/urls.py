@@ -29,7 +29,7 @@ urlpatterns = [
     path("p/", include("public.urls", namespace="public")),
     # المسارات الأساسية
     path("", views.home, name="home"),
-    path("admin-dashboard/", views.admin_dashboard, name="admin_dashboard"),
+    # path("admin-dashboard/", views.admin_dashboard, name="admin_dashboard"),  # Removed per user request
     path("about/", views.about, name="about"),
     path("contact/", views.contact, name="contact"),
     # مسارات API
@@ -108,6 +108,8 @@ urlpatterns = [
     ),
     # نظام WhatsApp - Webhooks
     path("whatsapp/", include("whatsapp.urls", namespace="whatsapp")),
+    # Executive Board Dashboard
+    path("board-level/", include("board_dashboard.urls", namespace="board_dashboard")),
     # لوحة مراقبة النظام
     path("monitoring/", views.monitoring_dashboard, name="monitoring_dashboard"),
     # API مراقبة النظام وقاعدة البيانات

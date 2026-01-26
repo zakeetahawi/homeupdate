@@ -467,6 +467,11 @@ class DraftOrderItem(models.Model):
         default="product",
         verbose_name="نوع العنصر",
     )
+    is_manual_price = models.BooleanField(
+        default=False,
+        verbose_name="سعر يدوي",
+        help_text="هل تم تعديل سعر هذا العنصر يدوياً؟",
+    )
     notes = models.TextField(blank=True, null=True, verbose_name="ملاحظات")
 
     # تتبع التعديلات

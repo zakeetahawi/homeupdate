@@ -209,10 +209,15 @@ def order_list(request):
     if date_to:
         orders = orders.filter(order_date__lte=date_to)
 
-    # فلتر البائع
+    # فلتر البائع (يستخدم المستخدم المرتبط بالبائع)
     salesperson_filter = request.GET.get("salesperson", "")
     if salesperson_filter:
-        orders = orders.filter(salesperson__id=salesperson_filter)
+        # الفلترة الشاملة: بالمستخدم (created_by) أو بالبائع (salesperson)
+        # للحفاظ على الاتساق مع لوحة التحكم التي تجمع بين الاثنين
+        orders = orders.filter(
+            Q(created_by__salesperson_profile__id=salesperson_filter)
+            | Q(salesperson__id=salesperson_filter)
+        )
 
     # Order by created_at
     orders = orders.order_by("-created_at")

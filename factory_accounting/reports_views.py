@@ -25,15 +25,19 @@ def production_reports(request):
     """
     # Get filter parameters with default date: 25th of previous month
     today = timezone.now().date()
-    
+
     # Calculate 25th of previous month
     if today.month == 1:
         # If January, go to December of previous year
-        default_date_from = today.replace(year=today.year - 1, month=12, day=25).strftime("%Y-%m-%d")
+        default_date_from = today.replace(
+            year=today.year - 1, month=12, day=25
+        ).strftime("%Y-%m-%d")
     else:
         # Otherwise, go to previous month
-        default_date_from = today.replace(month=today.month - 1, day=25).strftime("%Y-%m-%d")
-    
+        default_date_from = today.replace(month=today.month - 1, day=25).strftime(
+            "%Y-%m-%d"
+        )
+
     date_from = request.GET.get("date_from", default_date_from)
     date_to = request.GET.get("date_to")
     payment_status = request.GET.get("payment_status", "all")
@@ -56,7 +60,7 @@ def production_reports(request):
     cards = cards.exclude(manufacturing_order__production_line_id=4)
 
     # Exclude modification orders (تعديلات) to avoid duplicates
-    cards = cards.exclude(manufacturing_order__order_type='modification')
+    cards = cards.exclude(manufacturing_order__order_type="modification")
 
     # Apply filters
     if date_from:
@@ -68,7 +72,11 @@ def production_reports(request):
 
     # Filter by tailor
     if tailor_id:
-        cards = cards.filter(splits__tailor_id=tailor_id).distinct()
+        if tailor_id == "without":
+            # cards without ANY splits
+            cards = cards.filter(splits__isnull=True)
+        else:
+            cards = cards.filter(splits__tailor_id=tailor_id).distinct()
 
     # Filter by cutter (production line)
     if cutter_id:
@@ -90,7 +98,7 @@ def production_reports(request):
     splits = CardMeasurementSplit.objects.filter(factory_card__in=cards)
 
     # IMPORTANT: If filtering by tailor, only show that tailor's splits and costs
-    if tailor_id:
+    if tailor_id and tailor_id != "without":
         splits = splits.filter(tailor_id=tailor_id)
 
     if payment_status == "paid":
@@ -125,10 +133,13 @@ def production_reports(request):
         ProductionLine.objects.filter(is_active=True).exclude(id=4).order_by("name")
     )
 
+    # Safe conversion for integer ID
+    filtered_tailor_id = None
+    if tailor_id and tailor_id.isdigit():
+        filtered_tailor_id = int(tailor_id)
+
     context = {
-        "cards": cards.order_by("-production_date")[
-            :100
-        ],  # Limit to 100 for performance
+        "cards": cards.order_by("-production_date"),  # Show all records
         "total_meters": total_meters,
         "total_amount": total_amount,
         "total_tailor_cost": total_amount,  # Alias for template compatibility
@@ -145,9 +156,7 @@ def production_reports(request):
             "tailor": tailor_id,
             "cutter": cutter_id,
         },
-        "filtered_tailor_id": (
-            int(tailor_id) if tailor_id else None
-        ),  # For conditional display
+        "filtered_tailor_id": filtered_tailor_id,  # For conditional display
     }
 
     return render(request, "factory_accounting/reports.html", context)
@@ -182,7 +191,7 @@ def export_production_report(request):
     cards = cards.exclude(manufacturing_order__production_line_id=4)
 
     # Exclude modification orders (تعديلات) to avoid duplicates
-    cards = cards.exclude(manufacturing_order__order_type='modification')
+    cards = cards.exclude(manufacturing_order__order_type="modification")
 
     # Apply filters
     if date_from:
@@ -208,7 +217,10 @@ def export_production_report(request):
     if card_status != "all":
         cards = cards.filter(status=card_status)
     if tailor_id:
-        cards = cards.filter(splits__tailor_id=tailor_id).distinct()
+        if tailor_id == "without":
+            cards = cards.filter(splits__isnull=True)
+        else:
+            cards = cards.filter(splits__tailor_id=tailor_id).distinct()
     if cutter_id:  # Apply cutter filter
         cards = cards.filter(manufacturing_order__production_line_id=cutter_id)
 

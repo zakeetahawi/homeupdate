@@ -2,6 +2,14 @@
 القائمة الرئيسية الديناميكية من قاعدة البيانات
 {% endcomment %}
 {% if user.is_authenticated and navbar_departments %}
+    {# --- Executive Board Dashboard Link (Superuser Only) --- #}
+    {% if user.is_active and user.is_superuser %}
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'board_dashboard:home' %}">
+                <i class="fas fa-chart-line"></i><span class="nav-text">لوحة الإدارة</span>
+            </a>
+        </li>
+    {% endif %}
     {% for key, item in navbar_departments.items %}
         {% if item.units %}
             {% if item.units|length == 1 and not item.url and key != 'reports' %}
