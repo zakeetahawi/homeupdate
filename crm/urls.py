@@ -108,6 +108,8 @@ urlpatterns = [
     ),
     # نظام WhatsApp - Webhooks
     path("whatsapp/", include("whatsapp.urls", namespace="whatsapp")),
+    # Executive Board Dashboard
+    path("board-level/", include("board_dashboard.urls", namespace="board_dashboard")),
     # لوحة مراقبة النظام
     path("monitoring/", views.monitoring_dashboard, name="monitoring_dashboard"),
     # API مراقبة النظام وقاعدة البيانات

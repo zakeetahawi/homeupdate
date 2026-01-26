@@ -394,6 +394,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "widget_tweaks",
+    "board_dashboard.apps.BoardDashboardConfig",
 ]
 
 # Authentication backends

@@ -1,0 +1,635 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}لوحة تحكم مجلس الإدارة{% endblock %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0 text-gray-800">لوحة تحكم مجلس الإدارة التنفيذي</h1>
+            <span class="badge bg-danger">سري للغاية - للإدارة العليا فقط</span>
+        </div>
+        <!-- Filter Bar -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-filter me-2"></i>تصفية البيانات
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <label class="small font-weight-bold">الفرع</label>
+                        <select id="filter-branch" class="form-control form-control-sm">
+                            <option value="all">كل الفروع</option>
+                            {% for branch in branches %}<option value="{{ branch.id }}">{{ branch.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="small font-weight-bold">مندوب المبيعات</label>
+                        <select id="filter-salesperson" class="form-control form-control-sm">
+                            <option value="all">الكل</option>
+                            {% for sp in salespersons %}<option value="{{ sp.id }}">{{ sp.username }}</option>{% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-2 mb-2">
+                        <label class="small font-weight-bold">من تاريخ</label>
+                        <input type="date"
+                               id="filter-date-from"
+                               class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label class="small font-weight-bold">إلى تاريخ</label>
+                        <input type="date" id="filter-date-to" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <label class="small font-weight-bold">مقارنة بـ</label>
+                        <select id="filter-compare" class="form-control form-control-sm">
+                            <option value="period" selected>الفترة السابقة</option>
+                            <option value="year">العام السابق (نفس الفترة)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-2 d-flex align-items-end">
+                        <div class="btn-group w-100" role="group">
+                            <button id="btn-apply-filters" class="btn btn-primary btn-sm">
+                                <i class="fas fa-search me-1"></i> تطبيق
+                            </button>
+                            <button id="btn-clear-filters" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-eraser me-1"></i> مسح
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ROW 1: Financial Overview (4 Cards) -->
+        <div class="row">
+            <!-- 1. Total Revenue -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">إجمالي المبيعات (Booking)</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="card-revenue">0.00 {{ currency_symbol }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="h5 mb-0 font-weight-bold text-gray-800"
+                                     id="card-revenue-trend">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 2. Net Income -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">صافي الدخل (محصل)</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="card-net-income">0.00 {{ currency_symbol }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 3. Credit (Overpayments) -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">مدفوعات زائدة (Credit)</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="card-credit">0.00 {{ currency_symbol }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-wallet fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 4. Outstanding Debt (Red) -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-danger shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">الديون المستحقة</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="card-debt">0.00 {{ currency_symbol }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-hand-holding-usd fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ROW 2: Staff Performance & Efficiency -->
+        <div class="row">
+            <!-- Top Performer 1 -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-bottom-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">الموظف الأفضل أداءً (1)</div>
+                        <div id="top-performer-1" class="text-center">
+                            <div class="h5 font-weight-bold text-gray-800 name">--</div>
+                            <div class="text-xs text-success font-weight-bold revenue">0 {{ currency_symbol }}</div>
+                            <div class="mt-2 small text-gray-600 stats">
+                                الطلبات: <span class="count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Top Performer 2 -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-bottom-secondary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">المركز الثاني</div>
+                        <div id="top-performer-2" class="text-center">
+                            <div class="h5 font-weight-bold text-gray-800 name">--</div>
+                            <div class="text-xs text-success font-weight-bold revenue">0 {{ currency_symbol }}</div>
+                            <div class="mt-2 small text-gray-600 stats">
+                                الطلبات: <span class="count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Top Performer 3 -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-bottom-secondary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">المركز الثالث</div>
+                        <div id="top-performer-3" class="text-center">
+                            <div class="h5 font-weight-bold text-gray-800 name">--</div>
+                            <div class="text-xs text-success font-weight-bold revenue">0 {{ currency_symbol }}</div>
+                            <div class="mt-2 small text-gray-600 stats">
+                                الطلبات: <span class="count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Payment Efficiency -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">كفاءة السداد (خلال 3 أيام)</div>
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col-auto">
+                                        <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800"
+                                             id="card-efficiency">0%</div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="progress progress-sm mr-2">
+                                            <div class="progress-bar bg-success"
+                                                 role="progressbar"
+                                                 style="width: 0%"
+                                                 aria-valuenow="0"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100"
+                                                 id="progress-efficiency"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-2 small text-gray-600">
+                                    <div title="عدد الطلبات المغلقة خلال 3 أيام">
+                                        <i class="fas fa-check-circle text-success"></i> إغلاق سريع: <span id="card-fast-closures">0</span>
+                                    </div>
+                                    <div title="عدد الطلبات التي بها ديون متبقية">
+                                        <i class="fas fa-hourglass-half text-warning"></i> ديون متبقية: <span id="card-remaining-debtors">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Charts Row -->
+            <div class="row">
+                <!-- Revenue Forecast -->
+                <div class="col-xl-8 col-lg-7">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                            <h6 class="m-0 font-weight-bold text-primary">توقعات الإيرادات (3 أشهر)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-area">
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Inventory Demand -->
+                <div class="col-xl-4 col-lg-5">
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                            <h6 class="m-0 font-weight-bold text-primary">أكثر المنتجات طلباً (قص)</h6>
+                            <div class="dropdown no-arrow">
+                                <button class="btn btn-sm btn-outline-primary dropdown-toggle"
+                                        type="button"
+                                        id="warehouseDropdown"
+                                        data-toggle="dropdown"
+                                        aria-haspopup="true"
+                                        aria-expanded="false">
+                                    <span id="warehouse-filter-label">كل المخازن (الافتراضي)</span>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in p-2"
+                                     aria-labelledby="warehouseDropdown"
+                                     style="width: 250px;
+                                            max-height: 300px;
+                                            overflow-y: auto">
+                                    <div class="custom-control custom-checkbox mb-2">
+                                        <input type="checkbox"
+                                               class="custom-control-input warehouse-check-all"
+                                               id="wh-all"
+                                               value="all"
+                                               checked>
+                                        <label class="custom-control-label font-weight-bold" for="wh-all">الكل</label>
+                                    </div>
+                                    <div class="dropdown-divider"></div>
+                                    {% for w in warehouses %}
+                                        <div class="custom-control custom-checkbox mb-1">
+                                            <input type="checkbox"
+                                                   class="custom-control-input warehouse-check"
+                                                   id="wh-{{ w.id }}"
+                                                   value="{{ w.id }}">
+                                            <label class="custom-control-label small" for="wh-{{ w.id }}">{{ w.name }}</label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="inventory-list"
+                                 class="list-group list-group-flush list-group-flush-sm small"
+                                 style="max-height: 320px;
+                                        overflow-y: auto">
+                                <div class="text-center py-3 text-muted">جاري التحميل...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endblock %}
+    {% block extra_js %}
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+        <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const currencySymbol = "{{ currency_symbol }}"; // Define global currency symbol
+        let revenueChart = null;
+        let inventoryChart = null;
+
+        function formatCurrency(val) {
+             return parseFloat(val || 0).toLocaleString('en-US') + ' ' + currencySymbol;
+        }
+
+        // --- Functions to Fetch Data ---
+        
+        function getFilterParams() {
+            const params = new URLSearchParams();
+            const branch = document.getElementById('filter-branch').value;
+            const salesperson = document.getElementById('filter-salesperson').value;
+            const dateFrom = document.getElementById('filter-date-from').value;
+            const dateTo = document.getElementById('filter-date-to').value;
+            const compareMode = document.getElementById('filter-compare').value;
+
+            if(branch !== 'all') params.append('branch_id', branch);
+            if(salesperson !== 'all') params.append('salesperson_id', salesperson);
+            if(dateFrom) params.append('date_from', dateFrom);
+            if(dateTo) params.append('date_to', dateTo);
+            if(dateTo) params.append('date_to', dateTo);
+            params.append('compare_mode', compareMode);
+
+            // Warehouse specific filter (Multi-Select)
+            const allChecked = document.getElementById('wh-all').checked;
+            if(!allChecked) {
+                const checkedBoxes = document.querySelectorAll('.warehouse-check:checked');
+                checkedBoxes.forEach(box => {
+                    params.append('warehouse_id', box.value);
+                });
+            }
+            
+            // Add cache buster
+            params.append('v', new Date().getTime());
+            
+            return params;
+        }
+
+        function updateDashboard() {
+            const params = getFilterParams();
+            const queryString = params.toString();
+
+            // 1. Revenue API
+            fetch(`{% url 'board_dashboard:api_revenue' %}?${queryString}`)
+                .then(r => r.json())
+                .then(data => {
+                    // Updating Revenue
+                    if(document.getElementById('card-revenue')) {
+                        document.getElementById('card-revenue').innerHTML = `
+                            ${(data.current_revenue || 0).toLocaleString()} <small>${currencySymbol}</small>
+                        `;
+                    }
+                    if(document.getElementById('card-revenue-trend')) {
+                         document.getElementById('card-revenue-trend').innerHTML = `
+                            <span class="d-block small ${data.growth_rate >= 0 ? 'text-success' : 'text-danger'}">
+                                ${data.growth_rate}% ${data.growth_rate >= 0 ? '▲' : '▼'}
+                            </span>
+                        `;
+                    }
+                    
+                    // Updating Net Income
+                    if(document.getElementById('card-net-income')) {
+                        document.getElementById('card-net-income').innerHTML = `
+                            ${(data.net_income || 0).toLocaleString()} <small>${currencySymbol}</small>
+                        `;
+                    }
+
+                    // Updating Credit
+                    if(document.getElementById('card-credit')) {
+                        document.getElementById('card-credit').innerHTML = `
+                            ${(data.total_credit || 0).toLocaleString()} <small>${currencySymbol}</small>
+                        `;
+                    }
+                    
+                    // Advanced Stock/EKG Chart
+                    const ctx = document.getElementById('revenueChart').getContext('2d');
+                    if (revenueChart) revenueChart.destroy();
+
+                    // Create Gradient
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                    gradient.addColorStop(0, 'rgba(78, 115, 223, 0.5)'); // Top color
+                    gradient.addColorStop(1, 'rgba(78, 115, 223, 0.05)'); // Bottom color
+
+                    // Prepare History Data
+                    const historyLabels = data.chart_labels || [];
+                    const historyData = data.chart_values || [];
+                    
+                    // Separate Forecast Dataset (connects last history to forecast)
+                    const forecastLabels = [...historyLabels];
+                    const forecastData = new Array(historyData.length).fill(null);
+                    
+                    // Add forecast point if history exists
+                    if (historyData.length > 0) {
+                        const lastVal = historyData[historyData.length - 1];
+                        const forecastVal = data.forecast_next_month || lastVal;
+                        
+                        // Last History Point
+                        forecastData[historyData.length - 1] = lastVal;
+                        
+                        // New Forecast Point
+                        forecastLabels.push("توقعات");
+                        forecastData.push(forecastVal);
+                    }
+
+                    revenueChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: forecastLabels.length > historyLabels.length ? forecastLabels : historyLabels,
+                            datasets: [
+                                {
+                                    label: "الإيرادات التاريخية",
+                                    data: historyData,
+                                    borderColor: "#4e73df",
+                                    backgroundColor: gradient,
+                                    pointRadius: 2,
+                                    pointHoverRadius: 6,
+                                    lineTension: 0.4, // EKG Flow
+                                    fill: true,
+                                    borderWidth: 2
+                                },
+                                {
+                                    label: "التوقعات",
+                                    data: forecastData,
+                                    borderColor: "#1cc88a",
+                                    borderDash: [5, 5], // Dashed line for forecast
+                                    pointRadius: 4,
+                                    pointBackgroundColor: "#1cc88a",
+                                    fill: false,
+                                    lineTension: 0.4
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                            plugins: {
+                                zoom: {
+                                    zoom: {
+                                        wheel: { enabled: true },
+                                        pinch: { enabled: true },
+                                        mode: 'x',
+                                    },
+                                    pan: {
+                                        enabled: true,
+                                        mode: 'x',
+                                    }
+                                },
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { maxTicksLimit: 12 }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { borderDash: [2, 2] }
+                                }
+                            }
+                        }
+                    });
+                });
+
+            // 2. Inventory API
+            fetch(`{% url 'board_dashboard:api_inventory' %}?${queryString}`)
+                .then(r => r.json())
+                .then(data => {
+                    const listEl = document.getElementById('inventory-list');
+                    if(listEl) {
+                        if (data.product_demand && data.product_demand.length > 0) {
+                            let html = '';
+                            data.product_demand.forEach(item => {
+                                const pName = item.product__name || "غير محدد";
+                                const total = parseFloat(item.total || 0).toLocaleString();
+                                
+                                html += `
+                                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                                    <span class="font-weight-bold text-gray-800">${pName}</span>
+                                    <span class="badge badge-primary badge-pill">${total} م</span>
+                                </div>`;
+                            });
+                            listEl.innerHTML = html;
+                        } else {
+                            listEl.innerHTML = '<div class="text-center py-3 text-muted small">لا توجد بيانات</div>';
+                        }
+                    }
+                });
+
+            // 3. Staff API
+            fetch(`{% url 'board_dashboard:api_staff' %}?${queryString}`)
+                .then(r => r.json())
+                .then(data => {
+                    // Reset all cards first
+                     for (let i = 1; i <= 3; i++) {
+                         const cardId = `#top-performer-${i}`;
+                         const card = document.querySelector(cardId);
+                         if(card) {
+                             card.querySelector('.name').innerText = "--";
+                             card.querySelector('.revenue').innerText = "";
+                             card.querySelector('.stats').innerHTML = "";
+                         }
+                     }
+
+                    // ranking -> leaderboard
+                    if(data.leaderboard && data.leaderboard.length > 0) {
+                        const performers = data.leaderboard; // API key is leaderboard
+                        
+                        for (let i = 0; i < 3; i++) {
+                            const p = performers[i];
+                            const cardId = `#top-performer-${i+1}`;
+                            const card = document.querySelector(cardId);
+                            
+                            if (card && p) {
+                                card.querySelector('.name').innerText = p.username;
+                                card.querySelector('.revenue').innerText = formatCurrency(p.score);
+                                
+                                let detailsHtml = `الطلبات: <span class="count">${p.volume}</span>`;
+                                // Show breakdown only for the first one for now, or simplistic for all
+                                if (p.retail_breakdown) {
+                                    let parts = [];
+                                    for (const [k, v] of Object.entries(p.retail_breakdown)) {
+                                        parts.push(`${k}: ${v}`);
+                                    }
+                                    if(parts.length > 0) {
+                                         detailsHtml += `<br><span class="text-xs">${parts.join(', ')}</span>`
+                                    }
+                                }
+                                card.querySelector('.stats').innerHTML = detailsHtml;
+                            }
+                        }
+                    }
+                });
+                
+            // 4. Finance API
+            fetch(`{% url 'board_dashboard:api_finance' %}?${queryString}`)
+                .then(r => r.json())
+                .then(data => {
+                    // Debt (Red Card)
+                    document.getElementById('card-debt').innerHTML = `${(data.total_outstanding_debt || 0).toLocaleString()} <small>${currencySymbol}</small>`;
+                    
+                    // Efficiency Card
+                    const eff = data.efficiency_rate || 0;
+                    document.getElementById('card-efficiency').innerText = `${eff}%`;
+                    const pBar = document.getElementById('progress-efficiency');
+                    if(pBar) {
+                         pBar.style.width = `${eff}%`;
+                         pBar.setAttribute('aria-valuenow', eff);
+                    }
+                    
+                    // Detailed Efficiency Check
+                    if(document.getElementById('card-fast-closures')) {
+                        document.getElementById('card-fast-closures').innerText = data.fast_closures_count || 0;
+                    }
+                    if(document.getElementById('card-remaining-debtors')) {
+                        document.getElementById('card-remaining-debtors').innerText = data.remaining_debtors_count || 0;
+                    }
+                });
+        }
+
+        // Initialize Dates
+        const today = new Date();
+        const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 25);
+        const formatDate = (d) => d.toISOString().split('T')[0];
+        
+        const dateFromInput = document.getElementById('filter-date-from');
+        const dateToInput = document.getElementById('filter-date-to');
+        
+        // Debugging Date Inputs
+        console.log("Date Inputs:", dateFromInput, dateToInput);
+
+        if (dateFromInput && !dateFromInput.value) dateFromInput.value = formatDate(prevMonth);
+        if (dateToInput && !dateToInput.value) dateToInput.value = formatDate(today);
+
+        // Bind Apply Button
+        const applyBtn = document.getElementById('btn-apply-filters');
+        if(applyBtn) applyBtn.addEventListener('click', updateDashboard);
+        
+        // Bind Clear Button
+        const clearBtn = document.getElementById('btn-clear-filters');
+        if(clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                document.getElementById('filter-branch').value = 'all';
+                document.getElementById('filter-salesperson').value = 'all';
+                document.getElementById('filter-date-from').value = '';
+                document.getElementById('filter-date-to').value = '';
+                document.getElementById('filter-compare').value = 'period';
+                updateDashboard();
+            });
+        }
+        
+        
+        
+        // Bind Warehouse Filter Logic
+        const whCheckAll = document.getElementById('wh-all');
+        const whChecks = document.querySelectorAll('.warehouse-check');
+        const whLabel = document.getElementById('warehouse-filter-label');
+
+        function updateWarehouseLabel() {
+            if(whCheckAll.checked) {
+                whLabel.innerText = "كل المخازن (الافتراضي)";
+            } else {
+                const count = document.querySelectorAll('.warehouse-check:checked').length;
+                whLabel.innerText = count > 0 ? `${count} مخازن محددة` : "بحث مخصص";
+            }
+        }
+
+        if(whCheckAll) {
+            whCheckAll.addEventListener('change', function() {
+                if(this.checked) {
+                    whChecks.forEach(c => c.checked = false);
+                    updateDashboard();
+                    updateWarehouseLabel();
+                }
+            });
+        }
+        
+        whChecks.forEach(chk => {
+            chk.addEventListener('change', function() {
+                if(this.checked) {
+                    whCheckAll.checked = false;
+                }
+                // If all unchecked, check All back? Optional.
+                if(document.querySelectorAll('.warehouse-check:checked').length === 0) {
+                     whCheckAll.checked = true;
+                }
+                updateDashboard();
+                updateWarehouseLabel();
+            });
+        });
+
+        // Initial dashboard update
+        console.log("Initializing Dashboard v3...");
+        updateDashboard();
+    });
+        </script>
+    {% endblock %}
