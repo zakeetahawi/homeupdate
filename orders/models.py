@@ -69,6 +69,7 @@ class OrderInvoiceImage(SoftDeleteMixin, models.Model):
 
 
 class Order(SoftDeleteMixin, models.Model):
+
     STATUS_CHOICES = [
         ("normal", "عادي"),
         ("vip", "VIP"),

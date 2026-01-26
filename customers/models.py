@@ -416,7 +416,6 @@ class CustomerResponsible(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
-
 class Customer(SoftDeleteMixin, models.Model):
     STATUS_CHOICES = [
         ("active", _("نشط")),

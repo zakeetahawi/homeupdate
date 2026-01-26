@@ -199,54 +199,7 @@ LOGGING = {
     },
 }
 
-# تسجيل الاستعلامات البطيئة فقط (أكبر من 1000ms) لتقليل الضغط
-import time
-
-from django.db import connection
-from django.utils.deprecation import MiddlewareMixin
-
-
-class QueryPerformanceLoggingMiddleware(MiddlewareMixin):
-    def process_view(self, request, view_func, view_args, view_kwargs):
-        request._start_time = time.time()
-        # ✅ إصلاح أمني: تفعيل queries logging فقط في DEBUG
-        if settings.DEBUG:
-            from django.conf import settings
-            from django.db import connection, reset_queries
-            # تفعيل queries logging فقط في التطوير
-            connection.force_debug_cursor = True
-            reset_queries()
-            request._queries_before = len(connection.queries)
-
-    def process_response(self, request, response):
-        # حساب الوقت المستغرق
-        total_time = (time.time() - getattr(request, "_start_time", time.time())) * 1000
-
-        # تسجيل الصفحات البطيئة (أكثر من ثانية)
-        if total_time > 1000:
-            logger = logging.getLogger("performance")
-            logger.warning(
-                f"SLOW_PAGE: {request.path} | {int(total_time)}ms | user={getattr(request, 'user', None)}"
-            )
-
-        # ✅ تسجيل الاستعلامات البطيئة فقط في DEBUG
-        if settings.DEBUG and hasattr(request, '_queries_before'):
-            from django.db import connection
-            queries_count = len(connection.queries) - request._queries_before
-            
-            # تسجيل الاستعلامات البطيئة (أكثر من 100ms)
-            if hasattr(connection, "queries") and connection.queries:
-                slow_queries_logger = logging.getLogger("websocket_blocker")
-                for query in connection.queries[request._queries_before:]:
-                    if "time" in query and float(query["time"]) > 0.1:  # 100ms
-                        slow_queries_logger.warning(
-                            f"SLOW_QUERY: {query['time']}s | {query['sql'][:200]}..."
-                        )
-            
-            # إعادة ضبط force_debug_cursor
-            connection.force_debug_cursor = False
-
-        return response
+# تم نقل QueryPerformanceLoggingMiddleware إلى crm/middleware.py
 
 
 # أضف هذا الميدل وير في أعلى قائمة MIDDLEWARE
