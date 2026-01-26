@@ -260,6 +260,7 @@ class ManufacturingOrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
                     # تحديث كل عنصر على حدة لضمان تطبيق الإشارات والمنطق المخصص
                     for order in queryset.select_related("order"):
                         order.status = new_status
+                        order._changed_by = request.user
                         order.save()
                         count += 1
 
@@ -313,72 +314,117 @@ class ManufacturingOrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
             },
         )
 
+    def save_model(self, request, obj, form, change):
+        """تسجيل المستخدم الذي قام بالتغيير لاستخدامه في الإشارات"""
+        obj._changed_by = request.user
+        super().save_model(request, obj, form, change)
+
     bulk_update_status.short_description = "تبديل حالة الأوامر المحددة جماعياً"
 
     # إجراءات سريعة لتحديث الحالة
     def mark_pending_approval(self, request, queryset):
         """تغيير الحالة إلى قيد الموافقة"""
-        updated = queryset.update(status="pending_approval")
+        count = 0
+        for order in queryset:
+            order.status = "pending_approval"
+            order._changed_by = request.user
+            order.save()
+            count += 1
         self.message_user(
-            request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "قيد الموافقة"'
+            request, f'✅ تم تغيير حالة {count} أمر تصنيع إلى "قيد الموافقة"'
         )
 
     mark_pending_approval.short_description = "تغيير الحالة إلى قيد الموافقة"
 
     def mark_pending(self, request, queryset):
         """تغيير الحالة إلى قيد الانتظار"""
-        updated = queryset.update(status="pending")
+        count = 0
+        for order in queryset:
+            order.status = "pending"
+            order._changed_by = request.user
+            order.save()
+            count += 1
         self.message_user(
-            request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "قيد الانتظار"'
+            request, f'✅ تم تغيير حالة {count} أمر تصنيع إلى "قيد الانتظار"'
         )
 
     mark_pending.short_description = "تغيير الحالة إلى قيد الانتظار"
 
     def mark_in_progress(self, request, queryset):
         """تغيير الحالة إلى قيد التصنيع"""
-        updated = queryset.update(status="in_progress")
+        count = 0
+        for order in queryset:
+            order.status = "in_progress"
+            order._changed_by = request.user
+            order.save()
+            count += 1
         self.message_user(
-            request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "قيد التصنيع"'
+            request, f'✅ تم تغيير حالة {count} أمر تصنيع إلى "قيد التصنيع"'
         )
 
     mark_in_progress.short_description = "تغيير الحالة إلى قيد التصنيع"
 
     def mark_ready_install(self, request, queryset):
         """تغيير الحالة إلى جاهز للتركيب"""
-        updated = queryset.update(status="ready_install")
+        count = 0
+        for order in queryset:
+            order.status = "ready_install"
+            order._changed_by = request.user
+            order.save()
+            count += 1
         self.message_user(
-            request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "جاهز للتركيب"'
+            request, f'✅ تم تغيير حالة {count} أمر تصنيع إلى "جاهز للتركيب"'
         )
 
     mark_ready_install.short_description = "تغيير الحالة إلى جاهز للتركيب"
 
     def mark_completed(self, request, queryset):
         """تغيير الحالة إلى مكتمل"""
-        updated = queryset.update(status="completed")
-        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "مكتمل"')
+        count = 0
+        for order in queryset:
+            order.status = "completed"
+            order._changed_by = request.user
+            order.save()
+            count += 1
+        self.message_user(request, f'✅ تم تغيير حالة {count} أمر تصنيع إلى "مكتمل"')
 
     mark_completed.short_description = "تغيير الحالة إلى مكتمل"
 
     def mark_delivered(self, request, queryset):
         """تغيير الحالة إلى تم التسليم"""
-        updated = queryset.update(status="delivered")
+        count = 0
+        for order in queryset:
+            order.status = "delivered"
+            order._changed_by = request.user
+            order.save()
+            count += 1
         self.message_user(
-            request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "تم التسليم"'
+            request, f'✅ تم تغيير حالة {count} أمر تصنيع إلى "تم التسليم"'
         )
 
     mark_delivered.short_description = "تغيير الحالة إلى تم التسليم"
 
     def mark_rejected(self, request, queryset):
         """تغيير الحالة إلى مرفوض"""
-        updated = queryset.update(status="rejected")
-        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "مرفوض"')
+        count = 0
+        for order in queryset:
+            order.status = "rejected"
+            order._changed_by = request.user
+            order.save()
+            count += 1
+        self.message_user(request, f'✅ تم تغيير حالة {count} أمر تصنيع إلى "مرفوض"')
 
     mark_rejected.short_description = "تغيير الحالة إلى مرفوض"
 
     def mark_cancelled(self, request, queryset):
         """تغيير الحالة إلى ملغي"""
-        updated = queryset.update(status="cancelled")
-        self.message_user(request, f'✅ تم تغيير حالة {updated} أمر تصنيع إلى "ملغي"')
+        count = 0
+        for order in queryset:
+            order.status = "cancelled"
+            order._changed_by = request.user
+            order.save()
+            count += 1
+        self.message_user(request, f'✅ تم تغيير حالة {count} أمر تصنيع إلى "ملغي"')
 
     mark_cancelled.short_description = "تغيير الحالة إلى ملغي"
 
