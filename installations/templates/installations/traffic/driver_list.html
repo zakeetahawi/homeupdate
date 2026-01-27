@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 text-gray-800">{{ title }}</h1>
+                <p class="text-muted mb-0">إدارة السائقين وتتبع الحالة</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'installations:traffic_dashboard' %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-arrow-right"></i> لوحة الحركة
+                </a>
+                <a href="{% url 'installations:driver_create' %}"
+                   class="btn btn-success">
+                    <i class="fas fa-plus"></i> إضافة سائق جديد
+                </a>
+            </div>
+        </div>
+        <!-- Filters -->
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">بحث</label>
+                        <input type="text"
+                               name="q"
+                               class="form-control"
+                               placeholder="الاسم، الهاتف، رخصة..."
+                               value="{{ search_query }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">الحالة</label>
+                        <select name="status" class="form-select">
+                            <option value="">الكل</option>
+                            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>نشط</option>
+                            <option value="inactive"
+                                    {% if status_filter == 'inactive' %}selected{% endif %}>غير نشط</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter"></i> تصفية
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{% url 'installations:driver_list' %}"
+                           class="btn btn-outline-secondary w-100">إعادة تعيين</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- Drivers Table -->
+        <div class="card shadow">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>الاسم</th>
+                                <th>رقم الهاتف</th>
+                                <th>رقم الرخصة</th>
+                                <th>المركبة الحالية</th>
+                                <th>مهام اليوم</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for driver in drivers %}
+                                <tr>
+                                    <td class="fw-bold">
+                                        <i class="fas fa-user-tie text-secondary me-2"></i>{{ driver.name }}
+                                    </td>
+                                    <td>{{ driver.phone|default:"-" }}</td>
+                                    <td>{{ driver.license_number|default:"-" }}</td>
+                                    <td>
+                                        {% if driver.vehicle %}
+                                            <span class="badge bg-info text-dark">
+                                                <i class="fas fa-truck me-1"></i>{{ driver.vehicle.name }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted small">غير مخصص</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if driver.daily_tasks > 0 %}
+                                            <span class="badge bg-warning text-dark">{{ driver.daily_tasks }} مهام</span>
+                                        {% else %}
+                                            <span class="badge bg-success">متاح</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if driver.is_active %}
+                                            <span class="badge bg-success">نشط</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">غير نشط</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'installations:driver_update' driver.id %}"
+                                               class="btn btn-outline-primary"
+                                               title="تعديل">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form action="{% url 'installations:driver_delete' driver.id %}"
+                                                  method="post"
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('هل أنت متأكد من حذف هذا السائق؟');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-outline-danger" title="حذف">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">
+                                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                        لا يوجد سائقين مطابقين للبحث
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

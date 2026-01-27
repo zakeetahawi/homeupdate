@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-1">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'installations:traffic_dashboard' %}">لوحة الحركة</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'installations:vehicle_list' %}">المركبات</a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ vehicle.name }}</li>
+                    </ol>
+                </nav>
+                <h1 class="h3 text-gray-800">{{ vehicle.name }}</h1>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'installations:vehicle_update' vehicle.id %}"
+                   class="btn btn-primary">
+                    <i class="fas fa-edit"></i> تعديل البيانات
+                </a>
+                <a href="{% url 'installations:vehicle_list' %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-arrow-right"></i> عودة
+                </a>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Vehicle Info Card -->
+            <div class="col-xl-4 col-lg-5">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3 bg-light">
+                        <h6 class="m-0 font-weight-bold text-primary">معلومات المركبة</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-4">
+                            <div class="fs-1 text-primary mb-2">
+                                {% if vehicle.vehicle_type == 'truck' %}
+                                    <i class="fas fa-truck"></i>
+                                {% elif vehicle.vehicle_type == 'van' %}
+                                    <i class="fas fa-shuttle-van"></i>
+                                {% elif vehicle.vehicle_type == 'car' %}
+                                    <i class="fas fa-car"></i>
+                                {% elif vehicle.vehicle_type == 'motorcycle' %}
+                                    <i class="fas fa-motorcycle"></i>
+                                {% else %}
+                                    <i class="fas fa-truck-monster"></i>
+                                {% endif %}
+                            </div>
+                            <h5 class="fw-bold mb-0">{{ vehicle.name }}</h5>
+                            <p class="text-muted small">{{ vehicle.plate_number }}</p>
+                            {% if vehicle.status == 'active' %}
+                                <span class="badge bg-success">نشطة / شاغرة</span>
+                            {% elif vehicle.status == 'maintenance' %}
+                                <span class="badge bg-warning text-dark">صيانة</span>
+                            {% else %}
+                                <span class="badge bg-danger">غير نشطة</span>
+                            {% endif %}
+                        </div>
+                        <ul class="list-group list-group-flush small">
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span class="text-muted">الموديل:</span>
+                                <span class="fw-bold">{{ vehicle.model|default:"-" }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span class="text-muted">رقم الشاصي:</span>
+                                <span class="fw-bold">{{ vehicle.chassis_number|default:"-" }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span class="text-muted">نوع المركبة:</span>
+                                <span class="fw-bold">{{ vehicle.get_vehicle_type_display }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span class="text-muted">السائق الحالي:</span>
+                                <span class="fw-bold text-primary">
+                                    {% if vehicle.current_driver %}
+                                        <i class="fas fa-user-tie me-1"></i> {{ vehicle.current_driver.name }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </span>
+                            </li>
+                            {% if vehicle.license_expiry %}
+                                <li class="list-group-item d-flex justify-content-between px-0">
+                                    <span class="text-muted">انتهاء الرخصة:</span>
+                                    <span class="fw-bold {% if vehicle.license_expiry < today %}text-danger{% endif %}">{{ vehicle.license_expiry }}</span>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <!-- Mission History Card -->
+            <div class="col-xl-8 col-lg-7">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3 bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 font-weight-bold text-primary">سجل الحركة والمهام</h6>
+                        <span class="badge bg-primary rounded-pill">{{ missions.count }} مهمة</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 small">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>المهمة</th>
+                                        <th>السائق</th>
+                                        <th>البداية - النهاية</th>
+                                        <th>الحالة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for mission in missions %}
+                                        <tr>
+                                            <td class="text-nowrap fw-bold">{{ mission.date|date:"Y-m-d" }}</td>
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <span class="fw-bold">
+                                                        {% if mission.mission_type == 'installation' %}
+                                                            <i class="fas fa-tools text-primary me-1"></i> تركيب
+                                                        {% elif mission.mission_type == 'custom' %}
+                                                            <i class="fas fa-map-marker-alt text-purple me-1"></i> مهمة خاصة
+                                                        {% else %}
+                                                            <i class="fas fa-wrench text-warning me-1"></i> صيانة
+                                                        {% endif %}
+                                                    </span>
+                                                    {% if mission.installation %}
+                                                        <a href="{% url 'installations:installation_detail' mission.installation.id %}"
+                                                           class="text-decoration-none x-small">
+                                                            {{ mission.installation.client_name|truncatechars:20 }}
+                                                        </a>
+                                                    {% else %}
+                                                        <span class="text-muted text-xs">{{ mission.description|truncatechars:30|default:"-" }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>{{ mission.driver.name|default:"-" }}</td>
+                                            <td>
+                                                <div class="text-nowrap">
+                                                    <span class="text-success"><i class="fas fa-sign-out-alt fa-rotate-180 small me-1"></i> {{ mission.start_time|time:"H:i"|default:"--" }}</span>
+                                                    <br>
+                                                    <span class="text-danger"><i class="fas fa-sign-in-alt small me-1"></i> {{ mission.end_time|time:"H:i"|default:"--" }}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if mission.status == 'completed' %}
+                                                    <span class="badge bg-secondary">مكتملة</span>
+                                                {% elif mission.status == 'active' %}
+                                                    <span class="badge bg-success">نشطة</span>
+                                                {% elif mission.status == 'pending' %}
+                                                    <span class="badge bg-warning text-dark">معلقة</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">ملغاة</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4 text-muted">لا يوجد سجل حركات لهذه المركبة</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <style>
+    .x-small { font-size: 0.75rem; }
+    .text-xs { font-size: 0.7rem; }
+    </style>
+{% endblock %}

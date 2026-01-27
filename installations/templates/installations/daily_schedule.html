@@ -429,12 +429,10 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {% if installation.team %}
-                                                <div>
-                                                    <strong>{{ installation.team.name }}</strong>
-                                                    {% for technician in installation.team.technicians.all %}
-                                                        <br>
-                                                        <small class="text-muted">فني: {{ technician.name }}</small>
+                                            {% if installation.technicians.exists %}
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    {% for tech in installation.technicians.all %}
+                                                        <span class="badge bg-light text-dark border">{{ tech.name }}</span>
                                                     {% endfor %}
                                                 </div>
                                             {% else %}

@@ -236,6 +236,7 @@ class CustomUserAdmin(UserAdmin):
                     "is_factory_receiver",
                     "is_inspection_manager",
                     "is_installation_manager",
+                    "is_traffic_manager",
                     "managed_branches",
                     "can_export",
                     "can_edit_price",

@@ -84,7 +84,19 @@ ROLE_HIERARCHY = {
         "permissions": [
             "view_all_installations",
             "manage_installations",
+            "manage_installations",
             "view_all_manufacturing",
+        ],
+    },
+    "traffic_manager": {
+        "level": 3,
+        "display": "مدير حركة",
+        "inherits_from": [],
+        "permissions": [
+            "manage_drivers",
+            "manage_vehicles",
+            "view_traffic_dashboard",
+            "view_all_installations",
         ],
     },
     "warehouse_staff": {
@@ -154,6 +166,7 @@ class User(AbstractUser):
     is_installation_manager = models.BooleanField(
         default=False, verbose_name=_("مسؤول تركيبات")
     )
+    is_traffic_manager = models.BooleanField(default=False, verbose_name=_("مدير حركة"))
     is_warehouse_staff = models.BooleanField(
         default=False, verbose_name=_("موظف مستودع")
     )
@@ -224,6 +237,7 @@ class User(AbstractUser):
             self.is_factory_receiver,
             self.is_inspection_manager,
             self.is_installation_manager,
+            self.is_traffic_manager,
             self.is_warehouse_staff,
         ]
 
@@ -258,6 +272,8 @@ class User(AbstractUser):
             return "inspection_manager"
         elif self.is_installation_manager:
             return "installation_manager"
+        elif self.is_traffic_manager:
+            return "traffic_manager"
         elif self.is_warehouse_staff:
             return "warehouse_staff"
         elif self.is_salesperson:

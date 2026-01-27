@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import traffic_views, views
 
 app_name = "installations"
 
@@ -79,6 +79,11 @@ urlpatterns = [
         "installation/<int:installation_id>/schedule/",
         views.schedule_installation,
         name="schedule_installation",
+    ),
+    path(
+        "installation/<int:installation_id>/assign-technicians/",
+        views.assign_technicians,
+        name="assign_technicians",
     ),
     path(
         "quick-schedule/<int:order_id>/",
@@ -238,4 +243,66 @@ urlpatterns = [
     ),
     # جدول المديونية
     path("debt-orders/", views.debt_orders_list, name="debt_orders_list"),
+    # إدارة الحركة
+    path("traffic/", traffic_views.traffic_dashboard, name="traffic_dashboard"),
+    # Mission Management
+    path("traffic/missions/", traffic_views.mission_list, name="mission_list"),
+    path(
+        "traffic/mission/<int:pk>/complete/",
+        traffic_views.complete_mission,
+        name="complete_mission",
+    ),
+    # Driver Management
+    path("traffic/drivers/", traffic_views.driver_list, name="driver_list"),
+    path("traffic/driver/create/", traffic_views.driver_create, name="driver_create"),
+    path(
+        "traffic/driver/<int:pk>/update/",
+        traffic_views.driver_update,
+        name="driver_update",
+    ),
+    path(
+        "traffic/driver/<int:pk>/delete/",
+        traffic_views.driver_delete,
+        name="driver_delete",
+    ),
+    # إدارة المركبات
+    # Vehicle Management
+    path("traffic/vehicles/", traffic_views.vehicle_list, name="vehicle_list"),
+    path(
+        "traffic/vehicle/<int:pk>/", traffic_views.vehicle_detail, name="vehicle_detail"
+    ),
+    path(
+        "traffic/vehicle/create/", traffic_views.vehicle_create, name="vehicle_create"
+    ),
+    path(
+        "traffic/vehicle/<int:pk>/update/",
+        traffic_views.vehicle_update,
+        name="vehicle_update",
+    ),
+    path(
+        "traffic/vehicle/<int:pk>/delete/",
+        traffic_views.vehicle_delete,
+        name="vehicle_delete",
+    ),
+    # العمليات اليومية
+    path(
+        "traffic/assign-driver/<int:installation_id>/",
+        traffic_views.assign_driver_to_installation,
+        name="assign_driver_to_installation",
+    ),
+    path(
+        "traffic/create-mission/",
+        traffic_views.create_custom_mission,
+        name="create_custom_mission",
+    ),
+    path(
+        "traffic/request-vehicle/",
+        traffic_views.request_vehicle,
+        name="request_vehicle",
+    ),
+    path(
+        "traffic/handle-request/<int:request_id>/",
+        traffic_views.handle_vehicle_request,
+        name="handle_vehicle_request",
+    ),
 ]

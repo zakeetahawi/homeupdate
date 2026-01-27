@@ -33,6 +33,7 @@ from .models import (
     ModificationRequest,
     ReceiptMemo,
     Technician,
+    Vehicle,
 )
 
 
@@ -645,6 +646,23 @@ class DriverAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     list_filter = ["is_active", "created_at"]
     search_fields = ["name", "phone", "license_number", "vehicle_number"]
     list_editable = ["is_active"]
+    ordering = ["name"]
+
+
+@admin.register(Vehicle)
+class VehicleAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
+    list_per_page = 50
+    list_display = [
+        "name",
+        "plate_number",
+        "model",
+        "vehicle_type",
+        "status",
+        "created_at",
+    ]
+    list_filter = ["status", "vehicle_type", "created_at"]
+    search_fields = ["name", "plate_number", "chassis_number", "model"]
+    list_editable = ["status"]
     ordering = ["name"]
 
 

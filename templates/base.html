@@ -409,6 +409,27 @@
                                         <i class="fas fa-list-check"></i><span class="nav-text">أوامر التقطيع المجمعة</span>
                                     </a>
                                 </li>
+                            {% elif user.is_traffic_manager %}
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'installations:traffic_dashboard' %}">
+                                        <i class="fas fa-tachometer-alt"></i><span class="nav-text">لوحة التحكم</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'installations:mission_list' %}">
+                                        <i class="fas fa-tasks"></i><span class="nav-text">المهام</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'installations:driver_list' %}">
+                                        <i class="fas fa-id-card"></i><span class="nav-text">إدارة السائقين</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{% url 'installations:vehicle_list' %}">
+                                        <i class="fas fa-truck"></i><span class="nav-text">إدارة المركبات</span>
+                                    </a>
+                                </li>
                             {% elif user.is_factory_receiver %}
                                 {# مسؤول استلام المصنع يرى رابط استلام الأقمشة ورابط أوامر التصنيع #}
                                 <li class="nav-item">
@@ -459,6 +480,15 @@
                                 <i class="fas fa-barcode"></i>
                                 <span class="d-none d-lg-inline ms-1">باركود</span>
                             </button>
+                            <!-- أيقونة إدارة الحركة -->
+                            {% if user.is_traffic_manager or user.is_superuser %}
+                                <a href="{% url 'installations:traffic_dashboard' %}"
+                                   class="btn btn-outline-light me-2"
+                                   title="إدارة الحركة">
+                                    <i class="fas fa-traffic-light"></i>
+                                    <span class="d-none d-lg-inline ms-1">إدارة الحركة</span>
+                                </a>
+                            {% endif %}
                             <!-- أيقونة التحويلات الواردة - للمستخدمين الذين يديرون مستودعات -->
                             {% if incoming_transfers_count > 0 %}
                                 <div class="dropdown me-2">
@@ -2951,6 +2981,9 @@
             }, 5000);
         }
 </script>
+<!-- مكان مخصص للمودلز (Modals) لتجنب مشاكل التداخل (z-index/stacking context) -->
+{% block modals %}
+{% endblock %}
 <!-- نافذة فحص الباركود (للمستخدمين المسجلين فقط) -->
 {% if user.is_authenticated %}
     {% include 'barcode_scanner_modal.html' %}

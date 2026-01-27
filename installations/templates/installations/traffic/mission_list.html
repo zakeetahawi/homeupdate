@@ -1,0 +1,373 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <!-- Header with Actions -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 text-gray-800">{{ title }}</h1>
+                <p class="text-muted mb-0">تتبع ومراقبة جميع مهام المركبات</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'installations:traffic_dashboard' %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-arrow-right"></i> لوحة الحركة
+                </a>
+                <!-- Optional: Link to Create Custom Mission if needed here -->
+            </div>
+        </div>
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 border-start border-primary border-4 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-uppercase text-xs font-weight-bold text-primary mb-1">إجمالي المهام</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total }}</div>
+                            </div>
+                            <div class="fs-1 text-gray-300">
+                                <i class="fas fa-tasks"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 border-start border-success border-4 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-uppercase text-xs font-weight-bold text-success mb-1">مهام نشطة</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.active }}</div>
+                            </div>
+                            <div class="fs-1 text-gray-300">
+                                <i class="fas fa-play-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 border-start border-info border-4 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-uppercase text-xs font-weight-bold text-info mb-1">مهام معلقة</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.pending }}</div>
+                            </div>
+                            <div class="fs-1 text-gray-300">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm border-0 border-start border-secondary border-4 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-uppercase text-xs font-weight-bold text-secondary mb-1">مكتملة</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.completed }}</div>
+                            </div>
+                            <div class="fs-1 text-gray-300">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Filters Section -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 bg-light">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-filter me-1"></i> تصفية متقدمة
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">التاريخ من</label>
+                        <input type="date"
+                               name="date_from"
+                               class="form-control"
+                               value="{{ filters.date_from|default:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">التاريخ إلى</label>
+                        <input type="date"
+                               name="date_to"
+                               class="form-control"
+                               value="{{ filters.date_to|default:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">السائق</label>
+                        <select name="driver" class="form-select select2">
+                            <option value="">كل السائقين</option>
+                            {% for driver in drivers %}
+                                <option value="{{ driver.id }}"
+                                        {% if filters.driver_id == driver.id %}selected{% endif %}>
+                                    {{ driver.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">مركبة</label>
+                        <select name="vehicle" class="form-select select2">
+                            <option value="">كل المركبات</option>
+                            {% for vehicle in vehicles %}
+                                <option value="{{ vehicle.id }}"
+                                        {% if filters.vehicle_id == vehicle.id %}selected{% endif %}>
+                                    {{ vehicle.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">نوع المهمة</label>
+                        <select name="type" class="form-select">
+                            <option value="">الكل</option>
+                            <option value="installation"
+                                    {% if filters.mission_type == 'installation' %}selected{% endif %}>تركيب</option>
+                            <option value="custom"
+                                    {% if filters.mission_type == 'custom' %}selected{% endif %}>مهمة خاصة</option>
+                            <option value="maintenance"
+                                    {% if filters.mission_type == 'maintenance' %}selected{% endif %}>صيانة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">الحالة</label>
+                        <select name="status" class="form-select">
+                            <option value="">الكل</option>
+                            <option value="active" {% if filters.status == 'active' %}selected{% endif %}>نشط</option>
+                            <option value="completed"
+                                    {% if filters.status == 'completed' %}selected{% endif %}>مكتمل</option>
+                            <option value="pending"
+                                    {% if filters.status == 'pending' %}selected{% endif %}>معلق</option>
+                            <option value="cancelled"
+                                    {% if filters.status == 'cancelled' %}selected{% endif %}>ملغي</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary flex-grow-1">
+                            <i class="fas fa-search"></i> بحث
+                        </button>
+                        <a href="{% url 'installations:mission_list' %}"
+                           class="btn btn-outline-secondary">
+                            <i class="fas fa-undo"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- Missions List (Cards/Table) -->
+        <div class="card shadow">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>التاريخ</th>
+                                <th>نوع المهمة</th>
+                                <th>السائق / المركبة</th>
+                                <th>التفاصيل</th>
+                                <th>وقت الإنشاء</th>
+                                <th>البدء / الانتهاء</th>
+                                <th>المدة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mission in missions %}
+                                <tr>
+                                    <td>{{ mission.id }}</td>
+                                    <td class="text-nowrap fw-bold">{{ mission.date|date:"Y-m-d" }}</td>
+                                    <td>
+                                        {% if mission.mission_type == 'installation' %}
+                                            <span class="badge bg-primary rounded-pill">تركيبات فنيّة</span>
+                                        {% elif mission.mission_type == 'custom' %}
+                                            <span class="badge bg-purple rounded-pill"
+                                                  style="background-color: #6f42c1;
+                                                         color: white">مهمة خاصة</span>
+                                        {% elif mission.mission_type == 'maintenance' %}
+                                            <span class="badge bg-warning text-dark rounded-pill">صيانة</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary rounded-pill">{{ mission.get_mission_type_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold"><i class="fas fa-user-tie text-muted me-1"></i> {{ mission.driver.name|default:"-" }}</span>
+                                            <span class="text-muted small"><i class="fas fa-truck text-muted me-1"></i> {{ mission.vehicle.name|default:"-" }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if mission.mission_type == 'installation' %}
+                                            <div class="d-flex flex-column gap-1">
+                                                {% for inst in mission.scheduled_installations.all %}
+                                                    <div class="border-bottom pb-1 mb-1">
+                                                        <a href="{% url 'installations:installation_detail' inst.id %}"
+                                                           target="_blank"
+                                                           class="text-decoration-none small d-block">
+                                                            <i class="fas fa-external-link-alt me-1"></i>
+                                                            #{{ inst.order.order_number }} - {{ inst.order.customer.name }}
+                                                        </a>
+                                                        <span class="text-xs text-muted">{{ inst.get_status_display }}</span>
+                                                    </div>
+                                                {% empty %}
+                                                    <span class="text-muted small">لا توجد تركيبات مرتبطة</span>
+                                                {% endfor %}
+                                            </div>
+                                        {% else %}
+                                            <div class="text-truncate"
+                                                 style="max-width: 250px"
+                                                 title="{{ mission.description }}">
+                                                {{ mission.description|default:"-" }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if mission.status == 'active' or mission.status == 'pending' %}
+                                            <button type="button"
+                                                    class="btn btn-sm btn-success mb-1 w-100"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#completeMissionModal"
+                                                    data-mission-id="{{ mission.id }}"
+                                                    data-mission-desc="{{ mission.description|default:mission.get_mission_type_display|truncatechars:50 }}">
+                                                <i class="fas fa-check"></i> إنهاء
+                                            </button>
+                                        {% endif %}
+                                        {% if mission.status == 'active' %}
+                                            <span class="badge bg-success w-100">نشط</span>
+                                        {% elif mission.status == 'completed' %}
+                                            <span class="badge bg-secondary w-100">مكتمل</span>
+                                        {% elif mission.status == 'pending' %}
+                                            <span class="badge bg-warning text-dark w-100">معلق</span>
+                                        {% else %}
+                                            <span class="badge bg-danger w-100">{{ mission.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted small">
+                                        {{ mission.created_at|date:"Y-m-d H:i" }}
+                                        <div class="text-xs">بواسطة: {{ mission.created_by.get_full_name|default:mission.created_by.username }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="text-xs">
+                                            <div>
+                                                <i class="fas fa-play text-success me-1"></i> {{ mission.start_time|time:"H:i"|default:"-" }}
+                                            </div>
+                                            <div>
+                                                <i class="fas fa-stop text-danger me-1"></i> {{ mission.end_time|time:"H:i"|default:"-" }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-nowrap fw-bold text-primary">{{ mission.duration_display|default:"-" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-5 text-muted">
+                                        <img src="{% static 'img/empty_state.svg' %}"
+                                             alt=""
+                                             style="max-width: 100px;
+                                                    opacity: 0.5"
+                                             class="mb-3 d-block mx-auto">
+                                        <p>لا توجد مهام مطابقة للبحث</p>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                {% if missions.has_other_pages %}
+                    <div class="card-footer py-3 d-flex justify-content-center">
+                        <nav>
+                            <ul class="pagination mb-0">
+                                {% if missions.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ missions.previous_page_number }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&driver={{ filters.driver_id }}&status={{ filters.status }}">&laquo; السابق</a>
+                                    </li>
+                                {% endif %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">صفحة {{ missions.number }} من {{ missions.paginator.num_pages }}</span>
+                                </li>
+                                {% if missions.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ missions.next_page_number }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&driver={{ filters.driver_id }}&status={{ filters.status }}">التالي &raquo;</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <!-- Modal for Completing Mission -->
+    <div class="modal fade"
+         id="completeMissionModal"
+         tabindex="-1"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" id="completeMissionForm" action="">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            إنهاء المهمة #<span id="modalMissionId"></span>
+                        </h5>
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>هل أنت متأكد من رغبتك في إنهاء هذه المهمة؟</p>
+                        <p class="text-muted small" id="modalMissionDesc"></p>
+                        <div class="mb-3">
+                            <label for="missionNotes" class="form-label">ملاحظات الإكمال (اختياري)</label>
+                            <textarea class="form-control"
+                                      id="missionNotes"
+                                      name="notes"
+                                      rows="3"
+                                      placeholder="أضف أي ملاحظات حول إنجاز المهمة هنا..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check-circle me-1"></i> تأكيد الإكمال
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var completeModal = document.getElementById('completeMissionModal');
+        completeModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var missionId = button.getAttribute('data-mission-id');
+            var missionDesc = button.getAttribute('data-mission-desc');
+            
+            var modalTitleId = completeModal.querySelector('#modalMissionId');
+            var modalDesc = completeModal.querySelector('#modalMissionDesc');
+            var form = completeModal.querySelector('#completeMissionForm');
+            
+            modalTitleId.textContent = missionId;
+            modalDesc.textContent = missionDesc;
+            
+            // Update form action with correct URL
+            form.action = "/installations/traffic/mission/" + missionId + "/complete/";
+        });
+    });
+    </script>
+{% endblock %}

@@ -99,13 +99,223 @@ class Technician(SoftDeleteMixin, models.Model):
         super().save(*args, **kwargs)
 
 
+class Vehicle(SoftDeleteMixin, models.Model):
+    """نموذج المركبات"""
+
+    name = models.CharField(_("اسم المركبة"), max_length=100)
+    plate_number = models.CharField(_("رقم اللوحة"), max_length=20, unique=True)
+    model = models.CharField(_("الموديل"), max_length=50, blank=True)
+    chassis_number = models.CharField(_("رقم الشاصي"), max_length=50, blank=True)
+    vehicle_type = models.CharField(
+        _("نوع المركبة"),
+        max_length=20,
+        choices=[
+            ("truck", _("سيارة نقل")),
+            ("van", _("فان")),
+            ("car", _("سيارة ملاكي")),
+            ("motorcycle", _("دراجة نارية")),
+            ("other", _("أخرى")),
+        ],
+        default="truck",
+    )
+    status = models.CharField(
+        _("الحالة"),
+        max_length=20,
+        choices=[
+            ("active", _("نشط")),
+            ("maintenance", _("صيانة")),
+            ("inactive", _("غير نشط")),
+        ],
+        default="active",
+    )
+    license_expiry = models.DateField(_("تاريخ انتهاء الرخصة"), null=True, blank=True)
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("مركبة")
+        verbose_name_plural = _("المركبات")
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.plate_number})"
+
+    @property
+    def current_driver(self):
+        """إرجاع السائق الحالي للمركبة"""
+        return self.drivers.filter(is_active=True).first()
+
+
+class VehicleMission(SoftDeleteMixin, models.Model):
+    """نموذج مهمة المركبة"""
+
+    MISSION_TYPES = [
+        ("installation", _("تركيب")),
+        ("custom", _("مهمة خاصة")),
+        ("maintenance", _("صيانة")),
+    ]
+
+    STATUS_CHOICES = [
+        ("pending", _("معلق")),
+        ("active", _("نشط")),
+        ("completed", _("مكتمل")),
+        ("cancelled", _("ملغي")),
+    ]
+
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("المركبة"),
+        related_name="missions",
+    )
+    driver = models.ForeignKey(
+        "Driver",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("السائق"),
+        related_name="missions",
+    )
+    mission_type = models.CharField(
+        _("نوع المهمة"), max_length=20, choices=MISSION_TYPES, default="custom"
+    )
+    installation = models.ForeignKey(
+        "InstallationSchedule",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("التركيب المرتبط (قديم)"),
+        related_name="legacy_missions",
+    )
+    description = models.TextField(_("وصف المهمة"), blank=True)
+    date = models.DateField(_("التاريخ"))
+    start_time = models.TimeField(_("وقت البدء"), null=True, blank=True)
+    end_time = models.TimeField(_("وقت الانتهاء"), null=True, blank=True)
+    status = models.CharField(
+        _("الحالة"), max_length=20, choices=STATUS_CHOICES, default="pending"
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name=_("أنشئ بواسطة"),
+        related_name="created_missions",
+    )
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("مهمة مركبة")
+        verbose_name_plural = _("مهام المركبات")
+        ordering = ["-date", "-start_time"]
+
+    def __str__(self):
+        return f"{self.get_mission_type_display()} - {self.vehicle}"
+
+    @property
+    def duration_display(self):
+        """حساب ومدة المهمة بتنسيق مقروء"""
+        if not self.start_time or not self.end_time:
+            return None
+
+        # تحويل الوقت إلى دقائق لحساب الفارق
+        start_minutes = self.start_time.hour * 60 + self.start_time.minute
+        end_minutes = self.end_time.hour * 60 + self.end_time.minute
+
+        # في حال كانت المهمة عبرت منتصف الليل (نادر جداً هنا لكن للاحتياط)
+        diff = end_minutes - start_minutes
+        if diff < 0:
+            diff += 20 * 60
+
+        hours = diff // 60
+        minutes = diff % 60
+
+        parts = []
+        if hours > 0:
+            if hours == 1:
+                parts.append("ساعة")
+            elif hours == 2:
+                parts.append("ساعتين")
+            elif 3 <= hours <= 10:
+                parts.append(f"{hours} ساعات")
+            else:
+                parts.append(f"{hours} ساعة")
+
+        if minutes > 0:
+            if minutes == 1:
+                parts.append("دقيقة")
+            elif minutes == 2:
+                parts.append("دقيقتين")
+            elif 3 <= minutes <= 10:
+                parts.append(f"{minutes} دقائق")
+            else:
+                parts.append(f"{minutes} دقيقة")
+
+        return " و ".join(parts) if parts else "أقل من دقيقة"
+
+
+class VehicleRequest(SoftDeleteMixin, models.Model):
+    """نموذج طلب المركبة"""
+
+    STATUS_CHOICES = [
+        ("pending", _("قيد الانتظار")),
+        ("approved", _("تمت الموافقة")),
+        ("rejected", _("مرفوض")),
+    ]
+
+    requester = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        verbose_name=_("مقدم الطلب"),
+        related_name="vehicle_requests",
+    )
+    requested_date = models.DateField(_("التاريخ المطلوب"))
+    requested_time = models.TimeField(_("الوقت المطلوب"), null=True, blank=True)
+    purpose = models.TextField(_("الغر"))
+    status = models.CharField(
+        _("الحالة"), max_length=20, choices=STATUS_CHOICES, default="pending"
+    )
+    assigned_mission = models.OneToOneField(
+        VehicleMission,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("المهمة المرتبطة"),
+        related_name="request",
+    )
+    rejection_reason = models.TextField(_("سبب الرفض"), blank=True)
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("طلب مركبة")
+        verbose_name_plural = _("طلبات المركبات")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"طلب مركبة من {self.requester} ليوم {self.requested_date}"
+
+
 class Driver(SoftDeleteMixin, models.Model):
     """نموذج السائقين"""
 
     name = models.CharField(_("اسم السائق"), max_length=100)
     phone = models.CharField(_("رقم الهاتف"), max_length=20)
     license_number = models.CharField(_("رقم الرخصة"), max_length=50, blank=True)
-    vehicle_number = models.CharField(_("رقم المركبة"), max_length=50, blank=True)
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("المركبة الافتراضية"),
+        related_name="drivers",
+    )
+    # vehicle_number kept for backward compatibility or as text backup
+    vehicle_number = models.CharField(
+        _("رقم المركبة (قديم)"), max_length=50, blank=True
+    )
     is_active = models.BooleanField(_("نشط"), default=True)
     created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
     updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
@@ -176,7 +386,21 @@ class InstallationSchedule(SoftDeleteMixin, models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name=_("الفريق"),
+        verbose_name=_("الفريق (قديم)"),
+    )
+    technicians = models.ManyToManyField(
+        Technician,
+        verbose_name=_("الفنيين"),
+        blank=True,
+        related_name="installations",
+    )
+    driver = models.ForeignKey(
+        Driver,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("السائق"),
+        related_name="installations",
     )
     scheduled_date = models.DateField(_("تاريخ التركيب"), null=True, blank=True)
     scheduled_time = models.TimeField(_("موعد التركيب"), null=True, blank=True)
@@ -207,6 +431,14 @@ class InstallationSchedule(SoftDeleteMixin, models.Model):
         _("الحالة"), max_length=30, choices=STATUS_CHOICES, default="needs_scheduling"
     )
     notes = models.TextField(_("ملاحظات"), blank=True)
+    vehicle_mission = models.ForeignKey(
+        "VehicleMission",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("مهمة المركبة المرتبطة"),
+        related_name="scheduled_installations",
+    )
     completion_date = models.DateTimeField(_("تاريخ الإكمال"), null=True, blank=True)
     created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
     updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
@@ -433,6 +665,14 @@ class InstallationSchedule(SoftDeleteMixin, models.Model):
         else:
             return None
 
+    def get_assigned_driver(self):
+        """إرجاع السائق المعين (إما المباشر أو سائق الفريق)"""
+        if self.driver:
+            return self.driver
+        if self.team and self.team.driver:
+            return self.team.driver
+        return None
+
     def get_installation_date_label(self):
         """إرجاع تسمية تاريخ التركيب المناسبة حسب الحالة"""
         if self.status == "completed" and self.completion_date:
@@ -655,6 +895,14 @@ class InstallationPayment(models.Model):
     payment_method = models.CharField(_("طريقة الدفع"), max_length=50, blank=True)
     receipt_number = models.CharField(_("رقم الإيصال"), max_length=50, blank=True)
     notes = models.TextField(_("ملاحظات"), blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("تم الإنشاء بواسطة"),
+    )
+
     created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
 
     class Meta:

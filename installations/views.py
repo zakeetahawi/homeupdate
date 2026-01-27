@@ -461,8 +461,9 @@ def installation_list(request):
                 "order__salesperson",
                 "team",
                 "team__driver",
+                "driver",
             )
-            .prefetch_related("team__technicians")
+            .prefetch_related("team__technicians", "technicians")
             .only(
                 "id",
                 "status",
@@ -487,6 +488,9 @@ def installation_list(request):
                 "team__name",
                 "team__driver__id",
                 "team__driver__name",
+                "driver__id",
+                "driver__name",
+                "windows_count",
             )
         )
         # تطبيق الفلترة الشهرية على التركيبات المجدولة (بناءً على تاريخ الطلب)
@@ -547,6 +551,9 @@ def installation_list(request):
                     "scheduled_date": installation.scheduled_date,
                     "created_at": installation.created_at,
                     "location_type": getattr(installation, "location_type", None),
+                    "windows_count": installation.windows_count,
+                    "technicians": list(installation.technicians.all()),
+                    "driver": installation.get_assigned_driver(),
                 }
                 for installation in scheduled_query
             ]
@@ -630,6 +637,9 @@ def installation_list(request):
                     "created_at": mfg_order.created_at,
                     "location_type": getattr(mfg_order.order, "location_type", None),
                     "manufacturing_order": mfg_order,  # إضافة أمر التصنيع للمرجع
+                    "windows_count": None,
+                    "technicians": [],
+                    "driver": None,
                 }
                 for mfg_order in ready_manufacturing_query
             ]
@@ -880,6 +890,9 @@ def installation_detail(request, installation_id):
         "event_logs": event_logs,
         "status_logs": status_logs,
         "archive_info": archive_info,
+        "all_technicians": Technician.objects.filter(
+            is_active=True, department="installation"
+        ).order_by("name"),
     }
 
     return render(request, "installations/installation_detail.html", context)
@@ -903,7 +916,16 @@ def schedule_installation(request, installation_id):
         if form.is_valid():
             installation = form.save(commit=False)
             installation.status = "scheduled"  # تغيير الحالة إلى مجدول
+
+            # إذا لم يتم اختيار فريق، قم بإلغاء الفريق القديم (بناءً على طلب المستخدم)
+            if not form.cleaned_data.get("team"):
+                installation.team = None
+
             installation.save()
+            form.save_m2m()  # Saving ManyToMany relationships (technicians)
+
+            # إذا لم يتم اختيار فنيين في الفورم، لا نغير الفنيين الحاليين (أو نفرغهم حسب الرغبة)
+            # هنا سنتركهم كما هم ليتم إدارتهم من الصفحة التفصيلية
 
             # إنشاء سجل حدث
             from .models import InstallationEventLog
@@ -924,6 +946,7 @@ def schedule_installation(request, installation_id):
             return redirect(
                 "installations:installation_detail", installation_id=installation.id
             )
+
     else:
         # تعيين قيم افتراضية للجدولة (48 ساعة من الآن)
         scheduled_date = timezone.now().date() + timezone.timedelta(days=2)
@@ -970,6 +993,31 @@ def schedule_installation(request, installation_id):
     context = {"form": form, "installation": installation, "title": "جدولة التركيب"}
 
     return render(request, "installations/schedule_installation.html", context)
+
+
+@login_required
+@permission_required("installations.change_installationschedule", raise_exception=True)
+def assign_technicians(request, installation_id):
+    """تعيين الفنيين يدوياً"""
+    installation = get_object_or_404(InstallationSchedule, id=installation_id)
+
+    if request.method == "POST":
+        technician_ids = request.POST.getlist("technicians")
+        if technician_ids:
+            technicians = Technician.objects.filter(id__in=technician_ids)
+            installation.technicians.set(technicians)
+            # فك الارتباط بالفريق القديم عند التعيين اليدوي
+            if installation.team:
+                installation.team = None
+                installation.save()
+            messages.success(request, _("تم تحديث الفنيين بنجاح"))
+        else:
+            installation.technicians.clear()
+            messages.info(request, _("تم إزالة جميع الفنيين"))
+
+    return redirect(
+        "installations:installation_detail", installation_id=installation.id
+    )
 
 
 @login_required
@@ -2065,8 +2113,42 @@ def add_payment(request, installation_id):
         if form.is_valid():
             payment = form.save(commit=False)
             payment.installation = installation
+            payment.created_by = request.user  # ✅ تسجيل من قام بالإضافة
             payment.save()
-            messages.success(request, _("تم إضافة الدفعة بنجاح"))
+
+            # ✅ إنشاء سجل دفع في نظام الطلبات (Order.Payment)
+            from orders.models import Payment as OrderPayment
+
+            OrderPayment.objects.create(
+                order=installation.order,
+                amount=payment.amount,
+                payment_method=payment.payment_method or "cash",  # افتراضي نقداً
+                reference_number=payment.receipt_number or f"INST-PAY-{payment.id}",
+                notes=f"دفعة تركيب: {payment.get_payment_type_display()} - {payment.notes}",
+                created_by=request.user,
+            )
+
+            # ملاحظة: تم إزالة التحديث اليدوي لـ order.paid_amount لأن OrderPayment.save() يقوم بذلك تلقائياً
+            # ولكن للتأكد سنقوم بإعادة تحميل الطلب
+            order = installation.order
+            order.refresh_from_db()
+
+            # محاولة تحديث حالة الدفع في الطلب
+            if hasattr(order, "update_financial_status"):
+                order.update_financial_status()
+            elif hasattr(order, "check_full_payment"):
+                order.check_full_payment()
+
+            # إغلاق المديونية إذا تم السداد بالكامل
+            if order.remaining_amount <= 0:
+                # البحث عن أي مديونيات مفتوحة لهذا الطلب وإغلاقها
+                from installations.models import CustomerDebt
+
+                CustomerDebt.objects.filter(order=order, is_paid=False).update(
+                    is_paid=True, payment_date=timezone.now()
+                )
+
+            messages.success(request, _("تم إضافة الدفعة بنجاح وتحديث حساب الطلب"))
             return redirect(
                 "installations:installation_detail", installation_id=installation.id
             )

@@ -4,1126 +4,657 @@
 {% load order_extras %}
 {% block title %}تفاصيل التركيب - {{ installation.order.order_number }}{% endblock %}
 {% block extra_css %}
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <style>
-.status-select {
-    min-width: 150px;
-    font-size: 0.875rem;
+/* Custom Styles for Installation Detail */
+.status-stepper {
+display: flex;
+justify-content: space-between;
+margin-bottom: 2rem;
+position: relative;
 }
-
-.form-control {
-    border-radius: 8px;
-    border: 1px solid #d1d3e2;
+.status-stepper::before {
+content: '';
+position: absolute;
+top: 15px;
+left: 0;
+right: 0;
+height: 4px;
+background: #e9ecef;
+z-index: 0;
+border-radius: 2px;
 }
-
-.form-control:focus {
-    border-color: #4e73df;
-    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+.step-container {
+position: relative;
+z-index: 1;
+display: flex;
+flex-direction: column;
+align-items: center;
+width: 80px; /* Fixed width for stability */
 }
-
-.btn {
-    border-radius: 8px;
-    font-weight: 500;
+.step-item {
+background: #fff;
+width: 35px;
+height: 35px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+border: 3px solid #e9ecef;
+transition: all 0.3s ease;
+margin-bottom: 0.5rem;
 }
-
-.card {
-    border-radius: 12px;
-    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-    margin-bottom: 1.5rem;
+.step-item.active {
+border-color: #4e73df;
+background: #4e73df;
+color: #fff;
+box-shadow: 0 0 0 4px rgba(78, 115, 223, 0.2);
 }
-
-.card-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 12px 12px 0 0;
-    padding: 1rem 1.5rem;
+.step-item.completed {
+border-color: #1cc88a;
+background: #1cc88a;
+color: #fff;
 }
-
-.card-body {
-    padding: 1.5rem;
+.step-label {
+font-size: 0.75rem;
+font-weight: 700;
+white-space: nowrap;
+color: #858796;
+text-align: center;
 }
-
-.badge {
-    font-size: 0.8em;
-    padding: 0.5em 0.8em;
-    border-radius: 6px;
-    font-weight: 600;
+.step-item.active + .step-label {
+color: #4e73df;
 }
-
-.table-borderless th {
-    font-weight: 600;
-    color: #495057;
-    padding: 0.75rem 0.5rem;
-    border: none;
-    background-color: #f8f9fa;
-    border-radius: 6px;
-}
-
-.table-borderless td {
-    padding: 0.75rem 0.5rem;
-    border: none;
-    vertical-align: middle;
-}
-
-.table-borderless tr:hover {
-    background-color: rgba(0, 123, 255, 0.05);
-    border-radius: 6px;
-}
-
-.info-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.info-card h6 {
-    color: white;
-    font-weight: 600;
-    margin-bottom: 1rem;
-}
-
-.info-card p {
-    margin-bottom: 0.5rem;
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.info-card strong {
-    color: white;
-    font-weight: 600;
-}
+    /* Note: sibling selector won't work with wrapper, handling inline */
     </style>
 {% endblock %}
 {% block content %}
-    {% csrf_token %}
-    <div class="container-fluid">
-        <!-- عنوان الصفحة -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3 mb-0">
-                <i class="fas fa-tools text-primary"></i>
-                تفاصيل التركيب - {{ installation.order.order_number }}
-            </h1>
-            <div class="btn-group">
-                <a href="{% url 'installations:installation_list' %}"
-                   class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-right"></i> العودة للقائمة
-                </a>
+    <div class="container-fluid mb-5">
+        <!-- Header Section -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h1 class="h3 mb-0 text-gray-800 font-weight-bold">
+                    <i class="fas fa-tools text-primary ml-2"></i>
+                    تفاصيل التركيب <span class="text-primary">#{{ installation.order.order_number }}</span>
+                </h1>
+                <p class="text-muted mt-1 mb-0">
+                    <i class="far fa-clock ml-1"></i>
+                    تاريخ الإنشاء: {{ installation.created_at|date:"Y-m-d" }}
+                    {% if installation.order.branch %}
+                        <span class="mx-2">|</span>
+                        <i class="fas fa-store-alt ml-1"></i>
+                        {{ installation.order.branch.name }}
+                    {% endif %}
+                </p>
+            </div>
+            <div class="mt-3 mt-sm-0">
                 <a href="{% url 'installations:dashboard' %}"
-                   class="btn btn-outline-primary">
-                    <i class="fas fa-tachometer-alt"></i> لوحة التحكم
+                   class="btn btn-outline-secondary shadow-sm ml-2">
+                    <i class="fas fa-tachometer-alt fa-sm text-gray-50 text-secondary ml-1"></i> لوحة التحكم
                 </a>
-                {% if perms.installations.change_installationschedule %}
-                    <a href="{% url 'installations:edit_schedule' installation.pk %}"
-                       class="btn btn-primary">
-                        <i class="fas fa-edit"></i> تعديل
-                    </a>
-                {% endif %}
-                {% if perms.installations.delete_installationschedule %}
-                    <a href="{% url 'installations:installation_delete' installation.pk %}"
-                       class="btn btn-danger">
-                        <i class="fas fa-trash"></i> حذف
-                    </a>
-                {% endif %}
+                <a href="{% url 'installations:installation_list' %}"
+                   class="btn btn-secondary shadow-sm">
+                    <i class="fas fa-arrow-right fa-sm text-white-50 ml-1"></i> القائمة
+                </a>
             </div>
         </div>
-        <div class="row">
-            <!-- معلومات الطلب -->
-            <div class="col-lg-6">
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-info-circle"></i>
-                            معلومات الطلب
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <table class="table table-borderless">
-                                    <tr>
-                                        <th>رقم الطلب:</th>
-                                        <td>{{ installation.order.order_number }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>اسم العميل:</th>
-                                        <td>
-                                            <strong>{{ installation.order.customer.name }}</strong>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th>رقم الهاتف:</th>
-                                        <td>{{ installation.order.customer.phone }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th class="bg-dark text-white">عنوان العميل</th>
-                                        <td>
-                                            {% if installation.order.customer.address %}
-                                                {{ installation.order.customer.address }}
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th>نوع المكان:</th>
-                                        <td>
-                                            {% if installation.order.customer.location_type %}
-                                                {% if installation.order.customer.location_type == 'open' %}
-                                                    <span class="badge badge-success"
-                                                          style="background-color: #28a745;
-                                                                 color: #fff">
-                                                        <i class="fas fa-door-open"></i> مفتوح
-                                                    </span>
-                                                {% elif installation.order.customer.location_type == 'compound' %}
-                                                    <span class="badge badge-info"
-                                                          style="background-color: #17a2b8;
-                                                                 color: #fff">
-                                                        <i class="fas fa-building"></i> كومبوند
-                                                    </span>
-                                                {% else %}
-                                                    <span class="text-muted">غير محدد</span>
-                                                {% endif %}
-                                            {% else %}
-                                                <span class="text-muted">غير محدد</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                </table>
+        <!-- Status Progress (Simplified Stepper) -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body py-2">
+                        <div class="status-stepper px-3">
+                            <!-- Needs Scheduling -->
+                            <div class="step-container">
+                                <div class="step-item {% if installation.status != 'cancelled' %}completed{% endif %}">
+                                    <i class="fas fa-clipboard-list"></i>
+                                </div>
+                                <div class="step-label">طلب جديد</div>
                             </div>
-                            <div class="col-md-6">
-                                <table class="table table-borderless">
-                                    <tr>
-                                        <th>حالة التركيب:</th>
-                                        <td>
-                                            {% if installation.status == 'needs_scheduling' %}
-                                                <span class="badge badge-warning"
-                                                      style="background-color: #fd7e14;
-                                                             color: #fff;
-                                                             font-weight: bold;
-                                                             padding: 8px 12px;
-                                                             font-size: 0.9em">
-                                                    <i class="fas fa-calendar-plus"></i> بحاجة جدولة
-                                                </span>
-                                            {% elif installation.status == 'scheduled' %}
-                                                <span class="badge badge-info"
-                                                      style="background-color: #17a2b8;
-                                                             color: #fff;
-                                                             font-weight: bold;
-                                                             padding: 8px 12px;
-                                                             font-size: 0.9em">
-                                                    <i class="fas fa-calendar-check"></i> مجدول
-                                                </span>
-                                            {% elif installation.status == 'in_installation' %}
-                                                <span class="badge badge-primary"
-                                                      style="background-color: #007bff;
-                                                             color: #fff;
-                                                             font-weight: bold;
-                                                             padding: 8px 12px;
-                                                             font-size: 0.9em">
-                                                    <i class="fas fa-tools"></i> قيد التركيب
-                                                </span>
-                                            {% elif installation.status == 'completed' %}
-                                                <span class="badge badge-success"
-                                                      style="background-color: #28a745;
-                                                             color: #fff;
-                                                             font-weight: bold;
-                                                             padding: 8px 12px;
-                                                             font-size: 0.9em">
-                                                    <i class="fas fa-check-circle"></i> مكتمل
-                                                </span>
-                                            {% elif installation.status == 'cancelled' %}
-                                                <span class="badge badge-danger"
-                                                      style="background-color: #dc3545;
-                                                             color: #fff;
-                                                             font-weight: bold;
-                                                             padding: 8px 12px;
-                                                             font-size: 0.9em">
-                                                    <i class="fas fa-times-circle"></i> ملغي
-                                                </span>
-                                            {% elif installation.status == 'modification_required' %}
-                                                <span class="badge badge-warning"
-                                                      style="background-color: #fd7e14;
-                                                             color: #fff;
-                                                             font-weight: bold;
-                                                             padding: 8px 12px;
-                                                             font-size: 0.9em">
-                                                    <i class="fas fa-exclamation-triangle"></i> يحتاج تعديل
-                                                </span>
-                                            {% elif installation.status == 'modification_in_progress' %}
-                                                <span class="badge badge-info"
-                                                      style="background-color: #6f42c1;
-                                                             color: #fff;
-                                                             font-weight: bold;
-                                                             padding: 8px 12px;
-                                                             font-size: 0.9em">
-                                                    <i class="fas fa-cogs"></i> التعديل قيد التنفيذ
-                                                </span>
-                                            {% elif installation.status == 'modification_completed' %}
-                                                <span class="badge badge-success"
-                                                      style="background-color: #20c997;
-                                                             color: #fff;
-                                                             font-weight: bold;
-                                                             padding: 8px 12px;
-                                                             font-size: 0.9em">
-                                                    <i class="fas fa-check-circle"></i> التعديل مكتمل
-                                                </span>
-                                            {% else %}
-                                                <span class="badge badge-secondary"
-                                                      style="background-color: #6c757d;
-                                                             color: #fff;
-                                                             font-weight: bold;
-                                                             padding: 8px 12px;
-                                                             font-size: 0.9em">
-                                                    {{ installation.get_status_display }}
-                                                </span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th>الفريق:</th>
-                                        <td>{{ installation.team.name|default:"غير محدد" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>{{ installation.get_installation_date_label }}:</th>
-                                        <td>
-                                            {% if installation.get_installation_date %}
-                                                {{ installation.get_installation_date|date:"Y-m-d" }}
-                                                {% if installation.scheduled_time %}
-                                                    <br>
-                                                    <small class="text-muted">{{ installation.scheduled_time|time:"H:i" }}</small>
-                                                {% endif %}
-                                                {% if installation.notes and "--- ملاحظة تغيير التاريخ ---" in installation.notes %}
-                                                    <br>
-                                                    <small class="text-warning">
-                                                        <i class="fas fa-exclamation-triangle"></i>
-                                                        تم تغيير التاريخ تلقائياً
-                                                    </small>
-                                                {% endif %}
-                                            {% else %}
-                                                <span class="text-muted">غير محدد</span>
-                                            {% endif %}
-                                            {% if installation.scheduled_date and installation.scheduled_date != installation.get_installation_date %}
-                                                <br>
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-primary mt-2"
-                                                        onclick="updateDateFromScheduled('{{ installation.installation_code }}')">
-                                                    <i class="fas fa-calendar-alt"></i> تحديث التاريخ من المجدول
-                                                </button>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th>موعد التركيب:</th>
-                                        <td>{{ installation.scheduled_time|time:"H:i"|default:"غير محدد" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>عدد الشبابيك:</th>
-                                        <td>
-                                            {% if installation.windows_count %}
-                                                <span class="badge badge-primary">{{ installation.windows_count }}</span>
-                                            {% else %}
-                                                <span class="text-muted">غير محدد</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                </table>
+                            <!-- Scheduled -->
+                            <div class="step-container">
+                                <div class="step-item {% if installation.status == 'scheduled' or installation.status == 'in_installation' or installation.status == 'completed' %}completed{% elif installation.status == 'needs_scheduling' %}active{% endif %}">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                                <div class="step-label">مجدول</div>
+                            </div>
+                            <!-- In Progress -->
+                            <div class="step-container">
+                                <div class="step-item {% if installation.status == 'in_installation' or installation.status == 'completed' %}completed{% elif installation.status == 'scheduled' %}active{% endif %}">
+                                    <i class="fas fa-tools"></i>
+                                </div>
+                                <div class="step-label">قيد التنفيذ</div>
+                            </div>
+                            <!-- Completed -->
+                            <div class="step-container">
+                                <div class="step-item {% if installation.status == 'completed' %}completed{% elif installation.status == 'in_installation' %}active{% endif %}">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="step-label">منجز</div>
                             </div>
                         </div>
-                        {% if installation.notes %}
-                            <div class="mt-3">
-                                <h6>ملاحظات:</h6>
-                                {% if "--- ملاحظة تغيير التاريخ ---" in installation.notes %}
-                                    <div class="alert alert-warning">
-                                        <h6>
-                                            <i class="fas fa-calendar-alt"></i> ملاحظة تغيير التاريخ:
-                                        </h6>
-                                        <div style="white-space: pre-line;
-                                                    font-family: monospace;
-                                                    background-color: #f8f9fa;
-                                                    padding: 10px;
-                                                    border-radius: 5px;
-                                                    margin-top: 10px">{{ installation.notes }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Metric Cards Row -->
+        <div class="row mb-3">
+            <div class="col-6 col-xl-3 mb-3">
+                <div class="card metric-card primary shadow-sm h-100 py-1">
+                    <div class="card-body px-3">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">موعد التركيب</div>
+                                <div class="h6 mb-0 font-weight-bold text-gray-800">
+                                    {{ installation.get_installation_date|date:"Y-m-d"|default:"-" }}
+                                </div>
+                                <div class="small text-muted">{{ installation.scheduled_time|time:"H:i A"|default:"" }}</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-calendar fa-lg text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3 mb-3">
+                <div class="card metric-card success shadow-sm h-100 py-1">
+                    <div class="card-body px-3">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">المتبقي</div>
+                                <div class="h6 mb-0 font-weight-bold text-gray-800">
+                                    {{ installation.order.remaining_amount|default:"0"|currency_format }}
+                                </div>
+                                <div class="small text-muted">ج.م</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-money-bill-wave fa-lg text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3 mb-3">
+                <div class="card metric-card info shadow-sm h-100 py-1">
+                    <div class="card-body px-3">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">النوافذ</div>
+                                <div class="h6 mb-0 font-weight-bold text-gray-800">{{ installation.windows_count|default:"-" }}</div>
+                                <div class="small text-muted">وحدة</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-window-maximize fa-lg text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3 mb-3">
+                <div class="card metric-card warning shadow-sm h-100 py-1">
+                    <div class="card-body px-3">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">الفنيين</div>
+                            {% if installation.technicians.exists %}
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% for tech in installation.technicians.all %}
+                                        <span class="badge bg-warning text-dark">{{ tech.name }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="h6 mb-0 font-weight-bold text-gray-800">0</div>
+                                <div class="small text-muted">فرد</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users-cog fa-lg text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <!-- RIGHT COLUMN: Details & Info - Adjusted for better spacing -->
+        <div class="col-xl-8 col-lg-7">
+            <!-- Customer & Location Card -->
+            <div class="card shadow mb-4">
+                <div class="card-header card-header-gradient">
+                    <h6 class="card-header-title">
+                        <i class="fas fa-map-marked-alt"></i>
+                        معلومات العميل والموقع
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-7">
+                            <h5 class="font-weight-bold text-dark mb-3">{{ installation.order.customer.name }}</h5>
+                            <div class="address-box">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-map-marker-alt text-primary mt-1 ml-2"></i>
+                                    <div>
+                                        <strong>العنوان:</strong>
+                                        <br>
+                                        {{ installation.order.customer.address|default:"غير محدد" }}
                                     </div>
-                                {% else %}
-                                    <p class="text-muted">{{ installation.notes }}</p>
-                                {% endif %}
+                                </div>
+                                <div class="mt-3 d-flex align-items-center">
+                                    <i class="fas fa-building text-info ml-2"></i>
+                                    <span>
+                                        نوع المكان:
+                                        {% if installation.order.customer.location_type == 'open' %}
+                                            <span class="badge badge-success">مفتوح</span>
+                                        {% elif installation.order.customer.location_type == 'compound' %}
+                                            <span class="badge badge-info">كومبوند</span>
+                                        {% else %}
+                                            <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-5 border-right">
+                            <div class="mb-3">
+                                <label class="small text-gray-500 font-weight-bold text-uppercase">الهاتف</label>
+                                <div class="h5">
+                                    <a href="tel:{{ installation.order.customer.phone }}"
+                                       class="text-decoration-none">
+                                        <i class="fas fa-phone fa-sm text-success ml-1"></i>
+                                        <span dir="ltr">{{ installation.order.customer.phone }}</span>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-gray-500 font-weight-bold text-uppercase">حالة الطلب</label>
+                                <div>
+                                    {% if installation.status == 'needs_scheduling' %}
+                                        <span class="badge badge-warning px-3 py-2"><i class="fas fa-clock"></i> بحاجة جدولة</span>
+                                    {% elif installation.status == 'scheduled' %}
+                                        <span class="badge badge-info px-3 py-2"><i class="fas fa-calendar-check"></i> مجدول</span>
+                                    {% elif installation.status == 'in_installation' %}
+                                        <span class="badge badge-primary px-3 py-2"><i class="fas fa-tools"></i> قيد التركيب</span>
+                                    {% elif installation.status == 'completed' %}
+                                        <span class="badge badge-success px-3 py-2"><i class="fas fa-check-circle"></i> مكتمل</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary px-3 py-2">{{ installation.get_status_display }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Installation Crew Card -->
+            <div class="card shadow mb-4">
+                <div class="card-header card-header-gradient d-flex justify-content-between align-items-center">
+                    <h6 class="card-header-title">
+                        <i class="fas fa-users-cog"></i>
+                        طاقم التركيب
+                    </h6>
+                    {% if perms.installations.change_installationschedule %}
+                        <button class="btn btn-sm btn-light text-primary font-weight-bold shadow-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#assignTechniciansModal">
+                            <i class="fas fa-user-plus ml-1"></i> تعيين / تعديل
+                        </button>
+                    {% endif %}
+                </div>
+                <div class="card-body p-3">
+                    <!-- Driver & Vehicle Info -->
+                    {% with driver=installation.get_assigned_driver %}
+                        {% if driver %}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center p-3 border rounded bg-light border-left-primary">
+                                        <div class="bg-white p-2 rounded-circle shadow-sm ml-3 text-primary">
+                                            <i class="fas fa-shuttle-van fa-lg"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-1 font-weight-bold text-dark">السائق: {{ driver.name }}</h6>
+                                            <small class="text-muted d-block">
+                                                <i class="fas fa-car ml-1"></i>
+                                                {% if driver.vehicle %}
+                                                    {{ driver.vehicle.name }} - {{ driver.vehicle.plate_number }}
+                                                {% else %}
+                                                    {{ driver.vehicle_number|default:"لا توجد مركبة معينة" }}
+                                                {% endif %}
+                                            </small>
+                                            {% if driver.phone %}
+                                                <small class="text-success ml-3">
+                                                    <i class="fas fa-phone ml-1"></i>{{ driver.phone }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         {% endif %}
-                    </div>
-                </div>
-                <!-- تفاصيل الطلب -->
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-shopping-cart"></i>
-                            تفاصيل الطلب
-                        </h6>
-                    </div>
-                    <div class="card-body">
+                    {% endwith %}
+                    {% if installation.technicians.exists %}
                         <div class="row">
-                            <div class="col-md-6">
-                                <table class="table table-borderless">
-                                    <tr>
-                                        <th>نوع المكان:</th>
-                                        <td>{{ installation.order.location_type|default:"غير محدد" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>متبقي الحساب:</th>
-                                        <td>{{ installation.order.remaining_amount|default:"0"|currency_format }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>تاريخ الطلب:</th>
-                                        <td>{{ installation.order.created_at|date:"Y-m-d" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>البائع:</th>
-                                        <td>{{ installation.order.salesperson.name|default:"غير محدد" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>رقم العقد:</th>
-                                        <td>{{ installation.order.contract_number|default:"غير محدد" }}</td>
-                                    </tr>
-                                    {% if installation.order.contract_number_2 %}
-                                        <tr>
-                                            <th>رقم العقد الإضافي 2:</th>
-                                            <td>{{ installation.order.contract_number_2 }}</td>
-                                        </tr>
-                                    {% endif %}
-                                    {% if installation.order.contract_number_3 %}
-                                        <tr>
-                                            <th>رقم العقد الإضافي 3:</th>
-                                            <td>{{ installation.order.contract_number_3 }}</td>
-                                        </tr>
-                                    {% endif %}
-                                    <tr>
-                                        <th>رقم الفاتورة:</th>
-                                        <td>{{ installation.order.invoice_number|default:"غير محدد" }}</td>
-                                    </tr>
-                                    {% if installation.order.invoice_number_2 %}
-                                        <tr>
-                                            <th>رقم الفاتورة الإضافي 2:</th>
-                                            <td>{{ installation.order.invoice_number_2 }}</td>
-                                        </tr>
-                                    {% endif %}
-                                    {% if installation.order.invoice_number_3 %}
-                                        <tr>
-                                            <th>رقم الفاتورة الإضافي 3:</th>
-                                            <td>{{ installation.order.invoice_number_3 }}</td>
-                                        </tr>
-                                    {% endif %}
-                                    <tr>
-                                        <th>الفرع:</th>
-                                        <td>{{ installation.order.branch.name|default:"غير محدد" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>فني المعاينة:</th>
-                                        <td>
-                                            {% if installation.order.related_inspection and installation.order.related_inspection.inspector %}
-                                                {{ installation.order.related_inspection.inspector.get_full_name|default:"غير محدد" }}
-                                            {% else %}
-                                                <span class="text-muted">غير محدد</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th>المعاينة:</th>
-                                        <td>
-                                            {% if installation.order.related_inspection %}
-                                                {% if installation.order.related_inspection_type == 'customer_side' %}
-                                                    <a href="{% url 'inspections:inspection_detail' installation.order.related_inspection.id %}"
-                                                       class="text-decoration-none">
-                                                        <span class="badge badge-warning"
-                                                              style="background-color: #ffc107;
-                                                                     color: #000;
-                                                                     font-weight: bold;
-                                                                     padding: 6px 10px;
-                                                                     font-size: 0.85em">
-                                                            <i class="fas fa-user"></i> طرف العميل
-                                                        </span>
-                                                    </a>
-                                                    <br>
-                                                    <small class="text-muted">{{ installation.order.related_inspection.created_at|date:"Y-m-d H:i" }}</small>
-                                                {% else %}
-                                                    <a href="{% url 'inspections:inspection_detail' installation.order.related_inspection.id %}"
-                                                       class="text-decoration-none">
-                                                        <span class="badge badge-info"
-                                                              style="background-color: #17a2b8;
-                                                                     color: #fff;
-                                                                     font-weight: bold;
-                                                                     padding: 6px 10px;
-                                                                     font-size: 0.85em">
-                                                            <i class="fas fa-search"></i> معاينة مكتملة
-                                                        </span>
-                                                    </a>
-                                                    <br>
-                                                    <small class="text-muted">{{ installation.order.related_inspection.created_at|date:"Y-m-d H:i" }}</small>
-                                                {% endif %}
-                                            {% else %}
-                                                <span class="text-muted">لا توجد معاينة مرتبطة</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                            <div class="col-md-6">
-                                {% if installation.order.contract_file %}
-                                    <div class="text-center mb-3">
-                                        <h6>ملف العقد:</h6>
-                                        <div class="mb-2">
-                                            <strong>رقم العقد:</strong> {{ installation.order.contract_number|default:"غير محدد" }}
-                                            {% if installation.order.contract_number_2 %}
-                                                <br>
-                                                <strong>رقم العقد الإضافي 2:</strong> {{ installation.order.contract_number_2 }}
-                                            {% endif %}
-                                            {% if installation.order.contract_number_3 %}
-                                                <br>
-                                                <strong>رقم العقد الإضافي 3:</strong> {{ installation.order.contract_number_3 }}
-                                            {% endif %}
+                            {% for tech in installation.technicians.all %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="d-flex align-items-center p-3 border rounded bg-light">
+                                        <div class="bg-white p-2 rounded-circle shadow-sm ml-3 text-primary">
+                                            <i class="fas fa-user-tie fa-lg"></i>
                                         </div>
-                                        <a href="{{ installation.order.contract_file.url }}"
-                                           class="btn btn-outline-primary"
-                                           target="_blank">
-                                            <i class="fas fa-file-pdf"></i> عرض العقد
-                                        </a>
-                                    </div>
-                                {% endif %}
-                                <!-- معلومات المعاينة -->
-                                {% if installation.order.related_inspection and installation.order.related_inspection.inspection_file %}
-                                    <div class="text-center">
-                                        <h6>ملف المعاينة:</h6>
-                                        <div class="mb-2">
-                                            <strong>نوع المعاينة:</strong>
-                                            {% if installation.order.related_inspection_type == 'customer_side' %}
-                                                <span class="badge badge-warning"
-                                                      style="background-color: #ffc107;
-                                                             color: #000;
-                                                             font-weight: bold;
-                                                             padding: 4px 8px;
-                                                             font-size: 0.8em">
-                                                    <i class="fas fa-user"></i> طرف العميل
-                                                </span>
-                                            {% else %}
-                                                <span class="badge badge-info"
-                                                      style="background-color: #17a2b8;
-                                                             color: #fff;
-                                                             font-weight: bold;
-                                                             padding: 4px 8px;
-                                                             font-size: 0.8em">
-                                                    <i class="fas fa-search"></i> معاينة فعلية
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                        <a href="{{ installation.order.related_inspection.inspection_file.url }}"
-                                           class="btn btn-outline-info"
-                                           target="_blank">
-                                            <i class="fas fa-file-alt"></i> عرض المعاينة
-                                        </a>
-                                    </div>
-                                {% elif installation.order.related_inspection and installation.order.related_inspection.google_drive_file_url %}
-                                    <div class="text-center">
-                                        <h6>ملف المعاينة (Google Drive):</h6>
-                                        <div class="mb-2">
-                                            <strong>نوع المعاينة:</strong>
-                                            {% if installation.order.related_inspection_type == 'customer_side' %}
-                                                <span class="badge badge-warning"
-                                                      style="background-color: #ffc107;
-                                                             color: #000;
-                                                             font-weight: bold;
-                                                             padding: 4px 8px;
-                                                             font-size: 0.8em">
-                                                    <i class="fas fa-user"></i> طرف العميل
-                                                </span>
-                                            {% else %}
-                                                <span class="badge badge-info"
-                                                      style="background-color: #17a2b8;
-                                                             color: #fff;
-                                                             font-weight: bold;
-                                                             padding: 4px 8px;
-                                                             font-size: 0.8em">
-                                                    <i class="fas fa-search"></i> معاينة فعلية
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                        <a href="{{ installation.order.related_inspection.google_drive_file_url }}"
-                                           class="btn btn-outline-info"
-                                           target="_blank">
-                                            <i class="fab fa-google-drive"></i> عرض المعاينة
-                                        </a>
-                                        <small class="text-muted d-block mt-1">
-                                            {{ installation.order.related_inspection.google_drive_file_name|default:"ملف المعاينة" }}
-                                        </small>
-                                    </div>
-                                {% elif installation.order.related_inspection_type == 'customer_side' %}
-                                    <div class="text-center">
-                                        <h6>معاينة طرف العميل:</h6>
-                                        <div class="mb-2">
-                                            <span class="badge badge-warning"
-                                                  style="background-color: #ffc107;
-                                                         color: #000;
-                                                         font-weight: bold;
-                                                         padding: 4px 8px;
-                                                         font-size: 0.8em">
-                                                <i class="fas fa-user"></i> طرف العميل
-                                            </span>
-                                        </div>
-                                        <small class="text-muted">لا يوجد ملف معاينة مرفوع</small>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- الإجراءات السريعة -->
-            <div class="col-lg-6">
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-cogs"></i>
-                            الإجراءات السريعة
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            {% if installation.status != 'completed' and installation.status != 'cancelled' %}
-                                <div class="mb-3">
-                                    <label for="status-select" class="form-label">تحديث الحالة:</label>
-                                    <select id="status-select"
-                                            class="form-control"
-                                            onchange="updateInstallationStatus('{{ installation.installation_code }}', this.value)">
-                                        <option value="">اختر الحالة الجديدة</option>
-                                        <option value="needs_scheduling"
-                                                {% if installation.status == 'needs_scheduling' %}selected{% endif %}>
-                                            بحاجة جدولة
-                                        </option>
-                                        <option value="scheduled"
-                                                {% if installation.status == 'scheduled' %}selected{% endif %}>
-                                            مجدول
-                                        </option>
-                                        <option value="in_installation"
-                                                {% if installation.status == 'in_installation' %}selected{% endif %}>
-                                            قيد التركيب
-                                        </option>
-                                        <option value="completed"
-                                                {% if installation.status == 'completed' %}selected{% endif %}>
-                                            مكتمل
-                                        </option>
-                                        <option value="cancelled"
-                                                {% if installation.status == 'cancelled' %}selected{% endif %}>
-                                            ملغي
-                                        </option>
-                                        <option value="modification_required"
-                                                {% if installation.status == 'modification_required' %}selected{% endif %}>
-                                            يحتاج تعديل
-                                        </option>
-                                        <option value="modification_in_progress"
-                                                {% if installation.status == 'modification_in_progress' %}selected{% endif %}>
-                                            التعديل قيد التنفيذ
-                                        </option>
-                                        <option value="modification_completed"
-                                                {% if installation.status == 'modification_completed' %}selected{% endif %}>
-                                            التعديل مكتمل
-                                        </option>
-                                    </select>
-                                </div>
-                            {% endif %}
-                            <div class="d-grid gap-2">
-                                <!-- زر تفاصيل الطلب -->
-                                <a href="{% url 'orders:order_detail' installation.order.id %}"
-                                   class="btn btn-outline-info">
-                                    <i class="fas fa-shopping-cart"></i> تفاصيل الطلب
-                                </a>
-                                {% if installation.status == 'needs_scheduling' %}
-                                    <a href="{% url 'installations:schedule_installation' installation.id %}"
-                                       class="btn btn-success">
-                                        <i class="fas fa-calendar-plus"></i> جدولة التركيب
-                                    </a>
-                                {% endif %}
-                                {% if installation.status == 'scheduled' %}
-                                    <button type="button"
-                                            class="btn btn-primary update-status"
-                                            data-installation-id="{{ installation.installation_code }}"
-                                            data-status="in_installation">
-                                        <i class="fas fa-play"></i> بدء التركيب
-                                    </button>
-                                {% endif %}
-                                {% if installation.status == 'in_installation' %}
-                                    <a href="{% url 'installations:change_installation_status' installation.id %}"
-                                       class="btn btn-success">
-                                        <i class="fas fa-check"></i> إكمال التركيب
-                                    </a>
-                                {% endif %}
-                                {% if installation.status != 'modification_required' and installation.status != 'modification_in_progress' and installation.status != 'modification_completed' %}
-                                    <a href="{% url 'installations:create_modification_request' installation.id %}"
-                                       class="btn btn-outline-warning">
-                                        <i class="fas fa-tools"></i> طلب تعديل
-                                    </a>
-                                {% endif %}
-                                {% if installation.status == 'modification_required' or installation.status == 'modification_in_progress' %}
-                                    {% with first_modification=installation.modificationrequest_set.first %}
-                                        {% if first_modification %}
-                                            <a href="{% url 'installations:modification_detail' first_modification.id %}"
-                                               class="btn btn-outline-info">
-                                                <i class="fas fa-eye"></i> عرض طلب التعديل
-                                            </a>
-                                        {% endif %}
-                                    {% endwith %}
-                                {% endif %}
-                                <a href="{% url 'installations:add_payment' installation.id %}"
-                                   class="btn btn-outline-primary">
-                                    <i class="fas fa-money-bill"></i> إضافة دفعة
-                                </a>
-                                <!-- زر تعديل الجدولة -->
-                                <a href="{% url 'installations:edit_schedule' installation.id %}"
-                                   class="btn btn-outline-secondary">
-                                    <i class="fas fa-edit"></i> تعديل الجدولة
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- معلومات الفريق -->
-                {% if installation.team %}
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">
-                                <i class="fas fa-users"></i>
-                                معلومات الفريق
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <h6>{{ installation.team.name }}</h6>
-                            {% if installation.team.technicians.all %}
-                                <div class="mt-3">
-                                    <h6>الفنيين:</h6>
-                                    <ul class="list-unstyled">
-                                        {% for technician in installation.team.technicians.all %}
-                                            <li>
-                                                <i class="fas fa-user-cog"></i> {{ technician.name }}
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                            {% endif %}
-                            {% if installation.team.driver %}
-                                <div class="mt-3">
-                                    <h6>السائق:</h6>
-                                    <p>
-                                        <i class="fas fa-truck"></i> {{ installation.team.driver.name }}
-                                    </p>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-        <!-- المدفوعات -->
-        {% if payments %}
-            <div class="row">
-                <div class="col-12">
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">
-                                <i class="fas fa-money-bill"></i>
-                                المدفوعات
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>التاريخ</th>
-                                            <th>النوع</th>
-                                            <th>المبلغ</th>
-                                            <th>طريقة الدفع</th>
-                                            <th>رقم الإيصال</th>
-                                            <th>ملاحظات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for payment in payments %}
-                                            <tr>
-                                                <td>{{ payment.created_at|date:"Y-m-d" }}</td>
-                                                <td>{{ payment.get_payment_type_display }}</td>
-                                                <td>{{ payment.amount|currency_format }}</td>
-                                                <td>{{ payment.payment_method|default:"غير محدد" }}</td>
-                                                <td>{{ payment.receipt_number|default:"غير محدد" }}</td>
-                                                <td>{{ payment.notes|default:"-" }}</td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
-        <!-- تقارير التعديل -->
-        {% if modification_reports %}
-            <div class="row">
-                <div class="col-12">
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">
-                                <i class="fas fa-file-alt"></i>
-                                تقارير التعديل
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            {% for report in modification_reports %}
-                                <div class="border-bottom pb-3 mb-3">
-                                    <div class="d-flex justify-content-between align-items-start">
                                         <div>
-                                            <h6>{{ report.created_at|date:"Y-m-d H:i" }}</h6>
-                                            <p class="text-muted">{{ report.description }}</p>
+                                            <h6 class="mb-1 font-weight-bold text-dark">{{ tech.name }}</h6>
+                                            <small class="text-muted d-block">{{ tech.specialization|default:"فني تركيب" }}</small>
+                                            {% if tech.phone %}<small class="text-success"><i class="fas fa-phone ml-1"></i>{{ tech.phone }}</small>{% endif %}
                                         </div>
-                                        {% if report.report_file %}
-                                            <a href="{{ report.report_file.url }}"
-                                               class="btn btn-sm btn-outline-primary"
-                                               target="_blank">
-                                                <i class="fas fa-download"></i> تحميل التقرير
-                                            </a>
-                                        {% endif %}
                                     </div>
                                 </div>
                             {% endfor %}
                         </div>
+                    {% else %}
+                        <div class="text-center py-5 bg-light rounded border-dashed">
+                            <i class="fas fa-users-slash fa-3x text-gray-300 mb-3"></i>
+                            <h6 class="text-gray-500 font-weight-bold">لم يتم تعيين فنيين بعد</h6>
+                            <p class="small text-muted">قم بتعيين الفنيين لبدء العمل</p>
+                            <button class="btn btn-outline-primary btn-sm mt-2"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#assignTechniciansModal">تعيين الفنيين الآن</button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Order Details & Docs -->
+            <div class="card shadow mb-4">
+                <div class="card-header card-header-gradient">
+                    <h6 class="card-header-title">
+                        <i class="fas fa-file-contract"></i>
+                        تفاصيل العقد والوثائق
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-borderless info-table">
+                            <tbody>
+                                <tr class="border-bottom">
+                                    <th>رقم العقد</th>
+                                    <td>{{ installation.order.contract_number|default:"-" }}</td>
+                                    <th>رقم الفاتورة</th>
+                                    <td>{{ installation.order.invoice_number|default:"-" }}</td>
+                                </tr>
+                                <tr class="border-bottom">
+                                    <th>البائع</th>
+                                    <td>{{ installation.order.salesperson.name|default:"-" }}</td>
+                                    <th>الفرع</th>
+                                    <td>{{ installation.order.branch.name|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>ملف العقد</th>
+                                    <td>
+                                        {% if installation.order.contract_file %}
+                                            <a href="{{ installation.order.contract_file.url }}"
+                                               class="btn btn-sm btn-outline-danger"
+                                               target="_blank">
+                                                <i class="fas fa-file-pdf ml-1"></i> تحميل العقد
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted small">غير مرفق</span>
+                                        {% endif %}
+                                    </td>
+                                    <th>ملف المعاينة</th>
+                                    <td>
+                                        {% if installation.order.related_inspection.inspection_file %}
+                                            <a href="{{ installation.order.related_inspection.inspection_file.url }}"
+                                               class="btn btn-sm btn-outline-info"
+                                               target="_blank">
+                                                <i class="fas fa-file-alt ml-1"></i> تحميل المعاينة
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted small">غير مرفق</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-        {% endif %}
-        <!-- مذكرة الاستلام -->
-        {% if receipt_memo %}
-            <div class="row">
-                <div class="col-12">
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">
-                                <i class="fas fa-receipt"></i>
-                                مذكرة الاستلام
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <table class="table table-borderless">
+            <!-- Notes Block -->
+            {% if installation.notes %}
+                <div class="card shadow mb-4 border-left-warning">
+                    <div class="card-body">
+                        <h6 class="font-weight-bold text-warning mb-2">
+                            <i class="fas fa-sticky-note ml-2"></i> ملاحظات هامة:
+                        </h6>
+                        <p class="mb-0 text-gray-700 bg-light p-3 rounded">{{ installation.notes|linebreaksbr }}</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        <!-- LEFT COLUMN: Actions & Side Info - Adjusted for better spacing -->
+        <div class="col-xl-4 col-lg-5">
+            <!-- Main Actions Card -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-white py-3 border-bottom-primary">
+                    <h6 class="font-weight-bold text-primary m-0">إجراءات سريعة</h6>
+                </div>
+                <div class="card-body">
+                    {% if installation.status == 'needs_scheduling' %}
+                        <a href="{% url 'installations:schedule_installation' installation.id %}"
+                           class="btn btn-success action-btn-lg text-white">
+                            <i class="fas fa-calendar-plus ml-2"></i> جدولة التركيب
+                        </a>
+                    {% elif installation.status == 'scheduled' %}
+                        <button type="button"
+                                class="btn btn-primary action-btn-lg text-white update-status"
+                                data-installation-id="{{ installation.installation_code }}"
+                                data-status="in_installation">
+                            <i class="fas fa-play ml-2"></i> بدء التركيب
+                        </button>
+                        <a href="{% url 'installations:edit_schedule' installation.id %}"
+                           class="btn btn-warning action-btn-lg text-dark">
+                            <i class="fas fa-edit ml-2"></i> تعديل الموعد
+                        </a>
+                    {% elif installation.status == 'in_installation' %}
+                        <a href="{% url 'installations:change_installation_status' installation.id %}"
+                           class="btn btn-success action-btn-lg text-white">
+                            <i class="fas fa-check-double ml-2"></i> إكمال التركيب
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'installations:add_payment' installation.id %}"
+                       class="btn btn-info action-btn-lg text-white mt-2">
+                        <i class="fas fa-hand-holding-usd ml-2"></i> إضافة دفعة
+                    </a>
+                    <a href="{% url 'installations:create_modification_request' installation.id %}"
+                       class="btn btn-outline-secondary action-btn-lg mt-2">
+                        <i class="fas fa-tools ml-2"></i> طلب صيانة / تعديل
+                    </a>
+                </div>
+            </div>
+            <!-- Quick Status Change (Admin/Manager) -->
+            {% if perms.installations.change_installationschedule and installation.status != 'completed' %}
+                <div class="card shadow mb-4">
+                    <div class="card-header bg-light py-3">
+                        <h6 class="font-weight-bold text-gray-700 m-0 text-xs text-uppercase">تحديث الحالة يدوياً</h6>
+                    </div>
+                    <div class="card-body">
+                        <select id="status-select"
+                                class="form-control mb-3"
+                                onchange="updateInstallationStatus('{{ installation.installation_code }}', this.value)">
+                            <option value="">-- اختر الحالة --</option>
+                            <option value="needs_scheduling">بحاجة جدولة</option>
+                            <option value="scheduled">مجدول</option>
+                            <option value="in_installation">قيد التركيب</option>
+                            <option value="completed">مكتمل</option>
+                            <option value="cancelled">ملغي</option>
+                        </select>
+                        <small class="text-muted"><i class="fas fa-info-circle"></i> استخدم هذا الخيار في الحالات الاستثنائية فقط.</small>
+                    </div>
+                </div>
+            {% endif %}
+            <!-- Financial Summary Mini -->
+            <div class="card shadow mb-4 border-bottom-success">
+                <div class="card-header bg-white py-3">
+                    <h6 class="font-weight-bold text-success m-0">ملخص مالي</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>إجمالي المطلوب:</span>
+                        <strong>{{ installation.order.total_amount|currency_format }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>المدفوع:</span>
+                        <strong class="text-success">{{ installation.order.paid_amount|currency_format }}</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span class="font-weight-bold">المتبقي:</span>
+                        <span class="h5 font-weight-bold text-danger">{{ installation.order.remaining_amount|currency_format }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Payments History & Other Tables -->
+    {% if payments %}
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow mb-4">
+                    <div class="card-header card-header-gradient">
+                        <h6 class="card-header-title">
+                            <i class="fas fa-history"></i>
+                            سجل المدفوعات
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>المبلغ</th>
+                                        <th>النوع</th>
+                                        <th>المستلم</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payment in payments %}
                                         <tr>
-                                            <th>المبلغ المستلم:</th>
-                                            <td>{{ receipt_memo.amount_received|currency_format }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>توقيع العميل:</th>
+                                            <td>{{ payment.created_at|date:"Y-m-d" }}</td>
+                                            <td class="text-success font-weight-bold">{{ payment.amount|currency_format }}</td>
+                                            <td>{{ payment.get_payment_type_display }}</td>
                                             <td>
-                                                {% if receipt_memo.customer_signature %}
-                                                    <span class="badge badge-success"
-                                                          style="background-color: #28a745;
-                                                                 color: #fff;
-                                                                 font-weight: bold;
-                                                                 padding: 4px 8px;
-                                                                 font-size: 0.8em">
-                                                        <i class="fas fa-check"></i> نعم
-                                                    </span>
+                                                {% if payment.created_by %}
+                                                    {{ payment.created_by.get_full_name|default:payment.created_by.username }}
                                                 {% else %}
-                                                    <span class="badge badge-warning"
-                                                          style="background-color: #ffc107;
-                                                                 color: #000;
-                                                                 font-weight: bold;
-                                                                 padding: 4px 8px;
-                                                                 font-size: 0.8em">
-                                                        <i class="fas fa-times"></i> لا
-                                                    </span>
+                                                    <span class="text-muted">-</span>
                                                 {% endif %}
                                             </td>
                                         </tr>
-                                        <tr>
-                                            <th>التاريخ:</th>
-                                            <td>{{ receipt_memo.created_at|date:"Y-m-d H:i" }}</td>
-                                        </tr>
-                                    </table>
-                                    {% if receipt_memo.notes %}
-                                        <div class="mt-3">
-                                            <h6>ملاحظات:</h6>
-                                            <p class="text-muted">{{ receipt_memo.notes }}</p>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-6">
-                                    {% if receipt_memo.receipt_image %}
-                                        <div class="text-center">
-                                            <h6>صورة المذكرة:</h6>
-                                            <img src="{{ receipt_memo.receipt_image.url }}"
-                                                 class="img-fluid rounded"
-                                                 style="max-height: 200px"
-                                                 alt="صورة مذكرة الاستلام">
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
-        {% endif %}
+        </div>
+    {% endif %}
+</div>
+<!-- Modal: Assign Technicians -->
+<div class="modal fade"
+     id="assignTechniciansModal"
+     tabindex="-1"
+     role="dialog"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header text-white bg-primary">
+                <h5 class="modal-title font-weight-bold">
+                    <i class="fas fa-users-cog ml-2"></i> تعيين الفنيين
+                </h5>
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+            <form action="{% url 'installations:assign_technicians' installation.id %}"
+                  method="post">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="text-center mb-4">
+                        <p class="text-muted mb-1">قم باختيار الفنيين المسؤولين عن عملية التركيب</p>
+                        <small class="text-info"><i class="fas fa-info-circle"></i> يمكنك اختيار أكثر من فني</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="font-weight-bold mb-2">قائمة الفنيين (قسم التركيبات)</label>
+                        <select name="technicians"
+                                class="form-control shadow-sm"
+                                multiple
+                                style="height: 250px;
+                                       border-radius: 0.5rem">
+                            {% for tech in all_technicians %}
+                                <option value="{{ tech.id }}"
+                                        class="py-2"
+                                        {% if tech in installation.technicians.all %}selected{% endif %}>
+                                    {{ tech.name }}
+                                    {% if tech.specialization %}- ({{ tech.specialization }}){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-save ml-2"></i> حفظ التغييرات
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
+</div>
 {% endblock %}
 {% block extra_js %}
-    <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-// تحديث حالة التركيب عبر القائمة المنسدلة
-function updateInstallationStatus(installationId, newStatus) {
-    if (!newStatus) return; // إذا لم يتم اختيار حالة
-
-    Swal.fire({
-        title: 'تأكيد تحديث الحالة',
-        text: 'هل أنت متأكد من تحديث حالة التركيب؟',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'نعم، تحديث',
-        cancelButtonText: 'إلغاء',
-        confirmButtonColor: '#28a745',
-        cancelButtonColor: '#6c757d',
-        reverseButtons: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            
-            // إنشاء FormData
-            const formData = new FormData();
-            formData.append('status', newStatus);
-
-            fetch(`/installations/installation/${installationId}/update-status/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                },
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // إظهار رسالة نجاح جميلة
-                    Swal.fire({
-                        title: 'تم التحديث بنجاح!',
-                        text: data.message || 'تم تحديث الحالة بنجاح',
-                        icon: 'success',
-                        confirmButtonText: 'حسناً',
-                        confirmButtonColor: '#28a745',
-                        timer: 2000,
-                        timerProgressBar: true
-                    }).then(() => {
-                        // إعادة تحميل الصفحة
-                        location.reload();
-                    });
-                } else {
-                    // إظهار رسالة خطأ
-                    Swal.fire({
-                        title: 'خطأ في التحديث',
-                        text: data.error || 'حدث خطأ أثناء تحديث الحالة',
-                        icon: 'error',
-                        confirmButtonText: 'حسناً',
-                        confirmButtonColor: '#dc3545'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({
-                    title: 'خطأ في التحديث',
-                    text: 'حدث خطأ أثناء تحديث الحالة: ' + error.message,
-                    icon: 'error',
-                    confirmButtonText: 'حسناً',
-                    confirmButtonColor: '#dc3545'
-                });
-            });
-        }
-    });
-}
-
-// تحديث حالة التركيب
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.update-status').forEach(button => {
-        button.addEventListener('click', function() {
-            const installationId = this.dataset.installationId;
-            const newStatus = this.dataset.status;
-            
-            if (!installationId || !newStatus) {
-                Swal.fire({
-                    title: 'خطأ في البيانات',
-                    text: 'بيانات غير صحيحة',
-                    icon: 'error',
-                    confirmButtonText: 'حسناً',
-                    confirmButtonColor: '#dc3545'
-                });
-                return;
-            }
-            
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            
-            if (!csrfToken) {
-                Swal.fire({
-                    title: 'خطأ في الأمان',
-                    text: 'خطأ في الحصول على رمز الأمان',
-                    icon: 'error',
-                    confirmButtonText: 'حسناً',
-                    confirmButtonColor: '#dc3545'
-                });
-                return;
-            }
-
+        // Use existing JS logic for status updates
+        function updateInstallationStatus(installationId, newStatus) {
+            if (!newStatus) return;
             Swal.fire({
-                title: 'تأكيد تحديث الحالة',
-                text: 'هل أنت متأكد من تحديث حالة التركيب؟',
-                icon: 'question',
+                title: 'تأكيد التحديث',
+                text: 'هل أنت متأكد من تغيير الحالة؟',
+                icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'نعم، تحديث',
-                cancelButtonText: 'إلغاء',
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                reverseButtons: true
+                confirmButtonColor: '#4e73df',
+                cancelButtonColor: '#858796',
+                confirmButtonText: 'نعم، قم بالتحديث',
+                cancelButtonText: 'إلغاء'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // إظهار مؤشر التحميل
-                    const originalText = this.innerHTML;
-                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
-                    this.disabled = true;
-                    
-                    // إنشاء FormData
                     const formData = new FormData();
                     formData.append('status', newStatus);
+                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
                     
                     fetch(`/installations/installation/${installationId}/update-status/`, {
                         method: 'POST',
-                        headers: {
-                            'X-CSRFToken': csrfToken,
-                        },
+                        headers: {'X-CSRFToken': csrfToken},
                         body: formData
                     })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
+                    .then(r => r.json())
                     .then(data => {
-                        if (data.success) {
-                            // إظهار رسالة نجاح جميلة
-                            Swal.fire({
-                                title: 'تم التحديث بنجاح!',
-                                text: data.message || 'تم تحديث الحالة بنجاح',
-                                icon: 'success',
-                                confirmButtonText: 'حسناً',
-                                confirmButtonColor: '#28a745',
-                                timer: 2000,
-                                timerProgressBar: true
-                            }).then(() => {
-                                // إعادة تحميل الصفحة
-                                location.reload();
-                            });
+                        if(data.success) {
+                            Swal.fire('تم!', 'تم تحديث الحالة بنجاح.', 'success').then(() => location.reload());
                         } else {
-                            // إظهار رسالة خطأ
-                            Swal.fire({
-                                title: 'خطأ في التحديث',
-                                text: data.error || 'حدث خطأ أثناء تحديث الحالة',
-                                icon: 'error',
-                                confirmButtonText: 'حسناً',
-                                confirmButtonColor: '#dc3545'
-                            });
-                            // إعادة تعيين الزر
-                            this.innerHTML = originalText;
-                            this.disabled = false;
+                            Swal.fire('خطأ', data.error || 'حدث خطأ ما', 'error');
                         }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        Swal.fire({
-                            title: 'خطأ في التحديث',
-                            text: 'حدث خطأ أثناء تحديث الحالة: ' + error.message,
-                            icon: 'error',
-                            confirmButtonText: 'حسناً',
-                            confirmButtonColor: '#dc3545'
-                        });
-                        // إعادة تعيين الزر
-                        this.innerHTML = originalText;
-                        this.disabled = false;
                     });
                 }
-            });
-        });
-    });
-});
-
-// تحديث التاريخ بناء على التاريخ المجدول
-function updateDateFromScheduled(installationId) {
-    Swal.fire({
-        title: 'تأكيد تحديث التاريخ',
-        text: 'هل أنت متأكد من تحديث تاريخ التركيب بناء على التاريخ المجدول؟',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'نعم، تحديث',
-        cancelButtonText: 'إلغاء',
-        confirmButtonColor: '#28a745',
-        cancelButtonColor: '#6c757d',
-        reverseButtons: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            
-            fetch(`/installations/installation/${installationId}/update-date-from-scheduled/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    Swal.fire({
-                        title: 'تم التحديث بنجاح!',
-                        text: data.message || 'تم تحديث التاريخ بنجاح',
-                        icon: 'success',
-                        confirmButtonText: 'حسناً',
-                        confirmButtonColor: '#28a745',
-                        timer: 2000,
-                        timerProgressBar: true
-                    }).then(() => {
-                        location.reload();
-                    });
-                } else {
-                    Swal.fire({
-                        title: 'خطأ في التحديث',
-                        text: data.error || 'حدث خطأ أثناء تحديث التاريخ',
-                        icon: 'error',
-                        confirmButtonText: 'حسناً',
-                        confirmButtonColor: '#dc3545'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({
-                    title: 'خطأ في التحديث',
-                    text: 'حدث خطأ أثناء تحديث التاريخ: ' + error.message,
-                    icon: 'error',
-                    confirmButtonText: 'حسناً',
-                    confirmButtonColor: '#dc3545'
-                });
             });
         }
-    });
-}
+
+        document.querySelectorAll('.update-status').forEach(btn => {
+            btn.addEventListener('click', function() {
+                updateInstallationStatus(this.dataset.installationId, this.dataset.status);
+            });
+        });
     </script>
 {% endblock %}

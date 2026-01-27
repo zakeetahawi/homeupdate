@@ -67,12 +67,14 @@
                                 </div>
                             </div>
                             <div class="row">
+                                <!-- تم إخفاء حقل الفريق بناءً على طلب المستخدم (التعيين يتم يدوياً لاحقاً) -->
+                                <input type="hidden" name="team" value="">
+                                <!--
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="{{ form.team.id_for_label }}">
                                             <i class="fas fa-users"></i>
                                             الفريق
-                                            <span class="text-danger">*</span>
                                         </label>
                                         {{ form.team }}
                                         {% if form.team.errors %}
@@ -81,10 +83,11 @@
                                             </div>
                                         {% endif %}
                                         <small class="form-text text-muted">
-                                            <i class="fas fa-info-circle"></i> اختيار الفريق إلزامي
+                                            <i class="fas fa-info-circle"></i> يمكنك ترك الفريق فارغاً وتعيين الفنيين لاحقاً
                                         </small>
                                     </div>
                                 </div>
+                                -->
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="{{ form.location_type.id_for_label }}">

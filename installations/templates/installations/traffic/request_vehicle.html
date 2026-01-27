@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% block title %}طلب مركبة{% endblock %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">طلب مركبة من إدارة الحركة</h6>
+                    </div>
+                    <div class="card-body">
+                        {% if messages %}
+                            {% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}
+                        {% endif %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label">تاريخ الحاجة للمركبة</label>
+                                <input type="date"
+                                       name="date"
+                                       class="form-control"
+                                       required
+                                       min="{% now 'Y-m-d' %}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">الوقت (اختياري)</label>
+                                <input type="time" name="time" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">الغرض من الطلب / الوجهة</label>
+                                <textarea name="purpose"
+                                          class="form-control"
+                                          rows="4"
+                                          placeholder="يرجى توضيح سبب الحاجة للمركبة والوجهة المقصودة..."
+                                          required></textarea>
+                                <div class="form-text">سيتم مراجعة طلبك من قبل مدير الحركة والموافقة عليه حسب توفر المركبات.</div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane me-2"></i> إرسال الطلب
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{% url 'home' %}" class="text-muted"><i class="fas fa-arrow-right me-1"></i> العودة للرئيسية</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

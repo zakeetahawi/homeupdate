@@ -141,12 +141,14 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ item.order.customer.phone }}</td>
-                                    <td>{{ item.order.customer.address|default:"غير محدد" }}</td>
+                                    <td>
+                                        <span class="text-dark">{{ item.order.customer.address|default:"غير محدد" }}</span>
+                                    </td>
                                     <td>
                                         {% if item.installation and item.installation.location_type == 'open' %}
-                                            <span class="badge badge-success">مفتوح</span>
+                                            <span class="badge bg-success">مفتوح</span>
                                         {% elif item.installation and item.installation.location_type == 'compound' %}
-                                            <span class="badge badge-info">كومبوند</span>
+                                            <span class="badge bg-info text-dark">كومبوند</span>
                                         {% else %}
                                             <span class="text-muted">غير محدد</span>
                                         {% endif %}
@@ -175,35 +177,52 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ item.order.branch.name|default:"غير محدد" }}</td>
-                                    <td>{{ item.team.name|default:"غير محدد" }}</td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            {% if item.technicians %}
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    {% for tech in item.technicians %}<span class="badge bg-warning text-dark me-1">{{ tech.name }}</span>{% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <span class="font-weight-bold">{{ item.team.name|default:"غير محدد" }}</span>
+                                            {% endif %}
+                                            {% if item.driver %}
+                                                <small class="text-muted mt-1">
+                                                    <i class="fas fa-shuttle-van text-primary ml-1"></i>
+                                                    {{ item.driver.name }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
                                     <td>
                                         {% if item.scheduled_date %}
-                                            {{ item.scheduled_date|date:"Y-m-d" }}
-                                            {% if item.installation and item.installation.scheduled_time %}
-                                                <br>
-                                                <small class="text-muted">{{ item.installation.scheduled_time|time:"H:i" }}</small>
-                                            {% endif %}
+                                            <div class="d-flex flex-column">
+                                                <span class="font-weight-bold">{{ item.scheduled_date|date:"Y-m-d" }}</span>
+                                                {% if item.installation and item.installation.scheduled_time %}
+                                                    <small class="text-muted">
+                                                        <i class="far fa-clock ml-1"></i>
+                                                        {{ item.installation.scheduled_time|time:"H:i A" }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
                                         {% else %}
                                             <span class="text-muted">غير محدد</span>
                                         {% endif %}
                                     </td>
                                     <td>
                                         {% if item.installation and item.installation.scheduled_time %}
-                                            {{ item.installation.scheduled_time|time:"H:i" }}
+                                            {{ item.installation.scheduled_time|time:"H:i A" }}
                                         {% else %}
-                                            <span class="text-muted">غير محدد</span>
+                                            <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-center">
                                         {% if item.windows_count %}
-                                            <span class="badge badge-pill"
+                                            <span class="badge rounded-pill shadow-sm"
                                                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                                                          color: white;
-                                                         font-size: 0.9rem;
-                                                         padding: 0.5rem 1rem">
-                                                <i class="fas fa-window-maximize"></i>
-                                                {{ item.windows_count }}
-                                            </span>
+                                                         font-size: 0.85rem;
+                                                         padding: 0.4rem 0.8rem">{{ item.windows_count }}</span>
                                         {% else %}
                                             <span class="text-muted">-</span>
                                         {% endif %}
@@ -211,16 +230,25 @@
                                     <td class="text-center">
                                         {% if item.order.total_amount and item.order.paid_amount %}
                                             {% if item.order.remaining_amount > 0 %}
-                                                <span class="badge badge-warning"
-                                                      style="cursor: pointer"
-                                                      onclick="showDebtWarning('{{ item.order.customer.name|escapejs }}', '{{ item.order.remaining_amount }}', '{{ item.order.id }}')">
-                                                    <i class="fas fa-exclamation-triangle"></i>
-                                                    {{ item.order.remaining_amount|floatformat:2 }} ج.م
-                                                </span>
+                                                {% if item.status == 'completed' %}
+                                                    <span class="badge bg-success shadow-sm px-3 py-2"
+                                                          style="cursor: pointer"
+                                                          onclick="showDebtWarning('{{ item.order.customer.name|escapejs }}', '{{ item.order.remaining_amount }}', '{{ item.order.id }}')">
+                                                        <i class="fas fa-check-circle ml-1"></i>
+                                                        اكتمل ({{ item.order.remaining_amount|floatformat:0 }})
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-warning text-dark shadow-sm px-3 py-2"
+                                                          style="cursor: pointer"
+                                                          onclick="showDebtWarning('{{ item.order.customer.name|escapejs }}', '{{ item.order.remaining_amount }}', '{{ item.order.id }}')">
+                                                        <i class="fas fa-exclamation-triangle ml-1"></i>
+                                                        {{ item.order.remaining_amount|floatformat:2 }} ج.م
+                                                    </span>
+                                                {% endif %}
                                             {% else %}
-                                                <span class="badge badge-success">
-                                                    <i class="fas fa-check-circle"></i>
-                                                    مدفوع بالكامل
+                                                <span class="badge bg-success shadow-sm px-3 py-2">
+                                                    <i class="fas fa-check-double ml-1"></i>
+                                                    خالص
                                                 </span>
                                             {% endif %}
                                         {% else %}
@@ -229,63 +257,43 @@
                                     </td>
                                     <td class="text-center">
                                         {% if item.status == 'needs_scheduling' %}
-                                            <span class="badge badge-warning">
-                                                <i class="fas fa-calendar-plus"></i> بحاجة جدولة
+                                            <span class="badge bg-warning text-dark px-3 py-2">
+                                                <i class="fas fa-calendar-plus ml-1"></i> جديد
                                             </span>
                                         {% elif item.status == 'under_manufacturing' %}
-                                            <span class="badge badge-secondary">
-                                                <i class="fas fa-industry"></i> تحت التصنيع
+                                            <span class="badge bg-secondary px-3 py-2">
+                                                <i class="fas fa-industry ml-1"></i> تصنيع
                                             </span>
-                                            {% if item.manufacturing_status %}
-                                                <br>
-                                                <small class="text-muted">
-                                                    {% if item.manufacturing_status == 'pending_approval' %}
-                                                        قيد الموافقة
-                                                    {% elif item.manufacturing_status == 'approved' %}
-                                                        تمت الموافقة
-                                                    {% elif item.manufacturing_status == 'in_cutting' %}
-                                                        قيد القص
-                                                    {% elif item.manufacturing_status == 'cutting_completed' %}
-                                                        تم القص
-                                                    {% elif item.manufacturing_status == 'in_manufacturing' %}
-                                                        قيد التصنيع
-                                                    {% elif item.manufacturing_status == 'quality_check' %}
-                                                        فحص الجودة
-                                                    {% else %}
-                                                        {{ item.manufacturing_status }}
-                                                    {% endif %}
-                                                </small>
-                                            {% endif %}
                                         {% elif item.status == 'scheduled' %}
-                                            <span class="badge badge-info">
-                                                <i class="fas fa-calendar-check"></i> مجدول
+                                            <span class="badge bg-info text-dark px-3 py-2">
+                                                <i class="fas fa-calendar-check ml-1"></i> مجدول
                                             </span>
                                         {% elif item.status == 'in_installation' %}
-                                            <span class="badge badge-primary">
-                                                <i class="fas fa-tools"></i> قيد التركيب
+                                            <span class="badge bg-primary px-3 py-2">
+                                                <i class="fas fa-tools ml-1"></i> جاري
                                             </span>
                                         {% elif item.status == 'completed' %}
-                                            <span class="badge badge-success">
-                                                <i class="fas fa-check-circle"></i> مكتمل
+                                            <span class="badge bg-success px-3 py-2 shadow-sm">
+                                                <i class="fas fa-check-circle ml-1"></i> مكتمل
                                             </span>
                                         {% elif item.status == 'cancelled' %}
-                                            <span class="badge badge-danger">
+                                            <span class="badge bg-danger">
                                                 <i class="fas fa-times-circle"></i> ملغي
                                             </span>
                                         {% elif item.status == 'modification_required' %}
-                                            <span class="badge badge-warning">
+                                            <span class="badge bg-warning text-dark">
                                                 <i class="fas fa-exclamation-triangle"></i> يحتاج تعديل
                                             </span>
                                         {% elif item.status == 'modification_in_progress' %}
-                                            <span class="badge badge-info">
+                                            <span class="badge bg-info text-dark">
                                                 <i class="fas fa-cogs"></i> التعديل قيد التنفيذ
                                             </span>
                                         {% elif item.status == 'modification_completed' %}
-                                            <span class="badge badge-success">
+                                            <span class="badge bg-success">
                                                 <i class="fas fa-check-circle"></i> التعديل مكتمل
                                             </span>
                                         {% else %}
-                                            <span class="badge badge-secondary">
+                                            <span class="badge bg-secondary">
                                                 {% if item.installation %}
                                                     {{ item.installation.get_status_display }}
                                                 {% else %}
@@ -342,7 +350,7 @@
                                                    title="تفاصيل الطلب">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
-                                                <span class="badge badge-secondary" title="لا يمكن جدولة طلب تحت التصنيع">
+                                                <span class="badge bg-secondary" title="لا يمكن جدولة طلب تحت التصنيع">
                                                     <i class="fas fa-lock"></i> تحت التصنيع
                                                 </span>
                                             {% else %}

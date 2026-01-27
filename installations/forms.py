@@ -20,6 +20,7 @@ from .models import (
     ModificationRequest,
     ReceiptMemo,
     Technician,
+    Vehicle,
 )
 
 
@@ -321,6 +322,8 @@ class InstallationScheduleForm(forms.ModelForm):
         model = InstallationSchedule
         fields = [
             "team",
+            "technicians",
+            "driver",
             "scheduled_date",
             "scheduled_time",
             "location_type",
@@ -328,9 +331,14 @@ class InstallationScheduleForm(forms.ModelForm):
             "notes",
         ]
         widgets = {
-            "team": forms.Select(
-                attrs={"class": "form-control", "required": "required"}
+            "team": forms.Select(attrs={"class": "form-control"}),
+            "technicians": forms.SelectMultiple(
+                attrs={
+                    "class": "form-control select2",
+                    "data-placeholder": "اختر الفنيين",
+                }
             ),
+            "driver": forms.Select(attrs={"class": "form-control"}),
             "location_type": forms.Select(
                 attrs={
                     "class": "form-control",
@@ -343,6 +351,17 @@ class InstallationScheduleForm(forms.ModelForm):
             ),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["technicians"].queryset = Technician.objects.filter(
+            is_active=True
+        ).order_by("name")
+        self.fields["driver"].queryset = Driver.objects.filter(is_active=True).order_by(
+            "name"
+        )
+        self.fields["team"].required = False
+        self.fields["team"].label = "الفريق (اختياري - قديم)"
+
     def clean(self):
         cleaned_data = super().clean()
         scheduled_date = cleaned_data.get("scheduled_date")
@@ -351,11 +370,11 @@ class InstallationScheduleForm(forms.ModelForm):
         location_type = cleaned_data.get("location_type")
         windows_count = cleaned_data.get("windows_count")
 
-        # التحقق من الحقول الإلزامية
-        if not team:
-            raise ValidationError(
-                {"team": _("⚠️ الفريق مطلوب - يجب اختيار فريق التركيب")}
-            )
+        technicians = cleaned_data.get("technicians")
+
+        # تم تخفيف الشرط بناءً على طلب المستخدم (الجدولة بالتاريخ فقط)
+        # if not technicians and not team:
+        #     raise ValidationError(_("⚠️ يجب تحديد الفنيين أو اختيار فريق"))
 
         if not location_type:
             raise ValidationError(
@@ -641,12 +660,47 @@ class TechnicianEditForm(forms.ModelForm):
         }
 
 
+class VehicleForm(forms.ModelForm):
+    """نموذج المركبة"""
+
+    class Meta:
+        model = Vehicle
+        fields = [
+            "name",
+            "plate_number",
+            "model",
+            "chassis_number",
+            "vehicle_type",
+            "status",
+            "license_expiry",
+        ]
+        widgets = {
+            "name": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "الاسم"}
+            ),
+            "plate_number": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "رقم اللوحة"}
+            ),
+            "model": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "الموديل"}
+            ),
+            "chassis_number": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "رقم الشاصي"}
+            ),
+            "vehicle_type": forms.Select(attrs={"class": "form-control"}),
+            "status": forms.Select(attrs={"class": "form-control"}),
+            "license_expiry": forms.DateInput(
+                attrs={"class": "form-control", "type": "date"}
+            ),
+        }
+
+
 class DriverForm(forms.ModelForm):
     """نموذج السائق"""
 
     class Meta:
         model = Driver
-        fields = ["name", "phone", "license_number", "vehicle_number", "is_active"]
+        fields = ["name", "phone", "license_number", "vehicle", "is_active"]
         widgets = {
             "name": forms.TextInput(
                 attrs={"placeholder": "اسم السائق", "class": "form-control"}
@@ -657,9 +711,7 @@ class DriverForm(forms.ModelForm):
             "license_number": forms.TextInput(
                 attrs={"placeholder": "رقم الرخصة", "class": "form-control"}
             ),
-            "vehicle_number": forms.TextInput(
-                attrs={"placeholder": "رقم المركبة", "class": "form-control"}
-            ),
+            "vehicle": forms.Select(attrs={"class": "form-control"}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 

@@ -43,11 +43,13 @@
                         <form method="post">
                             {% csrf_token %}
                             <div class="row">
+                                <!-- تم إخفاء حقل الفريق -->
+                                <input type="hidden" name="team" value="">
+                                <!--
                                 <div class="col-md-6 mb-3">
                                     <label for="{{ form.team.id_for_label }}" class="form-label">
                                         <i class="fas fa-users text-primary"></i>
                                         {{ form.team.label }}
-                                        <span class="text-danger">*</span>
                                     </label>
                                     {{ form.team }}
                                     {% if form.team.errors %}
@@ -58,9 +60,10 @@
                                     {% endif %}
                                     <small class="form-text text-muted">
                                         <i class="fas fa-info-circle"></i>
-                                        اختر الفريق المسؤول عن التركيب (إلزامي)
+                                        يمكنك ترك الفريق فارغاً وتعيين الفنيين لاحقاً
                                     </small>
                                 </div>
+                                -->
                                 <div class="col-md-6 mb-3">
                                     <label for="{{ form.scheduled_date.id_for_label }}" class="form-label">{{ form.scheduled_date.label }}</label>
                                     {{ form.scheduled_date }}
