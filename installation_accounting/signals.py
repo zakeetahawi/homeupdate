@@ -49,12 +49,15 @@ def sync_technician_shares(card):
 
     # Check settings for price
     settings = InstallationAccountingSettings.get_settings()
-    price_per_window = card.price_per_window or settings.default_price_per_window
 
-    if card.price_per_window == 0:
+    # للملفات غير المدفوعة، نستخدم السعر الحالي من الإعدادات دائماً
+    if card.status != "paid":
+        price_per_window = settings.default_price_per_window
         card.price_per_window = price_per_window
         card.total_cost = total_windows * price_per_window
         card.save(update_fields=["price_per_window", "total_cost"])
+    else:
+        price_per_window = card.price_per_window or settings.default_price_per_window
 
     share_windows = total_windows / num_techs
     share_amount = (total_windows * price_per_window) / num_techs
@@ -83,3 +86,13 @@ def update_shares_on_tech_change(sender, instance, action, **kwargs):
     if action in ["post_add", "post_remove", "post_clear"]:
         if hasattr(instance, "accounting_card"):
             sync_technician_shares(instance.accounting_card)
+
+
+@receiver(post_save, sender=InstallationAccountingSettings)
+def update_all_unpaid_cards_price(sender, instance, **kwargs):
+    """
+    تحديث جميع البطاقات غير المدفوعة عند تغيير سعر الشباك الافتراضي في الإعدادات
+    """
+    cards = InstallationCard.objects.exclude(status="paid")
+    for card in cards:
+        sync_technician_shares(card)
