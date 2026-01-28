@@ -15,11 +15,12 @@ from .models import InstallationAccountingSettings, InstallationCard, Technician
 @login_required
 def installation_reports(request):
     """
-    نتائج تقارير التركيبات (بناءً على مبدأ تقرير المصنع)
+    نتائج تقارير التركيبات (بناءً على الجدول الزمني)
+    يعرض جميع التركيبات المجدولة في يوم معين بغض النظر عن حالة الإكمال
     """
     today = timezone.now().date()
 
-    # تطبيق نفس منطق التاريخ (25 من الشهر)
+    # تحديد التاريخ الافتراضي
     if today.day >= 25:
         default_date_from = today.replace(day=25).strftime("%Y-%m-%d")
     else:
@@ -35,49 +36,84 @@ def installation_reports(request):
     date_from = request.GET.get("date_from", default_date_from)
     date_to = request.GET.get("date_to")
     payment_status = request.GET.get("payment_status", "all")
+    completion_status = request.GET.get("completion_status", "all")
     technician_id = request.GET.get("technician")
 
-    # Base queryset - فقط التركيبات المكتملة
-    cards = InstallationCard.objects.select_related(
-        "installation_schedule",
-        "installation_schedule__order",
-        "installation_schedule__order__customer",
-    ).prefetch_related("shares__technician")
+    # Base queryset - Schedule based
+    from installations.models import InstallationSchedule
 
-    # Filter by date
+    schedules = (
+        InstallationSchedule.objects.select_related(
+            "order",
+            "order__customer",
+            "accounting_card",  # Left join with accounting card
+        )
+        .prefetch_related(
+            "technicians",
+            "accounting_card__shares",
+            "accounting_card__shares__technician",
+        )
+        .exclude(status="cancelled")
+    )  # Exclude cancelled (optional based on user request "full schedule", but usually cancelled means removed)
+
+    # Filter by SCHEDULED DATE
     if date_from:
-        cards = cards.filter(completion_date__date__gte=date_from)
+        schedules = schedules.filter(scheduled_date__gte=date_from)
     if date_to:
-        cards = cards.filter(completion_date__date__lte=date_to)
+        schedules = schedules.filter(scheduled_date__lte=date_to)
 
-    # Filter by technician
+    # Filter by TECHNICIAN (if assigned in schedule)
     if technician_id:
-        cards = cards.filter(shares__technician_id=technician_id).distinct()
+        schedules = schedules.filter(technicians__id=technician_id).distinct()
 
-    # Filter by payment status (card level)
+    # Filter by COMPLETION STATUS (Strictly Completed Only as per user request)
+    schedules = schedules.filter(status__in=["completed", "modification_completed"])
+
+    # Filter by PAYMENT STATUS (requires accounting card)
     if payment_status == "paid":
-        cards = cards.filter(status="paid")
+        schedules = schedules.filter(accounting_card__status="paid")
     elif payment_status == "unpaid":
-        cards = cards.exclude(status="paid")
+        schedules = schedules.exclude(accounting_card__status="paid")
 
     # Calculate Totals
-    total_windows = cards.aggregate(total=Sum("windows_count"))["total"] or 0
-    total_cost = cards.aggregate(total=Sum("total_cost"))["total"] or Decimal("0.00")
-
-    # Calculate technician specific cost if filtered
+    # Note: Totals should account for filtered list
+    total_windows = 0
+    total_cost = Decimal("0.00")
+    total_orders_count = schedules.count()
     technician_total = Decimal("0.00")
-    shares = TechnicianShare.objects.filter(card__in=cards)
 
-    if technician_id:
-        shares = shares.filter(technician_id=technician_id)
+    # We iterate to sum values because some might not have cards yet
+    # Or use aggregation if possible, but cleaner logic here:
 
-    if payment_status == "paid":
-        shares = shares.filter(is_paid=True)
-    elif payment_status == "unpaid":
-        shares = shares.filter(is_paid=False)
+    # For technician total, we need to be careful if filtering by technician
 
-    for share in shares:
-        technician_total += share.amount
+    for schedule in schedules:
+        # Windows count (from schedule or card)
+        # Use card's windows count if exists (final), else schedule's
+        if hasattr(schedule, "accounting_card"):
+            wins = schedule.accounting_card.windows_count
+            cost = schedule.accounting_card.total_cost
+
+            # Tech shares
+            shares = schedule.accounting_card.shares.all()
+            if technician_id:
+                shares = shares.filter(technician_id=technician_id)
+
+            # Payment status logic for tech total
+            if payment_status == "paid":
+                shares = shares.filter(is_paid=True)
+            elif payment_status == "unpaid":
+                shares = shares.filter(is_paid=False)
+
+            tech_sum = sum(share.amount for share in shares)
+        else:
+            wins = schedule.windows_count or 0
+            cost = Decimal("0.00")  # No accounting yet
+            tech_sum = Decimal("0.00")
+
+        total_windows += wins
+        total_cost += cost
+        technician_total += tech_sum
 
     # Dropdowns
     technicians = Technician.objects.filter(
@@ -85,16 +121,17 @@ def installation_reports(request):
     ).order_by("name")
 
     context = {
-        "cards": cards.order_by("-completion_date"),
+        "schedules": schedules.order_by("scheduled_date"),  # Sort by scheduled date
         "total_windows": total_windows,
         "total_cost": total_cost,
-        "total_orders_count": cards.count(),
+        "total_orders_count": total_orders_count,
         "technician_total": technician_total,
         "technicians": technicians,
         "filters": {
             "date_from": date_from,
             "date_to": date_to,
             "payment_status": payment_status,
+            "completion_status": completion_status,
             "technician": technician_id,
         },
     }

@@ -115,7 +115,7 @@
                         <!-- Data Table -->
                         <div class="table-responsive bg-white rounded shadow-sm border">
                             <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0 fw-bold text-secondary">تفاصيل عمليات التركيب</h5>
+                                <h5 class="mb-0 fw-bold text-secondary">تفاصيل جدول التركيبات</h5>
                                 <button type="button"
                                         class="btn btn-success btn-sm shadow-sm"
                                         id="btn-bulk-pay"
@@ -129,76 +129,128 @@
                                         <th style="width: 50px;">
                                             <input type="checkbox" class="form-check-input" id="check-all">
                                         </th>
+                                        <th>التاريخ المجدول</th>
                                         <th>رقم الطلب</th>
                                         <th>العميل</th>
-                                        <th>تاريخ الإكمال</th>
+                                        <th>حالة الإنجاز</th>
                                         <th>الشبابيك</th>
                                         <th>سعر الشباك</th>
                                         <th>الفنيين (الحصص)</th>
                                         <th>المستحقات</th>
-                                        <th>الحالة</th>
+                                        <th>حالة الدفع</th>
                                         <th>تاريخ الدفع</th>
                                     </tr>
                                 </thead>
                                 <tbody class="text-center">
-                                    {% for card in cards %}
-                                        <tr class="{% if card.status == 'paid' %}table-success{% endif %}">
-                                            <td>
-                                                {% if card.status != 'paid' %}
-                                                    <input type="checkbox"
-                                                           class="form-check-input card-check"
-                                                           value="{{ card.id }}">
-                                                {% else %}
-                                                    <i class="fas fa-check-circle text-success" title="مدفوع بالكامل"></i>
-                                                {% endif %}
-                                            </td>
-                                            <td class="fw-bold text-primary">
-                                                {{ card.order_number }}
-                                                {% if card.is_modification %}
-                                                    <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">تعديل</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>{{ card.customer_name }}</td>
-                                            <td>{{ card.completion_date|date:"Y-m-d"|default:"-" }}</td>
-                                            <td>
-                                                <span class="badge bg-secondary rounded-pill px-3">{{ card.windows_count }}</span>
-                                            </td>
-                                            <td>{{ card.price_per_window }}</td>
-                                            <td class="text-start">
-                                                {% for share in card.shares.all %}
-                                                    {% if not filters.technician or share.technician_id|stringformat:"s" == filters.technician %}
-                                                        <div class="small mb-1 {% if share.is_paid %}text-success{% endif %}">
-                                                            <i class="fas fa-user-circle me-1 opacity-50"></i>
-                                                            <strong>{{ share.technician.name }}:</strong>
-                                                            <span class="badge bg-light text-dark border ms-1">{{ share.assigned_windows|floatformat:1 }} شباك</span>
-                                                            {% if share.is_paid %}<i class="fas fa-check-circle text-success ms-1 small"></i>{% endif %}
+                                    {% for schedule in schedules %}
+                                        {% with card=schedule.accounting_card %}
+                                            <tr class="{% if card and card.status == 'paid' %}table-success{% endif %}">
+                                                <td>
+                                                    {% if card and card.status != 'paid' %}
+                                                        <input type="checkbox"
+                                                               class="form-check-input card-check"
+                                                               value="{{ card.id }}">
+                                                    {% elif card and card.status == 'paid' %}
+                                                        <i class="fas fa-check-circle text-success" title="مدفوع بالكامل"></i>
+                                                    {% else %}
+                                                        <!-- No card yet -->
+                                                        <i class="fas fa-minus text-muted"></i>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="fw-bold">
+                                                    {{ schedule.scheduled_date|date:"Y-m-d" }}
+                                                    {% if schedule.completion_date and schedule.completion_date.date != schedule.scheduled_date %}
+                                                        <div class="text-danger small mt-1" style="font-size: 0.75rem;">
+                                                            <i class="fas fa-check me-1"></i>
+                                                            {{ schedule.completion_date|date:"Y-m-d" }}
                                                         </div>
                                                     {% endif %}
-                                                {% endfor %}
-                                            </td>
-                                            <td class="fw-bold text-success">
-                                                {% if filters.technician %}
-                                                    {% for share in card.shares.all %}
-                                                        {% if share.technician_id|stringformat:"s" == filters.technician %}{{ share.amount|floatformat:2 }}{% endif %}
-                                                    {% endfor %}
-                                                {% else %}
-                                                    {{ card.total_cost|floatformat:2 }}
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if card.status == 'paid' %}
-                                                    <span class="badge bg-success">مدفوع</span>
-                                                {% else %}
-                                                    <span class="badge bg-warning text-dark">غير مدفوع</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>{{ card.payment_date|date:"Y-m-d"|default:"-" }}</td>
-                                        </tr>
+                                                </td>
+                                                <td class="fw-bold text-primary">
+                                                    {{ schedule.order.order_number }}
+                                                    {% if schedule.status|slice:":12" == "modification" %}
+                                                        <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">تعديل</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ schedule.order.customer.name }}</td>
+                                                <td>
+                                                    {% if schedule.status == 'completed' or schedule.status == 'modification_completed' %}
+                                                        <span class="badge bg-success">مكتمل</span>
+                                                    {% elif schedule.status == 'in_installation' %}
+                                                        <span class="badge bg-primary">قيد التنفيذ</span>
+                                                    {% elif schedule.status == 'scheduled' %}
+                                                        <span class="badge bg-info text-dark">مجدول</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">{{ schedule.get_status_display }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-secondary rounded-pill px-3">{{ card.windows_count|default:schedule.windows_count }}</span>
+                                                </td>
+                                                <td>{{ card.price_per_window|default:"-" }}</td>
+                                                <td class="text-start">
+                                                    {% if card %}
+                                                        {% for share in card.shares.all %}
+                                                            {% if not filters.technician or share.technician_id|stringformat:"s" == filters.technician %}
+                                                                <div class="small mb-1 {% if share.is_paid %}text-success{% endif %}">
+                                                                    <i class="fas fa-user-circle me-1 opacity-50"></i>
+                                                                    <strong>{{ share.technician.name }}:</strong>
+                                                                    <span class="badge bg-light text-dark border ms-1">{{ share.assigned_windows|floatformat:1 }} شباك</span>
+                                                                    {% if share.is_paid %}<i class="fas fa-check-circle text-success ms-1 small"></i>{% endif %}
+                                                                </div>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <!-- Show techs from schedule if no card yet -->
+                                                        {% for tech in schedule.technicians.all %}
+                                                            <div class="small mb-1 text-muted">
+                                                                <i class="fas fa-user-clock me-1 opacity-50"></i>
+                                                                {{ tech.name }}
+                                                            </div>
+                                                        {% endfor %}
+                                                    {% endif %}
+                                                </td>
+                                                <td class="fw-bold text-success">
+                                                    {% if card %}
+                                                        {% if filters.technician %}
+                                                            {% for share in card.shares.all %}
+                                                                {% if share.technician_id|stringformat:"s" == filters.technician %}{{ share.amount|floatformat:2 }}{% endif %}
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            {{ card.total_cost|floatformat:2 }}
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if card %}
+                                                        {% if card.status == 'paid' %}
+                                                            <span class="badge bg-success">مدفوع</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning text-dark">غير مدفوع</span>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="badge bg-light text-muted border">غير جاهز</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ card.payment_date|date:"Y-m-d"|default:"-" }}</td>
+                                            </tr>
+                                        {% endwith %}
                                     {% empty %}
                                         <tr>
-                                            <td colspan="10" class="text-center py-5 text-muted italic">لا توجد عمليات تركيب مكتملة في هذه الفترة</td>
+                                            <td colspan="11" class="text-center py-5 text-muted italic">لا توجد عمليات تركيب مجدولة في هذه الفترة</td>
                                         </tr>
                                     {% endfor %}
+                                    <!-- TOTALS ROW -->
+                                    <tr class="table-dark fw-bold">
+                                        <td colspan="5" class="text-end">الإجمالي:</td>
+                                        <td>{{ total_windows }}</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td class="text-success">{{ total_cost|floatformat:2 }}</td>
+                                        <td colspan="2"></td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
