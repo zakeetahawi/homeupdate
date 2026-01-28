@@ -772,6 +772,19 @@
                                     </li>
                                 </ul>
                             </div>
+                            <!-- زر التحويلات المخزنية لمسؤول المخزن -->
+                            {% if is_warehouse_manager %}
+                                <a href="{% url 'inventory:stock_transfer_list' %}"
+                                   class="btn btn-outline-light position-relative me-3"
+                                   title="التحويلات المخزنية">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    {% if pending_transfers_count > 0 %}
+                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                              style="font-size: 0.6rem">{{ pending_transfers_count }}</span>
+                                    {% endif %}
+                                    <span class="d-none d-lg-inline ms-1">التحويلات</span>
+                                </a>
+                            {% endif %}
                             <!-- أيقونة الإشعارات العامة -->
                             {% if not user.is_inspection_technician or user.is_superuser %}
                                 <div class="dropdown me-3">
