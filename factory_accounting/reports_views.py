@@ -27,16 +27,22 @@ def production_reports(request):
     today = timezone.now().date()
 
     # Calculate 25th of previous month
-    if today.month == 1:
-        # If January, go to December of previous year
-        default_date_from = today.replace(
-            year=today.year - 1, month=12, day=25
-        ).strftime("%Y-%m-%d")
+    # Calculate 25th of month logic
+    if today.day >= 25:
+        # If today is 25th or later, default to THIS month's 25th
+        default_date_from = today.replace(day=25).strftime("%Y-%m-%d")
     else:
-        # Otherwise, go to previous month
-        default_date_from = today.replace(month=today.month - 1, day=25).strftime(
-            "%Y-%m-%d"
-        )
+        # If before 25th, default to PREVIOUS month's 25th
+        if today.month == 1:
+            # If January, go to December of previous year
+            default_date_from = today.replace(
+                year=today.year - 1, month=12, day=25
+            ).strftime("%Y-%m-%d")
+        else:
+            # Otherwise, go to previous month
+            default_date_from = today.replace(month=today.month - 1, day=25).strftime(
+                "%Y-%m-%d"
+            )
 
     date_from = request.GET.get("date_from", default_date_from)
     date_to = request.GET.get("date_to")
