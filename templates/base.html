@@ -773,7 +773,7 @@
                                 </ul>
                             </div>
                             <!-- زر التحويلات المخزنية لمسؤول المخزن -->
-                            {% if is_warehouse_manager %}
+                            {% if is_warehouse_manager and not user.is_superuser %}
                                 <a href="{% url 'inventory:stock_transfer_list' %}"
                                    class="btn btn-outline-light position-relative me-3"
                                    title="التحويلات المخزنية">
