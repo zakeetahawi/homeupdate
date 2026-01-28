@@ -242,6 +242,16 @@ def navbar_departments(request):
                 }
             )
 
+    # Inject Installation Accounting Report in Reports section
+    if "reports" in navbar_items:
+        navbar_items["reports"]["units"].append(
+            {
+                "name": "محاسبة التركيبات",
+                "icon": "fa-tools",
+                "url_name": "/installation-accounting/reports/",
+            }
+        )
+
     # إزالة العناصر الفارغة
     navbar_items_filtered = {
         key: value for key, value in navbar_items.items() if value["units"]

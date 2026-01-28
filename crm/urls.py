@@ -101,6 +101,7 @@ urlpatterns = [
     path("backup-system/", include("backup_system.urls", namespace="backup_system")),
     # النظام المحاسبي المتكامل
     path("accounting/", include("accounting.urls", namespace="accounting")),
+    path("installation-accounting/", include("installation_accounting.urls")),
     # حسابات المصنع - الخياطين والقصاصين
     path(
         "factory-accounting/",
