@@ -13,6 +13,7 @@ from django.db.models import Q
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.safestring import mark_safe
+from django.views.decorators.cache import never_cache
 
 from .forms import (
     CompanyInfoForm,
@@ -109,6 +110,7 @@ def get_client_ip(request):
     return ip
 
 
+@never_cache
 def login_view(request):
     """
     View for user login with rate limiting
