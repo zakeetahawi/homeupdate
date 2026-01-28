@@ -88,6 +88,7 @@ def installation_reports(request):
         "cards": cards.order_by("-completion_date"),
         "total_windows": total_windows,
         "total_cost": total_cost,
+        "total_orders_count": cards.count(),
         "technician_total": technician_total,
         "technicians": technicians,
         "filters": {

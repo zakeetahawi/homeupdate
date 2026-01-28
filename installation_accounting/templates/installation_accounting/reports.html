@@ -75,7 +75,16 @@
                         </form>
                         <!-- Summary Cards -->
                         <div class="row g-4 mb-5">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
+                                <div class="card h-100 border-0 bg-dark text-white shadow">
+                                    <div class="card-body text-center p-4">
+                                        <div class="display-6 mb-1 fw-bold">{{ total_orders_count }}</div>
+                                        <div class="text-uppercase small opacity-75">إجمالي عدد الطلبات</div>
+                                        <i class="fas fa-file-invoice fa-2x mt-3 opacity-25"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
                                 <div class="card h-100 border-0 bg-primary text-white shadow">
                                     <div class="card-body text-center p-4">
                                         <div class="display-6 mb-1 fw-bold">{{ total_windows }}</div>
@@ -84,7 +93,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="card h-100 border-0 bg-info text-white shadow">
                                     <div class="card-body text-center p-4">
                                         <div class="display-6 mb-1 fw-bold">{{ total_cost|floatformat:2 }}</div>
@@ -93,7 +102,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="card h-100 border-0 bg-success text-white shadow">
                                     <div class="card-body text-center p-4">
                                         <div class="display-6 mb-1 fw-bold">{{ technician_total|floatformat:2 }}</div>

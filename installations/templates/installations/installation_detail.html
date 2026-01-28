@@ -449,14 +449,16 @@ color: #4e73df;
                                 data-status="in_installation">
                             <i class="fas fa-play ml-2"></i> بدء التركيب
                         </button>
-                        <a href="{% url 'installations:edit_schedule' installation.id %}"
-                           class="btn btn-warning action-btn-lg text-dark">
-                            <i class="fas fa-edit ml-2"></i> تعديل الموعد
-                        </a>
                     {% elif installation.status == 'in_installation' %}
                         <a href="{% url 'installations:change_installation_status' installation.id %}"
                            class="btn btn-success action-btn-lg text-white">
                             <i class="fas fa-check-double ml-2"></i> إكمال التركيب
+                        </a>
+                    {% endif %}
+                    {% if installation.status != 'completed' and installation.status != 'cancelled' %}
+                        <a href="{% url 'installations:edit_schedule' installation.id %}"
+                           class="btn btn-outline-primary action-btn-lg mt-2">
+                            <i class="fas fa-calendar-edit ml-2"></i> تعديل الجدولة
                         </a>
                     {% endif %}
                     <a href="{% url 'installations:add_payment' installation.id %}"
