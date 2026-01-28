@@ -437,12 +437,8 @@ class Customer(SoftDeleteMixin, models.Model):
         related_name="customers",
         verbose_name=_("تصنيف العميل"),
     )
-    CUSTOMER_TYPE_CHOICES = [
-        ("retail", _("قطاعي")),
-        ("wholesale", _("جملة")),
-    ]
     customer_type = models.CharField(
-        _("نوع العميل"), max_length=20, choices=CUSTOMER_TYPE_CHOICES, default="retail"
+        _("نوع العميل"), max_length=20, default="retail", db_index=True
     )
     name = models.CharField(_("اسم العميل"), max_length=200, db_index=True)
     branch = models.ForeignKey(
