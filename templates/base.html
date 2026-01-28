@@ -409,27 +409,6 @@
                                         <i class="fas fa-list-check"></i><span class="nav-text">أوامر التقطيع المجمعة</span>
                                     </a>
                                 </li>
-                            {% elif user.is_traffic_manager %}
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{% url 'installations:traffic_dashboard' %}">
-                                        <i class="fas fa-tachometer-alt"></i><span class="nav-text">لوحة التحكم</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{% url 'installations:mission_list' %}">
-                                        <i class="fas fa-tasks"></i><span class="nav-text">المهام</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{% url 'installations:driver_list' %}">
-                                        <i class="fas fa-id-card"></i><span class="nav-text">إدارة السائقين</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{% url 'installations:vehicle_list' %}">
-                                        <i class="fas fa-truck"></i><span class="nav-text">إدارة المركبات</span>
-                                    </a>
-                                </li>
                             {% elif user.is_factory_receiver %}
                                 {# مسؤول استلام المصنع يرى رابط استلام الأقمشة ورابط أوامر التصنيع #}
                                 <li class="nav-item">
@@ -480,15 +459,6 @@
                                 <i class="fas fa-barcode"></i>
                                 <span class="d-none d-lg-inline ms-1">باركود</span>
                             </button>
-                            <!-- أيقونة إدارة الحركة -->
-                            {% if user.is_traffic_manager or user.is_superuser %}
-                                <a href="{% url 'installations:traffic_dashboard' %}"
-                                   class="btn btn-outline-light me-2"
-                                   title="إدارة الحركة">
-                                    <i class="fas fa-traffic-light"></i>
-                                    <span class="d-none d-lg-inline ms-1">إدارة الحركة</span>
-                                </a>
-                            {% endif %}
                             <!-- أيقونة التحويلات الواردة - للمستخدمين الذين يديرون مستودعات -->
                             {% if incoming_transfers_count > 0 %}
                                 <div class="dropdown me-2">
@@ -568,78 +538,6 @@
                                                href="{% url 'inventory:stock_transfer_list' %}?status=approved,in_transit">
                                                 <i class="fas fa-list"></i> عرض جميع التحويلات الواردة
                                             </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            {% endif %}
-                            <!-- أيقونة التحويلات المخزنية - لمسؤولي المخازن (للإنشاء) -->
-                            {% if is_warehouse_manager %}
-                                <div class="dropdown me-2">
-                                    <button class="btn btn-outline-success position-relative"
-                                            type="button"
-                                            id="warehouseActionsDropdown"
-                                            data-bs-toggle="dropdown"
-                                            aria-expanded="false"
-                                            title="إجراءات المخازن">
-                                        <i class="fas fa-bolt"></i>
-                                        {% if pending_transfers_count > 0 %}
-                                            <span class="badge rounded-pill bg-danger"
-                                                  style="font-size: 0.6rem;
-                                                         position: absolute;
-                                                         top: 0;
-                                                         right: 0;
-                                                         transform: translate(25%, -25%)">
-                                                {{ pending_transfers_count }}
-                                            </span>
-                                        {% endif %}
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end"
-                                        aria-labelledby="warehouseActionsDropdown"
-                                        style="width: 280px">
-                                        <li class="dropdown-header bg-success bg-opacity-10">
-                                            <span class="fw-bold text-dark">
-                                                <i class="fas fa-warehouse me-2 text-success"></i>
-                                                إجراءات المخازن
-                                            </span>
-                                        </li>
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item py-2"
-                                               href="{% url 'inventory:stock_transfer_create' %}">
-                                                <i class="fas fa-bolt text-success me-2"></i>
-                                                <strong>تحويل مخزني جديد</strong>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item py-2"
-                                               href="{% url 'inventory:stock_transfer_list' %}">
-                                                <i class="fas fa-list text-primary me-2"></i>
-                                                جميع التحويلات
-                                            </a>
-                                        </li>
-                                        {% if user.is_superuser or user.is_staff %}
-                                            <li>
-                                                <a class="dropdown-item py-2"
-                                                   href="{% url 'inventory:warehouse_list' %}">
-                                                    <i class="fas fa-warehouse text-info me-2"></i>
-                                                    إدارة المستودعات
-                                                </a>
-                                            </li>
-                                        {% endif %}
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
-                                        <li class="px-3 py-2">
-                                            <small class="text-muted">
-                                                <i class="fas fa-info-circle me-1"></i>
-                                                {% if pending_transfers_count > 0 %}
-                                                    <strong class="text-warning">{{ pending_transfers_count }}</strong> تحويل معلق
-                                                {% else %}
-                                                    لا توجد تحويلات معلقة
-                                                {% endif %}
-                                            </small>
                                         </li>
                                     </ul>
                                 </div>
@@ -786,15 +684,6 @@
                                         </div>
                                     </ul>
                                 </div>
-                            {% endif %}
-                            <!-- لوحة تحكم فني المعاينات -->
-                            {% if user.is_inspection_technician or user.is_superuser or user.is_inspection_manager %}
-                                <a href="{% url 'inspections:technician_dashboard' %}"
-                                   class="btn btn-outline-light me-2"
-                                   title="لوحة تحكم فني المعاينات">
-                                    <i class="fas fa-clipboard-check"></i>
-                                    <span class="d-none d-lg-inline ms-1">معايناتي</span>
-                                </a>
                             {% endif %}
                             <!-- أيقونة الرسائل الداخلية والمستخدمين النشطين -->
                             <div class="dropdown me-2">
@@ -1046,10 +935,15 @@
                                 </div>
                             {% endif %}
                             <!-- زر المستخدم -->
-                            <button class="btn btn-outline-light dropdown-toggle"
+                            <button class="btn btn-outline-light dropdown-toggle d-inline-flex align-items-center gap-2"
                                     id="customUserBtn"
                                     type="button">
-                                <i class="fas fa-user"></i> {{ user.get_full_name|default:user.username }}
+                                <i class="fas fa-user"></i>
+                                <div class="d-flex flex-column align-items-start lh-1 text-wrap text-start">
+                                    <span class="mb-1">{{ user.get_full_name|default:user.username }}</span>
+                                    <span class="badge bg-white text-primary bg-opacity-75 rounded-pill"
+                                          style="font-size: 0.65em">{{ user.get_user_role_display }}</span>
+                                </div>
                             </button>
                         {% else %}
                             <a href="{% url 'accounts:login' %}" class="btn btn-outline-light"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a>

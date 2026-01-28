@@ -236,6 +236,8 @@ urlpatterns = [
     path(
         "stock-transfer/create/", stock_transfer_bulk, name="stock_transfer_create"
     ),  # النموذج الجديد
+    # Aliases for compatibility/typos
+    path("stock-transfers/create/", stock_transfer_bulk),
     path(
         "stock-transfer/create/bulk/",
         stock_transfer_bulk_create,

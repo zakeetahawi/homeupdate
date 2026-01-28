@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -568,14 +569,25 @@ def transaction_create(request, product_pk):
 
             # التحقق من صحة الكمية
             try:
-                quantity = float(quantity)
+                quantity = Decimal(quantity)
                 if quantity <= 0:
                     raise ValueError("يجب أن تكون الكمية أكبر من صفر")
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, Exception):
                 raise ValueError("الكمية يجب أن تكون رقماً صحيحاً")
 
             # الحصول على المستودع
             warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
+
+            # تحديث وحدة القياس إذا تم تغييرها
+            new_unit = request.POST.get("unit")
+            if new_unit and new_unit != product.unit:
+                # التحقق من أن الوحدة صالحة
+                valid_units = [choice[0] for choice in Product.UNIT_CHOICES]
+                if new_unit in valid_units:
+                    product.unit = new_unit
+                    product.save()
+                    # تحديث الكائن في الذاكرة
+                    product.refresh_from_db()
 
             # إعادة فحص المخزون الحالي قبل تسجيل الحركة
             current_stock = product.current_stock
@@ -667,10 +679,10 @@ def transaction_create(request, product_pk):
         "transaction_types": transaction_types,
         "transaction_reasons": transaction_reasons,
         "current_stock": current_stock,
-        "warehouses": warehouses_list,
         "alerts_count": alerts_count,
         "recent_alerts": recent_alerts,
         "current_year": current_year,
+        "unit_choices": Product.UNIT_CHOICES,
     }
 
     return render(request, "inventory/transaction_form_new.html", context)

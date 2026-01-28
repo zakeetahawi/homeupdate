@@ -106,15 +106,17 @@
                                                title="تعديل">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <form action="{% url 'installations:vehicle_delete' vehicle.id %}"
-                                                  method="post"
-                                                  class="d-inline"
-                                                  onsubmit="return confirm('هل أنت متأكد من حذف هذه المركبة؟');">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-outline-danger" title="حذف">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
+                                            {% if user.is_superuser or perms.installations.delete_vehicle %}
+                                                <form action="{% url 'installations:vehicle_delete' vehicle.id %}"
+                                                      method="post"
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('هل أنت متأكد من حذف هذه المركبة؟');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-outline-danger" title="حذف">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
                                         </div>
                                     </td>
                                 </tr>

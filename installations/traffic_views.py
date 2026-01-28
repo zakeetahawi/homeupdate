@@ -624,3 +624,14 @@ def vehicle_delete(request, pk):
         messages.success(request, _("تم حذف المركبة بنجاح"))
         return redirect("installations:traffic_dashboard")
     return redirect("installations:traffic_dashboard")
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or u.has_perm("installations.delete_vehiclemission"))
+def mission_delete(request, pk):
+    """حذف مهمة (لمدير النظام أو من لديه صلاحية الحذف فقط)"""
+    mission = get_object_or_404(VehicleMission, pk=pk)
+    if request.method == "POST":
+        mission.delete()  # Soft delete
+        messages.success(request, _("تم حذف المهمة بنجاح"))
+        return redirect("installations:mission_list")
+    return redirect("installations:mission_list")

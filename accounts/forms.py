@@ -20,7 +20,9 @@ from .models import (
 )
 
 THEME_CHOICES = [
-    ("default", _("الثيم الإفتراضي")),
+    ("default", _("الثيم الافتراضي")),
+    ("modern-black", _("الوضع المظلم (Dark)")),
+    ("ornamental", _("الثيم الزخرفي (Gold)")),
 ]
 
 
@@ -131,6 +133,45 @@ class UserUpdateForm(forms.ModelForm):
             "branch": forms.Select(attrs={"class": "form-select"}),
             "can_edit_price": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+
+
+class UserProfileForm(forms.ModelForm):
+    """
+    Form for user self-profile update
+    """
+
+    class Meta:
+        model = User
+        fields = (
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "image",
+            "default_theme",
+        )
+        widgets = {
+            "first_name": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": _("الاسم الأول")}
+            ),
+            "last_name": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": _("الاسم الأخير")}
+            ),
+            "email": forms.EmailInput(
+                attrs={"class": "form-control", "placeholder": _("البريد الإلكتروني")}
+            ),
+            "phone": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": _("رقم الهاتف")}
+            ),
+            "image": forms.FileInput(attrs={"class": "form-control"}),
+        }
+
+    default_theme = forms.ChoiceField(
+        choices=THEME_CHOICES,
+        widget=forms.Select(attrs={"class": "form-select"}),
+        label=_("المظهر المفضل"),
+        required=False,
+    )
 
 
 class CustomPasswordChangeForm(PasswordChangeForm):

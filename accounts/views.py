@@ -21,6 +21,7 @@ from .forms import (
     RoleAssignForm,
     RoleForm,
     SalespersonForm,
+    UserProfileForm,
 )
 from .models import (
     Branch,
@@ -1025,7 +1026,17 @@ def profile_view(request):
     """
     View for user profile
     """
+    if request.method == "POST":
+        form = UserProfileForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "تم تحديث الملف الشخصي بنجاح.")
+            return redirect("accounts:profile")
+    else:
+        form = UserProfileForm(instance=request.user)
+
     context = {
+        "form": form,
         "user": request.user,
         "title": "الملف الشخصي",
     }

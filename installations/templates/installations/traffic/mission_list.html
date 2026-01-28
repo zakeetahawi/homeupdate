@@ -177,6 +177,7 @@
                                 <th>نوع المهمة</th>
                                 <th>السائق / المركبة</th>
                                 <th>التفاصيل</th>
+                                <th>الحالة / الإجراءات</th>
                                 <th>وقت الإنشاء</th>
                                 <th>البدء / الانتهاء</th>
                                 <th>المدة</th>
@@ -240,6 +241,15 @@
                                                     data-mission-id="{{ mission.id }}"
                                                     data-mission-desc="{{ mission.description|default:mission.get_mission_type_display|truncatechars:50 }}">
                                                 <i class="fas fa-check"></i> إنهاء
+                                            </button>
+                                        {% endif %}
+                                        {% if user.is_superuser or perms.installations.delete_vehiclemission %}
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger mb-1 w-100"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#deleteMissionModal"
+                                                    data-mission-id="{{ mission.id }}">
+                                                <i class="fas fa-trash"></i> حذف
                                             </button>
                                         {% endif %}
                                         {% if mission.status == 'active' %}
@@ -350,24 +360,80 @@
             </div>
         </div>
     </div>
+    <!-- Modal for Deleting Mission -->
+    <div class="modal fade"
+         id="deleteMissionModal"
+         tabindex="-1"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" id="deleteMissionForm" action="">
+                    {% csrf_token %}
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-exclamation-triangle me-2"></i>تأكيد حذف المهمة
+                        </h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="fw-bold">
+                            هل أنت متأكد من رغبتك في حذف المهمة #<span id="deleteModalMissionId"></span>؟
+                        </p>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-circle"></i> هذا الإجراء نهائي ولا يمكن التراجع عنه.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i> نعم، احذف المهمة
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Complete Modal Logic
         var completeModal = document.getElementById('completeMissionModal');
-        completeModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            var missionId = button.getAttribute('data-mission-id');
-            var missionDesc = button.getAttribute('data-mission-desc');
-            
-            var modalTitleId = completeModal.querySelector('#modalMissionId');
-            var modalDesc = completeModal.querySelector('#modalMissionDesc');
-            var form = completeModal.querySelector('#completeMissionForm');
-            
-            modalTitleId.textContent = missionId;
-            modalDesc.textContent = missionDesc;
-            
-            // Update form action with correct URL
-            form.action = "/installations/traffic/mission/" + missionId + "/complete/";
-        });
+        if (completeModal) {
+            completeModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var missionId = button.getAttribute('data-mission-id');
+                var missionDesc = button.getAttribute('data-mission-desc');
+                
+                var modalTitleId = completeModal.querySelector('#modalMissionId');
+                var modalDesc = completeModal.querySelector('#modalMissionDesc');
+                var form = completeModal.querySelector('#completeMissionForm');
+                
+                modalTitleId.textContent = missionId;
+                modalDesc.textContent = missionDesc;
+                
+                // Update form action with correct URL
+                form.action = "/installations/traffic/mission/" + missionId + "/complete/";
+            });
+        }
+
+        // Delete Modal Logic
+        var deleteModal = document.getElementById('deleteMissionModal');
+        if (deleteModal) {
+            deleteModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var missionId = button.getAttribute('data-mission-id');
+                
+                var modalTitleId = deleteModal.querySelector('#deleteModalMissionId');
+                var form = deleteModal.querySelector('#deleteMissionForm');
+                
+                modalTitleId.textContent = missionId;
+                
+                // Update form action with correct URL
+                form.action = "/installations/traffic/mission/" + missionId + "/delete/";
+            });
+        }
     });
     </script>
 {% endblock %}

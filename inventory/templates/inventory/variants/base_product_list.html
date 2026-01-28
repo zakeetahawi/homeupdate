@@ -205,299 +205,296 @@
             <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
                 <i class="fas fa-info-circle me-2"></i>
                 <div>
-                    <strong>نتائج البحث:</strong> تم العثور على <strong>{{ filtered_count }}</strong> منتج من أصل <strong>{{
-                        total_base_products }}</strong> منتج أساسي
-                    </div>
-                </div>
-            {% endif %}
-            <!-- Filter Card -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">
-                        <i class="fas fa-filter me-2"></i>
-                        فلترة وبحث
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form method="get" class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">البحث</label>
-                            <input type="text"
-                                   name="search"
-                                   class="form-control"
-                                   placeholder="البحث بالاسم أو الكود..."
-                                   value="{{ request.GET.search }}">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">الفئة</label>
-                            <select name="category" class="form-select">
-                                <option value="">جميع الفئات</option>
-                                {% for cat in categories %}
-                                    <option value="{{ cat.id }}"
-                                            {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>
-                                        {{ cat.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">الحالة</label>
-                            <select name="status" class="form-select">
-                                <option value="">الكل</option>
-                                <option value="active"
-                                        {% if request.GET.status == 'active' %}selected{% endif %}>نشط</option>
-                                <option value="inactive"
-                                        {% if request.GET.status == 'inactive' %}selected{% endif %}>غير نشط</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">
-                                <i class="fas fa-tags text-primary me-1"></i>
-                                نوع السعر
-                            </label>
-                            <select name="price_type" class="form-select" id="priceTypeFilter">
-                                <option value="retail"
-                                        {% if request.GET.price_type == 'retail' or not request.GET.price_type %}selected{% endif %}>
-                                    🏪 قطاعي
-                                </option>
-                                <option value="wholesale"
-                                        {% if request.GET.price_type == 'wholesale' %}selected{% endif %}>
-                                    🏭 جملة
-                                </option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 d-flex align-items-end gap-2">
-                            <button type="submit" class="btn btn-primary flex-grow-1">
-                                <i class="fas fa-search me-1"></i>
-                                بحث
-                            </button>
-                            <a href="?" class="btn btn-outline-secondary" title="إعادة تعيين">
-                                <i class="fas fa-redo"></i>
-                            </a>
-                        </div>
-                    </form>
+                    <strong>نتائج البحث:</strong> تم العثور على <strong>{{ filtered_count }}</strong> منتج من أصل <strong>{{ total_base_products }}</strong> منتج أساسي
                 </div>
             </div>
-            <!-- Products Table -->
-            <div class="card shadow">
-                <div class="card-body">
-                    {% if base_products %}
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle">
-                                <thead class="table-light">
+        {% endif %}
+        <!-- Filter Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>
+                    فلترة وبحث
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">البحث</label>
+                        <input type="text"
+                               name="search"
+                               class="form-control"
+                               placeholder="البحث بالاسم أو الكود..."
+                               value="{{ request.GET.search }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">الفئة</label>
+                        <select name="category" class="form-select">
+                            <option value="">جميع الفئات</option>
+                            {% for cat in categories %}
+                                <option value="{{ cat.id }}"
+                                        {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ cat.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">الحالة</label>
+                        <select name="status" class="form-select">
+                            <option value="">الكل</option>
+                            <option value="active"
+                                    {% if request.GET.status == 'active' %}selected{% endif %}>نشط</option>
+                            <option value="inactive"
+                                    {% if request.GET.status == 'inactive' %}selected{% endif %}>غير نشط</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            <i class="fas fa-tags text-primary me-1"></i>
+                            نوع السعر
+                        </label>
+                        <select name="price_type" class="form-select" id="priceTypeFilter">
+                            <option value="retail"
+                                    {% if request.GET.price_type == 'retail' or not request.GET.price_type %}selected{% endif %}>
+                                🏪 قطاعي
+                            </option>
+                            <option value="wholesale"
+                                    {% if request.GET.price_type == 'wholesale' %}selected{% endif %}>🏭 جملة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary flex-grow-1">
+                            <i class="fas fa-search me-1"></i>
+                            بحث
+                        </button>
+                        <a href="?" class="btn btn-outline-secondary" title="إعادة تعيين">
+                            <i class="fas fa-redo"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- Products Table -->
+        <div class="card shadow">
+            <div class="card-body">
+                {% if base_products %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 80px;">الكود</th>
+                                    <th>اسم المنتج</th>
+                                    <th>الفئة</th>
+                                    <th class="text-center">
+                                        {% if request.GET.price_type == 'wholesale' %}
+                                            <span class="badge bg-primary me-1">🏭 جملة</span>
+                                        {% else %}
+                                            <span class="badge bg-success me-1">🏪 قطاعي</span>
+                                        {% endif %}
+                                        السعر
+                                    </th>
+                                    <th class="text-center">عدد المتغيرات</th>
+                                    <th class="text-center">الحالة</th>
+                                    <th style="width: 150px;">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in base_products %}
                                     <tr>
-                                        <th style="width: 80px;">الكود</th>
-                                        <th>اسم المنتج</th>
-                                        <th>الفئة</th>
-                                        <th class="text-center">
-                                            {% if request.GET.price_type == 'wholesale' %}
-                                                <span class="badge bg-primary me-1">🏭 جملة</span>
-                                            {% else %}
-                                                <span class="badge bg-success me-1">🏪 قطاعي</span>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ product.code }}</span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'inventory:base_product_detail' product.pk %}"
+                                               class="text-decoration-none fw-bold">{{ product.name }}</a>
+                                            {% if product.description %}
+                                                <br>
+                                                <small class="text-muted">{{ product.description|truncatewords:10 }}</small>
                                             {% endif %}
-                                            السعر
-                                        </th>
-                                        <th class="text-center">عدد المتغيرات</th>
-                                        <th class="text-center">الحالة</th>
-                                        <th style="width: 150px;">الإجراءات</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for product in base_products %}
-                                        <tr>
-                                            <td>
-                                                <span class="badge bg-secondary">{{ product.code }}</span>
-                                            </td>
-                                            <td>
+                                        </td>
+                                        <td>
+                                            {% if product.category %}
+                                                <span class="badge bg-info">{{ product.category.name }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if request.GET.price_type == 'wholesale' %}
+                                                {% if product.wholesale_price %}
+                                                    <strong class="text-primary">{{ product.wholesale_price|floatformat:2 }}</strong>
+                                                {% else %}
+                                                    <span class="text-warning" title="لم يُحدد سعر جملة">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                        {{ product.base_price|floatformat:2 }}
+                                                    </span>
+                                                {% endif %}
+                                            {% else %}
+                                                <strong class="text-success">{{ product.base_price|floatformat:2 }}</strong>
+                                            {% endif %}
+                                            <small class="text-muted">{{ product.currency }}</small>
+                                        </td>
+                                        <td class="text-center">
+                                            {% with variants_count=product.variants.count %}
+                                                <span class="badge {% if variants_count > 0 %}bg-primary{% else %}bg-secondary{% endif %}">
+                                                    {{ variants_count }} متغير
+                                                </span>
+                                            {% endwith %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if product.is_active %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i>نشط
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-times me-1"></i>غير نشط
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
                                                 <a href="{% url 'inventory:base_product_detail' product.pk %}"
-                                                   class="text-decoration-none fw-bold">{{ product.name }}</a>
-                                                {% if product.description %}
-                                                    <br>
-                                                    <small class="text-muted">{{ product.description|truncatewords:10 }}</small>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if product.category %}
-                                                    <span class="badge bg-info">{{ product.category.name }}</span>
-                                                {% else %}
-                                                    <span class="text-muted">-</span>
-                                                {% endif %}
-                                            </td>
-                                            <td class="text-center">
-                                                {% if request.GET.price_type == 'wholesale' %}
-                                                    {% if product.wholesale_price %}
-                                                        <strong class="text-primary">{{ product.wholesale_price|floatformat:2 }}</strong>
-                                                    {% else %}
-                                                        <span class="text-warning" title="لم يُحدد سعر جملة">
-                                                            <i class="fas fa-exclamation-triangle me-1"></i>
-                                                            {{ product.base_price|floatformat:2 }}
-                                                        </span>
-                                                    {% endif %}
-                                                {% else %}
-                                                    <strong class="text-success">{{ product.base_price|floatformat:2 }}</strong>
-                                                {% endif %}
-                                                <small class="text-muted">{{ product.currency }}</small>
-                                            </td>
-                                            <td class="text-center">
-                                                {% with variants_count=product.variants.count %}
-                                                    <span class="badge {% if variants_count > 0 %}bg-primary{% else %}bg-secondary{% endif %}">
-                                                        {{ variants_count }} متغير
-                                                    </span>
-                                                {% endwith %}
-                                            </td>
-                                            <td class="text-center">
-                                                {% if product.is_active %}
-                                                    <span class="badge bg-success">
-                                                        <i class="fas fa-check me-1"></i>نشط
-                                                    </span>
-                                                {% else %}
-                                                    <span class="badge bg-danger">
-                                                        <i class="fas fa-times me-1"></i>غير نشط
-                                                    </span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <div class="btn-group btn-group-sm" role="group">
-                                                    <a href="{% url 'inventory:base_product_detail' product.pk %}"
-                                                       class="btn btn-outline-info"
-                                                       title="عرض">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a href="{% url 'inventory:base_product_update' product.pk %}"
-                                                       class="btn btn-outline-primary"
-                                                       title="تعديل">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                    <a href="{% url 'inventory:variant_create' product.pk %}"
-                                                       class="btn btn-outline-success"
-                                                       title="إضافة متغير">
-                                                        <i class="fas fa-plus"></i>
-                                                    </a>
-                                                    <button type="button"
-                                                            class="btn btn-outline-danger"
-                                                            data-bs-toggle="modal"
-                                                            data-bs-target="#deleteModal{{ product.pk }}"
-                                                            title="حذف">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </div>
-                                                <!-- Delete Modal -->
-                                                <div class="modal fade" id="deleteModal{{ product.pk }}" tabindex="-1">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header bg-danger text-white">
-                                                                <h5 class="modal-title">تأكيد الحذف</h5>
-                                                                <button type="button"
-                                                                        class="btn-close btn-close-white"
-                                                                        data-bs-dismiss="modal"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <p>هل أنت متأكد من حذف المنتج الأساسي:</p>
-                                                                <p class="fw-bold text-danger">{{ product.name }} ({{ product.code }})</p>
-                                                                <p class="text-warning">
-                                                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                                                    سيتم حذف جميع المتغيرات المرتبطة!
-                                                                </p>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                                                                <form action="{% url 'inventory:base_product_delete' product.pk %}"
-                                                                      method="post"
-                                                                      style="display:inline">
-                                                                    {% csrf_token %}
-                                                                    <button type="submit" class="btn btn-danger">
-                                                                        <i class="fas fa-trash me-1"></i>
-                                                                        حذف
-                                                                    </button>
-                                                                </form>
-                                                            </div>
+                                                   class="btn btn-outline-info"
+                                                   title="عرض">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{% url 'inventory:base_product_update' product.pk %}"
+                                                   class="btn btn-outline-primary"
+                                                   title="تعديل">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="{% url 'inventory:variant_create' product.pk %}"
+                                                   class="btn btn-outline-success"
+                                                   title="إضافة متغير">
+                                                    <i class="fas fa-plus"></i>
+                                                </a>
+                                                <button type="button"
+                                                        class="btn btn-outline-danger"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#deleteModal{{ product.pk }}"
+                                                        title="حذف">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                            <!-- Delete Modal -->
+                                            <div class="modal fade" id="deleteModal{{ product.pk }}" tabindex="-1">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header bg-danger text-white">
+                                                            <h5 class="modal-title">تأكيد الحذف</h5>
+                                                            <button type="button"
+                                                                    class="btn-close btn-close-white"
+                                                                    data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <p>هل أنت متأكد من حذف المنتج الأساسي:</p>
+                                                            <p class="fw-bold text-danger">{{ product.name }} ({{ product.code }})</p>
+                                                            <p class="text-warning">
+                                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                                سيتم حذف جميع المتغيرات المرتبطة!
+                                                            </p>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                            <form action="{% url 'inventory:base_product_delete' product.pk %}"
+                                                                  method="post"
+                                                                  style="display:inline">
+                                                                {% csrf_token %}
+                                                                <button type="submit" class="btn btn-danger">
+                                                                    <i class="fas fa-trash me-1"></i>
+                                                                    حذف
+                                                                </button>
+                                                            </form>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Showing Info -->
+                    <div class="d-flex justify-content-between align-items-center mt-3 px-3">
+                        <div class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            عرض
+                            <strong>{{ page_obj.start_index }}</strong>
+                            إلى
+                            <strong>{{ page_obj.end_index }}</strong>
+                            من أصل
+                            <strong>{{ page_obj.paginator.count }}</strong>
+                            منتج
+                            {% if search or selected_category or selected_status %}(مفلتر من {{ total_base_products }} منتج){% endif %}
                         </div>
-                        <!-- Showing Info -->
-                        <div class="d-flex justify-content-between align-items-center mt-3 px-3">
-                            <div class="text-muted">
-                                <i class="fas fa-info-circle me-1"></i>
-                                عرض
-                                <strong>{{ page_obj.start_index }}</strong>
-                                إلى
-                                <strong>{{ page_obj.end_index }}</strong>
-                                من أصل
-                                <strong>{{ page_obj.paginator.count }}</strong>
-                                منتج
-                                {% if search or selected_category or selected_status %}(مفلتر من {{ total_base_products }} منتج){% endif %}
-                            </div>
-                            <div class="text-muted">
-                                <i class="fas fa-file-alt me-1"></i>
-                                صفحة <strong>{{ page_obj.number }}</strong> من <strong>{{ page_obj.paginator.num_pages }}</strong>
-                            </div>
+                        <div class="text-muted">
+                            <i class="fas fa-file-alt me-1"></i>
+                            صفحة <strong>{{ page_obj.number }}</strong> من <strong>{{ page_obj.paginator.num_pages }}</strong>
                         </div>
-                        <!-- Pagination -->
-                        {% if page_obj %}
-                            <nav aria-label="pagination" class="mt-4">
-                                <ul class="pagination justify-content-center">
-                                    {% if page_obj.has_previous %}
-                                        <li class="page-item">
-                                            <a class="page-link"
-                                               href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
-                                                <i class="fas fa-angle-double-right"></i>
-                                            </a>
-                                        </li>
-                                        <li class="page-item">
-                                            <a class="page-link"
-                                               href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
-                                                <i class="fas fa-angle-right"></i>
-                                            </a>
-                                        </li>
-                                    {% endif %}
-                                    <li class="page-item active">
-                                        <span class="page-link">{{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+                    </div>
+                    <!-- Pagination -->
+                    {% if page_obj %}
+                        <nav aria-label="pagination" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                                            <i class="fas fa-angle-double-right"></i>
+                                        </a>
                                     </li>
-                                    {% if page_obj.has_next %}
-                                        <li class="page-item">
-                                            <a class="page-link"
-                                               href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
-                                                <i class="fas fa-angle-left"></i>
-                                            </a>
-                                        </li>
-                                        <li class="page-item">
-                                            <a class="page-link"
-                                               href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
-                                                <i class="fas fa-angle-double-left"></i>
-                                            </a>
-                                        </li>
-                                    {% endif %}
-                                </ul>
-                            </nav>
-                        {% endif %}
-                    {% else %}
-                        <div class="text-center py-5">
-                            <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
-                            <h4 class="text-muted">لا توجد منتجات أساسية</h4>
-                            <p class="text-muted">ابدأ بإضافة منتج أساسي جديد أو ترحيل المنتجات الموجودة</p>
-                            <div class="d-flex justify-content-center gap-2">
-                                <a href="{% url 'inventory:base_product_create' %}"
-                                   class="btn btn-primary">
-                                    <i class="fas fa-plus me-1"></i>
-                                    إضافة منتج جديد
-                                </a>
-                                <a href="{% url 'inventory:migrate_products' %}" class="btn btn-warning">
-                                    <i class="fas fa-sync-alt me-1"></i>
-                                    ترحيل من المنتجات القديمة
-                                </a>
-                            </div>
-                        </div>
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                                            <i class="fas fa-angle-right"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</span>
+                                </li>
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                                            <i class="fas fa-angle-left"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">
+                                            <i class="fas fa-angle-double-left"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
                     {% endif %}
-                </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">لا توجد منتجات أساسية</h4>
+                        <p class="text-muted">ابدأ بإضافة منتج أساسي جديد أو ترحيل المنتجات الموجودة</p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="{% url 'inventory:base_product_create' %}"
+                               class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>
+                                إضافة منتج جديد
+                            </a>
+                            <a href="{% url 'inventory:migrate_products' %}" class="btn btn-warning">
+                                <i class="fas fa-sync-alt me-1"></i>
+                                ترحيل من المنتجات القديمة
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
         </div>
-        <script>
+    </div>
+    <script>
     function generateAllQR() {
         if (!confirm('هل أنت متأكد من رغبتك في توليد QR لجميع المنتجات؟ قد تستغرق العملية بعض الوقت.')) return;
 
@@ -572,5 +569,5 @@
                 checkboxes.forEach(cb => cb.checked = isSelectAll);
                 btn.textContent = isSelectAll ? 'إلغاء التحديد' : 'تحديد الكل';
             }
-</script>
+    </script>
 {% endblock %}

@@ -38,6 +38,13 @@
                                              right: 5px">{{ cutting_orders_pending_fix }}</span>
                             {% endif %}
                         {% endif %}
+                        {% if key == 'inventory' and pending_transfers_count > 0 %}
+                            <span class="badge rounded-pill bg-danger"
+                                  style="font-size: 0.6rem;
+                                         position: absolute;
+                                         top: 5px;
+                                         right: 5px">{{ pending_transfers_count }}</span>
+                        {% endif %}
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="{{ key }}Dropdown">
                         {% for unit in item.units %}

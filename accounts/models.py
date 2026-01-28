@@ -13,6 +13,12 @@ from django.utils.translation import gettext_lazy as _
 
 # التسلسل الهرمي للأدوار من الأعلى إلى الأدنى
 ROLE_HIERARCHY = {
+    "system_admin": {
+        "level": 0,
+        "display": "مدير النظام",
+        "inherits_from": ["sales_manager"],
+        "permissions": [],
+    },
     "sales_manager": {
         "level": 1,
         "display": "مدير مبيعات",
@@ -256,7 +262,9 @@ class User(AbstractUser):
 
     def get_user_role(self):
         """الحصول على دور المستخدم"""
-        if self.is_sales_manager:
+        if self.is_superuser:
+            return "system_admin"
+        elif self.is_sales_manager:
             return "sales_manager"
         elif self.is_region_manager:
             return "region_manager"

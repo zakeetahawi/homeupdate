@@ -248,6 +248,11 @@ urlpatterns = [
     # Mission Management
     path("traffic/missions/", traffic_views.mission_list, name="mission_list"),
     path(
+        "traffic/mission/<int:pk>/delete/",
+        traffic_views.mission_delete,
+        name="mission_delete",
+    ),
+    path(
         "traffic/mission/<int:pk>/complete/",
         traffic_views.complete_mission,
         name="complete_mission",

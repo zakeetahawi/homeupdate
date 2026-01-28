@@ -13,6 +13,9 @@ def navbar_departments(request):
     if not request.user.is_authenticated:
         return {"navbar_departments": []}
 
+    # Import Warehouse here to avoid circular imports
+    from inventory.models import Warehouse
+
     user = request.user
 
     # جلب أقسام المستخدم
@@ -46,10 +49,10 @@ def navbar_departments(request):
             "url": "/inspections/",
             "units": [],
         },
-        "installations": {
-            "name": "التركيبات",
-            "icon": "fa-tools",
-            "url": "/installations/",
+        "operations": {
+            "name": "العمليات",
+            "icon": "fa-cogs",
+            "url": None,  # مفعل كقائمة منسدلة
             "units": [],
         },
         "manufacturing": {
@@ -103,8 +106,8 @@ def navbar_departments(request):
                 navbar_items["inventory"]["units"].append(unit_dict)
             if unit.show_inspections and "inspections" in navbar_items:
                 navbar_items["inspections"]["units"].append(unit_dict)
-            if unit.show_installations and "installations" in navbar_items:
-                navbar_items["installations"]["units"].append(unit_dict)
+            if unit.show_installations and "operations" in navbar_items:
+                navbar_items["operations"]["units"].append(unit_dict)
             if unit.show_manufacturing and "manufacturing" in navbar_items:
                 navbar_items["manufacturing"]["units"].append(unit_dict)
             if unit.show_complaints and "complaints" in navbar_items:
@@ -155,8 +158,8 @@ def navbar_departments(request):
                     navbar_items["inventory"]["units"].append(unit_dict)
                 if unit.show_inspections and "inspections" in navbar_items:
                     navbar_items["inspections"]["units"].append(unit_dict)
-                if unit.show_installations and "installations" in navbar_items:
-                    navbar_items["installations"]["units"].append(unit_dict)
+                if unit.show_installations and "operations" in navbar_items:
+                    navbar_items["operations"]["units"].append(unit_dict)
                 if unit.show_manufacturing and "manufacturing" in navbar_items:
                     navbar_items["manufacturing"]["units"].append(unit_dict)
                 if unit.show_complaints and "complaints" in navbar_items:
@@ -167,6 +170,77 @@ def navbar_departments(request):
                     navbar_items["accounting"]["units"].append(unit_dict)
                 if unit.show_database and "database" in navbar_items:
                     navbar_items["database"]["units"].append(unit_dict)
+
+    # Inject Traffic Management for authorized users
+    if (
+        user.is_superuser or getattr(user, "is_traffic_manager", False)
+    ) and "operations" in navbar_items:
+        navbar_items["operations"]["units"].append(
+            {
+                "name": "إدارة الحركة",
+                "icon": "fa-traffic-light",
+                "url_name": "/installations/traffic/",  # Using raw path as url_name is used as href in template
+            }
+        )
+
+    # Inject My Inspections for authorized users
+    if (
+        user.is_superuser
+        or getattr(user, "is_inspection_manager", False)
+        or getattr(user, "is_inspection_technician", False)
+    ) and "inspections" in navbar_items:
+        navbar_items["inspections"]["units"].append(
+            {
+                "name": "معايناتي",
+                "icon": "fa-clipboard-check",
+                "url_name": "/inspections/technician/",
+            }
+        )
+
+    # Inject Warehouse Actions for authorized users
+    if "inventory" in navbar_items:
+        is_warehouse_manager = False
+        if user.is_superuser:
+            is_warehouse_manager = True
+        else:
+            # Check if user manages any warehouse or is in warehouse groups
+            is_manager = Warehouse.objects.filter(manager=user).exists()
+            in_group = user.groups.filter(
+                name__in=[
+                    "مسؤول مخزون",
+                    "مسؤول مخازن",
+                    "Warehouse Manager",
+                    "مسؤول مستودع",
+                ]
+            ).exists()
+            is_warehouse_manager = is_manager or in_group
+
+        if is_warehouse_manager:
+            # Add separator logic if needed, but for now just append
+            navbar_items["inventory"]["units"].append(
+                {
+                    "name": "تحويل مخزني جديد",
+                    "icon": "fa-bolt",
+                    "url_name": "/inventory/stock-transfer/create/",
+                }
+            )
+            navbar_items["inventory"]["units"].append(
+                {
+                    "name": "جميع التحويلات",
+                    "icon": "fa-list",
+                    "url_name": "/inventory/stock-transfers/",
+                }
+            )
+
+        # Warehouse Management link for staff/superusers
+        if user.is_superuser or user.is_staff:
+            navbar_items["inventory"]["units"].append(
+                {
+                    "name": "إدارة المستودعات",
+                    "icon": "fa-warehouse",
+                    "url_name": "/inventory/warehouses/",
+                }
+            )
 
     # إزالة العناصر الفارغة
     navbar_items_filtered = {
