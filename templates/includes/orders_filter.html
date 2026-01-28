@@ -52,6 +52,8 @@
                     {% if status_filter == 'pending' %}selected{% endif %}>قيد الانتظار</option>
             <option value="in_progress"
                     {% if status_filter == 'in_progress' %}selected{% endif %}>قيد التصنيع</option>
+            <option value="under_cutting"
+                    {% if status_filter == 'under_cutting' %}selected{% endif %}>قيد التقطيع</option>
             <option value="ready_install"
                     {% if status_filter == 'ready_install' %}selected{% endif %}>جاهز للتركيب</option>
             <option value="completed"
@@ -138,7 +140,9 @@
             {% elif status_filter == 'pending' %}
                 قيد الانتظار
             {% elif status_filter == 'in_progress' %}
-                قيد التنفيذ
+                قيد التصنيع
+            {% elif status_filter == 'under_cutting' %}
+                قيد التقطيع
             {% elif status_filter == 'ready_install' %}
                 جاهز للتركيب
             {% elif status_filter == 'completed' %}

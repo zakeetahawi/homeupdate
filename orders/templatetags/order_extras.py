@@ -147,13 +147,14 @@ def get_vip_badge():
 
 
 @register.simple_tag
-def get_status_badge(status, status_type="default"):
+def get_status_badge(status, status_type="default", order=None):
     """
     إنشاء badge موحد للحالة مع ألوان متناسقة مع هوية المشروع
 
     Args:
         status: حالة العنصر (pending, completed, etc.)
         status_type: نوع الحالة (default, manufacturing, installation, inspection)
+        order: كائن الطلب (اختياري) لتخصيص النص حسب نوع الطلب
     """
     status_colors = {
         # الحالات المكتملة - أخضر داكن
@@ -224,6 +225,32 @@ def get_status_badge(status, status_type="default"):
     color = status_colors.get(status, "#6c757d")
     icon = status_icons.get(status, "fas fa-circle")
     text = status_texts.get(status, status)
+
+    # تخصيص النص بناءً على نوع الطلب
+    if order and status == "in_progress":
+        try:
+            # التحقق إذا كان الطلب من نوع منتجات
+            selected_types = []
+            if hasattr(order, "get_selected_types_list"):
+                selected_types = order.get_selected_types_list()
+            elif hasattr(order, "selected_types"):
+                # fallback parsing
+                import json
+
+                try:
+                    val = order.selected_types
+                    if isinstance(val, str):
+                        selected_types = json.loads(val)
+                    elif isinstance(val, list):
+                        selected_types = val
+                except:
+                    pass
+
+            if "products" in selected_types:
+                text = "قيد التقطيع"
+                icon = "fas fa-cut"  # تغيير الأيقونة أيضاً لتناسب التقطيع
+        except Exception:
+            pass
 
     html = f"""
     <span class="badge text-white" style="font-size: 0.75rem; background-color: {color};">

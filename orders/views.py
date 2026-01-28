@@ -122,8 +122,8 @@ def order_list(request):
     View for listing orders with filtering and pagination
     """
     search_query = request.GET.get("search", "")
-    status_filter = request.GET.get("status", "")
-    status_param = request.GET.get("status_param", "")
+    status_filter = request.GET.get("order_status", "")
+    status_param = request.GET.get("status", "")
     page_size = request.GET.get("page_size", "25")
 
     try:
@@ -185,8 +185,20 @@ def order_list(request):
         )
 
     if status_filter:
-        # the status filter in the UI corresponds to the manufacturing/order_status
-        orders = orders.filter(order_status=status_filter)
+        if status_filter == "under_cutting":
+            # "Cutting" = In Progress + Products type (implicit logic for products workflow)
+            orders = orders.filter(
+                order_status="in_progress", selected_types__icontains="products"
+            )
+        elif status_filter == "in_progress":
+            # "In Progress" (Manufacturing) = In Progress + Has Manufacturing Order
+            # This separates it from "Cutting"
+            orders = orders.filter(
+                order_status="in_progress", manufacturing_orders__isnull=False
+            )
+        else:
+            # Standard status filter
+            orders = orders.filter(order_status=status_filter)
 
     # Filter by customer-facing status (e.g., VIP) if provided
     if status_param:

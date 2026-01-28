@@ -559,7 +559,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <td class="text-center">
                                             {# عرض حالة الطلب الحقيقية (order_status) كالمصدر الرئيسي للفلتر #}
                                             {% load order_extras %}
-                                            {% get_status_badge order.order_status %}
+                                            {% get_status_badge order.order_status order=order %}
                                             {# إذا كانت حالة العرض مختلفة (مصادر أخرى مثل المعاينة/التركيب/المصنع)، أعرضها كمعلومة ثانوية #}
                                             {% with display_info=order.get_display_status %}
                                                 {% if display_info.source != 'order' %}
