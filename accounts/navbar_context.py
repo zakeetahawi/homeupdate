@@ -113,7 +113,9 @@ def navbar_departments(request):
             if unit.show_complaints and "complaints" in navbar_items:
                 navbar_items["complaints"]["units"].append(unit_dict)
             if unit.show_reports and "reports" in navbar_items:
-                navbar_items["reports"]["units"].append(unit_dict)
+                # Restrict reports to superusers only as per request
+                if user.is_superuser:
+                    navbar_items["reports"]["units"].append(unit_dict)
             if unit.show_accounting and "accounting" in navbar_items:
                 navbar_items["accounting"]["units"].append(unit_dict)
             if unit.show_database and "database" in navbar_items:
@@ -165,7 +167,10 @@ def navbar_departments(request):
                 if unit.show_complaints and "complaints" in navbar_items:
                     navbar_items["complaints"]["units"].append(unit_dict)
                 if unit.show_reports and "reports" in navbar_items:
-                    navbar_items["reports"]["units"].append(unit_dict)
+                    # Restrict reports to superusers only to match the manager's request
+                    # Even if the department has show_reports=True, only superusers see it
+                    if user.is_superuser:
+                        navbar_items["reports"]["units"].append(unit_dict)
                 if unit.show_accounting and "accounting" in navbar_items:
                     navbar_items["accounting"]["units"].append(unit_dict)
                 if unit.show_database and "database" in navbar_items:
@@ -243,7 +248,8 @@ def navbar_departments(request):
             )
 
     # Inject Installation Accounting Report in Reports section
-    if "reports" in navbar_items:
+    # Restrict to Superusers only
+    if "reports" in navbar_items and user.is_superuser:
         navbar_items["reports"]["units"].append(
             {
                 "name": "محاسبة التركيبات",
