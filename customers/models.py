@@ -599,55 +599,64 @@ class Customer(SoftDeleteMixin, models.Model):
         super().save(*args, **kwargs)
 
     def generate_unique_code(self):
-        """توليد كود عميل فريد"""
+        """توليد كود عميل فريد بشكل تسلسلي صحيح"""
         try:
             # الحصول على كود الفرع
             branch_code = self.branch.code if self.branch else "00"
 
-            # البحث عن آخر كود عميل في نفس الفرع
-            last_customer = (
-                Customer.objects.filter(
-                    branch=self.branch, code__startswith=f"{branch_code}-"
-                )
-                .exclude(pk=self.pk)
-                .order_by("-code")
-                .first()
-            )
+            # استرجاع جميع الأكواد التي تبدأ بكود الفرع الحالي
+            # نستخدم values_list لتقليل استهلاك الذاكرة
+            existing_codes = Customer.objects.filter(
+                code__startswith=f"{branch_code}-"
+            ).values_list("code", flat=True)
 
-            if last_customer:
+            max_sequence = 0
+
+            # البحث عن أكبر رقم تسلسلي صحيح
+            for code in existing_codes:
                 try:
-                    # استخراج الرقم التسلسلي
-                    sequence = int(last_customer.code.split("-")[-1]) + 1
+                    # تقسيم الكود: BRANCH-SEQUENCENO
+                    parts = code.split("-")
+                    # نتأكد أن الكود يتكون من جزئين وأن الجزء الثاني رقمي بالكامل
+                    if len(parts) >= 2:
+                        sequence_part = parts[-1]
+                        if sequence_part.isdigit():
+                            sequence = int(sequence_part)
+                            if sequence > max_sequence:
+                                max_sequence = sequence
                 except (IndexError, ValueError):
-                    sequence = 1
-            else:
-                sequence = 1
+                    continue
 
-            # التأكد من عدم تكرار الكود
+            # الرقم التالي هو الأكبر + 1
+            next_sequence = max_sequence + 1
+
+            # محاولات للتأكد من عدم التكرار (حماية إضافية)
+            # في حال وجود تضارب لحظي في إنشاء العملاء
             max_attempts = 100
-            for attempt in range(max_attempts):
-                potential_code = f"{branch_code}-{sequence:04d}"
+            for _ in range(max_attempts):
+                new_code = f"{branch_code}-{next_sequence:04d}"
+                
+                # التحقق إذا كان الكود موجوداً بالفعل
+                # نستثني العميل الحالي في حالة التعديل (رغم أن هذا الكود يستخدم عند الإنشاء عادة)
+                qs = Customer.objects.filter(code=new_code)
+                if self.pk:
+                    qs = qs.exclude(pk=self.pk)
+                
+                if not qs.exists():
+                    return new_code
+                
+                next_sequence += 1
 
-                # التحقق من عدم وجود كود مكرر
-                if (
-                    not Customer.objects.filter(code=potential_code)
-                    .exclude(pk=self.pk)
-                    .exists()
-                ):
-                    return potential_code
-
-                sequence += 1
-
-            # إذا فشل في العثور على كود فريد، استخدم UUID
-            import uuid
-
-            return f"{branch_code}-{str(uuid.uuid4())[:8]}"
+            # في حالة نادرة جداً من الفشل المستمر (مثل سباق عالي جداً)، نلجأ لمؤقت زمني لضمان الفرادة
+            # لكن نحافظ على الصيغة الرقمية قدر الإمكـان
+            import time
+            timestamp_seq = int(time.time() * 1000) % 1000000
+            return f"{branch_code}-{timestamp_seq:06d}"
 
         except Exception:
-            # في حالة حدوث خطأ، استخدم UUID
+            # Fallback آمن جداً
             import uuid
-
-            return f"CUST-{str(uuid.uuid4())[:8]}"
+            return f"ERR-{str(uuid.uuid4())[:8]}"
 
     @property
     def branch_code(self):
