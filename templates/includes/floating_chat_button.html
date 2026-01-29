@@ -1,0 +1,211 @@
+{% load static %}
+<!-- Floating Chat Button -->
+<div id="floatingChatBtn" class="floating-chat-container dropdown">
+    <button class="floating-chat-btn"
+            type="button"
+            id="floatingChatDropdown"
+            aria-expanded="false"
+            title="التواصل والمستخدمين النشطين">
+        <i class="fas fa-users-cog"></i>
+        <!-- Red Badge: Unread Messages (Top Right) -->
+        {% with total_badges=internal_messages_unread %}
+            {% if total_badges > 0 %}<span class="badge-counter">{{ total_badges }}</span>{% endif %}
+        {% endwith %}
+        <!-- Green Badge: Online Users (Bottom Left) -->
+        <!-- Will be populated by JS -->
+        <span id="floating-btn-online-badge"
+              class="badge-online"
+              style="display: none">0</span>
+    </button>
+    <!-- The Menu (Reusing structure from original dropdown but styled better) -->
+    <ul class="dropdown-menu floating-chat-menu shadow-lg border-0"
+        aria-labelledby="floatingChatDropdown">
+        <li class="dropdown-header d-flex justify-content-between align-items-center py-3 px-3 border-bottom mb-2 rounded-top"
+            style="background: linear-gradient(to right, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.05))">
+            <span class="fw-bold text-primary">
+                <i class="fas fa-users-cog me-2"></i>
+                التواصل والمستخدمين
+            </span>
+            <span class="badge bg-primary rounded-pill">نظام التواصل</span>
+        </li>
+        <!-- Internal Messages Section -->
+        <li class="px-3 py-2 border-bottom">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-semibold small text-secondary">
+                    <i class="fas fa-envelope-open-text text-info me-1"></i>
+                    الرسائل الداخلية
+                </span>
+                {% if internal_messages_unread > 0 %}
+                    <span class="badge rounded-pill bg-danger" style="font-size: 0.7rem;">{{ internal_messages_unread }} جديد</span>
+                {% else %}
+                    <span class="badge rounded-pill bg-light text-muted border"
+                          style="font-size: 0.7rem">0 جديد</span>
+                {% endif %}
+            </div>
+            <div class="d-flex justify-content-between gap-2 mt-2">
+                <a href="{% url 'accounts:inbox' %}"
+                   class="btn btn-sm btn-outline-primary flex-fill position-relative"
+                   title="الوارد"
+                   style="border-radius: 10px">
+                    <i class="fas fa-inbox d-block mb-1" style="font-size: 1.1rem;"></i>
+                    <span class="small fw-bold">الوارد</span>
+                    {% if internal_messages_unread > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                            <span class="visually-hidden">unread messages</span>
+                        </span>
+                    {% endif %}
+                </a>
+                <a href="{% url 'accounts:sent_messages' %}"
+                   class="btn btn-sm btn-outline-secondary flex-fill"
+                   title="الصادر"
+                   style="border-radius: 10px">
+                    <i class="fas fa-paper-plane d-block mb-1" style="font-size: 1.1rem;"></i>
+                    <span class="small fw-bold">الصادر</span>
+                </a>
+                <a href="{% url 'accounts:compose_message' %}"
+                   class="btn btn-sm btn-primary flex-fill"
+                   title="رسالة جديدة"
+                   style="border-radius: 10px">
+                    <i class="fas fa-plus d-block mb-1" style="font-size: 1.1rem;"></i>
+                    <span class="small fw-bold">جديد</span>
+                </a>
+            </div>
+        </li>
+        <!-- Online Users Section -->
+        <li class="px-3 py-2 mt-2">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-semibold small text-success">
+                    <i class="fas fa-circle text-success me-1" style="font-size: 0.6rem;"></i>
+                    النشطون الآن
+                </span>
+                <span class="badge bg-success rounded-pill"
+                      id="online-users-count-float"
+                      style="font-size: 0.7rem">جاري التحميل...</span>
+            </div>
+            <div class="bg-light rounded-3 p-2 border" style="min-height: 100px;">
+                <div id="online-users-list-float"
+                     class="custom-scrollbar"
+                     style="max-height: 200px;
+                            overflow-y: auto">
+                    <div class="text-center p-3 text-muted">
+                        <div class="spinner-border spinner-border-sm text-primary mb-2"
+                             role="status"></div>
+                        <p class="small m-0">جاري تحديث القائمة...</p>
+                    </div>
+                </div>
+            </div>
+        </li>
+        <!-- Warehouse Transfers (If applicable) -->
+        {% if is_warehouse_manager and not user.is_superuser %}
+            <li class="px-3 py-2 mt-2 border-top">
+                <a href="{% url 'inventory:stock_transfer_list' %}"
+                   class="d-flex justify-content-between align-items-center text-decoration-none text-dark p-2 rounded hover-bg-light">
+                    <span>
+                        <i class="fas fa-exchange-alt text-warning me-2"></i>
+                        التحويلات المخزنية
+                    </span>
+                    {% if pending_transfers_count > 0 %}
+                        <span class="badge bg-danger rounded-pill">{{ pending_transfers_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+    <!-- Script to sync the online users list specifically for this floating widget -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Function to load online users (reusing the logic but targeting new IDs)
+            function loadOnlineUsersFloat() {
+                fetch('/accounts/api/online-users/')
+                    .then(response => response.json())
+                    .then(data => {
+                        const listContainer = document.getElementById('online-users-list-float');
+                        const countBadge = document.getElementById('online-users-count-float');
+                        const exteriorBadge = document.getElementById('floating-btn-online-badge');
+                        
+                        // Update Exterior Badge (Green)
+                        if (exteriorBadge) {
+                            if (data.total_online > 0) {
+                                exteriorBadge.textContent = "Online " + data.total_online;
+                                exteriorBadge.style.display = 'flex';
+                            } else {
+                                exteriorBadge.style.display = 'none';
+                            }
+                        }
+
+                        // Just looking for exterior badge only? No, update menu too if it exists
+                        if (listContainer && countBadge) {
+                            // Update Count in Menu
+                            countBadge.textContent = data.total_online;
+                            
+                            // Clear List
+                            listContainer.innerHTML = '';
+                            
+                            if (data.users && data.users.length > 0) {
+                                const onlineUsers = data.users.filter(u => u.is_online);
+                                
+                                if (onlineUsers.length === 0) {
+                                    listContainer.innerHTML = '<div class="text-center p-2 small text-muted">لا يوجد مستخدمين آخرين متصلين</div>';
+                                } else {
+                                    onlineUsers.forEach(user => {
+                                        const userItem = document.createElement('div');
+                                        userItem.className = 'd-flex align-items-center p-2 mb-1 rounded bg-white border-bottom';
+                                        
+                                        // User Avatar or Icon
+                                        let avatarHtml = '';
+                                        if (user.avatar_url) {
+                                            avatarHtml = `<img src="${user.avatar_url}" class="rounded-circle border border-1" width="30" height="30" style="object-fit: cover;">`;
+                                        } else {
+                                            avatarHtml = `<div class="rounded-circle bg-light d-flex align-items-center justify-content-center border border-1" style="width: 30px; height: 30px;"><i class="fas fa-user text-secondary" style="font-size: 0.8rem;"></i></div>`;
+                                        }
+                                        
+                                        // Branch Info
+                                        const branchHtml = user.branch && user.branch !== 'غير محدد' ? 
+                                            `<small class="text-muted d-block" style="font-size: 0.65rem;"><i class="fas fa-map-marker-alt me-1"></i>${user.branch}</small>` : '';
+                                        
+                                        // Make item a link to compose message to this user
+                                        userItem.innerHTML = `
+                                            <a href="/accounts/messages/compose/?to=${user.id}" class="d-flex align-items-center text-decoration-none text-dark w-100 p-1">
+                                                <div class="me-2 position-relative">
+                                                    ${avatarHtml}
+                                                    ${user.unread_messages > 0 ? `<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"><span class="visually-hidden">New alerts</span></span>` : ''}
+                                                </div>
+                                                <div class="flex-grow-1" style="min-width: 0;">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="fw-bold text-truncate d-block" style="font-size: 0.75rem; max-width: 140px;">${user.full_name}</span>
+                                                    </div>
+                                                    ${branchHtml}
+                                                </div>
+                                                <div class="ms-1 text-end">
+                                                     <small class="badge bg-light text-dark border" style="font-size: 0.6rem;">${user.role}</small>
+                                                </div>
+                                            </a>
+                                        `;
+                                        listContainer.appendChild(userItem);
+                                    });
+                                }
+                            } else {
+                                listContainer.innerHTML = '<div class="text-center p-2 small text-muted">لا يوجد بيانات</div>';
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error loading online users for float:', err);
+                        // Don't show error in exterior badge, just keep it hidden
+                    });
+            }
+            
+            // Initial Load (Run immediately to populate green badge)
+            loadOnlineUsersFloat();
+            
+            // Poll every 60 seconds to keep numbers fresh
+            setInterval(loadOnlineUsersFloat, 60000);
+
+            // Also reload when opening the menu
+            const dropdownBtn = document.getElementById('floatingChatDropdown');
+            if (dropdownBtn) {
+                dropdownBtn.addEventListener('show.bs.dropdown', loadOnlineUsersFloat);
+            }
+        });
+    </script>
+</div>

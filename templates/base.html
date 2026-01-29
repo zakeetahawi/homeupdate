@@ -16,6 +16,10 @@
         <title>
             {% block title %}نظام إدارة العملاء{% endblock %}
         </title>
+        <!-- Floating Chat Button Include -->
+        {% if user.is_authenticated %}
+            {% include 'includes/floating_chat_button.html' %}
+        {% endif %}
         <!-- Favicon -->
         {% if company_info.logo %}
             <link rel="icon" type="image/png" href="{{ company_info.logo.url }}">
@@ -79,6 +83,8 @@
         {% if 'database' in request.path %}
             <link rel="stylesheet" href="{% static 'css/db_card.css' %}">
         {% endif %}
+        <!-- Floating Chat Button CSS -->
+        <link rel="stylesheet" href="{% static 'css/floating-button.css' %}">
         <!-- تطبيق فوري للثيم لتجنب الوميض -->
         <script>
         // تطبيق الثيم فوراً قبل رسم الصفحة - محسن لتجنب الوميض
@@ -542,433 +548,283 @@
                                     </ul>
                                 </div>
                             {% endif %}
-                            <!-- فحص صلاحيات الشكاوى - يظهر للمدراء والمستخدمين ذوي الصلاحيات -->
-                            {% if user|has_complaints_permissions %}
-                                <!-- أيقونة إشعارات الشكاوى المحسنة -->
+                            <!-- Unified Complaints Center (Merged Button) -->
+                            {% if user|has_complaints_permissions or user|has_assignment_permissions %}
                                 <div class="dropdown me-2">
                                     <button class="btn btn-outline-warning position-relative"
                                             type="button"
-                                            id="complaintsNotificationsDropdown"
+                                            id="complaintsCenterDropdown"
                                             data-bs-toggle="dropdown"
+                                            data-bs-auto-close="outside"
                                             aria-expanded="false"
-                                            title="إشعارات الشكاوى">
+                                            title="مركز الشكاوى والتعيينات">
                                         <i class="fas fa-headset"></i>
-                                        <!-- عداد الشكاوى غير المحلولة -->
+                                        <!-- Combined Badge -->
                                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                              id="unresolved-complaints-badge"
+                                              id="complaints-center-total-badge"
                                               style="display: none">0</span>
-                                        <!-- عداد الإشعارات الجديدة -->
-                                        <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-warning text-dark"
-                                              id="complaints-notification-count-badge"
-                                              style="display: none;
-                                                     font-size: 0.6em">0</span>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end"
-                                        aria-labelledby="complaintsNotificationsDropdown"
-                                        style="width: 350px;
-                                               max-height: 400px;
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0"
+                                        aria-labelledby="complaintsCenterDropdown"
+                                        style="width: 360px;
+                                               max-height: 500px;
                                                overflow-y: auto">
-                                        <li class="dropdown-header d-flex justify-content-between align-items-center bg-light">
-                                            <span class="fw-bold">
+                                        <li class="dropdown-header d-flex justify-content-between align-items-center bg-light py-2">
+                                            <span class="fw-bold text-dark">
                                                 <i class="fas fa-headset me-2 text-warning"></i>
                                                 مركز الشكاوى
                                             </span>
-                                            <div>
-                                                <button class="btn btn-sm btn-outline-danger me-1"
-                                                        onclick="clearComplaintsNotifications()"
-                                                        title="مسح جميع الإشعارات">
-                                                    <i class="fas fa-trash"></i>
+                                            <a href="{% url 'complaints:complaint_list' %}"
+                                               class="btn btn-xs btn-outline-primary">عرض الكل</a>
+                                        </li>
+                                        <!-- Sub-header: Notifications -->
+                                        {% if user|has_complaints_permissions %}
+                                            <div class="px-2 mt-2">
+                                                <div class="d-flex justify-content-between align-items-center bg-light border rounded p-1">
+                                                    <span class="micro-header fw-bold text-muted ps-2"
+                                                          style="font-size: 0.7rem">الإشعارات</span>
+                                                    <span class="badge bg-warning text-dark"
+                                                          id="complaints-notification-count-badge"
+                                                          style="display:none;
+                                                                 font-size: 0.6rem">0</span>
+                                                </div>
+                                            </div>
+                                            <div id="complaints-notifications-list" class="px-1">
+                                                <!-- JS will load items here -->
+                                                <div class="text-center p-2 small text-muted">
+                                                    <i class="fas fa-spinner fa-spin"></i>
+                                                </div>
+                                            </div>
+                                            <div class="text-center mt-1 border-bottom pb-2">
+                                                <button class="btn btn-xs btn-link text-danger text-decoration-none"
+                                                        onclick="clearComplaintsNotifications()">
+                                                    <small>مسح الإشعارات</small>
                                                 </button>
-                                                <a href="{% url 'complaints:notifications_list' %}"
-                                                   class="btn btn-sm btn-outline-primary">عرض الكل</a>
                                             </div>
-                                        </li>
-                                        <!-- إحصائيات سريعة -->
-                                        <li class="px-3 py-2 bg-light border-bottom">
-                                            <div class="row text-center">
-                                                <div class="col-6">
-                                                    <div class="d-flex align-items-center justify-content-center">
-                                                        <i class="fas fa-exclamation-triangle text-danger me-1"></i>
-                                                        <span class="fw-bold text-danger" id="unresolved-count-display">0</span>
-                                                        <small class="text-muted ms-1">غير محلولة</small>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6">
-                                                    <div class="d-flex align-items-center justify-content-center">
-                                                        <i class="fas fa-bell text-warning me-1"></i>
-                                                        <span class="fw-bold text-warning" id="new-notifications-display">0</span>
-                                                        <small class="text-muted ms-1">إشعار جديد</small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
-                                        <li id="complaints-notifications-loading" class="text-center p-3">
-                                            <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
-                                        </li>
-                                        <li id="complaints-notifications-empty"
-                                            class="text-center p-3"
-                                            style="display: none">
-                                            <i class="fas fa-check-circle text-success"></i>
-                                            <br>
-                                            لا توجد إشعارات جديدة
-                                        </li>
-                                        <div id="complaints-notifications-list"></div>
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
-                                        <!-- روابط سريعة -->
-                                        <li>
-                                            <div class="row px-2">
-                                                <div class="col-6">
-                                                    <a class="dropdown-item text-center py-2"
-                                                       href="{% url 'complaints:complaint_list' %}">
-                                                        <i class="fas fa-list me-1"></i>
-                                                        جميع الشكاوى
-                                                    </a>
-                                                </div>
-                                                <div class="col-6">
-                                                    <a class="dropdown-item text-center py-2"
-                                                       href="{% url 'complaints:admin_complaint_list' %}">
-                                                        <i class="fas fa-shield-alt me-1"></i>
-                                                        غير المحلولة
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </div>
-                            {% endif %}
-                            <!-- فحص صلاحيات التعيين والتصعيد - يظهر للمدراء والمستخدمين ذوي الصلاحيات -->
-                            {% if user|has_assignment_permissions %}
-                                <!-- أيقونة إشعارات التعيين -->
-                                <div class="dropdown me-2">
-                                    <button class="btn btn-outline-info position-relative"
-                                            type="button"
-                                            id="assignmentNotificationsDropdown"
-                                            data-bs-toggle="dropdown"
-                                            aria-expanded="false"
-                                            title="إشعارات التعيين">
-                                        <i class="fas fa-user-check"></i>
-                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                              id="assignment-notification-badge"
-                                              style="display: none">0</span>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end"
-                                        aria-labelledby="assignmentNotificationsDropdown"
-                                        style="width: 350px;
-                                               max-height: 400px;
-                                               overflow-y: auto">
-                                        <li class="dropdown-header d-flex justify-content-between align-items-center">
-                                            <span><i class="fas fa-user-check me-2"></i>إشعارات التعيين</span>
-                                            <a href="{% url 'complaints:complaint_list' %}?assigned_to={{ user.id }}"
-                                               class="btn btn-sm btn-outline-primary">الشكاوى المسندة</a>
-                                        </li>
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
-                                        <li id="assignment-notifications-loading" class="text-center p-3">
-                                            <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
-                                        </li>
-                                        <li id="assignment-notifications-empty"
-                                            class="text-center p-3"
-                                            style="display: none">
-                                            <i class="fas fa-check-circle text-success"></i>
-                                            <br>
-                                            لا توجد إشعارات تعيين
-                                        </li>
-                                        <div id="assignment-notifications-list">
-                                            <!-- Assignment notifications will be loaded here -->
-                                        </div>
-                                    </ul>
-                                </div>
-                            {% endif %}
-                            <!-- أيقونة الرسائل الداخلية والمستخدمين النشطين -->
-                            <div class="dropdown me-2">
-                                <button class="btn btn-outline-light position-relative"
-                                        type="button"
-                                        id="internalMessagesDropdown"
-                                        data-bs-toggle="dropdown"
-                                        aria-expanded="false"
-                                        title="الرسائل والمستخدمين النشطين">
-                                    <i class="fas fa-users"></i>
-                                    {% if internal_messages_unread > 0 %}
-                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                              id="internal-messages-badge">{{ internal_messages_unread }}</span>
-                                    {% else %}
-                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                              id="internal-messages-badge"
-                                              style="display: none">0</span>
-                                    {% endif %}
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0"
-                                    aria-labelledby="internalMessagesDropdown"
-                                    style="width: 320px;
-                                           max-height: 500px;
-                                           overflow-y: auto;
-                                           border-radius: 15px">
-                                    <li class="dropdown-header d-flex justify-content-between align-items-center py-2 px-3 border-bottom mb-1"
-                                        style="background: rgba(var(--primary-rgb, 0,0,0), 0.05)">
-                                        <span class="fw-bold small text-uppercase tracking-wider">
-                                            <i class="fas fa-users-cog me-2"></i>
-                                            التواصل والمستخدمين
-                                        </span>
-                                    </li>
-                                    <!-- قسم الرسائل المُحسَّن -->
-                                    <li class="px-3 py-2 border-bottom">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span class="fw-semibold small">
-                                                <i class="fas fa-envelope-open-text text-info me-1"></i>
-                                                الرسائل الداخلية
-                                            </span>
-                                            {% if internal_messages_unread > 0 %}
-                                                <span class="badge rounded-pill bg-danger" style="font-size: 0.7rem;">{{ internal_messages_unread }}</span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="d-flex justify-content-between gap-1">
-                                            <a href="{% url 'accounts:inbox' %}"
-                                               class="btn btn-xs btn-outline-primary flex-fill py-1"
-                                               title="الوارد">
-                                                <i class="fas fa-inbox"></i>
-                                                <span class="d-block small mt-1" style="font-size: 0.65rem;">الوارد</span>
-                                            </a>
-                                            <a href="{% url 'accounts:sent_messages' %}"
-                                               class="btn btn-xs btn-outline-secondary flex-fill py-1"
-                                               title="الصادر">
-                                                <i class="fas fa-paper-plane"></i>
-                                                <span class="d-block small mt-1" style="font-size: 0.65rem;">الصادر</span>
-                                            </a>
-                                            <a href="{% url 'accounts:compose_message' %}"
-                                               class="btn btn-xs btn-primary flex-fill py-1"
-                                               title="رسالة جديدة">
-                                                <i class="fas fa-plus"></i>
-                                                <span class="d-block small mt-1" style="font-size: 0.65rem;">جديد</span>
-                                            </a>
-                                        </div>
-                                    </li>
-                                    <!-- قسم المستخدمين النشطين المُحسَّن -->
-                                    <li class="px-3 py-2">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span class="fw-semibold small text-success">
-                                                <i class="fas fa-user-check me-1"></i>
-                                                النشطون الآن
-                                            </span>
-                                            <span class="badge bg-success rounded-pill"
-                                                  id="online-users-count-header"
-                                                  style="font-size: 0.7rem">0</span>
-                                        </div>
-                                        <div id="online-users-list-dropdown"
-                                             class="custom-scrollbar"
-                                             style="max-height: 200px;
-                                                    overflow-y: auto">
-                                            <div class="text-center p-2">
-                                                <div class="spinner-border spinner-border-sm text-secondary" role="status">
-                                                    <span class="visually-hidden">جاري التحميل...</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-                            <!-- زر التحويلات المخزنية لمسؤول المخزن -->
-                            {% if is_warehouse_manager and not user.is_superuser %}
-                                <a href="{% url 'inventory:stock_transfer_list' %}"
-                                   class="btn btn-outline-light position-relative me-3"
-                                   title="التحويلات المخزنية">
-                                    <i class="fas fa-exchange-alt"></i>
-                                    {% if pending_transfers_count > 0 %}
-                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                              style="font-size: 0.6rem">{{ pending_transfers_count }}</span>
-                                    {% endif %}
-                                    <span class="d-none d-lg-inline ms-1">التحويلات</span>
-                                </a>
-                            {% endif %}
-                            <!-- أيقونة الإشعارات العامة -->
-                            {% if not user.is_inspection_technician or user.is_superuser %}
-                                <div class="dropdown me-3">
-                                    <button class="btn btn-outline-light position-relative"
-                                            type="button"
-                                            id="notificationsDropdown"
-                                            data-bs-toggle="dropdown"
-                                            aria-expanded="false"
-                                            title="الإشعارات العامة">
-                                        <i class="fas fa-bell"></i>
-                                        {% if notifications_unread_count > 0 %}
-                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                                  id="notification-count-badge">{{ notifications_unread_count }}</span>
-                                        {% else %}
-                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                                  id="notification-count-badge"
-                                                  style="display: none">0</span>
                                         {% endif %}
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-lg"
-                                        aria-labelledby="notificationsDropdown"
-                                        style="width: 500px;
-                                               max-height: 600px;
-                                               overflow-y: auto;
-                                               overflow-x: hidden">
-                                        <li>
-                                            <h6 class="dropdown-header d-flex justify-content-between align-items-center py-3 px-4 bg-light border-bottom">
-                                                <span class="fw-bold text-dark">
-                                                    <i class="fas fa-bell me-2 text-primary"></i>
-                                                    الإشعارات
-                                                    {% if notifications_unread_count > 0 %}
-                                                        <span class="badge bg-primary ms-2">{{ notifications_unread_count }}</span>
-                                                    {% endif %}
-                                                </span>
-                                                {% if notifications_unread_count > 0 %}
-                                                    <button type="button"
-                                                            class="btn btn-sm btn-outline-primary"
-                                                            onclick="markAllNotificationsRead()"
-                                                            title="تحديد جميع الإشعارات كمقروءة">
-                                                        <i class="fas fa-check-double"></i>
-                                                        تحديد الكل
-                                                    </button>
-                                                {% endif %}
-                                            </h6>
-                                        </li>
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
-                                        {% if recent_notifications %}
-                                            {% for notification in recent_notifications %}
-                                                {% with visibility=notification.visibility_records.all|first %}
-                                                    <li>
-                                                        <a class="dropdown-item py-3 px-3 notification-dropdown-item {% if not visibility.is_read %}bg-light border-start border-primary border-3{% endif %}"
-                                                           href="{{ notification.get_absolute_url }}"
-                                                           data-notification-id="{{ notification.pk }}"
-                                                           data-is-read="{% if visibility.is_read %}true{% else %}false{% endif %}"
-                                                           style="border-radius: 8px;
-                                                                  margin: 2px 8px;
-                                                                  white-space: normal;
-                                                                  word-wrap: break-word;
-                                                                  transition: all 0.3s ease"
-                                                           onmouseover="this.style.backgroundColor='#f8f9fa'"
-                                                           onmouseout="this.style.backgroundColor='{% if not visibility.is_read %}#f8f9fa{% else %}transparent{% endif %}'">
-                                                            <div class="d-flex align-items-start">
-                                                                <div class="me-3 flex-shrink-0">
-                                                                    {% with icon_data=notification.get_icon_and_color %}
-                                                                        <div class="notification-icon-wrapper d-flex align-items-center justify-content-center"
-                                                                             style="width: 45px;
-                                                                                    height: 45px;
-                                                                                    border-radius: 50%;
-                                                                                    background-color: {{ icon_data.bg }};
-                                                                                    border: 2px solid {{ icon_data.color }}">
-                                                                            <i class="{{ icon_data.icon }}"
-                                                                               style="color: {{ icon_data.color }};
-                                                                                      font-size: 18px"></i>
-                                                                        </div>
-                                                                    {% endwith %}
+                                        <!-- Sub-header: Assignments -->
+                                        {% if user|has_assignment_permissions %}
+                                            <div class="px-2 mt-2">
+                                                <div class="d-flex justify-content-between align-items-center bg-light border rounded p-1">
+                                                    <span class="micro-header fw-bold text-muted ps-2"
+                                                          style="font-size: 0.7rem">التعيينات والمهام</span>
+                                                    <span class="badge bg-danger"
+                                                          id="assignment-notification-badge"
+                                                          style="display:none;
+                                                                 font-size: 0.6rem">0</span>
+                                                </div>
+                                            </div>
+                                            <div id="assignment-notifications-list" class="px-1">
+                                                <!-- JS will load items here -->
+                                                <div class="text-center p-2 small text-muted">
+                                                    <i class="fas fa-spinner fa-spin"></i>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            {% endif %}
+                        </ul>
+                    </div>
+                {% endif %}
+                <!-- Right Side Icons (Authenticated) -->
+                {% if user.is_authenticated %}
+                    <!-- تم نقل أيقونة الرسائل والمستخدمين إلى زر عائم (Floating Button) -->
+                    <!-- زر التحويلات المخزنية لمسؤول المخزن -->
+                    {% if is_warehouse_manager and not user.is_superuser %}
+                        <a href="{% url 'inventory:stock_transfer_list' %}"
+                           class="btn btn-outline-light position-relative me-3"
+                           title="التحويلات المخزنية">
+                            <i class="fas fa-exchange-alt"></i>
+                            {% if pending_transfers_count > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                      style="font-size: 0.6rem">{{ pending_transfers_count }}</span>
+                            {% endif %}
+                            <span class="d-none d-lg-inline ms-1">التحويلات</span>
+                        </a>
+                    {% endif %}
+                    <!-- أيقونة الإشعارات العامة -->
+                    {% if not user.is_inspection_technician or user.is_superuser %}
+                        <div class="dropdown me-3">
+                            <button class="btn btn-outline-light position-relative"
+                                    type="button"
+                                    id="notificationsDropdown"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    title="الإشعارات العامة">
+                                <i class="fas fa-bell"></i>
+                                {% if notifications_unread_count > 0 %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                          id="notification-count-badge">{{ notifications_unread_count }}</span>
+                                {% else %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                          id="notification-count-badge"
+                                          style="display: none">0</span>
+                                {% endif %}
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg"
+                                aria-labelledby="notificationsDropdown"
+                                style="width: 500px;
+                                       max-height: 600px;
+                                       overflow-y: auto;
+                                       overflow-x: hidden">
+                                <li>
+                                    <h6 class="dropdown-header d-flex justify-content-between align-items-center py-3 px-4 bg-light border-bottom">
+                                        <span class="fw-bold text-dark">
+                                            <i class="fas fa-bell me-2 text-primary"></i>
+                                            الإشعارات
+                                            {% if notifications_unread_count > 0 %}
+                                                <span class="badge bg-primary ms-2">{{ notifications_unread_count }}</span>
+                                            {% endif %}
+                                        </span>
+                                        {% if notifications_unread_count > 0 %}
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                    onclick="markAllNotificationsRead()"
+                                                    title="تحديد جميع الإشعارات كمقروءة">
+                                                <i class="fas fa-check-double"></i>
+                                                تحديد الكل
+                                            </button>
+                                        {% endif %}
+                                    </h6>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                {% if recent_notifications %}
+                                    {% for notification in recent_notifications %}
+                                        {% with visibility=notification.visibility_records.all|first %}
+                                            <li>
+                                                <a class="dropdown-item py-3 px-3 notification-dropdown-item {% if not visibility.is_read %}bg-light border-start border-primary border-3{% endif %}"
+                                                   href="{{ notification.get_absolute_url }}"
+                                                   data-notification-id="{{ notification.pk }}"
+                                                   data-is-read="{% if visibility.is_read %}true{% else %}false{% endif %}"
+                                                   style="border-radius: 8px;
+                                                          margin: 2px 8px;
+                                                          white-space: normal;
+                                                          word-wrap: break-word;
+                                                          transition: all 0.3s ease"
+                                                   onmouseover="this.style.backgroundColor='#f8f9fa'"
+                                                   onmouseout="this.style.backgroundColor='{% if not visibility.is_read %}#f8f9fa{% else %}transparent{% endif %}'">
+                                                    <div class="d-flex align-items-start">
+                                                        <div class="me-3 flex-shrink-0">
+                                                            {% with icon_data=notification.get_icon_and_color %}
+                                                                <div class="notification-icon-wrapper d-flex align-items-center justify-content-center"
+                                                                     style="width: 45px;
+                                                                            height: 45px;
+                                                                            border-radius: 50%;
+                                                                            background-color: {{ icon_data.bg }};
+                                                                            border: 2px solid {{ icon_data.color }}">
+                                                                    <i class="{{ icon_data.icon }}"
+                                                                       style="color: {{ icon_data.color }};
+                                                                              font-size: 18px"></i>
                                                                 </div>
-                                                                <div class="flex-grow-1 min-width-0">
-                                                                    <div class="d-flex justify-content-between align-items-start mb-1">
-                                                                        <div class="d-flex align-items-center gap-2"
-                                                                             style="white-space: nowrap;
-                                                                                    overflow: hidden;
-                                                                                    width: 100%">
-                                                                            <h6 class="mb-0 text-truncate {% if not visibility.is_read %}fw-bold text-dark{% else %}text-muted{% endif %}"
-                                                                                style="line-height: 1.2;
-                                                                                       font-size: 0.85rem;
-                                                                                       max-width: 280px">
-                                                                                {% if not visibility.is_read %}<i class="fas fa-circle text-primary me-1" style="font-size: 6px;"></i>{% endif %}
-                                                                                <span class="text-decoration-underline text-primary">{{ notification.title }}</span>
-                                                                            </h6>
-                                                                            {% if notification.created_by %}
-                                                                                <span class="badge bg-light text-dark border flex-shrink-0"
-                                                                                      style="font-weight: normal;
-                                                                                             font-size: 0.75em">
-                                                                                    <i class="fas fa-user-tie text-primary me-1"></i>{# fmt:off #}{{ notification.created_by.get_full_name|default:notification.created_by.username }}{# fmt:on #}
-                                                                                </span>
-                                                                                {# fmt:off #}{% elif notification.extra_data and notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}{# fmt:on #}
-                                                                                <span class="badge bg-light text-dark border flex-shrink-0"
-                                                                                      style="font-weight: normal;
-                                                                                             font-size: 0.75em">
-                                                                                    <i class="fas fa-user-tie text-primary me-1"></i>{{ notification.extra_data.changed_by }}
-                                                                                </span>
-                                                                            {% endif %}
-                                                                            <small class="text-muted flex-shrink-0 ms-auto" style="font-size: 0.7em;">
-                                                                                <i class="far fa-clock me-1"></i>{{ notification.created_at|timesince }}
-                                                                            </small>
-                                                                        </div>
-                                                                        {% if not visibility.is_read %}
-                                                                            <span class="badge bg-primary rounded-pill ms-2 flex-shrink-0"
-                                                                                  style="font-size: 0.6em">جديد</span>
-                                                                        {% endif %}
-                                                                    </div>
-                                                                    <div class="notification-details mb-1 ms-1">
-                                                                        {% if notification.extra_data.customer_name %}
-                                                                            <div class="small text-muted">
-                                                                                <i class="fas fa-user me-1 text-info"></i>
-                                                                                {{ notification.extra_data.customer_name }}
-                                                                            </div>
-                                                                        {% endif %}
-                                                                    </div>
-                                                                    <p class="mb-1 text-muted small"
-                                                                       style="line-height: 1.3;
-                                                                              font-size: 0.75rem;
-                                                                              display: -webkit-box;
-                                                                              -webkit-line-clamp: 2;
-                                                                              -webkit-box-orient: vertical;
-                                                                              overflow: hidden">
-                                                                        {{ notification.message }}
-                                                                    </p>
+                                                            {% endwith %}
+                                                        </div>
+                                                        <div class="flex-grow-1 min-width-0">
+                                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                                <div class="d-flex align-items-center gap-2"
+                                                                     style="white-space: nowrap;
+                                                                            overflow: hidden;
+                                                                            width: 100%">
+                                                                    <h6 class="mb-0 text-truncate {% if not visibility.is_read %}fw-bold text-dark{% else %}text-muted{% endif %}"
+                                                                        style="line-height: 1.2;
+                                                                               font-size: 0.85rem;
+                                                                               max-width: 280px">
+                                                                        {% if not visibility.is_read %}<i class="fas fa-circle text-primary me-1" style="font-size: 6px;"></i>{% endif %}
+                                                                        <span class="text-decoration-underline text-primary">{{ notification.title }}</span>
+                                                                    </h6>
+                                                                    {% if notification.created_by %}
+                                                                        <span class="badge bg-light text-dark border flex-shrink-0"
+                                                                              style="font-weight: normal;
+                                                                                     font-size: 0.75em">
+                                                                            <i class="fas fa-user-tie text-primary me-1"></i>{# fmt:off #}{{ notification.created_by.get_full_name|default:notification.created_by.username }}{# fmt:on #}
+                                                                        </span>
+                                                                        {# fmt:off #}{% elif notification.extra_data and notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}{# fmt:on #}
+                                                                        <span class="badge bg-light text-dark border flex-shrink-0"
+                                                                              style="font-weight: normal;
+                                                                                     font-size: 0.75em">
+                                                                            <i class="fas fa-user-tie text-primary me-1"></i>{{ notification.extra_data.changed_by }}
+                                                                        </span>
+                                                                    {% endif %}
+                                                                    <small class="text-muted flex-shrink-0 ms-auto" style="font-size: 0.7em;">
+                                                                        <i class="far fa-clock me-1"></i>{{ notification.created_at|timesince }}
+                                                                    </small>
                                                                 </div>
+                                                                {% if not visibility.is_read %}
+                                                                    <span class="badge bg-primary rounded-pill ms-2 flex-shrink-0"
+                                                                          style="font-size: 0.6em">جديد</span>
+                                                                {% endif %}
                                                             </div>
-                                                        </a>
-                                                    </li>
-                                                    {% if not forloop.last %}
-                                                        <li>
-                                                            <hr class="dropdown-divider">
-                                                        </li>
-                                                    {% endif %}
-                                                {% endwith %}
-                                            {% endfor %}
-                                            <li>
-                                                <hr class="dropdown-divider">
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item text-center"
-                                                   href="{% url 'notifications:list' %}">
-                                                    <i class="fas fa-eye"></i> عرض جميع الإشعارات
+                                                            <div class="notification-details mb-1 ms-1">
+                                                                {% if notification.extra_data.customer_name %}
+                                                                    <div class="small text-muted">
+                                                                        <i class="fas fa-user me-1 text-info"></i>
+                                                                        {{ notification.extra_data.customer_name }}
+                                                                    </div>
+                                                                {% endif %}
+                                                            </div>
+                                                            <p class="mb-1 text-muted small"
+                                                               style="line-height: 1.3;
+                                                                      font-size: 0.75rem;
+                                                                      display: -webkit-box;
+                                                                      -webkit-line-clamp: 2;
+                                                                      -webkit-box-orient: vertical;
+                                                                      overflow: hidden">{{ notification.message }}</p>
+                                                        </div>
+                                                    </div>
                                                 </a>
                                             </li>
-                                        {% else %}
-                                            <li>
-                                                <div class="dropdown-item text-center text-muted">
-                                                    <i class="fas fa-bell-slash"></i>
-                                                    <br>
-                                                    لا توجد إشعارات
-                                                </div>
-                                            </li>
-                                        {% endif %}
-                                    </ul>
-                                </div>
-                            {% endif %}
-                            <!-- زر المستخدم -->
-                            <button class="btn btn-outline-light dropdown-toggle d-inline-flex align-items-center gap-2"
-                                    id="customUserBtn"
-                                    type="button">
-                                <i class="fas fa-user"></i>
-                                <div class="d-flex flex-column align-items-start lh-1 text-wrap text-start">
-                                    <span class="mb-1">{{ user.get_full_name|default:user.username }}</span>
-                                    <span class="badge bg-white text-primary bg-opacity-75 rounded-pill"
-                                          style="font-size: 0.65em">{{ user.get_user_role_display }}</span>
-                                </div>
-                            </button>
-                        {% else %}
-                            <a href="{% url 'accounts:login' %}" class="btn btn-outline-light"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a>
-                        {% endif %}
-                    </div>
-                </div>
+                                            {% if not forloop.last %}
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endfor %}
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item text-center"
+                                           href="{% url 'notifications:list' %}">
+                                            <i class="fas fa-eye"></i> عرض جميع الإشعارات
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li>
+                                        <div class="dropdown-item text-center text-muted">
+                                            <i class="fas fa-bell-slash"></i>
+                                            <br>
+                                            لا توجد إشعارات
+                                        </div>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    <!-- زر المستخدم -->
+                    <button class="btn btn-outline-light dropdown-toggle d-inline-flex align-items-center gap-2"
+                            id="customUserBtn"
+                            type="button">
+                        <i class="fas fa-user"></i>
+                        <div class="d-flex flex-column align-items-start lh-1 text-wrap text-start">
+                            <span class="mb-1">{{ user.get_full_name|default:user.username }}</span>
+                            <span class="badge bg-white text-primary bg-opacity-75 rounded-pill"
+                                  style="font-size: 0.65em">{{ user.get_user_role_display }}</span>
+                        </div>
+                    </button>
+                {% else %}
+                    <a href="{% url 'accounts:login' %}" class="btn btn-outline-light"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</a>
+                {% endif %}
             </div>
-        </nav>
-        <!-- تم إزالة صناديق الإشعارات -->
-        <!-- Branch Messages - Only shown on home page -->
-        {% if branch_messages and request.path == '/' %}
-            <script>
+        </div>
+    </div>
+</nav>
+<!-- تم إزالة صناديق الإشعارات -->
+<!-- Branch Messages - Only shown on home page -->
+{% if branch_messages and request.path == '/' %}
+    <script>
         // Wait for all DOM content and resources to load for optimal display timing
         window.addEventListener('load', function () {
             const branchMessages = [
@@ -1093,8 +949,8 @@
         // Start showing messages after a short delay to ensure page is fully loaded
         setTimeout(showMessage, 500);
         });
-            </script>
-            <style>
+    </script>
+    <style>
         /* تحسين مظهر رسائل الفروع */
         .branch-message-popup {
             border-radius: 15px !important;
@@ -1182,45 +1038,45 @@
                 font-size: 1rem !important;
             }
         }
-            </style>
-        {% endif %}
-        <!-- قائمة المستخدم المنبثقة خارج تدفق الهيدر -->
-        <div id="customUserDropdown"
-             class="custom-dropdown-menu"
-             style="display:none;
-                    position:fixed;
-                    top:70px;
-                    left:90px;
-                    z-index:2147483647;
-                    min-width:260px;
-                    max-width:95vw;
-                    background:#fff;
-                    border-radius:12px;
-                    box-shadow:0 8px 32px rgba(0,0,0,0.18);
-                    border:1px solid #eee">
-            <div class="dropdown-header fw-bold py-2 px-3 border-bottom">القائمة الشخصية</div>
-            <div class="px-3 py-2">
-                <label for="themeSelector" class="form-label" style="font-weight: bold;">اختر الثيم المناسب</label>
-                <select id="themeSelector" class="form-select">
-                    <option value="default">الثيم الإفتراضي</option>
-                    <option value="custom-theme">نسخة الثيم الإفتراضي القابلة للتعديل</option>
-                    <option value="ornamental">الثيم الزخرفي</option>
-                </select>
-            </div>
-            <hr class="my-1">
-            <a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="fas fa-id-card"></i> الملف الشخصي</a>
-            {% if user.is_staff %}
-                <a class="dropdown-item" href="{% url 'admin:index' %}"><i class="fas fa-cog"></i> لوحة الإدارة</a>
-                <a class="dropdown-item" href="{% url 'accounts:device_diagnostic' %}"><i class="fas fa-stethoscope"></i> تشخيص
-                الجهاز</a>
-                <a class="dropdown-item" href="{% url 'accounts:register_device' %}"><i class="fas fa-desktop"></i> تسجيل جهاز
-                جديد</a>
-            <a class="dropdown-item"
-               href="{% url 'admin:accounts_branchdevice_changelist' %}"><i class="fas fa-list"></i>
-        إدارة الأجهزة</a>
-    {% endif %}
+    </style>
+{% endif %}
+<!-- قائمة المستخدم المنبثقة خارج تدفق الهيدر -->
+<div id="customUserDropdown"
+     class="custom-dropdown-menu"
+     style="display:none;
+            position:fixed;
+            top:70px;
+            left:90px;
+            z-index:2147483647;
+            min-width:260px;
+            max-width:95vw;
+            background:#fff;
+            border-radius:12px;
+            box-shadow:0 8px 32px rgba(0,0,0,0.18);
+            border:1px solid #eee">
+    <div class="dropdown-header fw-bold py-2 px-3 border-bottom">القائمة الشخصية</div>
+    <div class="px-3 py-2">
+        <label for="themeSelector" class="form-label" style="font-weight: bold;">اختر الثيم المناسب</label>
+        <select id="themeSelector" class="form-select">
+            <option value="default">الثيم الإفتراضي</option>
+            <option value="custom-theme">نسخة الثيم الإفتراضي القابلة للتعديل</option>
+            <option value="ornamental">الثيم الزخرفي</option>
+        </select>
+    </div>
     <hr class="my-1">
-    <a class="dropdown-item" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
+    <a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="fas fa-id-card"></i> الملف الشخصي</a>
+    {% if user.is_staff %}
+        <a class="dropdown-item" href="{% url 'admin:index' %}"><i class="fas fa-cog"></i> لوحة الإدارة</a>
+        <a class="dropdown-item" href="{% url 'accounts:device_diagnostic' %}"><i class="fas fa-stethoscope"></i> تشخيص
+        الجهاز</a>
+        <a class="dropdown-item" href="{% url 'accounts:register_device' %}"><i class="fas fa-desktop"></i> تسجيل جهاز
+        جديد</a>
+    <a class="dropdown-item"
+       href="{% url 'admin:accounts_branchdevice_changelist' %}"><i class="fas fa-list"></i>
+إدارة الأجهزة</a>
+{% endif %}
+<hr class="my-1">
+<a class="dropdown-item" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
 </div>
 <script>
         // تم إزالة نظام الإشعارات
@@ -1705,10 +1561,10 @@
 
         // تحديث إشعارات التعيين
         function updateAssignmentNotifications() {
-            // التحقق من وجود العنصر قبل التحديث (قد يكون مخفي بسبب الصلاحيات)
-            const assignmentDropdown = document.querySelector('#assignmentNotificationsDropdown');
-            if (!assignmentDropdown) {
-                return; // العنصر غير موجود، المستخدم ليس له صلاحيات
+            // التحقق من وجود قائمة التعيينات
+            const list = document.querySelector('#assignment-notifications-list');
+            if (!list) {
+                return; // القائمة غير موجودة (لا يملك صلاحيات أو القائمة محذوفة)
             }
 
             fetch('/complaints/api/assignment-notifications/')
@@ -1776,10 +1632,10 @@
 
         // تحديث عداد إشعارات الشكاوى
         function updateComplaintsNotificationCount() {
-            // التحقق من وجود العنصر قبل التحديث (قد يكون مخفي بسبب الصلاحيات)
-            const complaintsDropdown = document.querySelector('#complaintsNotificationsDropdown');
-            if (!complaintsDropdown) {
-                return; // العنصر غير موجود، المستخدم ليس له صلاحيات
+            // التحقق من وجود زر مركز الشكاوى
+            const complaintsCenterDropdown = document.querySelector('#complaintsCenterDropdown');
+            if (!complaintsCenterDropdown) {
+                return; // العنصر غير موجود
             }
 
             // جلب إحصائيات الشكاوى غير المحلولة
@@ -1937,7 +1793,7 @@
                             loadComplaintsNotifications();
 
                             // إخفاء القائمة المنسدلة
-                            const dropdown = document.getElementById('complaintsNotificationsDropdown');
+                            const dropdown = document.getElementById('complaintsCenterDropdown');
                             if (dropdown) {
                                 const bsDropdown = bootstrap.Dropdown.getInstance(dropdown);
                                 if (bsDropdown) bsDropdown.hide();
@@ -2509,11 +2365,12 @@
                 setupDropdownNotificationListeners();
             }, 2000);
 
-            // إعداد مستمع لتحميل إشعارات الشكاوى عند فتح القائمة
-            const complaintsDropdown = document.getElementById('complaintsNotificationsDropdown');
-            if (complaintsDropdown) {
-                complaintsDropdown.addEventListener('click', function () {
+            // إعداد مستمع لتحميل إشعارات الشكاوى والتعيينات عند فتح القائمة الجديدة
+            const complaintsCenterDropdown = document.getElementById('complaintsCenterDropdown');
+            if (complaintsCenterDropdown) {
+                complaintsCenterDropdown.addEventListener('show.bs.dropdown', function () {
                     loadComplaintsNotifications();
+                    updateAssignmentNotifications();
                 });
             }
 
@@ -2895,5 +2752,7 @@
 {% if user.is_authenticated %}
     {% include 'barcode_scanner_modal.html' %}
 {% endif %}
+<!-- Floating Chat Button JS -->
+<script src="{% static 'js/floating-button.js' %}"></script>
 </body>
 </html>
