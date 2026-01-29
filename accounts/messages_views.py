@@ -2,6 +2,8 @@
 Views لنظام الرسائل الداخلية بين المستخدمين
 """
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Case, Count, IntegerField, Q, When
@@ -16,41 +18,90 @@ from .models import InternalMessage, User
 
 @login_required
 def inbox(request):
-    """صندوق الوارد - عرض الرسائل الواردة"""
-    messages_list = InternalMessage.get_inbox(request.user).order_by("-created_at")
+    """
+    صندوق المحادثات (Unified Chat List) - عرض المحادثات مجمعة
+    """
+    # 1. العثور على جميع المستخدمين الذين حدث تواصل معهم (إرسالاً أو استقبالاً)
+    sent_partners = InternalMessage.objects.filter(
+        sender=request.user, is_deleted_by_sender=False
+    ).values_list("recipient", flat=True)
 
-    # فلترة حسب الحالة (مقروءة/غير مقروءة)
-    status_filter = request.GET.get("status", "all")
-    if status_filter == "unread":
-        messages_list = messages_list.filter(is_read=False)
-    elif status_filter == "read":
-        messages_list = messages_list.filter(is_read=True)
+    received_partners = InternalMessage.objects.filter(
+        recipient=request.user, is_deleted_by_recipient=False
+    ).values_list("sender", flat=True)
 
-    # البحث
-    search_query = request.GET.get("search", "")
-    if search_query:
-        messages_list = messages_list.filter(
-            Q(subject__icontains=search_query)
-            | Q(body__icontains=search_query)
-            | Q(sender__username__icontains=search_query)
-            | Q(sender__first_name__icontains=search_query)
-            | Q(sender__last_name__icontains=search_query)
+    # توحيد القوائم لإزالة التكرار
+    partner_ids = set(list(sent_partners) + list(received_partners))
+
+    conversations = []
+
+    # 2. تجميع بيانات كل محادثة
+    for partner_id in partner_ids:
+        try:
+            partner = User.objects.get(id=partner_id)
+        except User.DoesNotExist:
+            continue
+
+        # آخر رسالة بين الطرفين (سواء واردة أو صادرة)
+        last_message = (
+            InternalMessage.objects.filter(
+                (Q(sender=request.user) & Q(recipient=partner))
+                | (Q(sender=partner) & Q(recipient=request.user))
+            )
+            .filter(
+                ~Q(sender=request.user, is_deleted_by_sender=True)
+                & ~Q(recipient=request.user, is_deleted_by_recipient=True)
+            )
+            .order_by("-created_at")
+            .first()
         )
 
-    # Pagination
-    paginator = Paginator(messages_list, 20)
-    page_number = request.GET.get("page")
-    messages_page = paginator.get_page(page_number)
+        if not last_message:
+            continue
 
-    # إحصائيات
-    unread_count = InternalMessage.get_unread_count(request.user)
+        # عدد الرسائل غير المقروءة الواردة من هذا الشريك
+        unread_count = InternalMessage.objects.filter(
+            sender=partner,
+            recipient=request.user,
+            is_read=False,
+            is_deleted_by_recipient=False,
+        ).count()
+
+        conversations.append(
+            {
+                "sender": partner,  # We call it sender in template but it's really "partner"
+                "last_message": last_message,
+                "unread_count": unread_count,
+                "timestamp": last_message.created_at,
+            }
+        )
+
+    # 3. ترتيب المحادثات حسب تاريخ آخر رسالة (الأحدث أولاً)
+    conversations.sort(key=lambda x: x["timestamp"], reverse=True)
+
+    # Search Logic
+    search_query = request.GET.get("search", "")
+    if search_query:
+        query = search_query.lower()
+        conversations = [
+            c
+            for c in conversations
+            if query in c["sender"].get_full_name().lower()
+            or query in c["sender"].username.lower()
+            or query in c["last_message"].subject.lower()
+            or query in c["last_message"].body.lower()
+        ]
+
+    # Pagination
+    paginator = Paginator(conversations, 20)
+    page_number = request.GET.get("page")
+    conversations_page = paginator.get_page(page_number)
 
     context = {
-        "messages": messages_page,
-        "unread_count": unread_count,
-        "status_filter": status_filter,
+        "conversations": conversations_page,
+        "unread_count": InternalMessage.get_unread_count(request.user),
         "search_query": search_query,
-        "page_title": "صندوق الوارد",
+        "page_title": "المحادثات",
     }
 
     return render(request, "accounts/messages/inbox.html", context)
@@ -356,3 +407,219 @@ def reply_to_message(request, message_id):
     }
 
     return render(request, "accounts/messages/reply.html", context)
+
+
+import json
+
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_http_methods
+
+from .models import InternalMessage, User
+
+
+@login_required
+def api_get_chat_history(request, user_id):
+    """
+    API لجلب سجل المحادثة مع مستخدم معين
+    """
+    other_user = get_object_or_404(User, id=user_id)
+
+    # جلب الرسائل المتبادلة بين المستخدم الحالي والمستخدم الآخر
+    messages = (
+        InternalMessage.objects.filter(
+            (Q(sender=request.user) & Q(recipient=other_user))
+            | (Q(sender=other_user) & Q(recipient=request.user))
+        )
+        .filter(
+            # استثناء الرسائل المحذوفة من قبل المستخدم الحالي
+            ~Q(sender=request.user, is_deleted_by_sender=True)
+            & ~Q(recipient=request.user, is_deleted_by_recipient=True)
+        )
+        .order_by("created_at")
+    )
+
+    # تحديد الرسائل الواردة كمقروءة وإرسال إشعارات بالقراءة
+    # Use direct query to ensure we catch all unread messages from this user independent of the history limit/ordering
+    unread_messages = InternalMessage.objects.filter(
+        recipient=request.user, sender=other_user, is_read=False
+    )
+
+    if unread_messages.exists():
+        print(
+            f"DEBUG: Found {unread_messages.count()} unread messages in history fetch"
+        )
+        channel_layer = get_channel_layer()
+        for msg in unread_messages:
+            msg.mark_as_read()
+
+            # Notify Sender (Read Receipt)
+            try:
+                print(
+                    f"DEBUG: Sending Read Receipt for Msg {msg.id} to Sender {msg.sender.id}"
+                )
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{msg.sender.id}",
+                    {
+                        "type": "read_receipt",
+                        "message_id": msg.id,
+                        "sender_id": msg.sender.id,  # The one who sent the original message
+                        "recipient_id": request.user.id,  # The one who just read it
+                    },
+                )
+                # print("DEBUG: Read Receipt Sent Successfully to Group")
+            except Exception as e:
+                pass
+                # print(f"DEBUG: Failed to send read receipt for msg {msg.id}: {e}")
+
+    # تنسيق البيانات
+    messages_data = []
+    for msg in messages:
+        messages_data.append(
+            {
+                "id": msg.id,
+                "sender_id": msg.sender.id,
+                "sender_name": msg.sender.get_full_name() or msg.sender.username,
+                "sender_avatar": msg.sender.image.url if msg.sender.image else None,
+                "body": msg.body,
+                "created_at": msg.created_at.strftime("%Y-%m-%d %H:%M"),
+                "is_me": msg.sender == request.user,
+                "is_read": msg.is_read,
+            }
+        )
+
+    return JsonResponse(
+        {
+            "messages": messages_data,
+            "other_user": {
+                "id": other_user.id,
+                "name": other_user.get_full_name() or other_user.username,
+                "avatar_url": other_user.image.url if other_user.image else None,
+            },
+        }
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_send_chat_message(request, user_id):
+    """
+    API لإرسال رسالة فورية عبر الدردشة
+    """
+    try:
+        data = json.loads(request.body)
+        body = data.get("body")
+
+        if not body:
+            return JsonResponse(
+                {"success": False, "error": "نص الرسالة مطلوب"}, status=400
+            )
+
+        recipient = get_object_or_404(User, id=user_id)
+
+        # إنشاء الرسالة
+        message = InternalMessage.objects.create(
+            sender=request.user,
+            recipient=recipient,
+            subject="رسالة محادثة فورية",  # موضوع افتراضي للدردشة
+            body=body,
+            is_important=False,
+        )
+
+        # =========================================================
+        # REAL-TIME PUSH: Notify the recipient instantly via WebSockets
+        # =========================================================
+        try:
+            channel_layer = get_channel_layer()
+            group_name = f"user_{recipient.id}"
+            print(f"DEBUG: Sending message to Group: {group_name}")
+
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    "type": "chat_message",
+                    "message": {
+                        "id": message.id,
+                        "sender_id": request.user.id,
+                        "sender_name": request.user.get_full_name()
+                        or request.user.username,
+                        "sender_avatar": (
+                            request.user.image.url if request.user.image else None
+                        ),
+                        "body": message.body,
+                        "created_at": message.created_at.strftime("%Y-%m-%d %H:%M"),
+                        "is_me": False,  # For the recipient, it's NOT me
+                    },
+                },
+            )
+            print("DEBUG: Message Pushed to Channel Layer")
+        except Exception as e:
+            print(f"DEBUG: WebSocket Push Failed: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": {
+                    "id": message.id,
+                    "body": message.body,
+                    "created_at": message.created_at.strftime("%Y-%m-%d %H:%M"),
+                    "sender_avatar": (
+                        request.user.image.url if request.user.image else None
+                    ),
+                    "is_me": True,
+                },
+            }
+        )
+
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "بيانات غير صالحة"}, status=400)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+from django.db.models import Count, Q
+
+
+@login_required
+def api_check_new_messages(request):
+    """
+    API للتحقق من وجود رسائل جديدة غير مقروءة من جميع المستخدمين
+    يعيد قائمة بمعرفات المستخدمين وعدد الرسائل غير المقروءة لكل منهم
+    """
+    # تجميع الرسائل غير المقروءة حسب المرسل
+    unread_stats = (
+        InternalMessage.objects.filter(
+            recipient=request.user, is_read=False, is_deleted_by_recipient=False
+        )
+        .values("sender")
+        .annotate(count=Count("id"))
+    )
+
+    # تحويل النتيجة إلى قائمة
+    unread_data = []
+    for item in unread_stats:
+        sender_id = item["sender"]
+        count = item["count"]
+
+        # نحتاج اسم المرسل أيضا للإشعار
+        try:
+            sender = User.objects.get(id=sender_id)
+            sender_name = sender.get_full_name() or sender.username
+        except User.DoesNotExist:
+            sender_name = "مستخدم غير معروف"
+
+        unread_data.append(
+            {"sender_id": sender_id, "sender_name": sender_name, "count": count}
+        )
+
+    return JsonResponse(
+        {
+            "unread_conversations": unread_data,
+            "total_unread": sum(item["count"] for item in unread_data),
+        }
+    )

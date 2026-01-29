@@ -146,9 +146,7 @@ def online_users_api(request):
                     )
 
                 users_data.append(user_data)
-                print(
-                    f"[DEBUG] Successfully processed online user: {online_user.user.username}"
-                )
+                # print(f"[DEBUG] Successfully processed online user: {online_user.user.username}")
 
             except Exception as user_error:
                 print(
@@ -181,7 +179,7 @@ def online_users_api(request):
         for login_history in unique_recent_users:
             try:
                 user = login_history.user
-                print(f"[DEBUG] Processing offline user: {user.username}")
+                # print(f"[DEBUG] Processing offline user: {user.username}")
 
                 # تحديد دور المستخدم
                 user_role = "مستخدم عادي"
@@ -245,7 +243,7 @@ def online_users_api(request):
                     )
 
                 users_data.append(user_data)
-                print(f"[DEBUG] Successfully processed offline user: {user.username}")
+                # print(f"[DEBUG] Successfully processed offline user: {user.username}")
 
             except Exception as user_error:
                 print(
@@ -267,9 +265,9 @@ def online_users_api(request):
 
         users_data = online_list + offline_list
 
-        print(
-            f"[DEBUG] Final response: success=True, total_users={len(users_data)}, online={total_online}"
-        )
+        # print(
+        #     f"[DEBUG] Final response: success=True, total_users={len(users_data)}, online={total_online}"
+        # )
 
         return JsonResponse(
             {

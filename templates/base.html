@@ -2753,6 +2753,6 @@
     {% include 'barcode_scanner_modal.html' %}
 {% endif %}
 <!-- Floating Chat Button JS -->
-<script src="{% static 'js/floating-button.js' %}"></script>
+<script src="{% static 'js/floating-button.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>

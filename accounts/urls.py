@@ -13,6 +13,9 @@ from .activity_views import (
 from .admin_device_reports import device_dashboard_view, device_detail_report
 from .auth_compat import auth_compat_view
 from .messages_views import (
+    api_check_new_messages,
+    api_get_chat_history,
+    api_send_chat_message,
     compose_message,
     delete_message,
     get_online_users_with_messages,
@@ -155,5 +158,19 @@ urlpatterns = [
         "api/messages/online-users/",
         get_online_users_with_messages,
         name="get_online_users_with_messages",
+    ),
+    # Chat APIs
+    path(
+        "api/messages/history/<int:user_id>/",
+        api_get_chat_history,
+        name="api_get_chat_history",
+    ),
+    path(
+        "api/messages/send/<int:user_id>/",
+        api_send_chat_message,
+        name="api_send_chat_message",
+    ),
+    path(
+        "api/messages/check-new/", api_check_new_messages, name="api_check_new_messages"
     ),
 ]

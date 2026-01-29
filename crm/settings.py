@@ -357,6 +357,8 @@ if DEBUG and os.environ.get("DEVELOPMENT_MODE"):
 
 # Application definition
 INSTALLED_APPS = [
+    "daphne",  # ASGI Server (Must be first)
+    "channels",  # Django Channels
     "admin_interface",
     "colorfield",
     "django.contrib.admin",
@@ -469,7 +471,18 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "crm.wsgi.application"
+# WSGI_APPLICATION = "crm.wsgi.application"
+ASGI_APPLICATION = "crm.asgi.application"
+
+# Channels Layer (Redis)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
 
 
 # --- قاعدة البيانات ---
@@ -615,7 +628,7 @@ STATICFILES_DIRS = [
 # استخدام WhiteNoise لخدمة الملفات الثابتة في الإنتاج مع Cache Busting
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # إضافة version للملفات لإجبار المتصفح على تحديث الـ cache
-STATIC_VERSION = "20251130"  # تحديث هذا الرقم عند تغيير الملفات الثابتة
+STATIC_VERSION = "20260129-21"  # تحديث هذا الرقم عند تغيير الملفات الثابتة
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
