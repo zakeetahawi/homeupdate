@@ -29,40 +29,33 @@ while true; do
 	sleep $CHECK_INTERVAL
 	CURRENT_TIME=$(date +%s)
 
-	# فحص Gunicorn
-	if [ -f "$PIDS_DIR/gunicorn.pid" ]; then
-		PID=$(cat "$PIDS_DIR/gunicorn.pid")
+	# فحص Daphne
+	if [ -f "$PIDS_DIR/daphne.pid" ]; then
+		PID=$(cat "$PIDS_DIR/daphne.pid")
 		if ! kill -0 $PID 2>/dev/null; then
-			log "⚠️ Gunicorn توقف - إعادة تشغيل..."
+			log "⚠️ Daphne توقف - إعادة تشغيل..."
 			# تنظيف العمليات القديمة
-			pkill -f "gunicorn crm.wsgi" 2>/dev/null
+			pkill -f "daphne" 2>/dev/null
 			sleep 2
 			# التأكد من أن المنفذ حر
 			lsof -ti:8000 | xargs kill -9 2>/dev/null
 			sleep 1
 			# إعادة التشغيل
-			gunicorn crm.wsgi:application \
-				--bind 0.0.0.0:8000 \
-				--workers 2 \
-				--threads 4 \
-				--worker-class gthread \
-				--worker-connections 100 \
-				--max-requests 1000 \
-				--max-requests-jitter 100 \
-				--timeout 120 \
-				--graceful-timeout 30 \
-				--keep-alive 5 \
-				--worker-tmp-dir /dev/shm \
-				--access-logfile "$LOGS_DIR/gunicorn_access.log" \
-				--error-logfile "$LOGS_DIR/gunicorn_error.log" \
-				--log-level warning \
-				--pid "$PIDS_DIR/gunicorn.pid" \
-				--daemon
-			sleep 2
-			if [ -f "$PIDS_DIR/gunicorn.pid" ] && kill -0 $(cat "$PIDS_DIR/gunicorn.pid") 2>/dev/null; then
-				log "✅ تم إعادة تشغيل Gunicorn بنجاح"
+			daphne -b 0.0.0.0 -p 8000 crm.asgi:application \
+				--access-log "$LOGS_DIR/daphne_access.log" \
+				--verbosity 1 >>"$PROJECT_DIR/logs/startup.log" 2>&1 &
+			echo $! > "$PIDS_DIR/daphne.pid"
+			PID=$(cat "$PIDS_DIR/daphne.pid")
+			
+			sleep 5
+			if kill -0 $PID 2>/dev/null; then
+				log "✅ تم إعادة تشغيل Daphne بنجاح (PID: $PID)"
+			elif lsof -i:8000 -t >/dev/null; then
+				REAL_PID=$(lsof -i:8000 -t | head -n 1)
+				echo $REAL_PID > "$PIDS_DIR/daphne.pid"
+				log "✅ تم إعادة تشغيل Daphne (تصحيح PID: $REAL_PID)"
 			else
-				log "❌ فشل في إعادة تشغيل Gunicorn"
+				log "❌ فشل في إعادة تشغيل Daphne"
 			fi
 		fi
 	fi

@@ -80,6 +80,8 @@ else
 	log_error "فشل في تجميع الملفات الثابتة"
 fi
 
+
+
 # تنظيف الإشعارات القديمة
 log "🧹 تنظيف الإشعارات القديمة..."
 python manage.py cleanup_notifications >>"$STARTUP_LOG" 2>&1
@@ -95,10 +97,11 @@ fi
 
 # تنظيف ملفات PID القديمة والعمليات المتبقية
 log "🧹 تنظيف العمليات القديمة..."
-pkill -f "gunicorn crm.wsgi" 2>/dev/null
+pkill -f "daphne" 2>/dev/null
 pkill -f "celery.*worker" 2>/dev/null
 pkill -f "celery.*beat" 2>/dev/null
-pkill -f cloudflared 2>/dev/null
+pkill -f "cloudflared" 2>/dev/null
+pkill -f "monitor-service.sh" 2>/dev/null
 sleep 2
 
 rm -f "$PIDS_DIR"/*.pid 2>/dev/null
@@ -168,10 +171,14 @@ if [ -f "$PROJECT_DIR/لينكس/db-backup.sh" ]; then
 	# تصدير متغيرات قاعدة البيانات
 	eval $(
 		python - <<'PY'
+import sys
 import os
+# Silencing stdout during setup to avoid capturing logs as commands
+sys.stdout = open(os.devnull, 'w')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE','crm.settings')
 import django
 django.setup()
+sys.stdout = sys.__stdout__
 from django.conf import settings
 print(f"export DB_NAME='{settings.DATABASES['default'].get('NAME','')}'")
 print(f"export DB_USER='{settings.DATABASES['default'].get('USER','')}'")
@@ -186,42 +193,14 @@ PY
 	log_success "تم تشغيل خدمة النسخ الاحتياطي"
 fi
 
-# تشغيل Gunicorn
-log "🚀 تشغيل خادم الويب Gunicorn..."
-gunicorn crm.wsgi:application \
-	--bind 0.0.0.0:8000 \
-	--workers 2 \
-	--threads 4 \
-	--worker-class gthread \
-	--worker-connections 100 \
-	--max-requests 1000 \
-	--max-requests-jitter 100 \
-	--timeout 120 \
-	--graceful-timeout 30 \
-	--keep-alive 5 \
-	--worker-tmp-dir /dev/shm \
-	--access-logfile "$LOGS_DIR/gunicorn_access.log" \
-	--error-logfile "$LOGS_DIR/gunicorn_error.log" \
-	--log-level warning \
-	--pid "$PIDS_DIR/gunicorn.pid" \
-	--daemon >>"$STARTUP_LOG" 2>&1
+# تشغيل Daphne
+log "🚀 تشغيل خادم Daphne (ASGI)..."
+# التأكد من أن المنفذ 8000 متاح
+fuser -k 8000/tcp 2>/dev/null
 
-sleep 3
-if [ -f "$PIDS_DIR/gunicorn.pid" ] && kill -0 $(cat "$PIDS_DIR/gunicorn.pid") 2>/dev/null; then
-	log_success "تم تشغيل Gunicorn (PID: $(cat $PIDS_DIR/gunicorn.pid))"
-	log "🌐 الموقع المحلي: http://localhost:8000"
-else
-	log_error "فشل في تشغيل Gunicorn"
-	exit 1
-fi
+# تشغيل Daphne في الواجهة (Foreground)
+# لكي يستطيع Systemd مراقبة العملية
+daphne -b 0.0.0.0 -p 8000 crm.asgi:application --access-log "$LOGS_DIR/daphne_access.log" --verbosity 1
 
-log "========================================"
-log "🎉 تم تشغيل جميع الخدمات بنجاح!"
-log "📊 السجلات في: $LOGS_DIR"
-log "========================================"
-
-# بدء المراقبة في الخلفية
-"$PROJECT_DIR/لينكس/monitor-service.sh" >>"$LOGS_DIR/monitor.log" 2>&1 &
-echo $! >"$PIDS_DIR/monitor.pid"
-
+# لا نحتاج لسكريبت المراقبة لأن systemd سيعيد تشغيل الخدمة بالكامل إذا توقفت
 exit 0

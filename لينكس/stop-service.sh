@@ -20,21 +20,21 @@ if [ -f "$PIDS_DIR/monitor.pid" ]; then
 	log "✅ تم إيقاف المراقبة"
 fi
 
-# إيقاف Gunicorn (مع الانتظار)
-if [ -f "$PIDS_DIR/gunicorn.pid" ]; then
-	PID=$(cat "$PIDS_DIR/gunicorn.pid")
+# إيقاف Daphne (مع الانتظار)
+if [ -f "$PIDS_DIR/daphne.pid" ]; then
+	PID=$(cat "$PIDS_DIR/daphne.pid")
 	kill $PID 2>/dev/null
 	sleep 2
 	# التحقق إذا ما زالت تعمل
 	if kill -0 $PID 2>/dev/null; then
 		kill -9 $PID 2>/dev/null
 	fi
-	rm -f "$PIDS_DIR/gunicorn.pid"
-	log "✅ تم إيقاف Gunicorn"
+	rm -f "$PIDS_DIR/daphne.pid"
+	log "✅ تم إيقاف Daphne"
 fi
 
-# قتل جميع عمليات Gunicorn المتبقية
-pkill -f "gunicorn crm.wsgi" 2>/dev/null
+# قتل جميع عمليات Daphne المتبقية
+pkill -f "daphne" 2>/dev/null
 sleep 1
 
 # إيقاف Celery Worker
@@ -93,11 +93,13 @@ if [ -f "$PIDS_DIR/db_backup.pid" ]; then
 	log "✅ تم إيقاف خدمة النسخ الاحتياطي"
 fi
 
-# تنظيف أي عمليات متبقية
-pkill -f "gunicorn crm.wsgi" 2>/dev/null
+# تنظيف أي عمليات متبقية على المنفذ 8000
+fuser -k 8000/tcp 2>/dev/null
+pkill -f "monitor-service.sh" 2>/dev/null
+pkill -f "daphne" 2>/dev/null
 pkill -f "celery -A crm" 2>/dev/null
 
-log "🛑 تم إيقاف جميع الخدمات"
+log "🛑 تم إيقاف جميع الخدمات وتحرير المنفذ 8000"
 log "========================================"
 
 exit 0

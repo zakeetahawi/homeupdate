@@ -92,7 +92,7 @@ python manage.py collectstatic --noinput --clear
 print_status "✔️ تم تجميع الملفات الثابتة للإنتاج"
 
 print_info "فحص المستخدمين..."
-USER_COUNT=$(python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings'); import django; django.setup(); from accounts.models import User; print(User.objects.count())")
+USER_COUNT=$(python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings'); import django; django.setup(); from accounts.models import User; print(User.objects.count())" | grep -oE '^[0-9]+$')
 if [ "$USER_COUNT" -eq 0 ]; then
 	print_status "لا يوجد مستخدمين، سيتم إنشاء admin/admin123"
 	python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm.settings'); import django; django.setup(); from accounts.models import User; User.objects.create_superuser('admin', 'admin@example.com', 'admin123'); print('تم إنشاء المستخدم admin/admin123')"
@@ -102,7 +102,7 @@ fi
 
 # تشغيل Redis (إذا لم يكن يعمل)
 print_info "فحص وتشغيل Redis..."
-if ! pgrep -x "redis-server" >/dev/null; then
+if ! pgrep -f "valkey|redis-server" >/dev/null; then
 	redis-server --daemonize yes --port 6379 --dir /tmp
 	print_status "✔️ تم تشغيل Redis"
 else
@@ -114,6 +114,16 @@ print_info "تشغيل Celery Worker مع نظام الرفع المحسن..."
 print_upload "📤 سيتم دعم رفع العقود والمعاينات بشكل صحيح"
 cd "$PROJECT_DIR" # التأكد من أننا في المجلد الصحيح
 if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
+	# انتظار جاهزية Redis بشكل كامل
+	print_info "انتظار جاهزية Redis..."
+	for i in {1..30}; do
+		if redis-cli ping | grep -q "PONG"; then
+			print_status "✔️ Redis جاهز لاستقبال الاتصالات"
+			break
+		fi
+		sleep 1
+	done
+
 	# تنظيف الملفات القديمة
 	rm -f "$LOGS_DIR/celery_worker.pid" "$LOGS_DIR/celery_worker.log"
 
@@ -130,7 +140,13 @@ if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
 		--soft-time-limit=270 \
 		--detach
 
-	sleep 5 # انتظار بدء العملية
+	# انتظار ذكي لملف PID
+	for i in {1..10}; do
+		if [ -f "$LOGS_DIR/celery_worker.pid" ]; then
+			break
+		fi
+		sleep 1
+	done
 
 	if [ -f "$LOGS_DIR/celery_worker.pid" ]; then
 		CELERY_WORKER_PID=$(cat "$LOGS_DIR/celery_worker.pid")
@@ -142,7 +158,7 @@ if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
 			tail -n 20 "$LOGS_DIR/celery_worker.log"
 		fi
 	else
-		print_error "❌ فشل في تشغيل Celery Worker - لم يتم إنشاء ملف PID"
+		print_error "❌ فشل في تشغيل Celery Worker - لم يتم إنشاء ملف PID بعد الانتظار"
 	fi
 else
 	print_error "❌ فشل في تشغيل Celery Worker - ملف التهيئة crm/__init__.py غير موجود"
@@ -288,10 +304,10 @@ cleanup() {
 		print_status "تم إيقاف tail سجل النسخ الاحتياطي"
 	fi
 
-	# إيقاف خادم الويب
-	if [ ! -z "$GUNICORN_PID" ]; then
-		kill $GUNICORN_PID 2>/dev/null
-		print_status "تم إيقاف خادم الويب"
+	# إيقاف خادم Daphne
+	if [ ! -z "$DAPHNE_PID" ]; then
+		kill $DAPHNE_PID 2>/dev/null
+		print_status "تم إيقاف خادم Daphne"
 	fi
 
 	exit 0
@@ -312,116 +328,116 @@ print_info "🔔 إشعارات محسنة: إخفاء تلقائي عند تغ�
 print_info "🔍 مراقبة دورية لحالة قاعدة البيانات كل 5 دقائق"
 print_info "Ctrl+C للإيقاف"
 
-# استخدام Gunicorn للإنتاج مع الإعدادات المحسنة لقاعدة البيانات
-print_info "تشغيل خادم الويب للإنتاج الحقيقي مع الإعدادات المحسنة..."
-print_status "✅ استخدام Gunicorn للإنتاج - أداء أفضل وأمان أعلى"
+# استخدام Daphne للإنتاج مع دعم WebSockets
+print_info "تشغيل خادم Daphne للإنتاج مع دعم WebSockets..."
+print_status "✅ استخدام Daphne - يدعم HTTP و WebSockets (ASGI)"
 print_status "✅ الملفات الثابتة: مدعومة بواسطة WhiteNoise"
 
-# استخدام Gunicorn مع إعدادات محسنة للإنتاج
-gunicorn crm.wsgi:application \
-	--bind 0.0.0.0:8000 \
-	--workers 1 \
-	--threads 4 \
-	--worker-class gthread \
-	--worker-connections 100 \
-	--max-requests 1000 \
-	--max-requests-jitter 100 \
-	--timeout 120 \
-	--graceful-timeout 30 \
-	--keep-alive 3 \
-	--worker-tmp-dir /dev/shm \
-	--access-logfile - \
-	--error-logfile - \
-	--log-level warning \
-	--pid /tmp/gunicorn.pid \
-	--access-logformat '[%(t)s] "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' 2>&1 | while read line; do
-	# تطبيق فلتر logs محسن لتقليل الرسائل غير المهمة
-	# تجاهل رسائل gunicorn access logs التي تبدأ بـ [[
-	if [[ $line =~ ^\[\[.*\]\] ]]; then
-		continue
+# تشغيل Daphne
+# دالة تشغيل Daphne مع الفلترة
+start_daphne() {
+	print_info "تشغيل خادم Daphne للإنتاج..."
+
+	# التأكد من أن المنفذ 8000 متاح (تنظيف قوي)
+	if fuser 8000/tcp >/dev/null 2>&1; then
+		print_warning "⚠️ المنفذ 8000 مشغول - جاري تحريره بقوة..."
+		fuser -k -9 8000/tcp >/dev/null 2>&1
+		sleep 2
 	fi
 
-	# تجاهل رسائل DEBUG والاستعلامات المتكررة
-	if [[ $line == *"[DEBUG]"* ]] ||
-		[[ $line == *"Updating online status"* ]] ||
-		[[ $line == *"Online user updated"* ]] ||
-		[[ $line == *"Activity updated"* ]] ||
-		[[ $line == *"/accounts/notifications/data/"* ]] ||
-		[[ $line == *"/accounts/api/online-users/"* ]] ||
-		[[ $line == *"/notifications/ajax/count/"* ]] ||
-		[[ $line == *"/notifications/ajax/recent/"* ]] ||
-		[[ $line == *"/complaints/api/assigned/"* ]] ||
-		[[ $line == *"/complaints/api/escalated/"* ]] ||
-		[[ $line == *"/complaints/api/notifications/"* ]] ||
-		[[ $line == *"/complaints/api/assignment-notifications/"* ]] ||
-		[[ $line == *"/inventory/api/product-autocomplete/"* ]] ||
-		[[ $line == *"/media/users/"* ]] ||
-		[[ $line == *"/media/"* ]] ||
-		[[ $line == *"/static/"* ]] ||
-		[[ $line == *"favicon.ico"* ]]; then
-		continue
-	fi
+	# نستخدم tee لحفظ السجل الخام مع تمريره للفلتر
+	daphne -b 0.0.0.0 -p 8000 crm.asgi:application --access-log /dev/stdout 2>&1 | tee -a "$LOGS_DIR/daphne_raw.log" | while read line; do
+		# تطبيق فلتر logs محسن لتقليل الرسائل غير المهمة
+		# تجاهل رسائل gunicorn access logs التي تبدأ بـ [[
+		if [[ $line =~ ^\[\[.*\]\] ]]; then
+			continue
+		fi
 
-	# معالجة رسائل تسجيل الدخول والخروج
-	if [[ $line == *"🔐"* && $line == *"login"* ]]; then
-		# استخراج اسم المستخدم من رسالة تسجيل الدخول
-		username=$(echo "$line" | sed -n 's/.*🔐 \([^ ]*\) -.*/\1/p')
-		if [ -n "$username" ]; then
-			print_login "🔐 قام المستخدم $username بتسجيل الدخول"
+		# تجاهل رسائل DEBUG والاستعلامات المتكررة
+		if [[ $line == *"[DEBUG]"* ]] ||
+			[[ $line == *"Updating online status"* ]] ||
+			[[ $line == *"Online user updated"* ]] ||
+			[[ $line == *"Activity updated"* ]] ||
+			[[ $line == *"/accounts/notifications/data/"* ]] ||
+			[[ $line == *"/accounts/api/online-users/"* ]] ||
+			[[ $line == *"/notifications/ajax/count/"* ]] ||
+			[[ $line == *"/notifications/ajax/recent/"* ]] ||
+			[[ $line == *"/complaints/api/assigned/"* ]] ||
+			[[ $line == *"/complaints/api/escalated/"* ]] ||
+			[[ $line == *"/complaints/api/notifications/"* ]] ||
+			[[ $line == *"/complaints/api/assignment-notifications/"* ]] ||
+			[[ $line == *"/inventory/api/product-autocomplete/"* ]] ||
+			[[ $line == *"/media/users/"* ]] ||
+			[[ $line == *"/media/"* ]] ||
+			[[ $line == *"/static/"* ]] ||
+			[[ $line == *"favicon.ico"* ]]; then
+			continue
 		fi
-	elif [[ $line == *"🚪"* && $line == *"logout"* ]]; then
-		# استخراج اسم المستخدم من رسالة تسجيل الخروج
-		username=$(echo "$line" | sed -n 's/.*🚪 \([^ ]*\) -.*/\1/p')
-		if [ -n "$username" ]; then
-			print_login "🚪 قام المستخدم $username بتسجيل الخروج"
-		fi
-	elif [[ $line == *"👁️"* && $line == *"page_view"* ]]; then
-		# استخراج اسم المستخدم من رسالة عرض الصفحة
-		username=$(echo "$line" | sed -n 's/.*👁️ \([^ ]*\) -.*/\1/p')
-		if [ -n "$username" ]; then
-			# عرض نشاط المستخدم المسجل
-			page=$(echo "$line" | sed -n 's/.*page_view - \([^ ]*\).*/\1/p')
-			echo -e "${WHITE}👁️ المستخدم $username يتصفح: $page${NC}"
+
+		# معالجة رسائل تسجيل الدخول والخروج
+		if [[ $line == *"🔐"* && $line == *"login"* ]]; then
+			# استخراج اسم المستخدم من رسالة تسجيل الدخول
+			username=$(echo "$line" | sed -n 's/.*🔐 \([^ ]*\) -.*/\1/p')
+			if [ -n "$username" ]; then
+				print_login "🔐 قام المستخدم $username بتسجيل الدخول"
+			fi
+		elif [[ $line == *"🚪"* && $line == *"logout"* ]]; then
+			# استخراج اسم المستخدم من رسالة تسجيل الخروج
+			username=$(echo "$line" | sed -n 's/.*🚪 \([^ ]*\) -.*/\1/p')
+			if [ -n "$username" ]; then
+				print_login "🚪 قام المستخدم $username بتسجيل الخروج"
+			fi
+		elif [[ $line == *"👁️"* && $line == *"page_view"* ]]; then
+			# استخراج اسم المستخدم من رسالة عرض الصفحة
+			username=$(echo "$line" | sed -n 's/.*👁️ \([^ ]*\) -.*/\1/p')
+			if [ -n "$username" ]; then
+				# عرض نشاط المستخدم المسجل
+				page=$(echo "$line" | sed -n 's/.*page_view - \([^ ]*\).*/\1/p')
+				echo -e "${WHITE}👁️ المستخدم $username يتصفح: $page${NC}"
+			else
+				# مستخدم غير معروف - استخراج IP
+				ip=$(echo "$line" | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -1)
+				if [ -n "$ip" ]; then
+					print_warning "🌐 تم فتح صفحة الموقع من مستخدم غير معروف - IP: $ip"
+				fi
+			fi
+		elif [[ $line == *"🔄"* ]]; then
+			# عرض عمليات تبديل الحالة والتحديثات
+			username=$(echo "$line" | sed -n 's/.*🔄 \([^ ]*\) -.*/\1/p')
+			if [ -n "$username" ]; then
+				action=$(echo "$line" | sed -n 's/.*🔄 [^ ]* - \([^(]*\).*/\1/p')
+				# استخراج كود الطلب إذا كان موجوداً
+				order_code=$(echo "$line" | grep -oE 'ORD-[0-9]+' | head -1)
+				if [ -n "$order_code" ]; then
+					echo -e "${YELLOW}🔄 المستخدم $username قام بـ: $action - الطلب: $order_code${NC}"
+				else
+					echo -e "${YELLOW}🔄 المستخدم $username قام بـ: $action${NC}"
+				fi
+			fi
+		elif [[ $line == *"✅"* || $line == *"❌"* || $line == *"⚠️"* ]]; then
+			# عرض العمليات المهمة الأخرى
+			username=$(echo "$line" | sed -n 's/.*[✅❌⚠️] \([^ ]*\) -.*/\1/p')
+			if [ -n "$username" ]; then
+				action=$(echo "$line" | sed -n 's/.*[✅❌⚠️] [^ ]* - \([^(]*\).*/\1/p')
+				# استخراج كود الطلب إذا كان موجوداً
+				order_code=$(echo "$line" | grep -oE 'ORD-[0-9]+' | head -1)
+				if [ -n "$order_code" ]; then
+					echo -e "${GREEN}المستخدم $username: $action - الطلب: $order_code${NC}"
+				else
+					echo -e "${GREEN}المستخدم $username: $action${NC}"
+				fi
+			fi
 		else
-			# مستخدم غير معروف - استخراج IP
-			ip=$(echo "$line" | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -1)
-			if [ -n "$ip" ]; then
-				print_warning "🌐 تم فتح صفحة الموقع من مستخدم غير معروف - IP: $ip"
-			fi
+			# عرض الرسائل الأخرى المهمة
+			echo "$line"
 		fi
-	elif [[ $line == *"🔄"* ]]; then
-		# عرض عمليات تبديل الحالة والتحديثات
-		username=$(echo "$line" | sed -n 's/.*🔄 \([^ ]*\) -.*/\1/p')
-		if [ -n "$username" ]; then
-			action=$(echo "$line" | sed -n 's/.*🔄 [^ ]* - \([^(]*\).*/\1/p')
-			# استخراج كود الطلب إذا كان موجوداً
-			order_code=$(echo "$line" | grep -oE 'ORD-[0-9]+' | head -1)
-			if [ -n "$order_code" ]; then
-				echo -e "${YELLOW}🔄 المستخدم $username قام بـ: $action - الطلب: $order_code${NC}"
-			else
-				echo -e "${YELLOW}🔄 المستخدم $username قام بـ: $action${NC}"
-			fi
-		fi
-	elif [[ $line == *"✅"* || $line == *"❌"* || $line == *"⚠️"* ]]; then
-		# عرض العمليات المهمة الأخرى
-		username=$(echo "$line" | sed -n 's/.*[✅❌⚠️] \([^ ]*\) -.*/\1/p')
-		if [ -n "$username" ]; then
-			action=$(echo "$line" | sed -n 's/.*[✅❌⚠️] [^ ]* - \([^(]*\).*/\1/p')
-			# استخراج كود الطلب إذا كان موجوداً
-			order_code=$(echo "$line" | grep -oE 'ORD-[0-9]+' | head -1)
-			if [ -n "$order_code" ]; then
-				echo -e "${GREEN}المستخدم $username: $action - الطلب: $order_code${NC}"
-			else
-				echo -e "${GREEN}المستخدم $username: $action${NC}"
-			fi
-		fi
-	else
-		# عرض الرسائل الأخرى المهمة
-		echo "$line"
-	fi
-done &
-GUNICORN_PID=$!
-print_status "خادم الإنتاج يعمل (PID: $GUNICORN_PID)"
+	done &
+	DAPHNE_PID=$!
+	print_status "خادم الإنتاج (Daphne) يعمل (PID: $DAPHNE_PID)"
+}
+
+# تشغيل Daphne لأول مرة
+start_daphne
 
 # متغيرات لتتبع الفحوصات الدورية
 LAST_DB_CHECK=0
@@ -432,10 +448,11 @@ NOTIFICATION_CLEANUP_INTERVAL=1800 # تنظيف كل 30 دقيقة
 while true; do
 	sleep 30
 
-	# فحص خادم الويب
-	if ! kill -0 $GUNICORN_PID 2>/dev/null; then
-		print_error "❌ خادم الويب توقف!"
-		break
+	# فحص خادم الويب وإعادة تشغيله إذا توقف
+	if ! pgrep -f "crm.asgi:application" >/dev/null; then
+		print_error "❌ خادم الويب (Daphne) توقف بشكل غير متوقع!"
+		print_warning "🔄 جاري إعادة تشغيل Daphne تلقائياً..."
+		start_daphne
 	fi
 
 	# فحص دوري لحالة قاعدة البيانات (كل 5 دقائق)
@@ -471,6 +488,17 @@ while true; do
 			print_upload "$UPLOAD_RESULT"
 		fi
 		LAST_UPLOAD_CHECK=$CURRENT_TIME
+	fi
+
+	# فحص Redis وإعادة تشغيله إذا توقف (حرج جداً للنظام)
+	if ! pgrep -f "valkey|redis-server" >/dev/null; then
+		print_warning "⚠️ Redis توقف - جاري إعادة التشغيل..."
+		redis-server --daemonize yes --port 6379 --dir /tmp
+		if [ $? -eq 0 ]; then
+			print_status "✔️ تم إعادة تشغيل Redis بنجاح"
+		else
+			print_error "❌ فشل في إعادة تشغيل Redis"
+		fi
 	fi
 
 	# فحص Celery Worker مع إعادة تشغيل محسنة
