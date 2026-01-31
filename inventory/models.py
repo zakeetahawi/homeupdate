@@ -92,13 +92,13 @@ class Product(SoftDeleteMixin, models.Model):
     )  # زيادة من 50 إلى 100 حرف
     price = models.DecimalField(
         _("السعر القطاعي"),
-        max_digits=10,
+        max_digits=18,
         decimal_places=2,
         help_text=_("سعر التجزئة للمنتج"),
     )
     wholesale_price = models.DecimalField(
         _("سعر الجملة"),
-        max_digits=10,
+        max_digits=18,
         decimal_places=2,
         default=0,
         help_text=_("سعر الجملة للمنتج"),
@@ -465,7 +465,7 @@ class ProductBatch(SoftDeleteMixin, models.Model):
     expiry_date = models.DateField(_("تاريخ الصلاحية"), null=True, blank=True)
     barcode = models.CharField(_("الباركود"), max_length=100, blank=True)
     cost_price = models.DecimalField(
-        _("سعر التكلفة"), max_digits=10, decimal_places=2, default=0
+        _("سعر التكلفة"), max_digits=18, decimal_places=2, default=0
     )
     created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
 
@@ -530,13 +530,13 @@ class StockTransaction(models.Model):
     reason = models.CharField(
         _("السبب"), max_length=20, choices=REASON_CHOICES, default="other"
     )
-    quantity = models.DecimalField(_("الكمية"), max_digits=10, decimal_places=2)
+    quantity = models.DecimalField(_("الكمية"), max_digits=18, decimal_places=2)
     reference = models.CharField(_("المرجع"), max_length=100, blank=True)
     transaction_date = models.DateTimeField(_("تاريخ العملية"), default=timezone.now)
     date = models.DateTimeField(_("تاريخ التسجيل"), auto_now_add=True)
     notes = models.TextField(_("ملاحظات"), blank=True)
     running_balance = models.DecimalField(
-        _("الرصيد المتحرك"), max_digits=10, decimal_places=2, default=0
+        _("الرصيد المتحرك"), max_digits=18, decimal_places=2, default=0
     )
     created_by = models.ForeignKey(
         User,
@@ -725,7 +725,7 @@ class PurchaseOrderItem(SoftDeleteMixin, models.Model):
         verbose_name=_("المنتج"),
     )
     quantity = models.PositiveIntegerField(_("الكمية"))
-    unit_price = models.DecimalField(_("سعر الوحدة"), max_digits=10, decimal_places=2)
+    unit_price = models.DecimalField(_("سعر الوحدة"), max_digits=18, decimal_places=2)
     received_quantity = models.PositiveIntegerField(_("الكمية المستلمة"), default=0)
     notes = models.TextField(_("ملاحظات"), blank=True)
 
@@ -765,10 +765,10 @@ class InventoryAdjustment(models.Model):
         _("نوع التسوية"), max_length=10, choices=ADJUSTMENT_TYPES
     )
     quantity_before = models.DecimalField(
-        _("الكمية قبل"), max_digits=10, decimal_places=2
+        _("الكمية قبل"), max_digits=18, decimal_places=2
     )
     quantity_after = models.DecimalField(
-        _("الكمية بعد"), max_digits=10, decimal_places=2
+        _("الكمية بعد"), max_digits=18, decimal_places=2
     )
     reason = models.TextField(_("سبب التسوية"))
     date = models.DateTimeField(_("تاريخ التسوية"), auto_now_add=True)
@@ -837,13 +837,13 @@ class StockAlert(models.Model):
         _("الحالة"), max_length=10, choices=STATUS_CHOICES, default="active"
     )
     quantity_before = models.DecimalField(
-        _("الكمية السابقة"), max_digits=10, decimal_places=2, default=0
+        _("الكمية السابقة"), max_digits=18, decimal_places=2, default=0
     )
     quantity_after = models.DecimalField(
-        _("الكمية الحالية"), max_digits=10, decimal_places=2, default=0
+        _("الكمية الحالية"), max_digits=18, decimal_places=2, default=0
     )
     threshold_limit = models.DecimalField(
-        _("حد التنبيه"), max_digits=10, decimal_places=2, default=0
+        _("حد التنبيه"), max_digits=18, decimal_places=2, default=0
     )
     is_urgent = models.BooleanField(_("عاجل"), default=False)
     is_pinned = models.BooleanField(_("مثبت"), default=False)
@@ -1138,10 +1138,10 @@ class StockTransferItem(models.Model):
         verbose_name=_("المنتج"),
     )
     quantity = models.DecimalField(
-        _("الكمية المطلوبة"), max_digits=10, decimal_places=2
+        _("الكمية المطلوبة"), max_digits=18, decimal_places=2
     )
     received_quantity = models.DecimalField(
-        _("الكمية المستلمة"), max_digits=10, decimal_places=2, default=0
+        _("الكمية المستلمة"), max_digits=18, decimal_places=2, default=0
     )
     notes = models.TextField(_("ملاحظات"), blank=True)
 
@@ -1385,7 +1385,7 @@ class BaseProduct(models.Model):
     # السعر الأساسي (القطاعي) - يُطبق على جميع المتغيرات افتراضياً
     base_price = models.DecimalField(
         _("السعر القطاعي"),
-        max_digits=10,
+        max_digits=18,
         decimal_places=2,
         default=0,
         help_text=_("السعر الافتراضي لعملاء التجزئة"),
@@ -1394,7 +1394,7 @@ class BaseProduct(models.Model):
     # سعر الجملة
     wholesale_price = models.DecimalField(
         _("سعر الجملة"),
-        max_digits=10,
+        max_digits=18,
         decimal_places=2,
         default=0,
         help_text=_("السعر لعملاء الجملة"),
@@ -1719,7 +1719,7 @@ class ProductVariant(models.Model):
     # تجاوز السعر القطاعي (اختياري)
     price_override = models.DecimalField(
         _("تجاوز السعر القطاعي"),
-        max_digits=10,
+        max_digits=18,
         decimal_places=2,
         null=True,
         blank=True,
@@ -1729,7 +1729,7 @@ class ProductVariant(models.Model):
     # تجاوز سعر الجملة (اختياري)
     wholesale_price_override = models.DecimalField(
         _("تجاوز سعر الجملة"),
-        max_digits=10,
+        max_digits=18,
         decimal_places=2,
         null=True,
         blank=True,
@@ -1888,11 +1888,11 @@ class VariantStock(models.Model):
         verbose_name=_("المستودع"),
     )
     current_quantity = models.DecimalField(
-        _("الكمية الحالية"), max_digits=10, decimal_places=2, default=0
+        _("الكمية الحالية"), max_digits=18, decimal_places=2, default=0
     )
     reserved_quantity = models.DecimalField(
         _("الكمية المحجوزة"),
-        max_digits=10,
+        max_digits=18,
         decimal_places=2,
         default=0,
         help_text=_("الكمية المحجوزة للطلبات غير المكتملة"),
@@ -1939,14 +1939,14 @@ class PriceHistory(models.Model):
         related_name="price_history",
         verbose_name=_("المتغير"),
     )
-    old_price = models.DecimalField(_("السعر القديم"), max_digits=10, decimal_places=2)
-    new_price = models.DecimalField(_("السعر الجديد"), max_digits=10, decimal_places=2)
+    old_price = models.DecimalField(_("السعر القديم"), max_digits=18, decimal_places=2)
+    new_price = models.DecimalField(_("السعر الجديد"), max_digits=18, decimal_places=2)
     change_type = models.CharField(
         _("نوع التغيير"), max_length=20, choices=CHANGE_TYPES, default="manual"
     )
     change_value = models.DecimalField(
         _("قيمة التغيير"),
-        max_digits=10,
+        max_digits=18,
         decimal_places=2,
         null=True,
         blank=True,

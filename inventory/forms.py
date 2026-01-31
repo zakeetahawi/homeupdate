@@ -600,7 +600,7 @@ class StockTransferReceiveForm(forms.Form):
                 self.fields[field_name] = forms.DecimalField(
                     label=f"{item.product.name}",
                     initial=item.quantity,
-                    max_digits=10,
+                    max_digits=18,
                     decimal_places=2,
                     min_value=0,
                     widget=forms.NumberInput(
