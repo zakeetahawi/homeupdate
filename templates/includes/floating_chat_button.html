@@ -199,7 +199,9 @@
             loadOnlineUsersFloat();
             
             // Poll every 60 seconds to keep numbers fresh
-            setInterval(loadOnlineUsersFloat, 60000);
+            setInterval(() => {
+                if (!document.hidden) loadOnlineUsersFloat();
+            }, 60000);
 
             // Also reload when opening the menu
             const dropdownBtn = document.getElementById('floatingChatDropdown');

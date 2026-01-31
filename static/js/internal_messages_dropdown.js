@@ -2,18 +2,22 @@
  * نظام الرسائل الداخلية والمستخدمين النشطين في القائمة المنسدلة
  */
 
-(function() {
+(function () {
     'use strict';
 
     const CONFIG = {
-        UPDATE_INTERVAL: 10000, // 10 ثواني
+        UPDATE_INTERVAL: 60000, // 60 ثانية (تمت الزيادة من 10 لتخفيف الضغط)
         MESSAGES_API: '/accounts/api/messages/unread-count/',
-        ONLINE_USERS_API: '/accounts/api/messages/online-users/'
+        ONLINE_USERS_API: '/accounts/api/messages/online-users/',
+        MAX_ERRORS: 3 // إيقاف التحديث بعد 3 أخطاء متتالية
     };
+
+    let errorCount = 0;
+    let autoUpdateInterval = null;
 
     // إدارة القائمة المنسدلة
     const DropdownManager = {
-        init: function() {
+        init: function () {
             // تحديث البيانات عند فتح القائمة
             const dropdown = document.getElementById('internalMessagesDropdown');
             if (dropdown) {
@@ -22,13 +26,35 @@
                     this.updateMessageCount();
                 });
             }
-            
+
             // تحديث دوري
             this.startAutoUpdate();
+
+            // إيقاف/تنشيط التحديث بناءً على نشاط التبويب
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    this.stopAutoUpdate();
+                } else {
+                    this.updateMessageCount(); // تحديث فوري عند العودة
+                    this.startAutoUpdate();
+                }
+            });
         },
 
-        startAutoUpdate: function() {
-            setInterval(() => {
+        startAutoUpdate: function () {
+            if (autoUpdateInterval) clearInterval(autoUpdateInterval);
+
+            autoUpdateInterval = setInterval(() => {
+                // لا تقم بالتحديث إذا كانت الصفحة مخفية
+                if (document.hidden) return;
+
+                // إيقاف التحديث إذا تكررت الأخطاء (مثل انتهاء الجلسة)
+                if (errorCount >= CONFIG.MAX_ERRORS) {
+                    this.stopAutoUpdate();
+                    console.warn('تم إيقاف التحديث التلقائي للرسائل بسبب تكرار الأخطاء (ربما انتهت الجلسة).');
+                    return;
+                }
+
                 this.updateMessageCount();
                 // تحديث المستخدمين فقط إذا كانت القائمة مفتوحة
                 const dropdown = document.getElementById('internalMessagesDropdown');
@@ -38,7 +64,14 @@
             }, CONFIG.UPDATE_INTERVAL);
         },
 
-        updateMessageCount: function() {
+        stopAutoUpdate: function () {
+            if (autoUpdateInterval) {
+                clearInterval(autoUpdateInterval);
+                autoUpdateInterval = null;
+            }
+        },
+
+        updateMessageCount: function () {
             fetch(CONFIG.MESSAGES_API, {
                 method: 'GET',
                 headers: {
@@ -46,22 +79,32 @@
                     'Content-Type': 'application/json'
                 }
             })
-            .then(response => response.json())
-            .then(data => {
-                const badge = document.getElementById('internal-messages-badge');
-                if (badge) {
-                    if (data.unread_count > 0) {
-                        badge.textContent = data.unread_count;
-                        badge.style.display = 'inline-block';
-                    } else {
-                        badge.style.display = 'none';
+                .then(response => {
+                    if (response.status === 401 || response.status === 403 || response.redirected) {
+                        throw new Error('Auth Error');
                     }
-                }
-            })
-            .catch(error => console.error('Error updating message count:', error));
+                    if (!response.ok) throw new Error('Network Error');
+                    return response.json();
+                })
+                .then(data => {
+                    errorCount = 0; // تصفير عداد الأخطاء عند النجاح
+                    const badge = document.getElementById('internal-messages-badge');
+                    if (badge) {
+                        if (data.unread_count > 0) {
+                            badge.textContent = data.unread_count;
+                            badge.style.display = 'inline-block';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating message count:', error);
+                    errorCount++;
+                });
         },
 
-        loadOnlineUsers: function() {
+        loadOnlineUsers: function () {
             const listContainer = document.getElementById('online-users-list-dropdown');
             if (!listContainer) return;
 
@@ -72,24 +115,24 @@
                     'Content-Type': 'application/json'
                 }
             })
-            .then(response => response.json())
-            .then(data => {
-                this.renderOnlineUsers(data.users || []);
-                this.updateOnlineCount(data.total_online || 0);
-            })
-            .catch(error => {
-                console.error('Error loading online users:', error);
-                listContainer.innerHTML = `
+                .then(response => response.json())
+                .then(data => {
+                    this.renderOnlineUsers(data.users || []);
+                    this.updateOnlineCount(data.total_online || 0);
+                })
+                .catch(error => {
+                    console.error('Error loading online users:', error);
+                    listContainer.innerHTML = `
                     <div class="text-center p-3 text-danger">
                         <i class="fas fa-exclamation-triangle"></i>
                         <br>
                         <small>فشل تحميل المستخدمين</small>
                     </div>
                 `;
-            });
+                });
         },
 
-        renderOnlineUsers: function(users) {
+        renderOnlineUsers: function (users) {
             const listContainer = document.getElementById('online-users-list-dropdown');
             if (!listContainer) return;
 
@@ -108,20 +151,20 @@
             listContainer.innerHTML = usersHtml;
         },
 
-        createUserHtml: function(user) {
-            const unreadBadge = user.unread_messages > 0 
+        createUserHtml: function (user) {
+            const unreadBadge = user.unread_messages > 0
                 ? `<span class="badge bg-danger rounded-pill">${user.unread_messages}</span>`
                 : '';
 
             return `
                 <div class="d-flex align-items-center p-2 border-bottom user-item-dropdown" style="cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='white'">
                     <div class="position-relative me-2">
-                        ${user.avatar_url 
-                            ? `<img src="${user.avatar_url}" alt="${user.full_name}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">`
-                            : `<div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" style="width: 40px; height: 40px; font-weight: bold;">
+                        ${user.avatar_url
+                    ? `<img src="${user.avatar_url}" alt="${user.full_name}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">`
+                    : `<div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" style="width: 40px; height: 40px; font-weight: bold;">
                                 ${user.full_name.charAt(0).toUpperCase()}
                             </div>`
-                        }
+                }
                         <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-success" style="width: 12px; height: 12px; padding: 0; border: 2px solid white;"></span>
                     </div>
                     <div class="flex-grow-1 min-width-0">
@@ -139,22 +182,22 @@
             `;
         },
 
-        updateOnlineCount: function(count) {
+        updateOnlineCount: function (count) {
             const countBadge = document.getElementById('online-users-count-header');
             if (countBadge) {
                 countBadge.textContent = count;
             }
         },
 
-        getCsrfToken: function() {
+        getCsrfToken: function () {
             const meta = document.querySelector('meta[name=csrf-token]');
             return meta ? meta.getAttribute('content') :
-                   document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
         }
     };
 
     // التهيئة عند تحميل الصفحة
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         DropdownManager.init();
     });
 
