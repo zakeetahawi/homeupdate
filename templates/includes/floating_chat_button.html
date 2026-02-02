@@ -4,6 +4,8 @@
     <button class="floating-chat-btn"
             type="button"
             id="floatingChatDropdown"
+            data-bs-toggle="dropdown"
+            data-bs-auto-close="outside"
             aria-expanded="false"
             title="التواصل والمستخدمين النشطين">
         <i class="fas fa-users-cog"></i>
@@ -18,98 +20,115 @@
               style="display: none">0</span>
     </button>
     <!-- The Menu (Reusing structure from original dropdown but styled better) -->
-    <ul class="dropdown-menu floating-chat-menu shadow-lg border-0"
-        aria-labelledby="floatingChatDropdown">
-        <li class="dropdown-header d-flex justify-content-between align-items-center py-3 px-3 border-bottom mb-2 rounded-top"
+    <ul class="dropdown-menu floating-chat-menu shadow-lg border-0 p-0"
+        aria-labelledby="floatingChatDropdown"
+        style="width: 320px;
+               overflow: hidden">
+        <!-- Header -->
+        <li class="dropdown-header d-flex justify-content-between align-items-center py-3 px-3 border-bottom mb-0"
             style="background: linear-gradient(to right, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.05))">
             <span class="fw-bold text-primary">
-                <i class="fas fa-users-cog me-2"></i>
-                التواصل والمستخدمين
+                <i class="fas fa-comments me-2"></i>
+                المحادثات
             </span>
-            <span class="badge bg-primary rounded-pill">نظام التواصل</span>
-        </li>
-        <!-- Internal Messages Section -->
-        <li class="px-3 py-2 border-bottom">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fw-semibold small text-secondary">
-                    <i class="fas fa-envelope-open-text text-info me-1"></i>
-                    الرسائل الداخلية
-                </span>
-                {% if internal_messages_unread > 0 %}
-                    <span class="badge rounded-pill bg-danger" style="font-size: 0.7rem;">{{ internal_messages_unread }} جديد</span>
-                {% else %}
-                    <span class="badge rounded-pill bg-light text-muted border"
-                          style="font-size: 0.7rem">0 جديد</span>
-                {% endif %}
-            </div>
-            <div class="d-flex justify-content-between gap-2 mt-2">
-                <a href="{% url 'accounts:inbox' %}"
-                   class="btn btn-sm btn-outline-primary flex-fill position-relative"
-                   title="الوارد"
-                   style="border-radius: 10px">
-                    <i class="fas fa-inbox d-block mb-1" style="font-size: 1.1rem;"></i>
-                    <span class="small fw-bold">الوارد</span>
-                    {% if internal_messages_unread > 0 %}
-                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
-                            <span class="visually-hidden">unread messages</span>
-                        </span>
-                    {% endif %}
-                </a>
-                <a href="{% url 'accounts:sent_messages' %}"
-                   class="btn btn-sm btn-outline-secondary flex-fill"
-                   title="الصادر"
-                   style="border-radius: 10px">
-                    <i class="fas fa-paper-plane d-block mb-1" style="font-size: 1.1rem;"></i>
-                    <span class="small fw-bold">الصادر</span>
-                </a>
+            <div class="d-flex gap-2">
                 <a href="{% url 'accounts:compose_message' %}"
-                   class="btn btn-sm btn-primary flex-fill"
+                   class="btn btn-sm btn-primary rounded-circle"
                    title="رسالة جديدة"
-                   style="border-radius: 10px">
-                    <i class="fas fa-plus d-block mb-1" style="font-size: 1.1rem;"></i>
-                    <span class="small fw-bold">جديد</span>
+                   style="width: 28px;
+                          height: 28px;
+                          padding: 0;
+                          display: flex;
+                          align-items: center;
+                          justify-content: center">
+                    <i class="fas fa-plus" style="font-size: 0.8rem;"></i>
+                </a>
+                <a href="{% url 'accounts:inbox' %}"
+                   class="btn btn-sm btn-outline-primary rounded-circle"
+                   title="البريد الوارد"
+                   style="width: 28px;
+                          height: 28px;
+                          padding: 0;
+                          display: flex;
+                          align-items: center;
+                          justify-content: center">
+                    <i class="fas fa-inbox" style="font-size: 0.8rem;"></i>
                 </a>
             </div>
         </li>
-        <!-- Online Users Section -->
-        <li class="px-3 py-2 mt-2">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fw-semibold small text-success">
-                    <i class="fas fa-circle text-success me-1" style="font-size: 0.6rem;"></i>
-                    النشطون الآن
-                </span>
-                <span class="badge bg-success rounded-pill"
-                      id="online-users-count-float"
-                      style="font-size: 0.7rem">جاري التحميل...</span>
+        <!-- Tabs Navigation -->
+        <li class="px-2 pt-2 bg-light border-bottom">
+            <ul class="nav nav-tabs nav-justified border-0"
+                id="chatWidgetTabs"
+                role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active py-2 border-0 border-bottom border-primary border-2 rounded-0 small fw-bold"
+                            id="chats-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#chats-panel"
+                            type="button"
+                            role="tab"
+                            aria-controls="chats-panel"
+                            aria-selected="true">
+                        <i class="fas fa-history me-1"></i> الأخيرة
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-2 border-0 rounded-0 small fw-bold text-secondary"
+                            id="online-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#online-panel"
+                            type="button"
+                            role="tab"
+                            aria-controls="online-panel"
+                            aria-selected="false">
+                        <i class="fas fa-circle text-success me-1" style="font-size: 0.6rem;"></i> المتصلين
+                        <span class="badge bg-success rounded-pill ms-1"
+                              id="online-users-count-float-tab"
+                              style="font-size: 0.6rem">0</span>
+                    </button>
+                </li>
+            </ul>
+        </li>
+        <!-- Tabs Content -->
+        <li class="tab-content" id="chatWidgetTabsContent">
+            <!-- Recent Chats Panel -->
+            <div class="tab-pane fade show active"
+                 id="chats-panel"
+                 role="tabpanel"
+                 aria-labelledby="chats-tab"
+                 tabindex="0">
+                <div id="recent-chats-list"
+                     class="custom-scrollbar"
+                     style="max-height: 300px;
+                            min-height: 150px;
+                            overflow-y: auto">
+                    <div class="text-center p-4 text-muted">
+                        <div class="spinner-border spinner-border-sm text-primary mb-2"
+                             role="status"></div>
+                        <p class="small m-0">جاري تحميل المحادثات...</p>
+                    </div>
+                </div>
             </div>
-            <div class="bg-light rounded-3 p-2 border" style="min-height: 100px;">
+            <!-- Online Users Panel -->
+            <div class="tab-pane fade"
+                 id="online-panel"
+                 role="tabpanel"
+                 aria-labelledby="online-tab"
+                 tabindex="0">
                 <div id="online-users-list-float"
                      class="custom-scrollbar"
-                     style="max-height: 200px;
+                     style="max-height: 300px;
+                            min-height: 150px;
                             overflow-y: auto">
-                    <div class="text-center p-3 text-muted">
-                        <div class="spinner-border spinner-border-sm text-primary mb-2"
+                    <div class="text-center p-4 text-muted">
+                        <div class="spinner-border spinner-border-sm text-success mb-2"
                              role="status"></div>
                         <p class="small m-0">جاري تحديث القائمة...</p>
                     </div>
                 </div>
             </div>
         </li>
-        <!-- Warehouse Transfers (If applicable) -->
-        {% if is_warehouse_manager and not user.is_superuser %}
-            <li class="px-3 py-2 mt-2 border-top">
-                <a href="{% url 'inventory:stock_transfer_list' %}"
-                   class="d-flex justify-content-between align-items-center text-decoration-none text-dark p-2 rounded hover-bg-light">
-                    <span>
-                        <i class="fas fa-exchange-alt text-warning me-2"></i>
-                        التحويلات المخزنية
-                    </span>
-                    {% if pending_transfers_count > 0 %}
-                        <span class="badge bg-danger rounded-pill">{{ pending_transfers_count }}</span>
-                    {% endif %}
-                </a>
-            </li>
-        {% endif %}
     </ul>
     <!-- Script to sync the online users list specifically for this floating widget -->
     <script>
@@ -134,9 +153,11 @@
                         }
 
                         // Just looking for exterior badge only? No, update menu too if it exists
-                        if (listContainer && countBadge) {
-                            // Update Count in Menu
-                            countBadge.textContent = data.total_online;
+                        if (listContainer) {
+                             const tabCountBadge = document.getElementById('online-users-count-float-tab');
+                             if (tabCountBadge) {
+                                 tabCountBadge.textContent = data.total_online;
+                             }
                             
                             // Clear List
                             listContainer.innerHTML = '';
@@ -203,11 +224,89 @@
                 if (!document.hidden) loadOnlineUsersFloat();
             }, 60000);
 
-            // Also reload when opening the menu
+            // Function to load recent chats
+            function loadRecentChats() {
+                const recentList = document.getElementById('recent-chats-list');
+                if (!recentList) return;
+
+                fetch('/accounts/api/messages/recent/')
+                    .then(response => response.json())
+                    .then(data => {
+                        recentList.innerHTML = '';
+                        if (data.conversations && data.conversations.length > 0) {
+                            data.conversations.forEach(conv => {
+                                const chatItem = document.createElement('div');
+                                chatItem.className = 'd-flex align-items-center p-2 mb-1 rounded bg-white border-bottom position-relative hover-bg-light';
+                                chatItem.style.cursor = 'pointer'; // Make the whole item clickable
+                                
+                                // Avatar
+                                let avatarHtml = '';
+                                if (conv.avatar_url) {
+                                    avatarHtml = `<img src="${conv.avatar_url}" class="rounded-circle border border-1" width="36" height="36" style="object-fit: cover;">`;
+                                } else {
+                                    avatarHtml = `<div class="rounded-circle bg-light d-flex align-items-center justify-content-center border border-1" style="width: 36px; height: 36px;"><i class="fas fa-user text-secondary" style="font-size: 0.9rem;"></i></div>`;
+                                }
+
+                                // Unread Dot
+                                const unreadHtml = conv.unread_count > 0 ? 
+                                    `<span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 10px; height: 10px; right: 10px; top: 10px;">
+                                        <span class="visually-hidden">unread</span>
+                                     </span>` : '';
+
+                                // Item HTML
+                                chatItem.innerHTML = `
+                                    <div class="me-2 position-relative">
+                                        ${avatarHtml}
+                                    </div>
+                                    <div class="flex-grow-1" style="min-width: 0;">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="fw-bold text-truncate d-block text-dark" style="font-size: 0.8rem; max-width: 140px;">
+                                                ${conv.user_name}
+                                            </span>
+                                            <small class="text-muted" style="font-size: 0.65rem;">${conv.timestamp_str.split(' ')[1]}</small>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-truncate d-block text-secondary ${conv.unread_count > 0 ? 'fw-bold text-dark' : ''}" style="font-size: 0.7rem; max-width: 180px;">
+                                                ${conv.last_message}
+                                            </span>
+                                            ${conv.unread_count > 0 ? `<span class="badge bg-danger rounded-pill" style="font-size: 0.6rem;">${conv.unread_count}</span>` : ''}
+                                        </div>
+                                    </div>
+                                    <a href="/accounts/messages/compose/?to=${conv.user_id}" class="stretched-link d-none chat-trigger" data-user-id="${conv.user_id}" data-user-name="${conv.user_name}"></a>
+                                `;
+
+                                // Event Listener to clear unread status on click
+                                chatItem.addEventListener('click', function(e) {
+                                    // Let the ChatManager handle opening via the invisible link interceptor
+                                    // or better, directly call ChatManager here to be cleaner
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if(window.FloatingChat) {
+                                        window.FloatingChat.openChat(conv.user_id, conv.user_name);
+                                    }
+                                    // Optionally hide dropdown
+                                });
+
+                                recentList.appendChild(chatItem);
+                            });
+                        } else {
+                            recentList.innerHTML = '<div class="text-center p-4 text-muted small"><i class="fas fa-comments fa-2x mb-2 text-light-gray"></i><p>لا توجد محادثات سابقة</p></div>';
+                        }
+                    })
+                    .catch(e => console.error("Error loading recents:", e));
+            }
+
+            // Reload on open
             const dropdownBtn = document.getElementById('floatingChatDropdown');
             if (dropdownBtn) {
-                dropdownBtn.addEventListener('show.bs.dropdown', loadOnlineUsersFloat);
+                dropdownBtn.addEventListener('show.bs.dropdown', function() {
+                    loadOnlineUsersFloat();
+                    loadRecentChats();
+                });
             }
+            
+            // Initial Load
+            loadRecentChats();
         });
     </script>
     <!-- Mini Chat Window Template (Hidden) -->

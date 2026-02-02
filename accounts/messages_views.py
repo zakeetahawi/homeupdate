@@ -623,3 +623,93 @@ def api_check_new_messages(request):
             "total_unread": sum(item["count"] for item in unread_data),
         }
     )
+
+
+@login_required
+def api_recent_conversations(request):
+    """
+    API لجلب آخر المحادثات (للويدجت العائم)
+    يعيد قائمة بالمحادثات مرتبة حسب الأحدث
+    """
+    # 1. تجميع معرفات المستخدمين الذين تواصلت معهم
+    sent_partners = InternalMessage.objects.filter(
+        sender=request.user, is_deleted_by_sender=False
+    ).values_list("recipient", flat=True)
+
+    received_partners = InternalMessage.objects.filter(
+        recipient=request.user, is_deleted_by_recipient=False
+    ).values_list("sender", flat=True)
+
+    partner_ids = set(list(sent_partners) + list(received_partners))
+    conversations_data = []
+
+    for partner_id in partner_ids:
+        # تجاوز المستخدم الحالي
+        if partner_id == request.user.id:
+            continue
+
+        try:
+            partner = User.objects.get(id=partner_id)
+        except User.DoesNotExist:
+            continue
+
+        # آخر رسالة
+        last_message = (
+            InternalMessage.objects.filter(
+                (Q(sender=request.user) & Q(recipient=partner))
+                | (Q(sender=partner) & Q(recipient=request.user))
+            )
+            .filter(
+                ~Q(sender=request.user, is_deleted_by_sender=True)
+                & ~Q(recipient=request.user, is_deleted_by_recipient=True)
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
+        if not last_message:
+            continue
+
+        # عدد الرسائل غير المقروءة
+        unread_count = InternalMessage.objects.filter(
+            sender=partner,
+            recipient=request.user,
+            is_read=False,
+            is_deleted_by_recipient=False,
+        ).count()
+
+        # الصورة
+        avatar_url = None
+        if hasattr(partner, "image") and partner.image:
+            try:
+                avatar_url = partner.image.url
+            except:
+                pass
+
+        conversations_data.append(
+            {
+                "user_id": partner.id,
+                "user_name": partner.get_full_name() or partner.username,
+                "avatar_url": avatar_url,
+                "last_message": (
+                    last_message.body[:50] + "..."
+                    if len(last_message.body) > 50
+                    else last_message.body
+                ),
+                "timestamp": last_message.created_at,
+                "timestamp_str": last_message.created_at.strftime(
+                    "%Y-%m-%d %H:%M"
+                ),  # Simplification for JSON
+                "unread_count": unread_count,
+            }
+        )
+
+    # الترتيب حسب الأحدث
+    conversations_data.sort(key=lambda x: x["timestamp"], reverse=True)
+
+    # تحويل التواريخ للنص النهائي
+    for c in conversations_data:
+        # تحسين عرض الوقت (مثلاً: "منذ دقيقة") يمكن أن يتم في الفرونت إند
+        pass
+
+    return JsonResponse({"conversations": conversations_data})

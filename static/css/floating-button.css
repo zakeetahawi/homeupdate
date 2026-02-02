@@ -13,8 +13,8 @@
 
 /* The Main Button */
 .floating-chat-btn {
-    width: 65px;
-    height: 65px;
+    width: 50px; /* Slight Increase as requested */
+    height: 50px;
     border-radius: 50%;
     
     /* Dynamic Theme Gradient using System Variables */
@@ -24,7 +24,7 @@
     border: 2px solid rgba(255, 255, 255, 0.2);
     box-shadow: var(--shadow);
 
-    color: #ffffff; /* Primary text is usually white */
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -40,63 +40,62 @@
 }
 
 .floating-chat-btn i {
-    font-size: 1.7rem;
+    font-size: 1.3rem; /* Adjusted Icon */
     pointer-events: none;
 }
 
 /* Notification Badge */
 .floating-chat-btn .badge-counter {
     position: absolute;
-    top: 0;
-    right: 0;
-    transform: translate(25%, -25%);
+    top: -2px;
+    right: -2px;
+    transform: none; 
     
-    /* Dynamic Error Color */
     background: var(--error);
-    
-    border: 2px solid #fff;
-    color: white;
-    font-weight: 700;
-    font-size: 0.75rem;
-    min-width: 24px;
-    height: 24px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-/* Online Badge (Green - Bottom Left) */
-.floating-chat-btn .badge-online {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    transform: translate(-20%, 30%); /* Floating outside (Bottom-Left) */
-    
-    background: var(--success);
-    border: 2px solid #fff;
+    border: 1.5px solid #fff;
     color: white;
     font-weight: 700;
     font-size: 0.65rem;
-    padding: 0 8px; /* Horizontal padding for text */
-    min-width: 24px;
-    height: 24px;
-    border-radius: 12px; /* Pill Shape */
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    padding: 0 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Online Badge */
+.floating-chat-btn .badge-online {
+    position: absolute;
+    bottom: -2px;
+    left: -2px;
+    transform: none;
+    
+    background: var(--success);
+    border: 1.5px solid #fff;
+    color: white;
+    font-weight: 700;
+    font-size: 0.6rem;
+    padding: 0 5px;
+    min-width: 14px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     z-index: 2;
-    white-space: nowrap; /* Prevent wrapping */
+    white-space: nowrap;
 }
 
 /* The Dropdown Menu */
 .floating-chat-menu {
     position: absolute;
-    bottom: 80px; 
+    bottom: 60px; /* 50px button + 10px gap */ 
     left: 0;
-    width: 360px;
+    width: 320px;
     max-height: 600px;
     overflow-y: auto;
     

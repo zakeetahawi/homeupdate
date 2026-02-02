@@ -173,7 +173,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // We use a capture listener on the window phase to block it?
             // Or easier: set a flag on the element
             container.setAttribute('data-was-dragged', 'true');
-            setTimeout(() => container.removeAttribute('data-was-dragged'), 50);
+            // Increase timeout to ensure we catch slightly delayed clicks
+            setTimeout(() => container.removeAttribute('data-was-dragged'), 350);
         } else {
             // It was a static click (moved < threshold)
             container.removeAttribute('data-was-dragged');
@@ -184,20 +185,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const toggleBtn = container.querySelector('.floating-chat-btn');
     
-    // Intercept Click
+    // Robust Click Interceptor
+    // We attach to the BUTTON itself in the capture phase to stop Bootstrap (which listens on the button/document)
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function(e) {
+            // Check if we dragged
+            if (container.getAttribute('data-was-dragged') === 'true') {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation(); // CRITICAL: Stops other listeners on the same element
+                return;
+            }
+        }, true); // Capture phase
+    }
+
+    // Also keep container listener just in case
     container.addEventListener('click', function(e) {
-        // If we just finished a drag, STOP EVERYTHING.
         if (container.getAttribute('data-was-dragged') === 'true') {
             e.preventDefault();
             e.stopPropagation();
-            return;
+            e.stopImmediatePropagation();
         }
-
-        // Otherwise, allow normal bootstrap toggle
-        // Safely Initialize/Get Dropdown
-        const dropdown = bootstrap.Dropdown.getOrCreateInstance(toggleBtn || container);
-        dropdown.toggle();
-    }, true); // Capture phase to intervene early? No, bubbling is fine if we check the attribute.
+    }, true);
 
     // --- Attach Events ---
     
@@ -214,6 +223,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // Window Resize Safety
     window.addEventListener('resize',  () => {
         validateBounds(); // Push it back on screen if resize hides it
+    });
+
+    // --- Tab Styling Logic ---
+    const tabEls = document.querySelectorAll('#chatWidgetTabs button[data-bs-toggle="tab"]');
+    tabEls.forEach(tabEl => {
+        tabEl.addEventListener('show.bs.tab', event => {
+            // Reset all
+            tabEls.forEach(btn => {
+                btn.classList.remove('border-bottom', 'border-primary', 'border-2', 'text-primary');
+                btn.classList.add('text-secondary');
+            });
+            // highlight new
+            const active = event.target;
+            active.classList.remove('text-secondary');
+            active.classList.add('border-bottom', 'border-primary', 'border-2', 'text-primary');
+        });
     });
 });
 
@@ -658,6 +683,7 @@ const ChatManager = {
             .then(data => {
                 const container = win.querySelector('.chat-messages-area');
                 container.innerHTML = ''; // Clear loading
+                container.dataset.lastMessageDate = ''; // Reset Date Separator Logic
                 
                 if (data.messages && data.messages.length > 0) {
                     data.messages.forEach(msg => {
@@ -731,17 +757,40 @@ const ChatManager = {
     },
     
     appendMessage: function(container, msg) {
+        // --- Date Separator Logic ---
+        const msgDateObj = new Date(msg.created_at || Date.now());
+        const msgDateStr = msgDateObj.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        
+        // Check local state for last date
+        const lastDate = container.dataset.lastMessageDate;
+        
+        if (lastDate !== msgDateStr) {
+            const separator = document.createElement('div');
+            separator.className = 'text-center my-3 position-relative';
+            separator.innerHTML = `
+                <span class="bg-light px-3 py-1 rounded-pill text-muted small border shadow-sm" style="font-size: 0.7rem;">
+                    ${msgDateStr}
+                </span>
+            `;
+            // Insert before typing indicator if exists
+            const typingIndicator = container.querySelector('.typing-indicator');
+            if (typingIndicator) {
+                container.insertBefore(separator, typingIndicator);
+            } else {
+                container.appendChild(separator);
+            }
+            container.dataset.lastMessageDate = msgDateStr;
+        }
+
         const d = document.createElement('div');
         const isMe = msg.is_me;
         d.className = `chat-message-row ${isMe ? 'me' : 'other'}`;
         
         let avatarHtml = '';
         if (!isMe) {
-            const avatarUrl = msg.sender_avatar || '/static/images/default_avatar.png'; // Fallback
-            // If we don't have a default image, use a placeholder div or just hide it? 
-            // Let's use a generic placeholder if URL is null/empty
-            if (msg.sender_avatar) {
-                avatarHtml = `<img src="${msg.sender_avatar}" class="chat-avatar" alt="User">`;
+            const avatarUrl = msg.sender_avatar || null; // Fallback handled by CSS or conditional
+            if (avatarUrl) {
+                avatarHtml = `<img src="${avatarUrl}" class="chat-avatar" alt="User">`;
             } else {
                 avatarHtml = `<div class="chat-avatar bg-secondary d-flex align-items-center justify-content-center text-white" style="font-size: 0.8rem;"><i class="fas fa-user"></i></div>`;
             }
@@ -755,13 +804,16 @@ const ChatManager = {
             statusHtml = `<span class="msg-status ${statusClass}" id="status-${msg.id}">${statusIcon}</span>`;
         }
         
+        // Time Formatting
+        const timeStr = msgDateObj.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
         d.innerHTML = `
             ${!isMe ? avatarHtml : ''}
             <div class="chat-bubble">
                 <div class="small" style="word-wrap: break-word;">${msg.body}</div>
                 <div class="d-flex align-items-center justify-content-end mt-1">
                     ${statusHtml}
-                    <div class="text-${isMe ? 'white-50' : 'muted'}" style="font-size: 0.6rem;">${msg.created_at ? msg.created_at.split(' ')[1] : 'Now'}</div>
+                    <div class="text-${isMe ? 'white-50' : 'muted'}" style="font-size: 0.6rem;">${timeStr}</div>
                 </div>
             </div>
         `;

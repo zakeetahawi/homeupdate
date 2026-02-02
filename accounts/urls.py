@@ -15,6 +15,7 @@ from .auth_compat import auth_compat_view
 from .messages_views import (
     api_check_new_messages,
     api_get_chat_history,
+    api_recent_conversations,
     api_send_chat_message,
     compose_message,
     delete_message,
@@ -172,5 +173,10 @@ urlpatterns = [
     ),
     path(
         "api/messages/check-new/", api_check_new_messages, name="api_check_new_messages"
+    ),
+    path(
+        "api/messages/recent/",
+        api_recent_conversations,
+        name="api_recent_conversations",
     ),
 ]
