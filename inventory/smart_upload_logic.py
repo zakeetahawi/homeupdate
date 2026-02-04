@@ -90,99 +90,87 @@ def smart_update_product(
 
             # التحديث الذكي أو الدمج
             if upload_mode in ["smart_update", "merge_warehouses"]:
-                # تحديث ذكي - فقط الحقول الممتلئة (Smart Update)
+                # ✅ تحديث انتقائي - فقط الحقول الممتلئة في الملف
                 update_fields_legacy = []
 
-                # تحديث الاسم فقط إذا كان ممتلئاً
-                if name:
+                # تحديث الاسم (فقط إذا كان ممتلئاً)
+                if name is not None:
                     name_str = str(name).strip()
                     if name_str and name_str.lower() not in ["nan", "none"]:
                         product.name = name_str
                         update_fields_legacy.append("name")
 
-                # تحديث السعر فقط إذا كان > 0
-                price_val = product_data.get("price", 0)
-                if price_val > 0:
+                # تحديث السعر (فقط إذا كان > 0)
+                price_val = product_data.get("price")
+                if price_val is not None and price_val > 0:
                     product.price = price_val
                     update_fields_legacy.append("price")
 
-                # تحديث سعر الجملة فقط إذا كان ممتلئاً
+                # تحديث سعر الجملة (فقط إذا كان ممتلئاً وأكبر من 0)
                 ws_price = product_data.get("wholesale_price")
-                if ws_price is not None and str(ws_price).strip():
+                if ws_price is not None and ws_price > 0:
                     try:
                         product.wholesale_price = Decimal(str(ws_price))
                         update_fields_legacy.append("wholesale_price")
                     except:
                         pass
 
-                # تحديث الفئة فقط إذا كانت موجودة
-                if product_data.get("category"):
+                # تحديث الفئة (فقط إذا كانت موجودة)
+                if product_data.get("category") is not None:
                     product.category = product_data["category"]
                     update_fields_legacy.append("category")
 
-                # تحديث الوصف فقط إذا كان ممتلئاً
+                # تحديث الوصف (فقط إذا كان ممتلئاً)
                 desc_val = product_data.get("description")
-                if (
-                    desc_val
-                    and str(desc_val).strip()
-                    and str(desc_val).lower() not in ["nan", "none"]
-                ):
-                    product.description = str(desc_val).strip()
-                    update_fields_legacy.append("description")
+                if desc_val is not None:
+                    desc_str = str(desc_val).strip()
+                    if desc_str and desc_str.lower() not in ["nan", "none"]:
+                        product.description = desc_str
+                        update_fields_legacy.append("description")
 
-                # تحديث الحد الأدنى فقط إذا كان > 0
+                # تحديث الحد الأدنى (يقبل 0 لكن يجب أن يكون موجوداً)
                 min_stock = product_data.get("minimum_stock")
-                if (
-                    min_stock is not None
-                    and str(min_stock).strip()
-                    and int(float(str(min_stock))) > 0
-                ):
-                    product.minimum_stock = int(float(str(min_stock)))
-                    update_fields_legacy.append("minimum_stock")
+                if min_stock is not None:
+                    try:
+                        product.minimum_stock = int(float(str(min_stock)))
+                        update_fields_legacy.append("minimum_stock")
+                    except:
+                        pass
 
-                # تحديث العملة
+                # تحديث العملة (فقط إذا كانت ممتلئة)
                 curr_val = product_data.get("currency")
-                if (
-                    curr_val
-                    and str(curr_val).strip()
-                    and str(curr_val).lower() not in ["nan", "none"]
-                ):
-                    product.currency = str(curr_val).strip()
-                    update_fields_legacy.append("currency")
+                if curr_val is not None:
+                    curr_str = str(curr_val).strip()
+                    if curr_str and curr_str.lower() not in ["nan", "none"]:
+                        product.currency = curr_str
+                        update_fields_legacy.append("currency")
 
-                # تحديث الوحدة
+                # تحديث الوحدة (فقط إذا كانت ممتلئة)
                 unit_val = product_data.get("unit")
-                if (
-                    unit_val
-                    and str(unit_val).strip()
-                    and str(unit_val).lower() not in ["nan", "none"]
-                ):
-                    product.unit = str(unit_val).strip()
-                    update_fields_legacy.append("unit")
+                if unit_val is not None:
+                    unit_str = str(unit_val).strip()
+                    if unit_str and unit_str.lower() not in ["nan", "none"]:
+                        product.unit = unit_str
+                        update_fields_legacy.append("unit")
 
-                # تحديث الخامة (Material)
+                # تحديث الخامة (فقط إذا كانت ممتلئة)
                 mat_val = product_data.get("material")
-                if (
-                    mat_val
-                    and str(mat_val).strip()
-                    and str(mat_val).lower() not in ["nan", "none"]
-                ):
-                    product.material = str(mat_val).strip()
-                    update_fields_legacy.append("material")
+                if mat_val is not None:
+                    mat_str = str(mat_val).strip()
+                    if mat_str and mat_str.lower() not in ["nan", "none"]:
+                        product.material = mat_str
+                        update_fields_legacy.append("material")
 
-                # تحديث العرض (Width) مع تنسيق تلقائي
+                # تحديث العرض (فقط إذا كان ممتلئاً)
                 width_val = product_data.get("width")
-                if (
-                    width_val
-                    and str(width_val).strip()
-                    and str(width_val).lower() not in ["nan", "none"]
-                ):
+                if width_val is not None:
                     width_str = str(width_val).strip()
-                    # إضافة cm تلقائياً إذا كان رقماً فقط
-                    if width_str.replace(".", "", 1).isdigit():
-                        width_str = f"{width_str} cm"
-                    product.width = width_str
-                    update_fields_legacy.append("width")
+                    if width_str and width_str.lower() not in ["nan", "none"]:
+                        # إضافة cm تلقائياً إذا كان رقماً فقط
+                        if width_str.replace(".", "", 1).isdigit():
+                            width_str = f"{width_str} cm"
+                        product.width = width_str
+                        update_fields_legacy.append("width")
 
                 if update_fields_legacy:
                     product.save(update_fields=update_fields_legacy)
@@ -234,89 +222,99 @@ def smart_update_product(
                 if base_product:
                     update_fields = []
 
-                    # مزامنة الاسم
-                    if name and name.strip() and base_product.name != name:
-                        base_product.name = name
-                        update_fields.append("name")
+                    # مزامنة الاسم (فقط إذا كان ممتلئاً)
+                    if name is not None and name.strip():
+                        name_str = str(name).strip()
+                        if name_str.lower() not in ["nan", "none"] and base_product.name != name_str:
+                            base_product.name = name_str
+                            update_fields.append("name")
 
-                    # مزامنة الوصف
+                    # مزامنة الوصف (فقط إذا كان ممتلئاً)
                     desc = product_data.get("description")
-                    if desc and desc.strip() and base_product.description != desc:
-                        base_product.description = desc
-                        update_fields.append("description")
+                    if desc is not None:
+                        desc_str = str(desc).strip()
+                        if desc_str and desc_str.lower() not in ["nan", "none"]:
+                            if base_product.description != desc_str:
+                                base_product.description = desc_str
+                                update_fields.append("description")
 
                     # مزامنة الفئة
                     category = product_data.get("category")
-                    if category and base_product.category != category:
+                    if category is not None and base_product.category != category:
                         base_product.category = category
                         update_fields.append("category")
 
-                    # مزامنة السعر القطاعي
-                    price = product_data.get("price", 0)
-                    if price > 0 and base_product.base_price != Decimal(str(price)):
-                        base_product.base_price = Decimal(str(price))
-                        update_fields.append("base_price")
+                    # مزامنة السعر القطاعي (فقط إذا كان > 0)
+                    price = product_data.get("price")
+                    if price is not None and price > 0:
+                        price_decimal = Decimal(str(price))
+                        if base_product.base_price != price_decimal:
+                            base_product.base_price = price_decimal
+                            update_fields.append("base_price")
 
-                    # مزامنة سعر الجملة
+                    # مزامنة سعر الجملة (فقط إذا كان > 0)
                     wholesale_price = product_data.get("wholesale_price")
-                    if (
-                        wholesale_price is not None
-                        and base_product.wholesale_price
-                        != Decimal(str(wholesale_price))
-                    ):
-                        base_product.wholesale_price = Decimal(str(wholesale_price))
-                        update_fields.append("wholesale_price")
+                    if wholesale_price is not None and wholesale_price > 0:
+                        ws_decimal = Decimal(str(wholesale_price))
+                        if base_product.wholesale_price != ws_decimal:
+                            base_product.wholesale_price = ws_decimal
+                            update_fields.append("wholesale_price")
 
-                    # مزامنة الخامة والعرض
+                    # مزامنة الخامة (فقط إذا كانت ممتلئة)
                     mat = product_data.get("material")
-                    if mat:
+                    if mat is not None:
                         mat_str = str(mat).strip()
-                        if (
-                            mat_str
-                            and mat_str.lower() not in ["nan", "none"]
-                            and base_product.material != mat_str
-                        ):
-                            base_product.material = mat_str
-                            update_fields.append("material")
+                        if mat_str and mat_str.lower() not in ["nan", "none"]:
+                            if base_product.material != mat_str:
+                                base_product.material = mat_str
+                                update_fields.append("material")
 
+                    # مزامنة العرض (فقط إذا كان ممتلئاً)
                     wth = product_data.get("width")
-                    if wth:
+                    if wth is not None:
                         wth_str = str(wth).strip()
                         if wth_str and wth_str.lower() not in ["nan", "none"]:
                             # التنسيق التلقائي للعرض
                             if wth_str.replace(".", "", 1).isdigit():
                                 wth_str = f"{wth_str} cm"
-
                             if base_product.width != wth_str:
                                 base_product.width = wth_str
                                 update_fields.append("width")
 
-                    # مزامنة الإعدادات الأخرى
+                    # مزامنة العملة (فقط إذا كانت ممتلئة)
                     curr = product_data.get("currency")
-                    if curr and curr.strip() and base_product.currency != curr:
-                        base_product.currency = curr
-                        update_fields.append("currency")
+                    if curr is not None:
+                        curr_str = str(curr).strip()
+                        if curr_str and curr_str.lower() not in ["nan", "none"]:
+                            if base_product.currency != curr_str:
+                                base_product.currency = curr_str
+                                update_fields.append("currency")
 
+                    # مزامنة الوحدة (فقط إذا كانت ممتلئة)
                     unit = product_data.get("unit")
-                    if unit and unit.strip() and base_product.unit != unit:
-                        base_product.unit = unit
-                        update_fields.append("unit")
+                    if unit is not None:
+                        unit_str = str(unit).strip()
+                        if unit_str and unit_str.lower() not in ["nan", "none"]:
+                            if base_product.unit != unit_str:
+                                base_product.unit = unit_str
+                                update_fields.append("unit")
 
+                    # مزامنة الحد الأدنى (يقبل 0)
                     min_stock = product_data.get("minimum_stock")
-                    if min_stock is not None and base_product.minimum_stock != int(
-                        min_stock
-                    ):
-                        base_product.minimum_stock = int(min_stock)
-                        update_fields.append("minimum_stock")
+                    if min_stock is not None:
+                        try:
+                            min_stock_int = int(float(str(min_stock)))
+                            if base_product.minimum_stock != min_stock_int:
+                                base_product.minimum_stock = min_stock_int
+                                update_fields.append("minimum_stock")
+                        except:
+                            pass
 
                     if update_fields:
                         base_product.save(update_fields=update_fields)
 
-                    if update_fields:
-                        base_product.save(update_fields=update_fields)
-
-                # نقل المخزون وتوحيد المستودعات (Consolidation + Replacement)
-                # نستخدم دمج المستودعات دائماً إذا تم اختيار مستودع لضمان العمل النظيف
+                # نقل المخزون وتوحيد المستودعات (Consolidation + Addition)
+                # ✅ تغيير: الكمية تُضاف للرصيد الموجود (وليس استبدال)
                 if warehouse:
                     moved = move_product_to_correct_warehouse(
                         product,
@@ -325,7 +323,7 @@ def smart_update_product(
                         user,
                         merge_all=True,  # دمج كل المستودعات القديمة لضمان عمل نظيف
                         fast_mode=fast_mode,
-                        replacement_mode=True,  # استبدال الكمية الحالية بالجديدة
+                        replacement_mode=False,  # ✅ إضافة الكمية (وليس استبدال)
                     )
 
                     if moved["moved"]:
@@ -339,7 +337,41 @@ def smart_update_product(
                             result["action"] = "updated"
                         result["message"] = "تم التحديث"
                 else:
-                    # لا يوجد مستودع محدد - فقط تحديث البيانات
+                    # لا يوجد مستودع محدد - لكن نضيف الكمية إلى أي مستودع موجود
+                    quantity = product_data.get("quantity", 0)
+                    if quantity > 0:
+                        # البحث عن آخر مستودع استخدمه المنتج
+                        from .models import StockTransaction
+                        last_transaction = StockTransaction.objects.filter(
+                            product=product
+                        ).order_by("-transaction_date").first()
+                        
+                        if last_transaction and last_transaction.warehouse:
+                            # إضافة للمستودع الأخير
+                            add_stock_transaction(
+                                product, 
+                                last_transaction.warehouse, 
+                                quantity, 
+                                user, 
+                                "إضافة من Excel - بدون تحديد مستودع"
+                            )
+                            logger.info(f"✅ تم إضافة {quantity} من {product.code} إلى {last_transaction.warehouse.name}")
+                        else:
+                            # لا يوجد تاريخ مخزون - نحتاج مستودع افتراضي
+                            from .models import Warehouse
+                            default_wh = Warehouse.objects.filter(is_active=True).first()
+                            if default_wh:
+                                add_stock_transaction(
+                                    product, 
+                                    default_wh, 
+                                    quantity, 
+                                    user, 
+                                    "إضافة من Excel - مستودع افتراضي"
+                                )
+                                logger.info(f"✅ تم إضافة {quantity} من {product.code} إلى المستودع الافتراضي {default_wh.name}")
+                            else:
+                                logger.warning(f"⚠️ لا يمكن إضافة الكمية {quantity} للمنتج {product.code} - لا يوجد مستودع")
+                    
                     if not result["action"]:
                         result["action"] = "updated"
                     result["message"] = "تم التحديث"

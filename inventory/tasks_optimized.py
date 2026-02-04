@@ -48,6 +48,28 @@ def bulk_upload_products_fast(
 
     User = get_user_model()
     logger.info(f"🚀 بدء الرفع الذكي - Log: {upload_log_id} - الوضع: {upload_mode}")
+    
+    # إنشاء ملف لوج للتتبع
+    import os
+    from django.conf import settings
+    
+    log_dir = os.path.join(settings.BASE_DIR, 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    log_file_path = os.path.join(log_dir, f'bulk_upload_{upload_log_id}.log')
+    
+    try:
+        log_file = open(log_file_path, 'w', encoding='utf-8')
+        
+        def log_message(msg):
+            """حفظ رسالة في الملف والطباعة"""
+            logger.info(msg)
+            log_file.write(msg + '\n')
+            log_file.flush()
+    except Exception as e:
+        logger.error(f"فشل إنشاء ملف اللوج: {e}")
+        # استخدام logger فقط إذا فشل إنشاء الملف
+        def log_message(msg):
+            logger.info(msg)
 
     # تعطيل Cloudflare signals لمنع الاتصالات الزائدة
     from django.db.models.signals import post_save, pre_save
@@ -61,7 +83,7 @@ def bulk_upload_products_fast(
     # تعطيل كل الـ signals
     post_save.receivers = []
     pre_save.receivers = []
-    logger.info("⚡ تم تعطيل Signals للسرعة")
+    log_message("⚡ تم تعطيل Signals للسرعة")
 
     try:
         # تحميل البيانات الأساسية
@@ -72,8 +94,17 @@ def bulk_upload_products_fast(
         upload_log.status = "processing"
         upload_log.save(update_fields=["status"])
 
+        log_message(f"{'='*80}")
+        log_message(f"📁 سجل رفع المنتجات - ID: {upload_log_id}")
+        log_message(f"{'='*80}")
+        log_message(f"📁 اسم الملف: {upload_log.file_name}")
+        log_message(f"🏢 المستودع: {warehouse.name if warehouse else 'غير محدد'}")
+        log_message(f"♻️ وضع الرفع: {upload_mode}")
+        log_message(f"👤 المستخدم: {user.username}")
+        log_message(f"{'='*80}\n")
+
         # قراءة Excel بسرعة
-        logger.info("📊 قراءة Excel...")
+        log_message("📊 قراءة Excel...")
         df = pd.read_excel(BytesIO(file_content), engine="openpyxl")
         total = len(df)
         # تحديث total_rows مباشرة بعد القراءة لضمان ظهور الـ 0% كبداية حقيقية
@@ -82,7 +113,8 @@ def bulk_upload_products_fast(
         upload_log.status = "processing"
         upload_log.save(update_fields=["total_rows", "processed_count", "status"])
 
-        logger.info(f"📋 {total} صف للمعالجة")
+        log_message(f"📋 {total} صف للمعالجة")
+        log_message(f"📝 أعمدة الملف: {list(df.columns)}\n")
 
         # تهيئة كاملة إذا طُلب
         if upload_mode == "clean_start":
@@ -246,14 +278,22 @@ def bulk_upload_products_fast(
                             except:
                                 wholesale_price = None
 
-                            # الكمية (عمود 5)
+                            # الكمية (عمود 5 أو حسب الاسم)
+                            quantity_val = row.get("الكمية", safe_get(5))
                             try:
-                                quantity = float(safe_get(5, "0"))
+                                quantity = float(quantity_val) if quantity_val else 0
                             except:
                                 quantity = 0
 
                             # الوصف (عمود 7)
                             description = safe_get(7, "")
+                            
+                            # الحد الأدنى (عمود 8 أو حسب الاسم)
+                            min_stock_val = row.get("الحد الأدنى", safe_get(8))
+                            try:
+                                minimum_stock = int(float(min_stock_val)) if min_stock_val is not None else None
+                            except:
+                                minimum_stock = None
 
                             # Material (عمود 9 أو حسب الاسم)
                             material = row.get(
@@ -268,6 +308,30 @@ def bulk_upload_products_fast(
                             )
                             if pd.isna(width):
                                 width = ""
+                            
+                            # Currency (عمود 11 أو حسب الاسم)
+                            currency_val = row.get("العملة", safe_get(11))
+                            currency = None
+                            if currency_val and pd.notna(currency_val):
+                                curr_str = str(currency_val).strip().upper()
+                                if curr_str in ["EGP", "USD", "EUR", "SAR"]:
+                                    currency = curr_str
+                            
+                            # Unit (عمود 12 أو حسب الاسم)
+                            unit_val = row.get("الوحدة", safe_get(12))
+                            unit = None
+                            if unit_val and pd.notna(unit_val):
+                                unit_str = str(unit_val).strip()
+                                valid_units = ["piece", "kg", "gram", "liter", "meter", "box", "pack", "dozen", "roll", "sheet"]
+                                unit_map = {
+                                    "قطعة": "piece", "كيلوجرام": "kg", "جرام": "gram",
+                                    "لتر": "liter", "متر": "meter", "علبة": "box",
+                                    "عبوة": "pack", "دستة": "dozen", "لفة": "roll", "ورقة": "sheet",
+                                }
+                                if unit_str in valid_units:
+                                    unit = unit_str
+                                elif unit_str in unit_map:
+                                    unit = unit_map[unit_str]
 
                             # DEBUG: طباعة أول 3 صفوف
                             if processed_overall <= 3:
@@ -315,6 +379,10 @@ def bulk_upload_products_fast(
                                 "quantity": quantity,
                                 "material": material,
                                 "width": width,
+                                "description": description,
+                                "minimum_stock": minimum_stock,
+                                "currency": currency,
+                                "unit": unit,
                             }
 
                             # تحديث الفئة والمستودع إذا وجدا
@@ -435,6 +503,16 @@ def bulk_upload_products_fast(
             )
 
         # إكمال
+        log_message(f"\n{'='*80}")
+        log_message(f"📊 ملخص العملية:")
+        log_message(f"   ✅ تم إنشاء: {stats['created']} منتج")
+        log_message(f"   🔄 تم تحديث: {stats['updated']} منتج")
+        log_message(f"   ⏭️ تم تخطي: {stats['skipped']} منتج")
+        log_message(f"   ❌ أخطاء: {stats['errors']}")
+        log_message(f"{'='*80}")
+        log_message(f"\n📝 ملف اللوج محفوظ في: {log_file_path}")
+        log_message(f"يمكنك قراءته بالأمر: cat {log_file_path}")
+        
         summary_parts = []
         if stats["created"] > 0:
             summary_parts.append(f"✅ {stats['created']} جديد")
@@ -446,9 +524,29 @@ def bulk_upload_products_fast(
         upload_log.complete(
             summary=" | ".join(summary_parts) if summary_parts else "مكتمل"
         )
+        
+        # حفظ مسار ملف اللوج
+        upload_log.options['log_file'] = log_file_path
+        upload_log.save(update_fields=['options'])
+        
+        # إغلاق ملف اللوج
+        try:
+            log_file.close()
+        except:
+            pass
+            
         return {"status": "success", "stats": stats}
 
     except Exception as e:
+        log_message(f"\n🚨 خطأ في المعالجة: {str(e)}")
+        import traceback
+        log_message(f"📍 Traceback:\n{traceback.format_exc()}")
+        
+        try:
+            log_file.close()
+        except:
+            pass
+            
         if "upload_log" in locals():
             upload_log.fail(error_message=str(e))
         raise
@@ -457,4 +555,4 @@ def bulk_upload_products_fast(
         # إعادة تفعيل الـ signals
         post_save.receivers = original_post_save
         pre_save.receivers = original_pre_save
-        logger.info("⚡ تم إعادة تفعيل Signals")
+        log_message("⚡ تم إعادة تفعيل Signals")

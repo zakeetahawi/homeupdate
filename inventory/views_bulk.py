@@ -322,11 +322,23 @@ def product_bulk_upload(request):
 
                 logger.info(f"✅ مهمة رفع أُطلقت: {task.id} - Log: {upload_log.id}")
 
+                # رسالة توضح مكان ملف اللوج
+                import os
+                from django.conf import settings
+                log_file_path = os.path.join(settings.BASE_DIR, 'logs', f'bulk_upload_{upload_log.id}.log')
+
                 messages.success(
                     request,
                     _(
                         f'🚀 تم إطلاق عملية الرفع السريع. <a href="/inventory/bulk-upload-report/{upload_log.id}/" class="alert-link">متابعة التقدم</a>'
                     ),
+                    extra_tags="safe",
+                )
+                
+                messages.info(
+                    request,
+                    f'📝 سيتم حفظ تفاصيل العملية في: <code>{log_file_path}</code><br>'
+                    f'يمكنك قراءته من Terminal بالأمر: <code>tail -f {log_file_path}</code>',
                     extra_tags="safe",
                 )
 
@@ -415,44 +427,64 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
         options={"upload_mode": upload_mode},
         created_by=user,
     )
+    
+    # إنشاء ملف لوج للتتبع
+    import os
+    from django.conf import settings
+    
+    log_dir = os.path.join(settings.BASE_DIR, 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    log_file_path = os.path.join(log_dir, f'bulk_upload_{upload_log.id}.log')
+    log_file = open(log_file_path, 'w', encoding='utf-8')
+    
+    def log_message(msg):
+        """حفظ رسالة في الملف والطباعة"""
+        print(msg)
+        log_file.write(msg + '\n')
+        log_file.flush()  # تأكد من الكتابة الفورية
 
     try:
-        print(f"📁 بدء معالجة ملف: {excel_file.name}")
-        print(f"🏢 المستودع الافتراضي: {default_warehouse}")
-        print(f"♻️ وضع الرفع: {upload_mode}")
+        log_message(f"{'='*80}")
+        log_message(f"📁 سجل رفع المنتجات - ID: {upload_log.id}")
+        log_message(f"{'='*80}")
+        log_message(f"📁 اسم الملف: {excel_file.name}")
+        log_message(f"🏢 المستودع الافتراضي: {default_warehouse}")
+        log_message(f"♻️ وضع الرفع: {upload_mode}")
+        log_message(f"👤 المستخدم: {user}")
+        log_message(f"{'='*80}\n")
 
         # معالجة وضع التهيئة الكاملة
         if upload_mode == "full_reset":
-            print("⚠️ وضع التهيئة الكاملة: حذف جميع البيانات القديمة...")
+            log_message("⚠️ وضع التهيئة الكاملة: حذف جميع البيانات القديمة...")
             with transaction.atomic():
                 from .models import StockTransfer
 
                 # حذف جميع المعاملات والتحويلات أولاً (بسبب العلاقات الخارجية)
                 deleted_transfers = StockTransfer.objects.all().count()
                 StockTransfer.objects.all().delete()
-                print(f"   ✓ تم حذف {deleted_transfers} تحويل مخزني")
+                log_message(f"   ✓ تم حذف {deleted_transfers} تحويل مخزني")
 
                 deleted_transactions = StockTransaction.objects.all().count()
                 StockTransaction.objects.all().delete()
-                print(f"   ✓ تم حذف {deleted_transactions} معاملة مخزون")
+                log_message(f"   ✓ تم حذف {deleted_transactions} معاملة مخزون")
 
                 # حذف جميع المنتجات
                 deleted_products = Product.objects.all().count()
                 Product.objects.all().delete()
-                print(f"   ✓ تم حذف {deleted_products} منتج")
+                log_message(f"   ✓ تم حذف {deleted_products} منتج")
 
                 # تسجيل في السجل
                 upload_log.notes = f"تهيئة كاملة: تم حذف {deleted_products} منتج، {deleted_transactions} معاملة، {deleted_transfers} تحويل"
                 upload_log.save()
 
-                print("✅ اكتمل حذف البيانات القديمة")
+                log_message("✅ اكتمل حذف البيانات القديمة")
 
         file_data = excel_file.read()
-        print(f"📊 تم قراءة الملف، الحجم: {len(file_data)} بايت")
+        log_message(f"📊 تم قراءة الملف، الحجم: {len(file_data)} بايت")
 
         df = safe_read_excel(file_data)
-        print(f"📋 تم تحليل الملف، عدد الصفوف: {len(df)}")
-        print(f"📝 أعمدة الملف: {list(df.columns)}")
+        log_message(f"📋 تم تحليل الملف، عدد الصفوف: {len(df)}")
+        log_message(f"📝 أعمدة الملف: {list(df.columns)}")
 
         # تحديث إجمالي الصفوف
         upload_log.total_rows = len(df)
@@ -480,6 +512,8 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                 try:
                     # ✅ 1. قراءة الكود أولاً (إلزامي)
                     code = str(row.get("الكود", "")).strip() if pd.notna(row.get("الكود")) else ""
+                    
+                    log_message(f"\n📋 معالجة الصف {row_number}: الكود={code}")
                     
                     # ✅ 2. إذا الكود فارغ → تخطي الصف كاملاً مع خطأ
                     if not code or code.lower() in ["nan", "none", ""]:
@@ -515,46 +549,67 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                     material = get_field_value("الخامة", "")
                     width = get_field_value("العرض", "")
                     
+                    print(f"   📝 البيانات المقروءة: اسم={name}, فئة={category_name}, مستودع={warehouse_name}")
+                    print(f"   📝 وصف={description[:30] if description else 'فارغ'}, خامة={material}, عرض={width}")
+                    
                     # معالجة الحقول الرقمية بشكل آمن
                     price = None
                     price_value = get_field_value("السعر")
                     if price_value:
                         try:
                             price = float(price_value)
+                            print(f"   💵 السعر المقروء: {price}")
                         except (ValueError, TypeError):
                             price = None
+                            print(f"   ⚠️ فشل تحويل السعر: {price_value}")
 
                     wholesale_price = None
                     wholesale_value = get_field_value("سعر الجملة")
                     if wholesale_value:
                         try:
                             wholesale_price = float(wholesale_value)
+                            print(f"   💰 سعر الجملة المقروء: {wholesale_price}")
                         except (ValueError, TypeError):
                             wholesale_price = None
+                            print(f"   ⚠️ فشل تحويل سعر الجملة: {wholesale_value}")
+                    else:
+                        print(f"   💰 سعر الجملة: غير محدد (سيبقى كما هو)")
 
                     quantity = None
                     quantity_value = get_field_value("الكمية")
-                    if quantity_value:
+                    if quantity_value is not None:
                         try:
                             quantity = float(quantity_value)
+                            print(f"   📦 الكمية المقروءة: {quantity} (من '{quantity_value}')")
                         except (ValueError, TypeError):
                             quantity = None
+                            print(f"   ⚠️ فشل تحويل الكمية: {quantity_value}")
 
                     minimum_stock = None
                     min_stock_value = get_field_value("الحد الأدنى")
-                    if min_stock_value:
+                    if min_stock_value is not None:  # ✅ تغيير: نقبل حتى القيمة 0
                         try:
                             minimum_stock = int(float(min_stock_value))
+                            print(f"   📊 الحد الأدنى المقروء: {minimum_stock} (من '{min_stock_value}')")
                         except (ValueError, TypeError):
                             minimum_stock = None
+                            print(f"   ⚠️ فشل تحويل الحد الأدنى: {min_stock_value}")
 
-                    currency = get_field_value("العملة", "EGP")
-                    if currency and currency.upper() not in ["EGP", "USD", "EUR", "SAR"]:
-                        currency = "EGP"
-                    elif currency:
-                        currency = currency.upper()
+                    # العملة (فقط إذا كانت مكتوبة في الملف)
+                    currency = get_field_value("العملة")
+                    if currency:
+                        if currency.upper() in ["EGP", "USD", "EUR", "SAR"]:
+                            currency = currency.upper()
+                            print(f"   💰 العملة المقروءة: {currency}")
+                        else:
+                            currency = None  # قيمة غير صالحة
+                            print(f"   ⚠️ عملة غير صالحة: {currency}")
+                    else:
+                        currency = None  # لم يتم تحديد عملة
+                        print(f"   💰 العملة: غير محددة (ستبقى كما هي)")
 
-                    unit = get_field_value("الوحدة", "piece")
+                    # الوحدة (فقط إذا كانت مكتوبة في الملف)
+                    unit = get_field_value("الوحدة")
                     if unit:
                         valid_units = ["piece", "kg", "gram", "liter", "meter", "box", "pack", "dozen", "roll", "sheet"]
                         unit_map = {
@@ -563,7 +618,15 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                             "عبوة": "pack", "دستة": "dozen", "لفة": "roll", "ورقة": "sheet",
                         }
                         if unit not in valid_units:
-                            unit = unit_map.get(unit, "piece")
+                            unit = unit_map.get(unit, None)
+                        
+                        if unit:
+                            print(f"   📏 الوحدة المقروءة: {unit}")
+                        else:
+                            print(f"   ⚠️ وحدة غير صالحة")
+                    else:
+                        unit = None  # لم يتم تحديد وحدة
+                        print(f"   📏 الوحدة: غير محددة (ستبقى كما هي)")
 
                     # ✅ 4. التحقق من وجود المنتج في قاعدة البيانات
                     product = None
@@ -574,7 +637,7 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                         product = Product.objects.get(code=code)
                         product_exists = True
                         
-                        # ✅ 5. منتج موجود → تحديث الحقول غير الفارغة فقط
+                        # ✅ 5. منتج موجود → تحديث الحقول الممتلئة فقط
                         if upload_mode == "add_only":
                             # وضع: المنتجات الجديدة فقط - تجاهل الموجود
                             skipped_count += 1
@@ -590,34 +653,83 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                             )
                             continue
                         
-                        # التحديث الانتقائي - فقط الحقول غير الفارغة
-                        if name is not None:
+                        # ✅ تحديث انتقائي - فقط الحقول الممتلئة في الملف
+                        updated_fields = []
+                        
+                        # اسم المنتج (إذا كان ممتلئاً)
+                        if name is not None and name:
+                            if product.name != name:
+                                updated_fields.append(f"الاسم: {product.name} → {name}")
                             product.name = name
+                        
+                        # الفئة (إذا كانت ممتلئة)
                         if category_name:
                             category, _ = Category.objects.get_or_create(
                                 name=category_name,
                                 defaults={"description": "تم إنشاؤها تلقائياً من ملف الإكسل"}
                             )
+                            if product.category != category:
+                                updated_fields.append(f"الفئة: {product.category} → {category}")
                             product.category = category
-                        if description is not None:
+                        
+                        # الوصف (فقط إذا كان ممتلئاً)
+                        if description is not None and description:
+                            if product.description != description:
+                                updated_fields.append(f"الوصف محدّث")
                             product.description = description
-                        if material is not None:
+                        
+                        # الخامة (فقط إذا كانت ممتلئة)
+                        if material is not None and material:
+                            if product.material != material:
+                                updated_fields.append(f"الخامة: {product.material} → {material}")
                             product.material = material
-                        if width is not None:
+                        
+                        # العرض (فقط إذا كان ممتلئاً)
+                        if width is not None and width:
+                            if product.width != width:
+                                updated_fields.append(f"العرض: {product.width} → {width}")
                             product.width = width
-                        if price is not None:
+                        
+                        # السعر (فقط إذا كان > 0)
+                        if price is not None and price > 0:
+                            if product.price != price:
+                                updated_fields.append(f"السعر: {product.price} → {price}")
                             product.price = price
-                        if wholesale_price is not None:
+                        
+                        # سعر الجملة (فقط إذا كان ممتلئاً)
+                        if wholesale_price is not None and wholesale_price > 0:
+                            if product.wholesale_price != wholesale_price:
+                                updated_fields.append(f"سعر الجملة: {product.wholesale_price} → {wholesale_price}")
                             product.wholesale_price = wholesale_price
-                        if currency is not None:
+                        
+                        # العملة (فقط إذا كانت ممتلئة)
+                        if currency is not None and currency:
+                            if product.currency != currency:
+                                updated_fields.append(f"العملة: {product.currency} → {currency}")
                             product.currency = currency
-                        if unit is not None:
+                        
+                        # الوحدة (فقط إذا كانت ممتلئة)
+                        if unit is not None and unit:
+                            if product.unit != unit:
+                                updated_fields.append(f"الوحدة: {product.unit} → {unit}")
                             product.unit = unit
+                        
+                        # الحد الأدنى (فقط إذا كان ممتلئاً - حتى لو 0)
                         if minimum_stock is not None:
+                            if product.minimum_stock != minimum_stock:
+                                updated_fields.append(f"الحد الأدنى: {product.minimum_stock} → {minimum_stock}")
                             product.minimum_stock = minimum_stock
                         
                         product.save()
                         result["updated_count"] += 1
+                        
+                        # طباعة التحديثات
+                        if updated_fields:
+                            print(f"   🔄 تحديث {code}: {', '.join(updated_fields[:3])}" + (f" +{len(updated_fields)-3} أكثر" if len(updated_fields) > 3 else ""))
+                        else:
+                            print(f"   ✅ {code}: لا توجد تغييرات في البيانات")
+                        
+                        print(f"   📊 ملخص التحديث: السعر={product.price}, الجملة={product.wholesale_price}, الحد الأدنى={product.minimum_stock}")
 
                     except Product.DoesNotExist:
                         # ✅ 6. منتج جديد → التحقق من الحقول الإلزامية
@@ -667,7 +779,10 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                         created = True
                         result["created_count"] += 1
                     # ✅ 7. معالجة الكمية (إذا كانت موجودة وأكبر من صفر)
+                    print(f"   🔍 فحص الكمية: quantity={quantity}, product={product.code if product else None}, warehouse={target_warehouse if 'target_warehouse' in locals() else 'غير محدد'}")
+                    
                     if quantity is not None and quantity > 0 and product:
+                        print(f"   ✅ دخول قسم إضافة الكمية: {quantity}")
                         # تحديد المستودع المناسب
                         target_warehouse = default_warehouse  # المستودع الافتراضي
 
@@ -688,6 +803,7 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                         # التأكد من وجود مستودع صالح
                         if not target_warehouse:
                             error_msg = "لا يمكن تحديد المستودع"
+                            print(f"   ❌ خطأ: {error_msg}")
                             result["errors"].append(f"الصف {row_number}: {error_msg}")
                             errors_to_create.append(
                                 BulkUploadError(
@@ -703,9 +819,10 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
 
                         from decimal import Decimal
 
-                        # وضع: استبدال الكمية - تصفير الرصيد الحالي أولاً
+                        # ✅ إضافة الكمية للرصيد الموجود (السلوك الافتراضي)
+                        # فقط في وضع replace_quantity يتم استبدال الكمية
                         if upload_mode == "replace_quantity" and product_exists:
-                            # الحصول على الرصيد الحالي
+                            # الحصول على الرصيد الحالي في المستودع المحدد
                             last_transaction = (
                                 StockTransaction.objects.filter(
                                     product=product, warehouse=target_warehouse
@@ -734,19 +851,21 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                                     created_by=user,
                                     transaction_date=timezone.now(),
                                 )
+                                print(f"   ⚠️ تصفير رصيد {product.code} من {current_balance} في {target_warehouse.name}")
 
-                        # إنشاء معاملة دخول بالكمية الجديدة (في جميع الأوضاع)
-                        StockTransaction.objects.create(
+                        # إنشاء معاملة دخول بالكمية (إضافة في smart_update، استبدال في replace_quantity)
+                        transaction = StockTransaction.objects.create(
                             product=product,
                             warehouse=target_warehouse,
                             transaction_type="in",
                             reason="purchase",
                             quantity=quantity,
                             reference="رفع من ملف إكسل",
-                            notes=f'{"استبدال" if upload_mode == "replace_quantity" and product_exists else "إضافة"} الكمية - المستودع: {target_warehouse.name}',
+                            notes=f'{"استبدال" if upload_mode == "replace_quantity" else "إضافة"} كمية {quantity} - المستودع: {target_warehouse.name}',
                             created_by=user,
                             transaction_date=timezone.now(),
                         )
+                        print(f"   ✅ تم إضافة كمية {product.code}: +{quantity} في {target_warehouse.name} (رصيد نهائي: {transaction.running_balance})")
                     result["total_processed"] += 1
                     if product:
                         invalidate_product_cache(product.id)
@@ -772,6 +891,19 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
         # حساب عدد الأخطاء الحقيقية (استبعاد المتخطاة)
         actual_errors = len(result["errors"]) - skipped_count
 
+        log_message(f"\n{'='*80}")
+        log_message(f"📊 ملخص العملية:")
+        log_message(f"   ✅ تم إنشاء: {result['created_count']} منتج")
+        log_message(f"   🔄 تم تحديث: {result['updated_count']} منتج")
+        log_message(f"   ⏭️ تم تخطي: {skipped_count} منتج")
+        log_message(f"   ❌ أخطاء: {actual_errors}")
+        log_message(f"{'='*80}")
+        log_message(f"\n📝 ملف اللوج محفوظ في: {log_file_path}")
+        log_message(f"يمكنك قراءته بالأمر: cat {log_file_path}")
+        
+        # إغلاق ملف اللوج
+        log_file.close()
+
         # تحديث إحصائيات السجل
         upload_log.processed_count = result["total_processed"]
         upload_log.created_count = result["created_count"]
@@ -793,10 +925,18 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
 
         summary = ". ".join(summary_parts) if summary_parts else "لا توجد بيانات"
         upload_log.complete(summary=summary)
+        
+        # حفظ مسار ملف اللوج في الخيارات
+        upload_log.options['log_file'] = log_file_path
+        upload_log.save(update_fields=['options'])
+        
         return result
     except Exception as e:
-        print(f"🚨 خطأ في معالجة ملف الإكسل: {str(e)}")
-        traceback.print_exc()
+        log_message(f"\n🚨 خطأ في معالجة ملف الإكسل: {str(e)}")
+        log_message(f"📍 Traceback:")
+        import traceback
+        log_message(traceback.format_exc())
+        log_file.close()
         logger.error(f"Error processing excel file: {str(e)}")
 
         # تسجيل فشل العملية
@@ -1036,9 +1176,12 @@ def download_excel_template(request):
             "ملاحظات هامة": [
                 "1. الكود: إذا ترك فارغاً سيتم توليده تلقائياً، لكن يُنصح بملئه لتجنب التكرار",
                 "2. السعر: هو السعر بعد الخصم - السعر قبل الخصم سيُحسب تلقائياً على صفحة Cloudflare",
-                "3. إذا كان الكود موجود: سيتم تحديث جميع بيانات المنتج (الاسم، السعر، الحد الأدنى، إلخ)",
-                "4. الحد الأدنى: سيتم تحديثه حتى لو كانت القيمة 0",
-                "5. الكمية: ستُضاف للمخزون في المستودع المحدد",
+                "3. ⭐ التحديث الذكي: فقط الحقول الممتلئة في الملف سيتم تحديثها",
+                "   - مثال: إذا كان سعر الجملة فارغاً → لن يتم المساس به في قاعدة البيانات",
+                "   - الحقول الفارغة = لا تحديث، تبقى كما هي",
+                "4. الحد الأدنى: يمكن تحديثه حتى لو كانت القيمة 0",
+                "5. الكمية: سيتم إضافتها للرصيد الموجود في المستودع",
+                "   - مثال: رصيد حالي 100 + كمية في الملف 50 = رصيد نهائي 150",
                 "",
                 "نسب السعر قبل الخصم:",
                 "- السعر من 1-400 ج.م: السعر قبل الخصم = السعر × 1.35 (زيادة 35%)",
