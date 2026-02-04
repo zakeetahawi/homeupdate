@@ -6,9 +6,22 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "deploy:prod": "wrangler deploy --env production"
+    "deploy:prod": "wrangler deploy --env production",
+    "test:dev": "wrangler dev --config wrangler-test.toml --remote",
+    "test:dev:local": "wrangler dev --config wrangler-test.toml",
+    "test:deploy": "wrangler deploy --config wrangler-test.toml",
+    "test:staging": "wrangler deploy --config wrangler-test.toml --env staging",
+    "staging:dev": "wrangler dev --config wrangler-staging.toml --remote",
+    "staging:dev:local": "wrangler dev --config wrangler-staging.toml",
+    "staging:deploy": "wrangler deploy --config wrangler-staging.toml",
+    "tail": "wrangler tail",
+    "tail:test": "wrangler tail --config wrangler-test.toml",
+    "tail:staging": "wrangler tail --config wrangler-staging.toml"
   },
   "keywords": ["cloudflare", "worker", "qr", "elkhawaga"],
   "author": "Elkhawaga",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  }
 }

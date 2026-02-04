@@ -128,30 +128,14 @@ async function generateProductPage(product, env) {
       display: flex;
       align-items: center;
       justify-content: center;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.15);
       position: relative;
-      overflow: hidden;
-    }
-    
-    .product-visual::before {
-      content: '';
-      position: absolute;
-      top: -50%; left: -50%; width: 200%; height: 200%;
-      background: conic-gradient(from 0deg, transparent 0deg 90deg, rgba(212, 175, 55, 0.1) 90deg 180deg, transparent 180deg 270deg, rgba(212, 175, 55, 0.05) 270deg 360deg);
-      animation: rotate 20s linear infinite;
-    }
-    
-    @keyframes rotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
     }
     
     .product-logo {
-      max-width: ${design.logo_size || 200}px;
-      max-height: ${Math.floor((design.logo_size || 200) * 0.7)}px;
-      object-fit: contain;
-      position: relative;
-      z-index: 1;
-      filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.3));
+      max-width: 120px;
+      max-height: 80px;
+      filter: drop-shadow(0 4px 12px rgba(212, 175, 55, 0.3));
     }
     
     .content {
@@ -573,42 +557,34 @@ async function handleSync(request, env) {
  * Worker Main Handler
  */
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     const url = new URL(request.url);
-    const path = url.pathname;
+    const path = url.pathname.slice(1);
 
-    // Sync Endpoint
-    if (path === '/sync' && request.method === 'POST') {
+    if (request.method === 'POST' && path === 'sync') {
       return handleSync(request, env);
     }
 
-    // Health Check
-    if (path === '/' || path === '') {
-      return new Response("Worker Active", { status: 200 });
+    if (!path || path === '' || path === 'health') {
+      return new Response('Worker Active', { status: 200 });
     }
 
-    // Get Product Code
-    const code = decodeURIComponent(path.substring(1));
+    const productCode = path.toUpperCase();
+    const productData = await env.PRODUCTS_KV.get(productCode);
 
-    if (!code) {
-      return new Response("Worker Active", { status: 200 });
-    }
-
-    // Fetch Product Data
-    // Fetch Product Data
-    const product = await env.PRODUCTS_KV.get(code, 'json');
-
-    if (!product) {
-      return new Response(await generate404Page(code, env), {
+    if (!productData) {
+      const html = await generate404Page(productCode, env);
+      return new Response(html, {
         status: 404,
-        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        headers: { 'Content-Type': 'text/html;charset=UTF-8' }
       });
     }
 
-    // Render Product Page
+    const product = JSON.parse(productData);
     const html = await generateProductPage(product, env);
+
     return new Response(html, {
-      headers: { 'Content-Type': 'text/html; charset=utf-8' }
+      headers: { 'Content-Type': 'text/html;charset=UTF-8' }
     });
   }
 };

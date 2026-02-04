@@ -1,0 +1,20 @@
+# ═══════════════════════════════════════════════════════════════════
+# Cloudflare Worker - STAGING (اختباري)
+# ═══════════════════════════════════════════════════════════════════
+
+name = "elkhawaga-qr-staging"
+main = "src/index-staging.js"
+compatibility_date = "2024-01-01"
+workers_dev = true
+
+# KV Namespace (نفس البيانات للاختبار)
+[[kv_namespaces]]
+binding = "PRODUCTS_KV"
+id = "5dad2f4d72b246758bdafa17dfe4eb10"
+preview_id = "5dad2f4d72b246758bdafa17dfe4eb10"
+
+# Environment variables
+[vars]
+SITE_NAME = "الخواجة - اختبار 🧪"
+MAIN_SITE_URL = "https://www.elkhawaga.uk"
+PRODUCTION_WORKER_NAME = "elkhawaga-qr"

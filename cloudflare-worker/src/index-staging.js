@@ -1,6 +1,6 @@
 /**
- * Cloudflare Worker - PRODUCTION
- * نسخة الإنتاج النهائية مع السعر قبل الخصم (بدون معلومات اختبار)
+ * Cloudflare Worker - STAGING (اختباري)
+ * نسخة اختبار كاملة مع السعر قبل الخصم
  */
 
 const SYNC_API_KEY_HEADER = 'X-Sync-API-Key';
@@ -32,6 +32,7 @@ async function generateProductPage(product, env) {
 <body style="font-family:Arial;padding:40px;text-align:center;">
 <h1>⚠️ التصميم غير متزامن</h1>
 <p>يرجى مزامنة إعدادات التصميم من لوحة التحكم أولاً</p>
+<p style="color: #d4af37; margin-top: 20px;">🧪 STAGING MODE</p>
 </body></html>`;
   }
 
@@ -98,6 +99,27 @@ async function generateProductPage(product, env) {
       z-index: 0;
     }
     
+    /* 🧪 STAGING Badge */
+    .staging-badge {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
     .container {
       max-width: 450px;
       width: 100%;
@@ -157,40 +179,24 @@ async function generateProductPage(product, env) {
     .content {
       padding: 24px;
     }
-        .product-code {
-      display: inline-block;
-      background: linear-gradient(135deg, #8B4513, #654321);
-      color: white;
-      padding: 6px 14px;
-      border-radius: 12px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      margin-bottom: 16px;
-      letter-spacing: 0.5px;
-    }
     
-    .product-code i {
-      margin-left: 6px;
-    }
-        .product-code {
-      display: inline-block;
+    .product-code {
+      display: block;
+      text-align: center;
       background: var(--badge-bg);
       color: var(--badge-text);
-      padding: 6px 14px;
-      border-radius: 12px;
-      font-size: 0.8rem;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 1rem;
       font-weight: 600;
-      margin-bottom: 16px;
-      letter-spacing: 0.5px;
-    }
-    
-    .product-code i {
-      margin-left: 6px;
+      margin: 0 auto 20px;
+      max-width: fit-content;
+      border: 1px solid rgba(212, 175, 55, 0.3);
     }
     
     .product-name {
-      font-size: 1.6rem;
-      font-weight: 800;
+      font-size: 1.5rem;
+      font-weight: 700;
       color: var(--product-name-color);
       margin-bottom: 20px;
       line-height: 1.4;
@@ -266,8 +272,29 @@ async function generateProductPage(product, env) {
       color: var(--price-color);
     }
     
+    .discount-badge {
+      display: inline-block;
+      background: #28a745;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+    
+    .price {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--price-color);
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 6px;
+    }
+    
     .currency {
-      font-size: 0.9rem;
+      font-size: 1.1rem;
       color: var(--gold);
       font-weight: 600;
     }
@@ -344,13 +371,9 @@ async function generateProductPage(product, env) {
     }
     
     .updated-at {
+      color: #888;
+      font-size: 0.75rem;
       margin-top: 16px;
-      color: var(--label-color);
-      font-size: 0.8rem;
-    }
-    
-    .updated-at i {
-      margin-left: 5px;
     }
     
     .social-links {
@@ -384,13 +407,24 @@ async function generateProductPage(product, env) {
       box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
     }
     
-    @media (max-width: 480px) {
-      .product-name { font-size: 1.3rem; }
-      .price { font-size: 2rem; }
+    /* Debug Info */
+    .debug-info {
+      margin-top: 20px;
+      padding: 12px;
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      color: #ff6b6b;
+      text-align: right;
     }
   </style>
 </head>
 <body>
+  <div class="staging-badge">
+    <i class="fas fa-flask"></i> STAGING
+  </div>
+
   <div class="container">
     <div class="card">
       <div class="product-visual">
@@ -421,10 +455,10 @@ async function generateProductPage(product, env) {
           </div>
         </div>
       </div>
-
+      
       <div class="footer">
-        <a href="${design.links?.website || env.MAIN_SITE_URL}" class="visit-btn">
-          <i class="fas fa-external-link-alt"></i>
+        <a href="${design.links?.website || 'https://elkhawaga.com'}" class="visit-btn">
+          <i class="fas fa-globe"></i>
           <span>زيارة الموقع</span>
         </a>
         <a href="https://elkhawaga.com/branches/" class="branches-btn" target="_blank">
@@ -474,7 +508,7 @@ async function generate404Page(code, env, design = null) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>المنتج غير موجود - 404</title>
+  <title>المنتج غير موجود - 404 [STAGING]</title>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -489,6 +523,15 @@ async function generate404Page(code, env, design = null) {
       padding: 20px;
       direction: rtl;
     }
+    .staging-badge {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #ff6b6b;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+    }
     .container { max-width: 400px; text-align: center; }
     h1 { font-size: 120px; opacity: 0.3; }
     h2 { font-size: 24px; margin: 20px 0; }
@@ -498,6 +541,7 @@ async function generate404Page(code, env, design = null) {
   </style>
 </head>
 <body>
+  <div class="staging-badge">🧪 STAGING</div>
   <div class="container">
     <h1>404</h1>
     <h2>المنتج غير موجود</h2>
@@ -510,68 +554,77 @@ async function generate404Page(code, env, design = null) {
 }
 
 /**
- * معالج المزامنة
+ * API للمزامنة
  */
 async function handleSync(request, env) {
-  const authHeader = request.headers.get(SYNC_API_KEY_HEADER);
-  const expectedKey = env.SYNC_API_KEY || 'default-secret-key';
+  const apiKey = request.headers.get(SYNC_API_KEY_HEADER);
+  const storedKey = await env.PRODUCTS_KV.get('__SYNC_API_KEY__');
 
-  if (authHeader !== expectedKey) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+  if (!apiKey || apiKey !== storedKey) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
       status: 401,
       headers: { 'Content-Type': 'application/json' }
     });
   }
 
-  const body = await request.json();
-  const { action, data } = body;
+  try {
+    const data = await request.json();
 
-  if (action === 'sync_product') {
-    await env.PRODUCTS_KV.put(data.code, JSON.stringify(data.product), {
-      metadata: { last_sync: new Date().toISOString() }
-    });
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
-  if (action === 'sync_all') {
-    const products = data.products;
-    const results = [];
-    for (const prod of products) {
-      await env.PRODUCTS_KV.put(prod.code, JSON.stringify(prod), {
-        metadata: { last_sync: new Date().toISOString() }
+    if (data.action === 'sync_product') {
+      await env.PRODUCTS_KV.put(data.product.code, JSON.stringify(data.product));
+      return new Response(JSON.stringify({ success: true, mode: 'staging' }), {
+        headers: { 'Content-Type': 'application/json' }
       });
-      results.push(prod.code);
     }
-    return new Response(JSON.stringify({ success: true, synced: results }), {
+
+    if (data.action === 'sync_all') {
+      const promises = data.products.map(p => env.PRODUCTS_KV.put(p.code, JSON.stringify(p)));
+      await Promise.all(promises);
+      return new Response(JSON.stringify({ success: true, count: data.products.length, mode: 'staging' }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (data.action === 'delete_product') {
+      await env.PRODUCTS_KV.delete(data.code);
+      return new Response(JSON.stringify({ success: true, mode: 'staging' }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (data.action === 'sync_qr_design') {
+      await env.PRODUCTS_KV.put('__QR_DESIGN_SETTINGS__', JSON.stringify(data.design));
+      return new Response(JSON.stringify({ success: true, mode: 'staging' }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // 🎯 مزامنة التصميم مع Production
+    if (data.action === 'deploy_to_production') {
+      // هنا يمكن استدعاء API لتحديث Worker الأساسي
+      // لكن الطريقة الأسهل: نسخ كود index-staging.js إلى index.js ونشره
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'جاهز للنشر - انسخ الكود من index-staging.js إلى index.js ثم npx wrangler deploy --env production',
+        mode: 'staging' 
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    return new Response(JSON.stringify({ error: 'Unknown action' }), { 
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message, mode: 'staging' }), { 
+      status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
   }
-
-  if (action === 'delete_product') {
-    await env.PRODUCTS_KV.delete(data.code);
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
-  if (action === 'sync_qr_design') {
-    await env.PRODUCTS_KV.put('__QR_DESIGN_SETTINGS__', JSON.stringify(data.design));
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
-  return new Response(JSON.stringify({ error: 'Unknown action' }), {
-    status: 400,
-    headers: { 'Content-Type': 'application/json' }
-  });
 }
 
-/**
- * Worker Main Handler
- */
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -584,17 +637,16 @@ export default {
 
     // Health Check
     if (path === '/' || path === '') {
-      return new Response("Worker Active", { status: 200 });
+      return new Response("🧪 STAGING Worker Active", { status: 200 });
     }
 
     // Get Product Code
     const code = decodeURIComponent(path.substring(1));
 
     if (!code) {
-      return new Response("Worker Active", { status: 200 });
+      return new Response("🧪 STAGING Worker Active", { status: 200 });
     }
 
-    // Fetch Product Data
     // Fetch Product Data
     const product = await env.PRODUCTS_KV.get(code, 'json');
 
