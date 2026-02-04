@@ -45,10 +45,14 @@ Thumbs.db
 
 # Testing & Temporary
 *.test.js
-test-*.json
-test-*.html
 *.tmp
 *.temp
+
+# Documentation & Development files (keep these for reference)
+# test-*.json
+# test-*.html
+# test-worker.sh
+# *.md files are included for documentation
 
 # SQLite databases (Wrangler local storage)
 *.sqlite

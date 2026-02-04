@@ -1,0 +1,15 @@
+{
+  "code": "WOOD-17",
+  "name": "قماش خشبي 17",
+  "price": 450,
+  "wholesale_price": 400,
+  "currency": "EGP",
+  "description": "قماش خشبي عالي الجودة - عرض 280 سم",
+  "category": "أقمشة خشبية",
+  "material": "Linen",
+  "width": "280",
+  "unit": "متر",
+  "stock": 150,
+  "minimum_stock": 20,
+  "updated_at": "2026-02-04"
+}
