@@ -1,0 +1,35 @@
+# Cloudflare Workers TEST Configuration
+# Worker اختباري لصفحات المنتجات مع حساب السعر قبل الخصم
+
+name = "elkhawaga-qr-test"
+main = "src/index-test.js"
+compatibility_date = "2024-01-01"
+workers_dev = true
+
+# KV Namespace binding (نفس الـ KV للاختبار)
+[[kv_namespaces]]
+binding = "PRODUCTS_KV"
+id = "5dad2f4d72b246758bdafa17dfe4eb10"
+preview_id = "5dad2f4d72b246758bdafa17dfe4eb10"
+
+# Environment variables
+[vars]
+SITE_NAME = "الخواجة - اختبار"
+MAIN_SITE_URL = "https://www.elkhawaga.uk"
+
+# ═══════════════════════════════════════════════════════════════════
+# بيئة الاختبار - Staging Environment
+# ═══════════════════════════════════════════════════════════════════
+[env.staging]
+name = "elkhawaga-qr-staging"
+workers_dev = false
+# Route: test-qr.elkhawaga.uk/*
+# يمكن تفعيل الراوت بعد إنشاء subdomain في Cloudflare DNS
+
+[[env.staging.kv_namespaces]]
+binding = "PRODUCTS_KV"
+id = "5dad2f4d72b246758bdafa17dfe4eb10"
+
+[env.staging.vars]
+SITE_NAME = "الخواجة - اختبار"
+MAIN_SITE_URL = "https://www.elkhawaga.uk"

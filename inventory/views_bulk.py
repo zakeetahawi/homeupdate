@@ -478,187 +478,196 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
             for index, row in df.iterrows():
                 row_number = index + 2  # لأن الصف الأول هو العناوين والترقيم يبدأ من 2
                 try:
-                    name = str(row["اسم المنتج"]).strip()
-                    code = str(row["الكود"]).strip() if pd.notna(row["الكود"]) else None
-                    category_name = str(row["الفئة"]).strip()
-                    warehouse_name = (
-                        str(row.get("المستودع", "")).strip()
-                        if pd.notna(row.get("المستودع"))
-                        else ""
-                    )
-
-                    # معالجة السعر بشكل آمن
-                    try:
-                        price_value = str(row["السعر"]).strip()
-                        if price_value and price_value.lower() not in [
-                            "",
-                            "nan",
-                            "none",
-                            "z",
-                            "n/a",
-                        ]:
-                            price = float(price_value)
-                        else:
-                            price = 0.0
-                    except (ValueError, TypeError):
-                        price = 0.0
-
-                    # معالجة الكمية بشكل آمن
-                    try:
-                        quantity_value = (
-                            str(row["الكمية"]).strip()
-                            if pd.notna(row["الكمية"])
-                            else "0"
-                        )
-                        if quantity_value and quantity_value.lower() not in [
-                            "",
-                            "nan",
-                            "none",
-                            "z",
-                            "n/a",
-                        ]:
-                            quantity = float(quantity_value)
-                        else:
-                            quantity = 0.0
-                    except (ValueError, TypeError):
-                        quantity = 0.0
-                    description = str(row.get("الوصف", "")).strip()
-
-                    # معالجة الحد الأدنى للمخزون بشكل آمن
-                    try:
-                        min_stock_value = (
-                            str(row.get("الحد الأدنى", 0)).strip()
-                            if pd.notna(row.get("الحد الأدنى", 0))
-                            else "0"
-                        )
-                        if min_stock_value and min_stock_value.lower() not in [
-                            "",
-                            "nan",
-                            "none",
-                            "z",
-                            "n/a",
-                        ]:
-                            minimum_stock = int(float(min_stock_value))
-                        else:
-                            minimum_stock = 0
-                    except (ValueError, TypeError):
-                        minimum_stock = 0
-                    currency = str(row.get("العملة", "EGP")).strip().upper()
-                    unit = str(row.get("الوحدة", "piece")).strip()
-                    if currency not in ["EGP", "USD", "EUR"]:
-                        currency = "EGP"
-                    valid_units = [
-                        "piece",
-                        "kg",
-                        "gram",
-                        "liter",
-                        "meter",
-                        "box",
-                        "pack",
-                        "dozen",
-                        "roll",
-                        "sheet",
-                    ]
-                    if unit not in valid_units:
-                        unit_map = {
-                            "قطعة": "piece",
-                            "كيلوجرام": "kg",
-                            "جرام": "gram",
-                            "لتر": "liter",
-                            "متر": "meter",
-                            "علبة": "box",
-                            "عبوة": "pack",
-                            "دستة": "dozen",
-                            "لفة": "roll",
-                            "ورقة": "sheet",
-                        }
-                        unit = unit_map.get(unit, "piece")
-                    if not name or price <= 0:
-                        error_msg = "اسم المنتج والسعر مطلوبان"
+                    # ✅ 1. قراءة الكود أولاً (إلزامي)
+                    code = str(row.get("الكود", "")).strip() if pd.notna(row.get("الكود")) else ""
+                    
+                    # ✅ 2. إذا الكود فارغ → تخطي الصف كاملاً مع خطأ
+                    if not code or code.lower() in ["nan", "none", ""]:
+                        error_msg = "⚠️ الكود مطلوب - تم تخطي الصف"
                         result["errors"].append(f"الصف {row_number}: {error_msg}")
                         errors_to_create.append(
                             BulkUploadError(
                                 upload_log=upload_log,
                                 row_number=row_number,
-                                error_type="missing_data",
+                                error_type="missing_code",
                                 result_status="failed",
                                 error_message=error_msg,
                                 row_data=row.to_dict(),
                             )
                         )
+                        skipped_count += 1
                         continue
-                    category = None
-                    if category_name:
-                        category, created = Category.objects.get_or_create(
-                            name=category_name,
-                            defaults={
-                                "description": "تم إنشاؤها تلقائياً من ملف الإكسل"
-                            },
-                        )
+
+                    # ✅ 3. قراءة باقي الحقول (فقط إذا غير فارغة)
+                    def get_field_value(field_name, default=""):
+                        """قراءة حقل فقط إذا كان غير فارغ"""
+                        value = row.get(field_name, default)
+                        if pd.notna(value):
+                            value_str = str(value).strip()
+                            if value_str and value_str.lower() not in ["nan", "none", "", "z", "n/a"]:
+                                return value_str
+                        return None
+
+                    name = get_field_value("اسم المنتج")
+                    category_name = get_field_value("الفئة")
+                    warehouse_name = get_field_value("المستودع", "")
+                    description = get_field_value("الوصف", "")
+                    material = get_field_value("الخامة", "")
+                    width = get_field_value("العرض", "")
+                    
+                    # معالجة الحقول الرقمية بشكل آمن
+                    price = None
+                    price_value = get_field_value("السعر")
+                    if price_value:
+                        try:
+                            price = float(price_value)
+                        except (ValueError, TypeError):
+                            price = None
+
+                    wholesale_price = None
+                    wholesale_value = get_field_value("سعر الجملة")
+                    if wholesale_value:
+                        try:
+                            wholesale_price = float(wholesale_value)
+                        except (ValueError, TypeError):
+                            wholesale_price = None
+
+                    quantity = None
+                    quantity_value = get_field_value("الكمية")
+                    if quantity_value:
+                        try:
+                            quantity = float(quantity_value)
+                        except (ValueError, TypeError):
+                            quantity = None
+
+                    minimum_stock = None
+                    min_stock_value = get_field_value("الحد الأدنى")
+                    if min_stock_value:
+                        try:
+                            minimum_stock = int(float(min_stock_value))
+                        except (ValueError, TypeError):
+                            minimum_stock = None
+
+                    currency = get_field_value("العملة", "EGP")
+                    if currency and currency.upper() not in ["EGP", "USD", "EUR", "SAR"]:
+                        currency = "EGP"
+                    elif currency:
+                        currency = currency.upper()
+
+                    unit = get_field_value("الوحدة", "piece")
+                    if unit:
+                        valid_units = ["piece", "kg", "gram", "liter", "meter", "box", "pack", "dozen", "roll", "sheet"]
+                        unit_map = {
+                            "قطعة": "piece", "كيلوجرام": "kg", "جرام": "gram",
+                            "لتر": "liter", "متر": "meter", "علبة": "box",
+                            "عبوة": "pack", "دستة": "dozen", "لفة": "roll", "ورقة": "sheet",
+                        }
+                        if unit not in valid_units:
+                            unit = unit_map.get(unit, "piece")
+
+                    # ✅ 4. التحقق من وجود المنتج في قاعدة البيانات
                     product = None
                     created = False
                     product_exists = False
 
-                    if code:
-                        try:
-                            product = Product.objects.get(code=code)
-                            product_exists = True
-
+                    try:
+                        product = Product.objects.get(code=code)
+                        product_exists = True
+                        
+                        # ✅ 5. منتج موجود → تحديث الحقول غير الفارغة فقط
+                        if upload_mode == "add_only":
                             # وضع: المنتجات الجديدة فقط - تجاهل الموجود
-                            if upload_mode == "new_only":
-                                skipped_count += 1
-                                errors_to_create.append(
-                                    BulkUploadError(
-                                        upload_log=upload_log,
-                                        row_number=row_number,
-                                        error_type="duplicate",
-                                        result_status="skipped",
-                                        error_message=f"منتج موجود بكود {code} - تم التخطي (وضع: جديد فقط)",
-                                        row_data=row.to_dict(),
-                                    )
+                            skipped_count += 1
+                            errors_to_create.append(
+                                BulkUploadError(
+                                    upload_log=upload_log,
+                                    row_number=row_number,
+                                    error_type="duplicate",
+                                    result_status="skipped",
+                                    error_message=f"منتج موجود بكود {code} - تم التخطي (وضع: جديد فقط)",
+                                    row_data=row.to_dict(),
                                 )
-                                continue
-
-                            # وضع: إضافة للموجود أو استبدال - تحديث البيانات
-                            elif upload_mode in ["add_to_existing", "replace_quantity"]:
-                                product.name = name
-                                product.category = category
-                                product.description = description
-                                product.price = price
-                                product.currency = currency
-                                product.unit = unit
-                                product.minimum_stock = minimum_stock
-                                product.save()
-                                result["updated_count"] += 1
-
-                        except Product.DoesNotExist:
-                            # منتج جديد - إنشاء في جميع الأوضاع
-                            product = Product.objects.create(
-                                name=name,
-                                code=code,
-                                category=category,
-                                description=description,
-                                price=price,
-                                currency=currency,
-                                unit=unit,
-                                minimum_stock=minimum_stock,
                             )
-                            created = True
-                            result["created_count"] += 1
-                    else:
-                        # بدون كود - إنشاء دائماً
+                            continue
+                        
+                        # التحديث الانتقائي - فقط الحقول غير الفارغة
+                        if name is not None:
+                            product.name = name
+                        if category_name:
+                            category, _ = Category.objects.get_or_create(
+                                name=category_name,
+                                defaults={"description": "تم إنشاؤها تلقائياً من ملف الإكسل"}
+                            )
+                            product.category = category
+                        if description is not None:
+                            product.description = description
+                        if material is not None:
+                            product.material = material
+                        if width is not None:
+                            product.width = width
+                        if price is not None:
+                            product.price = price
+                        if wholesale_price is not None:
+                            product.wholesale_price = wholesale_price
+                        if currency is not None:
+                            product.currency = currency
+                        if unit is not None:
+                            product.unit = unit
+                        if minimum_stock is not None:
+                            product.minimum_stock = minimum_stock
+                        
+                        product.save()
+                        result["updated_count"] += 1
+
+                    except Product.DoesNotExist:
+                        # ✅ 6. منتج جديد → التحقق من الحقول الإلزامية
+                        required_fields = {
+                            "اسم المنتج": name,
+                            "السعر": price,
+                        }
+                        
+                        missing_fields = [field for field, value in required_fields.items() if value is None]
+                        
+                        if missing_fields:
+                            error_msg = f"منتج جديد - حقول إلزامية ناقصة: {', '.join(missing_fields)}"
+                            result["errors"].append(f"الصف {row_number}: {error_msg}")
+                            errors_to_create.append(
+                                BulkUploadError(
+                                    upload_log=upload_log,
+                                    row_number=row_number,
+                                    error_type="missing_required_fields",
+                                    result_status="failed",
+                                    error_message=error_msg,
+                                    row_data=row.to_dict(),
+                                )
+                            )
+                            continue
+                        
+                        # إنشاء المنتج الجديد
+                        category = None
+                        if category_name:
+                            category, _ = Category.objects.get_or_create(
+                                name=category_name,
+                                defaults={"description": "تم إنشاؤها تلقائياً من ملف الإكسل"}
+                            )
+                        
                         product = Product.objects.create(
                             name=name,
+                            code=code,
                             category=category,
-                            description=description,
+                            description=description or "",
+                            material=material or "",
+                            width=width or "",
                             price=price,
-                            currency=currency,
-                            unit=unit,
-                            minimum_stock=minimum_stock,
+                            wholesale_price=wholesale_price or 0,
+                            currency=currency or "EGP",
+                            unit=unit or "piece",
+                            minimum_stock=minimum_stock or 0,
                         )
                         created = True
                         result["created_count"] += 1
-                    if quantity > 0 and product:
+                    # ✅ 7. معالجة الكمية (إذا كانت موجودة وأكبر من صفر)
+                    if quantity is not None and quantity > 0 and product:
                         # تحديد المستودع المناسب
                         target_warehouse = default_warehouse  # المستودع الافتراضي
 
@@ -982,7 +991,7 @@ def process_stock_update(excel_file, warehouse, update_type, reason, user):
 @login_required
 def download_excel_template(request):
     """
-    تحميل قالب ملف الإكسل للمنتجات - نسخة بسيطة بدون تنسيقات معقدة
+    تحميل قالب ملف الإكسل للمنتجات - مع ملاحظات توضيحية
     """
     try:
         # إنشاء DataFrame بدلاً من openpyxl مباشرة
@@ -991,9 +1000,9 @@ def download_excel_template(request):
         # إنشاء بيانات القالب للمنتجات
         products_data = {
             "اسم المنتج": ["لابتوب HP", "طابعة Canon", "ماوس لاسلكي"],
-            "الكود": ["LAP001", "PRN001", "MOU001"],
+            "الكود": ["LAP001", "PRN001", ""],  # ✅ مثال بكود فارغ
             "الفئة": ["أجهزة كمبيوتر", "طابعات", "ملحقات"],
-            "السعر": [15000, 2500, 150],
+            "السعر": [15000, 2500, 150],  # ✅ السعر بعد الخصم
             "سعر الجملة": [14000, 2300, 130],
             "الكمية": [10, 5, 20],
             "المستودع": ["المستودع الرئيسي", "مستودع الطابعات", "مستودع الملحقات"],
@@ -1002,7 +1011,7 @@ def download_excel_template(request):
                 "طابعة ليزر ملونة",
                 "ماوس لاسلكي عالي الجودة",
             ],
-            "الحد الأدنى": [5, 2, 10],
+            "الحد الأدنى": [5, 0, 10],  # ✅ مثال بحد أدنى = 0
             "الخامة": ["Coton", "Linen", "Polyester"],
             "العرض": ["320", "280", "140"],
             "العملة": ["EGP", "EGP", "EGP"],
@@ -1021,6 +1030,27 @@ def download_excel_template(request):
         }
 
         df_stock = pd.DataFrame(stock_data)
+        
+        # ✅ إضافة صفحة الملاحظات الهامة
+        notes_data = {
+            "ملاحظات هامة": [
+                "1. الكود: إذا ترك فارغاً سيتم توليده تلقائياً، لكن يُنصح بملئه لتجنب التكرار",
+                "2. السعر: هو السعر بعد الخصم - السعر قبل الخصم سيُحسب تلقائياً على صفحة Cloudflare",
+                "3. إذا كان الكود موجود: سيتم تحديث جميع بيانات المنتج (الاسم، السعر، الحد الأدنى، إلخ)",
+                "4. الحد الأدنى: سيتم تحديثه حتى لو كانت القيمة 0",
+                "5. الكمية: ستُضاف للمخزون في المستودع المحدد",
+                "",
+                "نسب السعر قبل الخصم:",
+                "- السعر من 1-400 ج.م: السعر قبل الخصم = السعر × 1.35 (زيادة 35%)",
+                "- السعر من 401-600 ج.م: السعر قبل الخصم = السعر × 1.30 (زيادة 30%)",
+                "- السعر من 601-800 ج.م: السعر قبل الخصم = السعر × 1.25 (زيادة 25%)",
+                "- السعر 801+ ج.م: السعر قبل الخصم = السعر × 1.20 (زيادة 20%)",
+                "",
+                "مثال: إذا كان السعر = 100 ج.م ← السعر قبل الخصم = 135 ج.م (يظهر على صفحة Cloudflare)",
+            ]
+        }
+        
+        df_notes = pd.DataFrame(notes_data)
 
         # حفظ كملف إكسل بسيط
         import tempfile
@@ -1032,6 +1062,7 @@ def download_excel_template(request):
             with pd.ExcelWriter(tmp_file.name, engine="openpyxl") as writer:
                 df_products.to_excel(writer, sheet_name="المنتجات", index=False)
                 df_stock.to_excel(writer, sheet_name="تحديث المخزون", index=False)
+                df_notes.to_excel(writer, sheet_name="ملاحظات هامة", index=False)  # ✅ جديد
 
             # قراءة الملف المحفوظ
             with open(tmp_file.name, "rb") as f:
@@ -1047,7 +1078,7 @@ def download_excel_template(request):
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         response["Content-Disposition"] = (
-            'attachment; filename="products_template_simple.xlsx"'
+            'attachment; filename="products_template_v2.xlsx"'
         )
         response.write(file_content)
 
