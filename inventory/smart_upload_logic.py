@@ -512,6 +512,9 @@ def move_product_to_correct_warehouse(
         result["cutting_orders_updated"] = cutting_update.get("updated", 0)
         result["cutting_orders_split"] = cutting_update.get("split", 0)
 
+        # إعادة حساب الأرصدة للتأكد من الصحة
+        recalculate_product_balances(product)
+
         return result
 
     # المنتج موجود في عدة مستودعات أو تم طلب الدمج الكامل (Consolidation)
@@ -583,6 +586,27 @@ def move_product_to_correct_warehouse(
 
         result["moved"] = True
         result["from_warehouse"] = f"{len(result['merged_warehouses'])} مستودعات"
+        result["total_merged_quantity"] = float(total_source_quantity)
+
+        # تحديث أوامر التقطيع لكل المستودعات المدموجة 🔥
+        total_cutting_updated = 0
+        total_cutting_split = 0
+
+        for stock in current_stocks:
+            old_wh = Warehouse.objects.get(id=stock["warehouse"])
+            if old_wh.id != target_warehouse.id:
+                cutting_update = update_cutting_orders_after_move(
+                    product, old_wh, target_warehouse, user
+                )
+                total_cutting_updated += cutting_update.get("updated", 0)
+                total_cutting_split += cutting_update.get("split", 0)
+
+        result["cutting_orders_updated"] = total_cutting_updated
+        result["cutting_orders_split"] = total_cutting_split
+
+        # إعادة حساب الأرصدة للتأكد من الصحة بعد الدمج
+        recalculate_product_balances(product)
+
         return result
 
     return result
@@ -691,6 +715,15 @@ def find_duplicate_products():
         .values("running_balance")[:1]
     )
 
+    # استعلام فرعي للحصول على تاريخ آخر معاملة
+    last_date_subquery = (
+        StockTransaction.objects.filter(
+            product_id=OuterRef("product_id"), warehouse_id=OuterRef("warehouse_id")
+        )
+        .order_by("-transaction_date", "-id")
+        .values("transaction_date")[:1]
+    )
+
     # الحصول على جميع الأزواج الفريدة (منتج، مستودع) مع آخر رصيد
     # في استعلام واحد فقط
     warehouse_stocks = (
@@ -698,6 +731,7 @@ def find_duplicate_products():
         .distinct()
         .annotate(
             last_balance=Subquery(last_transaction_subquery),
+            last_date=Subquery(last_date_subquery),
             warehouse_name=F("warehouse__name"),
             product_code=F("product__code"),
             product_name=F("product__name"),
@@ -707,12 +741,23 @@ def find_duplicate_products():
     )
 
     # تجميع البيانات حسب المنتج في الذاكرة
-    product_data = defaultdict(lambda: {"warehouses": [], "quantities": {}, "code": None, "name": None})
+    product_data = defaultdict(
+        lambda: {
+            "warehouses": [],
+            "warehouse_ids": [],
+            "quantities": {},
+            "code": None,
+            "name": None,
+            "last_transaction_dates": {},
+        }
+    )
 
     for stock in warehouse_stocks:
         product_id = stock["product_id"]
+        warehouse_id = stock["warehouse_id"]
         warehouse_name = stock["warehouse_name"]
         balance = stock["last_balance"]
+        last_date = stock["last_date"]
 
         # حفظ معلومات المنتج (أول مرة فقط)
         if product_data[product_id]["code"] is None:
@@ -721,7 +766,12 @@ def find_duplicate_products():
 
         # إضافة المستودع والكمية
         product_data[product_id]["warehouses"].append(warehouse_name)
+        product_data[product_id]["warehouse_ids"].append(warehouse_id)
         product_data[product_id]["quantities"][warehouse_name] = balance
+        
+        # حفظ تاريخ آخر معاملة (من الاستعلام الفرعي - بدون query إضافي)
+        if last_date:
+            product_data[product_id]["last_transaction_dates"][warehouse_name] = last_date
 
     # تصفية المنتجات المكررة فقط (أكثر من مستودع واحد)
     duplicate_ids = [
@@ -742,6 +792,22 @@ def find_duplicate_products():
     for product_id in duplicate_ids:
         if product_id in products_dict:
             data = product_data[product_id]
+
+            # تحديد المستودع الأخير (الذي حصل فيه آخر تحويل)
+            last_warehouse = None
+            last_warehouse_id = None
+            if data["last_transaction_dates"]:
+                # الترتيب حسب التاريخ - الأحدث أولاً
+                sorted_warehouses = sorted(
+                    data["last_transaction_dates"].items(),
+                    key=lambda x: x[1],
+                    reverse=True,
+                )
+                last_warehouse = sorted_warehouses[0][0]  # اسم المستودع
+                # العثور على ID المستودع
+                last_warehouse_idx = data["warehouses"].index(last_warehouse)
+                last_warehouse_id = data["warehouse_ids"][last_warehouse_idx]
+
             duplicates.append(
                 {
                     "product": products_dict[product_id],
@@ -749,7 +815,10 @@ def find_duplicate_products():
                     "name": data["name"],
                     "warehouses_count": len(data["warehouses"]),
                     "warehouses": data["warehouses"],
+                    "warehouse_ids": data["warehouse_ids"],
                     "quantities": data["quantities"],
+                    "suggested_warehouse": last_warehouse,  # المستودع المقترح للدمج
+                    "suggested_warehouse_id": last_warehouse_id,
                 }
             )
 
@@ -962,7 +1031,6 @@ def split_cutting_order(original_order, moved_product, new_warehouse, user):
         order=original_order.order,
         warehouse=new_warehouse,
         status="pending",
-        created_by=user,
         assigned_to=original_order.assigned_to,
         notes=f"🔀 منقول من أمر {original_order.cutting_code} بعد نقل منتج '{moved_product.name}' للمستودع '{new_warehouse.name}'",
     )
@@ -1077,3 +1145,58 @@ def delete_empty_warehouses(user):
 
         traceback.print_exc()
         return {"deleted": 0, "warehouses": [], "error": str(e)}
+
+
+def recalculate_product_balances(product):
+    """
+    إعادة حساب أرصدة منتج معين في جميع مستودعاته
+    يتم استدعاء هذه الدالة بعد عمليات النقل والدمج للتأكد من صحة الأرصدة
+    
+    Args:
+        product: Product - المنتج المراد إعادة حساب أرصدته
+    
+    Returns:
+        bool - True إذا نجحت العملية
+    """
+    from django.db import connection
+    from decimal import Decimal
+    
+    try:
+        with connection.cursor() as cursor:
+            # الحصول على جميع المستودعات التي تحتوي على معاملات لهذا المنتج
+            cursor.execute("""
+                SELECT DISTINCT warehouse_id
+                FROM inventory_stocktransaction
+                WHERE product_id = %s
+                ORDER BY warehouse_id
+            """, [product.id])
+            
+            warehouse_ids = [row[0] for row in cursor.fetchall()]
+            
+            for warehouse_id in warehouse_ids:
+                # جلب جميع المعاملات مرتبة
+                cursor.execute("""
+                    SELECT id, quantity
+                    FROM inventory_stocktransaction
+                    WHERE product_id = %s AND warehouse_id = %s
+                    ORDER BY transaction_date ASC, id ASC
+                """, [product.id, warehouse_id])
+                
+                transactions = cursor.fetchall()
+                running_balance = Decimal('0')
+                
+                # تحديث كل معاملة
+                for tx_id, quantity in transactions:
+                    running_balance += Decimal(str(quantity))
+                    
+                    cursor.execute("""
+                        UPDATE inventory_stocktransaction
+                        SET running_balance = %s
+                        WHERE id = %s
+                    """, [float(running_balance), tx_id])
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ خطأ في إعادة حساب أرصدة المنتج {product.code}: {e}")
+        return False

@@ -808,14 +808,26 @@ def update_order_status_based_on_cutting_orders(order):
 def create_operation_log(cutting_order, results, trigger_source):
     """إنشاء سجل تفصيلي لعملية الإصلاح التلقائي"""
     try:
+        from decimal import Decimal
         from .models import CuttingOrderFixLog
 
+        def convert_decimals(obj):
+            """تحويل Decimal إلى float بشكل متكرر في القواميس والقوائم"""
+            if isinstance(obj, Decimal):
+                return float(obj)
+            elif isinstance(obj, dict):
+                return {k: convert_decimals(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_decimals(item) for item in obj]
+            return obj
+
+        # تحويل جميع القيم Decimal إلى float
         details = {
-            "moved_items": results.get("moved_items", []),
-            "deleted_service_items": results.get("deleted_service_items", []),
-            "deleted_duplicates": results.get("deleted_duplicates", []),
-            "new_orders_created": results.get("new_orders_created", []),
-            "moved_to_existing": results.get("moved_to_existing", []),
+            "moved_items": convert_decimals(results.get("moved_items", [])),
+            "deleted_service_items": convert_decimals(results.get("deleted_service_items", [])),
+            "deleted_duplicates": convert_decimals(results.get("deleted_duplicates", [])),
+            "new_orders_created": convert_decimals(results.get("new_orders_created", [])),
+            "moved_to_existing": convert_decimals(results.get("moved_to_existing", [])),
             "original_deleted": results.get("original_deleted", False),
             "error": results.get("error", None),
         }
