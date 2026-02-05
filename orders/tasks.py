@@ -43,8 +43,8 @@ def upload_contract_to_drive_async(self, order_id):
             raise self.retry(countdown=60, exc=Exception(message))
 
     except Order.DoesNotExist:
-        logger.error(f"الطلب {order_id} غير موجود")
-        return {"success": False, "message": "الطلب غير موجود"}
+        logger.warning(f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)")
+        return {"success": True, "message": "تم تجاهل الطلب المحذوف"}
 
     except Exception as e:
         logger.error(f"خطأ في رفع ملف العقد للطلب {order_id}: {str(e)}")
@@ -206,8 +206,8 @@ def update_order_status_async(
         return {"success": True, "message": "تم تحديث الحالة بنجاح"}
 
     except Order.DoesNotExist:
-        logger.error(f"الطلب {order_id} غير موجود")
-        return {"success": False, "message": "الطلب غير موجود"}
+        logger.warning(f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)")
+        return {"success": True, "message": "تم تجاهل الطلب المحذوف"}
 
     except Exception as e:
         logger.error(f"خطأ في تحديث حالة الطلب {order_id}: {str(e)}")
@@ -234,8 +234,8 @@ def calculate_order_totals_async(order_id):
         return {"success": True, "final_price": float(final_price)}
 
     except Order.DoesNotExist:
-        logger.error(f"الطلب {order_id} غير موجود")
-        return {"success": False, "message": "الطلب غير موجود"}
+        logger.warning(f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)")
+        return {"success": True, "message": "تم تجاهل الطلب المحذوف"}
 
     except Exception as e:
         logger.error(f"خطأ في حساب إجماليات الطلب {order_id}: {str(e)}")
@@ -321,8 +321,8 @@ def generate_contract_pdf_async(self, order_id, user_id=None):
             raise self.retry(countdown=5, exc=Exception("Failed to generate contract"))
 
     except Order.DoesNotExist:
-        logger.error(f"❌ Order {order_id} not found for contract generation")
-        return {"success": False, "message": f"الطلب {order_id} غير موجود"}
+        logger.warning(f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)")
+        return {"success": True, "message": "تم تجاهل الطلب المحذوف"}
 
     except Exception as e:
         logger.error(

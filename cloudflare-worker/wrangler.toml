@@ -20,6 +20,7 @@ id = "5dad2f4d72b246758bdafa17dfe4eb10"
 [vars]
 SITE_NAME = "الخواجة"
 MAIN_SITE_URL = "https://www.elkhawaga.uk"
+SYNC_API_KEY = "cf_66eed06368ff433b92ac3f80c950038f"
 
 # Production environment for QR Scanner
 [env.production]
@@ -35,6 +36,7 @@ id = "5dad2f4d72b246758bdafa17dfe4eb10"
 [env.production.vars]
 SITE_NAME = "الخواجة"
 MAIN_SITE_URL = "https://www.elkhawaga.uk"
+SYNC_API_KEY = "cf_66eed06368ff433b92ac3f80c950038f"
 
 # ═══════════════════════════════════════════════════════════════════
 # Error Handler Worker (New)

@@ -524,7 +524,7 @@ async function handleSync(request, env) {
   }
 
   const body = await request.json();
-  const { action, data } = body;
+  const { action, products, data } = body;
 
   if (action === 'sync_product') {
     await env.PRODUCTS_KV.put(data.code, JSON.stringify(data.product), {
@@ -536,9 +536,17 @@ async function handleSync(request, env) {
   }
 
   if (action === 'sync_all') {
-    const products = data.products;
+    // دعم الشكلين: products مباشرة أو data.products
+    const productsList = products || data?.products;
+    if (!productsList || !Array.isArray(productsList)) {
+      return new Response(JSON.stringify({ error: 'Invalid products data' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     const results = [];
-    for (const prod of products) {
+    for (const prod of productsList) {
       await env.PRODUCTS_KV.put(prod.code, JSON.stringify(prod), {
         metadata: { last_sync: new Date().toISOString() }
       });

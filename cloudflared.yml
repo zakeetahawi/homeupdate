@@ -10,7 +10,7 @@ origincert: ./cert.pem
 ingress:
   # Main domain - routes to Django CRM application
   - hostname: elkhawaga.uk
-    service: http://localhost:8000
+    service: http://127.0.0.1:8000
     originRequest:
       httpHostHeader: elkhawaga.uk
       connectTimeout: 60s
@@ -23,7 +23,7 @@ ingress:
 
   # WWW subdomain - also routes to Django CRM application
   - hostname: www.elkhawaga.uk
-    service: http://localhost:8000
+    service: http://127.0.0.1:8000
     originRequest:
       httpHostHeader: www.elkhawaga.uk
       connectTimeout: 60s
@@ -36,7 +36,7 @@ ingress:
 
   # CRM subdomain - dedicated CRM access
   - hostname: crm.elkhawaga.uk
-    service: http://localhost:8000
+    service: http://127.0.0.1:8000
     originRequest:
       httpHostHeader: crm.elkhawaga.uk
       connectTimeout: 60s
@@ -49,7 +49,7 @@ ingress:
 
   # API subdomain - for API access
   - hostname: api.elkhawaga.uk
-    service: http://localhost:8000
+    service: http://127.0.0.1:8000
     originRequest:
       httpHostHeader: api.elkhawaga.uk
       connectTimeout: 60s
@@ -62,7 +62,7 @@ ingress:
 
   # Admin subdomain - for admin panel
   - hostname: admin.elkhawaga.uk
-    service: http://localhost:8000
+    service: http://127.0.0.1:8000
     originRequest:
       httpHostHeader: admin.elkhawaga.uk
       connectTimeout: 60s
