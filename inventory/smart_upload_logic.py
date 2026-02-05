@@ -671,60 +671,85 @@ def remove_stock_transaction(product, warehouse, quantity, user, notes):
 def find_duplicate_products():
     """
     البحث عن المنتجات المكررة في عدة مستودعات
+    محسّن بالكامل: يستخدم استعلامات قليلة جداً بدلاً من آلاف الاستعلامات
 
     Returns:
         list - قائمة المنتجات المكررة
     """
-    from django.db.models import Case, Count, F, Max, OuterRef, Subquery, When
+    from collections import defaultdict
+
+    from django.db.models import F, OuterRef, Subquery
 
     from .models import Product, StockTransaction
 
-    duplicates = []
-
-    # جميع المنتجات
-    products = Product.objects.all()
-
-    for product in products:
-        # المستودعات التي فيها المنتج - باستخدام آخر running_balance لكل مستودع
-        warehouses_with_stock = []
-
-        # الحصول على المستودعات الفريدة للمنتج (set لإزالة التكرار)
-        warehouse_ids = set(
-            StockTransaction.objects.filter(product=product).values_list(
-                "warehouse_id", flat=True
-            )
+    # استعلام فرعي للحصول على آخر رصيد لكل منتج ومستودع
+    last_transaction_subquery = (
+        StockTransaction.objects.filter(
+            product_id=OuterRef("product_id"), warehouse_id=OuterRef("warehouse_id")
         )
+        .order_by("-transaction_date", "-id")
+        .values("running_balance")[:1]
+    )
 
-        for warehouse_id in warehouse_ids:
-            # آخر حركة مخزون للمنتج في هذا المستودع
-            last_transaction = (
-                StockTransaction.objects.filter(
-                    product=product, warehouse_id=warehouse_id
-                )
-                .order_by("-transaction_date", "-id")
-                .first()
-            )
+    # الحصول على جميع الأزواج الفريدة (منتج، مستودع) مع آخر رصيد
+    # في استعلام واحد فقط
+    warehouse_stocks = (
+        StockTransaction.objects.values("product_id", "warehouse_id")
+        .distinct()
+        .annotate(
+            last_balance=Subquery(last_transaction_subquery),
+            warehouse_name=F("warehouse__name"),
+            product_code=F("product__code"),
+            product_name=F("product__name"),
+        )
+        .filter(last_balance__gt=0)  # فقط المستودعات ذات الرصيد الموجب
+        .order_by("product_id")
+    )
 
-            if last_transaction and last_transaction.running_balance > 0:
-                warehouses_with_stock.append(
-                    {
-                        "warehouse__name": last_transaction.warehouse.name,
-                        "total": last_transaction.running_balance,
-                    }
-                )
+    # تجميع البيانات حسب المنتج في الذاكرة
+    product_data = defaultdict(lambda: {"warehouses": [], "quantities": {}, "code": None, "name": None})
 
-        # فقط إذا كان المنتج موجود في أكثر من مستودع واحد
-        if len(warehouses_with_stock) > 1:
+    for stock in warehouse_stocks:
+        product_id = stock["product_id"]
+        warehouse_name = stock["warehouse_name"]
+        balance = stock["last_balance"]
+
+        # حفظ معلومات المنتج (أول مرة فقط)
+        if product_data[product_id]["code"] is None:
+            product_data[product_id]["code"] = stock["product_code"]
+            product_data[product_id]["name"] = stock["product_name"]
+
+        # إضافة المستودع والكمية
+        product_data[product_id]["warehouses"].append(warehouse_name)
+        product_data[product_id]["quantities"][warehouse_name] = balance
+
+    # تصفية المنتجات المكررة فقط (أكثر من مستودع واحد)
+    duplicate_ids = [
+        pid for pid, data in product_data.items() if len(data["warehouses"]) > 1
+    ]
+
+    # الحصول على كائنات المنتجات دفعة واحدة (استعلام واحد)
+    if not duplicate_ids:
+        return []
+
+    products_dict = {
+        p.id: p
+        for p in Product.objects.filter(id__in=duplicate_ids).only("id", "code", "name")
+    }
+
+    # بناء النتيجة النهائية
+    duplicates = []
+    for product_id in duplicate_ids:
+        if product_id in products_dict:
+            data = product_data[product_id]
             duplicates.append(
                 {
-                    "product": product,
-                    "code": product.code,
-                    "name": product.name,
-                    "warehouses_count": len(warehouses_with_stock),
-                    "warehouses": [w["warehouse__name"] for w in warehouses_with_stock],
-                    "quantities": {
-                        w["warehouse__name"]: w["total"] for w in warehouses_with_stock
-                    },
+                    "product": products_dict[product_id],
+                    "code": data["code"],
+                    "name": data["name"],
+                    "warehouses_count": len(data["warehouses"]),
+                    "warehouses": data["warehouses"],
+                    "quantities": data["quantities"],
                 }
             )
 

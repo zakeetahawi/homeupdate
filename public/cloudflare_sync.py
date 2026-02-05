@@ -36,6 +36,16 @@ class CloudflareSync:
             return False
 
         try:
+            # تحديد timeout ديناميكي بناءً على حجم البيانات
+            # للدفعات الكبيرة، نحتاج وقت أطول
+            num_products = 1
+            if isinstance(data.get("products"), list):
+                num_products = len(data["products"])
+            
+            # حساب timeout: 60 ثانية أساسي + 1 ثانية لكل 10 منتجات
+            # مثال: 50 منتج = 60 + (50/10) = 65 ثانية
+            calculated_timeout = 60 + (num_products // 10)
+            
             # logger.info(f"Sending sync request to {self.worker_url}/sync")
             response = requests.post(
                 f"{self.worker_url}/sync",
@@ -44,7 +54,7 @@ class CloudflareSync:
                     "Content-Type": "application/json",
                     "X-Sync-API-Key": self.api_key,
                 },
-                timeout=60,  # Increased for large batches with paid plan
+                timeout=calculated_timeout,  # Timeout ديناميكي للدفعات الكبيرة
             )
 
             if response.status_code == 200:

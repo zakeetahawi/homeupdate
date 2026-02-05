@@ -5,6 +5,7 @@
 import logging
 
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
@@ -18,8 +19,17 @@ logger = logging.getLogger(__name__)
 def check_duplicates(request):
     """
     صفحة فحص المنتجات المكررة
+    محسّن مع cache لمدة 5 دقائق
     """
-    duplicates = find_duplicate_products()
+    # محاولة الحصول على النتائج من الـ cache
+    cache_key = "inventory_duplicates_check"
+    duplicates = cache.get(cache_key)
+
+    if duplicates is None:
+        # إذا لم تكن في الـ cache، احصل عليها من قاعدة البيانات
+        duplicates = find_duplicate_products()
+        # احفظها في الـ cache لمدة 5 دقائق (300 ثانية)
+        cache.set(cache_key, duplicates, 300)
 
     # إحصائيات
     total_duplicates = len(duplicates)
@@ -64,6 +74,9 @@ def merge_duplicate(request, product_id):
             request.user,
             merge_all=True,
         )
+
+        # مسح الـ cache بعد الدمج
+        cache.delete("inventory_duplicates_check")
 
         return JsonResponse(
             {
@@ -118,6 +131,9 @@ def merge_all_duplicates(request):
             except Exception as e:
                 errors.append(f"{product.name}: {str(e)}")
                 logger.error(f"خطأ في دمج {product.name}: {e}")
+
+        # مسح الـ cache بعد الدمج الشامل
+        cache.delete("inventory_duplicates_check")
 
         return JsonResponse(
             {

@@ -659,7 +659,12 @@ class BaseProductAdmin(admin.ModelAdmin):
     search_fields = ("name", "code", "description")
     readonly_fields = ("created_at", "updated_at", "created_by", "qr_preview")
     inlines = [ProductVariantInline]
-    actions = ["regenerate_qrs", "sync_to_cloudflare", "download_pdf"]
+    actions = [
+        "regenerate_qrs",
+        "sync_to_cloudflare",
+        "sync_to_cloudflare_async",
+        "download_pdf",
+    ]
 
     fieldsets = (
         (
@@ -766,28 +771,125 @@ class BaseProductAdmin(admin.ModelAdmin):
                 count += 1
         self.message_user(request, f"تم توليد {count} رمز QR بنجاح")
 
-    @admin.action(description=_("☁️ مزامنة مع Cloudflare"))
+    @admin.action(description=_("☁️ مزامنة سريعة (حتى 50 منتج)"))
     def sync_to_cloudflare(self, request, queryset):
-        from public.cloudflare_sync import sync_product_to_cloudflare
+        """
+        مزامنة جماعية محسّنة - يستخدم batch processing
+        مناسبة للأعداد الصغيرة والمتوسطة (حتى 50 منتج)
+        للأعداد الكبيرة، استخدم "مزامنة في الخلفية"
+        """
+        from django.utils import timezone
 
-        success_count = 0
-        fail_count = 0
+        from public.cloudflare_sync import get_cloudflare_sync
 
-        for obj in queryset:
-            if sync_product_to_cloudflare(obj):
-                success_count += 1
-            else:
-                fail_count += 1
+        total_count = queryset.count()
 
-        if success_count > 0:
+        # تحذير إذا كان العدد كبير
+        if total_count > 50:
             self.message_user(
                 request,
-                f"✅ تم مزامنة {success_count} منتج مع Cloudflare بنجاح.",
+                f"⚠️ تحذير: اخترت {total_count} منتج. للأعداد الكبيرة، استخدم 'مزامنة في الخلفية' لتجنب تعطيل التطبيق.",
+                level="WARNING",
+            )
+
+        # استخدام batch processing بدلاً من حلقة for البطيئة
+        cloudflare = get_cloudflare_sync()
+
+        if not cloudflare.is_configured():
+            self.message_user(
+                request,
+                "❌ مزامنة Cloudflare غير مفعّلة في الإعدادات",
+                level="ERROR",
+            )
+            return
+
+        # تحديد حجم الدفعة - أصغر للسرعة
+        batch_size = min(25, total_count)  # أقصى 25 منتج في الطلب الواحد
+        synced = 0
+        now = timezone.now()
+
+        # معالجة الدفعات
+        queryset_list = list(
+            queryset.select_related("category").prefetch_related("variants__color")
+        )
+
+        for i in range(0, total_count, batch_size):
+            batch = queryset_list[i : i + batch_size]
+            formatted_products = [cloudflare.format_base_product(p) for p in batch]
+
+            # إرسال الدفعة كاملة في طلب واحد
+            data = {"action": "sync_all", "products": formatted_products}
+
+            if cloudflare._send_request(data):
+                # تحديث حالة المزامنة في قاعدة البيانات دفعة واحدة
+                batch_ids = [p.id for p in batch]
+                from inventory.models import BaseProduct
+
+                BaseProduct.objects.filter(id__in=batch_ids).update(
+                    cloudflare_synced=True, last_synced_at=now
+                )
+                synced += len(batch)
+
+        if synced > 0:
+            self.message_user(
+                request,
+                f"✅ تم مزامنة {synced} من {total_count} منتج مع Cloudflare بنجاح.",
                 level="SUCCESS",
             )
-        if fail_count > 0:
+        else:
             self.message_user(
-                request, f"❌ فشلت مزامنة {fail_count} منتج.", level="ERROR"
+                request, f"❌ فشلت المزامنة. تحقق من الاتصال.", level="ERROR"
+            )
+
+    @admin.action(description=_("☁️ مزامنة في الخلفية (للأعداد الكبيرة)"))
+    def sync_to_cloudflare_async(self, request, queryset):
+        """
+        مزامنة غير متزامنة - تعمل في process منفصل تماماً
+        مثالية للأعداد الكبيرة (أكثر من 100 منتج)
+        لا تعطل التطبيق - تتم في process منفصل
+        """
+        import subprocess
+        import sys
+
+        total_count = queryset.count()
+        product_ids = list(queryset.values_list("id", flat=True))
+        
+        # حفظ IDs في ملف مؤقت أو تمريرها كـ argument
+        ids_str = ",".join(map(str, product_ids))
+
+        # تشغيل الأمر في process منفصل (background)
+        python_executable = sys.executable
+        manage_py = "manage.py"
+        
+        try:
+            # تشغيل الأمر في الخلفية بدون انتظار
+            # استخدام nohup للتشغيل في الخلفية حتى بعد إغلاق الطرفية
+            subprocess.Popen(
+                [
+                    python_executable,
+                    manage_py,
+                    "sync_cloudflare",
+                    "--ids",
+                    ids_str,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,  # يعمل في session منفصل تماماً
+            )
+
+            self.message_user(
+                request,
+                f"🚀 بدأت عملية المزامنة في الخلفية لـ {total_count} منتج. "
+                f"ستكتمل خلال دقائق بدون تعطيل التطبيق. "
+                f"يمكنك متابعة العمل بشكل طبيعي.",
+                level="SUCCESS",
+            )
+
+        except Exception as e:
+            self.message_user(
+                request,
+                f"❌ فشل بدء عملية المزامنة: {str(e)}",
+                level="ERROR",
             )
 
     @admin.action(description=_("📄 تحميل ملف QR PDF"))
