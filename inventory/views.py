@@ -221,9 +221,26 @@ def product_list(request):
     if category_id:
         products = products.filter(category_id=category_id)
 
+    # تطبيق فلاتر خاصة
+    if filter_type == "low_stock":
+        # المنتجات التي المخزون الحالي أقل من الحد الأدنى
+        products = products.filter(current_stock_calc__lt=F('minimum_stock'))
+    elif filter_type == "out_of_stock":
+        # المنتجات التي المخزون = 0
+        products = products.filter(current_stock_calc=0)
+    elif filter_type == "in_stock":
+        # المنتجات المتوفرة في المخزون
+        products = products.filter(current_stock_calc__gt=0)
+
     # تطبيق الترتيب
-    if hasattr(Product, sort_by.lstrip("-")):
+    valid_sort_fields = ['name', 'code', 'price', 'created_at', 'minimum_stock']
+    sort_field = sort_by.lstrip("-")
+    
+    if sort_field in valid_sort_fields:
         products = products.order_by(sort_by)
+    elif sort_field == 'current_stock':
+        # ترتيب حسب المخزون الحالي
+        products = products.order_by(sort_by.replace('current_stock', 'current_stock_calc'))
     else:
         products = products.order_by("-created_at")
 

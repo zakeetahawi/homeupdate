@@ -1105,6 +1105,45 @@ class StockTransfer(models.Model):
                 created_by=user,
             )
 
+        # تحديث أوامر التقطيع للمنتجات المنقولة
+        try:
+            from .smart_upload_logic import update_cutting_orders_after_move
+
+            updated_cutting_orders = []
+            for item in self.items.all():
+                result = update_cutting_orders_after_move(
+                    item.product, self.from_warehouse, self.to_warehouse, user
+                )
+                if result.get("updated") or result.get("split"):
+                    updated_cutting_orders.extend(
+                        result.get("affected_order_ids", [])
+                    )
+
+            # إعادة تقييم needs_fix للأوامر المتأثرة بعد التحديث
+            if updated_cutting_orders:
+                try:
+                    from cutting.auto_fix import auto_fix_cutting_order_items
+                    from cutting.models import CuttingOrder
+
+                    for order_id in set(updated_cutting_orders):
+                        try:
+                            co = CuttingOrder.objects.get(id=order_id)
+                            auto_fix_cutting_order_items(
+                                co, trigger_source="transfer_complete"
+                            )
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"⚠️ تعذر تحديث أوامر التقطيع للتحويل {self.transfer_number}: {e}"
+            )
+
     def cancel(self, user, reason=""):
         """إلغاء التحويل"""
         if not self.can_cancel:

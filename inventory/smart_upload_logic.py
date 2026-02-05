@@ -821,6 +821,7 @@ def update_cutting_orders_after_move(product, old_warehouse, new_warehouse, user
                 "split": 0,
                 "total_affected": 0,
                 "message": "لا توجد أوامر تقطيع متأثرة",
+                "affected_order_ids": [],
             }
 
         updated_count = 0
@@ -847,6 +848,7 @@ def update_cutting_orders_after_move(product, old_warehouse, new_warehouse, user
                     .values("warehouse")
                     .annotate(total=Sum("quantity"))
                     .filter(total__gt=0)
+                    .order_by("-total")
                     .first()
                 )
 
@@ -876,11 +878,15 @@ def update_cutting_orders_after_move(product, old_warehouse, new_warehouse, user
                     f"🔀 تقسيم أمر تقطيع {cutting_order.cutting_code} → {new_order.cutting_code}"
                 )
 
+        # جمع IDs الأوامر المتأثرة
+        affected_order_ids = list(affected_orders.values_list("id", flat=True))
+
         result = {
             "updated": updated_count,
             "split": split_count,
             "total_affected": affected_orders.count(),
             "message": f"تم تحديث {updated_count} أمر، تقسيم {split_count} أمر",
+            "affected_order_ids": affected_order_ids,
         }
 
         # إرسال إشعار إذا تم التحديث 🔔
@@ -921,7 +927,13 @@ def update_cutting_orders_after_move(product, old_warehouse, new_warehouse, user
         import traceback
 
         traceback.print_exc()
-        return {"updated": 0, "split": 0, "total_affected": 0, "error": str(e)}
+        return {
+            "updated": 0,
+            "split": 0,
+            "total_affected": 0,
+            "error": str(e),
+            "affected_order_ids": [],
+        }
 
 
 def split_cutting_order(original_order, moved_product, new_warehouse, user):
