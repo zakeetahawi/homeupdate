@@ -114,6 +114,14 @@
                             <th colspan="4" class="text-end text-danger">إجمالي الخصم:</th>
                             <th colspan="2" class="text-danger">{{ totals.total_discount|format_currency }}</th>
                         </tr>
+                        {% if draft.administrative_discount_amount and draft.administrative_discount_amount > 0 %}
+                        <tr>
+                            <th colspan="4" class="text-end text-warning">
+                                <i class="fas fa-user-shield me-1"></i>الخصم الإداري:
+                            </th>
+                            <th colspan="2" class="text-warning">{{ totals.administrative_discount|format_currency }}</th>
+                        </tr>
+                        {% endif %}
                         <tr>
                             <th colspan="4" class="text-end">المجموع النهائي:</th>
                             <th colspan="2" class="text-success h5">{{ totals.final_total|format_currency }}</th>
@@ -123,6 +131,45 @@
             </div>
         </div>
     </div>
+    
+    <!-- Administrative Discount Card (if exists) -->
+    {% if draft.administrative_discount_amount and draft.administrative_discount_amount > 0 %}
+    <div class="card mb-4">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h5 class="mb-0 text-white">
+                <i class="fas fa-user-shield me-2"></i>الخصم الإداري
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="text-muted small d-block">القيمة</label>
+                        <h4 class="text-danger mb-0">{{ draft.administrative_discount_amount|format_currency }}</h4>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="text-muted small d-block">تم التطبيق بواسطة</label>
+                        <strong>{{ draft.administrative_discount_by.get_full_name|default:draft.administrative_discount_by.username }}</strong>
+                    </div>
+                </div>
+            </div>
+            {% if draft.administrative_discount_notes %}
+            <div class="mb-3">
+                <label class="text-muted small d-block">الملاحظات</label>
+                <p class="mb-0"><em>{{ draft.administrative_discount_notes }}</em></p>
+            </div>
+            {% endif %}
+            {% if draft.administrative_discount_date %}
+            <div class="text-muted small">
+                <i class="fas fa-clock me-1"></i>التاريخ: {{ draft.administrative_discount_date|date:"Y-m-d H:i" }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Invoice & Payment Info -->
     <div class="row mb-4">
         <div class="col-md-6">
@@ -491,6 +538,16 @@
                                 <strong>{{ totals.total_discount|format_currency }}</strong>
                             </td>
                         </tr>
+                        {% if draft.administrative_discount_amount and draft.administrative_discount_amount > 0 %}
+                        <tr>
+                            <td class="text-muted">
+                                <i class="fas fa-user-shield me-1"></i>الخصم الإداري:
+                            </td>
+                            <td class="text-warning">
+                                <strong>{{ totals.administrative_discount|format_currency }}</strong>
+                            </td>
+                        </tr>
+                        {% endif %}
                         <tr class="border-top">
                             <td class="text-muted">
                                 <strong>المبلغ النهائي:</strong>

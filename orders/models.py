@@ -409,6 +409,33 @@ class Order(SoftDeleteMixin, models.Model):
         help_text="نوع المعاينة المرتبطة بالطلب",
     )
 
+    # حقول الخصم الإداري
+    administrative_discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name="قيمة الخصم الإداري",
+        help_text="الخصم الإداري الإضافي على الطلب",
+    )
+    administrative_discount_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="administrative_discounts_applied",
+        verbose_name="المستخدم الذي قام بالخصم الإداري",
+    )
+    administrative_discount_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="تاريخ الخصم الإداري",
+    )
+    administrative_discount_notes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="ملاحظات الخصم الإداري",
+    )
+
     modified_at = models.DateTimeField(auto_now=True, help_text="آخر تحديث للطلب")
     tracker = FieldTracker(
         fields=[
@@ -519,12 +546,13 @@ class Order(SoftDeleteMixin, models.Model):
                     )
 
             addition = Decimal(str(self.financial_addition or 0))
-            final_after = subtotal - total_discount + addition
+            administrative_discount = Decimal(str(self.administrative_discount_amount or 0))
+            final_after = subtotal - total_discount + addition - administrative_discount
 
             # تحديث القيم
             self.total_amount = subtotal  # المبلغ قبل الخصم (Subtotal)
             self.final_price = (
-                final_after  # المبلغ النهائي بعد الخصم والإضافات (Grand Total)
+                final_after  # المبلغ النهائي بعد الخصم والإضافات والخصم الإداري (Grand Total)
             )
 
         except Exception as e:
@@ -542,10 +570,12 @@ class Order(SoftDeleteMixin, models.Model):
 
     @property
     def total_discount_amount(self):
-        """إجمالي مبلغ الخصم"""
+        """إجمالي مبلغ الخصم (خصومات العناصر + الخصم الإداري)"""
         from .models import OrderItem
 
         total_discount = Decimal("0")
+        
+        # إضافة خصومات العناصر
         items_to_calc = OrderItem.objects.filter(order=self)
         for item in items_to_calc:
             try:
@@ -558,13 +588,22 @@ class Order(SoftDeleteMixin, models.Model):
                     total_discount += Decimal(0)
                 except Exception:
                     pass
+        
+        # إضافة الخصم الإداري
+        if self.administrative_discount_amount:
+            try:
+                total_discount += Decimal(str(self.administrative_discount_amount))
+            except Exception:
+                pass
+        
         return total_discount
 
     @property
     def final_price_after_discount(self):
-        """السعر النهائي بعد الخصم والإضافات"""
+        """السعر النهائي بعد الخصم والإضافات (total_discount_amount يشمل الخصم الإداري بالفعل)"""
         subtotal = self.total_amount if self.total_amount is not None else Decimal("0")
         addition = self.financial_addition or Decimal("0.00")
+        # total_discount_amount يشمل بالفعل خصومات العناصر + الخصم الإداري
         return subtotal - self.total_discount_amount + addition
 
     def save(self, *args, **kwargs):
@@ -1902,10 +1941,29 @@ class OrderItem(SoftDeleteMixin, models.Model):
     )
     product = models.ForeignKey(
         "inventory.Product",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,  # ✅ SET_NULL: السماح بحذف المنتج، البيانات محفوظة في snapshot
         related_name="order_items",
         verbose_name="المنتج",
+        null=True,  # السماح بـ NULL عند حذف المنتج
+        blank=True,
     )
+    
+    # 📸 Snapshot Fields - حفظ بيانات المنتج وقت الطلب (حماية من التعديل/الحذف)
+    product_name_snapshot = models.CharField(
+        max_length=255,
+        verbose_name="اسم المنتج (نسخة محفوظة)",
+        help_text="نسخة محفوظة من اسم المنتج وقت إنشاء الطلب - لا تتأثر بالتعديلات",
+        blank=True,
+        null=True,
+    )
+    product_code_snapshot = models.CharField(
+        max_length=100,
+        verbose_name="كود المنتج (نسخة محفوظة)",
+        help_text="نسخة محفوظة من كود المنتج وقت إنشاء الطلب - لا تتأثر بالتعديلات",
+        blank=True,
+        null=True,
+    )
+    
     quantity = models.DecimalField(
         max_digits=10,
         decimal_places=3,
@@ -2032,8 +2090,52 @@ class OrderItem(SoftDeleteMixin, models.Model):
             ),
         ]
 
+    def save(self, *args, **kwargs):
+        """
+        🛡️ حماية البيانات التاريخية للطلب
+        حفظ نسخة من بيانات المنتج في وقت إنشاء الطلب لحماية السجلات المالية
+        من تأثر بحذف أو تعديل المنتج لاحقاً
+        """
+        # إذا كان عنصر جديد أو لم يتم حفظ snapshot بعد
+        if not self.pk or not self.product_name_snapshot:
+            if self.product:
+                # حفظ بيانات المنتج الحالية كـ snapshot
+                self.product_name_snapshot = self.product.name
+                self.product_code_snapshot = getattr(self.product, 'code', '') or getattr(self.product, 'sku', '')
+        
+        # ✅ حتى لو لم يكن هناك منتج (تم حذفه)، نتأكد من وجود snapshot
+        if not self.product and not self.product_name_snapshot:
+            # fallback: في حالة عدم وجود بيانات
+            self.product_name_snapshot = "[منتج محذوف]"
+        
+        super().save(*args, **kwargs)
+    
+    def get_display_name(self):
+        """
+        إرجاع اسم المنتج للعرض
+        يستخدم الـ snapshot إذا كان المنتج محذوفاً أو معدلاً
+        """
+        if self.product:
+            return self.product.name
+        elif self.product_name_snapshot:
+            return f"{self.product_name_snapshot} [محذوف]"
+        else:
+            return "[منتج غير معروف]"
+    
+    def get_display_code(self):
+        """
+        إرجاع كود المنتج للعرض
+        يستخدم الـ snapshot إذا كان المنتج محذوفاً أو معدلاً
+        """
+        if self.product:
+            return getattr(self.product, 'code', '') or getattr(self.product, 'sku', '')
+        elif self.product_code_snapshot:
+            return self.product_code_snapshot
+        else:
+            return ""
+
     def __str__(self):
-        return f"{self.product.name} ({self.get_clean_quantity_display()})"
+        return f"{self.get_display_name()} ({self.get_clean_quantity_display()})"
 
     def get_clean_quantity_display(self):
         """إرجاع الكمية بدون أصفار زائدة"""

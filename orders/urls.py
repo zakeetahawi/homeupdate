@@ -76,6 +76,11 @@ urlpatterns = [
         name="wizard_remove_item",
     ),
     path(
+        "wizard/apply-administrative-discount/",
+        wizard_views.wizard_apply_administrative_discount,
+        name="wizard_apply_administrative_discount",
+    ),
+    path(
         "wizard/complete-step-3/",
         wizard_views.wizard_complete_step_3,
         name="wizard_complete_step_3",
@@ -156,6 +161,12 @@ urlpatterns = [
     ),
     path("accessory/", dashboard_views.accessory_orders, name="accessory_orders"),
     path("tailoring/", dashboard_views.tailoring_orders, name="tailoring_orders"),
+    # Administrative Discount - تطبيق الخصم الإداري على طلب موجود
+    path(
+        "order/<int:order_id>/apply-administrative-discount/",
+        views.apply_administrative_discount,
+        name="apply_administrative_discount",
+    ),
     # URLs باستخدام رقم الطلب (order_number) - الأولوية الأولى
     path(
         "order/<str:order_number>/",

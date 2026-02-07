@@ -432,10 +432,22 @@
                         <td class="label">المجموع الفرعي:</td>
                         <td class="value">{{ order.total_amount|floatformat:2 }} {{ currency_symbol }}</td>
                     </tr>
-                    {% if order.discount_amount and order.discount_amount > 0 %}
+                    {% if order.total_discount_amount and order.total_discount_amount > 0 %}
                         <tr>
-                            <td class="label">الخصم:</td>
-                            <td class="value">-{{ order.discount_amount|floatformat:2 }} {{ currency_symbol }}</td>
+                            <td class="label">إجمالي الخصم:</td>
+                            <td class="value">-{{ order.total_discount_amount|floatformat:2 }} {{ currency_symbol }}</td>
+                        </tr>
+                        {% if order.administrative_discount_amount and order.administrative_discount_amount > 0 %}
+                            <tr style="font-size: 0.85em; color: #666;">
+                                <td class="label" style="padding-right: 20px;">↳ يشمل خصم إداري:</td>
+                                <td class="value">{{ order.administrative_discount_amount|floatformat:2 }} {{ currency_symbol }}</td>
+                            </tr>
+                        {% endif %}
+                    {% endif %}
+                    {% if order.financial_addition and order.financial_addition > 0 %}
+                        <tr>
+                            <td class="label">إضافات مالية:</td>
+                            <td class="value">+{{ order.financial_addition|floatformat:2 }} {{ currency_symbol }}</td>
                         </tr>
                     {% endif %}
                     <tr class="total-final">

@@ -747,7 +747,15 @@
                             </tr>
                             <tr>
                                 <th>إجمالي الخصم</th>
-                                <td class="text-danger">- {{ order.total_discount_amount|clean_decimal_currency:currency_symbol }}</td>
+                                <td class="text-danger">
+                                    <strong>- {{ order.total_discount_amount|clean_decimal_currency:currency_symbol }}</strong>
+                                    {% if order.administrative_discount_amount and order.administrative_discount_amount > 0 %}
+                                        <br>
+                                        <small class="text-muted">
+                                            (يشمل خصم إداري: {{ order.administrative_discount_amount|clean_decimal_currency:currency_symbol }})
+                                        </small>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% if order.financial_addition > 0 %}
                                 <tr>
@@ -1186,141 +1194,66 @@
                         </div>
                     {% endif %}
                 {% endwith %}
+                <!-- Administrative Discount Card - الخصم الإداري -->
+                {% if user.can_apply_administrative_discount %}
+                    <div class="card mb-3">
+                        <div class="card-header bg-warning" style="padding: 0.5rem 1rem;">
+                            <h6 class="mb-0">
+                                <i class="fas fa-percentage me-1"></i>الخصم الإداري
+                            </h6>
+                        </div>
+                        <div class="card-body" style="padding: 0.75rem;">
+                            {% if order.administrative_discount_amount and order.administrative_discount_amount > 0 %}
+                                <!-- عرض الخصم الإداري المطبق -->
+                                <div class="alert alert-success mb-2" style="padding: 0.5rem;">
+                                    <small><i class="fas fa-check-circle me-1"></i>تم التطبيق بنجاح</small>
+                                </div>
+                                <table class="table table-bordered table-sm mb-0" style="font-size: 0.85rem;">
+                                    <tr>
+                                        <th style="width: 40%"><i class="fas fa-money-bill-wave me-1"></i>القيمة</th>
+                                        <td><strong class="text-danger">{{ order.administrative_discount_amount|clean_decimal_currency:currency_symbol }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <th><i class="fas fa-user me-1"></i>بواسطة</th>
+                                        <td><small>{{ order.administrative_discount_by.get_full_name|default:order.administrative_discount_by.username }}</small></td>
+                                    </tr>
+                                    {% if order.administrative_discount_notes %}
+                                        <tr>
+                                            <th><i class="fas fa-sticky-note me-1"></i>ملاحظات</th>
+                                            <td><small>{{ order.administrative_discount_notes }}</small></td>
+                                        </tr>
+                                    {% endif %}
+                                </table>
+                            {% else %}
+                                <!-- نموذج تطبيق الخصم الإداري -->
+                                <div class="alert alert-info mb-2" style="padding: 0.5rem; font-size: 0.8rem;">
+                                    <i class="fas fa-info-circle me-1"></i>يطبق مرة واحدة فقط
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 0.25rem;">
+                                        <i class="fas fa-money-bill-wave me-1"></i>قيمة الخصم
+                                    </label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" step="0.01" min="0" class="form-control" id="admin_discount_amount" placeholder="0.00" required>
+                                        <span class="input-group-text">{{ currency_symbol }}</span>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 0.25rem;">
+                                        <i class="fas fa-sticky-note me-1"></i>ملاحظات
+                                    </label>
+                                    <input type="text" class="form-control form-control-sm" id="admin_discount_notes" placeholder="سبب الخصم">
+                                </div>
+                                <button type="button" class="btn btn-warning btn-sm w-100" onclick="applyAdministrativeDiscount({{ order.id }})">
+                                    <i class="fas fa-check-circle me-1"></i>تطبيق
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
             </div>
         </div>
-        <!-- Order Modification Logs -->
-        {% if order.modification_logs.exists and order.modification_logs.count > 0 %}
-            <div class="card mb-4">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">
-                        <i class="fas fa-edit me-2"></i>تعديلات الطلب اليدوية
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% for log in order.modification_logs.all %}
-                        {% if log.is_manual_modification %}
-                            <div class="alert alert-info mb-3">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h6 class="alert-heading mb-0">
-                                        <i class="fas fa-pencil-alt me-2"></i>{{ log.modification_type }}
-                                    </h6>
-                                    <small class="text-muted">{{ log.modified_at|date:"Y-m-d H:i" }}</small>
-                                </div>
-                                <!-- تفاصيل التعديل -->
-                                <div class="modification-content">
-                                    {% if log.modified_fields %}
-                                        {% for field_name, field_data in log.modified_fields.items %}
-                                            {% if field_name in 'contract_number,contract_number_2,contract_number_3,invoice_number,invoice_number_2,invoice_number_3,notes,delivery_address,location_address,expected_delivery_date' %}
-                                                <div class="mb-2">
-                                                    <strong>
-                                                        {% if field_name == 'contract_number' %}رقم العقد{% endif %}
-                                                        {% if field_name == 'contract_number_2' %}رقم العقد الإضافي 2{% endif %}
-                                                        {% if field_name == 'contract_number_3' %}رقم العقد الإضافي 3{% endif %}
-                                                        {% if field_name == 'invoice_number' %}رقم الفاتورة{% endif %}
-                                                        {% if field_name == 'invoice_number_2' %}رقم الفاتورة الإضافي 2{% endif %}
-                                                        {% if field_name == 'invoice_number_3' %}رقم الفاتورة الإضافي 3{% endif %}
-                                                        {% if field_name == 'notes' %}الملاحظات{% endif %}
-                                                        {% if field_name == 'delivery_address' %}عنوان التسليم{% endif %}
-                                                        {% if field_name == 'location_address' %}عنوان التركيب{% endif %}
-                                                        {% if field_name == 'expected_delivery_date' %}تاريخ التسليم المتوقع{% endif %}
-                                                    </strong>
-                                                    <br>
-                                                    <small class="text-muted">
-                                                        من: <del>{{ field_data.old|default:'غير محدد' }}</del>
-                                                        إلى: <span class="text-success">{{ field_data.new|default:'غير محدد' }}</span>
-                                                    </small>
-                                                </div>
-                                            {% elif field_name == 'order_items' %}
-                                                <div class="mb-2">
-                                                    <strong>تعديل عناصر الطلب:</strong>
-                                                    <ul class="mb-1">
-                                                        {% for item_mod in field_data %}
-                                                            <li>
-                                                                <small>
-                                                                    <strong>{{ item_mod.product }}:</strong>
-                                                                    {% if item_mod.changes %}
-                                                                        {% for change in item_mod.changes %}{{ change }}{% endfor %}
-                                                                    {% else %}
-                                                                        {{ item_mod.field }}: من {{ item_mod.old }} إلى {{ item_mod.new }}
-                                                                    {% endif %}
-                                                                </small>
-                                                            </li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                </div>
-                                            {% elif field_name == 'new_order_items' %}
-                                                <div class="mb-2">
-                                                    <strong>إضافة عناصر جديدة:</strong>
-                                                    <ul class="mb-1">
-                                                        {% for new_item in field_data %}
-                                                            <li>
-                                                                <small>
-                                                                    {{ new_item.product }} - الكمية: {{ new_item.quantity }} - السعر: {{ new_item.unit_price }} ج.م
-                                                                    {% if new_item.discount_percentage %}
-                                                                        - الخصم: {{ new_item.discount_percentage }}%
-                                                                    {% endif %}
-                                                                </small>
-                                                            </li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                </div>
-                                            {% elif field_name == 'deleted_order_items' %}
-                                                <div class="mb-2">
-                                                    <strong>حذف عناصر:</strong>
-                                                    <ul class="mb-1">
-                                                        {% for deleted_item in field_data %}
-                                                            <li>
-                                                                <small class="text-danger">
-                                                                    {{ deleted_item.product }} - الكمية: {{ deleted_item.quantity }} - السعر: {{ deleted_item.unit_price }} ج.م
-                                                                </small>
-                                                            </li>
-                                                        {% endfor %}
-                                                    </ul>
-                                                </div>
-                                            {% endif %}
-                                        {% endfor %}
-                                    {% else %}
-                                        <p class="mb-2">
-                                            <strong>{{ log.details }}</strong>
-                                        </p>
-                                    {% endif %}
-                                    <!-- ملاحظات -->
-                                    {% if log.notes %}
-                                        <p class="mb-2">
-                                            <em><i class="fas fa-sticky-note me-1"></i>{{ log.notes }}</em>
-                                        </p>
-                                    {% endif %}
-                                </div>
-                                <!-- المستخدم والتاريخ -->
-                                <hr class="my-2">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-muted">
-                                        <i class="fas fa-user me-1"></i>
-                                        بواسطة:
-                                        {% if log.modified_by %}
-                                            {{ log.modified_by.get_full_name|default:log.modified_by.username }}
-                                        {% else %}
-                                            مدير النظام
-                                        {% endif %}
-                                    </small>
-                                    <small class="text-muted">
-                                        <i class="fas fa-clock me-1"></i>
-                                        {{ log.modified_at|date:"Y-m-d H:i" }}
-                                    </small>
-                                </div>
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                    {% comment %} رسالة إذا لم تكن هناك تعديلات يدوية {% endcomment %}
-                    {% if not has_manual_modifications %}
-                        <div class="text-center py-3">
-                            <i class="fas fa-info-circle fa-2x text-muted mb-2"></i>
-                            <p class="text-muted">لم يتم إجراء أي تعديلات يدوية على هذا الطلب حتى الآن.</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        {% endif %}
+
         <!-- سجل حذف أوامر التصنيع -->
         {% if order.manufacturing_deletion_logs.exists %}
             <div class="card mb-4">
@@ -1529,6 +1462,12 @@
                                                     {{ computed_total_discount_amount|clean_decimal_currency:currency_symbol }}
                                                 {% else %}
                                                     {{ order.total_discount_amount|clean_decimal_currency:currency_symbol }}
+                                                {% endif %}
+                                                {% if order.administrative_discount_amount and order.administrative_discount_amount > 0 %}
+                                                    <br>
+                                                    <small class="text-muted fst-italic">
+                                                        (يشمل خصم إداري: {{ order.administrative_discount_amount|clean_decimal_currency:currency_symbol }})
+                                                    </small>
                                                 {% endif %}
                                             </th>
                                             <td colspan="2"></td>
@@ -2538,6 +2477,102 @@ function regenerateContract(orderId) {
                 }).then(() => {
                     // إعادة تحميل الصفحة للتحقق من حالة العقد
                     location.reload();
+                });
+            });
+        }
+    });
+}
+
+// تطبيق الخصم الإداري
+function applyAdministrativeDiscount(orderId) {
+    const amount = document.getElementById('admin_discount_amount').value;
+    const notes = document.getElementById('admin_discount_notes').value;
+    
+    // التحقق من صحة القيمة
+    if (!amount || parseFloat(amount) <= 0) {
+        Swal.fire({
+            title: 'خطأ!',
+            text: 'يرجى إدخال قيمة صحيحة للخصم (أكبر من صفر)',
+            icon: 'error',
+            confirmButtonText: 'حسناً'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: '⚠️ تأكيد التطبيق',
+        html: `
+            <p>هل تريد تطبيق خصم إداري بقيمة <strong class="text-danger">${amount} {{ currency_symbol }}</strong>؟</p>
+            <div class="alert alert-warning mt-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>تنبيه:</strong> لا يمكن التراجع عن هذا الإجراء بعد التطبيق
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ffc107',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'نعم، طبّق الخصم',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // رسالة جاري التحميل
+            Swal.fire({
+                title: 'جاري التطبيق...',
+                text: 'يرجى الانتظار',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            fetch(`/orders/order/${orderId}/apply-administrative-discount/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    discount_amount: parseFloat(amount),
+                    notes: notes
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'تم بنجاح!',
+                        html: `
+                            <div class="text-start">
+                                <p><strong><i class="fas fa-check-circle text-success me-2"></i>تم تطبيق الخصم الإداري</strong></p>
+                                <hr>
+                                <p><strong>قيمة الخصم:</strong> ${data.discount.amount} {{ currency_symbol }}</p>
+                                <p><strong>السعر النهائي الجديد:</strong> ${data.totals.final_price} {{ currency_symbol }}</p>
+                                <p><strong>المبلغ المتبقي:</strong> ${data.totals.remaining_amount} {{ currency_symbol }}</p>
+                            </div>
+                        `,
+                        icon: 'success',
+                        confirmButtonText: 'حسناً'
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'خطأ!',
+                        text: data.message || 'حدث خطأ أثناء تطبيق الخصم',
+                        icon: 'error',
+                        confirmButtonText: 'حسناً'
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: 'خطأ!',
+                    text: 'حدث خطأ في الاتصال بالخادم',
+                    icon: 'error',
+                    confirmButtonText: 'حسناً'
                 });
             });
         }

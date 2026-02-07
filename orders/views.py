@@ -2311,3 +2311,109 @@ def check_invoice_duplicate(request):
     except Exception as e:
         logger.error(f"خطأ في التحقق من تكرار رقم الفاتورة: {str(e)}")
         return JsonResponse({"is_duplicate": False, "message": "", "error": str(e)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def apply_administrative_discount(request, order_id):
+    """
+    تطبيق أو تحديث الخصم الإداري على طلب موجود (AJAX)
+    """
+    from decimal import Decimal
+    
+    try:
+        # التحقق من صلاحية المستخدم
+        if not request.user.can_apply_administrative_discount:
+            return JsonResponse(
+                {"success": False, "message": "ليس لديك صلاحية تطبيق الخصم الإداري"},
+                status=403,
+            )
+
+        # الحصول على الطلب
+        order = get_object_or_404(Order, pk=order_id)
+        
+        # التحقق من صلاحية المستخدم لتعديل هذا الطلب
+        if not can_user_edit_order(request.user, order):
+            return JsonResponse(
+                {"success": False, "message": "ليس لديك صلاحية لتعديل هذا الطلب"},
+                status=403,
+            )
+
+        data = json.loads(request.body)
+        discount_amount = data.get("discount_amount", 0)
+        discount_notes = data.get("notes", "")
+
+        # التحقق من قيمة الخصم
+        try:
+            discount_amount = Decimal(str(discount_amount))
+            if discount_amount < 0:
+                return JsonResponse(
+                    {"success": False, "message": "قيمة الخصم يجب أن تكون موجبة"},
+                    status=400,
+                )
+        except (ValueError, TypeError):
+            return JsonResponse(
+                {"success": False, "message": "قيمة الخصم غير صحيحة"}, status=400
+            )
+
+        # التحقق من عدم وجود خصم إداري مطبق مسبقاً
+        if order.administrative_discount_amount and order.administrative_discount_amount > 0:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "تم تطبيق خصم إداري على هذا الطلب مسبقاً. لا يمكن تطبيق خصم أكثر من مرة."
+                },
+                status=400,
+            )
+
+        # حفظ الخصم الإداري
+        order.administrative_discount_amount = discount_amount
+        order.administrative_discount_by = request.user
+        order.administrative_discount_date = timezone.now()
+        order.administrative_discount_notes = discount_notes
+        
+        # إعادة حساب السعر النهائي
+        order.calculate_final_price(force_update=True)
+        
+        order.save(
+            update_fields=[
+                "administrative_discount_amount",
+                "administrative_discount_by",
+                "administrative_discount_date",
+                "administrative_discount_notes",
+                "final_price",
+                "total_amount",
+            ]
+        )
+
+        # remaining_amount هو @property محسوب تلقائياً، لا حاجة لحفظه
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "تم تطبيق الخصم الإداري بنجاح",
+                "discount": {
+                    "amount": float(discount_amount),
+                    "by_user": request.user.get_full_name() or request.user.username,
+                    "date": order.administrative_discount_date.strftime("%Y-%m-%d %H:%M"),
+                    "notes": discount_notes,
+                },
+                "totals": {
+                    "total_amount": float(order.total_amount or 0),
+                    "total_discount_amount": float(order.total_discount_amount or 0),
+                    "administrative_discount": float(discount_amount),
+                    "financial_addition": float(order.financial_addition or 0),
+                    "final_price": float(order.final_price or 0),
+                    "paid_amount": float(order.paid_amount or 0),
+                    "remaining_amount": float(order.remaining_amount or 0),
+                },
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"خطأ في تطبيق الخصم الإداري: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse(
+            {"success": False, "message": f"حدث خطأ: {str(e)}"}, status=500
+        )

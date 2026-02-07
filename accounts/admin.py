@@ -155,6 +155,7 @@ class CustomUserAdmin(UserAdmin):
         "is_retail",
         "can_export",
         "can_edit_price",
+        "can_apply_administrative_discount",
     )
 
     def get_queryset(self, request):
@@ -187,6 +188,7 @@ class CustomUserAdmin(UserAdmin):
         "user_roles__role",
         "can_export",
         "can_edit_price",
+        "can_apply_administrative_discount",
     )
     search_fields = ("username", "first_name", "last_name", "email", "phone")
     filter_horizontal = (
@@ -240,6 +242,7 @@ class CustomUserAdmin(UserAdmin):
                     "managed_branches",
                     "can_export",
                     "can_edit_price",
+                    "can_apply_administrative_discount",
                     "is_wholesale",
                     "is_retail",
                     "groups",

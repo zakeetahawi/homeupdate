@@ -207,6 +207,11 @@ class User(AbstractUser):
         verbose_name=_("تعديل الأسعار"),
         help_text=_("السماح للمستخدم بتعديل أسعار المنتجات في الطلبات يدوياً"),
     )
+    can_apply_administrative_discount = models.BooleanField(
+        default=False,
+        verbose_name=_("صلاحية الخصم الإداري"),
+        help_text=_("السماح للمستخدم بتطبيق خصم إداري على الطلبات"),
+    )
     authorized_devices = models.ManyToManyField(
         "BranchDevice",
         blank=True,

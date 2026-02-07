@@ -263,6 +263,33 @@ class DraftOrder(models.Model):
         verbose_name="المجموع النهائي",
     )
 
+    # حقول الخصم الإداري
+    administrative_discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name="قيمة الخصم الإداري",
+        help_text="الخصم الإداري الإضافي على الطلب",
+    )
+    administrative_discount_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="draft_administrative_discounts_applied",
+        verbose_name="المستخدم الذي قام بالخصم الإداري",
+    )
+    administrative_discount_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="تاريخ الخصم الإداري",
+    )
+    administrative_discount_notes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="ملاحظات الخصم الإداري",
+    )
+
     # بيانات إضافية مخزنة كـ JSON
     wizard_state = models.JSONField(
         default=dict,
@@ -357,12 +384,17 @@ class DraftOrder(models.Model):
 
         self.subtotal = aggregates["total_amount"]
         self.total_discount = aggregates["total_discount_amount"]
-        self.final_total = self.subtotal - self.total_discount
+        
+        # حساب المجموع النهائي مع الخصم الإداري
+        administrative_discount = self.administrative_discount_amount or Decimal("0.00")
+        self.final_total = self.subtotal - self.total_discount - administrative_discount
+        
         self.save(update_fields=["subtotal", "total_discount", "final_total"])
 
         return {
             "subtotal": self.subtotal,
             "total_discount": self.total_discount,
+            "administrative_discount": administrative_discount,
             "final_total": self.final_total,
             "remaining": self.final_total - self.paid_amount,
         }
@@ -427,6 +459,23 @@ class DraftOrderItem(models.Model):
     product = models.ForeignKey(
         "inventory.Product", on_delete=models.CASCADE, verbose_name="المنتج"
     )
+    
+    # 📸 Snapshot Fields - حفظ بيانات المنتج وقت الطلب (حماية من التعديل/الحذف)
+    product_name_snapshot = models.CharField(
+        max_length=255,
+        verbose_name="اسم المنتج (نسخة محفوظة)",
+        help_text="نسخة محفوظة من اسم المنتج وقت إنشاء الطلب",
+        blank=True,
+        null=True,
+    )
+    product_code_snapshot = models.CharField(
+        max_length=100,
+        verbose_name="كود المنتج (نسخة محفوظة)",
+        help_text="نسخة محفوظة من كود المنتج وقت إنشاء الطلب",
+        blank=True,
+        null=True,
+    )
+    
     quantity = models.DecimalField(
         max_digits=10,
         decimal_places=3,
@@ -537,7 +586,16 @@ class DraftOrderItem(models.Model):
         return self.total_price - self.discount_amount
 
     def save(self, *args, **kwargs):
-        """حساب مبلغ الخصم تلقائياً قبل الحفظ"""
+        """
+        🛡️ حماية البيانات وحساب مبلغ الخصم تلقائياً
+        """
+        # 📸 حفظ snapshot من بيانات المنتج
+        if not self.pk or not self.product_name_snapshot:
+            if self.product:
+                self.product_name_snapshot = self.product.name
+                self.product_code_snapshot = getattr(self.product, 'code', '') or getattr(self.product, 'sku', '')
+        
+        # حساب مبلغ الخصم
         if self.discount_percentage and self.discount_percentage > 0:
             if self.quantity and self.unit_price:
                 total = self.quantity * self.unit_price
@@ -546,4 +604,5 @@ class DraftOrderItem(models.Model):
                 )
         else:
             self.discount_amount = Decimal("0.00")
+        
         super().save(*args, **kwargs)

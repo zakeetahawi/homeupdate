@@ -1010,6 +1010,118 @@ def wizard_remove_item(request, item_id):
         )
 
 
+@ajax_login_required
+@require_http_methods(["POST"])
+def wizard_apply_administrative_discount(request):
+    """
+    تطبيق أو تحديث الخصم الإداري على مسودة الطلب (AJAX)
+    """
+    try:
+        # التحقق من صلاحية المستخدم
+        if not request.user.can_apply_administrative_discount:
+            return JsonResponse(
+                {"success": False, "message": "ليس لديك صلاحية تطبيق الخصم الإداري"},
+                status=403,
+            )
+
+        data = json.loads(request.body)
+        discount_amount = data.get("discount_amount", 0)
+        discount_notes = data.get("notes", "")
+
+        # التحقق من قيمة الخصم
+        try:
+            discount_amount = Decimal(str(discount_amount))
+            if discount_amount < 0:
+                return JsonResponse(
+                    {"success": False, "message": "قيمة الخصم يجب أن تكون موجبة"},
+                    status=400,
+                )
+        except (ValueError, TypeError):
+            return JsonResponse(
+                {"success": False, "message": "قيمة الخصم غير صحيحة"}, status=400
+            )
+
+        # التحقق من وجود مسودة محددة في الجلسة
+        draft_id = request.session.get("wizard_draft_id")
+
+        if draft_id:
+            draft = DraftOrder.objects.filter(pk=draft_id).first()
+        else:
+            draft = (
+                DraftOrder.objects.filter(created_by=request.user, is_completed=False)
+                .order_by("-updated_at")
+                .first()
+            )
+
+        if not draft:
+            return JsonResponse(
+                {"success": False, "message": "لم يتم العثور على مسودة نشطة"},
+                status=404,
+            )
+
+        # حفظ الخصم الإداري
+        draft.administrative_discount_amount = discount_amount
+        draft.administrative_discount_by = request.user
+        draft.administrative_discount_date = timezone.now()
+        draft.administrative_discount_notes = discount_notes
+        draft.save(
+            update_fields=[
+                "administrative_discount_amount",
+                "administrative_discount_by",
+                "administrative_discount_date",
+                "administrative_discount_notes",
+            ]
+        )
+
+        # تسجيل التعديل في سجل المسودة
+        if draft.created_by != request.user:
+            draft.log_edit(
+                user=request.user,
+                action="apply_administrative_discount",
+                details=f"تطبيق خصم إداري: {discount_amount} {discount_notes and f'- {discount_notes}' or ''}",
+            )
+
+        # ⚡ إبطال الذاكرة المؤقتة للمجاميع
+        invalidate_draft_cache(draft.id)
+        cache.delete(f"draft_totals_{draft.id}")
+
+        # إعادة حساب المجاميع
+        totals = draft.calculate_totals()
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "تم تطبيق الخصم الإداري بنجاح",
+                "discount": {
+                    "amount": float(discount_amount),
+                    "by_user": request.user.get_full_name() or request.user.username,
+                    "date": draft.administrative_discount_date.strftime("%Y-%m-%d %H:%M"),
+                    "notes": discount_notes,
+                },
+                "totals": {
+                    "subtotal": float(totals["subtotal"]),
+                    "total_discount": float(totals["total_discount"]),
+                    "administrative_discount": float(totals["administrative_discount"]),
+                    "final_total": float(totals["final_total"]),
+                    "remaining": float(totals["remaining"]),
+                },
+            }
+        )
+
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"success": False, "message": "بيانات غير صالحة"}, status=400
+        )
+    except Exception as e:
+        logger.error(f"Error applying administrative discount: {e}")
+        import traceback
+
+        logger.error(traceback.format_exc())
+        return JsonResponse(
+            {"success": False, "message": f"حدث خطأ: {str(e)}"}, status=500
+        )
+
+
 @login_required
 @require_http_methods(["POST"])
 def wizard_complete_step_3(request):
@@ -1509,6 +1621,12 @@ def wizard_finalize(request):
                 order.final_price = draft.final_total
                 order.paid_amount = draft.paid_amount
 
+                # نسخ الخصم الإداري
+                order.administrative_discount_amount = draft.administrative_discount_amount or Decimal("0.00")
+                order.administrative_discount_by = draft.administrative_discount_by
+                order.administrative_discount_date = draft.administrative_discount_date
+                order.administrative_discount_notes = draft.administrative_discount_notes
+
                 # حفظ الإضافات المالية والرصيد المستخدم إذا كانت موجودة، وإلا تعيينها كصفر
                 if order.financial_addition is None:
                     order.financial_addition = Decimal("0.00")
@@ -1651,6 +1769,9 @@ def wizard_finalize(request):
                         item_type=draft_item.item_type,
                         is_manual_price=draft_item.is_manual_price,
                         notes=draft_item.notes or "",  # Fix for nullable constraints
+                        # 🛡️ نقل snapshot من المسودة (حماية البيانات التاريخية)
+                        product_name_snapshot=draft_item.product_name_snapshot or draft_item.product.name,
+                        product_code_snapshot=draft_item.product_code_snapshot or getattr(draft_item.product, 'code', '') or getattr(draft_item.product, 'sku', ''),
                     )
                     order_items_to_create.append(new_item)
 
@@ -1905,6 +2026,10 @@ def wizard_finalize(request):
                 total_amount=draft.subtotal,
                 final_price=draft.final_total,
                 paid_amount=draft.paid_amount,
+                administrative_discount_amount=draft.administrative_discount_amount or Decimal("0.00"),
+                administrative_discount_by=draft.administrative_discount_by,
+                administrative_discount_date=draft.administrative_discount_date,
+                administrative_discount_notes=draft.administrative_discount_notes,
                 financial_addition=Decimal("0.00"),
                 used_customer_balance=Decimal("0.00"),
                 contract_file=draft.contract_file,
@@ -1958,6 +2083,9 @@ def wizard_finalize(request):
                     item_type=draft_item.item_type,
                     is_manual_price=draft_item.is_manual_price,
                     notes=draft_item.notes or "",
+                    # 🛡️ نقل snapshot من المسودة (حماية البيانات التاريخية)
+                    product_name_snapshot=draft_item.product_name_snapshot or draft_item.product.name,
+                    product_code_snapshot=draft_item.product_code_snapshot or getattr(draft_item.product, 'code', '') or getattr(draft_item.product, 'sku', ''),
                 )
                 new_item.save()
                 draft_item_map[draft_item.id] = new_item

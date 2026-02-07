@@ -163,6 +163,7 @@
                     </div>
                 </div>
             </div>
+            
         </div>
         <!-- Summary Sidebar -->
         <div class="col-md-4">
@@ -752,6 +753,7 @@ function updateTotals(totals) {
     // تحويل القيم إلى أرقام وإضافة قيم افتراضية
     const subtotal = parseFloat(totals.subtotal) || 0;
     const totalDiscount = parseFloat(totals.total_discount) || 0;
+    const administrativeDiscount = parseFloat(totals.administrative_discount) || 0;
     const finalTotal = parseFloat(totals.final_total) || 0;
     const currencySymbol = '{{ currency_symbol|default:"ج.م" }}';
     
@@ -759,6 +761,12 @@ function updateTotals(totals) {
     document.getElementById('subtotal').textContent = formatCurrency(subtotal) + ' ' + currencySymbol;
     document.getElementById('total-discount').textContent = formatCurrency(totalDiscount) + ' ' + currencySymbol;
     document.getElementById('final-total').textContent = formatCurrency(finalTotal) + ' ' + currencySymbol;
+    
+    // تحديث الخصم الإداري إذا وُجد
+    const adminDiscountElement = document.getElementById('administrative-discount');
+    if (adminDiscountElement && administrativeDiscount > 0) {
+        adminDiscountElement.textContent = formatCurrency(administrativeDiscount) + ' ' + currencySymbol;
+    }
 }
 
 function clearForm() {

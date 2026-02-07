@@ -283,6 +283,24 @@ class Product(SoftDeleteMixin, models.Model):
             )
         super().save(*args, **kwargs)
         cache.delete_many(cache_keys)
+    
+    def delete(self, *args, **kwargs):
+        """
+        ✅ السماح بالحذف - البيانات التاريخية محمية في snapshot
+        عرض تحذير فقط عند الحذف من لوحة التحكم
+        """
+        # يمكنك إضافة logging هنا إذا أردت تتبع عمليات الحذف
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        order_items_count = self.order_items.count()
+        if order_items_count > 0:
+            logger.warning(
+                f"⚠️ تم حذف منتج '{self.name}' له {order_items_count} عنصر في الطلبات. "
+                f"البيانات التاريخية محفوظة في snapshot."
+            )
+        
+        return super().delete(*args, **kwargs)
 
 
 class Supplier(SoftDeleteMixin, models.Model):
