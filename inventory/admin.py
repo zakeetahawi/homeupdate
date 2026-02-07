@@ -1158,3 +1158,7 @@ class PriceHistoryAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # السماح للمشرفين فقط بالحذف
         return request.user.is_superuser
+
+
+# Import ProductSet admin configuration
+from .admin_product_set import ProductSetAdmin  # noqa: E402, F401

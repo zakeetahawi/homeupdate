@@ -2038,3 +2038,93 @@ class PriceHistory(models.Model):
 
     def __str__(self):
         return f"{self.variant.full_code}: {self.old_price} → {self.new_price}"
+
+
+class ProductSet(models.Model):
+    """
+    مجموعة منتجات متناسقة تُعرض معاً (2-5 منتجات)
+    عند مسح QR لأي منتج في المجموعة، تظهر جميع المنتجات كبطاقات جنب بعض
+    """
+
+    name = models.CharField(
+        _("اسم المجموعة"), max_length=200, help_text="مثل: طقم أقمشة كلاسيكي"
+    )
+    description = models.TextField(_("الوصف"), blank=True)
+    base_products = models.ManyToManyField(
+        "BaseProduct",
+        through="ProductSetItem",
+        related_name="product_sets",
+        verbose_name=_("المنتجات"),
+    )
+    is_active = models.BooleanField(_("نشط"), default=True)
+    cloudflare_synced = models.BooleanField(_("متزامن مع Cloudflare"), default=False)
+    last_synced_at = models.DateTimeField(_("آخر مزامنة"), null=True, blank=True)
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("أنشئ بواسطة"),
+    )
+
+    class Meta:
+        verbose_name = _("مجموعة منتجات")
+        verbose_name_plural = _("مجموعات المنتجات")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        count = self.base_products.count()
+        return f"{self.name} ({count} منتج)"
+
+    def get_ordered_products(self):
+        """الحصول على المنتجات بالترتيب المحدد"""
+        return self.base_products.order_by("productsetitem__display_order")
+
+    def to_cloudflare_dict(self):
+        """تحويل المجموعة لصيغة Cloudflare Worker"""
+        products = []
+        for item in self.productsetitem_set.select_related(
+            "base_product"
+        ).order_by("display_order"):
+            bp = item.base_product
+            products.append(
+                {
+                    "code": bp.code,
+                    "name": bp.name,
+                    "price": float(bp.base_price),
+                    "currency": bp.currency if bp.currency else "EGP",
+                    "category": bp.category.name if bp.category else "",
+                    "material": bp.material if bp.material else "",
+                    "width": bp.width if bp.width else "",
+                    "unit": bp.get_unit_display() if hasattr(bp, 'get_unit_display') else "متر",
+                }
+            )
+
+        return {"name": self.name, "products": products}
+
+
+class ProductSetItem(models.Model):
+    """
+    علاقة many-to-many بين ProductSet و BaseProduct مع ترتيب
+    """
+
+    product_set = models.ForeignKey(
+        ProductSet, on_delete=models.CASCADE, verbose_name=_("المجموعة")
+    )
+    base_product = models.ForeignKey(
+        "BaseProduct", on_delete=models.CASCADE, verbose_name=_("المنتج")
+    )
+    display_order = models.PositiveSmallIntegerField(
+        _("الترتيب"), default=1, help_text="ترتيب عرض المنتج في المجموعة"
+    )
+
+    class Meta:
+        verbose_name = _("منتج في مجموعة")
+        verbose_name_plural = _("منتجات في مجموعة")
+        ordering = ["display_order"]
+        unique_together = [["product_set", "base_product"]]
+
+    def __str__(self):
+        return f"{self.product_set.name} - {self.base_product.name} ({self.display_order})"

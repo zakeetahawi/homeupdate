@@ -276,3 +276,124 @@ def sync_qr_design_to_cloudflare(design_settings):
         error_details = traceback.format_exc()
         print(f"❌ خطأ في المزامنة: {error_details}")
         return {"success": False, "error": str(e), "details": error_details}
+
+
+def sync_product_sets_to_cloudflare(product_sets=None):
+    """
+    مزامنة مجموعات المنتجات مع Cloudflare Workers KV
+    
+    Args:
+        product_sets: قائمة المجموعات للمزامنة (None = جميع المجموعات النشطة)
+    
+    Returns:
+        dict: نتيجة المزامنة
+    """
+    # التحقق من التفعيل
+    if not getattr(settings, "CLOUDFLARE_SYNC_ENABLED", False):
+        return {"success": False, "error": "Cloudflare sync is disabled in settings"}
+    
+    # التحقق من الإعدادات المطلوبة
+    api_key = getattr(settings, "CLOUDFLARE_SYNC_API_KEY", None)
+    is_dev_mode = getattr(settings, "DEBUG", False) or api_key == "dev-placeholder-token"
+    
+    if not api_key:
+        return {"success": False, "error": "CLOUDFLARE_SYNC_API_KEY not configured"}
+    
+    try:
+        from inventory.models import ProductSet
+        
+        # تحديد المجموعات للمزامنة
+        if product_sets is None:
+            product_sets = ProductSet.objects.filter(is_active=True)
+        
+        if not product_sets:
+            return {"success": True, "count": 0, "message": "No product sets to sync"}
+        
+        # تحويل المجموعات إلى قاموس
+        sets_data = {}
+        for product_set in product_sets:
+            set_data = product_set.to_cloudflare_dict()
+            # استخدام ID المجموعة كمفتاح
+            sets_data[f"set_{product_set.id}"] = set_data
+        
+        # في وضع التطوير، نحاكي النجاح فقط
+        if is_dev_mode:
+            # تحديث حالة المزامنة (simulation)
+            for product_set in product_sets:
+                product_set.cloudflare_synced = True
+                product_set.last_synced_at = timezone.now()
+                product_set.save(update_fields=["cloudflare_synced", "last_synced_at"])
+            
+            return {
+                "success": True,
+                "count": len(product_sets),
+                "message": f"✓ Development Mode: Simulated sync for {len(product_sets)} product sets",
+                "dev_mode": True,
+            }
+        
+        # إرسال إلى Cloudflare Workers KV (Production)
+        success = upload_product_sets_to_cloudflare(sets_data)
+        
+        if success:
+            # تحديث حالة المزامنة
+            for product_set in product_sets:
+                product_set.cloudflare_synced = True
+                product_set.last_synced_at = timezone.now()
+                product_set.save(update_fields=["cloudflare_synced", "last_synced_at"])
+            
+            return {
+                "success": True,
+                "count": len(product_sets),
+                "message": f"Successfully synced {len(product_sets)} product sets",
+            }
+        else:
+            return {"success": False, "error": "Failed to upload product sets to Cloudflare KV"}
+    
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def upload_product_sets_to_cloudflare(sets_data):
+    """
+    رفع مجموعات المنتجات إلى Cloudflare Workers KV
+    
+    Args:
+        sets_data: قاموس المجموعات
+    
+    Returns:
+        bool: نجاح العملية
+    """
+    try:
+        worker_url = getattr(settings, "CLOUDFLARE_WORKER_URL", None)
+        api_key = getattr(settings, "CLOUDFLARE_SYNC_API_KEY", None)
+        
+        if not all([worker_url, api_key]):
+            print("Missing Cloudflare Worker configuration (URL or API Key)")
+            return False
+        
+        # إعداد طلب المزامنة
+        payload = {
+            "action": "sync_product_sets",
+            "product_sets": sets_data
+        }
+        
+        headers = {
+            "Content-Type": "application/json",
+            "X-Sync-API-Key": api_key,
+        }
+        
+        # إرسال الطلب إلى Worker endpoint
+        response = requests.post(
+            f"{worker_url}/sync", headers=headers, json=payload, timeout=15
+        )
+        
+        if response.status_code == 200:
+            print(f"Successfully uploaded {len(sets_data)} product sets to Cloudflare")
+            return True
+        else:
+            print(f"Cloudflare Worker Error: {response.status_code} - {response.text}")
+            return False
+    
+    except Exception as e:
+        print(f"Error uploading product sets to Cloudflare KV: {str(e)}")
+        return False

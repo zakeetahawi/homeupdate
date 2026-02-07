@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import api_views, views, views_variants, views_warehouse_cleanup
+from . import api_views, views, views_product_set, views_variants, views_warehouse_cleanup
 from .dashboard_view_append import optimized_product_detail
 from .views import InventoryDashboardView
 from .views_bulk import bulk_stock_update, download_excel_template, product_bulk_upload
@@ -508,4 +508,15 @@ urlpatterns = [
         views.export_products_excel,
         name="export_products_excel",
     ),
+    # ═══════════════════════════════════════════════════════════════════
+    # Product Sets (مجموعات المنتجات)
+    # ═══════════════════════════════════════════════════════════════════
+    path("product-sets/", views_product_set.ProductSetListView.as_view(), name="product_set_list"),
+    path("product-sets/create/", views_product_set.ProductSetCreateView.as_view(), name="product_set_create"),
+    path("product-sets/<int:pk>/", views_product_set.ProductSetDetailView.as_view(), name="product_set_detail"),
+    path("product-sets/<int:pk>/edit/", views_product_set.ProductSetUpdateView.as_view(), name="product_set_update"),
+    path("product-sets/<int:pk>/delete/", views_product_set.ProductSetDeleteView.as_view(), name="product_set_delete"),
+    # API
+    path("api/product-set/<int:pk>/", views_product_set.product_set_api, name="product_set_api"),
+    path("product-sets/<int:pk>/reorder/", views_product_set.reorder_products, name="product_set_reorder"),
 ]

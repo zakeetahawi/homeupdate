@@ -126,6 +126,22 @@ class CloudflareSync:
             )
 
         data["variants"] = variants
+        
+        # Check if product belongs to any active ProductSet
+        try:
+            from inventory.models import ProductSet
+            product_sets = ProductSet.objects.filter(
+                base_products=base_product,
+                is_active=True
+            ).prefetch_related('base_products').first()
+            
+            if product_sets:
+                # Include product set data
+                data["product_set"] = product_sets.to_cloudflare_dict()
+        except Exception as e:
+            # Fail silently if ProductSet model doesn't exist or error occurs
+            logger.warning(f"Could not fetch product set for {base_product.code}: {e}")
+        
         return data
 
     def format_product(self, product):

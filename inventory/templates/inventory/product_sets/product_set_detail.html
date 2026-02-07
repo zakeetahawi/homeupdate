@@ -1,0 +1,59 @@
+{% extends 'inventory/inventory_base_new.html' %}
+{% load static %}
+
+{% block title %}{{ product_set.name }} - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="fas fa-layer-group"></i> {{ product_set.name }}</h4>
+            <div class="d-flex gap-2">
+                <a href="{% url 'inventory:product_set_update' product_set.pk %}" class="btn btn-sm btn-light">
+                    <i class="fas fa-edit"></i> تعديل
+                </a>
+                <a href="{% url 'inventory:product_set_list' %}" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-arrow-left"></i> رجوع
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if product_set.description %}
+            <p class="text-muted">{{ product_set.description }}</p>
+            {% endif %}
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <strong>عدد المنتجات:</strong> {{ ordered_products.count }} منتج
+                </div>
+                <div class="col-md-6">
+                    <strong>الحالة:</strong>
+                    {% if product_set.is_active %}
+                    <span class="badge bg-success">نشط</span>
+                    {% else %}
+                    <span class="badge bg-secondary">غير نشط</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <h5 class="mb-3">المنتجات في المجموعة:</h5>
+            <div class="row">
+                {% for product in ordered_products %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>{{ product.name }}</h6>
+                            <p class="mb-1"><strong>الكود:</strong> {{ product.code }}</p>
+                            <p class="mb-1"><strong>السعر:</strong> {{ product.base_price }} ج.م</p>
+                            <a href="{% url 'inventory:base_product_detail' product.pk %}" class="btn btn-sm btn-outline-primary">
+                                عرض التفاصيل
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'inventory/inventory_base_new.html' %}
+
+{% block title %}حذف مجموعة - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> تأكيد الحذف</h4>
+                </div>
+                <div class="card-body">
+                    <p>هل أنت متأكد من حذف مجموعة "<strong>{{ object.name }}</strong>"؟</p>
+                    <p class="text-muted">سيتم حذف المجموعة فقط، المنتجات لن تتأثر.</p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'inventory:product_set_list' %}" class="btn btn-secondary">إلغاء</a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> حذف
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
