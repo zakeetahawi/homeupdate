@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}نقل مخزون - {{ variant.full_code }}{% endblock %}
+{% block title %}نقل مخزون - {{ variant.full_code_display }}{% endblock %}
 {% block content %}
     <div class="container-fluid">
         <!-- Breadcrumb -->
@@ -10,7 +10,7 @@
                     <a href="{% url 'inventory:base_product_list' %}">المنتجات الأساسية</a>
                 </li>
                 <li class="breadcrumb-item">
-                    <a href="{% url 'inventory:variant_detail' variant.pk %}">{{ variant.full_code }}</a>
+                    <a href="{% url 'inventory:variant_detail' variant.pk %}">{{ variant.full_code_display }}</a>
                 </li>
                 <li class="breadcrumb-item active">نقل مخزون</li>
             </ol>
@@ -27,7 +27,7 @@
                     <div class="card-body">
                         <!-- Variant Info -->
                         <div class="alert alert-info mb-4">
-                            <strong>المتغير:</strong> {{ variant.full_code }}
+                            <strong>المتغير:</strong> {{ variant.full_code_display }}
                             {% if variant.color %}
                                 {% if variant.color.hex_code %}
                                     <span class="color-swatch ms-2"

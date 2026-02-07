@@ -934,6 +934,7 @@ class BaseProductAdmin(admin.ModelAdmin):
 class ProductVariantAdmin(admin.ModelAdmin):
     list_per_page = 25
     list_display = (
+        "full_code_display",
         "full_code",
         "base_product",
         "variant_code",
@@ -952,6 +953,7 @@ class ProductVariantAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         "full_code",
+        "full_code_display",
         "effective_price",
         "effective_wholesale_price",
         "created_at",
@@ -962,7 +964,7 @@ class ProductVariantAdmin(admin.ModelAdmin):
     fieldsets = (
         (
             _("معلومات المتغير"),
-            {"fields": ("base_product", "variant_code", "full_code")},
+            {"fields": ("base_product", "variant_code", "full_code_display", "full_code")},
         ),
         (_("اللون"), {"fields": ("color", "color_code")}),
         (
@@ -991,6 +993,11 @@ class ProductVariantAdmin(admin.ModelAdmin):
         return obj.full_code
 
     full_code.short_description = _("الكود الكامل")
+
+    def full_code_display(self, obj):
+        return obj.full_code_display
+
+    full_code_display.short_description = _("اسم العرض")
 
     def effective_price(self, obj):
         return obj.effective_price

@@ -147,16 +147,22 @@ class VariantService:
             base_name = product.name
             variant_code = "DEFAULT"
 
+        # القاعدة الجديدة:
+        # - الاسم = الكود المستخرج (base_name مثل DORIS)
+        # - الكود = باركود المنتج (product.code مثل 10100300253)
+        new_base_name = base_name  # استخدام base_name كاسم
+        new_base_code = product.code  # استخدام باركود المنتج كرمز
+
         # إنشاء أو الحصول على المنتج الأساسي
-        # نستخدم filter().first() بدلاً من get_or_create لنتحكم في الـ flags قبل save()
-        base_product = BaseProduct.objects.filter(code=base_name).first()
+        # نبحث بالكود الجديد (الباركود)
+        base_product = BaseProduct.objects.filter(code=new_base_code).first()
         bp_created = False
 
         if not base_product:
             # إنشاء يدوي مع تعيين الـ flags قبل save()
             base_product = BaseProduct(
-                code=base_name,
-                name=base_name,
+                code=new_base_code,  # باركود المنتج
+                name=new_base_name,  # الكود المستخرج (DORIS)
                 base_price=product.price,
                 currency=product.currency,
                 unit=product.unit,

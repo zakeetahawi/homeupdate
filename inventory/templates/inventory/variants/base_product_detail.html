@@ -218,7 +218,7 @@
                                 {% for variant in variants %}
                                     <tr>
                                         <td>
-                                            <strong>{{ variant.full_code }}</strong>
+                                            <strong>{{ variant.full_code_display }}</strong>
                                             {% if variant.barcode %}
                                                 <br>
                                                 <small class="text-muted">
@@ -311,7 +311,7 @@
                                                         </div>
                                                         <div class="modal-body">
                                                             <p>هل أنت متأكد من حذف المتغير:</p>
-                                                            <p class="fw-bold text-danger">{{ variant.full_code }}</p>
+                                                            <p class="fw-bold text-danger">{{ variant.full_code_display }}</p>
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
@@ -371,7 +371,7 @@
                             <tbody>
                                 {% for history in price_history %}
                                     <tr>
-                                        <td>{{ history.variant.full_code }}</td>
+                                        <td>{{ history.variant.full_code_display }}</td>
                                         <td>{{ history.old_price|floatformat:2 }}</td>
                                         <td>{{ history.new_price|floatformat:2 }}</td>
                                         <td>

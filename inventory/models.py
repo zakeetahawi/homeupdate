@@ -1811,6 +1811,14 @@ class ProductVariant(models.Model):
         return f"{self.base_product.code}/{self.variant_code}"
 
     @property
+    def full_code_display(self):
+        """
+        الكود الكامل للعرض - يستخدم اسم المنتج الأساسي بدلاً من الكود
+        مثال: DORIS/C ASH بدلاً من 10100300280/C ASH
+        """
+        return f"{self.base_product.name}/{self.variant_code}"
+
+    @property
     def effective_price(self):
         """السعر القطاعي الفعلي (تجاوز أو أساسي)"""
         if self.price_override is not None:
