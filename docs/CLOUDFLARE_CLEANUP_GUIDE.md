@@ -18,6 +18,20 @@
 
 ## 📊 الاستراتيجيات المتاحة
 
+## ✅ المتطلبات قبل التشغيل
+
+حتى يعمل الأمر `cloudflare_cleanup` يجب توفير إعدادات Cloudflare Worker في `.env`:
+
+```bash
+CLOUDFLARE_WORKER_URL=https://qr.elkhawaga.uk
+CLOUDFLARE_SYNC_API_KEY=cf_xxxxx
+CLOUDFLARE_SYNC_ENABLED=True
+```
+
+> **ملاحظة:** الأمر يستخدم Cloudflare Worker endpoints مباشرة، لا يحتاج Account ID أو API Token.
+>
+> **⚠️ مهم:** تأكد من نشر Worker المحدث الذي يحتوي على endpoints الجديدة (`list_keys`, `delete_keys`, `get_key`).
+
 ### **استراتيجية 1: Clean Replace (الأسرع)**
 **مناسبة إذا:**
 - لا يوجد روابط خارجية تشير للمنتجات

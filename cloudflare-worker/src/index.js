@@ -571,6 +571,72 @@ async function handleSync(request, env) {
     });
   }
 
+  // List all keys (for cleanup operations)
+  if (action === 'list_keys') {
+    const limit = body.limit || 1000;
+    const cursor = body.cursor || null;
+    
+    const options = { limit };
+    if (cursor) {
+      options.cursor = cursor;
+    }
+    
+    const keys = await env.PRODUCTS_KV.list(options);
+    return new Response(JSON.stringify({ 
+      success: true, 
+      keys: keys.keys.map(k => k.name),
+      cursor: keys.cursor,
+      list_complete: keys.list_complete
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Delete multiple keys (for cleanup operations)
+  if (action === 'delete_keys') {
+    const keysToDelete = body.keys || [];
+    if (!Array.isArray(keysToDelete)) {
+      return new Response(JSON.stringify({ error: 'keys must be an array' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const results = [];
+    for (const key of keysToDelete) {
+      await env.PRODUCTS_KV.delete(key);
+      results.push(key);
+    }
+    
+    return new Response(JSON.stringify({ 
+      success: true, 
+      deleted: results,
+      count: results.length
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Get value for a specific key
+  if (action === 'get_key') {
+    const key = body.key;
+    if (!key) {
+      return new Response(JSON.stringify({ error: 'key is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const value = await env.PRODUCTS_KV.get(key, 'json');
+    return new Response(JSON.stringify({ 
+      success: true, 
+      key: key,
+      value: value
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   return new Response(JSON.stringify({ error: 'Unknown action' }), {
     status: 400,
     headers: { 'Content-Type': 'application/json' }
