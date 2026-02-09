@@ -96,73 +96,52 @@
                             <div class="col-sm-8">{{ inspection.windows_count|default:"-" }}</div>
                         </div>
                         <div class="row mb-3">
-                            <div class="col-sm-4">
-                                <strong>{% trans 'ملف المعاينة' %}:</strong>
-                            </div>
-                            <div class="col-sm-8">
-                                {% if inspection.inspection_file %}
-                                    <div class="d-flex flex-column gap-3">
-                                        <!-- الملف المحلي -->
-                                        <div>
-                                            <a href="{% url 'inspections:preview_inspection_file' inspection.pk %}"
-                                               target="_blank"
-                                               class="btn btn-outline-primary btn-lg"
-                                               title="عرض ملف المعاينة محلياً">
-                                                <i class="fas fa-file-pdf me-2"></i>
-                                                عرض الملف محلياً
-                                            </a>
-                                        </div>
-                                        <!-- Google Drive -->
-                                        {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
-                                            <div>
-                                                <a href="{{ inspection.google_drive_file_url }}"
-                                                   target="_blank"
-                                                   class="btn btn-success btn-lg"
-                                                   title="عرض ملف المعاينة في Google Drive"
-                                                   data-inspection-id="{{ inspection.inspection_code }}">
-                                                    <i class="fas fa-cloud me-2"></i>
-                                                    عرض في Google Drive
-                                                </a>
-                                                {% if inspection.google_drive_file_name %}
-                                                    <div class="mt-2">
-                                                        <small class="text-muted">
-                                                            <i class="fas fa-file-signature"></i>
-                                                            <strong>اسم الملف في Google Drive:</strong> {{ inspection.google_drive_file_name }}
-                                                        </small>
+                            <div class="col-12">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white py-2">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-file-pdf me-2"></i>{% trans 'ملفات المعاينة' %}
+                                            {% if inspection.files.exists %}
+                                                <span class="badge bg-light text-dark ms-2">{{ inspection.files.count }}</span>
+                                            {% endif %}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if inspection.files.exists %}
+                                            <div class="row g-3">
+                                                {% for file in inspection.files.all %}
+                                                    <div class="col-md-6 col-lg-4">
+                                                        <div class="card h-100 border-primary">
+                                                            <div class="card-body text-center py-3">
+                                                                <h6 class="mb-2">
+                                                                    <span class="badge bg-dark me-1">{{ forloop.counter }}</span>
+                                                                    {{ file.original_filename|default:"ملف المعاينة"|truncatechars:25 }}
+                                                                </h6>
+                                                                <div class="d-flex flex-column gap-2">
+                                                                    <a href="{{ file.file.url }}" target="_blank" class="btn btn-info">
+                                                                        <i class="fas fa-file-pdf me-2"></i>{% trans 'عرض الملف' %}
+                                                                    </a>
+                                                                    {% if file.is_uploaded_to_drive and file.google_drive_file_url %}
+                                                                        <a href="{{ file.google_drive_file_url }}"
+                                                                           target="_blank"
+                                                                           class="btn btn-outline-success">
+                                                                            <i class="fab fa-google-drive me-2"></i>{% trans 'Google Drive' %}
+                                                                        </a>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                {% endif %}
+                                                {% endfor %}
                                             </div>
                                         {% else %}
-                                            <!-- جاري الرفع -->
-                                            <div>
-                                                <span class="badge bg-warning text-dark p-3"
-                                                      data-inspection-id="{{ inspection.inspection_code }}"
-                                                      data-upload-pending="true">
-                                                    <i class="fas fa-clock me-2"></i>
-                                                    جاري رفع الملف إلى Google Drive
-                                                </span>
-                                                <div class="mt-2">
-                                                    <small class="text-muted">
-                                                        <i class="fas fa-info-circle"></i>
-                                                        سيتم رفع الملف تلقائياً...
-                                                    </small>
-                                                    <br>
-                                                    <button class="btn btn-outline-primary btn-sm mt-1"
-                                                            onclick="location.reload()">
-                                                        <i class="fas fa-sync"></i> تحديث الصفحة
-                                                    </button>
-                                                </div>
+                                            <div class="text-center py-4">
+                                                <i class="fas fa-file-pdf text-muted mb-3" style="font-size: 48px"></i>
+                                                <p class="text-muted mb-0">{% trans 'لا توجد ملفات مرفقة' %}</p>
                                             </div>
                                         {% endif %}
                                     </div>
-                                {% else %}
-                                    <div class="d-flex align-items-center gap-3">
-                                        <i class="fas fa-file-pdf text-muted"
-                                           style="font-size: 48px"
-                                           title="لا يوجد ملف"></i>
-                                        <span class="text-muted">لا يوجد ملف مرفق</span>
-                                    </div>
-                                {% endif %}
+                                </div>
                             </div>
                         </div>
                         <!-- فني المعاينة -->

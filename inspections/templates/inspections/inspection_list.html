@@ -313,41 +313,64 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {% if inspection.inspection_file %}
-                                                <div class="d-flex flex-column gap-1">
-                                                    <!-- الملف المحلي -->
+                                            {% if inspection.files.exists %}
+                                                <!-- ملفات متعددة جديدة -->
+                                                <div class="file-icons-container">
+                                                    {% for file in inspection.files.all %}
+                                                        <div class="file-icon-group d-inline-flex align-items-center me-2 mb-1"
+                                                             style="background:#f8f9fa;
+                                                                    border-radius:4px;
+                                                                    padding:2px 6px">
+                                                            <span class="badge bg-secondary me-1" style="font-size:0.65em;">{{ forloop.counter }}</span>
+                                                            <a href="{{ file.file.url }}"
+                                                               target="_blank"
+                                                               class="text-primary"
+                                                               title="تحميل الملف">
+                                                                <i class="fas fa-file-pdf" style="font-size:1.1em;"></i>
+                                                            </a>
+                                                            {% if file.is_uploaded_to_drive and file.google_drive_file_url %}
+                                                                <a href="{{ file.google_drive_file_url }}"
+                                                                   target="_blank"
+                                                                   class="text-success ms-1"
+                                                                   title="فتح في Google Drive">
+                                                                    <i class="fab fa-google-drive" style="font-size:1em;"></i>
+                                                                </a>
+                                                            {% else %}
+                                                                <i class="fas fa-spinner fa-spin text-warning ms-1"
+                                                                   style="font-size:0.8em"
+                                                                   title="جاري الرفع..."></i>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% elif inspection.inspection_file %}
+                                                <!-- ملف واحد قديم -->
+                                                <div class="file-icon-group d-inline-flex align-items-center"
+                                                     style="background:#f8f9fa;
+                                                            border-radius:4px;
+                                                            padding:2px 6px">
                                                     <a href="{{ inspection.inspection_file.url }}"
                                                        target="_blank"
-                                                       class="btn btn-sm btn-outline-primary"
-                                                       title="عرض ملف المعاينة محلياً">
-                                                        <i class="fas fa-file-pdf me-1"></i>
-                                                        محلي
+                                                       class="text-primary"
+                                                       title="تحميل الملف">
+                                                        <i class="fas fa-file-pdf" style="font-size:1.2em;"></i>
                                                     </a>
                                                     {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
-                                                        <!-- رابط Google Drive -->
                                                         <a href="{{ inspection.google_drive_file_url }}"
                                                            target="_blank"
-                                                           class="btn btn-sm btn-success"
-                                                           title="عرض ملف المعاينة في Google Drive"
-                                                           data-inspection-id="{{ inspection.inspection_code }}">
-                                                            <i class="fas fa-cloud me-1"></i>
-                                                            Drive
+                                                           class="text-success ms-2"
+                                                           title="فتح في Google Drive">
+                                                            <i class="fab fa-google-drive" style="font-size:1.1em;"></i>
                                                         </a>
                                                     {% else %}
-                                                        <!-- جاري الرفع -->
-                                                        <span class="badge bg-warning text-dark"
-                                                              title="جاري رفع الملف إلى Google Drive"
-                                                              data-inspection-id="{{ inspection.inspection_code }}"
-                                                              data-upload-pending="true">
-                                                            <i class="fas fa-clock me-1"></i>
-                                                            جاري الرفع
-                                                        </span>
+                                                        <i class="fas fa-spinner fa-spin text-warning ms-2"
+                                                           style="font-size:0.9em"
+                                                           title="جاري الرفع..."></i>
                                                     {% endif %}
                                                 </div>
                                             {% else %}
-                                                <span class="text-muted">
-                                                    <i class="fas fa-file-slash me-1"></i>
-                                                    لا يوجد ملف
+                                                <span class="text-muted" style="font-size:0.85em;">
+                                                    <i class="fas fa-minus-circle"></i>
                                                 </span>
                                             {% endif %}
                                         </td>

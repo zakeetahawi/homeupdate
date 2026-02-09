@@ -43,7 +43,9 @@ def upload_contract_to_drive_async(self, order_id):
             raise self.retry(countdown=60, exc=Exception(message))
 
     except Order.DoesNotExist:
-        logger.warning(f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)")
+        logger.warning(
+            f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)"
+        )
         return {"success": True, "message": "تم تجاهل الطلب المحذوف"}
 
     except Exception as e:
@@ -102,6 +104,55 @@ def upload_inspection_to_drive_async(self, inspection_id):
             # في حالة فشل جميع المحاولات، نسجل الخطأ
             logger.error(
                 f"فشل نهائي في رفع ملف المعاينة {inspection_id} بعد {self.max_retries} محاولات"
+            )
+            return {"success": False, "message": f"فشل نهائي: {str(e)}"}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, queue="file_uploads")
+def upload_inspection_file_to_drive_async(self, file_id):
+    """
+    مهمة خلفية لرفع ملف معاينة (من InspectionFile) إلى Google Drive
+    """
+    try:
+        from inspections.models import InspectionFile
+
+        # الحصول على الملف
+        inspection_file = InspectionFile.objects.select_related(
+            "inspection",
+            "inspection__customer",
+            "inspection__branch",
+            "inspection__order",
+        ).get(pk=file_id)
+
+        # التحقق من وجود الملف
+        if not inspection_file.file:
+            logger.warning(f"لا يوجد ملف للمعاينة {file_id}")
+            return {"success": False, "message": "لا يوجد ملف"}
+
+        # التحقق من أن الملف لم يتم رفعه مسبقاً
+        if inspection_file.is_uploaded_to_drive:
+            logger.info(f"ملف المعاينة {file_id} تم رفعه مسبقاً")
+            return {"success": True, "message": "تم رفع الملف مسبقاً"}
+
+        # رفع الملف
+        success = inspection_file.upload_to_google_drive_sync()
+
+        if success:
+            logger.info(f"تم رفع ملف المعاينة {file_id} بنجاح")
+            return {"success": True, "message": "تم رفع الملف بنجاح"}
+        else:
+            logger.error(f"فشل في رفع ملف المعاينة {file_id}")
+            raise self.retry(countdown=60, exc=Exception("فشل في رفع الملف"))
+
+    except Exception as e:
+        logger.error(f"خطأ في رفع ملف المعاينة {file_id}: {str(e)}")
+
+        if self.request.retries < self.max_retries:
+            raise self.retry(countdown=60, exc=e)
+        else:
+            logger.error(
+                f"فشل نهائي في رفع ملف المعاينة {file_id} "
+                f"بعد {self.max_retries} محاولات"
             )
             return {"success": False, "message": f"فشل نهائي: {str(e)}"}
 
@@ -206,7 +257,9 @@ def update_order_status_async(
         return {"success": True, "message": "تم تحديث الحالة بنجاح"}
 
     except Order.DoesNotExist:
-        logger.warning(f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)")
+        logger.warning(
+            f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)"
+        )
         return {"success": True, "message": "تم تجاهل الطلب المحذوف"}
 
     except Exception as e:
@@ -234,7 +287,9 @@ def calculate_order_totals_async(order_id):
         return {"success": True, "final_price": float(final_price)}
 
     except Order.DoesNotExist:
-        logger.warning(f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)")
+        logger.warning(
+            f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)"
+        )
         return {"success": True, "message": "تم تجاهل الطلب المحذوف"}
 
     except Exception as e:
@@ -321,7 +376,9 @@ def generate_contract_pdf_async(self, order_id, user_id=None):
             raise self.retry(countdown=5, exc=Exception("Failed to generate contract"))
 
     except Order.DoesNotExist:
-        logger.warning(f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)")
+        logger.warning(
+            f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)"
+        )
         return {"success": True, "message": "تم تجاهل الطلب المحذوف"}
 
     except Exception as e:

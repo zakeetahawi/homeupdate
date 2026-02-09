@@ -651,3 +651,182 @@ class Inspection(SoftDeleteMixin, models.Model):
 
 
 # Signal handlers moved to inspections/signals.py to avoid circular imports
+
+
+class InspectionFile(models.Model):
+    """
+    نموذج لتخزين ملفات المعاينة المتعددة.
+    يدعم حتى 5 ملفات لكل معاينة مع رفع تلقائي لـ Google Drive.
+    """
+
+    inspection = models.ForeignKey(
+        "Inspection",
+        on_delete=models.CASCADE,
+        related_name="files",
+        verbose_name=_("المعاينة"),
+    )
+    file = models.FileField(
+        _("الملف"),
+        upload_to="inspections/files/",
+        validators=[validate_inspection_pdf_file],
+        help_text=_("يجب أن يكون الملف من نوع PDF وأقل من 50 ميجابايت"),
+    )
+    original_filename = models.CharField(
+        _("اسم الملف الأصلي"),
+        max_length=500,
+        blank=True,
+    )
+    google_drive_file_id = models.CharField(
+        _("معرف ملف Google Drive"),
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+    google_drive_file_url = models.URLField(
+        _("رابط ملف Google Drive"),
+        blank=True,
+        null=True,
+    )
+    google_drive_file_name = models.CharField(
+        _("اسم الملف في Google Drive"),
+        max_length=500,
+        blank=True,
+        null=True,
+    )
+    is_uploaded_to_drive = models.BooleanField(
+        _("تم الرفع إلى Google Drive"),
+        default=False,
+    )
+    order = models.PositiveIntegerField(
+        _("الترتيب"),
+        default=0,
+        help_text=_("ترتيب عرض الملف"),
+    )
+    created_at = models.DateTimeField(
+        _("تاريخ الإنشاء"),
+        auto_now_add=True,
+    )
+
+    class Meta:
+        verbose_name = _("ملف معاينة")
+        verbose_name_plural = _("ملفات المعاينات")
+        ordering = ["order", "created_at"]
+        indexes = [
+            models.Index(fields=["inspection"], name="insp_file_inspection_idx"),
+            models.Index(
+                fields=["is_uploaded_to_drive"], name="insp_file_uploaded_idx"
+            ),
+            models.Index(fields=["created_at"], name="insp_file_created_idx"),
+        ]
+
+    def __str__(self):
+        return f"ملف معاينة #{self.inspection_id} - {self.original_filename or self.file.name}"
+
+    def save(self, *args, **kwargs):
+        # حفظ اسم الملف الأصلي
+        if self.file and not self.original_filename:
+            self.original_filename = os.path.basename(self.file.name)
+
+        # توليد اسم ملف Google Drive
+        if self.file and not self.google_drive_file_name:
+            self.google_drive_file_name = self.generate_drive_filename()
+
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        # جدولة رفع الملف إلى Google Drive
+        if is_new and self.file and not self.is_uploaded_to_drive:
+            self.schedule_upload_to_google_drive()
+
+    def generate_drive_filename(self):
+        """
+        توليد اسم الملف للرفع على Google Drive
+        الصيغة: اسم_العميل + رقم_تسلسلي (مثال: زكي1، زكي2، محمد1، محمد2)
+        """
+        inspection = self.inspection
+        # اسم العميل
+        if inspection.customer and inspection.customer.name:
+            customer_name = inspection.customer.name
+        else:
+            customer_name = "عميل_جديد"
+        customer_name = self._clean_filename(customer_name)
+
+        # حساب الرقم التسلسلي الفريد لهذا العميل
+        # نحسب عدد الملفات الموجودة لهذا العميل في كل المعاينات
+        customer_files_count = (
+            InspectionFile.objects.filter(inspection__customer=inspection.customer)
+            .exclude(pk=self.pk)
+            .count()
+        )
+
+        # الرقم التسلسلي = عدد الملفات الموجودة + 1
+        sequential_number = customer_files_count + 1
+
+        # تجميع اسم الملف: اسم_العميل + الرقم_التسلسلي
+        filename = f"{customer_name}{sequential_number}.pdf"
+        return filename
+
+    def _clean_filename(self, name):
+        """تنظيف اسم الملف من الرموز الخاصة"""
+        cleaned = re.sub(r"[^\w\u0600-\u06FF\s-]", "", str(name))
+        cleaned = re.sub(r"\s+", "_", cleaned)
+        return cleaned[:50]
+
+    def schedule_upload_to_google_drive(self):
+        """جدولة رفع الملف إلى Google Drive"""
+        try:
+            from orders.tasks import upload_inspection_file_to_drive_async
+
+            upload_inspection_file_to_drive_async.delay(self.pk)
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info(f"تم جدولة رفع ملف المعاينة {self.pk} إلى Google Drive")
+            return True
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(f"خطأ في جدولة رفع الملف {self.pk}: {str(e)}")
+            # محاولة الرفع المباشر
+            return self.upload_to_google_drive_sync()
+
+    def upload_to_google_drive_sync(self):
+        """رفع الملف إلى Google Drive بشكل متزامن"""
+        try:
+            import logging
+
+            from inspections.services.google_drive_service import (
+                get_google_drive_service,
+            )
+
+            logger = logging.getLogger(__name__)
+            logger.info(f"بدء رفع ملف {self.pk} إلى Google Drive")
+
+            drive_service = get_google_drive_service()
+            if not drive_service:
+                logger.error("فشل في الحصول على خدمة Google Drive")
+                return False
+
+            # رفع الملف
+            result = drive_service.upload_inspection_file(
+                file_path=self.file.path, inspection=self.inspection
+            )
+
+            if result and result.get("file_id"):
+                InspectionFile.objects.filter(id=self.id).update(
+                    google_drive_file_id=result.get("file_id"),
+                    google_drive_file_url=result.get("view_url"),
+                    is_uploaded_to_drive=True,
+                )
+                logger.info(f"تم رفع الملف {self.pk} بنجاح")
+                return True
+            else:
+                logger.error(f"فشل رفع الملف {self.pk}")
+                return False
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(f"خطأ في رفع الملف {self.pk}: {str(e)}")
+            return False

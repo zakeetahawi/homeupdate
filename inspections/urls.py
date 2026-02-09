@@ -133,4 +133,15 @@ urlpatterns = [
         views.preview_inspection_file,
         name="preview_inspection_file",
     ),
+    # Multi-file management
+    path(
+        "api/file/<int:file_id>/delete/",
+        views.delete_inspection_file,
+        name="delete_inspection_file",
+    ),
+    path(
+        "api/<int:inspection_id>/upload-files/",
+        views.upload_inspection_files,
+        name="upload_inspection_files",
+    ),
 ]

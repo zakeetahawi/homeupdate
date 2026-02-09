@@ -94,21 +94,69 @@
                                                     <br>
                                                     <small class="text-muted">تم تحديد المعاينة كطرف العميل</small>
                                                 {% elif order.related_inspection %}
-                                                    {% if order.related_inspection.inspection_file %}
-                                                        <a href="{% url 'inspections:preview_inspection_file' order.related_inspection.id %}"
-                                                           target="_blank"
-                                                           class="btn btn-sm btn-success">
-                                                            <i class="fas fa-file-pdf me-1"></i>عرض ملف المعاينة
-                                                        </a>
+                                                    <!-- عرض ملفات المعاينة -->
+                                                    {% if order.related_inspection.files.exists %}
+                                                        <div class="d-flex flex-wrap gap-2 mb-2">
+                                                            {% for file in order.related_inspection.files.all %}
+                                                                <div class="file-badge d-inline-flex align-items-center"
+                                                                     style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+                                                                            border-radius:6px;
+                                                                            padding:4px 10px;
+                                                                            color:#fff">
+                                                                    <span style="font-size:0.75em;margin-left:4px;">{{ forloop.counter }}</span>
+                                                                    <a href="{{ file.file.url }}"
+                                                                       target="_blank"
+                                                                       class="text-white"
+                                                                       title="تحميل">
+                                                                        <i class="fas fa-file-pdf" style="font-size:1.1em;"></i>
+                                                                    </a>
+                                                                    {% if file.is_uploaded_to_drive and file.google_drive_file_url %}
+                                                                        <a href="{{ file.google_drive_file_url }}"
+                                                                           target="_blank"
+                                                                           class="text-white ms-2"
+                                                                           title="Google Drive">
+                                                                            <i class="fab fa-google-drive" style="font-size:1em;"></i>
+                                                                        </a>
+                                                                    {% else %}
+                                                                        <i class="fas fa-sync fa-spin ms-2"
+                                                                           style="font-size:0.8em;
+                                                                                  opacity:0.7"
+                                                                           title="جاري الرفع"></i>
+                                                                    {% endif %}
+                                                                </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% elif order.related_inspection.inspection_file %}
+                                                        <div class="file-badge d-inline-flex align-items-center"
+                                                             style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+                                                                    border-radius:6px;
+                                                                    padding:4px 10px;
+                                                                    color:#fff">
+                                                            <a href="{{ order.related_inspection.inspection_file.url }}"
+                                                               target="_blank"
+                                                               class="text-white"
+                                                               title="تحميل الملف">
+                                                                <i class="fas fa-file-pdf" style="font-size:1.2em;"></i>
+                                                                <span class="ms-1" style="font-size:0.85em;">ملف المعاينة</span>
+                                                            </a>
+                                                            {% if order.related_inspection.is_uploaded_to_drive and order.related_inspection.google_drive_file_url %}
+                                                                <a href="{{ order.related_inspection.google_drive_file_url }}"
+                                                                   target="_blank"
+                                                                   class="text-white ms-3"
+                                                                   title="Google Drive">
+                                                                    <i class="fab fa-google-drive" style="font-size:1.1em;"></i>
+                                                                </a>
+                                                            {% endif %}
+                                                        </div>
                                                     {% elif order.related_inspection.google_drive_file_url %}
                                                         <a href="{{ order.related_inspection.google_drive_file_url }}"
                                                            target="_blank"
                                                            class="btn btn-sm btn-success">
-                                                            <i class="fab fa-google-drive me-1"></i>عرض ملف المعاينة (Drive)
+                                                            <i class="fab fa-google-drive me-1"></i>Drive
                                                         </a>
                                                     {% else %}
-                                                        <span class="text-warning">
-                                                            <i class="fas fa-exclamation-triangle me-1"></i>لا يوجد ملف معاينة
+                                                        <span class="badge bg-secondary">
+                                                            <i class="fas fa-file-circle-xmark me-1"></i>بدون ملف
                                                         </span>
                                                     {% endif %}
                                                     <br>
@@ -155,21 +203,69 @@
                                                 <br>
                                                 <small class="text-muted">تم تحديد المعاينة كطرف العميل</small>
                                             {% elif order.related_inspection %}
-                                                {% if order.related_inspection.inspection_file %}
-                                                    <a href="{% url 'inspections:preview_inspection_file' order.related_inspection.id %}"
-                                                       target="_blank"
-                                                       class="btn btn-sm btn-success">
-                                                        <i class="fas fa-file-pdf me-1"></i>عرض ملف المعاينة
-                                                    </a>
+                                                <!-- عرض ملفات المعاينة -->
+                                                {% if order.related_inspection.files.exists %}
+                                                    <div class="d-flex flex-wrap gap-2 mb-2">
+                                                        {% for file in order.related_inspection.files.all %}
+                                                            <div class="file-badge d-inline-flex align-items-center"
+                                                                 style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+                                                                        border-radius:6px;
+                                                                        padding:4px 10px;
+                                                                        color:#fff">
+                                                                <span style="font-size:0.75em;margin-left:4px;">{{ forloop.counter }}</span>
+                                                                <a href="{{ file.file.url }}"
+                                                                   target="_blank"
+                                                                   class="text-white"
+                                                                   title="تحميل">
+                                                                    <i class="fas fa-file-pdf" style="font-size:1.1em;"></i>
+                                                                </a>
+                                                                {% if file.is_uploaded_to_drive and file.google_drive_file_url %}
+                                                                    <a href="{{ file.google_drive_file_url }}"
+                                                                       target="_blank"
+                                                                       class="text-white ms-2"
+                                                                       title="Google Drive">
+                                                                        <i class="fab fa-google-drive" style="font-size:1em;"></i>
+                                                                    </a>
+                                                                {% else %}
+                                                                    <i class="fas fa-sync fa-spin ms-2"
+                                                                       style="font-size:0.8em;
+                                                                              opacity:0.7"
+                                                                       title="جاري الرفع"></i>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% elif order.related_inspection.inspection_file %}
+                                                    <div class="file-badge d-inline-flex align-items-center"
+                                                         style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+                                                                border-radius:6px;
+                                                                padding:4px 10px;
+                                                                color:#fff">
+                                                        <a href="{{ order.related_inspection.inspection_file.url }}"
+                                                           target="_blank"
+                                                           class="text-white"
+                                                           title="تحميل الملف">
+                                                            <i class="fas fa-file-pdf" style="font-size:1.2em;"></i>
+                                                            <span class="ms-1" style="font-size:0.85em;">ملف المعاينة</span>
+                                                        </a>
+                                                        {% if order.related_inspection.is_uploaded_to_drive and order.related_inspection.google_drive_file_url %}
+                                                            <a href="{{ order.related_inspection.google_drive_file_url }}"
+                                                               target="_blank"
+                                                               class="text-white ms-3"
+                                                               title="Google Drive">
+                                                                <i class="fab fa-google-drive" style="font-size:1.1em;"></i>
+                                                            </a>
+                                                        {% endif %}
+                                                    </div>
                                                 {% elif order.related_inspection.google_drive_file_url %}
                                                     <a href="{{ order.related_inspection.google_drive_file_url }}"
                                                        target="_blank"
                                                        class="btn btn-sm btn-success">
-                                                        <i class="fab fa-google-drive me-1"></i>عرض ملف المعاينة (Drive)
+                                                        <i class="fab fa-google-drive me-1"></i>Drive
                                                     </a>
                                                 {% else %}
-                                                    <span class="text-warning">
-                                                        <i class="fas fa-exclamation-triangle me-1"></i>لا يوجد ملف معاينة
+                                                    <span class="badge bg-secondary">
+                                                        <i class="fas fa-file-circle-xmark me-1"></i>بدون ملف
                                                     </span>
                                                 {% endif %}
                                                 <br>
@@ -985,41 +1081,84 @@
                             </tr>
                             {% if 'inspection' in order.service_types and order.inspections.exists %}
                                 <tr>
-                                    <th>ملف المعاينة</th>
+                                    <th>ملفات المعاينة</th>
                                     <td>
                                         {% for inspection in order.inspections.all %}
-                                            <div class="d-flex align-items-center gap-2 mb-2">
-                                                {% if inspection.inspection_file %}
-                                                    <!-- الملف المحلي -->
-                                                    <a href="{{ inspection.inspection_file.url }}"
-                                                       target="_blank"
-                                                       class="btn btn-sm btn-outline-primary"
-                                                       title="عرض ملف المعاينة {{ forloop.counter }} محلياً">
-                                                        <i class="fas fa-file-pdf me-1"></i>
-                                                        عرض محلي
-                                                    </a>
-                                                {% endif %}
-                                                {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
-                                                    <!-- رابط Google Drive -->
-                                                    <a href="{{ inspection.google_drive_file_url }}"
-                                                       target="_blank"
-                                                       class="btn btn-sm btn-success"
-                                                       title="عرض ملف المعاينة {{ forloop.counter }} في Google Drive">
-                                                        <i class="fas fa-cloud me-1"></i>
-                                                        Google Drive
-                                                    </a>
-                                                {% elif inspection.inspection_file %}
-                                                    <!-- جاري الرفع -->
-                                                    <span class="badge bg-warning text-dark"
-                                                          title="جاري رفع ملف المعاينة {{ forloop.counter }} إلى Google Drive">
-                                                        <i class="fas fa-clock me-1"></i>
-                                                        جاري الرفع
+                                            <div class="mb-3 p-3"
+                                                 style="background:linear-gradient(135deg,#f5f7fa 0%,#c3cfe2 100%);
+                                                        border-radius:8px;
+                                                        border:1px solid #e0e0e0">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="fw-bold" style="color:#495057;">
+                                                        <i class="fas fa-clipboard-check me-1"></i>معاينة #{{ inspection.pk }}
                                                     </span>
-                                                {% endif %}
-                                                {% if not inspection.inspection_file %}
-                                                    <span class="text-muted">
-                                                        <i class="fas fa-file-slash me-1"></i>
-                                                        لم يتم رفع ملف المعاينة {{ forloop.counter }} بعد
+                                                    {% get_status_badge inspection.status "inspection" %}
+                                                </div>
+                                                {% if inspection.files.exists %}
+                                                    <div class="d-flex flex-wrap gap-2">
+                                                        {% for file in inspection.files.all %}
+                                                            <div class="file-badge d-inline-flex align-items-center"
+                                                                 style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+                                                                        border-radius:6px;
+                                                                        padding:5px 12px;
+                                                                        color:#fff;
+                                                                        box-shadow:0 2px 4px rgba(0,0,0,0.15)">
+                                                                <span style="font-size:0.7em;
+                                                                             background:rgba(255,255,255,0.2);
+                                                                             padding:1px 5px;
+                                                                             border-radius:3px;
+                                                                             margin-left:6px">{{ forloop.counter }}</span>
+                                                                <a href="{{ file.file.url }}"
+                                                                   target="_blank"
+                                                                   class="text-white"
+                                                                   title="تحميل الملف">
+                                                                    <i class="fas fa-file-pdf" style="font-size:1.15em;"></i>
+                                                                </a>
+                                                                {% if file.is_uploaded_to_drive and file.google_drive_file_url %}
+                                                                    <a href="{{ file.google_drive_file_url }}"
+                                                                       target="_blank"
+                                                                       class="text-white ms-2"
+                                                                       title="فتح في Google Drive"
+                                                                       style="opacity:0.9">
+                                                                        <i class="fab fa-google-drive" style="font-size:1.05em;"></i>
+                                                                    </a>
+                                                                {% else %}
+                                                                    <i class="fas fa-sync fa-spin ms-2"
+                                                                       style="font-size:0.75em;
+                                                                              opacity:0.7"
+                                                                       title="جاري الرفع..."></i>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% elif inspection.inspection_file %}
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <div class="file-badge d-inline-flex align-items-center"
+                                                             style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+                                                                    border-radius:6px;
+                                                                    padding:5px 12px;
+                                                                    color:#fff;
+                                                                    box-shadow:0 2px 4px rgba(0,0,0,0.15)">
+                                                            <a href="{{ inspection.inspection_file.url }}"
+                                                               target="_blank"
+                                                               class="text-white"
+                                                               title="تحميل الملف">
+                                                                <i class="fas fa-file-pdf" style="font-size:1.2em;"></i>
+                                                                <span class="ms-1" style="font-size:0.85em;">ملف</span>
+                                                            </a>
+                                                            {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
+                                                                <a href="{{ inspection.google_drive_file_url }}"
+                                                                   target="_blank"
+                                                                   class="text-white ms-3"
+                                                                   title="Google Drive">
+                                                                    <i class="fab fa-google-drive" style="font-size:1.1em;"></i>
+                                                                </a>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">
+                                                        <i class="fas fa-file-circle-xmark me-1"></i>بدون ملفات
                                                     </span>
                                                 {% endif %}
                                             </div>
@@ -1208,43 +1347,68 @@
                                 <div class="alert alert-success mb-2" style="padding: 0.5rem;">
                                     <small><i class="fas fa-check-circle me-1"></i>تم التطبيق بنجاح</small>
                                 </div>
-                                <table class="table table-bordered table-sm mb-0" style="font-size: 0.85rem;">
+                                <table class="table table-bordered table-sm mb-0" style="font-size: 0.85rem">
                                     <tr>
-                                        <th style="width: 40%"><i class="fas fa-money-bill-wave me-1"></i>القيمة</th>
-                                        <td><strong class="text-danger">{{ order.administrative_discount_amount|clean_decimal_currency:currency_symbol }}</strong></td>
+                                        <th style="width: 40%">
+                                            <i class="fas fa-money-bill-wave me-1"></i>القيمة
+                                        </th>
+                                        <td>
+                                            <strong class="text-danger">{{ order.administrative_discount_amount|clean_decimal_currency:currency_symbol }}</strong>
+                                        </td>
                                     </tr>
                                     <tr>
-                                        <th><i class="fas fa-user me-1"></i>بواسطة</th>
-                                        <td><small>{{ order.administrative_discount_by.get_full_name|default:order.administrative_discount_by.username }}</small></td>
+                                        <th>
+                                            <i class="fas fa-user me-1"></i>بواسطة
+                                        </th>
+                                        <td>
+                                            <small>{{ order.administrative_discount_by.get_full_name|default:order.administrative_discount_by.username }}</small>
+                                        </td>
                                     </tr>
                                     {% if order.administrative_discount_notes %}
                                         <tr>
-                                            <th><i class="fas fa-sticky-note me-1"></i>ملاحظات</th>
-                                            <td><small>{{ order.administrative_discount_notes }}</small></td>
+                                            <th>
+                                                <i class="fas fa-sticky-note me-1"></i>ملاحظات
+                                            </th>
+                                            <td>
+                                                <small>{{ order.administrative_discount_notes }}</small>
+                                            </td>
                                         </tr>
                                     {% endif %}
                                 </table>
                             {% else %}
                                 <!-- نموذج تطبيق الخصم الإداري -->
-                                <div class="alert alert-info mb-2" style="padding: 0.5rem; font-size: 0.8rem;">
+                                <div class="alert alert-info mb-2"
+                                     style="padding: 0.5rem;
+                                            font-size: 0.8rem">
                                     <i class="fas fa-info-circle me-1"></i>يطبق مرة واحدة فقط
                                 </div>
                                 <div class="mb-2">
-                                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 0.25rem;">
+                                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 0.25rem">
                                         <i class="fas fa-money-bill-wave me-1"></i>قيمة الخصم
                                     </label>
                                     <div class="input-group input-group-sm">
-                                        <input type="number" step="0.01" min="0" class="form-control" id="admin_discount_amount" placeholder="0.00" required>
+                                        <input type="number"
+                                               step="0.01"
+                                               min="0"
+                                               class="form-control"
+                                               id="admin_discount_amount"
+                                               placeholder="0.00"
+                                               required>
                                         <span class="input-group-text">{{ currency_symbol }}</span>
                                     </div>
                                 </div>
                                 <div class="mb-2">
-                                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 0.25rem;">
+                                    <label class="form-label" style="font-size: 0.85rem; margin-bottom: 0.25rem">
                                         <i class="fas fa-sticky-note me-1"></i>ملاحظات
                                     </label>
-                                    <input type="text" class="form-control form-control-sm" id="admin_discount_notes" placeholder="سبب الخصم">
+                                    <input type="text"
+                                           class="form-control form-control-sm"
+                                           id="admin_discount_notes"
+                                           placeholder="سبب الخصم">
                                 </div>
-                                <button type="button" class="btn btn-warning btn-sm w-100" onclick="applyAdministrativeDiscount({{ order.id }})">
+                                <button type="button"
+                                        class="btn btn-warning btn-sm w-100"
+                                        onclick="applyAdministrativeDiscount({{ order.id }})">
                                     <i class="fas fa-check-circle me-1"></i>تطبيق
                                 </button>
                             {% endif %}
@@ -1253,7 +1417,6 @@
                 {% endif %}
             </div>
         </div>
-
         <!-- سجل حذف أوامر التصنيع -->
         {% if order.manufacturing_deletion_logs.exists %}
             <div class="card mb-4">
@@ -1794,33 +1957,34 @@
                                                 {% endif %}
                                             </td>
                                             <td class="text-center">
-                                                {% if inspection.inspection_file %}
+                                                {% if inspection.files.exists %}
                                                     <div class="d-flex flex-column gap-1">
-                                                        <!-- الملف المحلي -->
-                                                        <a href="{{ inspection.inspection_file.url }}"
-                                                           target="_blank"
-                                                           class="btn btn-sm btn-outline-primary"
-                                                           title="عرض ملف المعاينة محلياً">
-                                                            <i class="fas fa-file-pdf me-1"></i>
-                                                            محلي
-                                                        </a>
-                                                        {% if inspection.is_uploaded_to_drive and inspection.google_drive_file_url %}
-                                                            <!-- رابط Google Drive -->
-                                                            <a href="{{ inspection.google_drive_file_url }}"
-                                                               target="_blank"
-                                                               class="btn btn-sm btn-success"
-                                                               title="عرض ملف المعاينة في Google Drive">
-                                                                <i class="fas fa-cloud me-1"></i>
-                                                                Drive
-                                                            </a>
-                                                        {% else %}
-                                                            <!-- جاري الرفع -->
-                                                            <span class="badge bg-warning text-dark"
-                                                                  title="جاري رفع الملف إلى Google Drive">
-                                                                <i class="fas fa-clock me-1"></i>
-                                                                جاري الرفع
-                                                            </span>
-                                                        {% endif %}
+                                                        {% for file in inspection.files.all %}
+                                                            <div class="d-flex justify-content-center gap-1">
+                                                                <!-- الملف المحلي -->
+                                                                {% if file.file %}
+                                                                    <a href="{{ file.file.url }}"
+                                                                       target="_blank"
+                                                                       class="btn btn-sm btn-outline-primary"
+                                                                       title="ملف {{ forloop.counter }}">
+                                                                        <i class="fas fa-file-pdf"></i>
+                                                                    </a>
+                                                                {% endif %}
+                                                                <!-- رابط Google Drive -->
+                                                                {% if file.is_uploaded_to_drive and file.google_drive_file_url %}
+                                                                    <a href="{{ file.google_drive_file_url }}"
+                                                                       target="_blank"
+                                                                       class="btn btn-sm btn-success"
+                                                                       title="Drive {{ forloop.counter }}">
+                                                                        <i class="fas fa-cloud"></i>
+                                                                    </a>
+                                                                {% elif file.file %}
+                                                                    <span class="badge bg-warning text-dark" title="جاري الرفع">
+                                                                        <i class="fas fa-clock"></i>
+                                                                    </span>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% endfor %}
                                                     </div>
                                                 {% else %}
                                                     <span class="text-muted">

@@ -18,456 +18,520 @@
     <link rel="stylesheet"
           href="{% static 'inspections/css/google_drive.css' %}">
     <style>
+/* ============================================
+تصميم نموذج المعاينة - نسخة مضغوطة
+============================================ */
+/* البطاقة الرئيسية */
+.inspection-form-card {
+background: var(--card-bg, #fff);
+border-radius: var(--radius, 8px);
+box-shadow: var(--shadow, 0 2px 8px rgba(0,0,0,0.08));
+border: 1px solid var(--border, #DED5CE);
+max-width: 900px;
+margin: 0 auto;
+}
+.inspection-form-card .card-header {
+background: var(--primary, #8B735A);
+color: white;
+padding: 0.875rem 1.25rem;
+border-bottom: none;
+}
+.inspection-form-card .card-header h3 {
+font-weight: 600;
+margin: 0;
+font-size: 1.1rem;
+}
+.inspection-form-card .card-body {
+padding: 1rem;
+background: var(--card-bg, #fff);
+}
+/* أقسام النموذج المضغوطة */
 .form-section {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
+background: var(--surface, #F8F8F8);
+border-radius: var(--radius, 6px);
+padding: 0.875rem;
+margin-bottom: 0.75rem;
+border: 1px solid var(--border, #DED5CE);
 }
-
-.form-section h5 {
-    color: #495057;
-    border-bottom: 2px solid #007bff;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
+.form-section-header {
+display: flex;
+align-items: center;
+gap: 0.5rem;
+margin-bottom: 0.625rem;
+padding-bottom: 0.5rem;
+border-bottom: 1px solid var(--border, #DED5CE);
 }
-
-.payment-status-display {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    padding: 12px;
-    text-align: center;
+.form-section-icon {
+width: 28px;
+height: 28px;
+border-radius: 6px;
+display: flex;
+align-items: center;
+justify-content: center;
+color: white;
+font-size: 0.8rem;
 }
-
-.badge-large {
-    font-size: 0.9rem;
-    padding: 8px 12px;
+.form-section-icon.primary { background: var(--primary, #8B735A); }
+.form-section-icon.success { background: var(--success, #4CAF50); }
+.form-section-icon.warning { background: var(--warning, #FF9800); }
+.form-section-icon.info { background: var(--info, #2196F3); }
+.form-section-title {
+font-weight: 600;
+font-size: 0.9rem;
+color: var(--text-primary, #3D3427);
+margin: 0;
 }
+/* حقول الإدخال المضغوطة */
+.form-control, .form-select {
+border-radius: 6px;
+border: 1px solid var(--border, #DED5CE);
+padding: 0.4rem 0.65rem;
+font-size: 0.875rem;
+background: var(--card-bg, #fff);
+color: var(--text-primary, #3D3427);
+}
+.form-control:focus, .form-select:focus {
+border-color: var(--primary, #8B735A);
+box-shadow: 0 0 0 2px rgba(139, 115, 90, 0.12);
+}
+.form-label {
+font-weight: 600;
+color: var(--text-secondary, #6D6055);
+margin-bottom: 0.25rem;
+font-size: 0.8rem;
+}
+/* Grid لعرض البطاقات بجانب بعض */
+.sections-grid {
+display: grid;
+grid-template-columns: repeat(2, 1fr);
+gap: 0.75rem;
+}
+@media (max-width: 768px) {
+.sections-grid {
+grid-template-columns: 1fr;
+}
+}
+/* شارات الحالة المضغوطة */
+.status-badge {
+display: inline-flex;
+align-items: center;
+gap: 0.25rem;
+padding: 0.3rem 0.65rem;
+border-radius: 50px;
+font-weight: 600;
+font-size: 0.75rem;
+}
+.status-badge.success { background: rgba(76, 175, 80, 0.15); color: var(--success, #4CAF50); }
+.status-badge.warning { background: rgba(255, 152, 0, 0.15); color: var(--warning, #FF9800); }
+.status-badge.info { background: rgba(33, 150, 243, 0.15); color: var(--info, #2196F3); }
+.status-badge.secondary { background: var(--neutral, #B7A99A); color: white; }
+/* بطاقة الملفات المضغوطة */
+.files-card {
+background: var(--surface, #F8F8F8);
+border-radius: 6px;
+border: 1px solid var(--border, #DED5CE);
+}
+.files-card-header {
+background: var(--primary, #8B735A);
+color: white;
+padding: 0.625rem 0.875rem;
+font-size: 0.9rem;
+}
+.files-card-body {
+padding: 0.75rem;
+}
+.file-badge {
+background: var(--primary, #8B735A);
+color: white;
+border-radius: 6px;
+padding: 0.5rem 0.75rem;
+font-size: 0.8rem;
+margin-bottom: 0.375rem;
+}
+.upload-zone {
+background: var(--card-bg, #fff);
+border: 2px dashed var(--border, #DED5CE);
+border-radius: 6px;
+padding: 0.75rem;
+text-align: center;
+font-size: 0.85rem;
+}
+.upload-zone:hover {
+border-color: var(--primary, #8B735A);
+}
+/* أزرار الإجراءات المضغوطة */
+.btn-gradient-primary {
+background: var(--primary, #8B735A);
+color: white;
+border: none;
+padding: 0.5rem 1.25rem;
+border-radius: 6px;
+font-weight: 600;
+font-size: 0.875rem;
+}
+.btn-gradient-primary:hover {
+background: var(--accent, #5F4B32);
+color: white;
+}
+.btn-gradient-secondary {
+background: var(--neutral, #B7A99A);
+color: white;
+border: none;
+padding: 0.5rem 1.25rem;
+border-radius: 6px;
+font-weight: 600;
+font-size: 0.875rem;
+}
+.btn-gradient-secondary:hover {
+background: var(--border, #DED5CE);
+color: var(--text-primary, #3D3427);
+}
+/* تنبيهات مضغوطة */
+.alert-modern {
+border-radius: 6px;
+padding: 0.5rem 0.75rem;
+font-size: 0.85rem;
+border: none;
+display: flex;
+align-items: center;
+gap: 0.375rem;
+}
+.alert-modern.info { background: rgba(33, 150, 243, 0.1); color: var(--info, #2196F3); }
+.alert-modern.warning { background: rgba(255, 152, 0, 0.1); color: var(--warning, #FF9800); }
+.alert-modern.success { background: rgba(76, 175, 80, 0.1); color: var(--success, #4CAF50); }
+/* Select2 مضغوط */
+.select2-container--bootstrap-5 .select2-selection {
+border-radius: 6px !important;
+border: 1px solid var(--border, #DED5CE) !important;
+padding: 0.25rem !important;
+min-height: 34px !important;
+font-size: 0.875rem !important;
+}
+.select2-container--bootstrap-5.select2-container--focus .select2-selection {
+border-color: var(--primary, #8B735A) !important;
+box-shadow: 0 0 0 2px rgba(139, 115, 90, 0.12) !important;
+}
+/* عرض العنوان المضغوط */
+.address-display {
+background: var(--surface, #F8F8F8);
+border-radius: 6px;
+padding: 0.5rem 0.75rem;
+font-size: 0.85rem;
+border: 1px solid var(--border, #DED5CE);
+}
+/* معلومة التسليم المتوقع */
+.delivery-info {
+background: rgba(76, 175, 80, 0.1);
+border-radius: 6px;
+padding: 0.5rem 0.75rem;
+font-size: 0.85rem;
+border: 1px solid rgba(76, 175, 80, 0.2);
+}
+/* تصغير Row gap */
+.row.g-3 { --bs-gutter-y: 0.5rem; --bs-gutter-x: 0.5rem; }
+.row.g-2 { --bs-gutter-y: 0.375rem; --bs-gutter-x: 0.375rem; }
+.mb-3 { margin-bottom: 0.5rem !important; }
+.mb-4 { margin-bottom: 0.75rem !important; }
+.py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
     </style>
 {% endblock %}
 {% block content %}
-    <div class="container mt-4">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title mb-0">
-                            {% if inspection %}
-                                {% trans 'تعديل معاينة' %}
-                            {% else %}
-                                {% trans 'معاينة جديدة' %}
-                            {% endif %}
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <form method="post" enctype="multipart/form-data" novalidate>
-                            {% csrf_token %}
-                            {% if form.non_field_errors %}
-                                <div class="alert alert-danger">
-                                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    <div class="container-fluid py-3">
+        <form method="post"
+              enctype="multipart/form-data"
+              novalidate
+              id="inspection-form">
+            {% csrf_token %}
+            <!-- عنوان الصفحة -->
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-clipboard-check text-primary me-2"></i>
+                    {% if inspection %}
+                        {% trans 'تعديل معاينة' %} #{{ inspection.contract_number }}
+                    {% else %}
+                        {% trans 'معاينة جديدة' %}
+                    {% endif %}
+                </h4>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'inspections:inspection_list' %}"
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-right me-1"></i>{% trans 'رجوع' %}
+                    </a>
+                </div>
+            </div>
+            {% if form.non_field_errors %}
+                <div class="alert alert-warning mb-3 py-2">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                </div>
+            {% endif %}
+            <!-- الصف الأول: العميل والحالة -->
+            <div class="row g-3 mb-3">
+                <!-- بطاقة العميل والمعاين -->
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header py-2" style="background:var(--primary);color:#fff">
+                            <h6 class="mb-0">
+                                <i class="fas fa-users me-2"></i>{% trans 'معلومات العميل والمعاين' %}
+                            </h6>
+                        </div>
+                        <div class="card-body py-2">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label small mb-1">
+                                        <i class="fas fa-user me-1"></i>{% trans 'العميل' %} <span class="text-danger">*</span>
+                                    </label>
+                                    {% if form.fields.customer.disabled %}
+                                        <input type="text"
+                                               class="form-control form-control-sm"
+                                               value="{{ customer.name|default:'' }}"
+                                               readonly>
+                                        <input type="hidden" name="customer" value="{{ customer.pk }}">
+                                    {% else %}
+                                        {% render_field form.customer class="form-control form-control-sm select2" id="customer-select" %}
+                                    {% endif %}
                                 </div>
-                            {% endif %}
-                            <!-- معلومات العميل والمعاين -->
-                            <div class="form-section">
-                                <h5>
-                                    <i class="fas fa-users text-primary"></i> {% trans 'معلومات العميل والمعاين' %}
-                                </h5>
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="{{ form.customer.id_for_label }}" class="form-label fw-bold">
-                                                <i class="fas fa-user text-primary me-2"></i>{% trans 'العميل' %} <span class="text-danger">*</span>
-                                            </label>
-                                            {% if form.fields.customer.disabled %}
-                                                <input type="text"
-                                                       class="form-control"
-                                                       value="{{ customer.name|default:'' }}"
-                                                       readonly>
-                                                <input type="hidden" name="customer" value="{{ customer.pk }}">
-                                            {% else %}
-                                                {% render_field form.customer class="form-control select2" id="customer-select" %}
-                                            {% endif %}
-                                            {% if form.customer.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {% for error in form.customer.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label for="{{ form.inspector.id_for_label }}" class="form-label fw-bold">
-                                                <i class="fas fa-user-tie text-info me-2"></i>{% trans 'المعاين' %} <span class="text-danger">*</span>
-                                            </label>
-                                            {% render_field form.inspector class="form-control select2" %}
-                                            {% if form.inspector.errors %}
-                                                <div class="invalid-feedback d-block">
-                                                    {% for error in form.inspector.errors %}{{ error }}{% endfor %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
+                                <div class="col-6">
+                                    <label class="form-label small mb-1">
+                                        <i class="fas fa-user-tie me-1"></i>{% trans 'المعاين' %} <span class="text-danger">*</span>
+                                    </label>
+                                    {% render_field form.inspector class="form-control form-control-sm select2" %}
                                 </div>
                             </div>
                             <!-- عنوان العميل -->
-                            <div class="form-group mb-3"
-                                 id="customer-address-container"
-                                 style="display: none">
-                                <label class="form-label fw-bold">
-                                    <i class="fas fa-map-marker-alt text-warning me-2"></i>{% trans 'عنوان العميل' %}
-                                </label>
-                                <div class="form-control bg-light"
-                                     id="customer-address"
-                                     style="height: auto;
-                                            min-height: 60px"></div>
-                            </div>
-                        </div>
-                        <!-- معلومات العقد والتواريخ -->
-                        <div class="form-section">
-                            <h5>
-                                <i class="fas fa-calendar-alt text-success"></i> {% trans 'معلومات العقد والتواريخ' %}
-                            </h5>
-                            <!-- تم إزالة حقل رقم العقد -->
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.windows_count.id_for_label }}"
-                                           class="form-label fw-bold">
-                                        <i class="fas fa-th-large text-info me-2"></i>{% trans 'عدد الشبابيك' %}
-                                    </label>
-                                    {% render_field form.windows_count class="form-control" %}
-                                    {% if form.windows_count.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.windows_count.errors %}{{ error }}{% endfor %}
-                                        </div>
-                                    {% endif %}
+                            <div class="mt-2" id="customer-address-container" style="display:none">
+                                <div class="alert alert-info py-1 px-2 mb-0 small">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    <span id="customer-address"></span>
                                 </div>
                             </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="{{ form.request_date.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-calendar text-primary me-2"></i>{% trans 'تاريخ الطلب' %}
-                                    </label>
-                                    {% render_field form.request_date class="form-control" %}
-                                    {% if form.request_date.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.request_date.errors %}{{ error }}{% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="{{ form.scheduled_date.id_for_label }}"
-                                           class="form-label fw-bold">
-                                        <i class="fas fa-calendar-check text-warning me-2"></i>{% trans 'تاريخ التنفيذ' %}
-                                    </label>
-                                    {% render_field form.scheduled_date class="form-control" %}
-                                    {% if form.scheduled_date.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.scheduled_date.errors %}{{ error }}{% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="{{ form.scheduled_time.id_for_label }}"
-                                           class="form-label fw-bold">
-                                        <i class="fas fa-clock text-warning me-2"></i>{% trans 'وقت التنفيذ' %}
-                                    </label>
-                                    {% render_field form.scheduled_time class="form-control" %}
-                                    {% if form.scheduled_time.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.scheduled_time.errors %}{{ error }}{% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    <small class="form-text text-muted">اختياري - مثال: 14:30</small>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- تاريخ التسليم المتوقع -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label fw-bold">
-                                        <i class="fas fa-truck text-success me-2"></i>{% trans 'تاريخ التسليم المتوقع' %}
-                                    </label>
-                                    <div class="payment-status-display">
-                                        {% if inspection.expected_delivery_date %}
-                                            <span class="badge bg-info badge-large">
-                                                <i class="fas fa-calendar-day me-1"></i> {{ inspection.expected_delivery_date|date:"Y-m-d" }}
-                                            </span>
-                                        {% else %}
-                                            <span class="badge bg-secondary badge-large">
-                                                <i class="fas fa-question me-1"></i> سيتم حسابه تلقائياً
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                    <small class="form-text text-muted mt-2 d-block">
-                                        <i class="fas fa-info-circle me-1"></i> يتم حسابه بناءً على إعدادات التسليم
-                                    </small>
-                                    <!-- إزالة الحقل المخفي المسبب للمشكلة -->
-                                    {% comment %}
-                                        <input type="hidden" name="expected_delivery_date" value="{{ inspection.expected_delivery_date|default:'' }}">
-                                    {% endcomment %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- الحالة والنتيجة والمديونية -->
-                    <div class="form-section">
-                        <h5>
-                            <i class="fas fa-tasks text-warning"></i> {% trans 'الحالة والنتيجة والمديونية' %}
-                        </h5>
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="{{ form.status.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-flag text-primary me-2"></i>{% trans 'الحالة' %} <span class="text-danger">*</span>
-                                    </label>
-                                    {% render_field form.status class="form-control" %}
-                                    {% if form.status.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.status.errors %}{{ error }}{% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label class="form-label fw-bold">
-                                        <i class="fas fa-money-bill text-success me-2"></i>{% trans 'حالة المديونية' %}
-                                    </label>
-                                    <div class="payment-status-display">
-                                        {% if inspection.payment_status == 'paid' %}
-                                            <span class="badge bg-success badge-large">
-                                                <i class="fas fa-check-circle me-1"></i> مكتمل السداد
-                                            </span>
-                                        {% elif inspection.payment_status == 'collect_on_visit' %}
-                                            <span class="badge bg-warning text-dark badge-large">
-                                                <i class="fas fa-clock me-1"></i> تحصيل عند العميل
-                                            </span>
-                                        {% else %}
-                                            <span class="badge bg-secondary badge-large">
-                                                <i class="fas fa-question me-1"></i> غير محدد
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                    <small class="form-text text-muted mt-2 d-block">
-                                        <i class="fas fa-info-circle me-1"></i> يتم تحديد حالة المديونية تلقائياً بناءً على حالة الدفع في الطلب
-                                    </small>
-                                    <!-- لا نرسل payment_status في النموذج - يتم تحديدها تلقائياً -->
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="{{ form.result.id_for_label }}" class="form-label fw-bold">
-                                        <i class="fas fa-clipboard-check text-success me-2"></i>{% trans 'النتيجة' %}
-                                    </label>
-                                    {% render_field form.result class="form-control" %}
-                                    {% if form.result.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.result.errors %}{{ error }}{% endfor %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- معلومات الفرع والموظف -->
-                    <div class="form-section">
-                        <h5>
-                            <i class="fas fa-building text-info"></i> {% trans 'معلومات الفرع والموظف' %}
-                        </h5>
-                        <div class="row mb-3">
-                            {% if not user.is_superuser %}
-                                {{ form.branch.as_hidden }}
-                            {% else %}
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="{{ form.branch.id_for_label }}" class="form-label fw-bold">
-                                            <i class="fas fa-store text-info me-2"></i>{% trans 'الفرع' %} <span class="text-danger">*</span>
+                            <!-- الفرع والموظف -->
+                            <div class="row g-2 mt-2">
+                                {% if user.is_superuser %}
+                                    <div class="col-6">
+                                        <label class="form-label small mb-1">
+                                            <i class="fas fa-store me-1"></i>{% trans 'الفرع' %}
                                         </label>
-                                        {% render_field form.branch class="form-control select2" %}
-                                        {% if form.branch.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {% for error in form.branch.errors %}{{ error }}{% endfor %}
-                                            </div>
+                                        {% render_field form.branch class="form-control form-control-sm select2" %}
+                                    </div>
+                                {% else %}
+                                    {{ form.branch.as_hidden }}
+                                {% endif %}
+                                <div class="col-{% if user.is_superuser %}6{% else %}12{% endif %}">
+                                    <label class="form-label small mb-1">
+                                        <i class="fas fa-user-cog me-1"></i>{% trans 'الموظف المسؤول' %}
+                                    </label>
+                                    {% render_field form.responsible_employee class="form-control form-control-sm select2" %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- بطاقة الحالة والنتيجة -->
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header py-2"
+                             style="background:#d4c5b1;
+                                    color:var(--text-primary)">
+                            <h6 class="mb-0">
+                                <i class="fas fa-tasks me-2"></i>{% trans 'الحالة والنتيجة' %}
+                            </h6>
+                        </div>
+                        <div class="card-body py-2">
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <label class="form-label small mb-1">
+                                        <i class="fas fa-flag me-1"></i>{% trans 'الحالة' %} <span class="text-danger">*</span>
+                                    </label>
+                                    {% render_field form.status class="form-control form-control-sm" %}
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small mb-1">
+                                        <i class="fas fa-clipboard-check me-1"></i>{% trans 'النتيجة' %}
+                                    </label>
+                                    {% render_field form.result class="form-control form-control-sm" %}
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small mb-1">
+                                        <i class="fas fa-money-bill me-1"></i>{% trans 'المديونية' %}
+                                    </label>
+                                    <div>
+                                        {% if inspection.payment_status == 'paid' %}
+                                            <span class="badge bg-success"><i class="fas fa-check"></i> مكتمل</span>
+                                        {% elif inspection.payment_status == 'collect_on_visit' %}
+                                            <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> تحصيل</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary"><i class="fas fa-question"></i> غير محدد</span>
                                         {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- التواريخ -->
+                            <div class="row g-2 mt-2">
+                                <div class="col-3">
+                                    <label class="form-label small mb-1">
+                                        <i class="fas fa-calendar me-1"></i>{% trans 'تاريخ الطلب' %}
+                                    </label>
+                                    {% render_field form.request_date class="form-control form-control-sm" type="date" %}
+                                </div>
+                                <div class="col-3">
+                                    <label class="form-label small mb-1">
+                                        <i class="fas fa-calendar-check me-1"></i>{% trans 'التنفيذ' %}
+                                    </label>
+                                    {% render_field form.scheduled_date class="form-control form-control-sm" type="date" %}
+                                </div>
+                                <div class="col-3">
+                                    <label class="form-label small mb-1">
+                                        <i class="fas fa-clock me-1"></i>{% trans 'الوقت' %}
+                                    </label>
+                                    {% render_field form.scheduled_time class="form-control form-control-sm" type="time" %}
+                                </div>
+                                <div class="col-3">
+                                    {% if inspection.expected_delivery_date %}
+                                        <label class="form-label small mb-1">
+                                            <i class="fas fa-truck me-1"></i>{% trans 'التسليم' %}
+                                        </label>
+                                        <span class="badge bg-info">{{ inspection.expected_delivery_date|date:"Y-m-d" }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- الصف الثاني: الملفات وعدد الشبابيك -->
+            <div class="row g-3 mb-3">
+                <div class="col-lg-8">
+                    <div class="card h-100">
+                        <div class="card-header py-2 d-flex justify-content-between align-items-center"
+                             style="background:var(--primary);
+                                    color:#fff">
+                            <h6 class="mb-0">
+                                <i class="fas fa-file-pdf me-2"></i>{% trans 'ملفات المعاينة' %}
+                            </h6>
+                            <span class="badge bg-light text-dark" id="files-counter">{{ inspection.files.count|default:0 }}/5</span>
+                        </div>
+                        <div class="card-body py-2">
+                            <!-- الملفات الحالية -->
+                            {% if inspection.files.exists %}
+                                <div class="mb-2" id="existing-files-list">
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% for file in inspection.files.all %}
+                                            <div class="badge bg-primary d-flex align-items-center gap-2 py-2 px-3"
+                                                 id="file-item-{{ file.pk }}">
+                                                <span>{{ forloop.counter }}</span>
+                                                <i class="fas fa-file-pdf"></i>
+                                                <span class="text-truncate" style="max-width:100px">{{ file.original_filename }}</span>
+                                                {% if file.is_uploaded_to_drive %}
+                                                    <i class="fab fa-google-drive text-success"></i>
+                                                {% else %}
+                                                    <i class="fas fa-sync fa-spin"></i>
+                                                {% endif %}
+                                                <a href="{{ file.file.url }}" target="_blank" class="text-white"><i class="fas fa-download"></i></a>
+                                                <button type="button"
+                                                        class="btn btn-link text-white p-0"
+                                                        onclick="deleteInspectionFile({{ file.pk }})">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        {% endfor %}
                                     </div>
                                 </div>
                             {% endif %}
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.responsible_employee.id_for_label }}"
-                                           class="form-label fw-bold">
-                                        <i class="fas fa-user-cog text-secondary me-2"></i>{% trans 'الموظف المسؤول' %}
-                                    </label>
-                                    {% render_field form.responsible_employee class="form-control select2" %}
-                                    {% if form.responsible_employee.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.responsible_employee.errors %}{{ error }}{% endfor %}
-                                        </div>
-                                    {% endif %}
+                            <!-- إضافة ملفات جديدة -->
+                            <div id="new-files-container">
+                                <div class="input-group input-group-sm mb-1 file-input-row">
+                                    <span class="input-group-text"><i class="fas fa-plus"></i></span>
+                                    <input type="file"
+                                           name="new_files"
+                                           class="form-control form-control-sm"
+                                           accept=".pdf">
+                                    <button type="button" class="btn btn-success btn-sm" onclick="addFileInput()">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
                                 </div>
                             </div>
+                            <small class="text-muted"><i class="fab fa-google-drive text-success me-1"></i>رفع تلقائي • PDF فقط</small>
                         </div>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="{{ form.inspection_file.id_for_label }}" class="form-label">
-                                    <i class="fas fa-file-pdf"></i> {% trans 'ملف المعاينة' %}
-                                </label>
-                                {% render_field form.inspection_file class="form-control" accept=".pdf" %}
-                                <!-- معاينة اسم الملف في Google Drive -->
-                                <div class="mt-2">
-                                    <div class="alert alert-info py-2">
-                                        <i class="fab fa-google-drive text-primary"></i>
-                                        <strong>رفع تلقائي إلى Google Drive:</strong>
-                                        <br>
-                                        <small class="text-muted">
-                                            سيتم رفع الملف تلقائياً إلى Google Drive عند الحفظ
-                                            <br>
-                                            <strong>اسم الملف:</strong> <span id="filename-preview" class="text-primary">سيتم توليده تلقائياً</span>
-                                        </small>
-                                    </div>
-                                </div>
-                                <!-- حالة الرفع إلى Google Drive -->
-                                {% if inspection.is_uploaded_to_drive %}
-                                    <div class="mt-2">
-                                        <div class="alert alert-success py-2">
-                                            <i class="fas fa-check-circle"></i>
-                                            <strong>تم الرفع إلى Google Drive بنجاح!</strong>
-                                            <br>
-                                            <a href="{{ inspection.google_drive_file_url }}"
-                                               target="_blank"
-                                               class="btn btn-sm btn-primary mt-1">
-                                                <i class="fab fa-google-drive"></i> عرض في Google Drive
-                                            </a>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                                {% if form.inspection_file.help_text %}
-                                    <small class="text-muted">{{ form.inspection_file.help_text }}</small>
-                                {% endif %}
-                                {% if form.inspection_file.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.inspection_file.errors %}{{ error }}{% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-header py-2" style="background:var(--primary);color:#fff">
+                            <h6 class="mb-0">
+                                <i class="fas fa-th-large me-2"></i>{% trans 'عدد الشبابيك' %}
+                            </h6>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="{{ form.windows_count.id_for_label }}" class="form-label">{% trans 'عدد الشبابيك' %}</label>
-                                {% render_field form.windows_count class="form-control" type="number" min="0" %}
-                                {% if form.windows_count.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.windows_count.errors %}{{ error }}{% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
+                        <div class="card-body py-2 d-flex align-items-center justify-content-center">
+                            {% render_field form.windows_count class="form-control form-control-lg text-center" type="number" min="0" style="font-size:2rem;font-weight:bold;max-width:120px" %}
                         </div>
                     </div>
-                    <!-- Customer Address Update Section -->
-                    {% if inspection %}
-                        <div class="mb-4">
-                            <div class="card border-warning">
-                                <div class="card-header bg-warning text-dark">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-map-marker-alt"></i> {% trans 'تحديث عنوان العميل' %}
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="mb-3">
-                                        <label for="{{ form.update_customer_address.id_for_label }}"
-                                               class="form-label fw-bold">
-                                            <i class="fas fa-edit"></i> {% trans 'العنوان الجديد للعميل' %}:
-                                        </label>
-                                        {{ form.update_customer_address|add_class:"form-control" }}
-                                        <small class="text-muted mt-1 d-block">
-                                            <i class="fas fa-info-circle"></i>
-                                            {% trans 'إذا تم ملء هذا الحقل، سيتم تحديث العنوان الرئيسي للعميل في جميع أنحاء النظام (المعاينات والتركيبات)' %}
-                                        </small>
-                                        {% if form.update_customer_address.errors %}
-                                            <div class="invalid-feedback d-block">{{ form.update_customer_address.errors }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% if inspection.customer.address %}
-                                        <div class="alert alert-info">
-                                            <h6 class="alert-heading fw-bold">
-                                                <i class="fas fa-map-marker-alt"></i> {% trans 'العنوان الحالي للعميل' %}:
-                                            </h6>
-                                            <p class="mb-0">{{ inspection.customer.address|linebreaks }}</p>
-                                        </div>
-                                    {% else %}
-                                        <div class="alert alert-warning">
-                                            <i class="fas fa-exclamation-triangle"></i>
-                                            {% trans 'لا يوجد عنوان مسجل للعميل حالياً' %}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endif %}
-                    <!-- Notes section -->
-                    <div class="mb-4">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="card-title mb-0">{% trans 'ملاحظات المعاينة' %}</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <label for="{{ form.notes.id_for_label }}" class="form-label fw-bold">{% trans 'ملاحظات المعاينة' %}:</label>
-                                    {{ form.notes|add_class:"form-control" }}
-                                    <small class="text-muted mt-1 d-block">{% trans 'أدخل ملاحظات خاصة بعملية المعاينة هنا' %}</small>
-                                    {% if form.notes.errors %}<div class="invalid-feedback d-block">{{ form.notes.errors }}</div>{% endif %}
-                                </div>
-                                {% if inspection.order_notes %}
-                                    <div class="mt-4">
-                                        <div class="alert alert-info">
-                                            <h6 class="alert-heading fw-bold">{% trans 'ملاحظات من الطلب (للعلم فقط)' %}:</h6>
-                                            <hr>
-                                            <p class="mb-0">{{ inspection.order_notes|linebreaks }}</p>
-                                        </div>
-                                        <div class="text-muted small">
-                                            <i class="fas fa-info-circle"></i> {% trans 'هذه الملاحظات للعلم فقط ولا يمكن تعديلها هنا. يمكن التعديل من صفحة الطلب.' %}
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <a href="{% url 'inspections:inspection_list' %}"
-                           class="btn btn-secondary">
-                            <i class="fas fa-times"></i> {% trans 'إلغاء' %}
-                        </a>
-                        <button type="submit" class="btn btn-primary" id="save-btn">
-                            <i class="fas fa-save"></i>
-                            <span id="save-text">
-                                {% if inspection %}
-                                    {% trans 'حفظ التغييرات' %}
-                                {% else %}
-                                    {% trans 'إنشاء المعاينة' %}
-                                {% endif %}
-                            </span>
-                            <span id="saving-text" style="display: none;">
-                                <i class="fas fa-spinner fa-spin"></i> جاري الحفظ...
-                            </span>
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
+            <!-- الصف الثالث: تحديث العنوان والملاحظات -->
+            <div class="row g-3 mb-3">
+                {% if inspection %}
+                    <!-- بطاقة تحديث العنوان -->
+                    <div class="col-lg-6">
+                        <div class="card h-100">
+                            <div class="card-header py-2"
+                                 style="background:#d4c5b1;
+                                        color:var(--text-primary)">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-map-marker-alt me-2"></i>{% trans 'تحديث عنوان العميل' %}
+                                </h6>
+                            </div>
+                            <div class="card-body py-2">
+                                {% if inspection.customer.address %}
+                                    <div class="alert alert-light py-1 px-2 mb-2 small">
+                                        <strong>الحالي:</strong> {{ inspection.customer.address }}
+                                    </div>
+                                {% endif %}
+                                {{ form.update_customer_address|add_class:"form-control form-control-sm" }}
+                                <small class="text-muted">أدخل العنوان الجديد إذا تغير</small>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                <!-- بطاقة الملاحظات -->
+                <div class="col-lg-{% if inspection %}6{% else %}12{% endif %}">
+                    <div class="card h-100">
+                        <div class="card-header py-2" style="background:var(--primary);color:#fff">
+                            <h6 class="mb-0">
+                                <i class="fas fa-sticky-note me-2"></i>{% trans 'ملاحظات المعاينة' %}
+                            </h6>
+                        </div>
+                        <div class="card-body py-2">
+                            {{ form.notes|add_class:"form-control form-control-sm" }}
+                            {% if inspection.order_notes %}
+                                <div class="alert alert-info py-1 px-2 mt-2 mb-0 small">
+                                    <strong>ملاحظات الطلب:</strong> {{ inspection.order_notes|truncatewords:20 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- أزرار الإجراءات -->
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'inspections:inspection_list' %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i>{% trans 'إلغاء' %}
+                </a>
+                <button type="submit" class="btn btn-primary" id="save-btn">
+                    <i class="fas fa-save me-1"></i>
+                    <span id="save-text">
+                        {% if inspection %}
+                            {% trans 'حفظ التغييرات' %}
+                        {% else %}
+                            {% trans 'إنشاء المعاينة' %}
+                        {% endif %}
+                    </span>
+                    <span id="saving-text" style="display:none"><i class="fas fa-spinner fa-spin"></i> جاري الحفظ...</span>
+                </button>
+            </div>
+        </form>
     </div>
-</div>
-</div>
 {% endblock %}
 {% block extra_js %}
     <!-- Select2 JavaScript -->
@@ -623,5 +687,114 @@ function showQuietNotification(message, type = 'info') {
         setTimeout(() => toast.remove(), 300);
     }, 5000);
 }
+
+// ===== إدارة الملفات المتعددة =====
+const MAX_FILES = 5;
+let currentFilesCount = parseInt(document.getElementById('current-files-count')?.textContent || '0');
+
+// إضافة حقل ملف جديد
+function addFileInput() {
+    const container = document.getElementById('new-files-container');
+    const existingInputs = container.querySelectorAll('input[type="file"]').length;
+    
+    // التحقق من الحد الأقصى
+    if (currentFilesCount + existingInputs >= MAX_FILES) {
+        showQuietNotification('الحد الأقصى للملفات هو 5 ملفات', 'warning');
+        return;
+    }
+    
+    const newRow = document.createElement('div');
+    newRow.className = 'file-input-row mb-2';
+    newRow.innerHTML = `
+        <div class="input-group">
+            <input type="file" name="new_files" class="form-control" accept=".pdf">
+            <button type="button" class="btn btn-danger" onclick="removeFileInput(this)" title="إزالة">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(newRow);
+    updateFilesCounter();
+}
+
+// إزالة حقل ملف
+function removeFileInput(button) {
+    button.closest('.file-input-row').remove();
+    updateFilesCounter();
+}
+
+// حذف ملف موجود
+function deleteInspectionFile(fileId) {
+    if (!confirm('هل أنت متأكد من حذف هذا الملف؟')) {
+        return;
+    }
+    
+    fetch(`/inspections/api/file/${fileId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // إزالة العنصر من الواجهة
+            const fileItem = document.getElementById(`file-item-${fileId}`);
+            if (fileItem) {
+                fileItem.style.transition = 'opacity 0.3s ease';
+                fileItem.style.opacity = '0';
+                setTimeout(() => {
+                    fileItem.remove();
+                    currentFilesCount = data.remaining_files;
+                    updateFilesCounter();
+                }, 300);
+            }
+            showQuietNotification(data.message, 'success');
+        } else {
+            showQuietNotification(data.message || 'حدث خطأ', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showQuietNotification('حدث خطأ في حذف الملف', 'danger');
+    });
+}
+
+// تحديث عداد الملفات
+function updateFilesCounter() {
+    const counter = document.getElementById('current-files-count');
+    const container = document.getElementById('new-files-container');
+    const newInputs = container ? container.querySelectorAll('input[type="file"]').length : 0;
+    
+    // عد الملفات المحددة فعلياً
+    let selectedCount = 0;
+    if (container) {
+        container.querySelectorAll('input[type="file"]').forEach(input => {
+            if (input.files && input.files.length > 0) {
+                selectedCount++;
+            }
+        });
+    }
+    
+    const totalCount = currentFilesCount + selectedCount;
+    if (counter) {
+        counter.textContent = totalCount;
+    }
+    
+    // تغيير لون العداد حسب العدد
+    const badge = document.getElementById('files-counter');
+    if (badge) {
+        badge.className = 'badge ' + (totalCount >= MAX_FILES ? 'bg-warning' : 'bg-info');
+    }
+}
+
+// تحديث العداد عند تغيير الملفات
+document.addEventListener('change', function(e) {
+    if (e.target.type === 'file' && e.target.name === 'new_files') {
+        updateFilesCounter();
+    }
+});
     </script>
 {% endblock %}

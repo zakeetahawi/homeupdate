@@ -32,6 +32,7 @@ from .forms import (
 from .models import (
     Inspection,
     InspectionEvaluation,
+    InspectionFile,
     InspectionNotification,
     InspectionReport,
 )
@@ -438,6 +439,12 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
         return kwargs
 
+    def get_context_data(self, **kwargs):
+        """Pass inspection object to template for displaying existing files."""
+        context = super().get_context_data(**kwargs)
+        context["inspection"] = self.object
+        return context
+
     def form_valid(self, form):
         inspection = form.instance
         old_inspection = self.get_object()
@@ -493,6 +500,33 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         # تعيين المستخدم الذي قام بالتغيير للاستخدام في الإشعارات
         inspection._changed_by = self.request.user
         response = super().form_valid(form)
+
+        # ===== معالجة الملفات المتعددة =====
+        new_files = self.request.FILES.getlist("new_files")
+        if new_files:
+            current_count = inspection.files.count()
+            max_files = 5
+            available_slots = max_files - current_count
+
+            files_added = 0
+            for i, file in enumerate(new_files[:available_slots]):
+                # التحقق من نوع الملف
+                if not file.name.lower().endswith(".pdf"):
+                    continue
+
+                try:
+                    InspectionFile.objects.create(
+                        inspection=inspection, file=file, order=current_count + i
+                    )
+                    files_added += 1
+                except Exception as e:
+                    print(f"خطأ في إنشاء ملف المعاينة: {e}")
+
+            if files_added > 0:
+                messages.success(
+                    self.request,
+                    f"تم رفع {files_added} ملف(ات) وسيتم رفعها إلى Google Drive",
+                )
 
         # إنشاء سجل تغيير الحالة في OrderStatusLog إذا كان هناك طلب مرتبط
         if old_status != new_status and inspection.order:
@@ -1585,3 +1619,141 @@ def print_daily_schedule(request):
     }
 
     return render(request, "inspections/print_daily_schedule.html", context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_inspection_file(request, file_id):
+    """
+    حذف ملف معاينة منفرد من InspectionFile.
+    يتطلب صلاحية تعديل المعاينة.
+    """
+    try:
+        file_obj = get_object_or_404(
+            InspectionFile.objects.select_related("inspection"), pk=file_id
+        )
+        inspection = file_obj.inspection
+
+        # التحقق من الصلاحيات
+        user = request.user
+        has_permission = (
+            user.is_superuser
+            or user.is_staff
+            or user.has_perm("inspections.change_inspection")
+            or inspection.created_by == user
+            or inspection.inspector == user
+        )
+
+        if not has_permission:
+            return JsonResponse(
+                {"success": False, "message": "ليس لديك صلاحية لحذف هذا الملف"},
+                status=403,
+            )
+
+        # حذف الملف من التخزين
+        if file_obj.file:
+            file_obj.file.delete(save=False)
+
+        # حذف السجل
+        file_obj.delete()
+
+        # إرجاع عدد الملفات المتبقية
+        remaining_files = inspection.files.count()
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "تم حذف الملف بنجاح",
+                "remaining_files": remaining_files,
+            }
+        )
+
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "message": f"خطأ في حذف الملف: {str(e)}"}, status=500
+        )
+
+
+@login_required
+@require_http_methods(["POST"])
+def upload_inspection_files(request, inspection_id):
+    """
+    رفع ملفات متعددة لمعاينة موجودة.
+    الحد الأقصى 5 ملفات لكل معاينة.
+    """
+    try:
+        inspection = get_object_or_404(Inspection, pk=inspection_id)
+
+        # التحقق من الصلاحيات
+        user = request.user
+        has_permission = (
+            user.is_superuser
+            or user.is_staff
+            or user.has_perm("inspections.change_inspection")
+            or inspection.created_by == user
+            or inspection.inspector == user
+        )
+
+        if not has_permission:
+            return JsonResponse(
+                {"success": False, "message": "ليس لديك صلاحية لرفع ملفات"}, status=403
+            )
+
+        # التحقق من عدد الملفات الحالية
+        current_files_count = inspection.files.count()
+        max_files = 5
+
+        if current_files_count >= max_files:
+            return JsonResponse(
+                {"success": False, "message": f"الحد الأقصى للملفات هو {max_files}"},
+                status=400,
+            )
+
+        # الحصول على الملفات
+        uploaded_files = request.FILES.getlist("files")
+
+        if not uploaded_files:
+            return JsonResponse(
+                {"success": False, "message": "لم يتم رفع أي ملفات"}, status=400
+            )
+
+        # التحقق من أن العدد الإجمالي لا يتجاوز الحد
+        available_slots = max_files - current_files_count
+        if len(uploaded_files) > available_slots:
+            return JsonResponse(
+                {"success": False, "message": f"يمكنك رفع {available_slots} ملفات فقط"},
+                status=400,
+            )
+
+        created_files = []
+        for i, file in enumerate(uploaded_files):
+            # التحقق من نوع الملف
+            if not file.name.lower().endswith(".pdf"):
+                continue
+
+            # إنشاء سجل الملف
+            order_num = current_files_count + i
+            inspection_file = InspectionFile.objects.create(
+                inspection=inspection, file=file, order=order_num
+            )
+            created_files.append(
+                {
+                    "id": inspection_file.pk,
+                    "name": inspection_file.original_filename,
+                    "order": order_num,
+                }
+            )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": f"تم رفع {len(created_files)} ملفات بنجاح",
+                "files": created_files,
+                "total_files": inspection.files.count(),
+            }
+        )
+
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "message": f"خطأ في رفع الملفات: {str(e)}"}, status=500
+        )
