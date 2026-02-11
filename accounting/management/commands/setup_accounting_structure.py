@@ -4,6 +4,7 @@
 from decimal import Decimal
 
 from django.core.management.base import BaseCommand
+from django.db import IntegrityError
 
 from accounting.models import Account, AccountType
 
@@ -142,27 +143,42 @@ class Command(BaseCommand):
             if acc_data.get("parent_code"):
                 parent = Account.objects.filter(code=acc_data["parent_code"]).first()
 
-            # إنشاء الحساب
-            account, created = Account.objects.get_or_create(
-                code=acc_data["code"],
-                defaults={
-                    "name": acc_data["name"],
-                    "account_type": account_type,
-                    "parent": parent,
-                    "is_active": acc_data["is_active"],
-                },
-            )
+            # إنشاء الحساب - مع معالجة حالة وجود اسم مكرر بكود مختلف
+            existing_by_name = Account.objects.filter(
+                name=acc_data["name"], is_customer_account=False
+            ).first()
+            existing_by_code = Account.objects.filter(code=acc_data["code"]).first()
 
-            if created:
+            if existing_by_code:
+                self.stdout.write(
+                    f"  ⏭️  موجود مسبقاً: {existing_by_code.code} - {existing_by_code.name}"
+                )
+                continue
+            elif existing_by_name:
+                self.stdout.write(
+                    f"  ⏭️  موجود بكود مختلف: {existing_by_name.code} - {existing_by_name.name} (تخطي إنشاء {acc_data['code']})"
+                )
+                continue
+
+            try:
+                account = Account.objects.create(
+                    code=acc_data["code"],
+                    name=acc_data["name"],
+                    account_type=account_type,
+                    parent=parent,
+                    is_active=acc_data["is_active"],
+                )
                 self.stdout.write(
                     self.style.SUCCESS(
                         f"  ✅ حساب: {acc_data['code']} - {acc_data['name']}"
                     )
                 )
                 created_accounts += 1
-            else:
+            except IntegrityError as e:
                 self.stdout.write(
-                    f"  ⏭️  موجود مسبقاً: {acc_data['code']} - {acc_data['name']}"
+                    self.style.WARNING(
+                        f"  ⚠️  تخطي {acc_data['code']} - {acc_data['name']}: {e}"
+                    )
                 )
 
         self.stdout.write(

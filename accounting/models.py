@@ -468,26 +468,31 @@ class Transaction(models.Model):
 
     @classmethod
     def generate_transaction_number(cls):
-        """توليد رقم قيد فريد"""
+        """توليد رقم قيد فريد - يعمل من خلال البحث عن آخر رقم وزيادته"""
+        from django.db import connection
+
         today = timezone.now()
         prefix = f"TXN-{today.strftime('%Y%m')}-"
 
-        last_txn = (
-            cls.objects.filter(transaction_number__startswith=prefix)
-            .order_by("-transaction_number")
-            .first()
-        )
+        with connection.cursor() as cursor:
+            # نبحث عن آخر transaction_number يبدأ بالـ prefix ونستخرج الرقم منه
+            cursor.execute(
+                "SELECT transaction_number FROM accounting_transaction "
+                "WHERE transaction_number LIKE %s "
+                "ORDER BY CAST(SUBSTRING(transaction_number FROM %s) AS INTEGER) DESC "
+                "LIMIT 1",
+                [f"{prefix}%", len(prefix) + 1]
+            )
+            row = cursor.fetchone()
+            if row:
+                try:
+                    last_num = int(row[0].split("-")[-1])
+                except (IndexError, ValueError):
+                    last_num = 0
+            else:
+                last_num = 0
 
-        if last_txn:
-            try:
-                last_num = int(last_txn.transaction_number.split("-")[-1])
-                new_num = last_num + 1
-            except (IndexError, ValueError):
-                new_num = 1
-        else:
-            new_num = 1
-
-        return f"{prefix}{new_num:05d}"
+        return f"{prefix}{last_num + 1:05d}"
 
 
 class TransactionLine(models.Model):

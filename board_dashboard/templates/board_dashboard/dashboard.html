@@ -298,11 +298,13 @@
     align-items: flex-end;
     justify-content: center;
     margin-bottom: 8px;
+    direction: ltr;
 }
 .podium-item {
     text-align: center;
     flex: 1;
     transition: all 0.3s;
+    direction: rtl;
 }
 .podium-item:hover {
     transform: translateY(-3px);
@@ -320,18 +322,18 @@
     color: #fff;
     position: relative;
 }
-.podium-item:nth-child(1) .podium-avatar {
+#podium-1 .podium-avatar {
     background: linear-gradient(135deg, #f59e0b, #fbbf24);
     width: 52px;
     height: 52px;
     font-size: 1.3rem;
     box-shadow: 0 4px 14px rgba(245,158,11,0.35);
 }
-.podium-item:nth-child(2) .podium-avatar {
+#podium-2 .podium-avatar {
     background: linear-gradient(135deg, #94a3b8, #cbd5e1);
     box-shadow: 0 3px 10px rgba(148,163,184,0.3);
 }
-.podium-item:nth-child(3) .podium-avatar {
+#podium-3 .podium-avatar {
     background: linear-gradient(135deg, #b45309, #d97706);
     box-shadow: 0 3px 10px rgba(180,83,9,0.3);
 }
@@ -378,9 +380,9 @@
     border-radius: 3px;
     height: 4px;
 }
-.podium-item:nth-child(1) .podium-bar { background: #f59e0b; height: 50px; width: 100%; border-radius: 6px 6px 0 0; }
-.podium-item:nth-child(2) .podium-bar { background: #94a3b8; height: 35px; width: 100%; border-radius: 6px 6px 0 0; }
-.podium-item:nth-child(3) .podium-bar { background: #d97706; height: 22px; width: 100%; border-radius: 6px 6px 0 0; }
+#podium-1 .podium-bar { background: #f59e0b; height: 50px; width: 100%; border-radius: 6px 6px 0 0; }
+#podium-2 .podium-bar { background: #94a3b8; height: 35px; width: 100%; border-radius: 6px 6px 0 0; }
+#podium-3 .podium-bar { background: #d97706; height: 22px; width: 100%; border-radius: 6px 6px 0 0; }
 
 /* --- Chart Cards --- */
 .chart-card {
@@ -838,7 +840,7 @@
                 </div>
                 <!-- 4th & 5th Performers -->
                 <div id="performers-extra" class="mt-2" style="display:none">
-                    <div class="d-flex gap-2 justify-content-center flex-wrap" id="performers-extra-list"></div>
+                    <div class="d-flex gap-2 justify-content-center flex-wrap" id="performers-extra-list" style="direction:ltr"></div>
                 </div>
                 <!-- Performers full table breakdown -->
                 <div id="performers-breakdown" class="mt-2" style="display:none"></div>

@@ -951,16 +951,51 @@ async function handleSync(request, env) {
     const data = await request.json();
 
     if (data.action === 'sync_product') {
-      await env.PRODUCTS_KV.put(data.product.code, JSON.stringify(data.product));
+      const product = data.product;
+      await env.PRODUCTS_KV.put(product.code, JSON.stringify(product));
       return new Response(JSON.stringify({ success: true, mode: 'production' }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
     if (data.action === 'sync_all') {
-      const promises = data.products.map(p => env.PRODUCTS_KV.put(p.code, JSON.stringify(p)));
-      await Promise.all(promises);
-      return new Response(JSON.stringify({ success: true, count: data.products.length, mode: 'production' }), {
+      let synced = 0;
+      for (const p of data.products) {
+        await env.PRODUCTS_KV.put(p.code, JSON.stringify(p));
+        synced++;
+      }
+      return new Response(JSON.stringify({ success: true, count: synced, mode: 'production' }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // مزامنة خريطة الأسماء القديمة → الأكواد الجديدة (ملف واحد)
+    if (data.action === 'sync_name_map') {
+      await env.PRODUCTS_KV.put('__NAME_TO_CODE_MAP__', JSON.stringify(data.map));
+      return new Response(JSON.stringify({ success: true, count: Object.keys(data.map).length, mode: 'production' }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // تحديث جزئي لخريطة الأسماء (إضافة/تعديل إدخالات بدون مسح القديمة)
+    if (data.action === 'update_name_map') {
+      let existingMap = {};
+      try {
+        const existing = await env.PRODUCTS_KV.get('__NAME_TO_CODE_MAP__', 'json');
+        if (existing) existingMap = existing;
+      } catch (e) { /* ignore */ }
+      
+      // دمج الإدخالات الجديدة
+      const entries = data.entries || {};
+      Object.assign(existingMap, entries);
+      
+      await env.PRODUCTS_KV.put('__NAME_TO_CODE_MAP__', JSON.stringify(existingMap));
+      return new Response(JSON.stringify({ 
+        success: true, 
+        added: Object.keys(entries).length, 
+        total: Object.keys(existingMap).length, 
+        mode: 'production' 
+      }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
@@ -1048,7 +1083,19 @@ export default {
     }
 
     // Fetch Product Data
-    const product = await env.PRODUCTS_KV.get(code, 'json');
+    let product = await env.PRODUCTS_KV.get(code, 'json');
+
+    // إذا لم نجد بالكود المباشر، نبحث في خريطة الأسماء القديمة
+    if (!product) {
+      const nameMap = await env.PRODUCTS_KV.get('__NAME_TO_CODE_MAP__', 'json');
+      if (nameMap && nameMap[code]) {
+        product = await env.PRODUCTS_KV.get(nameMap[code], 'json');
+      }
+      // جرّب أيضاً بالأحرف الكبيرة
+      if (!product && nameMap && nameMap[code.toUpperCase()]) {
+        product = await env.PRODUCTS_KV.get(nameMap[code.toUpperCase()], 'json');
+      }
+    }
 
     if (!product) {
       return new Response(await generate404Page(code, env), {

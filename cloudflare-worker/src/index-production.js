@@ -511,9 +511,17 @@ async function handleSync(request, env) {
   const { action, data } = body;
 
   if (action === 'sync_product') {
-    await env.PRODUCTS_KV.put(data.code, JSON.stringify(data.product), {
+    const product = data.product || data;
+    const code = product.code || data.code;
+    await env.PRODUCTS_KV.put(code, JSON.stringify(product), {
       metadata: { last_sync: new Date().toISOString() }
     });
+    // حفظ alias بالاسم (الكود القديم) إذا كان مختلفاً عن الكود الجديد
+    if (product.name && product.name !== code) {
+      await env.PRODUCTS_KV.put(product.name, JSON.stringify(product), {
+        metadata: { last_sync: new Date().toISOString(), alias_for: code }
+      });
+    }
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -527,6 +535,12 @@ async function handleSync(request, env) {
         metadata: { last_sync: new Date().toISOString() }
       });
       results.push(prod.code);
+      // حفظ alias بالاسم (الكود القديم) إذا كان مختلفاً
+      if (prod.name && prod.name !== prod.code) {
+        await env.PRODUCTS_KV.put(prod.name, JSON.stringify(prod), {
+          metadata: { last_sync: new Date().toISOString(), alias_for: prod.code }
+        });
+      }
     }
     return new Response(JSON.stringify({ success: true, synced: results }), {
       headers: { 'Content-Type': 'application/json' }

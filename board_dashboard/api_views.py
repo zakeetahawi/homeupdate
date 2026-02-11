@@ -239,8 +239,10 @@ class BoardStaffAPIView(APIView, DashboardFilterMixin):
         start_date, end_date = self.get_date_range()
 
         # Base filter for Activity/Orders
-        # 1. Order Creation Volume
-        orders_qs = Order.objects.filter(
+        # 1. Order Creation Volume (exclude cancelled/rejected like Revenue API)
+        orders_qs = Order.objects.exclude(
+            status__in=["cancelled", "rejected"]
+        ).filter(
             created_at__gte=start_date, created_at__lte=end_date
         )
         orders_qs = self.apply_filters(

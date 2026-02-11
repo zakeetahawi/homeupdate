@@ -188,6 +188,9 @@ def bulk_upload_products_fast(
             "cutting_split": 0,
         }
 
+        # تتبع المنتجات المعدلة/المنشأة لخط الإنتاج التلقائي
+        affected_product_ids = []
+
         # معالجة بدفعات متوسطة للتوازن بين السرعة والأمان
         batch_size = 50  # دفعات أصغر لتقليل وقت المعاملات
         results_batch = []
@@ -422,11 +425,17 @@ def bulk_upload_products_fast(
                             action = result["action"]
                             if action == "created":
                                 stats["created"] += 1
+                                if result.get("product"):
+                                    affected_product_ids.append(result["product"].id)
                             elif action == "updated":
                                 stats["updated"] += 1
+                                if result.get("product"):
+                                    affected_product_ids.append(result["product"].id)
                             elif action == "moved":
                                 stats["moved"] += 1
                                 stats["updated"] += 1
+                                if result.get("product"):
+                                    affected_product_ids.append(result["product"].id)
                             elif action == "skipped":
                                 stats["skipped"] += 1
 
@@ -534,7 +543,18 @@ def bulk_upload_products_fast(
             log_file.close()
         except:
             pass
-            
+
+        # 🚀 تشغيل خط الإنتاج التلقائي: ترحيل + QR + مزامنة Cloudflare
+        if affected_product_ids:
+            try:
+                from inventory.auto_product_pipeline import bulk_post_upload_pipeline
+                log_message(f"🔄 بدء خط الإنتاج التلقائي لـ {len(affected_product_ids)} منتج...")
+                bulk_post_upload_pipeline(affected_product_ids)
+                log_message(f"✅ تم تشغيل خط الإنتاج التلقائي (ترحيل + QR + مزامنة Cloudflare)")
+            except Exception as pipeline_error:
+                log_message(f"⚠️ تحذير: فشل تشغيل خط الإنتاج التلقائي: {pipeline_error}")
+                logger.error(f"Auto pipeline error after bulk upload: {pipeline_error}")
+
         return {"status": "success", "stats": stats}
 
     except Exception as e:
