@@ -169,6 +169,10 @@ class InspectionListView(PaginationFixMixin, LoginRequiredMixin, ListView):
             status = form.cleaned_data.get("status")
             from_orders = form.cleaned_data.get("from_orders")
             is_duplicated = form.cleaned_data.get("is_duplicated")
+            date_from = form.cleaned_data.get("date_from")
+            date_to = form.cleaned_data.get("date_to")
+            inspector_id = form.cleaned_data.get("inspector")
+            result = form.cleaned_data.get("result")
             if branch_id:
                 queryset = queryset.filter(order__customer__branch_id=branch_id)
             if status == "pending" and from_orders == "1":
@@ -177,6 +181,14 @@ class InspectionListView(PaginationFixMixin, LoginRequiredMixin, ListView):
                 queryset = queryset.filter(status=status)
             if is_duplicated == "1":
                 queryset = queryset.filter(notes__contains="تكرار من المعاينة رقم:")
+            if date_from:
+                queryset = queryset.filter(scheduled_date__gte=date_from)
+            if date_to:
+                queryset = queryset.filter(scheduled_date__lte=date_to)
+            if inspector_id:
+                queryset = queryset.filter(inspector_id=inspector_id)
+            if result:
+                queryset = queryset.filter(result=result)
             # بحث شامل متعدد الحقول (يشمل جميع أرقام الفواتير والعقود)
             if q:
                 queryset = queryset.filter(
@@ -256,6 +268,11 @@ class InspectionListView(PaginationFixMixin, LoginRequiredMixin, ListView):
             ).count(),
         }
         context["branches"] = Branch.objects.all()
+        # قائمة الفنيين للفلتر
+        from accounts.models import User
+        context["inspectors"] = User.objects.filter(
+            Q(is_inspection_technician=True) | Q(is_inspection_manager=True)
+        ).order_by("first_name", "last_name")
         return context
 
 
@@ -1212,8 +1229,27 @@ class InspectionTechnicianDashboardView(LoginRequiredMixin, ListView):
             "customer", "branch", "order", "responsible_employee"
         )
 
-        # إخفاء المعاينات المكتملة التي تم رفع ملفها
-        queryset = queryset.exclude(status="completed", inspection_file__isnull=False)
+        # فلتر الحالة
+        status_filter = self.request.GET.get("status", "")
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        else:
+            # إخفاء المعاينات المكتملة التي تم رفع ملفها (الافتراضي)
+            queryset = queryset.exclude(status="completed", inspection_file__isnull=False)
+
+        # فلتر البحث
+        search = self.request.GET.get("search", "").strip()
+        if search:
+            queryset = queryset.filter(
+                Q(customer__name__icontains=search)
+                | Q(customer__phone__icontains=search)
+                | Q(customer__code__icontains=search)
+                | Q(order__order_number__icontains=search)
+                | Q(order__invoice_number__icontains=search)
+                | Q(order__contract_number__icontains=search)
+                | Q(inspection_code__icontains=search)
+                | Q(notes__icontains=search)
+            )
 
         # الفلترة حسب التاريخ
         date_filter = self.request.GET.get("date_filter", "today")
@@ -1249,6 +1285,8 @@ class InspectionTechnicianDashboardView(LoginRequiredMixin, ListView):
         context["date_filter"] = self.request.GET.get("date_filter", "today")
         context["date_from"] = self.request.GET.get("date_from", "")
         context["date_to"] = self.request.GET.get("date_to", "")
+        context["search_query"] = self.request.GET.get("search", "")
+        context["status_filter"] = self.request.GET.get("status", "")
 
         # إحصائيات سريعة - المدراء يرون جميع المعاينات
         today = timezone.now().date()
@@ -1299,11 +1337,73 @@ class TechnicianCompletedInspectionsView(
         ):
             queryset = queryset.filter(inspector=self.request.user)
 
+        queryset = queryset.select_related(
+            "customer", "inspector", "branch", "order", "responsible_employee"
+        )
+
+        # فلتر البحث
+        search = self.request.GET.get("search", "").strip()
+        if search:
+            queryset = queryset.filter(
+                Q(customer__name__icontains=search)
+                | Q(customer__phone__icontains=search)
+                | Q(customer__code__icontains=search)
+                | Q(order__order_number__icontains=search)
+                | Q(order__invoice_number__icontains=search)
+                | Q(order__contract_number__icontains=search)
+                | Q(inspection_code__icontains=search)
+                | Q(branch__name__icontains=search)
+                | Q(notes__icontains=search)
+            )
+
+        # فلتر التاريخ
+        date_filter = self.request.GET.get("date_filter", "")
+        today = timezone.now().date()
+
+        if date_filter == "today":
+            queryset = queryset.filter(completed_at__date=today)
+        elif date_filter == "week":
+            week_start = today - timedelta(days=today.weekday())
+            week_end = week_start + timedelta(days=6)
+            queryset = queryset.filter(
+                completed_at__date__gte=week_start, completed_at__date__lte=week_end
+            )
+        elif date_filter == "month":
+            queryset = queryset.filter(
+                completed_at__year=today.year, completed_at__month=today.month
+            )
+        elif date_filter == "custom":
+            date_from = self.request.GET.get("date_from")
+            date_to = self.request.GET.get("date_to")
+            if date_from:
+                queryset = queryset.filter(completed_at__date__gte=date_from)
+            if date_to:
+                queryset = queryset.filter(completed_at__date__lte=date_to)
+
+        # فلتر النتيجة
+        result_filter = self.request.GET.get("result", "")
+        if result_filter:
+            queryset = queryset.filter(result=result_filter)
+
+        # فلتر الفرع
+        branch_filter = self.request.GET.get("branch", "")
+        if branch_filter:
+            queryset = queryset.filter(branch_id=branch_filter)
+
+        # فلتر الفني (للمدراء فقط)
+        inspector_filter = self.request.GET.get("inspector", "")
+        if inspector_filter and (
+            self.request.user.is_superuser
+            or getattr(self.request.user, "is_inspection_manager", False)
+        ):
+            queryset = queryset.filter(inspector_id=inspector_filter)
+
         # ترتيب النتائج بالأحدث أولاً
         return queryset.order_by("-completed_at", "-updated_at")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        from accounts.models import Branch, User
 
         # حساب عدد المعاينات المكتملة في الشهر الحالي
         today = timezone.now().date()
@@ -1322,6 +1422,31 @@ class TechnicianCompletedInspectionsView(
 
         context["monthly_completed_count"] = monthly_qs.count()
         context["current_month_name"] = today.strftime("%B %Y")
+
+        # سياق الفلاتر
+        context["search_query"] = self.request.GET.get("search", "")
+        context["date_filter"] = self.request.GET.get("date_filter", "")
+        context["date_from"] = self.request.GET.get("date_from", "")
+        context["date_to"] = self.request.GET.get("date_to", "")
+        context["result_filter"] = self.request.GET.get("result", "")
+        context["branch_filter"] = self.request.GET.get("branch", "")
+        context["inspector_filter"] = self.request.GET.get("inspector", "")
+
+        # بيانات الفلاتر
+        context["branches"] = Branch.objects.all().order_by("name")
+        context["result_choices"] = Inspection.RESULT_CHOICES
+
+        # قائمة الفنيين (للمدراء فقط)
+        is_manager = (
+            self.request.user.is_superuser
+            or getattr(self.request.user, "is_inspection_manager", False)
+        )
+        context["is_manager"] = is_manager
+        if is_manager:
+            context["inspectors"] = User.objects.filter(
+                is_inspection_technician=True, is_active=True
+            ).order_by("first_name", "username")
+
         return context
 
 
@@ -1504,10 +1629,13 @@ def inspection_schedule_view(request):
     else:
         selected_date = timezone.now().date()
 
-    # الحصول على المعاينات المجدولة فقط لهذا التاريخ
+    # فلتر الحالة - يمكن عرض كل الحالات أو حالة محددة
+    status_filter = request.GET.get("status", "")
+
+    # الحصول على المعاينات لهذا التاريخ
     inspections = (
         Inspection.objects.filter(
-            scheduled_date=selected_date, status="scheduled"  # المجدولة فقط
+            scheduled_date=selected_date,
         )
         .select_related(
             "customer", "inspector", "branch", "order", "responsible_employee"
@@ -1515,49 +1643,63 @@ def inspection_schedule_view(request):
         .order_by("scheduled_time", "created_at")
     )
 
+    # تطبيق فلتر الحالة
+    if status_filter:
+        inspections = inspections.filter(status=status_filter)
+
     # تطبيق فلتر الصلاحيات
     if not request.user.is_superuser:
-        inspections = inspections.filter(
+        if getattr(request.user, "is_inspection_manager", False):
+            pass  # مدير المعاينات يرى الكل
+        else:
+            inspections = inspections.filter(
+                Q(inspector=request.user) | Q(created_by=request.user)
+            )
+
+    # إحصائيات التاريخ المحدد (بدون فلتر الحالة - لعرض جميع الإحصائيات)
+    day_qs = Inspection.objects.filter(scheduled_date=selected_date)
+    if not request.user.is_superuser and not getattr(request.user, "is_inspection_manager", False):
+        day_qs = day_qs.filter(
             Q(inspector=request.user) | Q(created_by=request.user)
         )
 
-    # إحصائيات التاريخ المحدد
     total_inspections = inspections.count()
-    scheduled_inspections = total_inspections  # كلها مجدولة
-    pending_inspections = 0  # لا نعرض المعلقة
+    scheduled_count = day_qs.filter(status="scheduled").count()
+    pending_count = day_qs.filter(status="pending").count()
+    completed_count = day_qs.filter(status="completed").count()
+    cancelled_count = day_qs.filter(status="cancelled").count()
 
-    # الحصول على التواريخ التي تحتوي على معاينات مجدولة (للتنقل السريع)
-    dates_with_inspections = (
-        Inspection.objects.filter(
-            scheduled_date__isnull=False, status="scheduled"  # المجدولة فقط
+    # الحصول على التواريخ التي تحتوي على معاينات (للتنقل السريع)
+    dates_qs = Inspection.objects.filter(
+        scheduled_date__isnull=False,
+    )
+    if not request.user.is_superuser and not getattr(request.user, "is_inspection_manager", False):
+        dates_qs = dates_qs.filter(
+            Q(inspector=request.user) | Q(created_by=request.user),
         )
-        .values_list("scheduled_date", flat=True)
+
+    dates_with_inspections = (
+        dates_qs.values_list("scheduled_date", flat=True)
         .distinct()
         .order_by("scheduled_date")
     )
-
-    if not request.user.is_superuser:
-        dates_with_inspections = (
-            Inspection.objects.filter(
-                Q(inspector=request.user) | Q(created_by=request.user),
-                scheduled_date__isnull=False,
-                status="scheduled",  # المجدولة فقط
-            )
-            .values_list("scheduled_date", flat=True)
-            .distinct()
-            .order_by("scheduled_date")
-        )
 
     context = {
         "inspections": inspections,
         "selected_date": selected_date,
         "total_inspections": total_inspections,
-        "scheduled_inspections": scheduled_inspections,
-        "pending_inspections": pending_inspections,
+        "scheduled_count": scheduled_count,
+        "pending_count": pending_count,
+        "completed_count": completed_count,
+        "cancelled_count": cancelled_count,
+        "scheduled_inspections": scheduled_count,
+        "pending_inspections": pending_count,
         "dates_with_inspections": dates_with_inspections,
         "today": timezone.now().date(),
         "prev_date": selected_date - timedelta(days=1),
         "next_date": selected_date + timedelta(days=1),
+        "status_filter": status_filter,
+        "status_choices": Inspection.STATUS_CHOICES,
     }
 
     return render(request, "inspections/inspection_schedule.html", context)

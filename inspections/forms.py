@@ -340,3 +340,7 @@ class InspectionSearchForm(forms.Form):
     status = forms.CharField(required=False)
     from_orders = forms.CharField(required=False)
     is_duplicated = forms.CharField(required=False)
+    date_from = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}))
+    date_to = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}))
+    inspector = forms.CharField(required=False)
+    result = forms.CharField(required=False)

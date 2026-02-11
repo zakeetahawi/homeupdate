@@ -122,14 +122,16 @@
         <div class="card mb-4">
             <div class="card-body">
                 <form method="get" class="row g-3 align-items-end">
-                    <div class="col-md-2">
+                    <div class="col-md-3">
+                        <label class="form-label">بحث</label>
                         <input type="text"
                                name="q"
                                class="form-control"
-                               placeholder="بحث بكود العميل أو اسم العميل أو رقم الطلب..."
+                               placeholder="كود العميل، الاسم، رقم الطلب، العقد، الهاتف..."
                                value="{{ request.GET.q }}">
                     </div>
                     <div class="col-md-2">
+                        <label class="form-label">الفرع</label>
                         <select name="branch" class="form-select">
                             <option value="">كل الفروع</option>
                             {% for branch in branches %}
@@ -141,8 +143,11 @@
                         </select>
                     </div>
                     <div class="col-md-2">
+                        <label class="form-label">الحالة</label>
                         <select name="status" class="form-select">
                             <option value="">كل الحالات</option>
+                            <option value="not_scheduled"
+                                    {% if request.GET.status == 'not_scheduled' %}selected{% endif %}>غير مجدول</option>
                             <option value="pending"
                                     {% if request.GET.status == 'pending' %}selected{% endif %}>قيد الانتظار</option>
                             <option value="scheduled"
@@ -151,11 +156,35 @@
                                     {% if request.GET.status == 'completed' %}selected{% endif %}>مكتمل</option>
                             <option value="cancelled"
                                     {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغي</option>
+                            <option value="postponed_by_customer"
+                                    {% if request.GET.status == 'postponed_by_customer' %}selected{% endif %}>مؤجل من العميل</option>
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="page_size" class="form-label">عدد الصفوف:</label>
-                        <select name="page_size" id="page_size" class="form-select">
+                        <label class="form-label">الفني</label>
+                        <select name="inspector" class="form-select">
+                            <option value="">كل الفنيين</option>
+                            {% for insp in inspectors %}
+                                <option value="{{ insp.id }}"
+                                        {% if insp.id|stringformat:'s' == request.GET.inspector|stringformat:'s' %}selected{% endif %}>
+                                    {{ insp.get_full_name|default:insp.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">النتيجة</label>
+                        <select name="result" class="form-select">
+                            <option value="">الكل</option>
+                            <option value="passed"
+                                    {% if request.GET.result == 'passed' %}selected{% endif %}>ناجحة</option>
+                            <option value="failed"
+                                    {% if request.GET.result == 'failed' %}selected{% endif %}>فاشلة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">عدد الصفوف</label>
+                        <select name="page_size" class="form-select">
                             <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
                             <option value="25"
                                     {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>
@@ -166,12 +195,23 @@
                                     {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
                         </select>
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-secondary w-100">
+                    <!-- صف ثاني: فلتر التاريخ + أزرار -->
+                    <div class="col-md-2">
+                        <label class="form-label">من تاريخ</label>
+                        <input type="date" name="date_from" class="form-control"
+                               value="{{ request.GET.date_from }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">إلى تاريخ</label>
+                        <input type="date" name="date_to" class="form-control"
+                               value="{{ request.GET.date_to }}">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-secondary">
                             <i class="fas fa-search"></i> بحث
                         </button>
                         <a href="{% url 'inspections:inspection_list' %}"
-                           class="btn btn-light ms-2">
+                           class="btn btn-light">
                             <i class="fas fa-times"></i> إعادة تعيين
                         </a>
                     </div>

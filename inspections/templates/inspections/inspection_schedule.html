@@ -135,20 +135,24 @@
         <div class="date-navigation">
             <div class="row align-items-center">
                 <div class="col-md-4">
-                    <a href="?date={{ prev_date }}" class="btn btn-outline-primary">
+                    <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn btn-outline-primary">
                         <i class="fas fa-chevron-right me-2"></i>اليوم السابق
                     </a>
                 </div>
                 <div class="col-md-4 text-center">
                     <h4 class="mb-0">
-                        <i class="fas fa-calendar me-2"></i>{{ selected_date }}
+                        <i class="fas fa-calendar me-2"></i>{{ selected_date|date:'Y-m-d' }}
                         {% if selected_date == today %}<span class="badge bg-success ms-2">اليوم</span>{% endif %}
                     </h4>
-                    <div class="d-flex gap-2 mt-2">
+                    <div class="d-flex gap-2 mt-2 justify-content-center">
                         <input type="date"
                                class="form-control"
+                               style="max-width: 200px;"
                                value="{{ selected_date|date:'Y-m-d' }}"
                                onchange="window.location.href='?date=' + this.value">
+                        <a href="?date={{ today|date:'Y-m-d' }}" class="btn btn-outline-success btn-sm" title="الذهاب لليوم الحالي">
+                            <i class="fas fa-calendar-day"></i> اليوم
+                        </a>
                         {% if total_inspections > 0 %}
                             <button onclick="quickPrint()"
                                     class="btn btn-outline-primary btn-sm"
@@ -159,7 +163,7 @@
                     </div>
                 </div>
                 <div class="col-md-4 text-end">
-                    <a href="?date={{ next_date }}" class="btn btn-outline-primary">
+                    <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn btn-outline-primary">
                         اليوم التالي<i class="fas fa-chevron-left ms-2"></i>
                     </a>
                 </div>
@@ -167,11 +171,45 @@
         </div>
         <!-- إحصائيات مبسطة -->
         <div class="row mb-3">
-            <div class="col-12">
-                <div class="alert alert-info d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-calendar-check me-2"></i><strong>{{ total_inspections }}</strong> معاينة لهذا اليوم</span>
-                    {% if total_inspections > 0 %}<span class="badge bg-success">جاهز للطباعة</span>{% endif %}
-                </div>
+            <div class="col-md-3">
+                <a href="?date={{ selected_date|date:'Y-m-d' }}" class="text-decoration-none">
+                    <div class="stats-card {% if not status_filter %}border border-primary border-2{% endif %}">
+                        <h3 class="text-primary">{{ scheduled_count|add:pending_count|add:completed_count|add:cancelled_count }}</h3>
+                        <p>إجمالي المعاينات</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2">
+                <a href="?date={{ selected_date|date:'Y-m-d' }}&status=scheduled" class="text-decoration-none">
+                    <div class="stats-card {% if status_filter == 'scheduled' %}border border-info border-2{% endif %}">
+                        <h3 class="text-info">{{ scheduled_count }}</h3>
+                        <p>مجدولة</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2">
+                <a href="?date={{ selected_date|date:'Y-m-d' }}&status=pending" class="text-decoration-none">
+                    <div class="stats-card {% if status_filter == 'pending' %}border border-warning border-2{% endif %}">
+                        <h3 class="text-warning">{{ pending_count }}</h3>
+                        <p>قيد الانتظار</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2">
+                <a href="?date={{ selected_date|date:'Y-m-d' }}&status=completed" class="text-decoration-none">
+                    <div class="stats-card {% if status_filter == 'completed' %}border border-success border-2{% endif %}">
+                        <h3 class="text-success">{{ completed_count }}</h3>
+                        <p>مكتملة</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="?date={{ selected_date|date:'Y-m-d' }}&status=cancelled" class="text-decoration-none">
+                    <div class="stats-card {% if status_filter == 'cancelled' %}border border-danger border-2{% endif %}">
+                        <h3 class="text-danger">{{ cancelled_count }}</h3>
+                        <p>ملغاة</p>
+                    </div>
+                </a>
             </div>
         </div>
         <!-- قائمة المعاينات -->
@@ -180,7 +218,14 @@
                 <div class="card">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
-                            <i class="fas fa-calendar-check me-2"></i>معاينات {{ selected_date }}
+                            <i class="fas fa-calendar-check me-2"></i>معاينات {{ selected_date|date:"Y-m-d" }}
+                            {% if status_filter %}
+                                <span class="badge bg-light text-dark ms-2">
+                                    {% for code, label in status_choices %}
+                                        {% if code == status_filter %}{{ label }}{% endif %}
+                                    {% endfor %}
+                                </span>
+                            {% endif %}
                         </h5>
                         {% if inspections %}
                             <div class="d-flex gap-2">
@@ -222,7 +267,10 @@
                                             <th width="10%">
                                                 <i class="fas fa-tools me-2"></i>الفني
                                             </th>
-                                            <th width="11%">
+                                            <th width="8%">
+                                                <i class="fas fa-info-circle me-2"></i>الحالة
+                                            </th>
+                                            <th width="10%">
                                                 <i class="fas fa-money-bill me-2"></i>المديونية
                                             </th>
                                         </tr>
@@ -277,6 +325,21 @@
                                                     {% endif %}
                                                 </td>
                                                 <td class="text-center">
+                                                    {% if inspection.status == 'scheduled' %}
+                                                        <span class="badge bg-info">مجدول</span>
+                                                    {% elif inspection.status == 'pending' %}
+                                                        <span class="badge bg-warning">قيد الانتظار</span>
+                                                    {% elif inspection.status == 'completed' %}
+                                                        <span class="badge bg-success">مكتمل</span>
+                                                    {% elif inspection.status == 'cancelled' %}
+                                                        <span class="badge bg-danger">ملغي</span>
+                                                    {% elif inspection.status == 'postponed_by_customer' %}
+                                                        <span class="badge bg-secondary">مؤجل</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">{{ inspection.get_status_display }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-center">
                                                     {% if inspection.payment_status == 'paid' %}
                                                         <span class="badge bg-success">مكتمل السداد</span>
                                                     {% else %}
@@ -287,7 +350,7 @@
                                             {% if inspection.notes %}
                                                 <tr class="table-light">
                                                     <td></td>
-                                                    <td colspan="8">
+                                                    <td colspan="9">
                                                         <small class="text-muted">
                                                             <i class="fas fa-sticky-note me-1"></i>
                                                             <strong>ملاحظات:</strong> {{ inspection.notes|truncatewords:25 }}
@@ -322,27 +385,6 @@
         </div>
         <!-- التواريخ السريعة -->
         {% if dates_with_inspections %}
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0">
-                                <i class="fas fa-calendar-week me-2"></i>التنقل السريع للتواريخ
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="d-flex flex-wrap gap-2">
-                                {% for date in dates_with_inspections %}
-                                    <a href="?date={{ date }}"
-                                       class="btn btn-sm {% if date == selected_date %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                                        {{ date }}
-                                    </a>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         {% endif %}
     </div>
 {% endblock %}

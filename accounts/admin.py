@@ -197,6 +197,7 @@ class CustomUserAdmin(UserAdmin):
         "user_permissions",
         "departments",
         "managed_branches",
+        "assigned_warehouses",
     )
     inlines = [UserRoleInline]
     actions = [
@@ -258,8 +259,8 @@ class CustomUserAdmin(UserAdmin):
         (
             _("أدوار المستودع"),
             {
-                "fields": ("is_warehouse_staff", "assigned_warehouse"),
-                "description": _("تحديد موظفي المستودع والمستودع المخصص لهم"),
+                "fields": ("is_warehouse_staff", "assigned_warehouse", "assigned_warehouses"),
+                "description": _("تحديد موظفي المستودع والمستودعات المخصصة لهم - يمكن تحديد أكثر من مستودع"),
             },
         ),
         (

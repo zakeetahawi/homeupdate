@@ -185,7 +185,14 @@ class User(AbstractUser):
         blank=True,
         related_name="warehouse_staff",
         verbose_name=_("المستودع المخصص"),
-        help_text=_("المستودع المخصص لموظف المستودع"),
+        help_text=_("المستودع المخصص لموظف المستودع (قديم - استخدم المستودعات المخصصة)"),
+    )
+    assigned_warehouses = models.ManyToManyField(
+        "inventory.Warehouse",
+        blank=True,
+        related_name="assigned_staff",
+        verbose_name=_("المستودعات المخصصة"),
+        help_text=_("المستودعات المخصصة لموظف المستودع - يمكن تحديد أكثر من مستودع"),
     )
     managed_branches = models.ManyToManyField(
         "Branch",
@@ -258,8 +265,14 @@ class User(AbstractUser):
             raise ValidationError(_("لا يمكن اختيار أكثر من دور وظيفي واحد للمستخدم"))
 
         # التحقق من أن موظف المستودع لديه مستودع مخصص
+        # ملاحظة: التحقق من M2M يتم بعد الحفظ، هنا نتحقق فقط من الحقل القديم
+        # سيتم دعم assigned_warehouses M2M أيضاً
         if self.is_warehouse_staff and not self.assigned_warehouse:
-            raise ValidationError(_("يجب تحديد مستودع مخصص لموظف المستودع"))
+            # سمح بالمرور إذا كان لديه مستودعات في M2M (يتم التحقق بعد الحفظ)
+            if self.pk is None:
+                pass  # مستخدم جديد - سيتم تعيين المستودعات بعد الحفظ
+            elif not self.assigned_warehouses.exists():
+                raise ValidationError(_("يجب تحديد مستودع مخصص لموظف المستودع"))
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -300,6 +313,28 @@ class User(AbstractUser):
         """الحصول على اسم الدور للعرض"""
         role = self.get_user_role()
         return ROLE_HIERARCHY.get(role, {}).get("display", "غير محدد")
+
+    def get_all_assigned_warehouses(self):
+        """
+        الحصول على جميع المستودعات المخصصة للمستخدم
+        يدمج المستودع القديم (FK) مع المستودعات الجديدة (M2M)
+        """
+        from inventory.models import Warehouse
+
+        warehouse_ids = set()
+
+        # المستودعات من الحقل الجديد M2M
+        if self.pk:
+            m2m_ids = set(self.assigned_warehouses.values_list("id", flat=True))
+            warehouse_ids.update(m2m_ids)
+
+        # المستودع القديم (FK) للتوافقية
+        if self.assigned_warehouse_id:
+            warehouse_ids.add(self.assigned_warehouse_id)
+
+        if warehouse_ids:
+            return Warehouse.objects.filter(id__in=warehouse_ids, is_active=True)
+        return Warehouse.objects.none()
 
     def get_role_level(self):
         """الحصول على مستوى الدور في التسلسل الهرمي"""

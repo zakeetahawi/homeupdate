@@ -21,22 +21,21 @@ from .models import CuttingOrder, CuttingOrderItem, CuttingReport
 
 
 def get_user_warehouses_for_user(user):
-    """Helper function للحصول على المستودعات المتاحة للمستخدم"""
+    """Helper function للحصول على المستودعات المتاحة للمستخدم - يدعم مستودعات متعددة"""
     if user.is_superuser:
         return Warehouse.objects.filter(is_active=True)
-    # موظف مستودع: الوصول فقط للمستودع المخصص له
+    # موظف مستودع: الوصول للمستودعات المخصصة له (متعددة)
     elif hasattr(user, "is_warehouse_staff") and user.is_warehouse_staff:
-        if user.assigned_warehouse:
-            return Warehouse.objects.filter(
-                id=user.assigned_warehouse.id, is_active=True
-            )
+        warehouses = user.get_all_assigned_warehouses()
+        if warehouses.exists():
+            return warehouses
         else:
             return Warehouse.objects.none()
     return Warehouse.objects.filter(is_active=True)
 
 
 def user_has_warehouse_access(user, warehouse_id):
-    """التحقق من صلاحية المستخدم للوصول لمستودع معين"""
+    """التحقق من صلاحية المستخدم للوصول لمستودع معين - يدعم مستودعات متعددة"""
     user_warehouses = get_user_warehouses_for_user(user)
     return user_warehouses.filter(id=warehouse_id).exists()
 
@@ -82,24 +81,21 @@ class CuttingDashboardView(LoginRequiredMixin, TemplateView):
         return context
 
     def get_user_warehouses(self):
-        """الحصول على المستودعات المتاحة للمستخدم"""
+        """الحصول على المستودعات المتاحة للمستخدم - يدعم مستودعات متعددة"""
         user = self.request.user
 
         if user.is_superuser:
             return Warehouse.objects.filter(is_active=True)
 
-        # موظف مستودع: الوصول فقط للمستودع المخصص له
+        # موظف مستودع: الوصول للمستودعات المخصصة له (متعددة)
         elif hasattr(user, "is_warehouse_staff") and user.is_warehouse_staff:
-            if user.assigned_warehouse:
-                return Warehouse.objects.filter(
-                    id=user.assigned_warehouse.id, is_active=True
-                )
+            warehouses = user.get_all_assigned_warehouses()
+            if warehouses.exists():
+                return warehouses
             else:
-                # إذا لم يكن لديه مستودع مخصص، لا يرى أي مستودعات
+                # إذا لم يكن لديه مستودعات مخصصة، لا يرى أي مستودعات
                 return Warehouse.objects.none()
 
-        # يمكن إضافة منطق صلاحيات المستودعات هنا
-        # مؤقتاً نعرض جميع المستودعات النشطة
         return Warehouse.objects.filter(is_active=True)
 
     def get_user_warehouses_with_stats(self):
@@ -225,18 +221,16 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
         return queryset.order_by("-created_at")
 
     def get_user_warehouses(self):
-        """الحصول على المستودعات المتاحة للمستخدم"""
+        """الحصول على المستودعات المتاحة للمستخدم - يدعم مستودعات متعددة"""
         user = self.request.user
         if user.is_superuser:
             return Warehouse.objects.filter(is_active=True)
-        # موظف مستودع: الوصول فقط للمستودع المخصص له
+        # موظف مستودع: الوصول للمستودعات المخصصة له (متعددة)
         elif hasattr(user, "is_warehouse_staff") and user.is_warehouse_staff:
-            if user.assigned_warehouse:
-                return Warehouse.objects.filter(
-                    id=user.assigned_warehouse.id, is_active=True
-                )
+            warehouses = user.get_all_assigned_warehouses()
+            if warehouses.exists():
+                return warehouses
             else:
-                # إذا لم يكن لديه مستودع مخصص، لا يرى أي مستودعات
                 return Warehouse.objects.none()
         return Warehouse.objects.filter(is_active=True)
 
@@ -397,18 +391,16 @@ class CompletedCuttingOrdersView(LoginRequiredMixin, ListView):
         return queryset.order_by("-created_at")
 
     def get_user_warehouses(self):
-        """الحصول على المستودعات المتاحة للمستخدم"""
+        """الحصول على المستودعات المتاحة للمستخدم - يدعم مستودعات متعددة"""
         user = self.request.user
         if user.is_superuser:
             return Warehouse.objects.filter(is_active=True)
-        # موظف مستودع: الوصول فقط للمستودع المخصص له
+        # موظف مستودع: الوصول للمستودعات المخصصة له (متعددة)
         elif hasattr(user, "is_warehouse_staff") and user.is_warehouse_staff:
-            if user.assigned_warehouse:
-                return Warehouse.objects.filter(
-                    id=user.assigned_warehouse.id, is_active=True
-                )
+            warehouses = user.get_all_assigned_warehouses()
+            if warehouses.exists():
+                return warehouses
             else:
-                # إذا لم يكن لديه مستودع مخصص، لا يرى أي مستودعات
                 return Warehouse.objects.none()
         return Warehouse.objects.filter(is_active=True)
 
@@ -755,18 +747,16 @@ class CuttingReportsView(LoginRequiredMixin, TemplateView):
         return context
 
     def get_user_warehouses(self):
-        """الحصول على المستودعات المتاحة للمستخدم"""
+        """الحصول على المستودعات المتاحة للمستخدم - يدعم مستودعات متعددة"""
         user = self.request.user
         if user.is_superuser:
             return Warehouse.objects.filter(is_active=True)
-        # موظف مستودع: الوصول فقط للمستودع المخصص له
+        # موظف مستودع: الوصول للمستودعات المخصصة له (متعددة)
         elif hasattr(user, "is_warehouse_staff") and user.is_warehouse_staff:
-            if user.assigned_warehouse:
-                return Warehouse.objects.filter(
-                    id=user.assigned_warehouse.id, is_active=True
-                )
+            warehouses = user.get_all_assigned_warehouses()
+            if warehouses.exists():
+                return warehouses
             else:
-                # إذا لم يكن لديه مستودع مخصص، لا يرى أي مستودعات
                 return Warehouse.objects.none()
         return Warehouse.objects.filter(is_active=True)
 
@@ -970,16 +960,15 @@ class CuttingReceiptView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_user_warehouses(self):
-        """الحصول على المستودعات المتاحة للمستخدم"""
+        """الحصول على المستودعات المتاحة للمستخدم - يدعم مستودعات متعددة"""
         user = self.request.user
         if user.is_superuser:
             return Warehouse.objects.filter(is_active=True)
-        # موظف مستودع: الوصول فقط للمستودع المخصص له
+        # موظف مستودع: الوصول للمستودعات المخصصة له (متعددة)
         elif hasattr(user, "is_warehouse_staff") and user.is_warehouse_staff:
-            if user.assigned_warehouse:
-                return Warehouse.objects.filter(
-                    id=user.assigned_warehouse.id, is_active=True
-                )
+            warehouses = user.get_all_assigned_warehouses()
+            if warehouses.exists():
+                return warehouses
             else:
                 return Warehouse.objects.none()
         return Warehouse.objects.filter(is_active=True)
