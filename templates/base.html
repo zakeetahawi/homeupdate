@@ -2756,8 +2756,8 @@
 <!-- Floating Chat Button Include + JS -->
 {% if user.is_authenticated %}
     {% include 'includes/floating_chat_button.html' %}
+    <script src="{% static 'js/floating-button.js' %}?v={% now 'U' %}"></script>
 {% endif %}
-<script src="{% static 'js/floating-button.js' %}?v={% now 'U' %}"></script>
 <!-- Arabic to English Number Converter -->
 <script src="{% static 'js/arabic-numbers-converter.js' %}"></script>
 </body>

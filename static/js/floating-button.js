@@ -282,7 +282,17 @@ const ChatManager = {
         });
     },
 
+    _wsRetryDelay: 3000,
+    _wsMaxRetryDelay: 60000,
+    _wsAuthFailed: false,
+
     connectWebSocket: function() {
+        // لا تحاول الاتصال إذا فشلت المصادقة سابقاً
+        if (this._wsAuthFailed) return;
+
+        // تحقق من وجود عنصر الشات (يعني المستخدم مسجل دخول)
+        if (!document.querySelector('.floating-chat-container')) return;
+
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const socketUrl = `${protocol}//${window.location.host}/ws/chat/`;
         
@@ -290,6 +300,7 @@ const ChatManager = {
         
         this.socket.onopen = () => {
             console.log('Chat WebSocket Connected');
+            this._wsRetryDelay = 3000; // إعادة تعيين مدة الانتظار عند النجاح
         };
         
         this.socket.onmessage = (e) => {
@@ -305,8 +316,16 @@ const ChatManager = {
         };
         
         this.socket.onclose = (e) => {
-            console.error('Chat WebSocket Closed. Reconnecting in 3s...');
-            setTimeout(() => this.connectWebSocket(), 3000); // Auto Reconnect
+            // كود 4001 = رفض المصادقة - لا تحاول مرة أخرى
+            if (e.code === 4001) {
+                console.warn('Chat WebSocket: Authentication failed. Will not reconnect.');
+                this._wsAuthFailed = true;
+                return;
+            }
+            // Exponential backoff لإعادة المحاولة
+            console.warn(`Chat WebSocket Closed. Reconnecting in ${this._wsRetryDelay/1000}s...`);
+            setTimeout(() => this.connectWebSocket(), this._wsRetryDelay);
+            this._wsRetryDelay = Math.min(this._wsRetryDelay * 2, this._wsMaxRetryDelay);
         };
     },
     

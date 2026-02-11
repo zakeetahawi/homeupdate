@@ -11,26 +11,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.user = self.scope["user"]
 
         if not self.user.is_authenticated:
-            print("DEBUG: WebSocket Rejected (Unauthenticated)")
-            await self.close()
+            await self.close(code=4001)
             return
 
         # Room group name (Unique per user)
         self.room_group_name = f"user_{self.user.id}"
 
         # Join room group
-        print(
-            f"DEBUG: Adding channel {self.channel_name} to group {self.room_group_name}"
-        )
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
 
         await self.accept()
-        print("DEBUG: WebSocket Accepted")
 
     async def disconnect(self, close_code):
         # Leave room group
-        if self.user.is_authenticated:
-            print(f"DEBUG: Removing channel from group {self.room_group_name}")
+        if hasattr(self, 'room_group_name') and self.user.is_authenticated:
             await self.channel_layer.group_discard(
                 self.room_group_name, self.channel_name
             )
@@ -44,7 +38,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if message_type == "typing":
                 recipient_id = data.get("recipient_id")
                 is_typing = data.get("is_typing", False)
-                print(f"DEBUG: Received 'typing' from {self.user} to {recipient_id}")
 
                 if recipient_id:
                     # Send typing status to recipient's group
@@ -63,9 +56,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 # Message received by recipient -> Notify sender
                 original_sender_id = data.get("sender_id")
                 message_id = data.get("message_id")
-                print(
-                    f"DEBUG: Received 'read_receipt' from {self.user} to {original_sender_id}"
-                )
 
                 if original_sender_id:
                     await self.channel_layer.group_send(
@@ -107,13 +97,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     # Handler for 'chat_message' event (sent from Group)
     async def chat_message(self, event):
-        print(
-            f"DEBUG: Consumer {self.channel_name} received 'chat_message' event: {event}"
-        )
         message = event["message"]
 
         # Send message to WebSocket
         await self.send(
             text_data=json.dumps({"type": "chat_message", "message": message})
         )
-        print("DEBUG: Message sent to WebSocket client")
