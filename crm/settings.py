@@ -1670,9 +1670,7 @@ REST_FRAMEWORK_RATE_LIMIT = {
 }
 
 # تسجيل محاولات تسجيل الدخول الفاشلة
-AXES_ENABLED = False  # نستخدم نظامنا الخاص في middleware
-AXES_FAILURE_LIMIT = 5
-AXES_COOLOFF_TIME = 1800  # 30 دقيقة
+# ملاحظة: إعدادات Django Axes الرئيسية في نهاية الملف
 
 # منع المعلومات الحساسة من الظهور في الأخطاء
 ADMINS = [("Admin", "admin@localhost")]
@@ -1783,6 +1781,7 @@ WHATSAPP_VERIFY_TOKEN = os.getenv(
 # ============================================
 # 🔒 Django Axes - Brute Force Protection
 # Added: 2026-01-20
+# Updated: 2026-02-11 - حظر بالاسم فقط + IP الحقيقي من Cloudflare
 # ============================================
 
 # عدد المحاولات الفاشلة المسموح بها قبل الحظر
@@ -1791,8 +1790,15 @@ AXES_FAILURE_LIMIT = 5
 # مدة الحظر (بالساعات)
 AXES_COOLOFF_TIME = 1  # ساعة واحدة
 
-# نوع الحظر: حظر بناءً على IP والـ Username
-AXES_LOCKOUT_PARAMETERS = ["ip_address", "username"]  # Fixed: 'ip' → 'ip_address'
+# نوع الحظر: حظر بناءً على اسم المستخدم فقط
+# ⚠️ مهم: لا نحظر بالـ IP لأن جميع المستخدمين يظهرون بنفس الـ IP
+# عبر Cloudflare Tunnel، الحظر بالـ IP يؤدي لحظر الجميع
+AXES_LOCKOUT_PARAMETERS = ["username"]
+
+# استخراج IP الحقيقي للمستخدم من Cloudflare Headers
+# يستخدم نفس الدالة الموجودة في user_activity middleware
+# تقرأ CF-Connecting-IP أولاً (Cloudflare) ثم X-Forwarded-For ثم REMOTE_ADDR
+AXES_CLIENT_IP_CALLABLE = "user_activity.utils.get_client_ip_from_request"
 
 # رسالة الحظر - صفحة مخصصة
 AXES_LOCKOUT_TEMPLATE = "axes/lockout.html"
