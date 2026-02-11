@@ -409,16 +409,16 @@ def register_customer_signals():
             if created:
                 # إنشاء حساب للعميل الجديد
                 try:
-                    # البحث عن نوع حساب المدينين
-                    receivables_type = AccountType.objects.filter(
-                        code_prefix="1100"
-                    ).first()
+                    # البحث عن نوع حساب العملاء (1200) أو الأصول (1)
+                    receivables_type = (
+                        AccountType.objects.filter(code_prefix="1200").first()
+                        or AccountType.objects.filter(code_prefix="1").first()
+                    )
 
                     if receivables_type:
-                        # البحث عن الحساب الأب (العملاء تحت الذمم المدينة) أو إنشاؤه
+                        # البحث عن الحساب الأب 1121 - العملاء
                         parent_account = Account.objects.filter(
-                            code="1121",
-                            account_type=receivables_type
+                            code="1121"
                         ).first()
                         
                         if not parent_account:
@@ -437,13 +437,14 @@ def register_customer_signals():
                         Account.objects.get_or_create(
                             code=customer_code,
                             defaults={
-                                "name": f"{instance.name}",
-                                "name_en": f"{instance.name}",
+                                "name": f"حساب العميل - {instance.name}",
+                                "name_en": f"Customer Account - {instance.name}",
                                 "account_type": receivables_type,
                                 "parent": parent_account,
                                 "customer": instance,
                                 "is_customer_account": True,
                                 "is_active": True,
+                                "allow_transactions": True,
                             },
                         )
                 except Exception as e:

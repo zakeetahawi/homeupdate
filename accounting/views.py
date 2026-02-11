@@ -62,14 +62,15 @@ def dashboard(request):
     3. Prefetch محسّن مع select_related
     4. استخدام aggregate بدلاً من Python loops
     """
-    from django.db.models import Prefetch
-    from orders.models import Order
+    from django.db.models import Prefetch, Min, Max, Value, BooleanField, Case, When, Subquery, OuterRef, DecimalField
+    from orders.models import Order, Payment
     from accounts.models import Branch
     from django.contrib.auth import get_user_model
     from accounting.performance_utils import (
         get_dashboard_stats_cached,
         get_optimized_customers_with_debt
     )
+    import datetime
     
     User = get_user_model()
     today = timezone.now().date()
@@ -80,52 +81,164 @@ def dashboard(request):
     # فلاتر
     branch_id = request.GET.get('branch')
     salesperson_id = request.GET.get('salesperson')
+    period_filter = request.GET.get('period', '')  # فلتر الفترة الزمنية
     
-    # ===== تحسين #2: جلب العملاء المديونين بطريقة محسّنة مع caching =====
-    customers_with_debt = get_optimized_customers_with_debt(
-        limit=200,
-        branch_id=branch_id,
-        salesperson_id=salesperson_id
-    )
+    # ===== فلتر الفترة الزمنية: مديونيات 2026 مع المديونيات القديمة =====
+    if period_filter == '2026':
+        # عملاء لديهم مديونية مع تفصيل حسب الفترة
+        start_2026 = datetime.datetime(2026, 1, 1, tzinfo=timezone.get_current_timezone())
+        start_2025 = datetime.datetime(2025, 1, 1, tzinfo=timezone.get_current_timezone())
+        
+        # جلب العملاء المديونين
+        debt_summaries = CustomerFinancialSummary.objects.filter(
+            total_debt__gt=0
+        ).select_related('customer').only(
+            'total_debt', 'total_paid', 'total_orders_amount', 'financial_status',
+            'customer__id', 'customer__name', 'customer__code', 'customer__phone'
+        ).order_by('-total_debt')
+        
+        if branch_id:
+            try:
+                debt_summaries = debt_summaries.filter(
+                    customer__customer_orders__branch_id=int(branch_id)
+                ).distinct()
+            except (ValueError, TypeError):
+                pass
+        
+        if salesperson_id:
+            try:
+                debt_summaries = debt_summaries.filter(
+                    customer__customer_orders__created_by_id=int(salesperson_id)
+                ).distinct()
+            except (ValueError, TypeError):
+                pass
+        
+        customers_debt_data = []
+        for summary in debt_summaries[:300]:
+            customer = summary.customer
+            
+            # طلبات العميل المستحقة (final_price > paid_amount)
+            all_orders = Order.objects.filter(
+                customer=customer
+            ).select_related('branch', 'created_by').only(
+                'id', 'order_number', 'final_price', 'paid_amount',
+                'order_date', 'branch__name', 'created_by__first_name', 'created_by__username',
+                'discount_percentage', 'discount_amount'
+            ).order_by('-order_date')
+            
+            # تصنيف الطلبات حسب الفترة
+            orders_2026 = []
+            orders_2025 = []
+            orders_old = []
+            debt_2026 = Decimal('0.00')
+            debt_2025 = Decimal('0.00')
+            debt_old = Decimal('0.00')
+            
+            for order in all_orders:
+                remaining = order.final_price_after_discount - order.paid_amount
+                if remaining <= 0:
+                    continue
+                
+                if order.order_date and order.order_date >= start_2026:
+                    orders_2026.append(order)
+                    debt_2026 += remaining
+                elif order.order_date and order.order_date >= start_2025:
+                    orders_2025.append(order)
+                    debt_2025 += remaining
+                else:
+                    orders_old.append(order)
+                    debt_old += remaining
+            
+            total_unpaid = len(orders_2026) + len(orders_2025) + len(orders_old)
+            if total_unpaid == 0:
+                continue
+            
+            # جمع الفروع والبائعين
+            branches = set()
+            salespersons = set()
+            for order in (orders_2026 + orders_2025 + orders_old)[:10]:
+                if hasattr(order, 'branch') and order.branch:
+                    branches.add(order.branch.name)
+                if hasattr(order, 'created_by') and order.created_by:
+                    salespersons.add(order.created_by.get_full_name() or order.created_by.username)
+            
+            customers_debt_data.append({
+                'summary': summary,
+                'customer': customer,
+                'branches': ', '.join(branches) if branches else '-',
+                'salespersons': ', '.join(salespersons) if salespersons else '-',
+                'unpaid_orders_count': total_unpaid,
+                'unpaid_orders': ', '.join([o.order_number for o in (orders_2026 + orders_2025 + orders_old)[:5]]),
+                'debt_2026': debt_2026,
+                'debt_2025': debt_2025,
+                'debt_old': debt_old,
+                'orders_2026_count': len(orders_2026),
+                'orders_2025_count': len(orders_2025),
+                'orders_old_count': len(orders_old),
+                'has_old_debt': (debt_2025 + debt_old) > 0,
+            })
+            
+            if len(customers_debt_data) >= 300:
+                break
+        
+        context['customers_with_debt'] = customers_debt_data
+        context['period_filter'] = '2026'
+        
+        # إحصائيات الفترة
+        total_debt_2026 = sum(d['debt_2026'] for d in customers_debt_data)
+        total_debt_2025 = sum(d['debt_2025'] for d in customers_debt_data)
+        total_debt_old = sum(d['debt_old'] for d in customers_debt_data)
+        context['period_stats'] = {
+            'total_debt_2026': total_debt_2026,
+            'total_debt_2025': total_debt_2025,
+            'total_debt_old': total_debt_old,
+            'customers_with_old_debt': sum(1 for d in customers_debt_data if d['has_old_debt']),
+        }
+    
+    else:
+        # ===== العرض الافتراضي (بدون فلتر فترة) =====
+        customers_with_debt = get_optimized_customers_with_debt(
+            limit=200,
+            branch_id=branch_id,
+            salesperson_id=salesperson_id
+        )
 
-    # ===== تحسين #3: معالجة البيانات بكفاءة دون Python computations زائدة =====
-    customers_debt_data = []
-    
-    for summary in customers_with_debt:
-        customer = summary.customer
-        unpaid_orders = getattr(customer, 'prefetched_unpaid_orders', [])
+        customers_debt_data = []
         
-        # تخطي إذا لم يكن لديه طلبات بعد الفلترة
-        if not unpaid_orders and (branch_id or salesperson_id):
-            continue
+        for summary in customers_with_debt:
+            customer = summary.customer
+            unpaid_orders = getattr(customer, 'prefetched_unpaid_orders', [])
+            
+            if not unpaid_orders and (branch_id or salesperson_id):
+                continue
+            
+            branches = set()
+            salespersons = set()
+            order_numbers = []
+            
+            for order in unpaid_orders:
+                if hasattr(order, 'branch') and order.branch:
+                    branches.add(order.branch.name)
+                if hasattr(order, 'created_by') and order.created_by:
+                    salespersons.add(
+                        order.created_by.get_full_name() or order.created_by.username
+                    )
+                order_numbers.append(order.order_number)
+            
+            customers_debt_data.append({
+                'summary': summary,
+                'customer': customer,
+                'branches': ', '.join(branches) if branches else '-',
+                'salespersons': ', '.join(salespersons) if salespersons else '-',
+                'unpaid_orders': ', '.join(order_numbers[:5]),
+                'unpaid_orders_count': len(unpaid_orders)
+            })
+            
+            if len(customers_debt_data) >= 200:
+                break
         
-        # جمع المعلومات من الطلبات المحمّلة مسبقاً (بدون queries إضافية)
-        branches = set()
-        salespersons = set()
-        order_numbers = []
-        
-        for order in unpaid_orders:
-            if hasattr(order, 'branch') and order.branch:
-                branches.add(order.branch.name)
-            if hasattr(order, 'created_by') and order.created_by:
-                salespersons.add(
-                    order.created_by.get_full_name() or order.created_by.username
-                )
-            order_numbers.append(order.order_number)
-        
-        customers_debt_data.append({
-            'summary': summary,
-            'customer': customer,
-            'branches': ', '.join(branches) if branches else '-',
-            'salespersons': ', '.join(salespersons) if salespersons else '-',
-            'unpaid_orders': ', '.join(order_numbers[:5]),
-            'unpaid_orders_count': len(unpaid_orders)
-        })
-        
-        if len(customers_debt_data) >= 200:
-            break
-    
-    context['customers_with_debt'] = customers_debt_data
+        context['customers_with_debt'] = customers_debt_data
+        context['period_filter'] = ''
 
     # ===== تحسين #4: آخر القيود مع only() =====
     context["recent_transactions"] = Transaction.objects.filter(

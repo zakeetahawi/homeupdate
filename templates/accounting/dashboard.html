@@ -143,12 +143,57 @@
                             عملاء لديهم مديونية
                             <span class="badge bg-danger ms-1" style="font-size:0.7rem" id="debtCustomerCount">{{ customers_with_debt|length|en }}</span>
                         </h5>
-                        <a href="{% url 'accounting:customer_balances' %}"
-                           class="btn btn-sm btn-outline-danger">عرض الكل</a>
+                        <div class="d-flex gap-1">
+                            {% if period_filter == '2026' %}
+                                <a href="{% url 'accounting:dashboard' %}{% if selected_branch %}?branch={{ selected_branch }}{% endif %}{% if selected_salesperson %}&salesperson={{ selected_salesperson }}{% endif %}"
+                                   class="btn btn-sm btn-outline-secondary" title="إزالة فلتر الفترة">
+                                    <i class="fas fa-times me-1"></i>الكل
+                                </a>
+                            {% else %}
+                                <a href="{% url 'accounting:dashboard' %}?period=2026{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_salesperson %}&salesperson={{ selected_salesperson }}{% endif %}"
+                                   class="btn btn-sm btn-outline-warning" title="عرض مديونيات 2026 والقديمة">
+                                    <i class="fas fa-filter me-1"></i>تفصيل 2026
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'accounting:customer_balances' %}"
+                               class="btn btn-sm btn-outline-danger">عرض الكل</a>
+                        </div>
                     </div>
+                    {% if period_filter == '2026' and period_stats %}
+                    <!-- إحصائيات الفترة -->
+                    <div class="px-3 pt-2 pb-1 border-bottom flex-shrink-0" style="background:#fffbf0">
+                        <div class="row g-1 mb-1">
+                            <div class="col-4">
+                                <div class="text-center p-1 rounded-3" style="background:#e8f5e9">
+                                    <div class="text-muted" style="font-size:0.62rem">مديونيات 2026</div>
+                                    <div class="fw-bold text-success" style="font-size:0.82rem">{{ period_stats.total_debt_2026|floatformat:0|en }}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-center p-1 rounded-3" style="background:#fff3e0">
+                                    <div class="text-muted" style="font-size:0.62rem">مديونيات 2025</div>
+                                    <div class="fw-bold" style="font-size:0.82rem;color:#e65100">{{ period_stats.total_debt_2025|floatformat:0|en }}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-center p-1 rounded-3" style="background:#fce4ec">
+                                    <div class="text-muted" style="font-size:0.62rem">قبل 2025</div>
+                                    <div class="fw-bold text-danger" style="font-size:0.82rem">{{ period_stats.total_debt_old|floatformat:0|en }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center" style="font-size:0.65rem;color:#888">
+                            <i class="fas fa-exclamation-circle text-warning me-1"></i>
+                            {{ period_stats.customers_with_old_debt|en }} عميل لديهم مديونيات قديمة (قبل 2026)
+                        </div>
+                    </div>
+                    {% endif %}
                     <!-- فلاتر -->
                     <div class="px-3 pt-2 pb-1 bg-light border-bottom flex-shrink-0">
                         <form method="get" class="row g-2 mb-1">
+                            {% if period_filter %}
+                            <input type="hidden" name="period" value="{{ period_filter }}">
+                            {% endif %}
                             <div class="col-md-5">
                                 <select name="branch" class="form-select form-select-sm" onchange="this.form.submit()">
                                     <option value="">كل الفروع</option>
@@ -170,7 +215,7 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <a href="{% url 'accounting:dashboard' %}" class="btn btn-sm btn-secondary w-100">إعادة</a>
+                                <a href="{% url 'accounting:dashboard' %}{% if period_filter %}?period={{ period_filter }}{% endif %}" class="btn btn-sm btn-secondary w-100">إعادة</a>
                             </div>
                         </form>
                         <div class="mb-1">
@@ -185,6 +230,10 @@
                                     <th>الكود</th>
                                     <th>الفرع</th>
                                     <th>المديونية</th>
+                                    {% if period_filter == '2026' %}
+                                    <th>2026</th>
+                                    <th>قديم</th>
+                                    {% endif %}
                                     <th>طلبات</th>
                                     <th></th>
                                 </tr>
@@ -199,10 +248,36 @@
                                         </td>
                                         <td><small class="text-muted">{{ item.customer.code }}</small></td>
                                         <td><small>{{ item.branches }}</small></td>
-                                        <td class="text-danger fw-bold">{{ item.summary.total_debt|floatformat:2|en }}</td>
+                                        <td class="text-danger fw-bold">{{ item.summary.total_debt|floatformat:0|en }}</td>
+                                        {% if period_filter == '2026' %}
+                                        <td>
+                                            {% if item.debt_2026 > 0 %}
+                                                <small class="text-success fw-bold">{{ item.debt_2026|floatformat:0|en }}</small>
+                                            {% else %}
+                                                <small class="text-muted">-</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if item.has_old_debt %}
+                                                <span class="text-danger" style="font-size:0.72rem" title="2025: {{ item.debt_2025|floatformat:0 }} | قبل 2025: {{ item.debt_old|floatformat:0 }}">
+                                                    {% if item.debt_2025 > 0 %}
+                                                        <span class="badge bg-warning text-dark" style="font-size:0.6rem">25: {{ item.debt_2025|floatformat:0|en }}</span>
+                                                    {% endif %}
+                                                    {% if item.debt_old > 0 %}
+                                                        <span class="badge bg-danger" style="font-size:0.6rem">قديم: {{ item.debt_old|floatformat:0|en }}</span>
+                                                    {% endif %}
+                                                </span>
+                                            {% else %}
+                                                <small class="text-muted">-</small>
+                                            {% endif %}
+                                        </td>
+                                        {% endif %}
                                         <td>
                                             <small class="text-muted" title="{{ item.unpaid_orders }}">
                                                 {{ item.unpaid_orders_count }} طلب
+                                                {% if period_filter == '2026' and item.orders_old_count > 0 %}
+                                                    <br><span class="text-danger" style="font-size:0.6rem">({{ item.orders_old_count }} قديم)</span>
+                                                {% endif %}
                                             </small>
                                         </td>
                                         <td>
@@ -214,7 +289,7 @@
                                     </tr>
                                 {% empty %}
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">
+                                        <td colspan="{% if period_filter == '2026' %}8{% else %}6{% endif %}" class="text-center text-muted py-4">
                                             <i class="fas fa-check-circle text-success fa-2x mb-2"></i>
                                             <br>
                                             لا يوجد عملاء لديهم مديونية

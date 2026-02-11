@@ -37,11 +37,11 @@ class Command(BaseCommand):
                 )
                 return
 
-            parent_account = Account.objects.filter(code="1210").first()
+            parent_account = Account.objects.filter(code="1121").first()
             if not parent_account:
                 self.stdout.write(
                     self.style.WARNING(
-                        "⚠️  الحساب الأب (1210) غير موجود - سيتم إنشاء الحسابات بدون حساب أب"
+                        "⚠️  الحساب الأب (1121 - العملاء) غير موجود - سيتم إنشاء الحسابات بدون حساب أب"
                     )
                 )
         except Exception as e:
