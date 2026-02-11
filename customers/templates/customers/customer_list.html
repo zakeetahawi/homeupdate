@@ -226,6 +226,13 @@
             });
         }
 
+        // تنظيف النص لمنع XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // عرض نتائج البحث
         function showSearchResults(customers) {
             let resultsHtml = '<div id="search-results" class="alert alert-success mt-2">';
@@ -238,18 +245,18 @@
                 resultsHtml += `
                 <div class="d-flex justify-content-between align-items-center border-bottom py-2">
                     <div>
-                        <strong>${customer.name}</strong> ${crossBranchBadge}
+                        <strong>${escapeHtml(customer.name)}</strong> ${crossBranchBadge}
                         <br>
                         <small class="text-muted">
-                            <i class="fas fa-phone"></i> ${customer.phone}
-                            <i class="fas fa-building ms-2"></i> ${customer.branch}
+                            <i class="fas fa-phone"></i> ${escapeHtml(customer.phone)}
+                            <i class="fas fa-building ms-2"></i> ${escapeHtml(customer.branch)}
                         </small>
                     </div>
                     <div class="btn-group btn-group-sm">
-                        <a href="${customer.url}" class="btn btn-info btn-sm">
+                        <a href="${escapeHtml(customer.url)}" class="btn btn-info btn-sm">
                             <i class="fas fa-eye"></i> عرض
                         </a>
-                        <a href="/orders/create/?customer_id=${customer.id}" class="btn btn-success btn-sm">
+                        <a href="/orders/create/?customer_id=${encodeURIComponent(customer.id)}" class="btn btn-success btn-sm">
                             <i class="fas fa-plus"></i> طلب
                         </a>
                     </div>
@@ -358,21 +365,22 @@
     .customers-table a:hover {
         text-decoration: underline !important;
     }
+
+    /* تحسين مظهر نتائج البحث */
+    #search-results {
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        transform: translateY(0);
+    }
+    #search-results.hiding {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    #search-results.showing {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    /* تحسين مؤشر البحث */
+    #search-indicator {
+        transition: opacity 0.3s ease;
+    }
 </style>
-/* تحسين مظهر نتائج البحث لتقليل الوميض */
-#search-results {
-transition: opacity 0.3s ease, transform 0.3s ease;
-transform: translateY(0);
-}
-#search-results.hiding {
-opacity: 0;
-transform: translateY(-10px);
-}
-#search-results.showing {
-opacity: 1;
-transform: translateY(0);
-}
-/* تحسين مؤشر البحث */
-#search-indicator {
-transition: opacity 0.3s ease;
-}

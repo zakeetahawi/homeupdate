@@ -37,6 +37,11 @@ urlpatterns = [
     path("categories/", views.customer_category_list, name="category_list"),
     path("categories/add/", views.add_customer_category, name="add_category"),
     path(
+        "categories/<int:category_id>/delete/",
+        views.delete_customer_category,
+        name="delete_category",
+    ),
+    path(
         "api/customer/<int:pk>/",
         views.get_customer_details,
         name="get_customer_details",

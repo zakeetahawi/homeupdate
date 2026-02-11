@@ -16,10 +16,7 @@
         <title>
             {% block title %}نظام إدارة العملاء{% endblock %}
         </title>
-        <!-- Floating Chat Button Include -->
-        {% if user.is_authenticated %}
-            {% include 'includes/floating_chat_button.html' %}
-        {% endif %}
+        <!-- Floating Chat Button: يُدرج في نهاية body لتجنب الوميض -->
         <!-- Favicon -->
         {% if company_info.logo %}
             <link rel="icon" type="image/png" href="{{ company_info.logo.url }}">
@@ -2756,7 +2753,10 @@
 {% if user.is_authenticated %}
     {% include 'barcode_scanner_modal.html' %}
 {% endif %}
-<!-- Floating Chat Button JS -->
+<!-- Floating Chat Button Include + JS -->
+{% if user.is_authenticated %}
+    {% include 'includes/floating_chat_button.html' %}
+{% endif %}
 <script src="{% static 'js/floating-button.js' %}?v={% now 'U' %}"></script>
 <!-- Arabic to English Number Converter -->
 <script src="{% static 'js/arabic-numbers-converter.js' %}"></script>

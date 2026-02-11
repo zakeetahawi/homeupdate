@@ -599,6 +599,11 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
 function finalizeOrder() {
+    // حماية من الضغط المزدوج
+    const finalBtn = document.querySelector('[onclick*=\"finalizeOrder\"]');
+    if (finalBtn && finalBtn.disabled) return;
+    if (finalBtn) { finalBtn.disabled = true; finalBtn.innerHTML = '<i class=\"fas fa-spinner fa-spin me-2\"></i>جاري الإنشاء...'; }
+    
     Swal.fire({
         title: 'تأكيد إنشاء الطلب',
         text: 'هل أنت متأكد من إنشاء هذا الطلب؟',
@@ -642,6 +647,9 @@ function finalizeOrder() {
             }).then(() => {
                 window.location.href = result.value.redirect_url;
             });
+        } else {
+            // إعادة تفعيل الزر عند الإلغاء
+            if (finalBtn) { finalBtn.disabled = false; finalBtn.innerHTML = '<i class="fas fa-check-circle me-2"></i>تأكيد وإنشاء الطلب'; }
         }
     });
 }

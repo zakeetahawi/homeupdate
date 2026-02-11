@@ -96,6 +96,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Interaction Handlers ---
 
     function onDragStart(e) {
+        // Only allow drag from the button itself, not from menu/chat content
+        if (!e.target.closest('.floating-chat-btn')) return;
+        
         // 1. Normalize Event
         const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
         const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
@@ -155,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (newTop > winH - rect.height) newTop = winH - rect.height;
 
         applyPosition(newLeft, newTop);
-        e.preventDefault(); // Stop scrolling on touch
+        if (hasMoved) e.preventDefault(); // Only stop scrolling when actually dragging
     }
 
     function onDragEnd(e) {
@@ -474,7 +477,19 @@ const ChatManager = {
         chatWin.id = `chat-window-${userId}`;
         chatWin.setAttribute('data-user-id', userId);
         const openCount = Object.keys(this.activeChats).length;
-        chatWin.style.right = `${100 + (openCount * 320)}px`;
+        
+        // Mobile: full width — Desktop: stacked right
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            chatWin.style.width = '100%';
+            chatWin.style.right = '0';
+            chatWin.style.left = '0';
+            chatWin.style.maxHeight = '75vh';
+            const msgArea = chatWin.querySelector('.chat-messages-area');
+            if (msgArea) msgArea.style.height = '50vh';
+        } else {
+            chatWin.style.right = `${100 + (openCount * 320)}px`;
+        }
         chatWin.style.display = 'block';
         
         // Set Content

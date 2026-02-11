@@ -8,6 +8,7 @@ import json
 import logging
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -3230,6 +3231,8 @@ def view_contract_template(request, order_id):
         "order": order,
         "curtains": curtains,
         "is_print_view": request.GET.get("print", False),
+        "watermark_path": settings.MEDIA_URL + "company_logos/Logo_1080.png",
+        "MEDIA_URL": settings.MEDIA_URL,
     }
 
     return render(request, "orders/contract_template.html", context)

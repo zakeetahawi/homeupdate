@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -8,6 +10,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
+
+logger = logging.getLogger(__name__)
 
 from orders.models import Order
 
@@ -39,15 +43,13 @@ def get_queryset_for_user(user, search_term=None):
         elif queryset is None:
             return Customer.objects.none()
         else:
-            # إذا لم تكن QuerySet، إرجاع جميع العملاء كـ fallback
-            print(
-                f"Warning: get_user_customers_queryset returned unexpected type: {type(queryset)}"
-            )
-            return Customer.objects.all()
+            # إذا لم تكن QuerySet، إرجاع فارغ للأمان
+            logger.warning(f"get_user_customers_queryset returned unexpected type: {type(queryset)}")
+            return Customer.objects.none()
     except Exception as e:
-        # في حالة حدوث خطأ، إرجاع جميع العملاء كـ fallback مع طباعة تفاصيل الخطأ
-        print(f"Error in get_queryset_for_user: {str(e)}")
-        return Customer.objects.all()
+        # في حالة حدوث خطأ، إرجاع فارغ للأمان بدلاً من جميع العملاء
+        logger.error(f"Error in get_queryset_for_user: {str(e)}")
+        return Customer.objects.none()
 
 
 @login_required
@@ -236,12 +238,6 @@ def customer_detail(request, pk):
     View for displaying customer details, orders, and notes
     تحسين الأداء باستخدام select_related و prefetch_related
     """
-    print("=" * 80)
-    print("🔥 CUSTOMER DETAIL VIEW STARTED!")
-    print(f"🔥 Request URL: {request.get_full_path()}")
-    print(f"🔥 Customer PK: {pk}")
-    print("=" * 80)
-
     # الحصول على العميل مباشرة (مثل الصفحة التجريبية)
     try:
         customer = Customer.objects.select_related(
@@ -259,13 +255,27 @@ def customer_detail(request, pk):
         messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
         return redirect("customers:customer_list")
 
-    # إضافة ملاحظة عند الوصول لعميل من فرع آخر
+    # إضافة ملاحظة عند الوصول لعميل من فرع آخر (مع منع التكرار)
     if is_cross_branch:
-        CustomerNote.objects.create(
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        access_note_text = f"تم الوصول لبيانات العميل من فرع {request.user.branch.name if request.user.branch else 'غير محدد'} بواسطة {request.user.get_full_name() or request.user.username}"
+
+        recent_access_notes = CustomerNote.objects.filter(
             customer=customer,
-            note=f"تم الوصول لبيانات العميل من فرع {request.user.branch.name if request.user.branch else 'غير محدد'} بواسطة {request.user.get_full_name() or request.user.username}",
             created_by=request.user,
+            note__icontains="تم الوصول لبيانات العميل",
+            created_at__gte=timezone.now() - timedelta(hours=1),
         )
+
+        if not recent_access_notes.exists():
+            CustomerNote.objects.create(
+                customer=customer,
+                note=access_note_text,
+                created_by=request.user,
+            )
 
     # تحسين استعلام الطلبات باستخدام prefetch_related
     customer_orders = (
@@ -296,38 +306,15 @@ def customer_detail(request, pk):
         "customer", "branch", "created_by"
     ).order_by("-created_at")[:10]
 
-    # إضافة معلومات تشخيصية مفصلة
-    print("=" * 50)
-    print(f"DEBUG START: Customer {customer.pk} - {customer.code}")
-    print("=" * 50)
-    print(f"DEBUG: Customer.inspections manager: {customer.inspections}")
-    print(f"DEBUG: Inspections count: {customer.inspections.count()}")
-    print(
-        f"DEBUG: All inspections for customer: {list(customer.inspections.all().values_list('id', 'inspection_code', 'status', 'scheduled_date', 'customer_id'))}"
-    )
-    print(
-        f"DEBUG: Recent inspections: {list(inspections.values_list('inspection_code', 'status', 'scheduled_date'))}"
-    )
-    print(f"DEBUG: Recent inspections objects: {list(inspections)}")
-
-    # اختبار بديل للمعاينات - استعلام مباشر
+    # استعلام بديل للمعاينات كاحتياط
     from inspections.models import Inspection
 
-    direct_inspections = Inspection.objects.filter(customer=customer).order_by(
-        "-created_at"
-    )[:10]
-    print(
-        f"DEBUG: Direct inspections query: {list(direct_inspections.values_list('inspection_code', 'status', 'scheduled_date'))}"
-    )
-
-    # إذا كان الاستعلام المباشر يحتوي على معاينات ولكن customer.inspections فارغ، استخدم الاستعلام المباشر
-    if direct_inspections.exists() and not inspections.exists():
-        print("DEBUG: Using direct inspections query as fallback")
-        inspections = direct_inspections
-
-    print("=" * 50)
-    print("DEBUG END")
-    print("=" * 50)
+    if not inspections.exists():
+        direct_inspections = Inspection.objects.filter(customer=customer).order_by(
+            "-created_at"
+        )[:10]
+        if direct_inspections.exists():
+            inspections = direct_inspections
 
     # تحميل ملاحظات العميل مسبقًا
     customer_notes = customer.notes_history.select_related("created_by").order_by(
@@ -404,7 +391,7 @@ def customer_create(request):
                     request, _("حدث خطأ أثناء حفظ العميل: {}").format(str(e))
                 )
         else:
-            print(f"Form errors: {form.errors}")  # للتشخيص
+            logger.debug("Form errors: %s", form.errors)
             # التحقق من وجود عميل مكرر لعرض البطاقة
             if "phone" in form.errors and hasattr(form, "existing_customer"):
                 existing_customer = form.existing_customer
@@ -713,18 +700,21 @@ def add_customer_note_by_code(request, customer_code):
 
 
 @login_required
+@require_POST
 def delete_customer_note(request, customer_pk, note_pk):
     """
     View for deleting a customer note
     """
+    customer = get_object_or_404(Customer, pk=customer_pk)
     note = get_object_or_404(CustomerNote, pk=note_pk, customer__pk=customer_pk)
 
-    if request.method == "POST":
-        note.delete()
-        messages.success(request, "تم حذف الملاحظة بنجاح.")
-        return JsonResponse({"status": "success"})
+    # التحقق من الصلاحيات: المنشئ أو المشرف
+    if not (request.user == note.created_by or request.user.is_superuser or can_user_delete_customer(request.user, customer)):
+        return JsonResponse({"status": "error", "message": "ليس لديك صلاحية حذف هذه الملاحظة"}, status=403)
 
-    return JsonResponse({"status": "error", "message": "طريقة طلب غير صالحة"})
+    note.delete()
+    messages.success(request, "تم حذف الملاحظة بنجاح.")
+    return JsonResponse({"status": "success"})
 
 
 @login_required
@@ -738,24 +728,28 @@ def customer_category_list(request):
 
 
 @login_required
+@require_POST
 def add_customer_category(request):
     """
     View for adding a new customer category
     """
-    if request.method == "POST":
-        name = request.POST.get("name")
-        description = request.POST.get("description")
+    # فقط المشرفين يمكنهم إضافة تصنيفات
+    if not request.user.is_superuser:
+        return JsonResponse({"status": "error", "message": "ليس لديك صلاحية إضافة تصنيفات"}, status=403)
 
-        if name:
-            category = CustomerCategory.objects.create(
-                name=name, description=description
-            )
-            return JsonResponse(
-                {
-                    "status": "success",
-                    "category": {"id": category.id, "name": category.name},
-                }
-            )
+    name = request.POST.get("name", "").strip()
+    description = request.POST.get("description", "").strip()
+
+    if name:
+        category = CustomerCategory.objects.create(
+            name=name, description=description
+        )
+        return JsonResponse(
+            {
+                "status": "success",
+                "category": {"id": category.id, "name": category.name},
+            }
+        )
 
     return JsonResponse({"status": "error", "message": "بيانات غير صالحة"})
 
@@ -783,15 +777,10 @@ def get_customer_notes(request, pk):
     """API endpoint to get customer notes"""
     customer = get_object_or_404(Customer, pk=pk)
 
-    # التحقق من صلاحية المستخدم لحذف هذا العميل
-    if not can_user_delete_customer(request.user, customer):
-        messages.error(request, "ليس لديك صلاحية لحذف هذا العميل.")
-        return redirect("customers:customer_detail", pk=pk)
-
-    # التحقق من صلاحية المستخدم لعرض هذا العميل
+    # التحقق من صلاحية العرض
     if not can_user_view_customer(request.user, customer):
-        messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
-        return redirect("customers:customer_list")
+        return JsonResponse({"status": "error", "message": "ليس لديك صلاحية عرض هذا العميل"}, status=403)
+
     notes = customer.notes_history.all().order_by("-created_at")
     notes_data = [
         {
@@ -871,7 +860,7 @@ class CustomerDashboardView(LoginRequiredMixin, TemplateView):
             )
 
         except Exception as e:
-            print(f"Error in CustomerDashboardView: {str(e)}")
+            logger.error("Error in CustomerDashboardView: %s", str(e))
             customers = Customer.objects.select_related(
                 "category", "branch", "created_by"
             )
@@ -1030,15 +1019,9 @@ def update_customer_address(request, pk):
             {"success": False, "error": f"حدث خطأ أثناء تحديث عنوان العميل: {str(e)}"}
         )
 
-    # التحقق من صلاحية المستخدم لحذف هذا العميل
-    if not can_user_delete_customer(request.user, customer):
-        messages.error(request, "ليس لديك صلاحية لحذف هذا العميل.")
-        return redirect("customers:customer_detail", pk=pk)
-
-    # التحقق من صلاحية المستخدم لعرض هذا العميل
-    if not can_user_view_customer(request.user, customer):
-        messages.error(request, "ليس لديك صلاحية لعرض هذا العميل.")
-        return redirect("customers:customer_list")
+    # التحقق من صلاحية التحرير
+    if not can_user_edit_customer(request.user, customer):
+        return JsonResponse({"success": False, "error": "ليس لديك صلاحية تحرير هذا العميل"}, status=403)
 
     # التحقق من الصلاحيات
     if not request.user.is_superuser and request.user.branch != customer.branch:
@@ -1086,7 +1069,7 @@ def customer_api(request):
         if not hasattr(customers, "filter"):
             customers = Customer.objects.all()
     except Exception as e:
-        print(f"Error in customer_api: {str(e)}")
+        logger.error("Error in customer_api: %s", str(e))
         customers = Customer.objects.all()
 
     # إذا كان هناك مصطلح بحث، تطبيق التصفية

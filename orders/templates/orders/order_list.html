@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load unified_status_tags %}
-{% load unified_status_tags %}
+{% load order_extras %}
 {% block title %}الطلبات - نظام الخواجه{% endblock %}
 {% block meta_tags %}
     <meta name="description"
@@ -522,7 +522,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                             {% endif %}
                                         </td>
                                         <td class="text-center">
-                                            {% load order_extras %}
                                             {% with order_types=order.get_selected_types_list %}
                                                 {% if order_types %}
                                                     {% for type in order_types %}
@@ -558,7 +557,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </td>
                                         <td class="text-center">
                                             {# عرض حالة الطلب الحقيقية (order_status) كالمصدر الرئيسي للفلتر #}
-                                            {% load order_extras %}
                                             {% get_status_badge order.order_status order=order %}
                                             {# إذا كانت حالة العرض مختلفة (مصادر أخرى مثل المعاينة/التركيب/المصنع)، أعرضها كمعلومة ثانوية #}
                                             {% with display_info=order.get_display_status %}

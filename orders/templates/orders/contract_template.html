@@ -11,14 +11,14 @@
             font-family: 'Noto Naskh Arabic';
             font-style: normal;
             font-weight: 400;
-            src: url('file:///home/zakee/homeupdate/static/vendor/fonts/noto-naskh/NotoNaskhArabic-Regular.ttf') format('truetype');
+            src: url('/static/vendor/fonts/noto-naskh/NotoNaskhArabic-Regular.ttf') format('truetype');
         }
 
         @font-face {
             font-family: 'Noto Naskh Arabic';
             font-style: normal;
             font-weight: 700;
-            src: url('file:///home/zakee/homeupdate/static/vendor/fonts/noto-naskh/NotoNaskhArabic-Bold.ttf') format('truetype');
+            src: url('/static/vendor/fonts/noto-naskh/NotoNaskhArabic-Bold.ttf') format('truetype');
         }
 
         * {
@@ -31,12 +31,12 @@
             size: A4 portrait;
             margin: 0.5cm;
             margin-top: 1.5cm;
-        }
+            margin-bottom: 1.5cm;
 
-        @page {
             @bottom-center {
                 content: "صفحة " counter(page) " من " counter(pages);
-                font-size: 10px;
+                font-family: 'Noto Naskh Arabic', 'Arial', sans-serif;
+                font-size: 11px;
                 color: #666;
             }
         }
@@ -300,29 +300,42 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* Subtle shadow for better distinction */
         }
 
-        /* Curtain Header */
+        /* Curtain Header - Table Layout for PDF compatibility */
         .curtain-header {
             background: white;
             border: 2px solid #a67c52;
             border-radius: 3px;
-            padding: 1px 3px;
-            margin-bottom: 1px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 3px;
+            padding: 4px 6px;
+            margin-bottom: 2px;
             width: 100%;
             box-sizing: border-box;
         }
 
-        .curtain-name-box {
-            display: flex;
-            align-items: center;
-            gap: 1px;
-            flex-wrap: nowrap;
-            justify-content: flex-start;
-            flex: 0 0 auto;
-            min-width: 0;
+        .curtain-header-row {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .curtain-header-cell {
+            display: table-cell;
+            vertical-align: middle;
+            padding: 2px 4px;
+        }
+
+        .curtain-header-cell.name-cell {
+            width: 40%;
+            text-align: right;
+        }
+
+        .curtain-header-cell.dims-cell {
+            width: 35%;
+            text-align: center;
+        }
+
+        .curtain-header-cell.info-cell {
+            width: 25%;
+            text-align: left;
         }
 
         .curtain-number {
@@ -330,56 +343,48 @@
             font-weight: 700;
             color: #a67c52;
             white-space: nowrap;
-            display: inline;
-            margin-left: 10px;
         }
 
         .curtain-name {
             font-size: 13px;
             font-weight: 700;
             color: #000;
-            white-space: nowrap;
-            display: inline;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 130px;
+            margin-right: 4px;
         }
 
-        .curtain-dimensions {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            justify-content: center;
-            direction: rtl;
-            flex: 1;
-            min-width: 0;
+        .curtain-code-badge {
+            background: #f8f5f0;
+            border: 1.5px solid #a67c52;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #a67c52;
+            letter-spacing: 0.5px;
+            direction: ltr;
+            display: inline-block;
+            margin-right: 6px;
         }
 
         .dim-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            direction: rtl;
+            display: inline-block;
+            margin: 0 8px;
+            white-space: nowrap;
         }
 
         .dim-label {
             font-size: 13px;
             color: #000;
             font-weight: 600;
-            white-space: nowrap;
-            flex-shrink: 0;
-            margin-left: 10px;
+            margin-left: 4px;
         }
 
         .dim-badge {
             color: #8b6f47;
             font-size: 14px;
             font-weight: 900;
-            white-space: nowrap;
-            flex-shrink: 0;
             direction: ltr;
             display: inline-block;
-            margin-left: 40px;
         }
 
         .dim-badge.height-badge {
@@ -387,12 +392,7 @@
         }
 
         .curtain-extra-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            justify-content: flex-end;
-            flex: 0 0 auto;
-            min-width: 0;
+            display: inline;
         }
 
         .curtain-type {
@@ -687,14 +687,6 @@
             page-break-inside: avoid;
         }
 
-        .page-number {
-            text-align: center;
-            font-size: 10px;
-            color: #666;
-            margin-top: 2px;
-            page-break-inside: avoid;
-        }
-
         .signature-box {
             text-align: center;
         }
@@ -753,7 +745,7 @@
         <button class="print-btn" onclick="window.print()">🖨️ طباعة</button>
         <!-- العلامة المائية -->
         <div class="watermark">
-            <img src="{{ MEDIA_ROOT }}/company_logos/Logo_1080.png" alt="علامة مائية">
+            <img src="{{ watermark_path }}" alt="علامة مائية">
         </div>
         <div class="contract-page">
             <!-- HEADER -->
@@ -906,48 +898,35 @@
                 <div class="curtain-row">
                     <!-- Curtain Header -->
                     <div class="curtain-header">
-                        <!-- Right: Number + Name -->
-                        <div class="curtain-name-box">
-                            <span class="curtain-number">ستارة {{ forloop.counter }}:</span>
-                            <span class="curtain-name">{{ curtain.room_name }}</span>
-                        </div>
-                        <!-- Contract Number Badge -->
-                        <div style="background: #f8f5f0;
-                                    border: 1.5px solid #a67c52;
-                                    border-radius: 4px;
-                                    padding: 2px 8px;
-                                    margin: 0 10px">
-                            <span style="font-size: 10px;
-                                         font-weight: 700;
-                                         color: #a67c52;
-                                         letter-spacing: 0.5px;
-                                         direction: ltr;
-                                         display: inline-block">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</span>
-                        </div>
-                        <!-- Center: Dimensions -->
-                        <div class="curtain-dimensions">
-                            <div class="dim-item">
-                                <span class="dim-label">عرض:</span>
-                                <span class="dim-badge">{{ curtain.width }}م</span>
+                        <div class="curtain-header-row">
+                            <div class="curtain-header-cell name-cell">
+                                <span class="curtain-number">ستارة {{ forloop.counter }}:</span>
+                                <span class="curtain-name">{{ curtain.room_name }}</span>
+                                <span class="curtain-code-badge">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</span>
                             </div>
-                            <div class="dim-item">
-                                <span class="dim-label">طول:</span>
-                                <span class="dim-badge height-badge">{{ curtain.height }}م</span>
+                            <div class="curtain-header-cell dims-cell">
+                                <span class="dim-item">
+                                    <span class="dim-label">عرض:</span>
+                                    <span class="dim-badge">{{ curtain.width }}م</span>
+                                </span>
+                                <span class="dim-item">
+                                    <span class="dim-label">طول:</span>
+                                    <span class="dim-badge height-badge">{{ curtain.height }}م</span>
+                                </span>
                             </div>
-                        </div>
-                        <!-- Left: Type + Box Info -->
-                        <div class="curtain-extra-info">
-                            {% if curtain.installation_type %}
-                                <div class="curtain-type">{{ curtain.get_installation_type_display }}</div>
-                            {% endif %}
-                            {% if curtain.curtain_box_width or curtain.curtain_box_depth %}
-                                <div class="box-dimensions">
+                            <div class="curtain-header-cell info-cell">
+                                {% if curtain.installation_type %}
+                                    <span class="curtain-type">{{ curtain.get_installation_type_display }}</span>
+                                {% endif %}
+                                {% if curtain.curtain_box_width or curtain.curtain_box_depth %}
+                                    <span class="box-dimensions">
                                     {% if curtain.curtain_box_width %}عرض {{ curtain.curtain_box_width|floatformat:0 }}{% endif %}
                                     {% if curtain.curtain_box_width and curtain.curtain_box_depth %}-{% endif %}
                                     {% if curtain.curtain_box_depth %}عمق {{ curtain.curtain_box_depth|floatformat:0 }}{% endif %}
                                     سم
-                                </div>
-                            {% endif %}
+                                    </span>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     <!-- Curtain Content -->
@@ -1099,10 +1078,6 @@
             {% empty %}
                 <div style="text-align: center; padding: 20px; color: #999;">لم يتم إضافة ستائر لهذا العقد</div>
             {% endfor %}
-            <div class="page-number">
-                <script>
-                document.write('صفحة ' + '<span class="page"></span>' + ' من ' + '<span class="pages"></span>');
-                </script>
             </div>
         </div>
     </body>

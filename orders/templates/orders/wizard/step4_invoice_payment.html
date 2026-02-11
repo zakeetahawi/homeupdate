@@ -338,7 +338,7 @@
     </script>
     <script>
     // بيانات المسودة
-    const customerId = {% if draft.customer %}{ { draft.customer.id } } {% else %} null{% endif %};
+    const customerId = {% if draft.customer %}{{ draft.customer.id }}{% else %}null{% endif %};
     const orderType = "{{ draft.selected_type|default:'' }}";
     const checkInvoiceUrl = "{% url 'orders:check_invoice_number_api' %}";
 

@@ -104,7 +104,7 @@ class CustomerForm(forms.ModelForm):
                     ),
                 )
                 if "branch" not in self._meta.fields:
-                    self._meta.fields.append("branch")
+                    self._meta.fields = list(self._meta.fields) + ["branch"]
             else:
                 # If user is not from main branch, their branch will be set in the view
                 self.fields.pop("branch", None)
