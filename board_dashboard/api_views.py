@@ -1,7 +1,8 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.db.models import Count, DurationField, ExpressionWrapper, F, Q, Sum
+from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -104,8 +105,6 @@ class BoardRevenueAPIView(APIView, DashboardFilterMixin):
         if sp_id and sp_id != "all":
             chart_qs = chart_qs.filter(salesperson__user_id=sp_id)
 
-        from django.db.models.functions import TruncMonth
-
         history_data = (
             chart_qs.annotate(month=TruncMonth("created_at"))
             .values("month")
@@ -188,12 +187,12 @@ class BoardInventoryAPIView(APIView, DashboardFilterMixin):
         # 2. Granular Tracking (By Branch) - Disabled for now as unused in UI and source of 500 errors
         warehouse_stats = []
 
-        # 3. Product Demand (Top 5 Products by Cut Volume)
+        # 3. Product Demand (Top 10 Products by Cut Volume)
         product_demand = (
             queryset.filter(product__isnull=False)
             .values("product__name")
             .annotate(total=Sum("quantity"))
-            .order_by("-total")[:5]
+            .order_by("-total")[:10]
         )
 
         # 4. Cutting Point Breakdown (If applicable, mapped via warehouse or section)
@@ -342,6 +341,14 @@ class BoardStaffAPIView(APIView, DashboardFilterMixin):
                 .order_by("-revenue")
             )
 
+        # Order type mapping for selected_types JSON field
+        ORDER_TYPE_NAMES = {
+            "installation": "تركيب",
+            "inspection": "معاينة",
+            "tailoring": "تسليم",
+            "products": "منتجات",
+        }
+
         ranked_performers = []
         for item in user_metrics[:5]:  # Process top 5
             username = item["created_by__username"]
@@ -349,49 +356,61 @@ class BoardStaffAPIView(APIView, DashboardFilterMixin):
                 continue
             revenue = float(item["revenue"] or 0)
             volume = item["volume"]
-            is_wholesale = item["created_by__is_wholesale"]
+            is_wholesale = item.get("created_by__is_wholesale", False)
 
-            # Logic: If user is Wholesale -> All Wholesale. Else Retail (generic).
-            # This is a simplification based on User flags.
-            wholesale_count = volume if is_wholesale else 0
-            retail_count = volume if not is_wholesale else 0
-
-            retail_breakdown = {}
-            if retail_count > 0:
-                # Fetch breakdown by type for this user
-                type_stats = (
-                    orders_qs.filter(created_by__username=username)
-                    .values("order_type")
-                    .annotate(c=Count("id"))
-                )
-                for t in type_stats:
-                    order_type = t["order_type"]
-                    if order_type:
-                        t_name = dict(Order.ORDER_TYPES).get(order_type, order_type)
-                    else:
-                        t_name = "غير محدد"
-                    retail_breakdown[t_name] = t["c"]
+            # Build order type breakdown from selected_types (JSON field)
+            user_orders = orders_qs.filter(created_by__username=username)
+            type_counts = {}
+            for order in user_orders.values_list("selected_types", "order_type"):
+                sel_types = order[0]  # selected_types JSON
+                old_type = order[1]   # legacy order_type
+                if sel_types and isinstance(sel_types, list) and len(sel_types) > 0:
+                    for st in sel_types:
+                        label = ORDER_TYPE_NAMES.get(st, st)
+                        type_counts[label] = type_counts.get(label, 0) + 1
+                elif old_type:
+                    # Fallback to old order_type field
+                    label = "منتج" if old_type == "product" else "خدمة" if old_type == "service" else old_type
+                    type_counts[label] = type_counts.get(label, 0) + 1
+                else:
+                    type_counts["غير محدد"] = type_counts.get("غير محدد", 0) + 1
 
             ranked_performers.append(
                 {
                     "username": username,
                     "revenue": revenue,
                     "volume": volume,
-                    "wholesale_count": wholesale_count,
-                    "retail_count": retail_count,
-                    "retail_breakdown": retail_breakdown,
+                    "retail_breakdown": type_counts,
                     "score": revenue,
                 }
             )
 
+        # Global order type distribution (all orders in period)
+        all_type_counts = {}
+        for sel_types, old_type in orders_qs.values_list("selected_types", "order_type"):
+            if sel_types and isinstance(sel_types, list) and len(sel_types) > 0:
+                for st in sel_types:
+                    label = ORDER_TYPE_NAMES.get(st, st)
+                    all_type_counts[label] = all_type_counts.get(label, 0) + 1
+            elif old_type:
+                label = "منتج" if old_type == "product" else "خدمة" if old_type == "service" else old_type
+                all_type_counts[label] = all_type_counts.get(label, 0) + 1
+            else:
+                all_type_counts["غير محدد"] = all_type_counts.get("غير محدد", 0) + 1
+
         top_user = ranked_performers[0] if ranked_performers else None
+
+        # Total orders count
+        total_orders_count = orders_qs.count()
 
         return Response(
             {
                 "top_creators": list(top_creators),
                 "engagement": formatted_engagement,
                 "top_performer": top_user,
-                "leaderboard": ranked_performers[:3],  # Return Top 3 as requested
+                "leaderboard": ranked_performers[:5],  # Return Top 5
+                "order_type_distribution": all_type_counts,
+                "total_orders_count": total_orders_count,
             }
         )
 
@@ -401,15 +420,15 @@ class BoardFinanceAPIView(APIView, DashboardFilterMixin):
     permission_classes = [IsBoardMember]
 
     def get(self, request):
-        # 1. Outstanding Debts (For the selected period to match Revenue)
-        # Filters apply to Order creation date to ensure Revenue = Net Income + Debt
+        # 1. Outstanding Debts - ALWAYS from start of current year (not filtered by date range)
+        # This gives the true total outstanding debt picture
+        year_start = timezone.make_aware(datetime(timezone.now().year, 1, 1))
 
         start_date, end_date = self.get_date_range()
 
         debt_qs = Order.objects.filter(
             paid_amount__lt=F("total_amount"),
-            created_at__gte=start_date,
-            created_at__lte=end_date,
+            created_at__gte=year_start,
         ).exclude(status__in=["cancelled", "rejected"])
 
         debt_qs = self.apply_filters(
@@ -457,6 +476,23 @@ class BoardFinanceAPIView(APIView, DashboardFilterMixin):
         # Calculate remaining debtors (orders with outstanding debt)
         remaining_debtors_count = debt_qs.count()
 
+        # Debt aging breakdown
+        now = timezone.now()
+        debt_0_30 = debt_qs.filter(created_at__gte=now - timedelta(days=30)).aggregate(
+            total=Sum(F("total_amount") - F("paid_amount"))
+        )["total"] or 0
+        debt_31_60 = debt_qs.filter(
+            created_at__lt=now - timedelta(days=30),
+            created_at__gte=now - timedelta(days=60),
+        ).aggregate(total=Sum(F("total_amount") - F("paid_amount")))["total"] or 0
+        debt_61_90 = debt_qs.filter(
+            created_at__lt=now - timedelta(days=60),
+            created_at__gte=now - timedelta(days=90),
+        ).aggregate(total=Sum(F("total_amount") - F("paid_amount")))["total"] or 0
+        debt_over_90 = debt_qs.filter(
+            created_at__lt=now - timedelta(days=90),
+        ).aggregate(total=Sum(F("total_amount") - F("paid_amount")))["total"] or 0
+
         return Response(
             {
                 "total_outstanding_debt": float(outstanding),
@@ -464,5 +500,11 @@ class BoardFinanceAPIView(APIView, DashboardFilterMixin):
                 "fast_closures_count": fast_closures,
                 "efficiency_rate": round(efficiency_rate, 1),
                 "remaining_debtors_count": remaining_debtors_count,
+                "debt_aging": {
+                    "0_30": float(debt_0_30),
+                    "31_60": float(debt_31_60),
+                    "61_90": float(debt_61_90),
+                    "over_90": float(debt_over_90),
+                },
             }
         )

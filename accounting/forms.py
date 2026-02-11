@@ -12,7 +12,6 @@ from django.utils import timezone
 from .models import (
     Account,
     AccountingSettings,
-    CustomerAdvance,
     Transaction,
     TransactionLine,
 )
@@ -58,6 +57,36 @@ class AccountForm(forms.ModelForm):
             ),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+
+    def clean_name(self):
+        """التحقق من عدم تكرار اسم الحساب"""
+        name = self.cleaned_data.get('name')
+        if name:
+            qs = Account.objects.filter(name=name)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("يوجد حساب آخر بنفس الاسم")
+        return name
+
+    def clean(self):
+        """التحقق من صحة البيانات"""
+        cleaned_data = super().clean()
+        parent = cleaned_data.get('parent')
+        
+        # التحقق من أن الحساب ليس أب لنفسه
+        if self.instance.pk and parent and parent.pk == self.instance.pk:
+            raise forms.ValidationError("لا يمكن للحساب أن يكون أب لنفسه")
+        
+        # التحقق من أن الحساب الأب ليس فرعياً للحساب الحالي
+        if self.instance.pk and parent:
+            current = parent
+            while current:
+                if current.pk == self.instance.pk:
+                    raise forms.ValidationError("لا يمكن تعيين حساب فرعي كحساب أب (دورة)")
+                current = current.parent
+        
+        return cleaned_data
 
 
 class TransactionForm(forms.ModelForm):
@@ -140,80 +169,6 @@ TransactionLineFormSet = inlineformset_factory(
     validate_min=True,
     can_delete=True,
 )
-
-
-class CustomerAdvanceForm(forms.ModelForm):
-    """
-    نموذج عربون العميل
-    """
-
-    class Meta:
-        model = CustomerAdvance
-        fields = [
-            "customer",
-            "amount",
-            "payment_method",
-            "receipt_number",
-            "notes",
-            "branch",
-        ]
-        widgets = {
-            "customer": forms.Select(attrs={"class": "form-control select2"}),
-            "amount": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "step": "0.01",
-                    "min": "0.01",
-                    "placeholder": "مبلغ العربون",
-                }
-            ),
-            "payment_method": forms.Select(attrs={"class": "form-control"}),
-            "receipt_number": forms.TextInput(
-                attrs={"class": "form-control", "placeholder": "رقم الإيصال"}
-            ),
-            "notes": forms.Textarea(
-                attrs={"class": "form-control", "rows": 2, "placeholder": "ملاحظات"}
-            ),
-            "branch": forms.Select(attrs={"class": "form-control"}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        self.customer = kwargs.pop("customer", None)
-        super().__init__(*args, **kwargs)
-
-        if self.customer:
-            self.fields["customer"].initial = self.customer
-            self.fields["customer"].widget = forms.HiddenInput()
-
-
-class AdvanceUsageForm(forms.Form):
-    """
-    نموذج استخدام العربون
-    """
-
-    order = forms.IntegerField(
-        label="رقم الطلب", widget=forms.Select(attrs={"class": "form-control select2"})
-    )
-    amount = forms.DecimalField(
-        label="المبلغ المستخدم",
-        max_digits=12,
-        decimal_places=2,
-        min_value=Decimal("0.01"),
-        widget=forms.NumberInput(
-            attrs={"class": "form-control", "step": "0.01", "placeholder": "المبلغ"}
-        ),
-    )
-
-    def __init__(self, *args, **kwargs):
-        self.advance = kwargs.pop("advance", None)
-        super().__init__(*args, **kwargs)
-
-        if self.advance:
-            # تحديد الحد الأقصى للمبلغ
-            self.fields["amount"].max_value = self.advance.remaining_amount
-            self.fields["amount"].widget.attrs["max"] = str(
-                self.advance.remaining_amount
-            )
 
 
 class QuickPaymentForm(forms.Form):
@@ -363,7 +318,6 @@ class AccountingSettingsForm(forms.ModelForm):
             "default_bank_account",
             "default_receivables_account",
             "default_revenue_account",
-            "default_advances_account",
             "auto_post_transactions",
             "require_transaction_approval",
         ]
@@ -381,9 +335,6 @@ class AccountingSettingsForm(forms.ModelForm):
                 attrs={"class": "form-control select2"}
             ),
             "default_revenue_account": forms.Select(
-                attrs={"class": "form-control select2"}
-            ),
-            "default_advances_account": forms.Select(
                 attrs={"class": "form-control select2"}
             ),
             "auto_post_transactions": forms.CheckboxInput(

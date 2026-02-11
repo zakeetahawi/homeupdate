@@ -1266,13 +1266,14 @@ def order_item_post_save(sender, instance, created, **kwargs):
 def payment_post_save(sender, instance, created, **kwargs):
     """معالج حفظ الدفعة"""
     if created:
-        # تحديث المبلغ المدفوع للطلب
         order = instance.order
-        paid_amount = order.payments.aggregate(total=models.Sum("amount"))["total"] or 0
-        # تحديث مباشر في قاعدة البيانات لتجنب التكرار الذاتي
-        Order.objects.filter(pk=order.pk).update(
-            paid_amount=paid_amount, payment_verified=True
-        )
+        if order:
+            # تحديث المبلغ المدفوع للطلب
+            paid_amount = order.payments.aggregate(total=models.Sum("amount"))["total"] or 0
+            # تحديث مباشر في قاعدة البيانات لتجنب التكرار الذاتي
+            Order.objects.filter(pk=order.pk).update(
+                paid_amount=paid_amount, payment_verified=True
+            )
 
 
 # إشارات تحديث حالة الطلب من الأقسام الأخرى

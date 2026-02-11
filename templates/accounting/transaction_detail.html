@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load accounting_numbers %}
 {% block title %}{{ transaction.transaction_number }} - تفاصيل القيد{% endblock %}
 {% block content %}
     <div class="container-fluid py-4">
@@ -34,13 +35,25 @@
                         قيد {{ transaction.transaction_number }}
                     </h2>
                     <div>
-                        {% if transaction.status == 'draft' %}
+                        {% if transaction.status == 'draft' and perms.accounting.can_post_transaction %}
                             <form action="{% url 'accounting:transaction_post' transaction.pk %}"
                                   method="post"
-                                  class="d-inline">
+                                  class="d-inline"
+                                  onsubmit="return confirm('هل أنت متأكد من ترحيل هذا القيد؟ لا يمكن التراجع عن هذا الإجراء.');">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-success">
                                     <i class="fas fa-check me-1"></i> ترحيل
+                                </button>
+                            </form>
+                        {% endif %}
+                        {% if transaction.status == 'posted' and perms.accounting.can_void_transaction %}
+                            <form action="{% url 'accounting:transaction_void' transaction.pk %}"
+                                  method="post"
+                                  class="d-inline"
+                                  onsubmit="return confirm('هل أنت متأكد من إلغاء هذا القيد؟');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-times me-1"></i> إلغاء القيد
                                 </button>
                             </form>
                         {% endif %}
@@ -199,10 +212,10 @@
                                             </td>
                                             <td>{{ line.description|default:'-' }}</td>
                                             <td class="text-end text-success fw-bold">
-                                                {% if line.debit > 0 %}{{ line.debit|floatformat:2 }}{% endif %}
+                                                {% if line.debit > 0 %}{{ line.debit|floatformat:2|en }}{% endif %}
                                             </td>
                                             <td class="text-end text-danger fw-bold">
-                                                {% if line.credit > 0 %}{{ line.credit|floatformat:2 }}{% endif %}
+                                                {% if line.credit > 0 %}{{ line.credit|floatformat:2|en }}{% endif %}
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -210,8 +223,8 @@
                                 <tfoot class="table-light">
                                     <tr class="fw-bold">
                                         <th colspan="3" class="text-end">المجموع:</th>
-                                        <th class="text-end text-success">{{ totals.total_debit|floatformat:2 }}</th>
-                                        <th class="text-end text-danger">{{ totals.total_credit|floatformat:2 }}</th>
+                                        <th class="text-end text-success">{{ totals.total_debit|floatformat:2|en }}</th>
+                                        <th class="text-end text-danger">{{ totals.total_credit|floatformat:2|en }}</th>
                                     </tr>
                                     <tr>
                                         <td colspan="3" class="text-end">الفرق:</td>

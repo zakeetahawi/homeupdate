@@ -330,13 +330,6 @@ class Order(SoftDeleteMixin, models.Model):
         verbose_name="إضافة مالية",
         help_text="إضافة مالية على الطلب (رسوم إضافية)",
     )
-    used_customer_balance = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=Decimal("0.00"),
-        verbose_name="رصيد العميل المستخدم",
-        help_text="المبلغ المستخدم من رصيد العميل",
-    )
     notes = models.TextField(blank=True, verbose_name="ملاحظات")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -2307,15 +2300,61 @@ oi_post_delete.connect(order_item_deleted, sender=OrderItem)
 
 
 class Payment(SoftDeleteMixin, models.Model):
+    """
+    دفعات العملاء - يمكن أن تكون لطلب محدد أو دفعة عامة
+    الدفعات العامة تُخصم تلقائياً على الطلبات المستحقة (FIFO)
+    """
     PAYMENT_METHOD_CHOICES = [
         ("cash", "نقداً"),
         ("bank_transfer", "تحويل بنكي"),
         ("check", "شيك"),
     ]
+    
+    PAYMENT_TYPE_CHOICES = [
+        ("order", "دفعة طلب محدد"),
+        ("general", "دفعة عامة"),  # بدلاً من العربون
+    ]
+    
+    # الطلب اختياري الآن
     order = models.ForeignKey(
-        Order, on_delete=models.CASCADE, related_name="payments", verbose_name="الطلب"
+        Order, 
+        on_delete=models.CASCADE, 
+        related_name="payments", 
+        verbose_name="الطلب",
+        null=True,
+        blank=True,
     )
-    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="المبلغ")
+    
+    # العميل إجباري
+    customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.CASCADE,
+        related_name="payments",
+        verbose_name="العميل",
+        null=True,  # مؤقتاً للـ migration
+        blank=True,
+    )
+    
+    amount = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        verbose_name="المبلغ"
+    )
+    
+    # التخصيص
+    payment_type = models.CharField(
+        max_length=20,
+        choices=PAYMENT_TYPE_CHOICES,
+        default="order",
+        verbose_name="نوع الدفعة",
+    )
+    allocated_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name="المبلغ المخصص",
+    )
+    
     payment_method = models.CharField(
         max_length=20,
         choices=PAYMENT_METHOD_CHOICES,
@@ -2339,23 +2378,53 @@ class Payment(SoftDeleteMixin, models.Model):
         verbose_name_plural = "الدفعات"
         ordering = ["-payment_date"]
         indexes = [
+            models.Index(fields=["customer"], name="payment_customer_idx"),
             models.Index(fields=["order"], name="payment_order_idx"),
+            models.Index(fields=["payment_type"], name="payment_type_idx"),
             models.Index(fields=["payment_method"], name="payment_method_idx"),
             models.Index(fields=["payment_date"], name="payment_date_idx"),
             models.Index(fields=["created_by"], name="payment_created_by_idx"),
         ]
 
     def __str__(self):
-        return f"{self.order.order_number} - {self.amount} ({self.get_payment_method_display()})"
+        if self.order:
+            return f"{self.order.order_number} - {self.amount} ({self.get_payment_method_display()})"
+        return f"{self.customer.name} - {self.amount} ج.م ({self.get_payment_type_display()})"
+    
+    @property
+    def remaining_amount(self):
+        """المبلغ المتبقي غير المخصص"""
+        return self.amount - self.allocated_amount
+    
+    @property
+    def is_fully_allocated(self):
+        """هل الدفعة مخصصة بالكامل"""
+        return self.allocated_amount >= self.amount
 
     def save(self, *args, **kwargs):
-        """Update order's paid amount when payment is saved"""
-        try:
-            # التحقق من أن الطلب له مفتاح أساسي
-            if not self.order.pk:
-                raise models.ValidationError("يجب حفظ الطلب أولاً قبل إنشاء دفعة")
-            super().save(*args, **kwargs)
-            # Update order's paid amount
+        """
+        - للدفعات المحددة لطلب: تحديد payment_type و customer من الطلب
+        - للدفعات العامة: التخصيص التلقائي FIFO بعد الحفظ
+        """
+        from core.utils.general import convert_model_arabic_numbers
+        
+        # تحويل الأرقام العربية إلى إنجليزية
+        convert_model_arabic_numbers(self, ['reference_number', 'notes'])
+        
+        # تحديد نوع الدفعة والعميل
+        is_new = not self.pk
+        
+        if self.order:
+            self.payment_type = "order"
+            if not self.customer_id:
+                self.customer = self.order.customer
+        else:
+            self.payment_type = "general"
+        
+        super().save(*args, **kwargs)
+        
+        # تحديث paid_amount للطلب المحدد
+        if self.order_id:
             try:
                 total_payments = (
                     Payment.objects.filter(order=self.order).aggregate(
@@ -2376,7 +2445,6 @@ class Payment(SoftDeleteMixin, models.Model):
                     if debt:
                         remaining = self.order.remaining_amount
                         if remaining <= 0:
-                            # الطلب مدفوع بالكامل، احذف المديونية أو اجعلها مدفوعة
                             debt.is_paid = True
                             debt.payment_date = timezone.now()
                             debt.payment_receiver_name = getattr(
@@ -2389,16 +2457,135 @@ class Payment(SoftDeleteMixin, models.Model):
                                 )
                             debt.save()
                         else:
-                            # حدث مبلغ المديونية
                             debt.debt_amount = remaining
                             debt.save()
                 except Exception:
                     pass
-            except Exception as e:
+            except Exception:
                 pass
-        except Exception as e:
-            pass
-            raise
+        
+        # للدفعات العامة الجديدة: التخصيص التلقائي FIFO
+        if is_new and self.payment_type == "general":
+            self.auto_allocate_fifo()
+    
+    def auto_allocate_fifo(self):
+        """
+        تخصيص الدفعة تلقائياً على الطلبات المستحقة (الأقدم أولاً)
+        PaymentAllocation.save() يتولى تحديث paid_amount للطلب تلقائياً
+        """
+        from decimal import Decimal
+        
+        remaining = self.remaining_amount
+        if remaining <= 0:
+            return
+        
+        # جلب طلبات العميل (الأقدم أولاً) وتصفية غير المسددة في Python
+        # لأن final_price_after_discount هو property وليس حقل DB
+        pending_orders = Order.objects.filter(
+            customer=self.customer,
+        ).order_by('order_date', 'id')
+        
+        for order in pending_orders:
+            if remaining <= 0:
+                break
+            
+            order_remaining = order.final_price_after_discount - order.paid_amount
+            if order_remaining <= 0:
+                continue
+            
+            # المبلغ المخصص لهذا الطلب
+            allocate = min(remaining, order_remaining)
+            
+            # إنشاء سجل التخصيص — PaymentAllocation.save() يحدّث paid_amount تلقائياً
+            PaymentAllocation.objects.create(
+                payment=self,
+                order=order,
+                allocated_amount=allocate,
+                created_by=self.created_by
+            )
+            
+            remaining -= allocate
+            self.allocated_amount += allocate
+        
+        # حفظ التخصيص النهائي بدون تشغيل signals
+        if self.allocated_amount > 0:
+            Payment.objects.filter(pk=self.pk).update(allocated_amount=self.allocated_amount)
+
+
+class PaymentAllocation(models.Model):
+    """
+    ربط الدفعات بالطلبات - التخصيص
+    يسمح بتوزيع دفعة واحدة على عدة طلبات
+    """
+    payment = models.ForeignKey(
+        Payment,
+        on_delete=models.CASCADE,
+        related_name="allocations",
+        verbose_name="الدفعة",
+    )
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="payment_allocations",
+        verbose_name="الطلب",
+    )
+    allocated_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="المبلغ المخصص",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="تاريخ التخصيص",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="تم بواسطة",
+    )
+    notes = models.TextField(
+        blank=True,
+        verbose_name="ملاحظات",
+    )
+    
+    class Meta:
+        verbose_name = "تخصيص دفعة"
+        verbose_name_plural = "تخصيصات الدفعات"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["payment"], name="alloc_payment_idx"),
+            models.Index(fields=["order"], name="alloc_order_idx"),
+        ]
+    
+    def __str__(self):
+        return f"{self.payment} → {self.order.order_number} ({self.allocated_amount} ج.م)"
+    
+    def save(self, *args, **kwargs):
+        """عند حفظ التخصيص: تحديث paid_amount للطلب"""
+        super().save(*args, **kwargs)
+        
+        # إعادة حساب إجمالي المدفوع للطلب
+        total_allocated = PaymentAllocation.objects.filter(
+            order=self.order
+        ).aggregate(
+            total=models.Sum('allocated_amount')
+        )['total'] or Decimal('0.00')
+        
+        # إضافة الدفعات المباشرة (order-specific)
+        direct_payments = Payment.objects.filter(
+            order=self.order,
+            payment_type='order'
+        ).aggregate(
+            total=models.Sum('amount')
+        )['total'] or Decimal('0.00')
+        
+        total = total_allocated + direct_payments
+        
+        if self.order.paid_amount != total:
+            self.order.paid_amount = total
+            self.order.save(update_fields=['paid_amount'])
 
 
 class OrderNote(models.Model):

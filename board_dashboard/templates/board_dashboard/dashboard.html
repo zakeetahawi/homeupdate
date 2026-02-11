@@ -1,635 +1,1592 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}لوحة تحكم مجلس الإدارة{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ═══════════════════════════════════════════════════════════
+   Board Dashboard – Executive Premium Styling
+   ═══════════════════════════════════════════════════════════ */
+
+/* --- Header Banner --- */
+.board-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f4c75 100%);
+    border-radius: 16px;
+    padding: 28px 32px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+.board-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+    pointer-events: none;
+}
+.board-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.3px;
+}
+.board-header .subtitle {
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.6);
+    margin-top: 4px;
+}
+.badge-confidential {
+    background: linear-gradient(135deg, #dc2626, #ef4444);
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(220,38,38,0.3);
+}
+.header-meta {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: 8px;
+}
+.header-meta i {
+    margin-left: 4px;
+    color: rgba(255,255,255,0.35);
+}
+
+/* --- Filter Strip --- */
+.filter-strip {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    border: 1px solid #e5e7eb;
+    margin-bottom: 22px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+}
+.filter-strip .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.filter-strip label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.filter-strip select,
+.filter-strip input[type="date"] {
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    min-width: 140px;
+    background: #f9fafb;
+    transition: all 0.2s;
+}
+.filter-strip select:focus,
+.filter-strip input[type="date"]:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+    outline: none;
+    background: #fff;
+}
+.filter-actions {
+    display: flex;
+    gap: 6px;
+    margin-right: auto;
+}
+.btn-filter-apply {
+    background: linear-gradient(135deg, #1e3a5f, #3b82f6);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 18px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-filter-apply:hover {
+    box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+    transform: translateY(-1px);
+}
+.btn-filter-clear {
+    background: #f3f4f6;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-filter-clear:hover {
+    background: #e5e7eb;
+}
+
+/* --- KPI Cards (Row 1) --- */
+.kpi-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 22px 20px 18px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    border: 1px solid #f0f0f0;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+}
+.kpi-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+.kpi-card .kpi-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.kpi-card .kpi-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 6px;
+}
+.kpi-card .kpi-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #1f2937;
+    line-height: 1.2;
+    direction: ltr;
+    text-align: right;
+}
+.kpi-card .kpi-value small {
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: #9ca3af;
+}
+.kpi-card .kpi-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 6px;
+}
+.kpi-trend.up {
+    color: #059669;
+    background: #ecfdf5;
+}
+.kpi-trend.down {
+    color: #dc2626;
+    background: #fef2f2;
+}
+.kpi-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+}
+.kpi-revenue::after    { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.kpi-income::after     { background: linear-gradient(90deg, #059669, #34d399); }
+.kpi-credit::after     { background: linear-gradient(90deg, #0891b2, #22d3ee); }
+.kpi-debt::after        { background: linear-gradient(90deg, #dc2626, #f87171); }
+
+.kpi-revenue .kpi-icon   { background: #eff6ff; color: #3b82f6; }
+.kpi-income .kpi-icon     { background: #ecfdf5; color: #059669; }
+.kpi-credit .kpi-icon     { background: #ecfeff; color: #0891b2; }
+.kpi-debt .kpi-icon        { background: #fef2f2; color: #dc2626; }
+
+/* --- Efficiency Gauge Card --- */
+.efficiency-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    border: 1px solid #f0f0f0;
+    height: 100%;
+}
+.efficiency-card .gauge-container {
+    position: relative;
+    width: 140px;
+    height: 70px;
+    margin: 0 auto 12px;
+    overflow: hidden;
+}
+.gauge-container canvas {
+    width: 140px !important;
+    height: 140px !important;
+    margin-top: 0;
+}
+.gauge-value {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1f2937;
+}
+.efficiency-detail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: #6b7280;
+    padding: 5px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+.efficiency-detail:last-child {
+    border-bottom: none;
+}
+.efficiency-detail i {
+    font-size: 0.85rem;
+    width: 20px;
+    text-align: center;
+}
+.efficiency-detail .detail-val {
+    font-weight: 700;
+    color: #1f2937;
+    margin-right: auto;
+}
+
+/* --- Performers Podium --- */
+.performers-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    border: 1px solid #f0f0f0;
+    height: 100%;
+}
+.performers-card .card-title-sm {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.podium {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+.podium-item {
+    text-align: center;
+    flex: 1;
+    transition: all 0.3s;
+}
+.podium-item:hover {
+    transform: translateY(-3px);
+}
+.podium-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin: 0 auto 6px;
+    color: #fff;
+    position: relative;
+}
+.podium-item:nth-child(1) .podium-avatar {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    width: 52px;
+    height: 52px;
+    font-size: 1.3rem;
+    box-shadow: 0 4px 14px rgba(245,158,11,0.35);
+}
+.podium-item:nth-child(2) .podium-avatar {
+    background: linear-gradient(135deg, #94a3b8, #cbd5e1);
+    box-shadow: 0 3px 10px rgba(148,163,184,0.3);
+}
+.podium-item:nth-child(3) .podium-avatar {
+    background: linear-gradient(135deg, #b45309, #d97706);
+    box-shadow: 0 3px 10px rgba(180,83,9,0.3);
+}
+.podium-rank {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #e5e7eb;
+    font-size: 0.55rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #374151;
+}
+.podium-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #1f2937;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0 auto;
+}
+.podium-revenue {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #059669;
+    direction: ltr;
+}
+.podium-orders {
+    font-size: 0.62rem;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+.podium-bar {
+    width: 60%;
+    margin: 6px auto 0;
+    border-radius: 3px;
+    height: 4px;
+}
+.podium-item:nth-child(1) .podium-bar { background: #f59e0b; height: 50px; width: 100%; border-radius: 6px 6px 0 0; }
+.podium-item:nth-child(2) .podium-bar { background: #94a3b8; height: 35px; width: 100%; border-radius: 6px 6px 0 0; }
+.podium-item:nth-child(3) .podium-bar { background: #d97706; height: 22px; width: 100%; border-radius: 6px 6px 0 0; }
+
+/* --- Chart Cards --- */
+.chart-card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    border: 1px solid #f0f0f0;
+    overflow: hidden;
+    margin-bottom: 22px;
+}
+.chart-card .chart-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #f5f5f5;
+}
+.chart-card .chart-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.chart-title .title-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.chart-card .chart-body {
+    padding: 16px 20px;
+    position: relative;
+}
+.chart-card .chart-body canvas {
+    max-height: 320px;
+}
+
+/* --- Inventory Bar Chart --- */
+.product-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.product-bar .bar-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #374151;
+    min-width: 120px;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.product-bar .bar-track {
+    flex: 1;
+    height: 22px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+.product-bar .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.6s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #fff;
+    min-width: 40px;
+}
+.bar-fill.c1 { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.bar-fill.c2 { background: linear-gradient(90deg, #059669, #34d399); }
+.bar-fill.c3 { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.bar-fill.c4 { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+.bar-fill.c5 { background: linear-gradient(90deg, #ec4899, #f472b6); }
+
+/* --- Warehouse dropdown --- */
+.wh-dropdown-toggle {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 5px 12px;
+    font-size: 0.72rem;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.wh-dropdown-toggle:hover {
+    background: #e5e7eb;
+}
+.wh-dropdown-menu {
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border: 1px solid #e5e7eb;
+    min-width: 220px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+.wh-dropdown-menu .form-check {
+    padding: 4px 0;
+}
+.wh-dropdown-menu .form-check-label {
+    font-size: 0.78rem;
+}
+
+/* --- Debtors Chart --- */
+.debtor-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f9fafb;
+}
+.debtor-item:last-child { border-bottom: none; }
+.debtor-rank {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #fef2f2;
+    color: #dc2626;
+    font-size: 0.68rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.debtor-name {
+    flex: 1;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #374151;
+}
+.debtor-amount {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #dc2626;
+    direction: ltr;
+}
+
+/* --- Loading Skeleton --- */
+@keyframes shimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: 200px 0; }
+}
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+    background-size: 400px 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 6px;
+}
+.skeleton-text { height: 14px; width: 60%; margin-bottom: 8px; }
+.skeleton-value { height: 28px; width: 80%; }
+
+/* --- Fade-in animation --- */
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up {
+    animation: fadeSlideUp 0.4s ease forwards;
+}
+.fade-up-d1 { animation-delay: 0.05s; }
+.fade-up-d2 { animation-delay: 0.1s; }
+.fade-up-d3 { animation-delay: 0.15s; }
+.fade-up-d4 { animation-delay: 0.2s; }
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+    .board-header { padding: 18px 16px; }
+    .board-header h1 { font-size: 1.15rem; }
+    .filter-strip { padding: 10px 12px; }
+    .kpi-card .kpi-value { font-size: 1.1rem; }
+    .podium { gap: 6px; }
+}
+
+/* Print-friendly */
+@media print {
+    .filter-strip, .btn-filter-apply, .btn-filter-clear,
+    .wh-dropdown-toggle { display: none !important; }
+    .kpi-card, .chart-card, .performers-card, .efficiency-card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        break-inside: avoid;
+    }
+}
+
+/* --- 4th/5th performer cards --- */
+.performer-extra-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 16px;
+    text-align: center;
+    min-width: 160px;
+    flex: 1;
+    max-width: 280px;
+}
+.performer-extra-card .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    background: #dbeafe;
+    color: #3b82f6;
+    margin-bottom: 4px;
+}
+.performer-extra-card .pname {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 2px;
+}
+.performer-extra-card .pamount {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #059669;
+}
+.performer-extra-card .ptypes {
+    font-size: 0.62rem;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+
+/* --- Debt aging bars --- */
+.aging-bar-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 10px 0;
+}
+.aging-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.aging-bar-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #374151;
+    min-width: 90px;
+    text-align: right;
+}
+.aging-bar-track {
+    flex: 1;
+    height: 28px;
+    background: #f3f4f6;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+.aging-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 10px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #fff;
+    transition: width 0.6s ease;
+    min-width: 0;
+}
+.aging-bar-fill.aging-green { background: linear-gradient(90deg, #059669, #34d399); }
+.aging-bar-fill.aging-yellow { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.aging-bar-fill.aging-orange { background: linear-gradient(90deg, #f97316, #fb923c); }
+.aging-bar-fill.aging-red { background: linear-gradient(90deg, #dc2626, #f87171); }
+.aging-bar-amount {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #374151;
+    min-width: 100px;
+    text-align: left;
+    direction: ltr;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-    <div class="container-fluid py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3 mb-0 text-gray-800">لوحة تحكم مجلس الإدارة التنفيذي</h1>
-            <span class="badge bg-danger">سري للغاية - للإدارة العليا فقط</span>
+<div class="container-fluid py-3">
+
+    <!-- ═══════ Header Banner ═══════ -->
+    <div class="board-header fade-up">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+                <h1><i class="fas fa-chart-line me-2" style="color:rgba(255,255,255,0.4)"></i>لوحة تحكم مجلس الإدارة التنفيذي</h1>
+                <div class="subtitle">نظرة شاملة على الأداء المالي والتشغيلي</div>
+                <div class="header-meta">
+                    <span><i class="fas fa-clock"></i> آخر تحديث: <span id="last-update-time">--</span></span>
+                    <span><i class="fas fa-calendar-alt"></i> <span id="period-label">--</span></span>
+                </div>
+            </div>
+            <span class="badge-confidential"><i class="fas fa-lock me-1"></i> سري للغاية - للإدارة العليا فقط</span>
         </div>
-        <!-- Filter Bar -->
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-filter me-2"></i>تصفية البيانات
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 mb-2">
-                        <label class="small font-weight-bold">الفرع</label>
-                        <select id="filter-branch" class="form-control form-control-sm">
-                            <option value="all">كل الفروع</option>
-                            {% for branch in branches %}<option value="{{ branch.id }}">{{ branch.name }}</option>{% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-2">
-                        <label class="small font-weight-bold">مندوب المبيعات</label>
-                        <select id="filter-salesperson" class="form-control form-control-sm">
-                            <option value="all">الكل</option>
-                            {% for sp in salespersons %}<option value="{{ sp.id }}">{{ sp.username }}</option>{% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-2 mb-2">
-                        <label class="small font-weight-bold">من تاريخ</label>
-                        <input type="date"
-                               id="filter-date-from"
-                               class="form-control form-control-sm">
-                    </div>
-                    <div class="col-md-2 mb-2">
-                        <label class="small font-weight-bold">إلى تاريخ</label>
-                        <input type="date" id="filter-date-to" class="form-control form-control-sm">
-                    </div>
-                    <div class="col-md-2 mb-2">
-                        <label class="small font-weight-bold">مقارنة بـ</label>
-                        <select id="filter-compare" class="form-control form-control-sm">
-                            <option value="period" selected>الفترة السابقة</option>
-                            <option value="year">العام السابق (نفس الفترة)</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-2 d-flex align-items-end">
-                        <div class="btn-group w-100" role="group">
-                            <button id="btn-apply-filters" class="btn btn-primary btn-sm">
-                                <i class="fas fa-search me-1"></i> تطبيق
-                            </button>
-                            <button id="btn-clear-filters" class="btn btn-secondary btn-sm">
-                                <i class="fas fa-eraser me-1"></i> مسح
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    </div>
+
+    <!-- ═══════ Compact Filter Strip ═══════ -->
+    <div class="filter-strip fade-up fade-up-d1">
+        <div class="filter-group">
+            <label>الفرع</label>
+            <select id="filter-branch">
+                <option value="all">كل الفروع</option>
+                {% for branch in branches %}<option value="{{ branch.id }}">{{ branch.name }}</option>{% endfor %}
+            </select>
         </div>
-        <!-- ROW 1: Financial Overview (4 Cards) -->
-        <div class="row">
-            <!-- 1. Total Revenue -->
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-primary shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">إجمالي المبيعات (Booking)</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="card-revenue">0.00 {{ currency_symbol }}</div>
-                            </div>
-                            <div class="col-auto">
-                                <div class="h5 mb-0 font-weight-bold text-gray-800"
-                                     id="card-revenue-trend">0%</div>
-                            </div>
+        <div class="filter-group">
+            <label>المندوب</label>
+            <select id="filter-salesperson">
+                <option value="all">الكل</option>
+                {% for sp in salespersons %}<option value="{{ sp.id }}">{{ sp.username }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>من تاريخ</label>
+            <input type="date" id="filter-date-from">
+        </div>
+        <div class="filter-group">
+            <label>إلى تاريخ</label>
+            <input type="date" id="filter-date-to">
+        </div>
+        <div class="filter-group">
+            <label>مقارنة بـ</label>
+            <select id="filter-compare">
+                <option value="period" selected>الفترة السابقة</option>
+                <option value="year">العام السابق</option>
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button id="btn-apply-filters" class="btn-filter-apply">
+                <i class="fas fa-search me-1"></i> تطبيق
+            </button>
+            <button id="btn-clear-filters" class="btn-filter-clear">
+                <i class="fas fa-eraser me-1"></i> مسح
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════ ROW 1: KPI Cards ═══════ -->
+    <div class="row g-3 mb-3">
+        <!-- 1. Total Revenue -->
+        <div class="col-xl-3 col-md-6 fade-up fade-up-d1">
+            <div class="kpi-card kpi-revenue">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <div class="kpi-label">إجمالي المبيعات (Booking)</div>
+                        <div class="kpi-value" id="card-revenue">
+                            <div class="skeleton skeleton-value"></div>
+                        </div>
+                        <div class="kpi-trend" id="card-revenue-trend">
+                            <div class="skeleton skeleton-text" style="width:50px;height:14px;margin:0"></div>
                         </div>
                     </div>
-                </div>
-            </div>
-            <!-- 2. Net Income -->
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-success shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">صافي الدخل (محصل)</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="card-net-income">0.00 {{ currency_symbol }}</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- 3. Credit (Overpayments) -->
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-info shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">مدفوعات زائدة (Credit)</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="card-credit">0.00 {{ currency_symbol }}</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-wallet fa-2x text-gray-300"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- 4. Outstanding Debt (Red) -->
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-danger shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">الديون المستحقة</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="card-debt">0.00 {{ currency_symbol }}</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-hand-holding-usd fa-2x text-gray-300"></i>
-                            </div>
-                        </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-chart-bar"></i>
                     </div>
                 </div>
             </div>
         </div>
-        <!-- ROW 2: Staff Performance & Efficiency -->
-        <div class="row">
-            <!-- Top Performer 1 -->
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-bottom-warning shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">الموظف الأفضل أداءً (1)</div>
-                        <div id="top-performer-1" class="text-center">
-                            <div class="h5 font-weight-bold text-gray-800 name">--</div>
-                            <div class="text-xs text-success font-weight-bold revenue">0 {{ currency_symbol }}</div>
-                            <div class="mt-2 small text-gray-600 stats">
-                                الطلبات: <span class="count">0</span>
-                            </div>
+        <!-- 2. Net Income -->
+        <div class="col-xl-3 col-md-6 fade-up fade-up-d2">
+            <div class="kpi-card kpi-income">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <div class="kpi-label">صافي الدخل (محصّل)</div>
+                        <div class="kpi-value" id="card-net-income">
+                            <div class="skeleton skeleton-value"></div>
                         </div>
                     </div>
-                </div>
-            </div>
-            <!-- Top Performer 2 -->
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-bottom-secondary shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">المركز الثاني</div>
-                        <div id="top-performer-2" class="text-center">
-                            <div class="h5 font-weight-bold text-gray-800 name">--</div>
-                            <div class="text-xs text-success font-weight-bold revenue">0 {{ currency_symbol }}</div>
-                            <div class="mt-2 small text-gray-600 stats">
-                                الطلبات: <span class="count">0</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Top Performer 3 -->
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-bottom-secondary shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">المركز الثالث</div>
-                        <div id="top-performer-3" class="text-center">
-                            <div class="h5 font-weight-bold text-gray-800 name">--</div>
-                            <div class="text-xs text-success font-weight-bold revenue">0 {{ currency_symbol }}</div>
-                            <div class="mt-2 small text-gray-600 stats">
-                                الطلبات: <span class="count">0</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Payment Efficiency -->
-            <div class="col-xl-3 col-md-6 mb-4">
-                <div class="card border-left-success shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">كفاءة السداد (خلال 3 أيام)</div>
-                                <div class="row no-gutters align-items-center">
-                                    <div class="col-auto">
-                                        <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800"
-                                             id="card-efficiency">0%</div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="progress progress-sm mr-2">
-                                            <div class="progress-bar bg-success"
-                                                 role="progressbar"
-                                                 style="width: 0%"
-                                                 aria-valuenow="0"
-                                                 aria-valuemin="0"
-                                                 aria-valuemax="100"
-                                                 id="progress-efficiency"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mt-2 small text-gray-600">
-                                    <div title="عدد الطلبات المغلقة خلال 3 أيام">
-                                        <i class="fas fa-check-circle text-success"></i> إغلاق سريع: <span id="card-fast-closures">0</span>
-                                    </div>
-                                    <div title="عدد الطلبات التي بها ديون متبقية">
-                                        <i class="fas fa-hourglass-half text-warning"></i> ديون متبقية: <span id="card-remaining-debtors">0</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Charts Row -->
-            <div class="row">
-                <!-- Revenue Forecast -->
-                <div class="col-xl-8 col-lg-7">
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                            <h6 class="m-0 font-weight-bold text-primary">توقعات الإيرادات (3 أشهر)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-area">
-                                <canvas id="revenueChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Inventory Demand -->
-                <div class="col-xl-4 col-lg-5">
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                            <h6 class="m-0 font-weight-bold text-primary">أكثر المنتجات طلباً (قص)</h6>
-                            <div class="dropdown no-arrow">
-                                <button class="btn btn-sm btn-outline-primary dropdown-toggle"
-                                        type="button"
-                                        id="warehouseDropdown"
-                                        data-toggle="dropdown"
-                                        aria-haspopup="true"
-                                        aria-expanded="false">
-                                    <span id="warehouse-filter-label">كل المخازن (الافتراضي)</span>
-                                </button>
-                                <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in p-2"
-                                     aria-labelledby="warehouseDropdown"
-                                     style="width: 250px;
-                                            max-height: 300px;
-                                            overflow-y: auto">
-                                    <div class="custom-control custom-checkbox mb-2">
-                                        <input type="checkbox"
-                                               class="custom-control-input warehouse-check-all"
-                                               id="wh-all"
-                                               value="all"
-                                               checked>
-                                        <label class="custom-control-label font-weight-bold" for="wh-all">الكل</label>
-                                    </div>
-                                    <div class="dropdown-divider"></div>
-                                    {% for w in warehouses %}
-                                        <div class="custom-control custom-checkbox mb-1">
-                                            <input type="checkbox"
-                                                   class="custom-control-input warehouse-check"
-                                                   id="wh-{{ w.id }}"
-                                                   value="{{ w.id }}">
-                                            <label class="custom-control-label small" for="wh-{{ w.id }}">{{ w.name }}</label>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div id="inventory-list"
-                                 class="list-group list-group-flush list-group-flush-sm small"
-                                 style="max-height: 320px;
-                                        overflow-y: auto">
-                                <div class="text-center py-3 text-muted">جاري التحميل...</div>
-                            </div>
-                        </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-dollar-sign"></i>
                     </div>
                 </div>
             </div>
         </div>
-    {% endblock %}
-    {% block extra_js %}
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
-        <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const currencySymbol = "{{ currency_symbol }}"; // Define global currency symbol
-        let revenueChart = null;
-        let inventoryChart = null;
+        <!-- 3. Credit -->
+        <div class="col-xl-3 col-md-6 fade-up fade-up-d3">
+            <div class="kpi-card kpi-credit">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <div class="kpi-label">مدفوعات زائدة (Credit)</div>
+                        <div class="kpi-value" id="card-credit">
+                            <div class="skeleton skeleton-value"></div>
+                        </div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 4. Debt -->
+        <div class="col-xl-3 col-md-6 fade-up fade-up-d4">
+            <div class="kpi-card kpi-debt">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <div class="kpi-label">الديون المستحقة (من بداية السنة)</div>
+                        <div class="kpi-value" id="card-debt">
+                            <div class="skeleton skeleton-value"></div>
+                        </div>
+                    </div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-hand-holding-usd"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        function formatCurrency(val) {
-             return parseFloat(val || 0).toLocaleString('en-US') + ' ' + currencySymbol;
-        }
+    <!-- ═══════ ROW 2: Performers + Efficiency ═══════ -->
+    <div class="row g-3 mb-3">
+        <div class="col-xl-8">
+            <div class="performers-card fade-up">
+                <div class="card-title-sm">
+                    <i class="fas fa-trophy" style="color:#f59e0b"></i> أفضل الموظفين أداءً (حسب المبيعات)
+                </div>
 
-        // --- Functions to Fetch Data ---
-        
-        function getFilterParams() {
-            const params = new URLSearchParams();
-            const branch = document.getElementById('filter-branch').value;
-            const salesperson = document.getElementById('filter-salesperson').value;
-            const dateFrom = document.getElementById('filter-date-from').value;
-            const dateTo = document.getElementById('filter-date-to').value;
-            const compareMode = document.getElementById('filter-compare').value;
+                <!-- Podium Visual (Top 3) -->
+                <div class="podium" id="podium-container">
+                    <!-- 2nd Place (Left) -->
+                    <div class="podium-item" id="podium-2">
+                        <div class="podium-avatar"><span class="podium-rank">2</span><span class="name-initial">-</span></div>
+                        <div class="podium-name name">--</div>
+                        <div class="podium-revenue revenue">0</div>
+                        <div class="podium-orders stats">0 طلب</div>
+                        <div class="podium-bar"></div>
+                    </div>
+                    <!-- 1st Place (Center) -->
+                    <div class="podium-item" id="podium-1">
+                        <div class="podium-avatar"><span class="podium-rank">1</span><span class="name-initial">-</span></div>
+                        <div class="podium-name name">--</div>
+                        <div class="podium-revenue revenue">0</div>
+                        <div class="podium-orders stats">0 طلب</div>
+                        <div class="podium-bar"></div>
+                    </div>
+                    <!-- 3rd Place (Right) -->
+                    <div class="podium-item" id="podium-3">
+                        <div class="podium-avatar"><span class="podium-rank">3</span><span class="name-initial">-</span></div>
+                        <div class="podium-name name">--</div>
+                        <div class="podium-revenue revenue">0</div>
+                        <div class="podium-orders stats">0 طلب</div>
+                        <div class="podium-bar"></div>
+                    </div>
+                </div>
+                <!-- 4th & 5th Performers -->
+                <div id="performers-extra" class="mt-2" style="display:none">
+                    <div class="d-flex gap-2 justify-content-center flex-wrap" id="performers-extra-list"></div>
+                </div>
+                <!-- Performers full table breakdown -->
+                <div id="performers-breakdown" class="mt-2" style="display:none"></div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="efficiency-card fade-up fade-up-d1">
+                <div class="card-title-sm" style="font-size:0.78rem;font-weight:700;color:#374151;margin-bottom:14px;display:flex;align-items:center;gap:6px;">
+                    <i class="fas fa-tachometer-alt" style="color:#059669"></i> كفاءة السداد
+                </div>
+                <div class="gauge-container">
+                    <canvas id="gaugeChart"></canvas>
+                    <div class="gauge-value" id="card-efficiency">0%</div>
+                </div>
+                <div style="text-align:center;font-size:0.68rem;color:#9ca3af;margin-bottom:12px;">نسبة الإغلاق خلال 3 أيام</div>
+                <div class="efficiency-detail">
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>إغلاق سريع</span>
+                    <span class="detail-val" id="card-fast-closures">0</span>
+                </div>
+                <div class="efficiency-detail">
+                    <i class="fas fa-hourglass-half text-warning"></i>
+                    <span>ديون متبقية</span>
+                    <span class="detail-val" id="card-remaining-debtors">0</span>
+                </div>
+                <!-- Hidden progress for backward compat -->
+                <div style="display:none"><div class="progress"><div class="progress-bar bg-success" id="progress-efficiency" style="width:0%"></div></div></div>
+            </div>
+        </div>
+    </div>
 
-            if(branch !== 'all') params.append('branch_id', branch);
-            if(salesperson !== 'all') params.append('salesperson_id', salesperson);
-            if(dateFrom) params.append('date_from', dateFrom);
-            if(dateTo) params.append('date_to', dateTo);
-            if(dateTo) params.append('date_to', dateTo);
-            params.append('compare_mode', compareMode);
+    <!-- ═══════ ROW 2.5: Order Type Distribution + Debt Aging ═══════ -->
+    <div class="row g-3 mb-3">
+        <div class="col-xl-5">
+            <div class="chart-card fade-up">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <span class="title-dot" style="background:#8b5cf6"></span>
+                        توزيع أنواع الطلبات المباعة
+                    </div>
+                    <div class="badge bg-light text-dark" style="font-size:0.68rem;border-radius:8px;padding:3px 10px;" id="order-type-total">0 طلب</div>
+                </div>
+                <div class="chart-body" style="height:280px;display:flex;align-items:center;justify-content:center;">
+                    <canvas id="orderTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-7">
+            <div class="chart-card fade-up fade-up-d1">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <span class="title-dot" style="background:#f59e0b"></span>
+                        تقادم الديون (Aging)
+                    </div>
+                </div>
+                <div class="chart-body" style="height:280px;">
+                    <canvas id="debtAgingChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            // Warehouse specific filter (Multi-Select)
-            const allChecked = document.getElementById('wh-all').checked;
-            if(!allChecked) {
-                const checkedBoxes = document.querySelectorAll('.warehouse-check:checked');
-                checkedBoxes.forEach(box => {
-                    params.append('warehouse_id', box.value);
-                });
+    <!-- ═══════ ROW 3: Revenue Chart + Branch Breakdown ═══════ -->
+    <div class="row g-3 mb-3">
+        <div class="col-xl-8">
+            <div class="chart-card fade-up">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <span class="title-dot" style="background:#3b82f6"></span>
+                        توقعات الإيرادات الشهرية
+                    </div>
+                    <div style="font-size:0.7rem;color:#9ca3af" id="chart-period-info"></div>
+                </div>
+                <div class="chart-body" style="height:340px;">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="chart-card fade-up fade-up-d1">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <span class="title-dot" style="background:#8b5cf6"></span>
+                        توزيع المبيعات حسب الفرع
+                    </div>
+                </div>
+                <div class="chart-body" style="height:340px;display:flex;align-items:center;justify-content:center;">
+                    <canvas id="branchChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════ ROW 4: Products + Top Debtors ═══════ -->
+    <div class="row g-3 mb-3">
+        <div class="col-xl-7">
+            <div class="chart-card fade-up">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <span class="title-dot" style="background:#059669"></span>
+                        أكثر المنتجات طلباً (قص)
+                    </div>
+                    <!-- Warehouse Filter Dropdown -->
+                    <div class="dropdown">
+                        <button class="wh-dropdown-toggle dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                                aria-expanded="false" id="warehouseDropdown">
+                            <i class="fas fa-warehouse me-1"></i>
+                            <span id="warehouse-filter-label">كل المخازن</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end wh-dropdown-menu" aria-labelledby="warehouseDropdown">
+                            <div class="form-check mb-2">
+                                <input type="checkbox" class="form-check-input warehouse-check-all" id="wh-all" value="all" checked>
+                                <label class="form-check-label fw-bold" for="wh-all">الكل</label>
+                            </div>
+                            <hr class="my-1">
+                            {% for w in warehouses %}
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input warehouse-check" id="wh-{{ w.id }}" value="{{ w.id }}">
+                                <label class="form-check-label" for="wh-{{ w.id }}">{{ w.name }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-body" id="inventory-list">
+                    <div class="text-center py-4 text-muted small">
+                        <i class="fas fa-spinner fa-spin me-1"></i> جاري التحميل...
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-5">
+            <div class="chart-card fade-up fade-up-d1">
+                <div class="chart-header">
+                    <div class="chart-title">
+                        <span class="title-dot" style="background:#dc2626"></span>
+                        أكبر المدينين
+                    </div>
+                </div>
+                <div class="chart-body" id="debtors-list">
+                    <div class="text-center py-4 text-muted small">
+                        <i class="fas fa-spinner fa-spin me-1"></i> جاري التحميل...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const currencySymbol = "{{ currency_symbol }}";
+    let revenueChart = null;
+    let branchChart = null;
+    let gaugeChart = null;
+    window._orderTypeChart = null;
+    window._debtAgingChart = null;
+
+    function formatCurrency(val) {
+        return parseFloat(val || 0).toLocaleString('en-US') + ' ' + currencySymbol;
+    }
+
+    function formatNum(val) {
+        return parseFloat(val || 0).toLocaleString('en-US');
+    }
+
+    // --- Gauge Chart Init ---
+    function initGaugeChart() {
+        const ctx = document.getElementById('gaugeChart').getContext('2d');
+        gaugeChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [0, 100],
+                    backgroundColor: ['#059669', '#f3f4f6'],
+                    borderWidth: 0,
+                    circumference: 180,
+                    rotation: 270
+                }]
+            },
+            options: {
+                responsive: false,
+                cutout: '78%',
+                plugins: { legend: { display: false }, tooltip: { enabled: false } }
             }
-            
-            // Add cache buster
-            params.append('v', new Date().getTime());
-            
-            return params;
+        });
+    }
+    initGaugeChart();
+
+    // --- Filter Params ---
+    function getFilterParams() {
+        const params = new URLSearchParams();
+        const branch = document.getElementById('filter-branch').value;
+        const salesperson = document.getElementById('filter-salesperson').value;
+        const dateFrom = document.getElementById('filter-date-from').value;
+        const dateTo = document.getElementById('filter-date-to').value;
+        const compareMode = document.getElementById('filter-compare').value;
+
+        if (branch !== 'all') params.append('branch_id', branch);
+        if (salesperson !== 'all') params.append('salesperson_id', salesperson);
+        if (dateFrom) params.append('date_from', dateFrom);
+        if (dateTo) params.append('date_to', dateTo);
+        params.append('compare_mode', compareMode);
+
+        const allChecked = document.getElementById('wh-all').checked;
+        if (!allChecked) {
+            document.querySelectorAll('.warehouse-check:checked').forEach(box => {
+                params.append('warehouse_id', box.value);
+            });
         }
+        params.append('v', new Date().getTime());
+        return params;
+    }
 
-        function updateDashboard() {
-            const params = getFilterParams();
-            const queryString = params.toString();
+    // --- Main Update ---
+    function updateDashboard() {
+        const params = getFilterParams();
+        const queryString = params.toString();
 
-            // 1. Revenue API
-            fetch(`{% url 'board_dashboard:api_revenue' %}?${queryString}`)
-                .then(r => r.json())
-                .then(data => {
-                    // Updating Revenue
-                    if(document.getElementById('card-revenue')) {
-                        document.getElementById('card-revenue').innerHTML = `
-                            ${(data.current_revenue || 0).toLocaleString()} <small>${currencySymbol}</small>
-                        `;
-                    }
-                    if(document.getElementById('card-revenue-trend')) {
-                         document.getElementById('card-revenue-trend').innerHTML = `
-                            <span class="d-block small ${data.growth_rate >= 0 ? 'text-success' : 'text-danger'}">
-                                ${data.growth_rate}% ${data.growth_rate >= 0 ? '▲' : '▼'}
-                            </span>
-                        `;
-                    }
-                    
-                    // Updating Net Income
-                    if(document.getElementById('card-net-income')) {
-                        document.getElementById('card-net-income').innerHTML = `
-                            ${(data.net_income || 0).toLocaleString()} <small>${currencySymbol}</small>
-                        `;
-                    }
+        // Update timestamp
+        const now = new Date();
+        document.getElementById('last-update-time').textContent =
+            now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
 
-                    // Updating Credit
-                    if(document.getElementById('card-credit')) {
-                        document.getElementById('card-credit').innerHTML = `
-                            ${(data.total_credit || 0).toLocaleString()} <small>${currencySymbol}</small>
-                        `;
-                    }
-                    
-                    // Advanced Stock/EKG Chart
-                    const ctx = document.getElementById('revenueChart').getContext('2d');
-                    if (revenueChart) revenueChart.destroy();
+        // === 1. Revenue API ===
+        fetch(`{% url 'board_dashboard:api_revenue' %}?${queryString}`)
+            .then(r => r.json())
+            .then(data => {
+                // KPI Cards
+                document.getElementById('card-revenue').innerHTML =
+                    `${formatNum(data.current_revenue)} <small>${currencySymbol}</small>`;
 
-                    // Create Gradient
-                    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-                    gradient.addColorStop(0, 'rgba(78, 115, 223, 0.5)'); // Top color
-                    gradient.addColorStop(1, 'rgba(78, 115, 223, 0.05)'); // Bottom color
+                const gr = data.growth_rate || 0;
+                const trendEl = document.getElementById('card-revenue-trend');
+                trendEl.className = 'kpi-trend ' + (gr >= 0 ? 'up' : 'down');
+                trendEl.innerHTML = `<i class="fas fa-arrow-${gr >= 0 ? 'up' : 'down'}" style="font-size:0.6rem"></i> ${Math.abs(gr)}%`;
 
-                    // Prepare History Data
-                    const historyLabels = data.chart_labels || [];
-                    const historyData = data.chart_values || [];
-                    
-                    // Separate Forecast Dataset (connects last history to forecast)
-                    const forecastLabels = [...historyLabels];
-                    const forecastData = new Array(historyData.length).fill(null);
-                    
-                    // Add forecast point if history exists
-                    if (historyData.length > 0) {
-                        const lastVal = historyData[historyData.length - 1];
-                        const forecastVal = data.forecast_next_month || lastVal;
-                        
-                        // Last History Point
-                        forecastData[historyData.length - 1] = lastVal;
-                        
-                        // New Forecast Point
-                        forecastLabels.push("توقعات");
-                        forecastData.push(forecastVal);
-                    }
+                document.getElementById('card-net-income').innerHTML =
+                    `${formatNum(data.net_income)} <small>${currencySymbol}</small>`;
+                document.getElementById('card-credit').innerHTML =
+                    `${formatNum(data.total_credit)} <small>${currencySymbol}</small>`;
 
-                    revenueChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: forecastLabels.length > historyLabels.length ? forecastLabels : historyLabels,
-                            datasets: [
-                                {
-                                    label: "الإيرادات التاريخية",
-                                    data: historyData,
-                                    borderColor: "#4e73df",
-                                    backgroundColor: gradient,
-                                    pointRadius: 2,
-                                    pointHoverRadius: 6,
-                                    lineTension: 0.4, // EKG Flow
-                                    fill: true,
-                                    borderWidth: 2
-                                },
-                                {
-                                    label: "التوقعات",
-                                    data: forecastData,
-                                    borderColor: "#1cc88a",
-                                    borderDash: [5, 5], // Dashed line for forecast
-                                    pointRadius: 4,
-                                    pointBackgroundColor: "#1cc88a",
-                                    fill: false,
-                                    lineTension: 0.4
+                // Period label in header
+                if (data.period_label) {
+                    document.getElementById('period-label').textContent = data.period_label;
+                }
+
+                // === Revenue Chart ===
+                const ctx = document.getElementById('revenueChart').getContext('2d');
+                if (revenueChart) revenueChart.destroy();
+
+                const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+                gradient.addColorStop(0, 'rgba(59, 130, 246, 0.15)');
+                gradient.addColorStop(1, 'rgba(59, 130, 246, 0.01)');
+
+                const historyLabels = data.chart_labels || [];
+                const historyData = data.chart_values || [];
+
+                const forecastLabels = [...historyLabels];
+                const forecastData = new Array(historyData.length).fill(null);
+
+                if (historyData.length > 0) {
+                    const lastVal = historyData[historyData.length - 1];
+                    const forecastVal = data.forecast_next_month || lastVal;
+                    forecastData[historyData.length - 1] = lastVal;
+                    forecastLabels.push("توقعات");
+                    forecastData.push(forecastVal);
+                }
+
+                revenueChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: forecastLabels.length > historyLabels.length ? forecastLabels : historyLabels,
+                        datasets: [
+                            {
+                                label: "الإيرادات",
+                                data: historyData,
+                                borderColor: "#3b82f6",
+                                backgroundColor: gradient,
+                                pointRadius: 3,
+                                pointBackgroundColor: '#3b82f6',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                pointHoverRadius: 6,
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2.5
+                            },
+                            {
+                                label: "التوقعات",
+                                data: forecastData,
+                                borderColor: "#10b981",
+                                borderDash: [6, 4],
+                                pointRadius: 5,
+                                pointBackgroundColor: "#10b981",
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                fill: false,
+                                tension: 0.4,
+                                borderWidth: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    padding: 16,
+                                    font: { size: 11, weight: '600' }
                                 }
-                            ]
+                            },
+                            zoom: {
+                                zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+                                pan: { enabled: true, mode: 'x' }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(15,23,42,0.9)',
+                                titleFont: { size: 12 },
+                                bodyFont: { size: 11 },
+                                padding: 10,
+                                cornerRadius: 8,
+                                callbacks: {
+                                    label: function(ctx) {
+                                        return ctx.dataset.label + ': ' + formatCurrency(ctx.parsed.y);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { maxTicksLimit: 12, font: { size: 10 } }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
+                                ticks: {
+                                    font: { size: 10 },
+                                    callback: function(val) {
+                                        if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+                                        if (val >= 1000) return (val / 1000).toFixed(0) + 'K';
+                                        return val;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // === Branch Breakdown Doughnut ===
+                if (data.branch_breakdown && data.branch_breakdown.length > 0) {
+                    const bLabels = data.branch_breakdown.map(b => b.branch__name || 'غير محدد');
+                    const bValues = data.branch_breakdown.map(b => parseFloat(b.total || 0));
+                    const bColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#6366f1'];
+
+                    const bctx = document.getElementById('branchChart').getContext('2d');
+                    if (branchChart) branchChart.destroy();
+
+                    branchChart = new Chart(bctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: bLabels,
+                            datasets: [{
+                                data: bValues,
+                                backgroundColor: bColors.slice(0, bLabels.length),
+                                borderWidth: 2,
+                                borderColor: '#fff',
+                                hoverOffset: 6
+                            }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            interaction: {
-                                mode: 'index',
-                                intersect: false,
-                            },
+                            cutout: '62%',
                             plugins: {
-                                zoom: {
-                                    zoom: {
-                                        wheel: { enabled: true },
-                                        pinch: { enabled: true },
-                                        mode: 'x',
-                                    },
-                                    pan: {
-                                        enabled: true,
-                                        mode: 'x',
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        usePointStyle: true,
+                                        pointStyle: 'circle',
+                                        padding: 12,
+                                        font: { size: 11 }
                                     }
                                 },
                                 tooltip: {
-                                    mode: 'index',
-                                    intersect: false
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    grid: { display: false },
-                                    ticks: { maxTicksLimit: 12 }
-                                },
-                                y: {
-                                    beginAtZero: true,
-                                    grid: { borderDash: [2, 2] }
+                                    backgroundColor: 'rgba(15,23,42,0.9)',
+                                    padding: 10,
+                                    cornerRadius: 8,
+                                    callbacks: {
+                                        label: function(ctx) {
+                                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                            const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                                            return ctx.label + ': ' + formatCurrency(ctx.parsed) + ' (' + pct + '%)';
+                                        }
+                                    }
                                 }
                             }
                         }
                     });
-                });
+                } else {
+                    document.getElementById('branchChart').parentElement.innerHTML =
+                        '<div class="text-muted text-center small py-5"><i class="fas fa-chart-pie fa-2x mb-2 d-block" style="opacity:0.2"></i>لا توجد بيانات فروع</div>';
+                }
+            });
 
-            // 2. Inventory API
-            fetch(`{% url 'board_dashboard:api_inventory' %}?${queryString}`)
-                .then(r => r.json())
-                .then(data => {
-                    const listEl = document.getElementById('inventory-list');
-                    if(listEl) {
-                        if (data.product_demand && data.product_demand.length > 0) {
-                            let html = '';
-                            data.product_demand.forEach(item => {
-                                const pName = item.product__name || "غير محدد";
-                                const total = parseFloat(item.total || 0).toLocaleString();
-                                
-                                html += `
-                                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
-                                    <span class="font-weight-bold text-gray-800">${pName}</span>
-                                    <span class="badge badge-primary badge-pill">${total} م</span>
-                                </div>`;
-                            });
-                            listEl.innerHTML = html;
-                        } else {
-                            listEl.innerHTML = '<div class="text-center py-3 text-muted small">لا توجد بيانات</div>';
+        // === 2. Inventory API ===
+        fetch(`{% url 'board_dashboard:api_inventory' %}?${queryString}`)
+            .then(r => r.json())
+            .then(data => {
+                const listEl = document.getElementById('inventory-list');
+                if (data.product_demand && data.product_demand.length > 0) {
+                    const maxVal = Math.max(...data.product_demand.map(i => parseFloat(i.total || 0)));
+                    let html = '';
+                    data.product_demand.forEach((item, idx) => {
+                        const pName = item.product__name || "غير محدد";
+                        const total = parseFloat(item.total || 0);
+                        const pct = maxVal > 0 ? (total / maxVal * 100) : 0;
+                        html += `
+                        <div class="product-bar">
+                            <span class="bar-label">${pName}</span>
+                            <div class="bar-track">
+                                <div class="bar-fill c${(idx % 5) + 1}" style="width:${pct}%">${total.toLocaleString()} م</div>
+                            </div>
+                        </div>`;
+                    });
+                    listEl.innerHTML = html;
+                } else {
+                    listEl.innerHTML = '<div class="text-center py-4 text-muted small"><i class="fas fa-box-open fa-2x mb-2 d-block" style="opacity:0.2"></i>لا توجد بيانات</div>';
+                }
+            });
+
+        // === 3. Staff API ===
+        fetch(`{% url 'board_dashboard:api_staff' %}?${queryString}`)
+            .then(r => r.json())
+            .then(data => {
+                // Reset podium
+                for (let i = 1; i <= 3; i++) {
+                    const pod = document.getElementById(`podium-${i}`);
+                    if (pod) {
+                        pod.querySelector('.name-initial').textContent = '-';
+                        pod.querySelector('.name').textContent = '--';
+                        pod.querySelector('.revenue').textContent = '0';
+                        pod.querySelector('.stats').textContent = '0 طلب';
+                    }
+                }
+
+                const extraContainer = document.getElementById('performers-extra');
+                const extraList = document.getElementById('performers-extra-list');
+                extraContainer.style.display = 'none';
+                extraList.innerHTML = '';
+
+                if (data.leaderboard && data.leaderboard.length > 0) {
+                    const performers = data.leaderboard;
+
+                    // Fill top 3 podium
+                    for (let i = 0; i < Math.min(3, performers.length); i++) {
+                        const p = performers[i];
+                        const podId = `podium-${i + 1}`;
+                        const pod = document.getElementById(podId);
+                        if (pod && p) {
+                            const initial = p.username ? p.username.charAt(0).toUpperCase() : '-';
+                            pod.querySelector('.name-initial').textContent = initial;
+                            pod.querySelector('.name').textContent = p.username || '--';
+                            pod.querySelector('.revenue').textContent = formatCurrency(p.score);
+
+                            let statsText = `${p.volume || 0} طلب`;
+                            if (p.retail_breakdown) {
+                                const parts = [];
+                                for (const [k, v] of Object.entries(p.retail_breakdown)) {
+                                    parts.push(`${k}: ${v}`);
+                                }
+                                if (parts.length > 0) statsText += ' · ' + parts.join(', ');
+                            }
+                            pod.querySelector('.stats').textContent = statsText;
                         }
                     }
-                });
 
-            // 3. Staff API
-            fetch(`{% url 'board_dashboard:api_staff' %}?${queryString}`)
-                .then(r => r.json())
-                .then(data => {
-                    // Reset all cards first
-                     for (let i = 1; i <= 3; i++) {
-                         const cardId = `#top-performer-${i}`;
-                         const card = document.querySelector(cardId);
-                         if(card) {
-                             card.querySelector('.name').innerText = "--";
-                             card.querySelector('.revenue').innerText = "";
-                             card.querySelector('.stats').innerHTML = "";
-                         }
-                     }
-
-                    // ranking -> leaderboard
-                    if(data.leaderboard && data.leaderboard.length > 0) {
-                        const performers = data.leaderboard; // API key is leaderboard
-                        
-                        for (let i = 0; i < 3; i++) {
+                    // Fill 4th & 5th performers
+                    if (performers.length > 3) {
+                        extraContainer.style.display = 'block';
+                        for (let i = 3; i < Math.min(5, performers.length); i++) {
                             const p = performers[i];
-                            const cardId = `#top-performer-${i+1}`;
-                            const card = document.querySelector(cardId);
-                            
-                            if (card && p) {
-                                card.querySelector('.name').innerText = p.username;
-                                card.querySelector('.revenue').innerText = formatCurrency(p.score);
-                                
-                                let detailsHtml = `الطلبات: <span class="count">${p.volume}</span>`;
-                                // Show breakdown only for the first one for now, or simplistic for all
-                                if (p.retail_breakdown) {
-                                    let parts = [];
-                                    for (const [k, v] of Object.entries(p.retail_breakdown)) {
-                                        parts.push(`${k}: ${v}`);
+                            let typesStr = '';
+                            if (p.retail_breakdown) {
+                                const parts = [];
+                                for (const [k, v] of Object.entries(p.retail_breakdown)) {
+                                    parts.push(`${k}: ${v}`);
+                                }
+                                typesStr = parts.join(' · ');
+                            }
+                            extraList.innerHTML += `
+                            <div class="performer-extra-card">
+                                <div class="rank-badge">${i + 1}</div>
+                                <div class="pname">${p.username || '--'}</div>
+                                <div class="pamount">${formatCurrency(p.score)}</div>
+                                <div class="ptypes">${p.volume || 0} طلب${typesStr ? ' · ' + typesStr : ''}</div>
+                            </div>`;
+                        }
+                    }
+                }
+
+                // Order Type Distribution Chart
+                if (data.order_type_distribution && Object.keys(data.order_type_distribution).length > 0) {
+                    const typeLabels = Object.keys(data.order_type_distribution);
+                    const typeValues = Object.values(data.order_type_distribution);
+                    const typeColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+
+                    document.getElementById('order-type-total').textContent =
+                        `${data.total_orders_count || typeValues.reduce((a, b) => a + b, 0)} طلب`;
+
+                    const otCtx = document.getElementById('orderTypeChart').getContext('2d');
+                    if (window._orderTypeChart) window._orderTypeChart.destroy();
+                    window._orderTypeChart = new Chart(otCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: typeLabels,
+                            datasets: [{
+                                data: typeValues,
+                                backgroundColor: typeColors.slice(0, typeLabels.length),
+                                borderWidth: 2,
+                                borderColor: '#fff',
+                                hoverOffset: 8
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: '55%',
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        usePointStyle: true,
+                                        pointStyle: 'circle',
+                                        padding: 14,
+                                        font: { size: 12, weight: '600' }
                                     }
-                                    if(parts.length > 0) {
-                                         detailsHtml += `<br><span class="text-xs">${parts.join(', ')}</span>`
+                                },
+                                tooltip: {
+                                    backgroundColor: 'rgba(15,23,42,0.9)',
+                                    padding: 10,
+                                    cornerRadius: 8,
+                                    callbacks: {
+                                        label: function(ctx) {
+                                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                            const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                                            return ctx.label + ': ' + ctx.parsed + ' طلب (' + pct + '%)';
+                                        }
                                     }
                                 }
-                                card.querySelector('.stats').innerHTML = detailsHtml;
                             }
                         }
-                    }
-                });
-                
-            // 4. Finance API
-            fetch(`{% url 'board_dashboard:api_finance' %}?${queryString}`)
-                .then(r => r.json())
-                .then(data => {
-                    // Debt (Red Card)
-                    document.getElementById('card-debt').innerHTML = `${(data.total_outstanding_debt || 0).toLocaleString()} <small>${currencySymbol}</small>`;
-                    
-                    // Efficiency Card
-                    const eff = data.efficiency_rate || 0;
-                    document.getElementById('card-efficiency').innerText = `${eff}%`;
-                    const pBar = document.getElementById('progress-efficiency');
-                    if(pBar) {
-                         pBar.style.width = `${eff}%`;
-                         pBar.setAttribute('aria-valuenow', eff);
-                    }
-                    
-                    // Detailed Efficiency Check
-                    if(document.getElementById('card-fast-closures')) {
-                        document.getElementById('card-fast-closures').innerText = data.fast_closures_count || 0;
-                    }
-                    if(document.getElementById('card-remaining-debtors')) {
-                        document.getElementById('card-remaining-debtors').innerText = data.remaining_debtors_count || 0;
-                    }
-                });
-        }
-
-        // Initialize Dates
-        const today = new Date();
-        const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 25);
-        const formatDate = (d) => d.toISOString().split('T')[0];
-        
-        const dateFromInput = document.getElementById('filter-date-from');
-        const dateToInput = document.getElementById('filter-date-to');
-        
-        // Debugging Date Inputs
-        console.log("Date Inputs:", dateFromInput, dateToInput);
-
-        if (dateFromInput && !dateFromInput.value) dateFromInput.value = formatDate(prevMonth);
-        if (dateToInput && !dateToInput.value) dateToInput.value = formatDate(today);
-
-        // Bind Apply Button
-        const applyBtn = document.getElementById('btn-apply-filters');
-        if(applyBtn) applyBtn.addEventListener('click', updateDashboard);
-        
-        // Bind Clear Button
-        const clearBtn = document.getElementById('btn-clear-filters');
-        if(clearBtn) {
-            clearBtn.addEventListener('click', function() {
-                document.getElementById('filter-branch').value = 'all';
-                document.getElementById('filter-salesperson').value = 'all';
-                document.getElementById('filter-date-from').value = '';
-                document.getElementById('filter-date-to').value = '';
-                document.getElementById('filter-compare').value = 'period';
-                updateDashboard();
-            });
-        }
-        
-        
-        
-        // Bind Warehouse Filter Logic
-        const whCheckAll = document.getElementById('wh-all');
-        const whChecks = document.querySelectorAll('.warehouse-check');
-        const whLabel = document.getElementById('warehouse-filter-label');
-
-        function updateWarehouseLabel() {
-            if(whCheckAll.checked) {
-                whLabel.innerText = "كل المخازن (الافتراضي)";
-            } else {
-                const count = document.querySelectorAll('.warehouse-check:checked').length;
-                whLabel.innerText = count > 0 ? `${count} مخازن محددة` : "بحث مخصص";
-            }
-        }
-
-        if(whCheckAll) {
-            whCheckAll.addEventListener('change', function() {
-                if(this.checked) {
-                    whChecks.forEach(c => c.checked = false);
-                    updateDashboard();
-                    updateWarehouseLabel();
+                    });
+                } else {
+                    document.getElementById('orderTypeChart').parentElement.innerHTML =
+                        '<div class="text-muted text-center small py-5"><i class="fas fa-tags fa-2x mb-2 d-block" style="opacity:0.2"></i>لا توجد بيانات أنواع</div>';
                 }
             });
-        }
-        
-        whChecks.forEach(chk => {
-            chk.addEventListener('change', function() {
-                if(this.checked) {
-                    whCheckAll.checked = false;
-                }
-                // If all unchecked, check All back? Optional.
-                if(document.querySelectorAll('.warehouse-check:checked').length === 0) {
-                     whCheckAll.checked = true;
-                }
-                updateDashboard();
-                updateWarehouseLabel();
-            });
-        });
 
-        // Initial dashboard update
-        console.log("Initializing Dashboard v3...");
+        // === 4. Finance API ===
+        fetch(`{% url 'board_dashboard:api_finance' %}?${queryString}`)
+            .then(r => r.json())
+            .then(data => {
+                // Debt Card
+                document.getElementById('card-debt').innerHTML =
+                    `${formatNum(data.total_outstanding_debt)} <small>${currencySymbol}</small>`;
+
+                // Gauge
+                const eff = data.efficiency_rate || 0;
+                document.getElementById('card-efficiency').textContent = eff + '%';
+                if (gaugeChart) {
+                    gaugeChart.data.datasets[0].data = [eff, 100 - eff];
+                    gaugeChart.data.datasets[0].backgroundColor = [
+                        eff >= 70 ? '#059669' : eff >= 40 ? '#f59e0b' : '#dc2626',
+                        '#f3f4f6'
+                    ];
+                    gaugeChart.update('none');
+                }
+
+                // Details
+                document.getElementById('card-fast-closures').textContent = data.fast_closures_count || 0;
+                document.getElementById('card-remaining-debtors').textContent = data.remaining_debtors_count || 0;
+
+                // Progress bar (hidden compat)
+                const pBar = document.getElementById('progress-efficiency');
+                if (pBar) {
+                    pBar.style.width = eff + '%';
+                    pBar.setAttribute('aria-valuenow', eff);
+                }
+
+                // === Top Debtors List ===
+                const debtorsEl = document.getElementById('debtors-list');
+                if (data.top_debtors && data.top_debtors.length > 0) {
+                    let html = '';
+                    data.top_debtors.forEach((d, idx) => {
+                        html += `
+                        <div class="debtor-item">
+                            <div class="debtor-rank">${idx + 1}</div>
+                            <div class="debtor-name">${d.customer__name || 'غير محدد'}</div>
+                            <div class="debtor-amount">${formatNum(d.debt)} ${currencySymbol}</div>
+                        </div>`;
+                    });
+                    debtorsEl.innerHTML = html;
+                } else {
+                    debtorsEl.innerHTML = '<div class="text-center py-4 text-muted small"><i class="fas fa-check-circle fa-2x mb-2 d-block text-success" style="opacity:0.3"></i>لا توجد ديون مستحقة</div>';
+                }
+
+                // === Debt Aging Chart ===
+                if (data.debt_aging) {
+                    const aging = data.debt_aging;
+                    const agingLabels = ['0-30 يوم', '31-60 يوم', '61-90 يوم', 'أكثر من 90 يوم'];
+                    const agingValues = [
+                        parseFloat(aging['0_30'] || 0),
+                        parseFloat(aging['31_60'] || 0),
+                        parseFloat(aging['61_90'] || 0),
+                        parseFloat(aging['over_90'] || 0)
+                    ];
+                    const agingColors = ['#059669', '#f59e0b', '#f97316', '#dc2626'];
+
+                    const agCtx = document.getElementById('debtAgingChart').getContext('2d');
+                    if (window._debtAgingChart) window._debtAgingChart.destroy();
+                    window._debtAgingChart = new Chart(agCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: agingLabels,
+                            datasets: [{
+                                label: 'مبلغ الدين',
+                                data: agingValues,
+                                backgroundColor: agingColors,
+                                borderRadius: 8,
+                                borderSkipped: false,
+                                barPercentage: 0.6,
+                                categoryPercentage: 0.7
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: 'rgba(15,23,42,0.9)',
+                                    padding: 10,
+                                    cornerRadius: 8,
+                                    callbacks: {
+                                        label: function(ctx) {
+                                            return formatCurrency(ctx.parsed.x);
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
+                                    ticks: {
+                                        font: { size: 10 },
+                                        callback: function(val) {
+                                            if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+                                            if (val >= 1000) return (val / 1000).toFixed(0) + 'K';
+                                            return val;
+                                        }
+                                    }
+                                },
+                                y: {
+                                    grid: { display: false },
+                                    ticks: { font: { size: 11, weight: '600' } }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+    }
+
+    // --- Initialize Dates ---
+    const today = new Date();
+    const yearStart = new Date(today.getFullYear(), 0, 1); // January 1st of current year
+    const formatDate = (d) => d.toISOString().split('T')[0];
+
+    const dateFromInput = document.getElementById('filter-date-from');
+    const dateToInput = document.getElementById('filter-date-to');
+    if (dateFromInput && !dateFromInput.value) dateFromInput.value = formatDate(yearStart);
+    if (dateToInput && !dateToInput.value) dateToInput.value = formatDate(today);
+
+    // --- Button Bindings ---
+    document.getElementById('btn-apply-filters').addEventListener('click', updateDashboard);
+    document.getElementById('btn-clear-filters').addEventListener('click', function() {
+        document.getElementById('filter-branch').value = 'all';
+        document.getElementById('filter-salesperson').value = 'all';
+        document.getElementById('filter-date-from').value = formatDate(yearStart);
+        document.getElementById('filter-date-to').value = formatDate(today);
+        document.getElementById('filter-compare').value = 'period';
         updateDashboard();
     });
-        </script>
-    {% endblock %}
+
+    // --- Warehouse Filter ---
+    const whCheckAll = document.getElementById('wh-all');
+    const whChecks = document.querySelectorAll('.warehouse-check');
+    const whLabel = document.getElementById('warehouse-filter-label');
+
+    function updateWarehouseLabel() {
+        if (whCheckAll.checked) {
+            whLabel.textContent = "كل المخازن";
+        } else {
+            const count = document.querySelectorAll('.warehouse-check:checked').length;
+            whLabel.textContent = count > 0 ? `${count} مخازن محددة` : "بحث مخصص";
+        }
+    }
+
+    if (whCheckAll) {
+        whCheckAll.addEventListener('change', function() {
+            if (this.checked) {
+                whChecks.forEach(c => c.checked = false);
+                updateDashboard();
+                updateWarehouseLabel();
+            }
+        });
+    }
+
+    whChecks.forEach(chk => {
+        chk.addEventListener('change', function() {
+            if (this.checked) whCheckAll.checked = false;
+            if (document.querySelectorAll('.warehouse-check:checked').length === 0) {
+                whCheckAll.checked = true;
+            }
+            updateDashboard();
+            updateWarehouseLabel();
+        });
+    });
+
+    // --- Initial Load ---
+    updateDashboard();
+});
+</script>
+{% endblock %}

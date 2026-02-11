@@ -271,15 +271,16 @@ def create_default_departments_structure(sender, **kwargs):
             "order": 3,
             "show_accounting": True,
         },
-        {
-            "parent_code": "accounting",
-            "code": "accounting_advances",
-            "name": "سلف العملاء",
-            "url_name": "/accounting/advances/",
-            "icon": "fa-hand-holding-usd",
-            "order": 4,
-            "show_accounting": True,
-        },
+        # تم إزالة سلف العملاء - استخدم نظام الدفعات العامة
+        # {
+        #     "parent_code": "accounting",
+        #     "code": "accounting_advances",
+        #     "name": "سلف العملاء",
+        #     "url_name": "/accounting/advances/",
+        #     "icon": "fa-hand-holding-usd",
+        #     "order": 4,
+        #     "show_accounting": True,
+        # },
         {
             "parent_code": "database",
             "code": "database_management",

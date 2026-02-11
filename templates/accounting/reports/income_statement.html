@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load accounting_numbers %}
 {% block title %}قائمة الدخل{% endblock %}
 {% block content %}
     <div class="container-fluid py-4">
@@ -16,6 +17,35 @@
                 </div>
             </div>
         </div>
+        
+        <!-- فلتر التاريخ -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="get" class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">من تاريخ</label>
+                                {{ form.start_date }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">إلى تاريخ</label>
+                                {{ form.end_date }}
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter me-1"></i> تصفية
+                                </button>
+                                <a href="{% url 'accounting:income_statement' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-redo me-1"></i> إعادة تعيين
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- الإيرادات -->
         <div class="row mb-4">
             <div class="col-12">
@@ -37,13 +67,13 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for account in revenue_accounts %}
+                                    {% for item in revenue_data %}
                                         <tr>
                                             <td>
-                                                <span class="badge bg-secondary">{{ account.code }}</span>
+                                                <span class="badge bg-secondary">{{ item.account.code }}</span>
                                             </td>
-                                            <td>{{ account.name }}</td>
-                                            <td class="text-end text-success">{{ account.current_balance|floatformat:2 }}</td>
+                                            <td>{{ item.account.name }}</td>
+                                            <td class="text-end text-success">{{ item.balance|floatformat:2|en }}</td>
                                         </tr>
                                     {% empty %}
                                         <tr>
@@ -54,7 +84,7 @@
                                 <tfoot class="table-success">
                                     <tr class="fw-bold">
                                         <th colspan="2" class="text-end">إجمالي الإيرادات:</th>
-                                        <th class="text-end">{{ total_revenue|floatformat:2 }} {{ currency_symbol }}</th>
+                                        <th class="text-end">{{ total_revenue|floatformat:2|en }} {{ currency_symbol }}</th>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -84,13 +114,13 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for account in expense_accounts %}
+                                    {% for item in expense_data %}
                                         <tr>
                                             <td>
-                                                <span class="badge bg-secondary">{{ account.code }}</span>
+                                                <span class="badge bg-secondary">{{ item.account.code }}</span>
                                             </td>
-                                            <td>{{ account.name }}</td>
-                                            <td class="text-end text-danger">{{ account.current_balance|floatformat:2 }}</td>
+                                            <td>{{ item.account.name }}</td>
+                                            <td class="text-end text-danger">{{ item.balance|floatformat:2|en }}</td>
                                         </tr>
                                     {% empty %}
                                         <tr>
@@ -101,7 +131,7 @@
                                 <tfoot class="table-danger">
                                     <tr class="fw-bold">
                                         <th colspan="2" class="text-end">إجمالي المصروفات:</th>
-                                        <th class="text-end">{{ total_expenses|floatformat:2 }} {{ currency_symbol }}</th>
+                                        <th class="text-end">{{ total_expenses|floatformat:2|en }} {{ currency_symbol }}</th>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -124,8 +154,14 @@
                             {% endif %}
                         </h4>
                         <h1 class="{% if net_income >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
-                            {{ net_income|floatformat:2 }} {{ currency_symbol }}
+                            {{ net_income|floatformat:2|en }} {{ currency_symbol }}
                         </h1>
+                        {% if start_date or end_date %}
+                        <div class="mt-2 text-muted small">
+                            <i class="fas fa-calendar me-1"></i>
+                            الفترة: {% if start_date %}{{ start_date }}{% else %}البداية{% endif %} - {% if end_date %}{{ end_date }}{% else %}الآن{% endif %}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

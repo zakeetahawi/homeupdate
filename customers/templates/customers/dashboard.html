@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load accounting_numbers %}
 {% block title %}لوحة تحكم العملاء{% endblock %}
 {% block content %}
     <div class="container-fluid">
@@ -46,8 +48,8 @@
                         <td>
                             <strong>{{ customer.name }}</strong>
                         </td>
-                        <td>{{ customer.code }}</td>
-                        <td>{{ customer.phone }}</td>
+                        <td>{{ customer.code|en }}</td>
+                        <td>{{ customer.phone|en }}</td>
                         <td>{{ customer.get_status_display }}</td>
                         <td>{{ customer.created_at|date:"Y-m-d H:i" }}</td>
                     </tr>

@@ -1627,11 +1627,9 @@ def wizard_finalize(request):
                 order.administrative_discount_date = draft.administrative_discount_date
                 order.administrative_discount_notes = draft.administrative_discount_notes
 
-                # حفظ الإضافات المالية والرصيد المستخدم إذا كانت موجودة، وإلا تعيينها كصفر
+                # حفظ الإضافات المالية إذا كانت موجودة، وإلا تعيينها كصفر
                 if order.financial_addition is None:
                     order.financial_addition = Decimal("0.00")
-                if order.used_customer_balance is None:
-                    order.used_customer_balance = Decimal("0.00")
 
                 # تحديث الملفات إذا لزم الأمر
                 if draft.contract_file:
@@ -2031,7 +2029,6 @@ def wizard_finalize(request):
                 administrative_discount_date=draft.administrative_discount_date,
                 administrative_discount_notes=draft.administrative_discount_notes,
                 financial_addition=Decimal("0.00"),
-                used_customer_balance=Decimal("0.00"),
                 contract_file=draft.contract_file,
                 invoice_image=draft.invoice_image,
                 created_by=request.user,

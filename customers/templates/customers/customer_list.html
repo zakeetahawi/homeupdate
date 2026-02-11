@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load pagination_tags %}
+{% load accounting_numbers %}
 {% block title %}قائمة العملاء - نظام الخواجه{% endblock %}
 {% block meta_tags %}
     <meta name="description"
@@ -57,7 +58,7 @@
                                 {% for customer in page_obj %}
                                     <tr {% if customer.pk in cross_branch_customers %}class="cross-branch-customer"{% endif %}>
                                         <td>{{ forloop.counter }}</td>
-                                        <td>{{ customer.code|default:"-" }}</td>
+                                        <td>{{ customer.code|default:"-"|en }}</td>
                                         <td>
                                             <a href="{% url 'customers:customer_detail' customer.pk %}"
                                                style="color: var(--primary);
@@ -91,7 +92,7 @@
                                                 -
                                             {% endif %}
                                         </td>
-                                        <td>{{ customer.phone }}</td>
+                                        <td>{{ customer.phone|en }}</td>
                                         <td>{{ customer.created_at|date:"Y-m-d" }}</td>
                                         <td>
                                             <div class="btn-group btn-group-sm action-buttons">

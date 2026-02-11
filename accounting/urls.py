@@ -5,7 +5,7 @@ Accounting URLs
 
 from django.urls import path
 
-from . import views, views_bank
+from . import views, views_bank, views_statement
 
 app_name = "accounting"
 
@@ -44,13 +44,6 @@ urlpatterns = [
         name="transaction_print",
     ),
     # ============================================
-    # سلف العملاء
-    # ============================================
-    path("advances/", views.advance_list, name="advance_list"),
-    path("advances/create/", views.advance_create, name="advance_create"),
-    path("advances/<int:pk>/", views.advance_detail, name="advance_detail"),
-    path("advances/<int:pk>/use/", views.advance_use, name="advance_use"),
-    # ============================================
     # الملف المالي للعميل
     # ============================================
     path(
@@ -64,10 +57,11 @@ urlpatterns = [
         name="customer_statement",
     ),
     path(
-        "customer/<int:customer_id>/advances/",
-        views.customer_advances,
-        name="customer_advances",
+        "customer/<int:customer_id>/account-statement/",
+        views_statement.customer_account_statement,
+        name="customer_account_statement",
     ),
+
     path(
         "customer/<int:customer_id>/payments/",
         views.customer_payments,
@@ -78,11 +72,7 @@ urlpatterns = [
         views.register_customer_payment,
         name="register_payment",
     ),
-    path(
-        "customer/<int:customer_id>/register-advance/",
-        views.register_customer_advance,
-        name="register_advance",
-    ),
+
     # ============================================
     # التقارير
     # ============================================
@@ -100,7 +90,40 @@ urlpatterns = [
         views.daily_transactions_report,
         name="daily_transactions",
     ),
-    path("reports/advances/", views.advances_report, name="advances_report"),
+    path(
+        "reports/general-ledger/",
+        views.general_ledger,
+        name="general_ledger",
+    ),
+    path(
+        "reports/aging-report/",
+        views.aging_report,
+        name="aging_report",
+    ),
+    path(
+        "reports/cash-flow/",
+        views.cash_flow,
+        name="cash_flow",
+    ),
+    # ============================================
+    # التصدير
+    # ============================================
+    path(
+        "export/trial-balance/",
+        views.export_trial_balance,
+        name="export_trial_balance",
+    ),
+    path(
+        "export/customer-balances/",
+        views.export_customer_balances,
+        name="export_customer_balances",
+    ),
+    path(
+        "export/general-ledger/",
+        views.export_general_ledger_excel_view,
+        name="export_general_ledger",
+    ),
+
     # ============================================
     # API للبيانات
     # ============================================

@@ -49,7 +49,7 @@
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <h6 class="mb-0">
                                         <a href="{% url 'accounting:transaction_detail' transaction.pk %}">{{ transaction.transaction_number }}</a>
-                                        <span class="badge bg-{{ transaction.status }}">{{ transaction.get_status_display }}</span>
+                                        <span class="badge {% if transaction.status == 'posted' %}bg-success{% elif transaction.status == 'draft' %}bg-warning text-dark{% elif transaction.status == 'void' %}bg-danger{% else %}bg-secondary{% endif %}">{{ transaction.get_status_display }}</span>
                                     </h6>
                                     <small class="text-muted">{{ transaction.get_transaction_type_display }}</small>
                                 </div>

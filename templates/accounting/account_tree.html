@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load accounting_numbers %}
 {% block title %}شجرة الحسابات{% endblock %}
 {% block content %}
     <div class="container-fluid py-4">
@@ -46,7 +47,7 @@
                                             <span class="account-name">{{ account.name }}</span>
                                         </a>
                                         <span class="account-balance ms-auto {% if account.current_balance > 0 %}text-success{% elif account.current_balance < 0 %}text-danger{% else %}text-muted{% endif %}">
-                                            {{ account.current_balance|floatformat:2 }}
+                                            {{ account.current_balance|floatformat:2|en }}
                                         </span>
                                     </div>
                                     {% if account.children.count > 0 %}
@@ -69,7 +70,7 @@
                                                             <span class="account-name">{{ child.name }}</span>
                                                         </a>
                                                         <span class="account-balance ms-auto {% if child.current_balance > 0 %}text-success{% elif child.current_balance < 0 %}text-danger{% else %}text-muted{% endif %}">
-                                                            {{ child.current_balance|floatformat:2 }}
+                                                            {{ child.current_balance|floatformat:2|en }}
                                                         </span>
                                                     </div>
                                                     {% if child.children.count > 0 %}
@@ -86,7 +87,7 @@
                                                                             <span class="account-name">{{ grandchild.name }}</span>
                                                                         </a>
                                                                         <span class="account-balance ms-auto {% if grandchild.current_balance > 0 %}text-success{% elif grandchild.current_balance < 0 %}text-danger{% else %}text-muted{% endif %}">
-                                                                            {{ grandchild.current_balance|floatformat:2 }}
+                                                                            {{ grandchild.current_balance|floatformat:2|en }}
                                                                         </span>
                                                                     </div>
                                                                 </div>

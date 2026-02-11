@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load accounting_numbers %}
 {% block title %}{{ account.name }} - تفاصيل الحساب{% endblock %}
 {% block content %}
     <div class="container-fluid py-4">
@@ -120,13 +121,13 @@
                     <div class="card-body text-center">
                         <div class="mb-3">
                             <small class="text-muted">الرصيد الافتتاحي</small>
-                            <h4 class="mb-0">{{ account.opening_balance|floatformat:2 }}</h4>
+                            <h4 class="mb-0">{{ account.opening_balance|floatformat:2|en }}</h4>
                         </div>
                         <hr>
                         <div class="mb-0">
                             <small class="text-muted">الرصيد الحالي</small>
                             <h2 class="{% if account.current_balance > 0 %}text-success{% elif account.current_balance < 0 %}text-danger{% else %}text-muted{% endif %} mb-0">
-                                {{ account.current_balance|floatformat:2 }}
+                                {{ account.current_balance|floatformat:2|en }}
                             </h2>
                             <small>
                                 {% if account.current_balance > 0 %}
@@ -160,7 +161,7 @@
                                             {{ child.name }}
                                         </a>
                                         <span class="{% if child.current_balance > 0 %}text-success{% elif child.current_balance < 0 %}text-danger{% endif %}">
-                                            {{ child.current_balance|floatformat:2 }}
+                                            {{ child.current_balance|floatformat:2|en }}
                                         </span>
                                     </li>
                                 {% endfor %}
@@ -202,16 +203,16 @@
                                 <tbody>
                                     {% for line in transactions %}
                                         <tr>
-                                            <td>{{ line.transaction.transaction_date }}</td>
+                                            <td>{{ line.transaction.date }}</td>
                                             <td>
                                                 <a href="{% url 'accounting:transaction_detail' line.transaction.pk %}">{{ line.transaction.reference_number }}</a>
                                             </td>
                                             <td>{{ line.description|default:line.transaction.description }}</td>
                                             <td class="text-success">
-                                                {% if line.debit_amount > 0 %}{{ line.debit_amount|floatformat:2 }}{% endif %}
+                                                {% if line.debit > 0 %}{{ line.debit|floatformat:2|en }}{% endif %}
                                             </td>
                                             <td class="text-danger">
-                                                {% if line.credit_amount > 0 %}{{ line.credit_amount|floatformat:2 }}{% endif %}
+                                                {% if line.credit > 0 %}{{ line.credit|floatformat:2|en }}{% endif %}
                                             </td>
                                         </tr>
                                     {% empty %}

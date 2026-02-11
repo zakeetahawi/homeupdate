@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load accounting_numbers %}
 {% block title %}كشف حساب - {{ account.name }}{% endblock %}
 {% block content %}
     <div class="container-fluid py-4">
@@ -91,7 +92,7 @@
                     <div class="card-body text-center">
                         <h6 class="text-muted mb-2">الرصيد الحالي</h6>
                         <h2 class="{% if account.current_balance > 0 %}text-success{% elif account.current_balance < 0 %}text-danger{% endif %} mb-0">
-                            {{ account.current_balance|floatformat:2 }} {{ currency_symbol }}
+                            {{ account.current_balance|floatformat:2|en }} {{ currency_symbol }}
                         </h2>
                     </div>
                 </div>
@@ -125,7 +126,7 @@
                                         <td></td>
                                         <td></td>
                                         <td>
-                                            <strong>{{ account.opening_balance|floatformat:2 }}</strong>
+                                            <strong>{{ account.opening_balance|floatformat:2|en }}</strong>
                                         </td>
                                     </tr>
                                     {% for item in statement_lines %}
@@ -138,13 +139,13 @@
                                             </td>
                                             <td>{{ item.line.description|default:item.line.transaction.description }}</td>
                                             <td class="text-success">
-                                                {% if item.line.debit > 0 %}{{ item.line.debit|floatformat:2 }}{% endif %}
+                                                {% if item.line.debit > 0 %}{{ item.line.debit|floatformat:2|en }}{% endif %}
                                             </td>
                                             <td class="text-danger">
-                                                {% if item.line.credit > 0 %}{{ item.line.credit|floatformat:2 }}{% endif %}
+                                                {% if item.line.credit > 0 %}{{ item.line.credit|floatformat:2|en }}{% endif %}
                                             </td>
                                             <td class="{% if item.balance > 0 %}text-success{% elif item.balance < 0 %}text-danger{% endif %} fw-bold">
-                                                {{ item.balance|floatformat:2 }}
+                                                {{ item.balance|floatformat:2|en }}
                                             </td>
                                         </tr>
                                     {% empty %}
@@ -158,7 +159,7 @@
                                         <th colspan="3">الرصيد الختامي</th>
                                         <th></th>
                                         <th></th>
-                                        <th>{{ account.current_balance|floatformat:2 }}</th>
+                                        <th>{{ account.current_balance|floatformat:2|en }}</th>
                                     </tr>
                                 </tfoot>
                             </table>

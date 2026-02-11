@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
-{% block title %}أرصدة العملاء{% endblock %}
+{% load static %}{% load accounting_numbers %}{% block title %}أرصدة العملاء{% endblock %}
 {% block content %}
     <div class="container-fluid py-4">
         <div class="row mb-4">
@@ -10,9 +9,14 @@
                         <i class="fas fa-users me-2"></i>
                         تقرير أرصدة العملاء
                     </h2>
-                    <button onclick="window.print()" class="btn btn-outline-secondary">
-                        <i class="fas fa-print me-1"></i> طباعة
-                    </button>
+                    <div>
+                        <a href="{% url 'accounting:export_customer_balances' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-success me-2">
+                            <i class="fas fa-file-excel me-1"></i> تصدير Excel
+                        </a>
+                        <button onclick="window.print()" class="btn btn-outline-secondary">
+                            <i class="fas fa-print me-1"></i> طباعة
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -21,29 +25,70 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-body">
-                        <form method="get" class="row g-3">
-                            <div class="col-md-4">
+                        <form method="get" class="row g-3" id="filterForm">
+                            <!-- حقل البحث -->
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-search me-1"></i>
+                                    البحث (الاسم، الكود، الهاتف)
+                                </label>
+                                <input type="text" 
+                                       name="search" 
+                                       class="form-control form-control-lg" 
+                                       placeholder="ابحث باسم العميل، كود العميل، أو رقم الهاتف..."
+                                       value="{{ search_query }}"
+                                       autofocus>
+                            </div>
+                            
+                            <div class="col-md-3">
                                 <label class="form-label">الحالة المالية</label>
                                 <select name="status" class="form-select">
                                     <option value="">الكل</option>
                                     <option value="debit"
-                                            {% if request.GET.status == 'debit' %}selected{% endif %}>
+                                            {% if selected_status == 'debit' %}selected{% endif %}>
                                         مدين (عليه)
                                     </option>
                                     <option value="credit"
-                                            {% if request.GET.status == 'credit' %}selected{% endif %}>
+                                            {% if selected_status == 'credit' %}selected{% endif %}>
                                         دائن (له)
                                     </option>
                                     <option value="clear"
-                                            {% if request.GET.status == 'clear' %}selected{% endif %}>
+                                            {% if selected_status == 'clear' %}selected{% endif %}>
                                         حساب صافي
                                     </option>
                                 </select>
                             </div>
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary">
+                            <div class="col-md-3">
+                                <label class="form-label">الفرع</label>
+                                <select name="branch" class="form-select">
+                                    <option value="">كل الفروع</option>
+                                    {% for branch in branches %}
+                                        <option value="{{ branch.id }}" 
+                                                {% if selected_branch == branch.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ branch.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">البائع</label>
+                                <select name="salesperson" class="form-select">
+                                    <option value="">كل البائعين</option>
+                                    {% for salesperson in salespersons %}
+                                        <option value="{{ salesperson.id }}" 
+                                                {% if selected_salesperson == salesperson.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ salesperson.get_full_name|default:salesperson.username }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1">
                                     <i class="fas fa-filter me-1"></i> تصفية
                                 </button>
+                                <a href="{% url 'accounting:customer_balances' %}" class="btn btn-secondary">
+                                    <i class="fas fa-redo me-1"></i>
+                                </a>
                             </div>
                         </form>
                     </div>
@@ -56,15 +101,25 @@
                 <div class="card border-danger">
                     <div class="card-body text-center">
                         <h6 class="text-muted">إجمالي المديونيات (على العملاء)</h6>
-                        <h2 class="text-danger">{{ totals.total_receivables|floatformat:2|default:'0.00' }} {{ currency_symbol }}</h2>
+                        <h2 class="text-danger">{{ total_receivables|floatformat:2|en }} {{ currency_symbol }}</h2>
                     </div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="card border-success">
                     <div class="card-body text-center">
-                        <h6 class="text-muted">إجمالي الدائنيات (للعملاء)</h6>
-                        <h2 class="text-success">{{ totals.total_payables|floatformat:2|default:'0.00' }} {{ currency_symbol }}</h2>
+                        <h6 class="text-muted">إجمالي المدفوع</h6>
+                        <h2 class="text-success">{{ total_paid|floatformat:2|en }} {{ currency_symbol }}</h2>
+                        <div class="progress mt-2" style="height: 25px;">
+                            <div class="progress-bar bg-success" 
+                                 role="progressbar" 
+                                 style="width: {{ payment_percentage|floatformat:0|en }}%"
+                                 aria-valuenow="{{ payment_percentage|floatformat:0|en }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                {{ payment_percentage|floatformat:1|en }}% من إجمالي الطلبات
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -73,61 +128,185 @@
         <div class="row">
             <div class="col-12">
                 <div class="card">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <span>
+                            {% if search_query %}
+                                نتائج البحث عن: <strong>"{{ search_query }}"</strong>
+                                - وجدنا {{ page_obj.paginator.count }} نتيجة
+                            {% else %}
+                                إجمالي العملاء: {{ page_obj.paginator.count }}
+                            {% endif %}
+                        </span>
+                        <span class="text-muted">
+                            صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
                                         <th>العميل</th>
+                                        <th>الكود</th>
+                                        <th>الفرع</th>
                                         <th>عدد الطلبات</th>
                                         <th>إجمالي الطلبات</th>
                                         <th>المدفوع</th>
                                         <th>الرصيد</th>
-                                        <th>العربونات المتاحة</th>
+                                        <th>
+                                            <span data-bs-toggle="tooltip" title="رصيد الدفعات العامة التي لم تُخصص بالكامل">
+                                                الدفعات غير المخصصة
+                                                <i class="fas fa-info-circle text-muted small"></i>
+                                            </span>
+                                        </th>
                                         <th>الحالة</th>
                                         <th>إجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for summary in summaries %}
+                                    {% for item in customers_data %}
                                         <tr>
                                             <td>
-                                                <a href="{% url 'customers:customer_detail' summary.customer.pk %}">{{ summary.customer.name }}</a>
+                                                <a href="{% url 'customers:customer_detail' item.customer.pk %}" class="text-decoration-none">
+                                                    <strong>{{ item.customer.name }}</strong>
+                                                </a>
+                                                {% if item.customer.phone %}
+                                                    <br><small class="text-muted">
+                                                        <i class="fas fa-phone fa-xs"></i> {{ item.customer.phone }}
+                                                    </small>
+                                                {% endif %}
                                             </td>
-                                            <td>{{ summary.total_orders_count }}</td>
-                                            <td>{{ summary.total_orders_amount|floatformat:2 }}</td>
-                                            <td class="text-success">{{ summary.total_paid|floatformat:2 }}</td>
-                                            <td class="{% if summary.total_debt > 0 %}text-danger{% elif summary.total_debt < 0 %}text-success{% endif %} fw-bold">
-                                                {{ summary.total_debt|floatformat:2 }}
+                                            <td><code>{{ item.customer.code|default:"-"|en }}</code></td>
+                                            <td><small>{{ item.branches }}</small></td>
+                                            <td>{{ item.summary.total_orders_count|en }}</td>
+                                            <td>{{ item.summary.total_orders_amount|floatformat:2|en }}</td>
+                                            <td class="text-success">{{ item.summary.total_paid|floatformat:2|en }}</td>
+                                            <td class="{% if item.summary.total_debt > 0 %}text-danger{% elif item.summary.total_debt < 0 %}text-success{% endif %} fw-bold">
+                                                {{ item.summary.total_debt|floatformat:2|en }}
                                             </td>
-                                            <td class="text-info">{{ summary.remaining_advances|floatformat:2 }}</td>
+                                            <td class="text-info">{{ item.summary.remaining_advances|floatformat:2|en }}</td>
                                             <td>
-                                                {% if summary.total_debt > 0 %}
+                                                {% if item.summary.total_debt > 0 %}
                                                     <span class="badge bg-danger">مدين</span>
-                                                {% elif summary.total_debt < 0 %}
+                                                {% elif item.summary.total_debt < 0 %}
                                                     <span class="badge bg-success">دائن</span>
                                                 {% else %}
                                                     <span class="badge bg-secondary">صافي</span>
                                                 {% endif %}
                                             </td>
                                             <td>
-                                                <a href="{% url 'accounting:customer_financial' summary.customer.pk %}"
-                                                   class="btn btn-sm btn-outline-primary">
+                                                <a href="{% url 'accounting:customer_financial' item.customer.pk %}"
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   title="الملف المالي">
                                                     <i class="fas fa-wallet"></i>
                                                 </a>
                                             </td>
                                         </tr>
                                     {% empty %}
                                         <tr>
-                                            <td colspan="8" class="text-center py-4 text-muted">لا توجد بيانات</td>
+                                            <td colspan="10" class="text-center py-4">
+                                                {% if search_query %}
+                                                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                                                    <p class="text-muted">لا توجد نتائج للبحث عن "{{ search_query }}"</p>
+                                                {% else %}
+                                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                                    <p class="text-muted">لا توجد بيانات</p>
+                                                {% endif %}
+                                            </td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
                         </div>
                     </div>
+                    
+                    <!-- Pagination -->
+                    {% if page_obj.paginator.num_pages > 1 %}
+                        <div class="card-footer">
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination justify-content-center mb-0">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_salesperson %}&salesperson={{ selected_salesperson }}{% endif %}">
+                                                <i class="fas fa-angle-double-right"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_salesperson %}&salesperson={{ selected_salesperson }}{% endif %}">
+                                                <i class="fas fa-angle-right"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_salesperson %}&salesperson={{ selected_salesperson }}{% endif %}">
+                                                    {{ num }}
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_salesperson %}&salesperson={{ selected_salesperson }}{% endif %}">
+                                                <i class="fas fa-angle-left"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_branch %}&branch={{ selected_branch }}{% endif %}{% if selected_salesperson %}&salesperson={{ selected_salesperson }}{% endif %}">
+                                                <i class="fas fa-angle-double-left"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // البحث التلقائي عند الضغط على Enter
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.querySelector('input[name="search"]');
+        const form = document.getElementById('filterForm');
+        
+        if (searchInput) {
+            // البحث عند الضغط على Enter
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    form.submit();
+                }
+            });
+            
+            // تحديد النص عند التركيز
+            searchInput.addEventListener('focus', function() {
+                this.select();
+            });
+        }
+        
+        // إرسال النموذج عند تغيير الفلاتر
+        const selects = form.querySelectorAll('select');
+        selects.forEach(select => {
+            select.addEventListener('change', function() {
+                // إعادة تعيين رقم الصفحة إلى 1 عند تغيير الفلاتر
+                const pageInput = form.querySelector('input[name="page"]');
+                if (pageInput) {
+                    pageInput.remove();
+                }
+                form.submit();
+            });
+        });
+    });
+</script>
 {% endblock %}

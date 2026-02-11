@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}التقارير المالية{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'accounting:dashboard' %}">المحاسبة</a>
+                    </li>
+                    <li class="breadcrumb-item active">التقارير</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-0">
+                <i class="fas fa-chart-bar me-2"></i>
+                التقارير المالية
+            </h2>
+        </div>
+    </div>
+    
+    <div class="row">
+        {% for report in reports %}
+        <div class="col-md-4 col-lg-3 mb-4">
+            <a href="{% url report.url %}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm hover-shadow">
+                    <div class="card-body text-center py-4">
+                        <div class="mb-3">
+                            <i class="fas {{ report.icon }} fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title text-dark">{{ report.name }}</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.hover-shadow:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+.card {
+    transition: all 0.3s ease;
+}
+</style>
+{% endblock %}

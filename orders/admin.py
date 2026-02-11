@@ -24,6 +24,7 @@ from .models import (
     OrderItem,
     OrderStatusLog,
     Payment,
+    PaymentAllocation,
 )
 
 
@@ -809,6 +810,73 @@ class PaymentAdmin(admin.ModelAdmin):
         (_("ملاحظات"), {"fields": ("notes",)}),
         (_("معلومات النظام"), {"fields": ("created_by",), "classes": ("collapse",)}),
     )
+
+
+@admin.register(PaymentAllocation)
+class PaymentAllocationAdmin(admin.ModelAdmin):
+    """إدارة تخصيصات الدفعات"""
+    
+    list_display = (
+        "id",
+        "payment_link",
+        "order_link",
+        "allocated_amount",
+        "created_at",
+        "created_by",
+    )
+    list_filter = ("created_at",)
+    search_fields = (
+        "payment__reference_number",
+        "order__order_number",
+        "order__invoice_number",
+    )
+    date_hierarchy = "created_at"
+    readonly_fields = ("created_at", "created_by")
+    
+    fieldsets = (
+        (
+            _("معلومات التخصيص"),
+            {
+                "fields": (
+                    "payment",
+                    "order",
+                    "allocated_amount",
+                )
+            },
+        ),
+        (
+            _("معلومات النظام"),
+            {
+                "fields": ("created_at", "created_by"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    def payment_link(self, obj):
+        """رابط للدفعة"""
+        if obj.payment:
+            url = reverse("admin:orders_payment_change", args=[obj.payment.pk])
+            return format_html(
+                '<a href="{}">{} - {}</a>',
+                url,
+                obj.payment.reference_number or f"#{obj.payment.pk}",
+                obj.payment.amount,
+            )
+        return "-"
+
+    payment_link.short_description = "الدفعة"
+
+    def order_link(self, obj):
+        """رابط للطلب"""
+        if obj.order:
+            url = reverse("admin:orders_order_change", args=[obj.order.pk])
+            return format_html(
+                '<a href="{}">{}</a>', url, obj.order.order_number
+            )
+        return "-"
+
+    order_link.short_description = "الطلب"
 
 
 # استيراد إدارة الفواتير

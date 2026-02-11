@@ -478,9 +478,7 @@ def order_detail(request, pk):
         context["computed_final_price_after_discount"] = final_after
         # remaining amount should be what remains to pay from the final after-discount total
         paid = Decimal(str(order.paid_amount or 0))
-        # Ensure used_customer_balance exists and is Decimal
-        used_balance = Decimal(str(getattr(order, "used_customer_balance", 0) or 0))
-        context["computed_remaining_amount"] = final_after - paid - used_balance
+        context["computed_remaining_amount"] = final_after - paid
     except Exception as e:
         import logging
 

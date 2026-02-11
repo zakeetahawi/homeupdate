@@ -1,0 +1,2223 @@
+/* ═══════════════════════════════════════════════════════════════════
+   ثيم ZakZak - أزرق وفضي أنيق
+   Blue & Silver Premium Theme
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ===== CSS Variables ===== */
+html[data-theme="zakzak"] {
+    --zk-blue-900: #0a1628;
+    --zk-blue-800: #0f2847;
+    --zk-blue-700: #143a66;
+    --zk-blue-600: #1a4d85;
+    --zk-blue-500: #2563eb;
+    --zk-blue-400: #3b82f6;
+    --zk-blue-300: #60a5fa;
+    --zk-blue-200: #93c5fd;
+    --zk-blue-100: #dbeafe;
+    --zk-blue-50: #eff6ff;
+    --zk-silver-900: #374151;
+    --zk-silver-800: #4b5563;
+    --zk-silver-700: #6b7280;
+    --zk-silver-600: #9ca3af;
+    --zk-silver-500: #b8c0cc;
+    --zk-silver-400: #d1d5db;
+    --zk-silver-300: #e5e7eb;
+    --zk-silver-200: #f3f4f6;
+    --zk-silver-100: #f9fafb;
+    --zk-accent-cyan: #06b6d4;
+    --zk-accent-teal: #14b8a6;
+    --zk-accent-indigo: #6366f1;
+    --zk-accent-rose: #f43f5e;
+    --zk-accent-amber: #f59e0b;
+    --zk-accent-emerald: #10b981;
+    --zk-gradient-main: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #0f2847 100%);
+    --zk-gradient-card: linear-gradient(145deg, #ffffff 0%, #f8faff 100%);
+    --zk-gradient-navbar: linear-gradient(135deg, #0f2847 0%, #1a4d85 40%, #2563eb 100%);
+    --zk-gradient-footer: linear-gradient(135deg, #0a1628 0%, #143a66 100%);
+    --zk-gradient-silver: linear-gradient(135deg, #e5e7eb 0%, #f9fafb 50%, #e5e7eb 100%);
+    --zk-shadow-sm: 0 1px 3px rgba(37, 99, 235, 0.08);
+    --zk-shadow-md: 0 4px 12px rgba(37, 99, 235, 0.1);
+    --zk-shadow-lg: 0 8px 30px rgba(37, 99, 235, 0.15);
+    --zk-shadow-glow: 0 0 20px rgba(37, 99, 235, 0.2);
+    --zk-radius: 12px;
+    --zk-radius-lg: 16px;
+    --zk-radius-xl: 20px;
+    --zk-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== Body & Background ===== */
+html[data-theme="zakzak"] body {
+    background: linear-gradient(180deg, #eef2f7 0%, #e8edf5 50%, #dfe6f0 100%) !important;
+    background-attachment: fixed !important;
+    color: var(--zk-silver-900) !important;
+    font-family: 'Cairo', 'Roboto', sans-serif !important;
+}
+
+/* Subtle background pattern */
+html[data-theme="zakzak"] body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 20% 50%, rgba(37, 99, 235, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 50% 80%, rgba(99, 102, 241, 0.02) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+html[data-theme="zakzak"] main#main-content {
+    position: relative;
+    z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Navbar
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .navbar.navbar-dark.bg-primary {
+    background: var(--zk-gradient-navbar) !important;
+    box-shadow: 0 4px 20px rgba(10, 22, 40, 0.3), 0 1px 0 rgba(255, 255, 255, 0.05) inset !important;
+    border-bottom: 1px solid rgba(147, 197, 253, 0.15) !important;
+    backdrop-filter: blur(10px) !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .navbar .nav-link {
+    display: inline-flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0.3rem 0.6rem !important;
+    min-width: 58px;
+    transition: var(--zk-transition) !important;
+    position: relative !important;
+    border-radius: 8px !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+html[data-theme="zakzak"] .navbar .nav-link:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    transform: translateY(-2px) !important;
+}
+
+html[data-theme="zakzak"] .navbar .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 20px;
+    height: 2px;
+    background: var(--zk-accent-cyan);
+    border-radius: 2px;
+    transition: transform 0.3s ease;
+}
+
+html[data-theme="zakzak"] .navbar .nav-link:hover::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+html[data-theme="zakzak"] .navbar .nav-link i,
+html[data-theme="zakzak"] .navbar .nav-link .fas,
+html[data-theme="zakzak"] .navbar .nav-link .far,
+html[data-theme="zakzak"] .navbar .nav-link .fab {
+    font-size: 1.2rem !important;
+    margin-bottom: 0.1rem !important;
+    display: block !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .navbar .nav-link span,
+html[data-theme="zakzak"] .navbar .nav-link .nav-text {
+    font-size: 0.68rem !important;
+    line-height: 1.1 !important;
+    opacity: 0.9;
+}
+
+/* Navbar icon colors */
+html[data-theme="zakzak"] .navbar .fa-home { color: #60a5fa !important; }
+html[data-theme="zakzak"] .navbar .fa-users { color: #06b6d4 !important; }
+html[data-theme="zakzak"] .navbar .fa-shopping-cart { color: #10b981 !important; }
+html[data-theme="zakzak"] .navbar .fa-calculator,
+html[data-theme="zakzak"] .navbar .fa-file-invoice { color: #f59e0b !important; }
+html[data-theme="zakzak"] .navbar .fa-industry { color: #8b5cf6 !important; }
+html[data-theme="zakzak"] .navbar .fa-warehouse { color: #ec4899 !important; }
+html[data-theme="zakzak"] .navbar .fa-cut { color: #ef4444 !important; }
+html[data-theme="zakzak"] .navbar .fa-boxes { color: #14b8a6 !important; }
+html[data-theme="zakzak"] .navbar .fa-chart-bar,
+html[data-theme="zakzak"] .navbar .fa-chart-line { color: #6366f1 !important; }
+html[data-theme="zakzak"] .navbar .fa-tools,
+html[data-theme="zakzak"] .navbar .fa-cog,
+html[data-theme="zakzak"] .navbar .fa-cogs { color: #d1d5db !important; }
+html[data-theme="zakzak"] .navbar .fa-bell { color: #fbbf24 !important; }
+html[data-theme="zakzak"] .navbar .fa-user,
+html[data-theme="zakzak"] .navbar .fa-user-circle { color: #93c5fd !important; }
+html[data-theme="zakzak"] .navbar .fa-wrench { color: #a78bfa !important; }
+
+/* Navbar brand */
+html[data-theme="zakzak"] .navbar-brand {
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .navbar-brand:hover {
+    transform: scale(1.03) !important;
+    filter: brightness(1.1) !important;
+}
+
+html[data-theme="zakzak"] .navbar-brand .logo-img {
+    filter: drop-shadow(0 2px 8px rgba(37, 99, 235, 0.3)) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Cards - General
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .card {
+    background: var(--zk-gradient-card) !important;
+    border: 1px solid rgba(37, 99, 235, 0.08) !important;
+    border-radius: var(--zk-radius) !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+    transition: var(--zk-transition) !important;
+    overflow: hidden;
+}
+
+html[data-theme="zakzak"] .card:hover {
+    box-shadow: var(--zk-shadow-md) !important;
+    border-color: rgba(37, 99, 235, 0.15) !important;
+    transform: translateY(-1px);
+}
+
+html[data-theme="zakzak"] .card .card-header {
+    background: linear-gradient(135deg, #f0f4ff 0%, #f8faff 100%) !important;
+    border-bottom: 1px solid rgba(37, 99, 235, 0.08) !important;
+    color: var(--zk-blue-700) !important;
+}
+
+html[data-theme="zakzak"] .card .card-header h5,
+html[data-theme="zakzak"] .card .card-header h6 {
+    color: var(--zk-blue-700) !important;
+}
+
+html[data-theme="zakzak"] .card .card-footer {
+    background: linear-gradient(135deg, #f8faff 0%, #f0f4ff 100%) !important;
+    border-top: 1px solid rgba(37, 99, 235, 0.08) !important;
+}
+
+/* ===== Stat cards (bg-primary, bg-success, etc.) override ===== */
+html[data-theme="zakzak"] .card.bg-primary {
+    background: linear-gradient(135deg, #1a4d85 0%, #2563eb 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3) !important;
+}
+
+html[data-theme="zakzak"] .card.bg-success {
+    background: linear-gradient(135deg, #047857 0%, #10b981 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+}
+
+html[data-theme="zakzak"] .card.bg-warning {
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3) !important;
+}
+
+html[data-theme="zakzak"] .card.bg-danger {
+    background: linear-gradient(135deg, #be123c 0%, #f43f5e 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3) !important;
+}
+
+html[data-theme="zakzak"] .card.bg-info {
+    background: linear-gradient(135deg, #0e7490 0%, #06b6d4 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Tables
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .table {
+    color: var(--zk-silver-900) !important;
+}
+
+html[data-theme="zakzak"] .table thead th {
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
+    color: var(--zk-blue-700) !important;
+    border-bottom: 2px solid rgba(37, 99, 235, 0.15) !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em;
+}
+
+html[data-theme="zakzak"] .table-light th,
+html[data-theme="zakzak"] .table-light td {
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
+    color: var(--zk-blue-700) !important;
+}
+
+html[data-theme="zakzak"] .table-hover tbody tr:hover {
+    background: rgba(37, 99, 235, 0.04) !important;
+}
+
+html[data-theme="zakzak"] .table td {
+    border-color: rgba(37, 99, 235, 0.06) !important;
+}
+
+html[data-theme="zakzak"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: rgba(37, 99, 235, 0.02) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Buttons
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .btn-primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3) !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .btn-primary:hover {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important;
+    transform: translateY(-1px) !important;
+}
+
+html[data-theme="zakzak"] .btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25) !important;
+}
+
+html[data-theme="zakzak"] .btn-success:hover {
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35) !important;
+    transform: translateY(-1px) !important;
+}
+
+html[data-theme="zakzak"] .btn-danger {
+    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(244, 63, 94, 0.25) !important;
+}
+
+html[data-theme="zakzak"] .btn-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    border: none !important;
+}
+
+html[data-theme="zakzak"] .btn-outline-primary {
+    color: var(--zk-blue-500) !important;
+    border-color: var(--zk-blue-300) !important;
+    background: transparent !important;
+}
+
+html[data-theme="zakzak"] .btn-outline-primary:hover {
+    background: var(--zk-blue-500) !important;
+    color: #fff !important;
+    box-shadow: var(--zk-shadow-md) !important;
+}
+
+html[data-theme="zakzak"] .btn-outline-danger {
+    color: var(--zk-accent-rose) !important;
+    border-color: rgba(244, 63, 94, 0.4) !important;
+}
+
+html[data-theme="zakzak"] .btn-outline-danger:hover {
+    background: var(--zk-accent-rose) !important;
+    color: #fff !important;
+}
+
+html[data-theme="zakzak"] .btn-outline-success {
+    color: var(--zk-accent-emerald) !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+}
+
+html[data-theme="zakzak"] .btn-outline-success:hover {
+    background: var(--zk-accent-emerald) !important;
+    color: #fff !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Forms
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .form-control {
+    background: #fff !important;
+    border: 1.5px solid var(--zk-silver-300) !important;
+    border-radius: 8px !important;
+    transition: var(--zk-transition) !important;
+    color: var(--zk-silver-900) !important;
+}
+
+html[data-theme="zakzak"] .form-control:focus {
+    border-color: var(--zk-blue-400) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+    background: #fff !important;
+}
+
+html[data-theme="zakzak"] .form-select {
+    background-color: #fff !important;
+    border: 1.5px solid var(--zk-silver-300) !important;
+    border-radius: 8px !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .form-select:focus {
+    border-color: var(--zk-blue-400) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+}
+
+html[data-theme="zakzak"] .form-label {
+    color: var(--zk-blue-700) !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Badges
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .badge.bg-primary {
+    background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+}
+
+html[data-theme="zakzak"] .badge.bg-success {
+    background: linear-gradient(135deg, #059669, #10b981) !important;
+}
+
+html[data-theme="zakzak"] .badge.bg-danger {
+    background: linear-gradient(135deg, #e11d48, #f43f5e) !important;
+}
+
+html[data-theme="zakzak"] .badge.bg-warning {
+    background: linear-gradient(135deg, #d97706, #f59e0b) !important;
+    color: #fff !important;
+}
+
+html[data-theme="zakzak"] .badge.bg-info {
+    background: linear-gradient(135deg, #0891b2, #06b6d4) !important;
+}
+
+html[data-theme="zakzak"] .badge.bg-secondary {
+    background: linear-gradient(135deg, var(--zk-silver-700), var(--zk-silver-500)) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Footer
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] footer.footer-area.bg-primary {
+    background: var(--zk-gradient-footer) !important;
+    box-shadow: 0 -4px 20px rgba(10, 22, 40, 0.2) !important;
+    border-top: 1px solid rgba(147, 197, 253, 0.1) !important;
+}
+
+html[data-theme="zakzak"] footer.footer-area .footer-title {
+    color: var(--zk-blue-200) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="zakzak"] footer.footer-area .footer-link {
+    color: rgba(255, 255, 255, 0.7) !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] footer.footer-area .footer-link:hover {
+    color: var(--zk-blue-300) !important;
+    transform: translateY(-2px) !important;
+}
+
+html[data-theme="zakzak"] footer.footer-area .footer-link:hover i {
+    text-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
+}
+
+html[data-theme="zakzak"] footer.footer-area .footer-contact-item {
+    color: rgba(255, 255, 255, 0.7) !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] footer.footer-area .footer-contact-item:hover {
+    color: var(--zk-accent-cyan) !important;
+}
+
+html[data-theme="zakzak"] footer.footer-area .footer-contact-item i {
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] footer.footer-area .footer-contact-item:hover i {
+    text-shadow: 0 0 12px rgba(6, 182, 212, 0.6) !important;
+}
+
+html[data-theme="zakzak"] footer.footer-area .copyright-text {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+html[data-theme="zakzak"] footer.footer-area .social-icon {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] footer.footer-area .social-icon:hover {
+    background: rgba(37, 99, 235, 0.3) !important;
+    color: #fff !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Breadcrumb
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .breadcrumb {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.04) 0%, rgba(6, 182, 212, 0.03) 100%) !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 1rem !important;
+    border: 1px solid rgba(37, 99, 235, 0.06);
+}
+
+html[data-theme="zakzak"] .breadcrumb-item a {
+    color: var(--zk-blue-500) !important;
+    text-decoration: none !important;
+}
+
+html[data-theme="zakzak"] .breadcrumb-item a:hover {
+    color: var(--zk-blue-700) !important;
+}
+
+html[data-theme="zakzak"] .breadcrumb-item.active {
+    color: var(--zk-silver-700) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Modals
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .modal-content {
+    background: linear-gradient(145deg, #ffffff 0%, #f8faff 100%) !important;
+    border: 1px solid rgba(37, 99, 235, 0.1) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: 0 20px 60px rgba(10, 22, 40, 0.25) !important;
+}
+
+html[data-theme="zakzak"] .modal-header {
+    background: linear-gradient(135deg, #eef2ff 0%, #dbeafe 100%) !important;
+    border-bottom: 1px solid rgba(37, 99, 235, 0.1) !important;
+    border-radius: var(--zk-radius-lg) var(--zk-radius-lg) 0 0 !important;
+}
+
+html[data-theme="zakzak"] .modal-header .modal-title {
+    color: var(--zk-blue-700) !important;
+}
+
+html[data-theme="zakzak"] .modal-footer {
+    border-top: 1px solid rgba(37, 99, 235, 0.08) !important;
+    background: linear-gradient(135deg, #f8faff 0%, #eef2ff 100%) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Alerts
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .alert-success {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+    border: 1px solid rgba(16, 185, 129, 0.2) !important;
+    color: #065f46 !important;
+    border-radius: 10px !important;
+}
+
+html[data-theme="zakzak"] .alert-danger {
+    background: linear-gradient(135deg, #fef2f2 0%, #fecdd3 100%) !important;
+    border: 1px solid rgba(244, 63, 94, 0.2) !important;
+    color: #9f1239 !important;
+    border-radius: 10px !important;
+}
+
+html[data-theme="zakzak"] .alert-warning {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+    border: 1px solid rgba(245, 158, 11, 0.2) !important;
+    color: #92400e !important;
+    border-radius: 10px !important;
+}
+
+html[data-theme="zakzak"] .alert-info {
+    background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%) !important;
+    border: 1px solid rgba(6, 182, 212, 0.2) !important;
+    color: #155e75 !important;
+    border-radius: 10px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Pagination
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .page-link {
+    color: var(--zk-blue-500) !important;
+    border-color: var(--zk-silver-300) !important;
+    border-radius: 6px !important;
+    margin: 0 2px !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .page-link:hover {
+    background: var(--zk-blue-50) !important;
+    color: var(--zk-blue-700) !important;
+    border-color: var(--zk-blue-300) !important;
+}
+
+html[data-theme="zakzak"] .page-item.active .page-link {
+    background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Dropdown Menus
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .dropdown-menu {
+    background: linear-gradient(145deg, #ffffff 0%, #f8faff 100%) !important;
+    border: 1px solid rgba(37, 99, 235, 0.1) !important;
+    border-radius: var(--zk-radius) !important;
+    box-shadow: var(--zk-shadow-lg) !important;
+}
+
+html[data-theme="zakzak"] .dropdown-item {
+    color: var(--zk-silver-800) !important;
+    transition: var(--zk-transition) !important;
+    border-radius: 6px !important;
+    margin: 2px 4px !important;
+}
+
+html[data-theme="zakzak"] .dropdown-item:hover {
+    background: linear-gradient(135deg, #eef2ff 0%, #dbeafe 100%) !important;
+    color: var(--zk-blue-700) !important;
+}
+
+html[data-theme="zakzak"] .dropdown-header {
+    color: var(--zk-blue-600) !important;
+    font-weight: 700 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Links
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] a:not(.btn):not(.nav-link):not(.dropdown-item):not(.navbar-brand):not(.footer-link):not(.footer-contact-item):not(.text-decoration-none) {
+    color: var(--zk-blue-500);
+    transition: color 0.2s ease;
+}
+
+html[data-theme="zakzak"] a:not(.btn):not(.nav-link):not(.dropdown-item):not(.navbar-brand):hover {
+    color: var(--zk-blue-700);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Scrollbar
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+html[data-theme="zakzak"] ::-webkit-scrollbar-track {
+    background: var(--zk-silver-200);
+    border-radius: 4px;
+}
+
+html[data-theme="zakzak"] ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--zk-blue-300), var(--zk-blue-400));
+    border-radius: 4px;
+}
+
+html[data-theme="zakzak"] ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--zk-blue-400), var(--zk-blue-500));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Welcome / Home Page
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .welcome-title {
+    color: var(--zk-blue-700) !important;
+    text-shadow: 0 2px 4px rgba(37, 99, 235, 0.1) !important;
+}
+
+html[data-theme="zakzak"] .home-welcome-card {
+    background: linear-gradient(145deg, #ffffff 0%, #eef2ff 100%) !important;
+    border: 1px solid rgba(37, 99, 235, 0.1) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-md) !important;
+}
+
+html[data-theme="zakzak"] .home-welcome-card:hover {
+    box-shadow: var(--zk-shadow-lg) !important;
+    transform: translateY(-3px) !important;
+}
+
+html[data-theme="zakzak"] .animated-logo {
+    filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.2)) !important;
+}
+
+html[data-theme="zakzak"] .animated-logo:hover {
+    filter: drop-shadow(0 6px 20px rgba(37, 99, 235, 0.3)) brightness(1.05) !important;
+    transform: scale(1.03) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Container & Content Cards (generic .container .card)
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .container .card,
+html[data-theme="zakzak"] .container-fluid .card {
+    border-radius: var(--zk-radius) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Border / Separator overrides
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .border-danger {
+    border-color: rgba(244, 63, 94, 0.3) !important;
+}
+
+html[data-theme="zakzak"] .border-primary {
+    border-color: rgba(37, 99, 235, 0.3) !important;
+}
+
+html[data-theme="zakzak"] hr {
+    border-color: rgba(37, 99, 235, 0.08) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Text color overrides for readability
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .text-primary { color: var(--zk-blue-500) !important; }
+html[data-theme="zakzak"] .text-success { color: var(--zk-accent-emerald) !important; }
+html[data-theme="zakzak"] .text-danger { color: var(--zk-accent-rose) !important; }
+html[data-theme="zakzak"] .text-warning { color: var(--zk-accent-amber) !important; }
+html[data-theme="zakzak"] .text-info { color: var(--zk-accent-cyan) !important; }
+html[data-theme="zakzak"] .text-muted { color: var(--zk-silver-600) !important; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Selection highlight
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] ::selection {
+    background: rgba(37, 99, 235, 0.2);
+    color: var(--zk-blue-900);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Toast / Notifications
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .toast {
+    background: linear-gradient(145deg, #ffffff, #f8faff) !important;
+    border: 1px solid rgba(37, 99, 235, 0.1) !important;
+    border-radius: var(--zk-radius) !important;
+    box-shadow: var(--zk-shadow-lg) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SweetAlert2 Override
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .swal2-popup {
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: 0 20px 60px rgba(10, 22, 40, 0.3) !important;
+}
+
+html[data-theme="zakzak"] .swal2-title {
+    color: var(--zk-blue-700) !important;
+}
+
+html[data-theme="zakzak"] .swal2-confirm {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    border-radius: 8px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Sidebar / Off-canvas (if any)
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .offcanvas {
+    background: linear-gradient(180deg, #ffffff, #f8faff) !important;
+    border-color: rgba(37, 99, 235, 0.1) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   List group
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .list-group-item {
+    border-color: rgba(37, 99, 235, 0.06) !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .list-group-item:hover {
+    background: rgba(37, 99, 235, 0.03) !important;
+}
+
+html[data-theme="zakzak"] .list-group-item.active {
+    background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+    border-color: transparent !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Progress bars
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .progress {
+    background: var(--zk-silver-200) !important;
+    border-radius: 8px !important;
+    overflow: hidden;
+}
+
+html[data-theme="zakzak"] .progress-bar {
+    background: linear-gradient(135deg, #2563eb, #60a5fa) !important;
+}
+
+html[data-theme="zakzak"] .progress-bar.bg-success {
+    background: linear-gradient(135deg, #10b981, #34d399) !important;
+}
+
+html[data-theme="zakzak"] .progress-bar.bg-danger {
+    background: linear-gradient(135deg, #f43f5e, #fb7185) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Tabs / Nav-tabs
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .nav-tabs .nav-link {
+    color: var(--zk-silver-700) !important;
+    border-radius: 8px 8px 0 0 !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .nav-tabs .nav-link:hover {
+    color: var(--zk-blue-500) !important;
+    background: rgba(37, 99, 235, 0.04) !important;
+}
+
+html[data-theme="zakzak"] .nav-tabs .nav-link.active {
+    color: var(--zk-blue-600) !important;
+    border-color: var(--zk-blue-300) var(--zk-blue-300) #fff !important;
+    background: #fff !important;
+    font-weight: 600 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Popups & complaints
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .assigned-complaints-popup .popup-content {
+    background: linear-gradient(145deg, #ffffff, #f8faff) !important;
+    border: 1px solid rgba(37, 99, 235, 0.1) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-lg) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Responsive Adjustments
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    html[data-theme="zakzak"] .navbar .nav-link {
+        padding: 0.4rem 0.5rem !important;
+        min-width: 50px;
+    }
+
+    html[data-theme="zakzak"] .navbar .nav-link i,
+    html[data-theme="zakzak"] .navbar .nav-link .fas {
+        font-size: 1rem !important;
+    }
+
+    html[data-theme="zakzak"] .card {
+        border-radius: 10px !important;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   بطاقات ZakCard - Dashboard Cards Override
+   تحويل جميع أنماط البطاقات القديمة إلى التصميم الجديد
+   اسم التصميم: ZakCard (بطاقات زك‌زك المدوّرة)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ===== Page Header (orders dashboard gradient banner) ===== */
+html[data-theme="zakzak"] .page-header {
+    background: var(--zk-gradient-navbar) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-lg) !important;
+    border: 1px solid rgba(147, 197, 253, 0.15) !important;
+}
+
+/* ===== Dashboard Type Cards (inspection/installation/accessory/tailoring) ===== */
+html[data-theme="zakzak"] .inspection-card,
+html[data-theme="zakzak"] .installation-card,
+html[data-theme="zakzak"] .accessory-card,
+html[data-theme="zakzak"] .tailoring-card {
+    border-radius: var(--zk-radius-lg) !important;
+    border: none !important;
+    box-shadow: var(--zk-shadow-md) !important;
+    transition: var(--zk-transition) !important;
+    overflow: hidden;
+}
+
+html[data-theme="zakzak"] .inspection-card {
+    background: linear-gradient(135deg, #1a4d85 0%, #3b82f6 100%) !important;
+}
+
+html[data-theme="zakzak"] .installation-card {
+    background: linear-gradient(135deg, #047857 0%, #10b981 100%) !important;
+}
+
+html[data-theme="zakzak"] .accessory-card {
+    background: linear-gradient(135deg, #b45309 0%, #f59e0b 100%) !important;
+}
+
+html[data-theme="zakzak"] .tailoring-card {
+    background: linear-gradient(135deg, #be123c 0%, #f43f5e 100%) !important;
+}
+
+html[data-theme="zakzak"] .inspection-card::before,
+html[data-theme="zakzak"] .installation-card::before,
+html[data-theme="zakzak"] .accessory-card::before,
+html[data-theme="zakzak"] .tailoring-card::before {
+    display: none !important;
+}
+
+html[data-theme="zakzak"] .inspection-card:hover,
+html[data-theme="zakzak"] .installation-card:hover,
+html[data-theme="zakzak"] .accessory-card:hover,
+html[data-theme="zakzak"] .tailoring-card:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: var(--zk-shadow-lg) !important;
+}
+
+html[data-theme="zakzak"] .inspection-card .card-body,
+html[data-theme="zakzak"] .installation-card .card-body,
+html[data-theme="zakzak"] .accessory-card .card-body,
+html[data-theme="zakzak"] .tailoring-card .card-body {
+    background: transparent !important;
+}
+
+/* ===== stats-card (orders dashboard + complaints + backup + edit_tracking) ===== */
+html[data-theme="zakzak"] .stats-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f8faff 100%) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    border: 1px solid rgba(37, 99, 235, 0.08) !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+    transition: var(--zk-transition) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+html[data-theme="zakzak"] .stats-card::after {
+    display: none !important;
+}
+
+html[data-theme="zakzak"] .stats-card:hover {
+    box-shadow: var(--zk-shadow-md) !important;
+    transform: translateY(-2px) !important;
+    border-color: rgba(37, 99, 235, 0.15) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.total-orders {
+    border-left: 4px solid var(--zk-blue-500) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #eff6ff 100%) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.pending-orders {
+    border-left: 4px solid var(--zk-accent-amber) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #fffbeb 100%) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.completed-orders {
+    border-left: 4px solid var(--zk-accent-emerald) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #ecfdf5 100%) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.total-revenue {
+    border-left: 4px solid var(--zk-accent-rose) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #fff1f2 100%) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.border-info {
+    border-left: 4px solid var(--zk-accent-cyan) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #ecfeff 100%) !important;
+    border: none !important;
+    border-left: 4px solid var(--zk-accent-cyan) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.border-warning {
+    border-left: 4px solid var(--zk-accent-amber) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #fffbeb 100%) !important;
+    border: none !important;
+    border-left: 4px solid var(--zk-accent-amber) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.border-secondary {
+    border-left: 4px solid var(--zk-silver-500) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #f9fafb 100%) !important;
+    border: none !important;
+    border-left: 4px solid var(--zk-silver-500) !important;
+}
+
+/* Stats badges (remove glow animation, clean look) */
+html[data-theme="zakzak"] .stats-badge {
+    border-radius: 8px !important;
+    font-size: 0.62rem !important;
+    padding: 3px 8px !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+    animation: none !important;
+}
+
+html[data-theme="zakzak"] .stats-card.total-orders .stats-badge {
+    background: linear-gradient(135deg, var(--zk-blue-500), var(--zk-blue-400)) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.pending-orders .stats-badge {
+    background: linear-gradient(135deg, #d97706, #f59e0b) !important;
+    color: #fff !important;
+}
+
+html[data-theme="zakzak"] .stats-card.completed-orders .stats-badge {
+    background: linear-gradient(135deg, #059669, #10b981) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.total-revenue .stats-badge {
+    background: linear-gradient(135deg, #e11d48, #f43f5e) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.border-info .stats-badge {
+    background: linear-gradient(135deg, #0891b2, #06b6d4) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.border-warning .stats-badge {
+    background: linear-gradient(135deg, #d97706, #f59e0b) !important;
+    color: #fff !important;
+}
+
+html[data-theme="zakzak"] .stats-card.border-secondary .stats-badge {
+    background: linear-gradient(135deg, var(--zk-silver-700), var(--zk-silver-500)) !important;
+}
+
+/* Complaints stats-card variants */
+html[data-theme="zakzak"] .stats-card.total,
+html[data-theme="zakzak"] .stats-card.resolved {
+    border-left: 4px solid var(--zk-accent-emerald) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #ecfdf5 100%) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.pending {
+    border-left: 4px solid var(--zk-accent-amber) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #fffbeb 100%) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.urgent {
+    border-left: 4px solid var(--zk-accent-rose) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #fff1f2 100%) !important;
+}
+
+/* Backup dashboard stats-card color variants */
+html[data-theme="zakzak"] .stats-card.primary {
+    border-left: 4px solid var(--zk-blue-500) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #eff6ff 100%) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.success {
+    border-left: 4px solid var(--zk-accent-emerald) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #ecfdf5 100%) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.warning {
+    border-left: 4px solid var(--zk-accent-amber) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #fffbeb 100%) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.danger {
+    border-left: 4px solid var(--zk-accent-rose) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #fff1f2 100%) !important;
+}
+
+/* Border-direction variants (border-left-* used in complaints/edit_tracking) */
+html[data-theme="zakzak"] .stats-card.border-left-primary,
+html[data-theme="zakzak"] .stat-card.border-left-primary {
+    border-left: 4px solid var(--zk-blue-500) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #eff6ff 100%) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.border-left-info,
+html[data-theme="zakzak"] .stat-card.border-left-info {
+    border-left: 4px solid var(--zk-accent-cyan) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #ecfeff 100%) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.border-left-warning,
+html[data-theme="zakzak"] .stat-card.border-left-warning {
+    border-left: 4px solid var(--zk-accent-amber) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #fffbeb 100%) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.border-left-success,
+html[data-theme="zakzak"] .stat-card.border-left-success {
+    border-left: 4px solid var(--zk-accent-emerald) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #ecfdf5 100%) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.border-left-danger,
+html[data-theme="zakzak"] .stat-card.border-left-danger {
+    border-left: 4px solid var(--zk-accent-rose) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #fff1f2 100%) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+/* Border-color variants (border-primary/success used in edit_tracking) */
+html[data-theme="zakzak"] .stats-card.border-primary,
+html[data-theme="zakzak"] .card.stats-card.border-primary {
+    border: none !important;
+    border-left: 4px solid var(--zk-blue-500) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #eff6ff 100%) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+html[data-theme="zakzak"] .stats-card.border-success,
+html[data-theme="zakzak"] .card.stats-card.border-success {
+    border: none !important;
+    border-left: 4px solid var(--zk-accent-emerald) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #ecfdf5 100%) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+/* ===== stat-card (admin, inventory, installations, manufacturing, complaints) ===== */
+html[data-theme="zakzak"] .stat-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f8faff 100%) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    border: 1px solid rgba(37, 99, 235, 0.08) !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+    transition: var(--zk-transition) !important;
+    color: var(--zk-silver-900) !important;
+}
+
+html[data-theme="zakzak"] .stat-card:hover {
+    box-shadow: var(--zk-shadow-md) !important;
+    transform: translateY(-2px) !important;
+}
+
+html[data-theme="zakzak"] .stat-card.blue,
+html[data-theme="zakzak"] .stat-card.primary {
+    border-left: 4px solid var(--zk-blue-500) !important;
+}
+
+html[data-theme="zakzak"] .stat-card.green,
+html[data-theme="zakzak"] .stat-card.success {
+    border-left: 4px solid var(--zk-accent-emerald) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #ecfdf5 100%) !important;
+}
+
+html[data-theme="zakzak"] .stat-card.orange,
+html[data-theme="zakzak"] .stat-card.warning {
+    border-left: 4px solid var(--zk-accent-amber) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #fffbeb 100%) !important;
+}
+
+html[data-theme="zakzak"] .stat-card.purple,
+html[data-theme="zakzak"] .stat-card.info {
+    border-left: 4px solid var(--zk-accent-indigo) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #eef2ff 100%) !important;
+}
+
+html[data-theme="zakzak"] .stat-card.danger {
+    border-left: 4px solid var(--zk-accent-rose) !important;
+    background: linear-gradient(145deg, #ffffff 0%, #fff1f2 100%) !important;
+}
+
+html[data-theme="zakzak"] .stat-card .stat-number,
+html[data-theme="zakzak"] .stat-card .stat-value,
+html[data-theme="zakzak"] .stat-card h2,
+html[data-theme="zakzak"] .stat-card h3 {
+    color: var(--zk-blue-700) !important;
+    font-weight: 700 !important;
+}
+
+html[data-theme="zakzak"] .stat-card .stat-label,
+html[data-theme="zakzak"] .stat-card p {
+    color: var(--zk-silver-600) !important;
+}
+
+html[data-theme="zakzak"] .stat-card .stat-icon,
+html[data-theme="zakzak"] .stat-card .icon-wrapper {
+    border-radius: 10px !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .stat-number {
+    color: var(--zk-blue-600) !important;
+}
+
+html[data-theme="zakzak"] .stat-label {
+    color: var(--zk-silver-600) !important;
+}
+
+/* Manufacturing stat-card with bg-* classes */
+html[data-theme="zakzak"] .stat-card.bg-warning,
+html[data-theme="zakzak"] .stat-card.bg-success,
+html[data-theme="zakzak"] .stat-card.bg-info,
+html[data-theme="zakzak"] .stat-card.bg-secondary,
+html[data-theme="zakzak"] .stat-card.bg-primary,
+html[data-theme="zakzak"] .stat-card.bg-danger {
+    background: linear-gradient(145deg, #ffffff 0%, #f8faff 100%) !important;
+    color: var(--zk-silver-900) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+html[data-theme="zakzak"] .stat-card.bg-warning {
+    border-left: 4px solid var(--zk-accent-amber) !important;
+}
+
+html[data-theme="zakzak"] .stat-card.bg-success {
+    border-left: 4px solid var(--zk-accent-emerald) !important;
+}
+
+html[data-theme="zakzak"] .stat-card.bg-info {
+    border-left: 4px solid var(--zk-accent-cyan) !important;
+}
+
+html[data-theme="zakzak"] .stat-card.bg-secondary {
+    border-left: 4px solid var(--zk-silver-500) !important;
+}
+
+html[data-theme="zakzak"] .stat-card.bg-primary {
+    border-left: 4px solid var(--zk-blue-500) !important;
+}
+
+html[data-theme="zakzak"] .stat-card.bg-danger {
+    border-left: 4px solid var(--zk-accent-rose) !important;
+}
+
+/* ===== dashboard-card (large feature cards) ===== */
+html[data-theme="zakzak"] .dashboard-card {
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-md) !important;
+    border: none !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .dashboard-card:hover {
+    box-shadow: var(--zk-shadow-lg) !important;
+    transform: translateY(-4px) scale(1.01) !important;
+}
+
+/* ===== stat-card-premium (order detail redesign) ===== */
+html[data-theme="zakzak"] .stat-card-premium {
+    background: linear-gradient(145deg, #ffffff 0%, #f8faff 100%) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    border: 1px solid rgba(37, 99, 235, 0.08) !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .stat-card-premium:hover {
+    box-shadow: var(--zk-shadow-md) !important;
+    transform: translateY(-2px) !important;
+}
+
+html[data-theme="zakzak"] .stat-card-premium.success {
+    border-left: 4px solid var(--zk-accent-emerald) !important;
+}
+
+html[data-theme="zakzak"] .stat-card-premium.warning {
+    border-left: 4px solid var(--zk-accent-amber) !important;
+}
+
+html[data-theme="zakzak"] .stat-card-premium.info {
+    border-left: 4px solid var(--zk-accent-cyan) !important;
+}
+
+/* ===== error-stat-card (installations error_analysis) ===== */
+html[data-theme="zakzak"] .error-stat-card {
+    background: linear-gradient(145deg, #ffffff 0%, #f8faff 100%) !important;
+    border-radius: var(--zk-radius) !important;
+    border: 1px solid rgba(37, 99, 235, 0.08) !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .error-stat-card:hover {
+    box-shadow: var(--zk-shadow-md) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* ===== stats-section / recent-orders ===== */
+html[data-theme="zakzak"] .stats-section {
+    background: linear-gradient(145deg, #f8faff 0%, #eef2ff 100%) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    border: 1px solid rgba(37, 99, 235, 0.06) !important;
+}
+
+html[data-theme="zakzak"] .recent-orders {
+    background: linear-gradient(145deg, #ffffff 0%, #f8faff 100%) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+    border: 1px solid rgba(37, 99, 235, 0.06) !important;
+}
+
+html[data-theme="zakzak"] .order-item {
+    border-color: rgba(37, 99, 235, 0.06) !important;
+    transition: var(--zk-transition) !important;
+    border-radius: 8px !important;
+}
+
+html[data-theme="zakzak"] .order-item:hover {
+    background: rgba(37, 99, 235, 0.03) !important;
+}
+
+/* ===== Year filter / action buttons ===== */
+html[data-theme="zakzak"] .year-filter {
+    background: linear-gradient(145deg, #ffffff 0%, #f8faff 100%) !important;
+    border-radius: var(--zk-radius) !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+    border: 1px solid rgba(37, 99, 235, 0.06) !important;
+}
+
+html[data-theme="zakzak"] .action-btn {
+    background: var(--zk-gradient-navbar) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .action-btn:hover {
+    box-shadow: var(--zk-shadow-md) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ===== Bootstrap bg-COLOR cards (inspections, cutting, factory, etc.) ===== */
+html[data-theme="zakzak"] .card.bg-primary.text-white {
+    background: linear-gradient(135deg, #1a4d85 0%, #3b82f6 100%) !important;
+    border: none !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25) !important;
+}
+
+html[data-theme="zakzak"] .card.bg-success.text-white {
+    background: linear-gradient(135deg, #047857 0%, #10b981 100%) !important;
+    border: none !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25) !important;
+}
+
+html[data-theme="zakzak"] .card.bg-warning.text-dark,
+html[data-theme="zakzak"] .card.bg-warning.text-white {
+    background: linear-gradient(135deg, #b45309 0%, #f59e0b 100%) !important;
+    border: none !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.25) !important;
+    color: #fff !important;
+}
+
+html[data-theme="zakzak"] .card.bg-danger.text-white {
+    background: linear-gradient(135deg, #be123c 0%, #f43f5e 100%) !important;
+    border: none !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: 0 4px 15px rgba(244, 63, 94, 0.25) !important;
+}
+
+html[data-theme="zakzak"] .card.bg-info.text-white {
+    background: linear-gradient(135deg, #0e7490 0%, #06b6d4 100%) !important;
+    border: none !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: 0 4px 15px rgba(6, 182, 212, 0.25) !important;
+}
+
+html[data-theme="zakzak"] .card.bg-secondary.text-white {
+    background: linear-gradient(135deg, var(--zk-silver-700) 0%, var(--zk-silver-500) 100%) !important;
+    border: none !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: 0 4px 15px rgba(107, 114, 128, 0.25) !important;
+}
+
+html[data-theme="zakzak"] .card.bg-primary .card-body,
+html[data-theme="zakzak"] .card.bg-success .card-body,
+html[data-theme="zakzak"] .card.bg-warning .card-body,
+html[data-theme="zakzak"] .card.bg-danger .card-body,
+html[data-theme="zakzak"] .card.bg-info .card-body {
+    background: transparent !important;
+}
+
+html[data-theme="zakzak"] .card.bg-primary .card-header,
+html[data-theme="zakzak"] .card.bg-info .card-header,
+html[data-theme="zakzak"] .card.bg-success .card-header {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Clean fa-3x icons in colored cards */
+html[data-theme="zakzak"] .card .fa-3x {
+    font-size: 2rem !important;
+    opacity: 0.4 !important;
+}
+
+/* ===== Card border-danger (accounting dashboard old) ===== */
+html[data-theme="zakzak"] .card.border-danger {
+    border: none !important;
+    border-left: 4px solid var(--zk-accent-rose) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+html[data-theme="zakzak"] .card.border-danger .card-header.bg-danger {
+    background: linear-gradient(135deg, #be123c 0%, #f43f5e 100%) !important;
+    border-radius: var(--zk-radius) var(--zk-radius) 0 0 !important;
+}
+
+/* ===== Gradient feature card (upcoming installations) ===== */
+html[data-theme="zakzak"] .card[style*="linear-gradient(135deg, #667eea"] {
+    background: linear-gradient(135deg, #1a4d85 0%, #6366f1 100%) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-lg) !important;
+    border: none !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Print Override - Clean output
+   ═══════════════════════════════════════════════════════════════════ */
+@media print {
+    html[data-theme="zakzak"] body {
+        background: #fff !important;
+    }
+    
+    html[data-theme="zakzak"] .navbar,
+    html[data-theme="zakzak"] footer {
+        display: none !important;
+    }
+    
+    html[data-theme="zakzak"] .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Generic CSS Variables Bridge
+   Many components use generic vars (--primary, --secondary, etc.)
+   We map them to ZakZak palette so everything works consistently
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] {
+    --primary: #2563eb;
+    --primary-rgb: 37, 99, 235;
+    --secondary: #6b7280;
+    --secondary-rgb: 107, 114, 128;
+    --neutral: #d1d5db;
+    --shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    --shadow-lg: 0 8px 30px rgba(37, 99, 235, 0.2);
+    --error: #f43f5e;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --info: #06b6d4;
+    --card-bg: #ffffff;
+    --text-primary: #374151;
+    --text-secondary: #6b7280;
+    --elevated-bg: #eff6ff;
+    --border: #e5e7eb;
+    --radius-large: 16px;
+    --radius-medium: 12px;
+    --radius-small: 8px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Login Page
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .card[style*="border-color: var(--neutral)"] {
+    border-color: var(--zk-silver-300) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-lg), 0 0 40px rgba(37, 99, 235, 0.08) !important;
+    overflow: hidden;
+}
+
+html[data-theme="zakzak"] .card-header[style*="background-color: var(--primary)"] {
+    background: var(--zk-gradient-navbar) !important;
+    color: #fff !important;
+    border-bottom: 2px solid rgba(147, 197, 253, 0.2) !important;
+    padding: 1.2rem 1.5rem !important;
+}
+
+html[data-theme="zakzak"] .card-header[style*="background-color: var(--primary)"] h5 {
+    font-weight: 700 !important;
+    letter-spacing: 0.3px;
+}
+
+html[data-theme="zakzak"] .btn[style*="background-color: var(--primary)"] {
+    background: var(--zk-gradient-main) !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 0.65rem 1.5rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3) !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .btn[style*="background-color: var(--primary)"]:hover {
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4) !important;
+    transform: translateY(-1px);
+}
+
+/* Login form inputs */
+html[data-theme="zakzak"] #loginForm .form-control {
+    border: 2px solid var(--zk-silver-300) !important;
+    border-radius: 10px !important;
+    padding: 0.7rem 1rem !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] #loginForm .form-control:focus {
+    border-color: var(--zk-blue-400) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Floating Chat Button
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .floating-chat-btn {
+    background: var(--zk-gradient-main) !important;
+    border: 2px solid rgba(147, 197, 253, 0.3) !important;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35), var(--zk-shadow-glow) !important;
+}
+
+html[data-theme="zakzak"] .floating-chat-btn:hover {
+    box-shadow: 0 6px 25px rgba(37, 99, 235, 0.45), 0 0 30px rgba(37, 99, 235, 0.25) !important;
+}
+
+html[data-theme="zakzak"] .floating-chat-btn .badge-counter {
+    background: var(--zk-accent-rose) !important;
+    border-color: #fff !important;
+}
+
+html[data-theme="zakzak"] .floating-chat-btn .badge-online {
+    background: var(--zk-accent-emerald) !important;
+    border-color: #fff !important;
+}
+
+html[data-theme="zakzak"] .floating-chat-menu {
+    background: #fff !important;
+    border: 1px solid var(--zk-silver-300) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-lg) !important;
+}
+
+html[data-theme="zakzak"] .floating-chat-menu .dropdown-item {
+    color: var(--zk-silver-900) !important;
+    border-radius: 8px !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .floating-chat-menu .dropdown-item:hover {
+    background: var(--zk-blue-50) !important;
+    color: var(--zk-blue-500) !important;
+}
+
+html[data-theme="zakzak"] .floating-chat-menu .dropdown-header {
+    color: var(--zk-silver-600) !important;
+    font-weight: 600;
+}
+
+/* Chat bubble styling */
+html[data-theme="zakzak"] .chat-message-row.me .chat-bubble {
+    background: var(--zk-blue-500) !important;
+}
+
+html[data-theme="zakzak"] .chat-message-row.other .chat-bubble {
+    background: var(--zk-silver-100) !important;
+    border-color: var(--zk-silver-300) !important;
+    color: var(--zk-silver-900) !important;
+}
+
+html[data-theme="zakzak"] .mini-chat-window {
+    border: 1px solid var(--zk-silver-300) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-lg) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Complaints Module - Dashboard
+   Override purple gradients → ZakZak blue gradients
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .complaints-dashboard {
+    background: var(--zk-gradient-navbar) !important;
+    border-radius: var(--zk-radius-xl) !important;
+}
+
+html[data-theme="zakzak"] .complaints-dashboard::before {
+    opacity: 0.15;
+}
+
+/* Stats card purple gradient → blue */
+html[data-theme="zakzak"] .complaints-dashboard ~ * .stats-card::before,
+html[data-theme="zakzak"] .stats-card::before {
+    background: linear-gradient(90deg, var(--zk-blue-500), var(--zk-blue-300)) !important;
+}
+
+html[data-theme="zakzak"] .stats-number {
+    background: linear-gradient(135deg, var(--zk-blue-500), var(--zk-blue-300)) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+}
+
+html[data-theme="zakzak"] .stats-icon {
+    color: var(--zk-blue-400) !important;
+}
+
+/* Chart containers */
+html[data-theme="zakzak"] .chart-container {
+    background: var(--zk-gradient-card) !important;
+    border: 1px solid var(--zk-silver-200) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+}
+
+html[data-theme="zakzak"] .chart-title {
+    color: var(--zk-silver-900) !important;
+}
+
+html[data-theme="zakzak"] .chart-header {
+    border-bottom-color: var(--zk-silver-200) !important;
+}
+
+/* Complaint items - status colors as left border, keep them but improve card */
+html[data-theme="zakzak"] .complaint-item {
+    border-radius: var(--zk-radius) !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .complaint-item:hover {
+    box-shadow: var(--zk-shadow-md) !important;
+}
+
+html[data-theme="zakzak"] .complaint-item.new {
+    border-left-color: var(--zk-blue-500) !important;
+    background: linear-gradient(135deg, var(--zk-blue-50) 0%, #ffffff 100%) !important;
+}
+
+html[data-theme="zakzak"] .complaint-item.in_progress {
+    border-left-color: var(--zk-accent-amber) !important;
+}
+
+html[data-theme="zakzak"] .complaint-item.resolved {
+    border-left-color: var(--zk-accent-emerald) !important;
+}
+
+html[data-theme="zakzak"] .complaint-item.overdue {
+    border-left-color: var(--zk-accent-rose) !important;
+}
+
+html[data-theme="zakzak"] .complaint-item.escalated {
+    border-left-color: var(--zk-accent-indigo) !important;
+}
+
+html[data-theme="zakzak"] .complaint-item h6 a {
+    color: var(--zk-blue-500) !important;
+}
+
+/* FAB button - purple → blue */
+html[data-theme="zakzak"] .fab-button {
+    background: var(--zk-gradient-main) !important;
+    box-shadow: 0 5px 20px rgba(37, 99, 235, 0.4) !important;
+}
+
+html[data-theme="zakzak"] .fab-button:hover {
+    box-shadow: 0 8px 30px rgba(37, 99, 235, 0.6) !important;
+}
+
+/* Btn modern */
+html[data-theme="zakzak"] .btn-modern {
+    border-radius: 10px !important;
+}
+
+/* Metric grid items */
+html[data-theme="zakzak"] .metric-item {
+    border-radius: var(--zk-radius) !important;
+    border-color: rgba(147, 197, 253, 0.3) !important;
+}
+
+html[data-theme="zakzak"] .chart-container .metric-item {
+    background: var(--zk-gradient-card) !important;
+    border: 1px solid var(--zk-silver-200) !important;
+}
+
+html[data-theme="zakzak"] .chart-container .metric-value {
+    color: var(--zk-blue-700) !important;
+}
+
+html[data-theme="zakzak"] .chart-container .metric-label {
+    color: var(--zk-silver-700) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Complaints - Detail Page
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .complaint-header {
+    background: var(--zk-gradient-navbar) !important;
+    border-radius: var(--zk-radius-lg) !important;
+}
+
+html[data-theme="zakzak"] .info-card {
+    background: var(--zk-gradient-card) !important;
+    border-radius: var(--zk-radius) !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+    border: 1px solid var(--zk-silver-200) !important;
+}
+
+/* Timeline - neutral track, blue accents */
+html[data-theme="zakzak"] .timeline::before {
+    background: var(--zk-silver-300) !important;
+}
+
+html[data-theme="zakzak"] .timeline-item.status_change .timeline-icon {
+    background: var(--zk-blue-100) !important;
+    color: var(--zk-blue-600) !important;
+}
+
+html[data-theme="zakzak"] .timeline-item.assignment .timeline-icon {
+    background: #dbeafe !important;
+    color: var(--zk-blue-500) !important;
+}
+
+html[data-theme="zakzak"] .timeline-item.escalation .timeline-icon {
+    background: #fef2f2 !important;
+    color: var(--zk-accent-rose) !important;
+}
+
+html[data-theme="zakzak"] .timeline-item.resolution .timeline-icon {
+    background: #d1fae5 !important;
+    color: var(--zk-accent-emerald) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Complaints - Form Page
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .form-header {
+    background: var(--zk-gradient-navbar) !important;
+    border-radius: var(--zk-radius-lg) !important;
+}
+
+html[data-theme="zakzak"] .form-card {
+    background: var(--zk-gradient-card) !important;
+    border-radius: var(--zk-radius) !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+    border: 1px solid var(--zk-silver-200) !important;
+}
+
+html[data-theme="zakzak"] .form-section-title {
+    color: var(--zk-blue-700) !important;
+    border-bottom-color: var(--zk-blue-100) !important;
+}
+
+html[data-theme="zakzak"] .customer-info-card {
+    border-color: var(--zk-blue-300) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Complaints - List Page
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .complaint-row {
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .complaint-row.new {
+    border-left-color: var(--zk-blue-500) !important;
+}
+
+html[data-theme="zakzak"] .complaint-row.in_progress {
+    border-left-color: var(--zk-accent-amber) !important;
+}
+
+html[data-theme="zakzak"] .complaint-row.resolved {
+    border-left-color: var(--zk-accent-emerald) !important;
+}
+
+html[data-theme="zakzak"] .complaint-row.overdue {
+    border-left-color: var(--zk-accent-rose) !important;
+}
+
+html[data-theme="zakzak"] .complaint-row.escalated {
+    border-left-color: var(--zk-accent-indigo) !important;
+}
+
+html[data-theme="zakzak"] .complaint-row.pending_evaluation {
+    border-left-color: var(--zk-accent-amber) !important;
+}
+
+html[data-theme="zakzak"] .complaint-row.closed {
+    border-left-color: var(--zk-silver-600) !important;
+}
+
+html[data-theme="zakzak"] .priority-indicator.priority-urgent {
+    background-color: var(--zk-accent-rose) !important;
+}
+
+html[data-theme="zakzak"] .priority-indicator.priority-high {
+    background-color: #f97316 !important;
+}
+
+html[data-theme="zakzak"] .priority-indicator.priority-medium {
+    background-color: var(--zk-accent-amber) !important;
+}
+
+html[data-theme="zakzak"] .priority-indicator.priority-low {
+    background-color: var(--zk-accent-teal) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Base.html Components - User Dropdown
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] #customUserDropdown {
+    background: #fff !important;
+    border: 1px solid var(--zk-silver-200) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-lg), 0 0 0 1px rgba(37, 99, 235, 0.05) !important;
+}
+
+html[data-theme="zakzak"] #customUserDropdown .dropdown-header {
+    background: var(--zk-blue-50) !important;
+    color: var(--zk-blue-700) !important;
+    border-bottom-color: var(--zk-silver-200) !important;
+    font-weight: 700 !important;
+}
+
+html[data-theme="zakzak"] #customUserDropdown .dropdown-item {
+    color: var(--zk-silver-800) !important;
+    transition: var(--zk-transition) !important;
+    border-radius: 6px !important;
+    margin: 2px 6px !important;
+}
+
+html[data-theme="zakzak"] #customUserDropdown .dropdown-item:hover {
+    background: var(--zk-blue-50) !important;
+    color: var(--zk-blue-600) !important;
+}
+
+html[data-theme="zakzak"] #customUserDropdown .dropdown-item i {
+    color: var(--zk-blue-400) !important;
+    width: 20px;
+}
+
+html[data-theme="zakzak"] #customUserDropdown hr {
+    border-color: var(--zk-silver-200) !important;
+}
+
+/* Theme selector within user dropdown */
+html[data-theme="zakzak"] #themeSelector {
+    border: 2px solid var(--zk-silver-300) !important;
+    border-radius: 8px !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] #themeSelector:focus {
+    border-color: var(--zk-blue-400) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Base.html Components - Notifications Dropdown
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] #notificationsDropdown + .dropdown-menu {
+    background: #fff !important;
+    border: 1px solid var(--zk-silver-200) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-lg) !important;
+}
+
+html[data-theme="zakzak"] #notificationsDropdown + .dropdown-menu .dropdown-header {
+    background: var(--zk-blue-50) !important;
+    border-bottom-color: var(--zk-silver-200) !important;
+    color: var(--zk-blue-700) !important;
+}
+
+html[data-theme="zakzak"] .notification-dropdown-item:hover {
+    background: var(--zk-blue-50) !important;
+    border-color: var(--zk-blue-100) !important;
+}
+
+html[data-theme="zakzak"] .notification-dropdown-item.bg-light {
+    background: var(--zk-blue-50) !important;
+    border-color: var(--zk-blue-200) !important;
+}
+
+html[data-theme="zakzak"] .notification-dropdown-item h6 {
+    color: var(--zk-silver-900) !important;
+}
+
+/* Notification scrollbar */
+html[data-theme="zakzak"] #notificationsDropdown + .dropdown-menu::-webkit-scrollbar-thumb {
+    background: var(--zk-silver-400) !important;
+}
+
+html[data-theme="zakzak"] #notificationsDropdown + .dropdown-menu::-webkit-scrollbar-track {
+    background: var(--zk-silver-100) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Escalated Complaints Popup
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .escalated-complaints-popup {
+    background: #fff !important;
+    border: 3px solid var(--zk-accent-rose) !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: 0 15px 40px rgba(244, 63, 94, 0.35) !important;
+}
+
+html[data-theme="zakzak"] .escalated-complaints-popup .popup-header {
+    background: linear-gradient(135deg, #be123c, var(--zk-accent-rose)) !important;
+    border-radius: 13px 13px 0 0 !important;
+}
+
+html[data-theme="zakzak"] .escalated-complaints-popup .complaint-item {
+    border-left-color: var(--zk-accent-rose) !important;
+    background: #fff5f5 !important;
+    border-radius: 8px !important;
+}
+
+/* Assigned complaints popup */
+html[data-theme="zakzak"] .assigned-complaints-popup {
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-lg) !important;
+}
+
+html[data-theme="zakzak"] .assigned-complaints-popup .popup-content {
+    border-radius: var(--zk-radius-lg) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Branch Message Popup
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .branch-message-popup {
+    background: #fff !important;
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-lg) !important;
+    border: 1px solid var(--zk-silver-200) !important;
+}
+
+html[data-theme="zakzak"] .branch-message-title {
+    color: var(--zk-blue-700) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Installations Dashboard - Override hardcoded colors
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .installation-card-hover,
+html[data-theme="zakzak"] .dashboard-card-hover {
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .installation-card-hover:hover,
+html[data-theme="zakzak"] .dashboard-card-hover:hover {
+    box-shadow: var(--zk-shadow-md) !important;
+}
+
+/* Fix installations overriding text colors */
+html[data-theme="zakzak"] .border-purple {
+    border-color: var(--zk-accent-indigo) !important;
+}
+
+html[data-theme="zakzak"] .border-teal {
+    border-color: var(--zk-accent-teal) !important;
+}
+
+html[data-theme="zakzak"] .border-orange {
+    border-color: #f97316 !important;
+}
+
+html[data-theme="zakzak"] .border-indigo {
+    border-color: var(--zk-accent-indigo) !important;
+}
+
+html[data-theme="zakzak"] .border-pink {
+    border-color: var(--zk-accent-rose) !important;
+}
+
+html[data-theme="zakzak"] .text-purple {
+    color: var(--zk-accent-indigo) !important;
+}
+
+html[data-theme="zakzak"] .text-teal {
+    color: var(--zk-accent-teal) !important;
+}
+
+html[data-theme="zakzak"] .text-orange {
+    color: #f97316 !important;
+}
+
+html[data-theme="zakzak"] .text-indigo {
+    color: var(--zk-accent-indigo) !important;
+}
+
+html[data-theme="zakzak"] .text-pink {
+    color: var(--zk-accent-rose) !important;
+}
+
+html[data-theme="zakzak"] .text-gray-800 {
+    color: var(--zk-silver-800) !important;
+}
+
+/* Badge gradients from installations */
+html[data-theme="zakzak"] .badge-primary {
+    background: linear-gradient(135deg, var(--zk-blue-600), var(--zk-blue-400)) !important;
+}
+
+html[data-theme="zakzak"] .badge-success {
+    background: linear-gradient(135deg, #059669, var(--zk-accent-emerald)) !important;
+}
+
+html[data-theme="zakzak"] .badge-warning {
+    background: linear-gradient(135deg, #d97706, var(--zk-accent-amber)) !important;
+}
+
+html[data-theme="zakzak"] .badge-info {
+    background: linear-gradient(135deg, #0891b2, var(--zk-accent-cyan)) !important;
+}
+
+html[data-theme="zakzak"] .badge-danger {
+    background: linear-gradient(135deg, #be123c, var(--zk-accent-rose)) !important;
+}
+
+html[data-theme="zakzak"] .badge-secondary {
+    background: linear-gradient(135deg, var(--zk-silver-700), var(--zk-silver-500)) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Manufacturing Dashboard
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .alert-card {
+    background: linear-gradient(135deg, #be123c, var(--zk-accent-rose)) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+html[data-theme="zakzak"] .clickable-card {
+    transition: var(--zk-transition) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+html[data-theme="zakzak"] .clickable-card:hover {
+    box-shadow: var(--zk-shadow-md) !important;
+}
+
+html[data-theme="zakzak"] .metric-card {
+    background: var(--zk-gradient-card) !important;
+    border: 1px solid var(--zk-silver-200) !important;
+    border-radius: var(--zk-radius) !important;
+    box-shadow: var(--zk-shadow-sm) !important;
+}
+
+html[data-theme="zakzak"] .metric-number {
+    color: var(--zk-blue-600) !important;
+}
+
+html[data-theme="zakzak"] .metric-label {
+    color: var(--zk-silver-600) !important;
+}
+
+html[data-theme="zakzak"] .vip-card {
+    border-radius: var(--zk-radius) !important;
+}
+
+html[data-theme="zakzak"] .production-line-card {
+    border-radius: var(--zk-radius) !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .production-line-card:hover {
+    border-left-color: var(--zk-blue-500) !important;
+}
+
+html[data-theme="zakzak"] .info-card[style*="linear-gradient(135deg, #4ecdc4"] {
+    background: linear-gradient(135deg, var(--zk-blue-500), var(--zk-accent-cyan)) !important;
+    border-radius: var(--zk-radius-lg) !important;
+}
+
+html[data-theme="zakzak"] .status-badge {
+    border-radius: 20px !important;
+}
+
+html[data-theme="zakzak"] .recent-orders-card {
+    background: var(--zk-gradient-card) !important;
+    border: 1px solid var(--zk-silver-200) !important;
+    border-radius: var(--zk-radius) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Inventory Dashboard Gaps
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .stat-card-icon {
+    border-radius: 12px !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .stat-card-value {
+    color: var(--zk-silver-900) !important;
+    font-weight: 800 !important;
+}
+
+html[data-theme="zakzak"] .stat-card-title {
+    color: var(--zk-silver-600) !important;
+    font-weight: 600 !important;
+}
+
+html[data-theme="zakzak"] .stat-card-footer {
+    border-top: 1px solid var(--zk-silver-200) !important;
+}
+
+html[data-theme="zakzak"] .dashboard-container {
+    position: relative;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Cutting Dashboard minor gaps
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .stats-icon {
+    color: var(--zk-blue-400) !important;
+}
+
+html[data-theme="zakzak"] .text-xs {
+    color: var(--zk-silver-600);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Select2 (used in complaints + other forms)
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .select2-container--bootstrap-5 .select2-selection {
+    border: 2px solid var(--zk-silver-300) !important;
+    border-radius: 10px !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .select2-container--bootstrap-5 .select2-selection--single:focus,
+html[data-theme="zakzak"] .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+    border-color: var(--zk-blue-400) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+}
+
+html[data-theme="zakzak"] .select2-container--bootstrap-5 .select2-dropdown {
+    border: 1px solid var(--zk-silver-300) !important;
+    border-radius: var(--zk-radius) !important;
+    box-shadow: var(--zk-shadow-md) !important;
+}
+
+html[data-theme="zakzak"] .select2-container--bootstrap-5 .select2-results__option--highlighted {
+    background: var(--zk-blue-500) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   DataTables Integration
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .dataTables_wrapper .dataTables_filter input {
+    border: 2px solid var(--zk-silver-300) !important;
+    border-radius: 8px !important;
+    transition: var(--zk-transition) !important;
+}
+
+html[data-theme="zakzak"] .dataTables_wrapper .dataTables_filter input:focus {
+    border-color: var(--zk-blue-400) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+}
+
+html[data-theme="zakzak"] .dataTables_wrapper .dataTables_length select {
+    border: 1px solid var(--zk-silver-300) !important;
+    border-radius: 6px !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Quick Actions (complaints + other fixed-position elements)
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .quick-actions .fab-button,
+html[data-theme="zakzak"] .quick-actions button {
+    background: var(--zk-gradient-main) !important;
+    border: none !important;
+    box-shadow: 0 5px 20px rgba(37, 99, 235, 0.35) !important;
+}
+
+html[data-theme="zakzak"] .quick-actions .fab-button:hover,
+html[data-theme="zakzak"] .quick-actions button:hover {
+    box-shadow: 0 8px 30px rgba(37, 99, 235, 0.5) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   SweetAlert2 - Enhanced
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .swal2-popup {
+    border-radius: var(--zk-radius-lg) !important;
+    box-shadow: var(--zk-shadow-lg) !important;
+}
+
+html[data-theme="zakzak"] .swal2-title {
+    color: var(--zk-silver-900) !important;
+}
+
+html[data-theme="zakzak"] .swal2-confirm {
+    background: var(--zk-gradient-main) !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+}
+
+html[data-theme="zakzak"] .swal2-cancel {
+    border-radius: 10px !important;
+    background: var(--zk-silver-200) !important;
+    color: var(--zk-silver-800) !important;
+}
+
+html[data-theme="zakzak"] .swal2-deny {
+    border-radius: 10px !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Tooltip Overrides
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .tooltip-inner {
+    background: var(--zk-blue-800) !important;
+    border-radius: 8px !important;
+    font-size: 0.78rem;
+    padding: 6px 12px;
+}
+
+html[data-theme="zakzak"] .bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: var(--zk-blue-800) !important;
+}
+
+html[data-theme="zakzak"] .bs-tooltip-bottom .tooltip-arrow::before {
+    border-bottom-color: var(--zk-blue-800) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Accordion (used in various detail pages)
+   ═══════════════════════════════════════════════════════════════════ */
+html[data-theme="zakzak"] .accordion-button:not(.collapsed) {
+    background: var(--zk-blue-50) !important;
+    color: var(--zk-blue-700) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="zakzak"] .accordion-button:focus {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+    border-color: var(--zk-blue-400) !important;
+}
+
+html[data-theme="zakzak"] .accordion-item {
+    border-color: var(--zk-silver-200) !important;
+    border-radius: var(--zk-radius) !important;
+    overflow: hidden;
+}

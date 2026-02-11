@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load accounting_numbers %}
 {% block title %}الميزانية العمومية{% endblock %}
 {% block content %}
     <div class="container-fluid py-4">
@@ -36,13 +37,13 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for account in asset_accounts %}
+                                    {% for item in asset_data %}
                                         <tr>
                                             <td>
-                                                <span class="badge bg-secondary me-2">{{ account.code }}</span>
-                                                {{ account.name }}
+                                                <span class="badge bg-secondary me-2">{{ item.account.code }}</span>
+                                                {{ item.account.name }}
                                             </td>
-                                            <td class="text-end">{{ account.current_balance|floatformat:2 }}</td>
+                                            <td class="text-end">{{ item.balance|floatformat:2|en }}</td>
                                         </tr>
                                     {% empty %}
                                         <tr>
@@ -53,7 +54,7 @@
                                 <tfoot class="table-primary">
                                     <tr class="fw-bold">
                                         <th>إجمالي الأصول</th>
-                                        <th class="text-end">{{ total_assets|floatformat:2 }} {{ currency_symbol }}</th>
+                                        <th class="text-end">{{ total_assets|floatformat:2|en }} {{ currency_symbol }}</th>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -81,13 +82,13 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for account in liability_accounts %}
+                                    {% for item in liability_data %}
                                         <tr>
                                             <td>
-                                                <span class="badge bg-secondary me-2">{{ account.code }}</span>
-                                                {{ account.name }}
+                                                <span class="badge bg-secondary me-2">{{ item.account.code }}</span>
+                                                {{ item.account.name }}
                                             </td>
-                                            <td class="text-end">{{ account.current_balance|floatformat:2 }}</td>
+                                            <td class="text-end">{{ item.balance|floatformat:2|en }}</td>
                                         </tr>
                                     {% empty %}
                                         <tr>
@@ -98,7 +99,7 @@
                                 <tfoot class="table-warning">
                                     <tr class="fw-bold">
                                         <th>إجمالي الخصوم</th>
-                                        <th class="text-end">{{ total_liabilities|floatformat:2 }} {{ currency_symbol }}</th>
+                                        <th class="text-end">{{ total_liabilities|floatformat:2|en }} {{ currency_symbol }}</th>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -123,13 +124,13 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for account in equity_accounts %}
+                                    {% for item in equity_data %}
                                         <tr>
                                             <td>
-                                                <span class="badge bg-secondary me-2">{{ account.code }}</span>
-                                                {{ account.name }}
+                                                <span class="badge bg-secondary me-2">{{ item.account.code }}</span>
+                                                {{ item.account.name }}
                                             </td>
-                                            <td class="text-end">{{ account.current_balance|floatformat:2 }}</td>
+                                            <td class="text-end">{{ item.balance|floatformat:2|en }}</td>
                                         </tr>
                                     {% empty %}
                                         <tr>
@@ -140,7 +141,7 @@
                                 <tfoot class="table-info">
                                     <tr class="fw-bold">
                                         <th>إجمالي حقوق الملكية</th>
-                                        <th class="text-end">{{ total_equity|floatformat:2 }} {{ currency_symbol }}</th>
+                                        <th class="text-end">{{ total_equity|floatformat:2|en }} {{ currency_symbol }}</th>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -157,12 +158,12 @@
                         <div class="row text-center">
                             <div class="col-md-4">
                                 <h6 class="text-muted">إجمالي الأصول</h6>
-                                <h3 class="text-primary">{{ total_assets|floatformat:2 }} {{ currency_symbol }}</h3>
+                                <h3 class="text-primary">{{ total_assets|floatformat:2|en }} {{ currency_symbol }}</h3>
                             </div>
                             <div class="col-md-4">
                                 <h6 class="text-muted">إجمالي الخصوم + حقوق الملكية</h6>
-                                <h3 class="text-warning">{{ total_liabilities|floatformat:2 }}</h3>
-                                <h3 class="text-info">+ {{ total_equity|floatformat:2 }}</h3>
+                                <h3 class="text-warning">{{ total_liabilities|floatformat:2|en }}</h3>
+                                <h3 class="text-info">+ {{ total_equity|floatformat:2|en }}</h3>
                             </div>
                             <div class="col-md-4">
                                 {% with total_liabilities_equity=total_liabilities|add:total_equity %}

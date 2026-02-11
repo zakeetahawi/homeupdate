@@ -1,4 +1,8 @@
+import logging
+
 from django.apps import AppConfig
+
+logger = logging.getLogger('accounting')
 
 
 class AccountingConfig(AppConfig):
@@ -16,5 +20,6 @@ class AccountingConfig(AppConfig):
             signals.register_accounting_signals()
             signals.register_order_signals()
             signals.register_customer_signals()
+            logger.info("Accounting signals registered successfully")
         except Exception as e:
-            print(f"Error registering accounting signals: {e}")
+            logger.error(f"Error registering accounting signals: {e}", exc_info=True)

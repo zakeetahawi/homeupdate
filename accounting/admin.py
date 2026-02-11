@@ -8,11 +8,10 @@ from .models import (
     Account,
     AccountingSettings,
     AccountType,
-    AdvanceUsage,
     BankAccount,
-    CustomerAdvance,
     CustomerFinancialSummary,
     Transaction,
+    TransactionAttachment,
     TransactionLine,
 )
 
@@ -36,18 +35,25 @@ class TransactionLineInline(admin.TabularInline):
         return super().get_queryset(request).select_related("account")
 
 
-class AdvanceUsageInline(admin.TabularInline):
+class TransactionAttachmentInline(admin.TabularInline):
     """
-    استخدامات السلفة
+    مرفقات القيد المحاسبي
     """
 
-    model = AdvanceUsage
+    model = TransactionAttachment
     extra = 0
-    readonly_fields = ["order", "amount", "created_at", "created_by"]
-    can_delete = False
+    fields = ["file", "file_name", "description", "uploaded_by", "uploaded_at"]
+    readonly_fields = ["uploaded_by", "uploaded_at"]
 
-    def has_add_permission(self, request, obj=None):
-        return False
+    def save_model(self, request, obj, form, change):
+        if not obj.uploaded_by:
+            obj.uploaded_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+# ============================================
+# Model Admin Classes  
+# ============================================
 
 
 class AccountChildInline(admin.TabularInline):
@@ -286,7 +292,7 @@ class TransactionAdmin(admin.ModelAdmin):
         "posted_at",
     ]
     autocomplete_fields = ["order", "customer", "payment"]
-    inlines = [TransactionLineInline]
+    inlines = [TransactionLineInline, TransactionAttachmentInline]
     actions = ["post_transactions", "void_transactions"]
 
     def total_amount_display(self, obj):
@@ -399,179 +405,6 @@ class TransactionLineAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("transaction", "account")
-
-
-@admin.register(CustomerAdvance)
-class CustomerAdvanceAdmin(admin.ModelAdmin):
-    """
-    إدارة سلف العملاء
-    """
-
-    list_display = [
-        "customer_link",
-        "advance_number",
-        "amount",
-        "remaining_display",
-        "payment_method",
-        "status_badge",
-        "created_at",
-    ]
-    list_filter = ["status", "payment_method", "branch"]
-    search_fields = [
-        "customer__name",
-        "customer__phone",
-        "receipt_number",
-        "advance_number",
-        "notes",
-    ]
-    date_hierarchy = "created_at"
-    ordering = ["-created_at"]
-    autocomplete_fields = ["customer", "transaction"]
-    list_per_page = 30
-    inlines = [AdvanceUsageInline]
-
-    fieldsets = (
-        ("معلومات العميل", {"fields": ("customer", "branch")}),
-        (
-            "تفاصيل السلفة",
-            {
-                "fields": (
-                    "advance_number",
-                    "amount",
-                    "remaining_amount",
-                    "payment_method",
-                    "receipt_number",
-                )
-            },
-        ),
-        ("الحالة", {"fields": ("status", "notes")}),
-        (
-            "القيد المحاسبي",
-            {
-                "fields": ("transaction",),
-                "classes": ("collapse",),
-            },
-        ),
-        (
-            "معلومات النظام",
-            {
-                "fields": ("created_by", "created_at", "updated_at"),
-                "classes": ("collapse",),
-            },
-        ),
-    )
-    readonly_fields = [
-        "advance_number",
-        "remaining_amount",
-        "created_by",
-        "created_at",
-        "updated_at",
-    ]
-    actions = ["mark_as_used"]
-
-    def customer_link(self, obj):
-        url = reverse("admin:customers_customer_change", args=[obj.customer.id])
-        return format_html('<a href="{}">{}</a>', url, obj.customer.name)
-
-    customer_link.short_description = "العميل"
-
-    def remaining_display(self, obj):
-        remaining = obj.remaining_amount
-        if remaining > 0:
-            return format_html(
-                '<span style="color: green; font-weight: bold;">{}</span>',
-                f"{remaining:,.2f}",
-            )
-        from django.utils.safestring import mark_safe
-
-        return mark_safe('<span style="color: gray;">0.00</span>')
-
-    remaining_display.short_description = "المتبقي"
-
-    def status_badge(self, obj):
-        colors = {
-            "active": "#28a745",
-            "partially_used": "#17a2b8",
-            "fully_used": "#6c757d",
-            "refunded": "#dc3545",
-            "cancelled": "#6c757d",
-        }
-        labels = {
-            "active": "نشط",
-            "partially_used": "مستخدم جزئياً",
-            "fully_used": "مستخدم بالكامل",
-            "refunded": "مسترد",
-            "cancelled": "ملغي",
-        }
-        return format_html(
-            '<span style="background-color: {}; color: white; padding: 2px 8px; border-radius: 3px;">{}</span>',
-            colors.get(obj.status, "#000"),
-            labels.get(obj.status, obj.status),
-        )
-
-    status_badge.short_description = "الحالة"
-
-    def save_model(self, request, obj, form, change):
-        if not change:
-            obj.created_by = request.user
-        super().save_model(request, obj, form, change)
-
-    def mark_as_used(self, request, queryset):
-        count = queryset.filter(status="active").update(status="fully_used")
-        self.message_user(request, f'تم تحديث حالة {count} سلفة إلى "مستخدم"')
-
-    mark_as_used.short_description = "تحديث الحالة إلى مستخدم"
-
-    def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .select_related("customer", "branch", "created_by")
-        )
-
-
-@admin.register(AdvanceUsage)
-class AdvanceUsageAdmin(admin.ModelAdmin):
-    """
-    إدارة استخدامات السلف
-    """
-
-    list_display = ["advance_link", "order_link", "amount", "created_at", "created_by"]
-    list_filter = ["advance__status"]
-    search_fields = [
-        "advance__customer__name",
-        "order__order_number",
-        "advance__advance_number",
-    ]
-    date_hierarchy = "created_at"
-    readonly_fields = ["advance", "order", "amount", "created_at", "created_by"]
-
-    def advance_link(self, obj):
-        url = reverse("admin:accounting_customeradvance_change", args=[obj.advance.id])
-        return format_html('<a href="{}">{}</a>', url, str(obj.advance))
-
-    advance_link.short_description = "السلفة"
-
-    def order_link(self, obj):
-        if obj.order:
-            url = reverse("admin:orders_order_change", args=[obj.order.id])
-            return format_html('<a href="{}">{}</a>', url, obj.order.order_number)
-        return "-"
-
-    order_link.short_description = "الطلب"
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .select_related("advance", "advance__customer", "order", "created_by")
-        )
 
 
 @admin.register(CustomerFinancialSummary)
@@ -730,7 +563,6 @@ class AccountingSettingsAdmin(admin.ModelAdmin):
                     "default_bank_account",
                     "default_receivables_account",
                     "default_revenue_account",
-                    "default_advances_account",
                 )
             },
         ),
@@ -752,7 +584,6 @@ class AccountingSettingsAdmin(admin.ModelAdmin):
         "default_bank_account",
         "default_receivables_account",
         "default_revenue_account",
-        "default_advances_account",
     ]
 
     def has_add_permission(self, request):

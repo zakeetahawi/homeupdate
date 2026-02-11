@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load accounting_numbers %}
 {% block title %}قائمة الحسابات{% endblock %}
 {% block content %}
     <div class="container-fluid py-4">
@@ -86,7 +87,13 @@
                                             </td>
                                             <td>
                                                 <a href="{% url 'accounting:account_detail' account.pk %}">{{ account.name }}</a>
-                                                {% if account.is_customer_account %}<span class="badge bg-info ms-1">عميل</span>{% endif %}
+                                                {% if account.is_customer_account %}
+                                                    <span class="badge bg-info ms-1">عميل</span>
+                                                {% elif account.code == '1121' %}
+                                                    <span class="badge bg-success ms-1">
+                                                        <i class="fas fa-users"></i> {{ customer_accounts_count|default:0 }} عميل
+                                                    </span>
+                                                {% endif %}
                                             </td>
                                             <td>{{ account.account_type.name }}</td>
                                             <td>
@@ -98,7 +105,7 @@
                                             </td>
                                             <td>{{ account.level }}</td>
                                             <td class="{% if account.current_balance > 0 %}text-success{% elif account.current_balance < 0 %}text-danger{% else %}text-muted{% endif %} fw-bold">
-                                                {{ account.current_balance|floatformat:2 }}
+                                                {{ account.current_balance|floatformat:2|en }}
                                             </td>
                                             <td>
                                                 {% if account.is_active %}
@@ -142,5 +149,29 @@
                 </div>
             </div>
         </div>
+        <!-- Pagination -->
+        {% if accounts.has_other_pages %}
+        <div class="row mt-3">
+            <div class="col-12">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if accounts.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ accounts.previous_page_number }}&type={{ request.GET.type }}&q={{ request.GET.q }}">&laquo; السابق</a>
+                            </li>
+                        {% endif %}
+                        <li class="page-item disabled">
+                            <span class="page-link">صفحة {{ accounts.number }} من {{ accounts.paginator.num_pages }}</span>
+                        </li>
+                        {% if accounts.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ accounts.next_page_number }}&type={{ request.GET.type }}&q={{ request.GET.q }}">التالي &raquo;</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
     </div>
 {% endblock %}

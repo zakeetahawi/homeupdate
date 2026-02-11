@@ -64,6 +64,9 @@
         <!-- Custom Theme Enhancements -->
         <link rel="stylesheet"
               href="{% static 'css/custom-theme-enhancements.css' %}?v={% now 'U' %}">
+        <!-- ZakZak Theme - أزرق وفضي -->
+        <link rel="stylesheet"
+              href="{% static 'css/zakzak-theme.css' %}?v={% now 'U' %}">
         <!-- Unified Status System CSS -->
         <link rel="stylesheet" href="{% static 'css/unified-status-system.css' %}">
         <!-- Unified Status Colors CSS -->
@@ -1061,6 +1064,7 @@
             <option value="default">الثيم الإفتراضي</option>
             <option value="custom-theme">نسخة الثيم الإفتراضي القابلة للتعديل</option>
             <option value="ornamental">الثيم الزخرفي</option>
+            <option value="zakzak">ثيم ZakZak - أزرق وفضي</option>
         </select>
     </div>
     <hr class="my-1">
@@ -2754,5 +2758,7 @@
 {% endif %}
 <!-- Floating Chat Button JS -->
 <script src="{% static 'js/floating-button.js' %}?v={% now 'U' %}"></script>
+<!-- Arabic to English Number Converter -->
+<script src="{% static 'js/arabic-numbers-converter.js' %}"></script>
 </body>
 </html>

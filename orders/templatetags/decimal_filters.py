@@ -1,6 +1,7 @@
 from decimal import ROUND_HALF_UP, Decimal
 
 from django import template
+from core.utils.general import convert_arabic_numbers_to_english
 
 register = template.Library()
 
@@ -52,6 +53,9 @@ def clean_decimal(value, max_decimals=2):
             str_value = str_value.rstrip("0")
             # إزالة الفاصلة إذا لم يبق أي رقم بعدها
             str_value = str_value.rstrip(".")
+
+        # تحويل الأرقام العربية إلى إنجليزية
+        str_value = convert_arabic_numbers_to_english(str_value)
 
         return str_value
 

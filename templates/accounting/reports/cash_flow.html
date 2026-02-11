@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load accounting_numbers %}
+{% block title %}التدفقات النقدية{% endblock %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">
+                        <i class="fas fa-money-bill-wave me-2"></i>
+                        تقرير التدفقات النقدية
+                    </h2>
+                    <div>
+                        <a href="{% url 'accounting:reports' %}" class="btn btn-outline-secondary me-2">
+                            <i class="fas fa-arrow-right me-1"></i> التقارير
+                        </a>
+                        <button onclick="window.print()" class="btn btn-outline-primary">
+                            <i class="fas fa-print me-1"></i> طباعة
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- فلتر التاريخ -->
+        <div class="row mb-4 no-print">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="get" class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">من تاريخ</label>
+                                {{ form.start_date }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">إلى تاريخ</label>
+                                {{ form.end_date }}
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter me-1"></i> عرض
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- الأنشطة التشغيلية -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>أولاً: التدفقات النقدية من الأنشطة التشغيلية</h5>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>الكود</th>
+                            <th>اسم الحساب</th>
+                            <th>النوع</th>
+                            <th class="text-end">مدين</th>
+                            <th class="text-end">دائن</th>
+                            <th class="text-end">الصافي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in operating_items %}
+                        <tr>
+                            <td>{{ item.code }}</td>
+                            <td>{{ item.name }}</td>
+                            <td><span class="badge bg-info">{{ item.type }}</span></td>
+                            <td class="text-end">{{ item.debit|floatformat:2|en }}</td>
+                            <td class="text-end">{{ item.credit|floatformat:2|en }}</td>
+                            <td class="text-end {% if item.net > 0 %}text-success{% elif item.net < 0 %}text-danger{% endif %}">
+                                {{ item.net|floatformat:2|en }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-3">لا توجد حركات</td></tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-primary">
+                        <tr class="fw-bold">
+                            <td colspan="5" class="text-start">صافي التدفقات التشغيلية</td>
+                            <td class="text-end {% if total_operating > 0 %}text-success{% elif total_operating < 0 %}text-danger{% endif %}">
+                                {{ total_operating|floatformat:2|en }} {{ currency_symbol }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- الأنشطة الاستثمارية -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>ثانياً: التدفقات النقدية من الأنشطة الاستثمارية</h5>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>الكود</th>
+                            <th>اسم الحساب</th>
+                            <th>النوع</th>
+                            <th class="text-end">مدين</th>
+                            <th class="text-end">دائن</th>
+                            <th class="text-end">الصافي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in investing_items %}
+                        <tr>
+                            <td>{{ item.code }}</td>
+                            <td>{{ item.name }}</td>
+                            <td><span class="badge bg-info">{{ item.type }}</span></td>
+                            <td class="text-end">{{ item.debit|floatformat:2|en }}</td>
+                            <td class="text-end">{{ item.credit|floatformat:2|en }}</td>
+                            <td class="text-end {% if item.net > 0 %}text-success{% elif item.net < 0 %}text-danger{% endif %}">
+                                {{ item.net|floatformat:2|en }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-3">لا توجد حركات</td></tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-warning">
+                        <tr class="fw-bold">
+                            <td colspan="5" class="text-start">صافي التدفقات الاستثمارية</td>
+                            <td class="text-end {% if total_investing > 0 %}text-success{% elif total_investing < 0 %}text-danger{% endif %}">
+                                {{ total_investing|floatformat:2|en }} {{ currency_symbol }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- الأنشطة التمويلية -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-hand-holding-usd me-2"></i>ثالثاً: التدفقات النقدية من الأنشطة التمويلية</h5>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>الكود</th>
+                            <th>اسم الحساب</th>
+                            <th>النوع</th>
+                            <th class="text-end">مدين</th>
+                            <th class="text-end">دائن</th>
+                            <th class="text-end">الصافي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in financing_items %}
+                        <tr>
+                            <td>{{ item.code }}</td>
+                            <td>{{ item.name }}</td>
+                            <td><span class="badge bg-info">{{ item.type }}</span></td>
+                            <td class="text-end">{{ item.debit|floatformat:2|en }}</td>
+                            <td class="text-end">{{ item.credit|floatformat:2|en }}</td>
+                            <td class="text-end {% if item.net > 0 %}text-success{% elif item.net < 0 %}text-danger{% endif %}">
+                                {{ item.net|floatformat:2|en }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-3">لا توجد حركات</td></tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-success">
+                        <tr class="fw-bold">
+                            <td colspan="5" class="text-start">صافي التدفقات التمويلية</td>
+                            <td class="text-end {% if total_financing > 0 %}text-success{% elif total_financing < 0 %}text-danger{% endif %}">
+                                {{ total_financing|floatformat:2|en }} {{ currency_symbol }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- الملخص -->
+        <div class="card border-dark">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>ملخص التدفقات النقدية</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="fw-bold">صافي التدفقات التشغيلية</td>
+                            <td class="text-end {% if total_operating > 0 %}text-success{% elif total_operating < 0 %}text-danger{% endif %}">
+                                {{ total_operating|floatformat:2|en }} {{ currency_symbol }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">صافي التدفقات الاستثمارية</td>
+                            <td class="text-end {% if total_investing > 0 %}text-success{% elif total_investing < 0 %}text-danger{% endif %}">
+                                {{ total_investing|floatformat:2|en }} {{ currency_symbol }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">صافي التدفقات التمويلية</td>
+                            <td class="text-end {% if total_financing > 0 %}text-success{% elif total_financing < 0 %}text-danger{% endif %}">
+                                {{ total_financing|floatformat:2|en }} {{ currency_symbol }}
+                            </td>
+                        </tr>
+                        <tr class="table-dark">
+                            <td class="fw-bold text-white">صافي التغير في النقد</td>
+                            <td class="text-end fw-bold {% if net_change > 0 %}text-success{% elif net_change < 0 %}text-danger{% else %}text-white{% endif %}">
+                                {{ net_change|floatformat:2|en }} {{ currency_symbol }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

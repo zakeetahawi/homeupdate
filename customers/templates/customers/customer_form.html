@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load accounting_numbers %}
 {% block title %}{{ title }} - نظام الخواجه{% endblock %}
 {% block extra_css %}
     <style>
@@ -353,7 +354,7 @@
                                 <p class="mb-3">
                                     <strong>الاسم:</strong> {{ existing_customer.name }}
                                     <br>
-                                    <strong>رقم الهاتف:</strong> {{ existing_customer.phone }}
+                                    <strong>رقم الهاتف:</strong> {{ existing_customer.phone|en }}
                                     <br>
                                     <strong>الفرع:</strong> {{ existing_customer.branch.name|default:"غير محدد" }}
                                 </p>

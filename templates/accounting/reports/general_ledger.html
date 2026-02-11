@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load accounting_numbers %}
+{% block title %}دفتر الأستاذ العام{% endblock %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">
+                        <i class="fas fa-book me-2"></i>
+                        دفتر الأستاذ العام
+                    </h2>
+                    <div>
+                        <a href="{% url 'accounting:reports' %}" class="btn btn-outline-secondary me-2">
+                            <i class="fas fa-arrow-right me-1"></i> التقارير
+                        </a>
+                        {% if selected_account %}
+                        <a href="{% url 'accounting:export_general_ledger' %}?account={{ selected_account.id }}{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}" class="btn btn-success me-2">
+                            <i class="fas fa-file-excel me-1"></i> تصدير Excel
+                        </a>
+                        <button onclick="window.print()" class="btn btn-outline-primary">
+                            <i class="fas fa-print me-1"></i> طباعة
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- فلاتر -->
+        <div class="row mb-4 no-print">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="get" class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">الحساب</label>
+                                <select name="account" class="form-select" required>
+                                    <option value="">-- اختر حساب --</option>
+                                    {% for acc in accounts %}
+                                        <option value="{{ acc.id }}" {% if selected_account and selected_account.id == acc.id %}selected{% endif %}>
+                                            {{ acc.code }} - {{ acc.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">من تاريخ</label>
+                                <input type="date" name="from_date" class="form-control" value="{{ from_date }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">إلى تاريخ</label>
+                                <input type="date" name="to_date" class="form-control" value="{{ to_date }}">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-search me-1"></i> عرض
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if selected_account %}
+        <!-- معلومات الحساب -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card bg-light">
+                    <div class="card-body py-2">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <strong>
+                                    <span class="badge bg-secondary me-2">{{ selected_account.code }}</span>
+                                    {{ selected_account.name }}
+                                </strong>
+                                {% if selected_account.account_type %}
+                                    <span class="text-muted ms-2">({{ selected_account.account_type.name }})</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <small class="text-muted">الرصيد الافتتاحي</small>
+                                <div class="fw-bold">{{ opening_balance|floatformat:2|en }} {{ currency_symbol }}</div>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <small class="text-muted">عدد الحركات</small>
+                                <div class="fw-bold">{{ ledger_entries|length }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- جدول دفتر الأستاذ -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th style="width: 100px;">التاريخ</th>
+                                        <th style="width: 120px;">رقم القيد</th>
+                                        <th>البيان</th>
+                                        <th class="text-end" style="width: 130px;">مدين</th>
+                                        <th class="text-end" style="width: 130px;">دائن</th>
+                                        <th class="text-end" style="width: 140px;">الرصيد</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for entry in ledger_entries %}
+                                        <tr>
+                                            <td>{{ entry.date }}</td>
+                                            <td>
+                                                <a href="{% url 'accounting:transaction_detail' entry.transaction.pk %}">
+                                                    {{ entry.transaction.transaction_number }}
+                                                </a>
+                                            </td>
+                                            <td>{{ entry.description|truncatechars:80 }}</td>
+                                            <td class="text-end">
+                                                {% if entry.debit > 0 %}
+                                                    <span class="text-danger">{{ entry.debit|floatformat:2|en }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                {% if entry.credit > 0 %}
+                                                    <span class="text-success">{{ entry.credit|floatformat:2|en }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end fw-bold {% if entry.balance > 0 %}text-danger{% elif entry.balance < 0 %}text-success{% endif %}">
+                                                {{ entry.balance|floatformat:2|en }}
+                                            </td>
+                                        </tr>
+                                    {% empty %}
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted py-4">
+                                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                                لا توجد حركات لهذا الحساب في الفترة المحددة
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                                {% if ledger_entries %}
+                                <tfoot class="table-secondary fw-bold">
+                                    <tr>
+                                        <th colspan="3">الرصيد النهائي</th>
+                                        <th class="text-end">-</th>
+                                        <th class="text-end">-</th>
+                                        <th class="text-end {% if ledger_entries.last.balance > 0 %}text-danger{% elif ledger_entries.last.balance < 0 %}text-success{% endif %}">
+                                            {% with last=ledger_entries|last %}
+                                                {{ last.balance|floatformat:2|en }} {{ currency_symbol }}
+                                            {% endwith %}
+                                        </th>
+                                    </tr>
+                                </tfoot>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-book fa-4x mb-3"></i>
+                    <h5>اختر حساباً لعرض دفتر الأستاذ</h5>
+                    <p>استخدم الفلاتر أعلاه لاختيار الحساب والفترة الزمنية</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <style>
+    @media print {
+        .no-print { display: none !important; }
+        .navbar, .breadcrumb { display: none !important; }
+    }
+    </style>
+{% endblock %}

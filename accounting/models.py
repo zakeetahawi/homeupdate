@@ -67,7 +67,7 @@ class Account(models.Model):
     )
     parent = models.ForeignKey(
         "self",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="children",
@@ -94,6 +94,7 @@ class Account(models.Model):
 
     is_active = models.BooleanField(_("نشط"), default=True)
     is_system_account = models.BooleanField(_("حساب نظام"), default=False)
+    is_customer_account = models.BooleanField(_("حساب عميل"), default=False, db_index=True)
     allow_transactions = models.BooleanField(_("يسمح بالقيود"), default=True)
 
     # الأرصدة
@@ -122,6 +123,13 @@ class Account(models.Model):
         verbose_name = _("حساب")
         verbose_name_plural = _("دليل الحسابات")
         ordering = ["code"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name"],
+                condition=models.Q(is_customer_account=False),
+                name="unique_non_customer_account_name",
+            ),
+        ]
         indexes = [
             models.Index(fields=["code"], name="acc_code_idx"),
             models.Index(fields=["name"], name="acc_name_idx"),
@@ -146,17 +154,48 @@ class Account(models.Model):
     @property
     def level(self):
         """مستوى الحساب في الشجرة"""
-        level = 0
-        parent = self.parent
-        while parent:
-            level += 1
-            parent = parent.parent
-        return level
+        return self._calculate_level()
 
     @property
     def has_children(self):
         """هل للحساب حسابات فرعية"""
         return self.children.exists()
+
+    def clean(self):
+        """التحقق من صحة بيانات الحساب"""
+        from django.core.exceptions import ValidationError
+        errors = {}
+
+        # منع الحساب من أن يكون أباً لنفسه
+        if self.parent_id and self.pk and self.parent_id == self.pk:
+            errors["parent"] = "لا يمكن أن يكون الحساب أباً لنفسه"
+
+        # منع المراجع الدائرية
+        if self.parent_id and self.pk:
+            visited = set()
+            current = self.parent
+            while current is not None:
+                if current.pk == self.pk:
+                    errors["parent"] = "تم اكتشاف مرجع دائري في شجرة الحسابات"
+                    break
+                if current.pk in visited:
+                    break
+                visited.add(current.pk)
+                current = current.parent
+
+        if errors:
+            raise ValidationError(errors)
+
+    def _calculate_level(self):
+        """حساب مستوى الحساب في الشجرة"""
+        level = 0
+        parent = self.parent
+        visited = set()
+        while parent and parent.pk not in visited:
+            level += 1
+            visited.add(parent.pk)
+            parent = parent.parent
+        return level
 
     def get_balance(self):
         """حساب الرصيد الفعلي من القيود"""
@@ -181,6 +220,11 @@ class Account(models.Model):
         self.save(update_fields=["current_balance", "updated_at"])
 
     def save(self, *args, **kwargs):
+        from core.utils.general import convert_model_arabic_numbers
+        
+        # تحويل الأرقام العربية إلى إنجليزية
+        convert_model_arabic_numbers(self, ['code', 'name', 'name_en'])
+        
         # التأكد من أن الكود لا يحتوي على مسافات
         if self.code:
             self.code = self.code.strip()
@@ -284,11 +328,27 @@ class Transaction(models.Model):
         verbose_name=_("تم الترحيل بواسطة"),
     )
     posted_at = models.DateTimeField(_("تاريخ الترحيل"), null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_transactions",
+        verbose_name=_("تمت الموافقة بواسطة"),
+    )
+    approved_at = models.DateTimeField(_("تاريخ الموافقة"), null=True, blank=True)
 
     class Meta:
         verbose_name = _("قيد محاسبي")
         verbose_name_plural = _("القيود المحاسبية")
         ordering = ["-date", "-created_at"]
+        permissions = [
+            ("can_post_transaction", "يمكنه ترحيل القيود المحاسبية"),
+            ("can_void_transaction", "يمكنه إلغاء القيود المحاسبية"),
+            ("can_approve_transaction", "يمكنه الموافقة على القيود المحاسبية"),
+            ("can_view_reports", "يمكنه عرض التقارير المالية"),
+            ("can_export_reports", "يمكنه تصدير التقارير المالية"),
+        ]
         indexes = [
             models.Index(fields=["transaction_number"], name="txn_number_idx"),
             models.Index(fields=["transaction_type"], name="txn_type_idx"),
@@ -317,20 +377,84 @@ class Transaction(models.Model):
 
     def post(self, user=None):
         """ترحيل القيد وتحديث أرصدة الحسابات"""
-        if not self.is_balanced:
+        from django.db import transaction as db_transaction
+
+        # إعادة حساب الإجماليات قبل التحقق من التوازن
+        totals = self.lines.aggregate(
+            total_debit=Sum("debit"), total_credit=Sum("credit")
+        )
+        self.total_debit = totals["total_debit"] or Decimal("0.00")
+        self.total_credit = totals["total_credit"] or Decimal("0.00")
+
+        if self.total_debit != self.total_credit:
             raise ValueError("القيد غير متوازن - لا يمكن الترحيل")
 
         if self.status == "posted":
             raise ValueError("القيد مرحّل مسبقاً")
 
-        # تحديث أرصدة الحسابات
-        for line in self.lines.all():
+        if self.status == "cancelled":
+            raise ValueError("القيد ملغي - لا يمكن ترحيله")
+
+        if self.lines.count() < 2:
+            raise ValueError("يجب أن يحتوي القيد على سطرين على الأقل")
+
+        # التحقق من صلاحية الحسابات
+        for line in self.lines.select_related('account'):
+            if not line.account.is_active:
+                raise ValueError(f"الحساب {line.account.code} - {line.account.name} غير نشط")
+            if not line.account.allow_transactions:
+                raise ValueError(f"الحساب {line.account.code} - {line.account.name} لا يسمح بالقيود المباشرة")
+
+        with db_transaction.atomic():
+            self.status = "posted"
+            self.posted_by = user
+            self.posted_at = timezone.now()
+            self.save(update_fields=["status", "posted_by", "posted_at", "total_debit", "total_credit"])
+
+            # تحديث أرصدة الحسابات
+            for line in self.lines.select_related('account'):
+                line.account.update_balance()
+
+    def cancel(self, user=None):
+        """إلغاء القيد"""
+        if self.status == "cancelled":
+            raise ValueError("القيد ملغي مسبقاً")
+
+        self.status = "cancelled"
+        self.save(update_fields=["status", "updated_at"])
+
+        # إعادة حساب أرصدة الحسابات المتأثرة
+        for line in self.lines.select_related('account'):
             line.account.update_balance()
 
-        self.status = "posted"
-        self.posted_by = user
-        self.posted_at = timezone.now()
-        self.save(update_fields=["status", "posted_by", "posted_at"])
+    def create_reversal(self, user=None, description=None):
+        """إنشاء قيد عكسي"""
+        if self.status != "posted":
+            raise ValueError("يمكن عكس القيود المرحّلة فقط")
+
+        reversal = Transaction.objects.create(
+            transaction_type=self.transaction_type,
+            date=timezone.now().date(),
+            description=description or f"قيد عكسي للقيد {self.transaction_number}",
+            reference=f"REV-{self.transaction_number}",
+            customer=self.customer,
+            order=self.order,
+            created_by=user,
+            status="draft",
+        )
+
+        # عكس بنود القيد (المدين يصبح دائن والعكس)
+        for line in self.lines.all():
+            TransactionLine.objects.create(
+                transaction=reversal,
+                account=line.account,
+                debit=line.credit,
+                credit=line.debit,
+                description=f"عكس: {line.description}",
+            )
+
+        reversal.calculate_totals()
+        return reversal
 
     def save(self, *args, **kwargs):
         # تحويل الأرقام العربية إلى إنجليزية
@@ -403,6 +527,11 @@ class TransactionLine(models.Model):
         verbose_name = _("بند القيد")
         verbose_name_plural = _("بنود القيد")
         ordering = ["id"]
+        indexes = [
+            models.Index(fields=['transaction'], name='txnline_txn_idx'),
+            models.Index(fields=['account'], name='txnline_acc_idx'),
+            models.Index(fields=['transaction', 'account'], name='txnline_txn_acc_idx'),
+        ]
 
     def __str__(self):
         return f"{self.account.code}: مدين {self.debit} / دائن {self.credit}"
@@ -416,191 +545,43 @@ class TransactionLine(models.Model):
             raise ValidationError("يجب أن يكون أحد المدين أو الدائن موجباً")
 
 
-class CustomerAdvance(models.Model):
-    """عربون العملاء"""
+class TransactionAttachment(models.Model):
+    """مرفقات القيد المحاسبي"""
 
-    ADVANCE_STATUS = [
-        ("active", "نشط"),
-        ("partially_used", "مستخدم جزئياً"),
-        ("fully_used", "مستخدم بالكامل"),
-        ("refunded", "مسترد"),
-        ("cancelled", "ملغي"),
-    ]
-
-    advance_number = models.CharField(
-        _("رقم العربون"), max_length=50, unique=True, db_index=True
-    )
-    customer = models.ForeignKey(
-        "customers.Customer",
-        on_delete=models.CASCADE,
-        related_name="advances",
-        verbose_name=_("العميل"),
-    )
-
-    amount = models.DecimalField(
-        _("المبلغ"),
-        max_digits=15,
-        decimal_places=2,
-        validators=[MinValueValidator(Decimal("0.01"))],
-    )
-    remaining_amount = models.DecimalField(
-        _("المبلغ المتبقي"), max_digits=15, decimal_places=2, default=Decimal("0.00")
-    )
-
-    payment_method = models.CharField(
-        _("طريقة الدفع"),
-        max_length=20,
-        choices=[
-            ("cash", "نقداً"),
-            ("bank_transfer", "تحويل بنكي"),
-            ("check", "شيك"),
-        ],
-        default="cash",
-    )
-    receipt_number = models.CharField(_("رقم الإيصال"), max_length=100, blank=True)
-
-    status = models.CharField(
-        _("الحالة"), max_length=20, choices=ADVANCE_STATUS, default="active"
-    )
-
-    notes = models.TextField(_("ملاحظات"), blank=True)
-
-    branch = models.ForeignKey(
-        "accounts.Branch",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="customer_advances",
-        verbose_name=_("الفرع"),
-    )
-
-    # القيد المحاسبي المرتبط
-    transaction = models.OneToOneField(
+    transaction = models.ForeignKey(
         Transaction,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="advance",
-        verbose_name=_("القيد المحاسبي"),
+        on_delete=models.CASCADE,
+        related_name="attachments",
+        verbose_name=_("القيد"),
     )
-
-    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
-    updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
-    created_by = models.ForeignKey(
+    file = models.FileField(
+        _("الملف"),
+        upload_to="accounting/attachments/%Y/%m/",
+    )
+    file_name = models.CharField(_("اسم الملف"), max_length=255, blank=True)
+    description = models.CharField(_("وصف المرفق"), max_length=500, blank=True)
+    uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name="created_advances",
-        verbose_name=_("تم الإنشاء بواسطة"),
+        blank=True,
+        related_name="uploaded_attachments",
+        verbose_name=_("تم الرفع بواسطة"),
     )
+    uploaded_at = models.DateTimeField(_("تاريخ الرفع"), auto_now_add=True)
 
     class Meta:
-        verbose_name = _("عربون")
-        verbose_name_plural = _("عربون العملاء")
-        ordering = ["-created_at"]
-        indexes = [
-            models.Index(fields=["customer"], name="adv_customer_idx"),
-            models.Index(fields=["status"], name="adv_status_idx"),
-        ]
+        verbose_name = _("مرفق القيد")
+        verbose_name_plural = _("مرفقات القيود")
+        ordering = ["-uploaded_at"]
 
     def __str__(self):
-        return f"{self.advance_number} - {self.customer.name} ({self.amount} ج.م)"
+        return f"مرفق: {self.file_name or self.file.name} - قيد #{self.transaction_id}"
 
     def save(self, *args, **kwargs):
-        # تحويل الأرقام العربية إلى إنجليزية
-        from core.utils import convert_model_arabic_numbers
-
-        convert_model_arabic_numbers(self, ["receipt_number"])
-
-        if not self.advance_number:
-            self.advance_number = self.generate_advance_number()
-        if not self.pk:  # جديد
-            self.remaining_amount = self.amount
+        if not self.file_name and self.file:
+            self.file_name = self.file.name.split("/")[-1]
         super().save(*args, **kwargs)
-
-    @classmethod
-    def generate_advance_number(cls):
-        """توليد رقم عربون فريد"""
-        today = timezone.now()
-        prefix = f"ADV-{today.strftime('%Y%m')}-"
-
-        last_adv = (
-            cls.objects.filter(advance_number__startswith=prefix)
-            .order_by("-advance_number")
-            .first()
-        )
-
-        if last_adv:
-            try:
-                last_num = int(last_adv.advance_number.split("-")[-1])
-                new_num = last_num + 1
-            except (IndexError, ValueError):
-                new_num = 1
-        else:
-            new_num = 1
-
-        return f"{prefix}{new_num:05d}"
-
-    def use_for_order(self, order, amount, user=None):
-        """استخدام جزء من العربون لطلب معين"""
-        if amount > self.remaining_amount:
-            raise ValueError("المبلغ المطلوب أكبر من الرصيد المتبقي")
-
-        self.remaining_amount -= amount
-
-        if self.remaining_amount == 0:
-            self.status = "fully_used"
-        else:
-            self.status = "partially_used"
-
-        self.save()
-
-        # تسجيل الاستخدام
-        AdvanceUsage.objects.create(
-            advance=self, order=order, amount=amount, created_by=user or self.created_by
-        )
-
-        return self.remaining_amount
-
-    @property
-    def used_amount(self):
-        """حساب المبلغ المستخدم"""
-        return self.amount - self.remaining_amount
-
-
-class AdvanceUsage(models.Model):
-    """سجل استخدام العربون"""
-
-    advance = models.ForeignKey(
-        CustomerAdvance,
-        on_delete=models.CASCADE,
-        related_name="usages",
-        verbose_name=_("العربون"),
-    )
-    order = models.ForeignKey(
-        "orders.Order",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="advance_usages",
-        verbose_name=_("الطلب"),
-    )
-    amount = models.DecimalField(_("المبلغ المستخدم"), max_digits=15, decimal_places=2)
-    created_at = models.DateTimeField(_("تاريخ الاستخدام"), auto_now_add=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        verbose_name=_("تم بواسطة"),
-    )
-
-    class Meta:
-        verbose_name = _("استخدام عربون")
-        verbose_name_plural = _("استخدامات العربون")
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"{self.advance.advance_number} - {self.amount} ج.م"
 
 
 class CustomerFinancialSummary(models.Model):
@@ -662,39 +643,57 @@ class CustomerFinancialSummary(models.Model):
     class Meta:
         verbose_name = _("ملخص مالي للعميل")
         verbose_name_plural = _("ملخصات مالية للعملاء")
+        indexes = [
+            # Single-column indexes
+            models.Index(fields=['customer'], name='cfs_customer_idx'),
+            models.Index(fields=['total_debt'], name='cfs_debt_idx'),
+            models.Index(fields=['financial_status'], name='cfs_status_idx'),
+            models.Index(fields=['last_updated'], name='cfs_updated_idx'),
+            models.Index(fields=['last_payment_date'], name='cfs_last_pay_idx'),
+            # Composite indexes للاستعلامات المعقدة
+            models.Index(fields=['financial_status', 'total_debt'], name='cfs_status_debt_idx'),
+            models.Index(fields=['total_debt', 'last_updated'], name='cfs_debt_upd_idx'),
+        ]
 
     def __str__(self):
         return f"ملخص مالي: {self.customer.name}"
 
     def refresh(self):
         """تحديث الملخص المالي من البيانات الفعلية"""
-        from django.db.models import Count, Sum
+        from django.db.models import Sum
 
         from orders.models import Order, Payment
+        from accounting.performance_utils import invalidate_customer_cache
 
-        # إجماليات الطلبات
+        # إجماليات الطلبات - حساب دقيق باستخدام final_price_after_discount
         orders = Order.objects.filter(customer=self.customer)
-        orders_agg = orders.aggregate(count=Count("id"), total=Sum("final_price"))
-        self.total_orders_count = orders_agg["count"] or 0
-        self.total_orders_amount = orders_agg["total"] or Decimal("0.00")
+        self.total_orders_count = orders.count()
+        
+        # حساب المجموع الصحيح (property لا يمكن استخدامه في aggregate)
+        self.total_orders_amount = Decimal("0.00")
+        for order in orders:
+            self.total_orders_amount += order.final_price_after_discount
 
-        # إجمالي المدفوع
-        payments = Payment.objects.filter(order__customer=self.customer)
+        # إجمالي المدفوع — استعلام واحد عبر customer FK
+        payments = Payment.objects.filter(customer=self.customer)
         self.total_paid = payments.aggregate(total=Sum("amount"))["total"] or Decimal(
             "0.00"
         )
 
-        # العربون
-        advances = CustomerAdvance.objects.filter(
-            customer=self.customer, status__in=["active", "partially_used"]
+        # حساب رصيد الدفعات العامة غير المخصصة بالكامل
+        general_payments = Payment.objects.filter(
+            customer=self.customer,
+            payment_type='general'
         )
-        advances_agg = advances.aggregate(
-            total=Sum("amount"), remaining=Sum("remaining_amount")
+        general_payments_total = general_payments.aggregate(
+            total=Sum('amount'),
+            allocated=Sum('allocated_amount')
         )
-        self.total_advances = advances_agg["total"] or Decimal("0.00")
-        self.remaining_advances = advances_agg["remaining"] or Decimal("0.00")
+        total_general = general_payments_total['total'] or Decimal('0.00')
+        total_allocated = general_payments_total['allocated'] or Decimal('0.00')
+        self.remaining_advances = total_general - total_allocated  # الرصيد المتبقي
 
-        # حساب المديونية
+        # حساب المديونية الصحيح
         self.total_debt = self.total_orders_amount - self.total_paid
 
         # تحديد الحالة المالية
@@ -717,6 +716,12 @@ class CustomerFinancialSummary(models.Model):
 
         self.save()
 
+        # حذف الـ cache بعد التحديث
+        try:
+            invalidate_customer_cache(self.customer_id)
+        except Exception:
+            pass
+
     @property
     def status_badge_class(self):
         """CSS class للـ badge"""
@@ -736,6 +741,14 @@ class CustomerFinancialSummary(models.Model):
             "has_credit": "fa-wallet",
         }
         return status_icons.get(self.financial_status, "fa-question-circle")
+    
+    def get_orders_with_debt(self):
+        """الحصول على الطلبات التي لديها رصيد متبقي"""
+        from orders.models import Order
+        
+        all_orders = Order.objects.filter(customer=self.customer)
+        # تصفية في Python لأن remaining_amount هو property
+        return [order for order in all_orders if order.remaining_amount > 0]
 
 
 class AccountingSettings(models.Model):
@@ -773,14 +786,6 @@ class AccountingSettings(models.Model):
         blank=True,
         related_name="+",
         verbose_name=_("حساب المدينين الافتراضي"),
-    )
-    default_advances_account = models.ForeignKey(
-        Account,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="+",
-        verbose_name=_("حساب سلف العملاء الافتراضي"),
     )
 
     # إعدادات عامة

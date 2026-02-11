@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load accounting_numbers %}
 {% block title %}ميزان المراجعة{% endblock %}
 {% block content %}
     <div class="container-fluid py-4">
@@ -10,12 +11,46 @@
                         <i class="fas fa-balance-scale me-2"></i>
                         ميزان المراجعة
                     </h2>
-                    <button onclick="window.print()" class="btn btn-outline-secondary">
-                        <i class="fas fa-print me-1"></i> طباعة
-                    </button>
+                    <div>
+                        <a href="{% url 'accounting:export_trial_balance' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-success me-2">
+                            <i class="fas fa-file-excel me-1"></i> تصدير Excel
+                        </a>
+                        <button onclick="window.print()" class="btn btn-outline-secondary">
+                            <i class="fas fa-print me-1"></i> طباعة
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
+        
+        <!-- فلتر التاريخ -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="get" class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">من تاريخ</label>
+                                {{ form.start_date }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">إلى تاريخ</label>
+                                {{ form.end_date }}
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter me-1"></i> تصفية
+                                </button>
+                                <a href="{% url 'accounting:trial_balance' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-redo me-1"></i> إعادة تعيين
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-12">
                 <div class="card">
@@ -38,30 +73,30 @@
                                             </td>
                                             <td>{{ item.account.name }}</td>
                                             <td class="text-end text-success">
-                                                {% if item.debit > 0 %}{{ item.debit|floatformat:2 }}{% endif %}
+                                                {% if item.debit > 0 %}{{ item.debit|floatformat:2|en }}{% endif %}
                                             </td>
                                             <td class="text-end text-danger">
-                                                {% if item.credit > 0 %}{{ item.credit|floatformat:2 }}{% endif %}
+                                                {% if item.credit > 0 %}{{ item.credit|floatformat:2|en }}{% endif %}
                                             </td>
                                         </tr>
                                     {% empty %}
                                         <tr>
-                                            <td colspan="4" class="text-center py-4 text-muted">لا توجد حسابات</td>
+                                            <td colspan="4" class="text-center py-4 text-muted">لا توجد حسابات بها حركات</td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
                                 <tfoot class="table-dark">
                                     <tr class="fw-bold">
                                         <th colspan="2" class="text-end">المجموع ({{ currency_symbol }}):</th>
-                                        <th class="text-end text-success">{{ total_debit|floatformat:2 }}</th>
-                                        <th class="text-end text-danger">{{ total_credit|floatformat:2 }}</th>
+                                        <th class="text-end text-success">{{ total_debit|floatformat:2|en }}</th>
+                                        <th class="text-end text-danger">{{ total_credit|floatformat:2|en }}</th>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
                     </div>
                     <div class="card-footer text-center">
-                        {% if total_debit == total_credit %}
+                        {% if is_balanced %}
                             <span class="badge bg-success fs-6">
                                 <i class="fas fa-check-circle me-1"></i>
                                 الميزان متوازن
@@ -69,8 +104,14 @@
                         {% else %}
                             <span class="badge bg-danger fs-6">
                                 <i class="fas fa-exclamation-triangle me-1"></i>
-                                الميزان غير متوازن - الفرق: {{ total_debit|floatformat:2 }} - {{ total_credit|floatformat:2 }}
+                                الميزان غير متوازن - الفرق: {{ total_debit|floatformat:2|en }} - {{ total_credit|floatformat:2|en }}
                             </span>
+                        {% endif %}
+                        {% if start_date or end_date %}
+                        <div class="mt-2 text-muted small">
+                            <i class="fas fa-calendar me-1"></i>
+                            الفترة: {% if start_date %}{{ start_date }}{% else %}البداية{% endif %} - {% if end_date %}{{ end_date }}{% else %}الآن{% endif %}
+                        </div>
                         {% endif %}
                     </div>
                 </div>

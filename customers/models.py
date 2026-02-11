@@ -499,6 +499,20 @@ class Customer(SoftDeleteMixin, models.Model):
         help_text=_("نوع الخصم المطبق على هذا العميل"),
     )
 
+    # الحد الائتماني وشروط الدفع
+    credit_limit = models.DecimalField(
+        _("الحد الائتماني"),
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        help_text=_("الحد الأقصى للمديونية المسموح بها (0 = غير محدود)"),
+    )
+    payment_terms_days = models.PositiveIntegerField(
+        _("مدة الدفع (أيام)"),
+        default=0,
+        help_text=_("عدد أيام الاستحقاق من تاريخ الفاتورة (0 = نقدي فوري)"),
+    )
+
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,

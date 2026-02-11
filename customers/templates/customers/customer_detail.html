@@ -3,6 +3,7 @@
 {% load static %}
 {% load unified_status_tags %}
 {% load customer_badges %}
+{% load accounting_numbers %}
 {% block title %}{{ customer.name }}{% endblock %}
 {% block content %}
     <div class="container-fluid mt-4">
@@ -43,7 +44,7 @@
                             <div class="col-md-8">
                                 <h2 class="mb-1">
                                     <i class="fas fa-user-tie text-primary"></i> {{ customer.name }}
-                                    <small class="text-muted fs-6">#{{ customer.code }}</small>
+                                    <small class="text-muted fs-6">#{{ customer.code|en }}</small>
                                     {% if is_cross_branch %}
                                         <span class="badge bg-warning text-dark ms-2">
                                             <i class="fas fa-exchange-alt"></i> فرع آخر
@@ -71,7 +72,7 @@
                                         <div>
                                             <small class="text-muted d-block">{% trans 'الهاتف الأساسي' %}</small>
                                             <a href="tel:{{ customer.phone }}" class="text-decoration-none">
-                                                <i class="fas fa-phone text-success"></i> {{ customer.phone }}
+                                                <i class="fas fa-phone text-success"></i> {{ customer.phone|en }}
                                             </a>
                                         </div>
                                     {% endif %}
@@ -186,7 +187,7 @@
                             <tr>
                                 <th>{% trans 'كود العميل' %}:</th>
                                 <td>
-                                    <strong>{{ customer.code }}</strong>
+                                    <strong>{{ customer.code|en }}</strong>
                                 </td>
                             </tr>
                             <tr>
@@ -224,7 +225,7 @@
                                 <th>{% trans 'الهاتف' %}:</th>
                                 <td>
                                     <a href="tel:{{ customer.phone }}" class="text-decoration-none">
-                                        <i class="fas fa-phone text-success"></i> {{ customer.phone }}
+                                        <i class="fas fa-phone text-success"></i> {{ customer.phone|en }}
                                     </a>
                                 </td>
                             </tr>
@@ -233,7 +234,7 @@
                                     <th>{% trans 'الهاتف الثاني' %}:</th>
                                     <td>
                                         <a href="tel:{{ customer.phone2 }}" class="text-decoration-none">
-                                            <i class="fas fa-phone text-success"></i> {{ customer.phone2 }}
+                                            <i class="fas fa-phone text-success"></i> {{ customer.phone2|en }}
                                         </a>
                                     </td>
                                 </tr>
@@ -622,20 +623,20 @@
                                                            text-align: center;
                                                            font-weight: bold;
                                                            font-size: 1em">
-                                                    <a href="{% url 'orders:order_detail' order.pk %}" tabindex="0" class="order-popover" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="<b>رقم العقد:</b> {{ order.contract_number|default:'-' }}
-                                                        {% if order.contract_number_2 %}<br/><b>عقد إضافي 2:</b> {{ order.contract_number_2 }}{% endif %}
-                                                        {% if order.contract_number_3 %}<br/><b>عقد إضافي 3:</b> {{ order.contract_number_3 }}{% endif %}
-                                                        <br/><b>البائع:</b> {{ order.salesperson.name|default:'-' }}<br/><b>تاريخ الطلب:</b> {{ order.order_date|date:'Y-m-d H:i' }}<br/><b>حالة التصنيع:</b>
+                                                    <a href="{% url 'orders:order_detail' order.pk %}" tabindex="0" class="order-popover" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-content="<b>رقم العقد:</b> {{ order.contract_number|default:'-'|en }}
+                                                        {% if order.contract_number_2 %}<br/><b>عقد إضافي 2:</b> {{ order.contract_number_2|en }}{% endif %}
+                                                        {% if order.contract_number_3 %}<br/><b>عقد إضافي 3:</b> {{ order.contract_number_3|en }}{% endif %}
+                                                        <br/><b>البائع:</b> {{ order.salesperson.name|default:'-' }}<br/><b>تاريخ الطلب:</b> {{ order.order_date|date:'Y-m-d H:i'|en }}<br/><b>حالة التصنيع:</b>
                                                         {% if order.manufacturing_order %}
                                                             {{ order.manufacturing_order.get_status_display }}
                                                         {% else %}
                                                             -
                                                         {% endif %}
                                                         ">>
-                                                        {{ order.order_number }}
+                                                        {{ order.order_number|en }}
                                                     </a>
                                                 </td>
-                                                <td style="white-space: nowrap; max-width: 100px; text-align: center;">{{ order.order_date|date:"Y-m-d" }}</td>
+                                                <td style="white-space: nowrap; max-width: 100px; text-align: center;">{{ order.order_date|date:"Y-m-d"|en }}</td>
                                                 <td style="white-space: nowrap; max-width: 140px; text-align: center;">
                                                     {% with types_list=order.get_selected_types_list %}
                                                         {% if types_list %}
@@ -696,7 +697,7 @@
                                                 <td style="white-space: nowrap;
                                                            max-width: 90px;
                                                            text-align: center;
-                                                           font-weight: 600">{{ order.total|default:'-' }}</td>
+                                                           font-weight: 600">{{ order.total|default:'-'|en }}</td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
@@ -898,7 +899,7 @@
                                 <div class="card bg-primary text-white h-100">
                                     <div class="card-body text-center">
                                         <h6 class="text-white-50">إجمالي الطلبات</h6>
-                                        <h4 class="mb-0">${data.total_orders_amount.toLocaleString('ar-SA', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
+                                        <h4 class="mb-0">${data.total_orders_amount.toLocaleString('en', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
                                         <small>${data.total_orders} طلب</small>
                                     </div>
                                 </div>
@@ -907,7 +908,7 @@
                                 <div class="card bg-success text-white h-100">
                                     <div class="card-body text-center">
                                         <h6 class="text-white-50">المدفوعات</h6>
-                                        <h4 class="mb-0">${data.total_payments.toLocaleString('ar-SA', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
+                                        <h4 class="mb-0">${data.total_payments.toLocaleString('en', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -915,7 +916,7 @@
                                 <div class="card bg-${statusClass} text-white h-100">
                                     <div class="card-body text-center">
                                         <h6 class="text-white-50">الرصيد</h6>
-                                        <h4 class="mb-0">${Math.abs(data.balance).toLocaleString('ar-SA', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
+                                        <h4 class="mb-0">${Math.abs(data.balance).toLocaleString('en', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
                                         <small>${statusText}</small>
                                     </div>
                                 </div>
@@ -923,9 +924,9 @@
                             <div class="col-md-3">
                                 <div class="card bg-warning text-dark h-100">
                                     <div class="card-body text-center">
-                                        <h6>العربونات المتاحة</h6>
-                                        <h4 class="mb-0">${data.available_advances.toLocaleString('ar-SA', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
-                                        <small>من ${data.total_advances.toLocaleString('ar-SA', {minimumFractionDigits: 2})} ${currencySymbol}</small>
+                                        <h6>الدفعات غير المخصصة</h6>
+                                        <h4 class="mb-0">${data.available_advances.toLocaleString('en', {minimumFractionDigits: 2})} ${currencySymbol}</h4>
+                                        <small>رصيد دفعات عامة</small>
                                     </div>
                                 </div>
                             </div>
@@ -937,9 +938,7 @@
                             <button type="button" class="btn btn-success ms-2" data-bs-toggle="modal" data-bs-target="#quickPaymentModal">
                                 <i class="fas fa-money-bill me-2"></i>تسجيل دفعة
                             </button>
-                            <button type="button" class="btn btn-warning ms-2" data-bs-toggle="modal" data-bs-target="#quickAdvanceModal">
-                                <i class="fas fa-hand-holding-usd me-2"></i>تسجيل عربون
-                            </button>
+                            <!-- تم إزالة زر العربون - استخدم نظام الدفعات العامة الجديد -->
                         </div>
                     `;
                 })
@@ -1320,7 +1319,7 @@
                             <select name="order" class="form-select">
                                 <option value="">بدون طلب محدد</option>
                                 {% for order in customer.customer_orders.all %}
-                                    <option value="{{ order.pk }}">{{ order.order_number }} - {{ order.total_amount }} ج.م</option>
+                                    <option value="{{ order.pk }}">{{ order.order_number|en }} - {{ order.total_amount|en }} ج.م</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -1378,75 +1377,5 @@
             </div>
         </div>
     </div>
-    <!-- Modal تسجيل عربون سريعة -->
-    <div class="modal fade"
-         id="quickAdvanceModal"
-         tabindex="-1"
-         aria-labelledby="quickAdvanceModalLabel"
-         aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form action="{% url 'accounting:register_advance' customer.pk %}"
-                      method="post">
-                    {% csrf_token %}
-                    <div class="modal-header bg-warning">
-                        <h5 class="modal-title" id="quickAdvanceModalLabel">
-                            <i class="fas fa-hand-holding-usd me-2"></i>
-                            تسجيل عربون جديدة
-                        </h5>
-                        <button type="button"
-                                class="btn-close"
-                                data-bs-dismiss="modal"
-                                aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">
-                                المبلغ <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group">
-                                <input type="number"
-                                       name="amount"
-                                       class="form-control"
-                                       step="0.01"
-                                       required
-                                       placeholder="0.00">
-                                <span class="input-group-text">ج.م</span>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">طريقة الدفع</label>
-                            <select name="payment_method" class="form-select">
-                                <option value="cash">نقداً</option>
-                                <option value="bank_transfer">تحويل بنكي</option>
-                                <option value="check">شيك</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">رقم الإيصال</label>
-                            <input type="text"
-                                   name="receipt_number"
-                                   class="form-control"
-                                   placeholder="اختياري">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">ملاحظات</label>
-                            <textarea name="notes"
-                                      class="form-control"
-                                      rows="2"
-                                      placeholder="ملاحظات إضافية..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-1"></i>إلغاء
-                        </button>
-                        <button type="submit" class="btn btn-warning">
-                            <i class="fas fa-check me-1"></i>تسجيل العربون
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+    <!-- تم إزالة Modal العربون - استخدم نظام الدفعات العامة الجديد -->
 {% endblock %}

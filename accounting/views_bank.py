@@ -7,6 +7,7 @@ import base64
 from io import BytesIO
 
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -19,6 +20,7 @@ from reportlab.pdfgen import canvas
 from .models import BankAccount
 
 
+@login_required
 def bank_qr_view(request, unique_code):
     """
     عرض صفحة QR للحساب البنكي (للاختبار المحلي)
@@ -34,6 +36,7 @@ def bank_qr_view(request, unique_code):
     return render(request, "accounting/bank_qr.html", context)
 
 
+@login_required
 def all_banks_qr_view(request):
     """
     عرض جميع الحسابات البنكية النشطة
@@ -52,6 +55,7 @@ def all_banks_qr_view(request):
     return render(request, "accounting/all_banks_qr.html", context)
 
 
+@login_required
 def export_bank_qr_pdf(request):
     """
     تصدير QR Codes للحسابات البنكية كـ PDF
@@ -172,6 +176,7 @@ def export_bank_qr_pdf(request):
     return response
 
 
+@login_required
 def bank_accounts_api(request):
     """
     API للحصول على جميع الحسابات البنكية النشطة

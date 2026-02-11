@@ -28,6 +28,43 @@
         </div>
         <form method="post" id="transaction-form">
             {% csrf_token %}
+            
+            {% if form.errors or formset.errors or formset.non_form_errors %}
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="alert alert-danger">
+                        <h6><i class="fas fa-exclamation-triangle me-1"></i> يرجى تصحيح الأخطاء التالية:</h6>
+                        {% if form.errors %}
+                        <ul class="mb-1">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                <li>{{ field }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                        {% if formset.non_form_errors %}
+                        <ul class="mb-1">
+                            {% for error in formset.non_form_errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                        {% for line_form in formset %}
+                            {% if line_form.errors %}
+                            <ul class="mb-1">
+                                {% for field, errors in line_form.errors.items %}
+                                    {% for error in errors %}
+                                    <li>سطر {{ forloop.parentloop.counter }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             <div class="row">
                 <!-- معلومات القيد -->
                 <div class="col-lg-4 mb-4">
@@ -43,7 +80,7 @@
                                 <label class="form-label">
                                     تاريخ القيد <span class="text-danger">*</span>
                                 </label>
-                                {{ form.transaction_date }}
+                                {{ form.date }}
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">
@@ -100,8 +137,8 @@
                                                     {{ line_form.id }}
                                                     {{ line_form.account }}
                                                 </td>
-                                                <td>{{ line_form.debit_amount }}</td>
-                                                <td>{{ line_form.credit_amount }}</td>
+                                                <td>{{ line_form.debit }}</td>
+                                                <td>{{ line_form.credit }}</td>
                                                 <td>{{ line_form.description }}</td>
                                                 <td>
                                                     {{ line_form.DELETE }}
@@ -157,6 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalDebit = document.getElementById('total-debit');
     const totalCredit = document.getElementById('total-credit');
     const balanceStatus = document.getElementById('balance-status');
+    const addLineBtn = document.getElementById('add-line');
     
     function calculateTotals() {
         let debit = 0;
@@ -183,6 +221,44 @@ document.addEventListener('DOMContentLoaded', function() {
             balanceStatus.className = 'badge bg-danger';
             balanceStatus.textContent = 'غير متوازن - الفرق: ' + Math.abs(debit - credit).toFixed(2);
         }
+    }
+    
+    // Add new line
+    if (addLineBtn) {
+        addLineBtn.addEventListener('click', function() {
+            const totalForms = document.querySelector('[name$="-TOTAL_FORMS"]');
+            const formIdx = parseInt(totalForms.value);
+            
+            // Get the first line row as template
+            const firstRow = linesBody.querySelector('.line-row');
+            if (!firstRow) return;
+            
+            const newRow = firstRow.cloneNode(true);
+            
+            // Update all input names and ids with new index
+            newRow.querySelectorAll('input, select, textarea').forEach(function(el) {
+                if (el.name) {
+                    el.name = el.name.replace(/-\d+-/, '-' + formIdx + '-');
+                }
+                if (el.id) {
+                    el.id = el.id.replace(/-\d+-/, '-' + formIdx + '-');
+                }
+                // Clear values
+                if (el.type === 'checkbox') {
+                    el.checked = false;
+                } else if (el.tagName === 'SELECT') {
+                    el.selectedIndex = 0;
+                } else if (el.type !== 'hidden') {
+                    el.value = '';
+                } else if (el.name.endsWith('-id')) {
+                    el.value = '';
+                }
+            });
+            
+            newRow.style.display = '';
+            linesBody.appendChild(newRow);
+            totalForms.value = formIdx + 1;
+        });
     }
     
     // Calculate on input

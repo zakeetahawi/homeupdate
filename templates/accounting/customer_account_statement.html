@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load accounting_numbers %}
+
+{% block title %}كشف حساب {{ customer.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .statement-tree {
+        font-family: 'Courier New', monospace;
+    }
+    
+    .transaction-row {
+        border-inline-start: 3px solid #dee2e6;
+        margin-inline-start: 20px;
+        padding-inline-start: 15px;
+        margin-bottom: 20px;
+        transition: all 0.3s;
+    }
+    
+    .transaction-row:hover {
+        border-inline-start-color: #0d6efd;
+        background-color: #f8f9fa;
+    }
+    
+    .transaction-header {
+        cursor: pointer;
+        padding: 10px;
+        border-radius: 5px;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .transaction-lines {
+        margin-top: 10px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 5px;
+        display: none;
+    }
+    
+    .transaction-lines.show {
+        display: block;
+    }
+    
+    .line-item {
+        padding: 8px 0;
+        border-bottom: 1px dashed #dee2e6;
+    }
+    
+    .line-item:last-child {
+        border-bottom: none;
+    }
+    
+    .balance-positive {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    
+    .balance-negative {
+        color: #198754;
+        font-weight: bold;
+    }
+    
+    .account-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        background: #e9ecef;
+        border-radius: 3px;
+        font-size: 0.85em;
+        font-family: monospace;
+    }
+    
+    @media print {
+        .no-print { display: none !important; }
+        .transaction-lines { display: block !important; }
+        .transaction-row { page-break-inside: avoid; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- العنوان -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>
+                        كشف حساب محاسبي
+                    </h2>
+                    <h4 class="text-muted">{{ customer.name }}</h4>
+                    {% if customer_account %}
+                        <p class="text-muted mb-0">
+                            <span class="account-badge">{{ customer_account.code }}</span>
+                            {{ customer_account.name }}
+                        </p>
+                    {% endif %}
+                </div>
+                <div class="no-print">
+                    <a href="{% url 'accounting:customer_financial' customer.id %}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-right me-1"></i> الملف المالي
+                    </a>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print me-1"></i> طباعة
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الفلاتر -->
+    <div class="row mb-4 no-print">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">من تاريخ</label>
+                            <input type="date" name="from_date" class="form-control" value="{{ from_date }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">إلى تاريخ</label>
+                            <input type="date" name="to_date" class="form-control" value="{{ to_date }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1">
+                                <i class="fas fa-filter me-1"></i> تصفية
+                            </button>
+                            <a href="{% url 'accounting:customer_account_statement' customer.id %}" class="btn btn-secondary">
+                                <i class="fas fa-redo"></i>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الملخص -->
+    <div class="row mb-4">
+        {% if opening_balance != 0 %}
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">الرصيد الافتتاحي</h6>
+                    <h3 class="mb-0 {% if opening_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                        {{ opening_balance|floatformat:2|en }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="col-md-3">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">إجمالي المدين</h6>
+                    <h3 class="text-danger mb-0">{{ total_debit|floatformat:2|en }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">إجمالي الدائن</h6>
+                    <h3 class="text-success mb-0">{{ total_credit|floatformat:2|en }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card {% if final_balance > 0 %}border-danger{% elif final_balance < 0 %}border-success{% else %}border-secondary{% endif %}">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">الرصيد النهائي</h6>
+                    <h3 class="{% if final_balance > 0 %}text-danger{% elif final_balance < 0 %}text-success{% else %}text-secondary{% endif %} mb-0">
+                        {{ final_balance|floatformat:2|en }}
+                    </h3>
+                    <small class="text-muted">
+                        {% if final_balance > 0 %}
+                            مدين (على العميل)
+                        {% elif final_balance < 0 %}
+                            دائن (للعميل)
+                        {% else %}
+                            حساب صافي
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- كشف الحساب -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list-ul me-2"></i>
+                        كشف الحساب التفصيلي
+                        <small class="text-muted">({{ statement_data|length }} قيد)</small>
+                    </h5>
+                </div>
+                
+                <div class="card-body statement-tree">
+                    {% if has_transactions %}
+                        {% if opening_balance != 0 %}
+                        <div class="alert alert-info">
+                            <strong>رصيد أول المدة:</strong> 
+                            {{ opening_balance|floatformat:2|en }} {{ currency_symbol|default:"ج.م" }}
+                            {% if opening_balance > 0 %}(مدين){% else %}(دائن){% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% for item in statement_data %}
+                        <div class="transaction-row">
+                            <!-- رأس القيد -->
+                            <div class="transaction-header" onclick="toggleLines({{ forloop.counter }})">
+                                <div class="row align-items-center">
+                                    <div class="col-md-2">
+                                        <strong>{{ item.transaction.date }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            <i class="fas fa-hashtag"></i> 
+                                            قيد {{ item.transaction.id }}
+                                        </small>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <span class="badge bg-{% if item.transaction.transaction_type == 'sales' %}primary{% elif item.transaction.transaction_type == 'receipt' %}success{% else %}secondary{% endif %}">
+                                            {{ item.transaction.get_transaction_type_display }}
+                                        </span>
+                                        <div class="mt-1">{{ item.transaction.description }}</div>
+                                        {% if item.transaction.order %}
+                                            <small class="text-muted">
+                                                <i class="fas fa-shopping-cart"></i>
+                                                طلب {{ item.transaction.order.order_number }}
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="col-md-2 text-center">
+                                        <div class="text-danger fw-bold">{{ item.customer_debit|floatformat:2|en }}</div>
+                                        <small class="text-muted">مدين</small>
+                                    </div>
+                                    
+                                    <div class="col-md-2 text-center">
+                                        <div class="text-success fw-bold">{{ item.customer_credit|floatformat:2|en }}</div>
+                                        <small class="text-muted">دائن</small>
+                                    </div>
+                                    
+                                    <div class="col-md-2 text-center">
+                                        <div class="{% if item.balance > 0 %}balance-positive{% elif item.balance < 0 %}balance-negative{% endif %}">
+                                            {{ item.balance|floatformat:2|en }}
+                                        </div>
+                                        <small class="text-muted">الرصيد</small>
+                                    </div>
+                                </div>
+                                
+                                {% if item.line_count > 0 %}
+                                <div class="mt-2 text-muted">
+                                    <i class="fas fa-chevron-down"></i>
+                                    <small>{{ item.line_count }} سطر مقابل - اضغط للعرض</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- تفاصيل القيد (السطور المقابلة) -->
+                            {% if item.other_lines %}
+                            <div class="transaction-lines" id="lines-{{ forloop.counter }}">
+                                <h6 class="text-muted mb-3">
+                                    <i class="fas fa-sitemap me-2"></i>
+                                    القيود المقابلة:
+                                </h6>
+                                {% for line in item.other_lines %}
+                                <div class="line-item">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-6">
+                                            <span class="account-badge me-2">{{ line.account.code }}</span>
+                                            <strong>{{ line.account.name }}</strong>
+                                            {% if line.description %}
+                                                <br><small class="text-muted">{{ line.description }}</small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-3 text-center">
+                                            {% if line.debit > 0 %}
+                                                <span class="text-danger">{{ line.debit|floatformat:2|en }}</span>
+                                                <small class="text-muted d-block">مدين</small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-3 text-center">
+                                            {% if line.credit > 0 %}
+                                                <span class="text-success">{{ line.credit|floatformat:2|en }}</span>
+                                                <small class="text-muted d-block">دائن</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- الرصيد النهائي -->
+                        <div class="alert {% if final_balance > 0 %}alert-danger{% elif final_balance < 0 %}alert-success{% else %}alert-secondary{% endif %} mt-4">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h5 class="mb-0"><strong>الرصيد النهائي:</strong></h5>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <h4 class="mb-0">{{ final_balance|floatformat:2|en }} {{ currency_symbol|default:"ج.م" }}</h4>
+                                    <small>
+                                        {% if final_balance > 0 %}
+                                            مدين (على العميل)
+                                        {% elif final_balance < 0 %}
+                                            دائن (للعميل) 
+                                        {% else %}
+                                            حساب صافي
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                            <h5 class="text-muted">لا توجد قيود محاسبية</h5>
+                            <p class="text-muted">
+                                {% if not customer_account %}
+                                    لم يتم إنشاء حساب محاسبي لهذا العميل بعد
+                                {% else %}
+                                    لم يتم تسجيل أي قيود محاسبية لهذا العميل
+                                    {% if from_date or to_date %}في الفترة المحددة{% endif %}
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleLines(index) {
+        const linesDiv = document.getElementById('lines-' + index);
+        if (linesDiv) {
+            linesDiv.classList.toggle('show');
+        }
+    }
+    
+    // عرض جميع التفاصيل عند الطباعة
+    window.addEventListener('beforeprint', () => {
+        document.querySelectorAll('.transaction-lines').forEach(el => {
+            el.classList.add('show');
+        });
+    });
+</script>
+{% endblock %}

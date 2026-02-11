@@ -10,11 +10,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="cuttingorderitem",
-            name="bag_number",
-            field=models.CharField(
-                max_length=50, blank=True, verbose_name="رقم الشنطة", default=""
-            ),
-        ),
+        # bag_number already added in 0006_add_fabric_received_field
     ]

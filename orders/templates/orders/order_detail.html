@@ -1653,13 +1653,6 @@
                                             </th>
                                             <td colspan="2"></td>
                                         </tr>
-                                        {% if order.used_customer_balance > 0 %}
-                                            <tr class="table-secondary">
-                                                <th colspan="4" class="text-start">رصيد مستخدم من الحساب</th>
-                                                <th colspan="2">- {{ order.used_customer_balance|clean_decimal_currency:currency_symbol }}</th>
-                                                <td colspan="2"></td>
-                                            </tr>
-                                        {% endif %}
                                         <tr class="table-primary">
                                             <th colspan="4" class="text-start">المتبقي المطلوب</th>
                                             <th colspan="2">

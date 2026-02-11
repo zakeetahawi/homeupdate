@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load accounting_numbers %}
 {% block title %}طباعة القيد - {{ transaction.transaction_number }}{% endblock %}
 {% block extra_css %}
     <style>
@@ -91,10 +92,10 @@
                                 <tr>
                                     <td>{{ line.account.code }} - {{ line.account.name }}</td>
                                     <td class="text-end">
-                                        {% if line.debit > 0 %}{{ line.debit|floatformat:2 }}{% endif %}
+                                        {% if line.debit > 0 %}{{ line.debit|floatformat:2|en }}{% endif %}
                                     </td>
                                     <td class="text-end">
-                                        {% if line.credit > 0 %}{{ line.credit|floatformat:2 }}{% endif %}
+                                        {% if line.credit > 0 %}{{ line.credit|floatformat:2|en }}{% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -102,8 +103,8 @@
                         <tfoot class="table-light">
                             <tr class="fw-bold">
                                 <th>المجموع</th>
-                                <th class="text-end">{{ totals.total_debit|floatformat:2 }}</th>
-                                <th class="text-end">{{ totals.total_credit|floatformat:2 }}</th>
+                                <th class="text-end">{{ totals.total_debit|floatformat:2|en }}</th>
+                                <th class="text-end">{{ totals.total_credit|floatformat:2|en }}</th>
                             </tr>
                         </tfoot>
                     </table>
