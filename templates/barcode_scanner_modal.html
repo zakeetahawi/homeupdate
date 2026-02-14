@@ -1,418 +1,208 @@
 {% load static %}
-<!-- CSS للنافذة المنبثقة -->
+
+<!-- تنسيق المودال -->
 <style>
-    .scanner-modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.95);
-        z-index: 9999;
-        justify-content: center;
-        align-items: center;
-        padding: 10px;
-        overflow-y: auto;
-    }
-    
-    .scanner-modal.active {
-        display: flex;
-    }
-    
-    .scanner-container {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        max-width: 500px;
-        width: 100%;
-        max-height: 95vh;
-        overflow-y: auto;
-        position: relative;
-        margin: auto;
-    }
-    
-    .scanner-close {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: #ff4757;
-        border: none;
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
-        color: white;
-        font-size: 24px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        z-index: 10;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    }
-    
-    .scanner-close:hover {
-        background: #ff3838;
-        transform: scale(1.1);
-    }
-    
-    .scanner-close:active {
-        transform: scale(0.95);
-    }
-    
-    #reader {
-        width: 100%;
-        border-radius: 15px;
-        margin: 20px 0;
-        border: 3px solid #667eea;
-        background: #000;
-        position: relative;
+    #scannerModal .modal-content {
+        border-radius: var(--radius-large, 12px);
         overflow: hidden;
+        border: 1px solid var(--border, #DED5CE);
     }
-    
-    #reader video {
-        width: 100% !important;
-        border-radius: 15px;
-        display: block;
-    }
-    
-    #reader__scan_region {
-        border: 3px solid #667eea !important;
-        border-radius: 10px !important;
-    }
-    
-    #reader__scan_region img {
-        opacity: 0.4 !important;
-    }
-    
-    #reader__dashboard {
-        background: rgba(102, 126, 234, 0.1) !important;
-        padding: 10px !important;
-    }
-    
-    #reader__dashboard_section {
-        text-align: center !important;
-    }
-    
-    #reader__camera_selection {
-        margin: 10px 0 !important;
-    }
-    
-    .product-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 20px;
-        padding: 30px;
-        color: white;
-        margin-top: 20px;
-        animation: slideIn 0.5s ease;
-    }
-    
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .product-info-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 12px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .product-info-item:last-child {
+    #scannerModal .scanner-modal-header {
+        background: var(--primary, #8B735A);
+        color: #fff;
         border-bottom: none;
     }
-    
-    .product-info-label {
-        font-weight: 600;
-        opacity: 0.9;
+    #scannerModal .scanner-modal-header .btn-close {
+        filter: brightness(0) invert(1);
+        opacity: .85;
     }
-    
-    .product-info-value {
-        font-weight: 700;
+    #scannerModal .scanner-modal-header .btn-close:hover {
+        opacity: 1;
     }
-    
-    .warehouse-badge {
-        display: inline-block;
-        background: rgba(255, 255, 255, 0.2);
-        padding: 8px 15px;
-        border-radius: 10px;
-        margin: 5px;
-        font-size: 14px;
+    #scannerModal .scanner-tools-bar {
+        background: var(--surface, #F8F8F8);
+        border-bottom: 1px solid var(--border, #DED5CE);
     }
-    
-    .stock-status {
-        display: inline-block;
-        padding: 8px 20px;
-        border-radius: 20px;
-        font-weight: bold;
-        margin: 10px 0;
+    #scannerModal .scanner-tool-btn {
+        border: 1px solid var(--border, #DED5CE);
+        background: var(--card-bg, #fff);
+        color: var(--text-secondary, #6D6055);
+        border-radius: var(--radius, 8px);
+        transition: var(--transition, all 0.3s ease);
+        font-size: 0.82rem;
+        padding: 0.35rem 0.75rem;
     }
-    
-    .stock-status.available {
-        background: #2ecc71;
-        color: white;
+    #scannerModal .scanner-tool-btn:hover {
+        background: var(--primary, #8B735A);
+        color: #fff;
+        border-color: var(--primary, #8B735A);
     }
-    
-    .stock-status.low {
-        background: #f39c12;
-        color: white;
+    #scannerModal .scanner-tool-btn.active-camera {
+        background: var(--error, #F44336);
+        color: #fff;
+        border-color: var(--error, #F44336);
     }
-    
-    .stock-status.out {
-        background: #e74c3c;
-        color: white;
+    #scannerModal .search-input {
+        border: 1px solid var(--border, #DED5CE);
+        border-radius: var(--radius, 8px);
+        transition: var(--transition, all 0.3s ease);
     }
-    
-    .scanner-input-group {
+    #scannerModal .search-input:focus {
+        border-color: var(--primary, #8B735A);
+        box-shadow: 0 0 0 0.2rem rgba(139, 115, 90, 0.15);
+    }
+    #scannerModal .search-btn {
+        background: var(--primary, #8B735A);
+        border-color: var(--primary, #8B735A);
+        color: #fff;
+        border-radius: 0 var(--radius, 8px) var(--radius, 8px) 0 !important;
+    }
+    #scannerModal .search-btn:hover {
+        background: var(--accent, #5F4B32);
+        border-color: var(--accent, #5F4B32);
+    }
+    #scannerModal #reader {
+        border: 2px solid var(--primary, #8B735A) !important;
+        border-radius: var(--radius, 8px);
+    }
+    #scannerModal .autocomplete-item {
+        border-bottom: 1px solid var(--separator, #E8DCCA);
+        transition: background 0.15s;
+    }
+    #scannerModal .autocomplete-item:last-child { border-bottom: none; }
+    #scannerModal .autocomplete-item:hover,
+    #scannerModal .autocomplete-item:focus {
+        background: var(--surface, #F8F8F8);
+    }
+    /* بطاقة المنتج */
+    #scannerModal .product-result-card {
+        background: var(--card-bg, #fff);
+        border: 1px solid var(--border, #DED5CE);
+        border-radius: var(--radius-large, 12px);
+        overflow: hidden;
+    }
+    #scannerModal .product-result-header {
+        background: var(--primary, #8B735A);
+        color: #fff;
+        padding: 0.75rem 1rem;
+    }
+    #scannerModal .product-result-body {
+        padding: 1rem;
+    }
+    #scannerModal .product-info-row {
         display: flex;
-        gap: 10px;
-        margin: 20px 0;
+        justify-content: space-between;
+        padding: 0.45rem 0;
+        border-bottom: 1px solid var(--separator, #E8DCCA);
+        font-size: 0.875rem;
     }
-    
-    .scanner-input {
-        flex: 1;
-        padding: 15px;
-        border: 2px solid #ddd;
-        border-radius: 10px;
-        font-size: 16px;
+    #scannerModal .product-info-row:last-child { border-bottom: none; }
+    #scannerModal .product-info-row .info-label {
+        color: var(--text-tertiary, #8B8178);
     }
-    
-    .scanner-submit-btn {
-        padding: 15px 30px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        border-radius: 10px;
-        color: white;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.3s ease;
+    #scannerModal .product-info-row .info-value {
+        color: var(--text-primary, #3D3427);
+        font-weight: 600;
     }
-    
-    .scanner-submit-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-    }
-    
-    /* تحسينات للموبايل */
-    @media (max-width: 768px) {
-        .scanner-container {
-            padding: 15px;
-            border-radius: 10px;
-            max-height: 98vh;
-        }
-        
-        .scanner-container h3 {
-            font-size: 18px;
-            margin-bottom: 15px;
-            padding-right: 50px;
-        }
-        
-        .scanner-close {
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
-            top: 5px;
-            right: 5px;
-        }
-        
-        .product-card {
-            padding: 20px;
-        }
-        
-        .product-card h4 {
-            font-size: 18px;
-        }
-        
-        .product-info-item {
-            padding: 10px 0;
-            font-size: 14px;
-        }
-        
-        .warehouse-badge {
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-        
-        .scanner-input {
-            padding: 12px;
-            font-size: 14px;
-        }
-        
-        .scanner-submit-btn {
-            padding: 12px 20px;
-            font-size: 14px;
-        }
-    }
-    
-    /* تنبيه HTTPS */
-    .https-warning {
-        background: #fff3cd;
-        border: 2px solid #ffc107;
-        border-radius: 10px;
-        padding: 15px;
-        margin: 15px 0;
-        color: #856404;
-    }
-    
-    .https-warning strong {
-        color: #d39e00;
-    }
-    
-    .camera-error {
-        background: #f8d7da;
-        border: 2px solid #f5c6cb;
-        border-radius: 10px;
-        padding: 15px;
-        margin: 15px 0;
-        color: #721c24;
-    }
-    
-    /* خيار رفع الصورة */
-    .upload-option {
-        margin: 20px 0;
-        padding: 15px;
-        background: #e3f2fd;
-        border-radius: 10px;
-        text-align: center;
-    }
-    
-    .upload-btn {
+    #scannerModal .warehouse-chip {
         display: inline-block;
-        padding: 12px 25px;
-        background: #2196F3;
-        color: white;
-        border: none;
-        border-radius: 10px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: all 0.3s ease;
-    }
-    
-    .upload-btn:hover {
-        background: #1976D2;
-        transform: translateY(-2px);
-    }
-    
-    #imageInput {
-        display: none;
-    }
-    
-    /* طلب الأذونات */
-    .permission-request {
-        background: #e8f5e9;
-        border: 2px solid #4caf50;
-        border-radius: 10px;
-        padding: 20px;
-        margin: 15px 0;
-        text-align: center;
-    }
-    
-    .permission-request-btn {
-        background: #4caf50;
-        color: white;
-        border: none;
-        padding: 15px 30px;
-        border-radius: 10px;
-        font-weight: bold;
-        cursor: pointer;
-        font-size: 16px;
-        margin-top: 10px;
-        transition: all 0.3s ease;
-    }
-    
-    .permission-request-btn:hover {
-        background: #45a049;
-        transform: scale(1.05);
+        background: var(--surface, #F8F8F8);
+        border: 1px solid var(--border, #DED5CE);
+        border-radius: 20px;
+        padding: 0.2rem 0.65rem;
+        font-size: 0.78rem;
+        color: var(--text-secondary, #6D6055);
+        margin: 0.15rem;
     }
 </style>
-<!-- نافذة فحص الباركود -->
-<div class="scanner-modal" id="scannerModal">
-    <div class="scanner-container">
-        <button class="scanner-close"
-                id="closeScannerBtn"
-                aria-label="إغلاق ماسح الباركود"
-                title="إغلاق">
-            <i class="fas fa-times" aria-hidden="true"></i>
-        </button>
-        <h3 class="text-center mb-3" style="color: #667eea; font-weight: bold;">
-            <i class="fas fa-barcode"></i> فحص باركود المنتج
-        </h3>
-        <!-- طلب الأذونات -->
-        <div class="permission-request d-none" id="permissionRequest">
-            <i class="fas fa-camera fa-3x mb-3" style="color: #4caf50;"></i>
-            <h5 style="color: #2e7d32;">نحتاج إلى إذن الكاميرا</h5>
-            <p style="color: #555;">للفحص التلقائي، يرجى السماح بالوصول إلى الكاميرا</p>
-            <button class="permission-request-btn" id="requestPermissionBtn">
-                <i class="fas fa-check-circle"></i> منح الإذن
-            </button>
+
+<!-- نافذة فحص الباركود - Bootstrap 5 Modal -->
+<div class="modal fade" id="scannerModal" tabindex="-1" aria-labelledby="scannerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <!-- Header -->
+            <div class="modal-header scanner-modal-header py-2">
+                <h6 class="modal-title fw-bold mb-0" id="scannerModalLabel">
+                    <i class="fas fa-barcode me-2"></i>فحص باركود / بحث عن منتج
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+
+            <!-- شريط الأدوات -->
+            <div class="scanner-tools-bar d-flex gap-2 justify-content-center p-2">
+                <button class="scanner-tool-btn" id="startCameraBtn">
+                    <i class="fas fa-camera me-1"></i>الكاميرا
+                </button>
+                <button class="scanner-tool-btn active-camera d-none" id="stopCameraBtn">
+                    <i class="fas fa-stop me-1"></i>إيقاف
+                </button>
+                <input type="file" id="imageInput" accept="image/*" capture="environment" class="d-none">
+                <label for="imageInput" class="scanner-tool-btn mb-0" role="button" style="cursor:pointer;">
+                    <i class="fas fa-image me-1"></i>صورة
+                </label>
+            </div>
+
+            <div class="modal-body px-3 py-3" style="max-height: 75vh; overflow-y: auto;">
+                <!-- طلب الأذونات -->
+                <div class="alert alert-success d-none text-center py-2 small" id="permissionRequest">
+                    <i class="fas fa-camera d-block mb-1" style="font-size:1.4rem;"></i>
+                    <strong>نحتاج إلى إذن الكاميرا</strong>
+                    <p class="mb-1" style="font-size:.78rem;">يرجى السماح بالوصول إلى الكاميرا</p>
+                    <button class="btn btn-success btn-sm py-0 px-3" id="requestPermissionBtn">
+                        <i class="fas fa-check-circle me-1"></i>منح الإذن
+                    </button>
+                </div>
+
+                <!-- تنبيه HTTPS -->
+                <div class="alert alert-warning d-none small py-2 mb-2" id="httpsWarning">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    الكاميرا تعمل فقط على <strong>HTTPS</strong> أو <strong>localhost</strong>.
+                </div>
+
+                <!-- خطأ الكاميرا -->
+                <div class="alert alert-danger d-none small py-2 mb-2" id="cameraError">
+                    <i class="fas fa-times-circle me-1"></i>
+                    فشل تشغيل الكاميرا. استخدم الإدخال اليدوي أو رفع صورة.
+                </div>
+
+                <!-- عنصر القارئ -->
+                <div id="reader" class="d-none overflow-hidden mb-3"></div>
+
+                <!-- حقل البحث مع Autocomplete -->
+                <div class="position-relative">
+                    <label class="form-label small mb-1" style="color: var(--text-tertiary, #8B8178);">
+                        <i class="fas fa-search me-1"></i>بحث بالكود أو اسم المنتج
+                    </label>
+                    <div class="input-group">
+                        <input type="text"
+                               id="manualBarcodeInput"
+                               class="form-control search-input"
+                               placeholder="ادخل كود الصنف أو اسم المنتج..."
+                               autocomplete="off"
+                               dir="auto">
+                        <button class="btn search-btn" type="button" id="manualScanBtn">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <!-- قائمة الاقتراحات (inline - توسّع المودال) -->
+                <div id="autocompleteDropdown"
+                     class="border rounded-2 mt-1 py-0"
+                     style="max-height: 270px; overflow-y: auto; display: none; border-color: var(--border, #DED5CE) !important; background: var(--card-bg, #fff);">
+                </div>
+
+                <!-- عرض النتيجة -->
+                <div id="scanResult" class="mt-3"></div>
+            </div>
         </div>
-        <!-- تنبيه HTTPS -->
-        <div class="https-warning d-none" id="httpsWarning">
-            <strong>⚠️ تنبيه:</strong> الكاميرا تعمل فقط على:
-            <br>
-            • <strong>HTTPS</strong> (الاتصال الآمن)
-            <br>
-            • <strong>localhost</strong> (التطوير المحلي)
-            <br>
-            استخدم الإدخال اليدوي أو رفع الصورة بدلاً من ذلك.
-        </div>
-        <!-- خطأ الكاميرا -->
-        <div class="camera-error d-none" id="cameraError">
-            <strong>❌ فشل تشغيل الكاميرا</strong>
-            <br>
-            الرجاء استخدام الإدخال اليدوي أو رفع صورة الباركود.
-        </div>
-        <!-- خيار الفحص بالكاميرا -->
-        <div class="text-center mb-3">
-            <button class="btn btn-primary" id="startCameraBtn">
-                <i class="fas fa-camera"></i> تشغيل الكاميرا
-            </button>
-            <button class="btn btn-danger d-none" id="stopCameraBtn">
-                <i class="fas fa-stop"></i> إيقاف الكاميرا
-            </button>
-        </div>
-        <!-- عنصر الفيديو للفحص -->
-        <div id="reader" class="d-none"></div>
-        <!-- خيار رفع صورة -->
-        <div class="upload-option">
-            <p style="margin: 0 0 10px 0; font-weight: bold; color: #1976D2;">
-                <i class="fas fa-image"></i> أو ارفع صورة الباركود
-            </p>
-            <input type="file" id="imageInput" accept="image/*" capture="environment">
-            <label for="imageInput" class="upload-btn">
-                <i class="fas fa-upload"></i> اختر صورة
-            </label>
-        </div>
-        <!-- خيار الإدخال اليدوي -->
-        <div class="scanner-input-group">
-            <input type="text"
-                   id="manualBarcodeInput"
-                   class="scanner-input"
-                   placeholder="أو أدخل كود المنتج يدوياً..."
-                   autocomplete="off">
-            <button class="scanner-submit-btn" id="manualScanBtn">
-                <i class="fas fa-search"></i> بحث
-            </button>
-        </div>
-        <!-- عرض النتيجة -->
-        <div id="scanResult"></div>
     </div>
 </div>
-<!-- JavaScript للنافذة المنبثقة -->
-{% load static %}
+
+<!-- JavaScript -->
 <script src="{% static 'vendor/qrcode/html5-qrcode.min.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const openScannerBtn = document.getElementById('openScannerBtn');
-    const closeScannerBtn = document.getElementById('closeScannerBtn');
     const scannerModal = document.getElementById('scannerModal');
     const startCameraBtn = document.getElementById('startCameraBtn');
     const stopCameraBtn = document.getElementById('stopCameraBtn');
@@ -422,179 +212,245 @@ document.addEventListener('DOMContentLoaded', function() {
     const scanResult = document.getElementById('scanResult');
     const permissionRequest = document.getElementById('permissionRequest');
     const requestPermissionBtn = document.getElementById('requestPermissionBtn');
-    
+    const autocompleteDropdown = document.getElementById('autocompleteDropdown');
+
     let html5QrCode = null;
     let isScanning = false;
     let isCameraRunning = false;
-    
-    // فتح نافذة الفحص
+    let bsModal = null;
+    let autocompleteTimer = null;
+
+    // تهيئة Bootstrap Modal
+    if (scannerModal) {
+        bsModal = new bootstrap.Modal(scannerModal);
+    }
+
+    // فتح النافذة
     if (openScannerBtn) {
         openScannerBtn.addEventListener('click', function() {
-            scannerModal.classList.add('active');
-            manualBarcodeInput.focus();
+            if (bsModal) bsModal.show();
         });
     }
-    
-    // إغلاق نافذة الفحص
-    closeScannerBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        closeScanner();
+
+    // عند فتح النافذة - focus على حقل البحث
+    scannerModal.addEventListener('shown.bs.modal', function() {
+        manualBarcodeInput.focus();
     });
-    
-    // إغلاق عند الضغط خارج النافذة
-    scannerModal.addEventListener('click', function(e) {
-        if (e.target === scannerModal) {
-            closeScanner();
-        }
-    });
-    
-    // دالة مركزية للإغلاق
-    function closeScanner() {
+
+    // عند إغلاق النافذة
+    scannerModal.addEventListener('hidden.bs.modal', function() {
         stopCamera();
-        scannerModal.classList.remove('active');
         scanResult.innerHTML = '';
+        manualBarcodeInput.value = '';
         document.getElementById('httpsWarning').classList.add('d-none');
         document.getElementById('cameraError').classList.add('d-none');
         permissionRequest.classList.add('d-none');
-        manualBarcodeInput.value = '';
-        imageInput.value = '';
+        hideAutocomplete();
+        const imageInput = document.getElementById('imageInput');
+        if (imageInput) imageInput.value = '';
+    });
+
+    // ============ AUTOCOMPLETE ============
+    manualBarcodeInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        clearTimeout(autocompleteTimer);
+
+        if (query.length < 2) {
+            hideAutocomplete();
+            return;
+        }
+
+        autocompleteTimer = setTimeout(() => {
+            fetchAutocomplete(query);
+        }, 250);
+    });
+
+    function fetchAutocomplete(query) {
+        fetch(`/inventory/api/product-autocomplete/?query=${encodeURIComponent(query)}`)
+            .then(r => r.json())
+            .then(results => {
+                if (!results || results.length === 0) {
+                    hideAutocomplete();
+                    return;
+                }
+                showAutocomplete(results);
+            })
+            .catch(() => hideAutocomplete());
     }
-    
-    // إغلاق بالضغط على ESC
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && scannerModal.classList.contains('active')) {
-            closeScanner();
+
+    function showAutocomplete(results) {
+        autocompleteDropdown.innerHTML = '';
+        results.forEach(item => {
+            const el = document.createElement('button');
+            el.type = 'button';
+            el.className = 'dropdown-item autocomplete-item d-flex justify-content-between align-items-center py-2 px-3';
+            el.style.whiteSpace = 'normal';
+            el.style.cursor = 'pointer';
+
+            const stockClass = item.current_stock > 0 ? 'text-success' : 'text-danger';
+            const stockIcon = item.current_stock > 0 ? 'check-circle' : 'times-circle';
+
+            el.innerHTML = `
+                <div class="flex-grow-1 me-2">
+                    <div class="fw-semibold" style="font-size:.85rem; color: var(--text-primary, #3D3427);">${item.name}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-tertiary, #8B8178);">
+                        ${item.code ? '<i class="fas fa-barcode me-1"></i>' + item.code : ''}
+                        ${item.category ? ' · ' + item.category : ''}
+                    </div>
+                </div>
+                <span class="${stockClass}" style="font-size: 0.75rem;">
+                    <i class="fas fa-${stockIcon} me-1"></i>${item.current_stock}
+                </span>
+            `;
+
+            el.addEventListener('click', function() {
+                hideAutocomplete();
+                manualBarcodeInput.value = item.code || item.name;
+                if (item.code) {
+                    searchProduct(item.code);
+                } else {
+                    searchProduct(item.name);
+                }
+            });
+
+            autocompleteDropdown.appendChild(el);
+        });
+
+        autocompleteDropdown.style.display = 'block';
+    }
+
+    function hideAutocomplete() {
+        autocompleteDropdown.style.display = 'none';
+        autocompleteDropdown.innerHTML = '';
+    }
+
+    // إغلاق القائمة عند النقر خارجها
+    document.addEventListener('click', function(e) {
+        if (!manualBarcodeInput.contains(e.target) && !autocompleteDropdown.contains(e.target)) {
+            hideAutocomplete();
         }
     });
-    
-    // رفع صورة الباركود
+
+    // التنقل بالأسهم في القائمة
+    manualBarcodeInput.addEventListener('keydown', function(e) {
+        if (autocompleteDropdown.style.display !== 'block') return;
+
+        const items = autocompleteDropdown.querySelectorAll('.dropdown-item');
+        if (!items.length) return;
+
+        let focused = autocompleteDropdown.querySelector('.dropdown-item:focus');
+        let idx = Array.from(items).indexOf(focused);
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            idx = idx < items.length - 1 ? idx + 1 : 0;
+            items[idx].focus();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            idx = idx > 0 ? idx - 1 : items.length - 1;
+            items[idx].focus();
+        } else if (e.key === 'Escape') {
+            hideAutocomplete();
+            manualBarcodeInput.focus();
+        }
+    });
+
+    // ============ رفع صورة الباركود ============
     const imageInput = document.getElementById('imageInput');
     imageInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {
-            scanResult.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>جاري قراءة الصورة...</p></div>';
-            
+            scanResult.innerHTML = `
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                    جاري قراءة الصورة...
+                </div>`;
+
             const tempScanner = new Html5Qrcode("reader");
-            
             tempScanner.scanFile(file, true)
                 .then(decodedText => {
-                    console.log('✅ تم قراءة الباركود من الصورة:', decodedText);
                     searchProduct(decodedText);
                 })
                 .catch(err => {
-                    console.error('❌ خطأ في قراءة الصورة:', err);
                     scanResult.innerHTML = `
-                        <div class="alert alert-danger text-center">
-                            <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
-                            <h5>فشل قراءة الباركود من الصورة</h5>
-                            <p>تأكد من وضوح الباركود في الصورة</p>
-                        </div>
-                    `;
+                        <div class="alert alert-danger text-center py-2">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            فشل قراءة الباركود من الصورة. تأكد من وضوح الباركود.
+                        </div>`;
                 });
         }
     });
-    
-    // طلب الأذونات
+
+    // ============ طلب الأذونات ============
     requestPermissionBtn.addEventListener('click', function() {
         permissionRequest.classList.add('d-none');
         startCamera();
     });
-    
+
+    // ============ الكاميرا ============
     function startCamera() {
-        // فحص HTTPS أولاً
-        const isSecure = window.location.protocol === 'https:' || 
-                        window.location.hostname === 'localhost' || 
+        const isSecure = window.location.protocol === 'https:' ||
+                        window.location.hostname === 'localhost' ||
                         window.location.hostname === '127.0.0.1';
-        
+
         if (!isSecure) {
             document.getElementById('httpsWarning').classList.remove('d-none');
             return;
         }
-        
-        if (isCameraRunning) {
-            return;
-        }
-        
-        // إظهار عنصر القارئ
+        if (isCameraRunning) return;
+
         readerElement.classList.remove('d-none');
         startCameraBtn.classList.add('d-none');
         stopCameraBtn.classList.remove('d-none');
         document.getElementById('httpsWarning').classList.add('d-none');
         document.getElementById('cameraError').classList.add('d-none');
-        
-        // إنشاء قارئ Html5Qrcode
+
         html5QrCode = new Html5Qrcode("reader");
-        
-        // إعدادات الفحص - محسنة للفحص السريع
+
         const config = {
             fps: 30,
-            qrbox: { width: 300, height: 300 },
+            qrbox: { width: 280, height: 280 },
             aspectRatio: 1.0,
             disableFlip: false,
-            experimentalFeatures: {
-                useBarCodeDetectorIfSupported: true
-            }
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true }
         };
-        
-        // بدء الفحص
+
         html5QrCode.start(
             { facingMode: "environment" },
             config,
-            (decodedText, decodedResult) => {
-                // الفحص التلقائي - يعمل فوراً عند اكتشاف الباركود
+            (decodedText) => {
                 if (!isScanning) {
                     isScanning = true;
                     isCameraRunning = true;
-                    
-                    console.log('✅ تم اكتشاف الباركود:', decodedText);
-                    
-                    // إيقاف الكاميرا للعرض النظيف
                     stopCamera();
-                    
-                    // البحث عن المنتج
                     searchProduct(decodedText);
-                    
-                    setTimeout(() => { 
-                        isScanning = false;
-                    }, 1000);
+                    setTimeout(() => { isScanning = false; }, 1000);
                 }
             },
-            (errorMessage) => {
-                // لا نفعل شيء للأخطاء العادية أثناء الفحص
-            }
+            () => {}
         ).then(() => {
             isCameraRunning = true;
-            console.log('✅ تم تشغيل الكاميرا بنجاح');
         }).catch((err) => {
-            console.error('❌ خطأ في تشغيل الكاميرا:', err);
-            
-            // التحقق إذا كان الخطأ بسبب الأذونات
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
                 permissionRequest.classList.remove('d-none');
             } else {
                 document.getElementById('cameraError').classList.remove('d-none');
             }
-            
             readerElement.classList.add('d-none');
             startCameraBtn.classList.remove('d-none');
             stopCameraBtn.classList.add('d-none');
             isCameraRunning = false;
         });
     }
-    
+
     function stopCamera() {
         if (html5QrCode && isCameraRunning) {
             html5QrCode.stop().then(() => {
-                console.log('✅ تم إيقاف الكاميرا');
                 readerElement.classList.add('d-none');
                 startCameraBtn.classList.remove('d-none');
                 stopCameraBtn.classList.add('d-none');
                 isCameraRunning = false;
-            }).catch((err) => {
-                console.error('❌ خطأ في إيقاف الكاميرا:', err);
-                isCameraRunning = false;
-            });
+            }).catch(() => { isCameraRunning = false; });
         } else {
             readerElement.classList.add('d-none');
             startCameraBtn.classList.remove('d-none');
@@ -602,140 +458,120 @@ document.addEventListener('DOMContentLoaded', function() {
             isCameraRunning = false;
         }
     }
-    
-    // تشغيل الكاميرا
-    startCameraBtn.addEventListener('click', function() {
-        startCamera();
-    });
-    
-    // إيقاف الكاميرا
-    stopCameraBtn.addEventListener('click', function() {
-        stopCamera();
-    });
-    
-    // البحث اليدوي
+
+    startCameraBtn.addEventListener('click', () => startCamera());
+    stopCameraBtn.addEventListener('click', () => stopCamera());
+
+    // ============ البحث اليدوي ============
     manualScanBtn.addEventListener('click', function() {
-        const barcode = manualBarcodeInput.value.trim();
-        if (barcode) {
-            searchProduct(barcode);
+        const val = manualBarcodeInput.value.trim();
+        if (val) {
+            hideAutocomplete();
+            searchProduct(val);
         }
     });
-    
-    // البحث عند الضغط على Enter
+
     manualBarcodeInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            const barcode = manualBarcodeInput.value.trim();
-            if (barcode) {
-                searchProduct(barcode);
+            const val = manualBarcodeInput.value.trim();
+            if (val) {
+                hideAutocomplete();
+                searchProduct(val);
             }
         }
     });
-    
+
+    // ============ البحث عن المنتج ============
     function searchProduct(barcode) {
-        // تنظيف الباركود: إزالة المسافات والأحرف غير الضرورية
         barcode = barcode.trim();
-        
-        // إزالة الأصفار من البداية إذا كانت موجودة
         const originalBarcode = barcode;
         barcode = barcode.replace(/^0+/, '') || '0';
-        
-        // عرض رسالة في console للمطور
-        if (originalBarcode !== barcode) {
-            console.log(`🔄 تم تحويل الباركود: ${originalBarcode} → ${barcode}`);
-        }
-        
-        scanResult.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>جاري البحث...</p></div>';
-        
+
+        scanResult.innerHTML = `
+            <div class="text-center py-3">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                جاري البحث...
+            </div>`;
+
         fetch(`/inventory/api/barcode-scan/?barcode=${encodeURIComponent(barcode)}`)
-            .then(response => response.json())
+            .then(r => r.json())
             .then(data => {
                 if (data.success) {
                     displayProduct(data.product);
                 } else {
                     scanResult.innerHTML = `
-                        <div class="alert alert-danger text-center">
-                            <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
-                            <h5>${data.error}</h5>
-                            <p>${data.message || ''}</p>
-                            ${originalBarcode !== barcode ? `<p class="small text-muted">تم البحث بالكود: ${barcode}</p>` : ''}
-                        </div>
-                    `;
+                        <div class="alert alert-danger text-center py-2 mb-0">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            <strong>${data.error}</strong>
+                            ${data.message ? '<br><small>' + data.message + '</small>' : ''}
+                        </div>`;
                 }
             })
-            .catch(error => {
-                console.error('خطأ:', error);
+            .catch(() => {
                 scanResult.innerHTML = `
-                    <div class="alert alert-danger text-center">
-                        <i class="fas fa-times-circle fa-2x mb-2"></i>
-                        <h5>حدث خطأ في الاتصال</h5>
-                    </div>
-                `;
+                    <div class="alert alert-danger text-center py-2 mb-0">
+                        <i class="fas fa-times-circle me-1"></i>حدث خطأ في الاتصال
+                    </div>`;
             });
     }
-    
+
+    // ============ عرض بيانات المنتج ============
     function displayProduct(product) {
-        let stockStatusClass = 'available';
+        let stockBadge = 'bg-success';
+        let stockLabel = product.stock_status;
         if (product.current_stock <= 0) {
-            stockStatusClass = 'out';
+            stockBadge = 'bg-danger';
         } else if (product.current_stock <= product.minimum_stock) {
-            stockStatusClass = 'low';
+            stockBadge = 'bg-warning text-dark';
         }
-        
+
         let warehousesHtml = '';
         if (product.warehouses && product.warehouses.length > 0) {
-            warehousesHtml = '<div class="mt-3"><strong>المخزون حسب المستودع:</strong><br>';
-            product.warehouses.forEach(wh => {
-                warehousesHtml += `<span class="warehouse-badge">${wh.warehouse_name}: ${wh.stock}</span>`;
-            });
-            warehousesHtml += '</div>';
+            warehousesHtml = `
+                <div class="mt-2 pt-2" style="border-top: 1px solid var(--separator, #E8DCCA);">
+                    <small class="fw-bold" style="color: var(--text-tertiary, #8B8178);">المخزون حسب المستودع:</small>
+                    <div class="mt-1">
+                        ${product.warehouses.map(wh => `
+                            <span class="warehouse-chip">
+                                ${wh.warehouse_name}: <strong>${wh.stock}</strong>
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>`;
         }
-        
+
         scanResult.innerHTML = `
-            <div class="product-card">
-                <h4 class="text-center mb-4">
-                    <i class="fas fa-box-open"></i> ${product.name}
-                </h4>
-                
-                <div class="product-info-item">
-                    <span class="product-info-label">الكود:</span>
-                    <span class="product-info-value">${product.code || 'غير محدد'}</span>
+            <div class="product-result-card">
+                <div class="product-result-header text-center">
+                    <i class="fas fa-box-open me-1"></i>
+                    <span class="fw-bold">${product.name}</span>
                 </div>
-                
-                <div class="product-info-item">
-                    <span class="product-info-label">السعر:</span>
-                    <span class="product-info-value">${product.price} ${product.currency_symbol}</span>
+                <div class="product-result-body">
+                    <div class="product-info-row">
+                        <span class="info-label"><i class="fas fa-barcode me-1"></i>الكود</span>
+                        <span class="info-value">${product.code || '—'}</span>
+                    </div>
+                    <div class="product-info-row">
+                        <span class="info-label"><i class="fas fa-tag me-1"></i>السعر</span>
+                        <span class="info-value">${product.price} ${product.currency_symbol}</span>
+                    </div>
+                    <div class="product-info-row">
+                        <span class="info-label"><i class="fas fa-layer-group me-1"></i>الفئة</span>
+                        <span class="info-value">${product.category}</span>
+                    </div>
+                    <div class="product-info-row">
+                        <span class="info-label"><i class="fas fa-ruler me-1"></i>الوحدة</span>
+                        <span class="info-value">${product.unit_display}</span>
+                    </div>
+                    <div class="text-center mt-2">
+                        <span class="badge ${stockBadge} px-3 py-2" style="font-size: 0.85rem;">
+                            <i class="fas fa-cubes me-1"></i>المتوفر: ${product.current_stock} — ${stockLabel}
+                        </span>
+                    </div>
+                    ${warehousesHtml}
+                    ${product.description ? '<p class="mt-2 mb-0 small" style="color: var(--text-tertiary, #8B8178);">' + product.description + '</p>' : ''}
                 </div>
-                
-                <div class="product-info-item">
-                    <span class="product-info-label">الفئة:</span>
-                    <span class="product-info-value">${product.category}</span>
-                </div>
-                
-                <div class="product-info-item">
-                    <span class="product-info-label">الوحدة:</span>
-                    <span class="product-info-value">${product.unit_display}</span>
-                </div>
-                
-                <div class="product-info-item">
-                    <span class="product-info-label">الكمية المتوفرة:</span>
-                    <span class="product-info-value">${product.current_stock}</span>
-                </div>
-                
-                <div class="text-center mt-3">
-                    <span class="stock-status ${stockStatusClass}">${product.stock_status}</span>
-                </div>
-                
-                ${warehousesHtml}
-                
-                ${product.description ? `<div class="mt-3"><strong>الوصف:</strong><br>${product.description}</div>` : ''}
-                
-                <div class="text-center mt-3">
-                    <button class="btn btn-light btn-sm" onclick="document.getElementById('closeScannerBtn').click()">
-                        <i class="fas fa-check-circle"></i> تم
-                    </button>
-                </div>
-            </div>
-        `;
+            </div>`;
     }
 });
 </script>

@@ -139,41 +139,28 @@ class Notification(models.Model):
         return f"{self.title} - {self.get_notification_type_display()}"
 
     def get_absolute_url(self):
-        """الحصول على رابط الإشعار"""
-        # للإشعارات المرتبطة بالأقسام، توجيه لتفاصيل الطلب إذا كان متوفراً
-        if self.notification_type in [
-            "inspection_status_changed",
-            "manufacturing_status_changed",
-            "installation_completed",
-            "installation_scheduled",
-        ]:
-            # البحث عن رقم الطلب في extra_data
-            if self.extra_data and "order_number" in self.extra_data:
-                try:
-                    from orders.models import Order
+        """الحصول على رابط الإشعار — بدون استعلامات DB إضافية"""
+        # محاولة بناء الرابط من extra_data مباشرة (بدون استعلام DB)
+        if self.extra_data:
+            # إذا كان الرابط محفوظ مباشرة
+            if "url" in self.extra_data:
+                return self.extra_data["url"]
 
-                    order = Order.objects.get(
-                        order_number=self.extra_data["order_number"]
-                    )
-                    return order.get_absolute_url()
-                except Order.DoesNotExist:
-                    pass
+            # بناء رابط الطلب من رقم الطلب
+            if "order_number" in self.extra_data:
+                return f"/orders/{self.extra_data['order_number']}/"
 
-            # إذا كان الكائن المرتبط له طلب
-            if (
-                self.related_object
-                and hasattr(self.related_object, "order")
-                and self.related_object.order
-            ):
-                return self.related_object.order.get_absolute_url()
+            # بناء رابط من order_id
+            if "order_id" in self.extra_data:
+                return f"/orders/{self.extra_data['order_id']}/"
 
-        # للإشعارات الأخرى، استخدم الكائن المرتبط
-        if self.related_object:
-            # محاولة الحصول على رابط الكائن المرتبط
-            if hasattr(self.related_object, "get_absolute_url"):
-                return self.related_object.get_absolute_url()
-            elif hasattr(self.related_object, "get_admin_url"):
-                return self.related_object.get_admin_url()
+            # بناء رابط العميل من كود العميل
+            if "customer_code" in self.extra_data:
+                return f"/customers/{self.extra_data['customer_code']}/"
+
+            # بناء رابط المعاينة من رقم العقد
+            if "contract_number" in self.extra_data:
+                return f"/inspections/{self.extra_data['contract_number']}/"
 
         # رابط افتراضي لصفحة تفاصيل الإشعار
         return reverse("notifications:detail", kwargs={"pk": self.pk})

@@ -12,6 +12,100 @@
                         </h4>
                     </div>
                     <div class="card-body">
+                        <!-- تقرير الترتيب الموحد -->
+                        <div class="row mb-4">
+                            <div class="col-md-12 mb-3">
+                                <h5 class="border-bottom pb-2">
+                                    <i class="fas fa-trophy me-2 text-warning"></i>ترتيب الأداء
+                                </h5>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <a href="{% url 'reports:ranking' %}?type=installations"
+                                   class="text-decoration-none">
+                                    <div class="card border-primary hover-shadow h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-tools fa-3x text-primary mb-3"></i>
+                                            <h5 class="card-title">ترتيب فنيي التركيب</h5>
+                                            <p class="card-text text-muted">
+                                                <small>ترتيب الفنيين بعدد الشبابيك</small>
+                                            </p>
+                                        </div>
+                                        <div class="card-footer bg-primary text-white text-center">
+                                            <strong>عرض الترتيب <i class="fas fa-arrow-left"></i></strong>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <a href="{% url 'reports:ranking' %}?type=production"
+                                   class="text-decoration-none">
+                                    <div class="card border-warning hover-shadow h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-industry fa-3x text-warning mb-3"></i>
+                                            <h5 class="card-title">ترتيب خياطي الإنتاج</h5>
+                                            <p class="card-text text-muted">
+                                                <small>ترتيب الخياطين بالأمتار المنتجة</small>
+                                            </p>
+                                        </div>
+                                        <div class="card-footer bg-warning text-dark text-center">
+                                            <strong>عرض الترتيب <i class="fas fa-arrow-left"></i></strong>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <a href="{% url 'reports:ranking' %}?type=sales"
+                                   class="text-decoration-none">
+                                    <div class="card border-success hover-shadow h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-cash-register fa-3x text-success mb-3"></i>
+                                            <h5 class="card-title">ترتيب البائعين</h5>
+                                            <p class="card-text text-muted">
+                                                <small>ترتيب البائعين بعدد الطلبات</small>
+                                            </p>
+                                        </div>
+                                        <div class="card-footer bg-success text-white text-center">
+                                            <strong>عرض الترتيب <i class="fas fa-arrow-left"></i></strong>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <a href="{% url 'reports:ranking' %}?type=cutting"
+                                   class="text-decoration-none">
+                                    <div class="card border-info hover-shadow h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-cut fa-3x text-info mb-3"></i>
+                                            <h5 class="card-title">ترتيب التقطيع</h5>
+                                            <p class="card-text text-muted">
+                                                <small>ترتيب المستودعات بعدد الطلبات المكتملة</small>
+                                            </p>
+                                        </div>
+                                        <div class="card-footer bg-info text-white text-center">
+                                            <strong>عرض الترتيب <i class="fas fa-arrow-left"></i></strong>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <a href="{% url 'reports:ranking' %}?type=inventory"
+                                   class="text-decoration-none">
+                                    <div class="card border-secondary hover-shadow h-100">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-boxes fa-3x text-secondary mb-3"></i>
+                                            <h5 class="card-title">ترتيب الخامات</h5>
+                                            <p class="card-text text-muted">
+                                                <small>أكثر الخامات اكتمالاً من التقطيع</small>
+                                            </p>
+                                        </div>
+                                        <div class="card-footer bg-secondary text-white text-center">
+                                            <strong>عرض الترتيب <i class="fas fa-arrow-left"></i></strong>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+
                         <!-- تقارير حسابات المصنع -->
                         <div class="row">
                             <div class="col-md-12 mb-3">

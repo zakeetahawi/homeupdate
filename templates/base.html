@@ -229,126 +229,33 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════════
-           قائمة الإشعارات المنسدلة - تصميم احترافي ومضغوط
+           قائمة الإشعارات المنسدلة
            ═══════════════════════════════════════════════════════════════════ */
 
-        /* قائمة الإشعارات - أعرض */
         #notificationsDropdown+.dropdown-menu {
-            width: 600px !important;
-            min-width: 600px !important;
-            max-height: 550px;
+            width: 420px;
+            max-height: 500px;
             overflow-y: auto;
-            background: #ffffff;
+            border-radius: 10px;
             border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
             padding: 0;
         }
 
-        /* رأس الإشعارات - مضغوط */
-        #notificationsDropdown+.dropdown-menu .dropdown-header {
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-            padding: 0.5rem 1rem;
-            border-radius: 12px 12px 0 0;
-        }
-
-        /* عناصر الإشعارات - مضغوطة */
         .notification-dropdown-item {
-            padding: 0.5rem 0.75rem !important;
-            margin: 2px 6px !important;
-            border-radius: 8px !important;
-            border: 1px solid transparent !important;
-            transition: all 0.15s ease !important;
+            white-space: normal !important;
+            word-wrap: break-word;
+            transition: background 0.15s ease;
+            border-bottom: 1px solid #f0f0f0;
         }
-
-        .notification-dropdown-item:hover {
-            background: #f5f7fa !important;
-            border-color: #e8e8e8 !important;
-        }
-
-        /* أيقونة الإشعار - أصغر */
-        .notification-icon-wrapper {
-            width: 32px !important;
-            height: 32px !important;
-            border-radius: 50% !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            flex-shrink: 0 !important;
-        }
-
-        .notification-icon-wrapper i {
-            font-size: 13px !important;
-        }
-
-        /* عنوان الإشعار - مضغوط */
-        .notification-dropdown-item h6 {
-            font-size: 0.8rem !important;
-            margin-bottom: 0.15rem !important;
-            line-height: 1.3 !important;
-        }
-
-        /* تفاصيل الإشعار - سطر واحد */
-        .notification-details {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            gap: 8px !important;
-            align-items: center !important;
-            overflow-x: auto !important; /* في حال فاض المحتوى */
-        }
-
-        .notification-details .small {
-            font-size: 0.65rem !important;
-            padding: 0.1rem 0.4rem !important;
-            border-radius: 4px !important;
-            margin: 0 !important;
-            white-space: nowrap !important; /* منع التفاف النص */
-            background: rgba(0,0,0,0.03); /* خلفية خفيفة للتمييز */
-        }
-
-        /* نص الرسالة */
-        .notification-dropdown-item p {
-            font-size: 0.75rem !important;
-            color: #6c757d !important;
-            line-height: 1.3 !important;
-            margin-bottom: 0.25rem !important;
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-        }
-
-        /* الوقت */
-        .notification-dropdown-item .text-muted {
-            font-size: 0.65rem !important;
-        }
-
-        /* إشعار غير مقروء */
-        .notification-dropdown-item.bg-light {
-            background: #eef5ff !important;
-            border-color: #c5d9f1 !important;
-        }
+        .notification-dropdown-item:last-child { border-bottom: none; }
+        .notification-dropdown-item:hover { background-color: #f5f7fa !important; }
+        .notification-dropdown-item.bg-light { background-color: #eef5ff !important; }
 
         /* Scrollbar */
-        #notificationsDropdown+.dropdown-menu::-webkit-scrollbar {
-            width: 5px;
-        }
-
-        #notificationsDropdown+.dropdown-menu::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-
-        #notificationsDropdown+.dropdown-menu::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 10px;
-        }
-
-        #notificationsDropdown+.dropdown-menu::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
+        #notificationsDropdown+.dropdown-menu::-webkit-scrollbar { width: 4px; }
+        #notificationsDropdown+.dropdown-menu::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        #notificationsDropdown+.dropdown-menu::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
         </style>
         {% block extra_css %}{% endblock %}
         <!-- تم إزالة CSS الإشعارات -->
@@ -458,10 +365,12 @@
                     <div class="d-flex align-items-center ms-auto">
                         {% if user.is_authenticated %}
                             <!-- زر فحص الباركود -->
-                            <button class="btn btn-outline-light position-relative me-2"
+                            <button class="btn btn-outline-light btn-sm position-relative me-2"
                                     type="button"
                                     id="openScannerBtn"
-                                    title="فحص الباركود">
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#scannerModal"
+                                    title="فحص الباركود / بحث عن منتج">
                                 <i class="fas fa-barcode"></i>
                                 <span class="d-none d-lg-inline ms-1">باركود</span>
                             </button>
@@ -662,141 +571,94 @@
                                           style="display: none">0</span>
                                 {% endif %}
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-lg"
-                                aria-labelledby="notificationsDropdown"
-                                style="width: 500px;
-                                       max-height: 600px;
-                                       overflow-y: auto;
-                                       overflow-x: hidden">
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg p-0"
+                                aria-labelledby="notificationsDropdown">
+                                <!-- رأس القائمة -->
                                 <li>
-                                    <h6 class="dropdown-header d-flex justify-content-between align-items-center py-3 px-4 bg-light border-bottom">
-                                        <span class="fw-bold text-dark">
-                                            <i class="fas fa-bell me-2 text-primary"></i>
-                                            الإشعارات
+                                    <div class="dropdown-header d-flex justify-content-between align-items-center py-2 px-3 bg-light border-bottom">
+                                        <span class="fw-bold text-dark small">
+                                            <i class="fas fa-bell me-1 text-primary"></i>الإشعارات
                                             {% if notifications_unread_count > 0 %}
-                                                <span class="badge bg-primary ms-2">{{ notifications_unread_count }}</span>
+                                                <span class="badge bg-primary rounded-pill ms-1" style="font-size: 0.65rem;">{{ notifications_unread_count }}</span>
                                             {% endif %}
                                         </span>
                                         {% if notifications_unread_count > 0 %}
                                             <button type="button"
-                                                    class="btn btn-sm btn-outline-primary"
+                                                    class="btn btn-sm btn-outline-primary py-0 px-2"
                                                     onclick="markAllNotificationsRead()"
-                                                    title="تحديد جميع الإشعارات كمقروءة">
-                                                <i class="fas fa-check-double"></i>
-                                                تحديد الكل
+                                                    style="font-size: 0.7rem;">
+                                                <i class="fas fa-check-double me-1"></i>تحديد الكل
                                             </button>
                                         {% endif %}
-                                    </h6>
+                                    </div>
                                 </li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
+                                <!-- قائمة الإشعارات -->
                                 {% if recent_notifications %}
                                     {% for notification in recent_notifications %}
                                         {% with visibility=notification.visibility_records.all|first %}
+                                        {% with icon_data=notification.get_icon_and_color %}
                                             <li>
-                                                <a class="dropdown-item py-3 px-3 notification-dropdown-item {% if not visibility.is_read %}bg-light border-start border-primary border-3{% endif %}"
+                                                <a class="dropdown-item notification-dropdown-item px-3 py-2 {% if not visibility.is_read %}bg-light{% endif %}"
                                                    href="{{ notification.get_absolute_url }}"
                                                    data-notification-id="{{ notification.pk }}"
-                                                   data-is-read="{% if visibility.is_read %}true{% else %}false{% endif %}"
-                                                   style="border-radius: 8px;
-                                                          margin: 2px 8px;
-                                                          white-space: normal;
-                                                          word-wrap: break-word;
-                                                          transition: all 0.3s ease"
-                                                   onmouseover="this.style.backgroundColor='#f8f9fa'"
-                                                   onmouseout="this.style.backgroundColor='{% if not visibility.is_read %}#f8f9fa{% else %}transparent{% endif %}'">
-                                                    <div class="d-flex align-items-start">
-                                                        <div class="me-3 flex-shrink-0">
-                                                            {% with icon_data=notification.get_icon_and_color %}
-                                                                <div class="notification-icon-wrapper d-flex align-items-center justify-content-center"
-                                                                     style="width: 45px;
-                                                                            height: 45px;
-                                                                            border-radius: 50%;
-                                                                            background-color: {{ icon_data.bg }};
-                                                                            border: 2px solid {{ icon_data.color }}">
-                                                                    <i class="{{ icon_data.icon }}"
-                                                                       style="color: {{ icon_data.color }};
-                                                                              font-size: 18px"></i>
-                                                                </div>
-                                                            {% endwith %}
+                                                   data-is-read="{% if visibility.is_read %}true{% else %}false{% endif %}">
+                                                    <div class="d-flex gap-2 align-items-start">
+                                                        <!-- أيقونة -->
+                                                        <div class="notification-icon-wrapper flex-shrink-0"
+                                                             style="width: 36px; height: 36px; border-radius: 50%;
+                                                                    background: {{ icon_data.bg }}; border: 1.5px solid {{ icon_data.color }};
+                                                                    display: flex; align-items: center; justify-content: center;">
+                                                            <i class="{{ icon_data.icon }}" style="color: {{ icon_data.color }}; font-size: 14px;"></i>
                                                         </div>
-                                                        <div class="flex-grow-1 min-width-0">
-                                                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                                                <div class="d-flex align-items-center gap-2"
-                                                                     style="white-space: nowrap;
-                                                                            overflow: hidden;
-                                                                            width: 100%">
-                                                                    <h6 class="mb-0 text-truncate {% if not visibility.is_read %}fw-bold text-dark{% else %}text-muted{% endif %}"
-                                                                        style="line-height: 1.2;
-                                                                               font-size: 0.85rem;
-                                                                               max-width: 280px">
-                                                                        {% if not visibility.is_read %}<i class="fas fa-circle text-primary me-1" style="font-size: 6px;"></i>{% endif %}
-                                                                        <span class="text-decoration-underline text-primary">{{ notification.title }}</span>
-                                                                    </h6>
-                                                                    {% if notification.created_by %}
-                                                                        <span class="badge bg-light text-dark border flex-shrink-0"
-                                                                              style="font-weight: normal;
-                                                                                     font-size: 0.75em">
-                                                                            <i class="fas fa-user-tie text-primary me-1"></i>{# fmt:off #}{{ notification.created_by.get_full_name|default:notification.created_by.username }}{# fmt:on #}
-                                                                        </span>
-                                                                        {# fmt:off #}{% elif notification.extra_data and notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}{# fmt:on #}
-                                                                        <span class="badge bg-light text-dark border flex-shrink-0"
-                                                                              style="font-weight: normal;
-                                                                                     font-size: 0.75em">
-                                                                            <i class="fas fa-user-tie text-primary me-1"></i>{{ notification.extra_data.changed_by }}
+                                                        <!-- محتوى -->
+                                                        <div class="flex-grow-1" style="min-width: 0;">
+                                                            <div class="d-flex justify-content-between align-items-center mb-0">
+                                                                <h6 class="mb-0 text-truncate {% if not visibility.is_read %}fw-semibold text-dark{% else %}text-muted{% endif %}"
+                                                                    style="font-size: 0.8rem; max-width: 260px;">
+                                                                    {% if not visibility.is_read %}<i class="fas fa-circle text-primary me-1" style="font-size: 5px; vertical-align: middle;"></i>{% endif %}
+                                                                    {{ notification.title }}
+                                                                </h6>
+                                                                <small class="text-muted flex-shrink-0 ms-2" style="font-size: 0.65rem;">
+                                                                    {{ notification.created_at|timesince|truncatewords:2 }}
+                                                                </small>
+                                                            </div>
+                                                            <p class="mb-0 text-muted" style="font-size: 0.72rem; line-height: 1.3;
+                                                               display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;">
+                                                                {{ notification.message|truncatewords:12 }}
+                                                            </p>
+                                                            {% if notification.extra_data.customer_name or notification.extra_data.order_number %}
+                                                                <div class="d-flex gap-1 mt-1">
+                                                                    {% if notification.extra_data.order_number %}
+                                                                        <span class="badge bg-light text-dark border" style="font-size: 0.6rem; font-weight: normal;">
+                                                                            <i class="fas fa-hashtag text-info me-1"></i>{{ notification.extra_data.order_number }}
                                                                         </span>
                                                                     {% endif %}
-                                                                    <small class="text-muted flex-shrink-0 ms-auto" style="font-size: 0.7em;">
-                                                                        <i class="far fa-clock me-1"></i>{{ notification.created_at|timesince }}
-                                                                    </small>
+                                                                    {% if notification.extra_data.customer_name %}
+                                                                        <span class="badge bg-light text-dark border" style="font-size: 0.6rem; font-weight: normal;">
+                                                                            <i class="fas fa-user text-success me-1"></i>{{ notification.extra_data.customer_name|truncatewords:3 }}
+                                                                        </span>
+                                                                    {% endif %}
                                                                 </div>
-                                                                {% if not visibility.is_read %}
-                                                                    <span class="badge bg-primary rounded-pill ms-2 flex-shrink-0"
-                                                                          style="font-size: 0.6em">جديد</span>
-                                                                {% endif %}
-                                                            </div>
-                                                            <div class="notification-details mb-1 ms-1">
-                                                                {% if notification.extra_data.customer_name %}
-                                                                    <div class="small text-muted">
-                                                                        <i class="fas fa-user me-1 text-info"></i>
-                                                                        {{ notification.extra_data.customer_name }}
-                                                                    </div>
-                                                                {% endif %}
-                                                            </div>
-                                                            <p class="mb-1 text-muted small"
-                                                               style="line-height: 1.3;
-                                                                      font-size: 0.75rem;
-                                                                      display: -webkit-box;
-                                                                      -webkit-line-clamp: 2;
-                                                                      -webkit-box-orient: vertical;
-                                                                      overflow: hidden">{{ notification.message }}</p>
+                                                            {% endif %}
                                                         </div>
                                                     </div>
                                                 </a>
                                             </li>
-                                            {% if not forloop.last %}
-                                                <li>
-                                                    <hr class="dropdown-divider">
-                                                </li>
-                                            {% endif %}
+                                        {% endwith %}
                                         {% endwith %}
                                     {% endfor %}
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item text-center"
+                                    <!-- رابط عرض الكل -->
+                                    <li class="border-top">
+                                        <a class="dropdown-item text-center py-2 text-primary fw-semibold" style="font-size: 0.8rem;"
                                            href="{% url 'notifications:list' %}">
-                                            <i class="fas fa-eye"></i> عرض جميع الإشعارات
+                                            <i class="fas fa-list me-1"></i>عرض جميع الإشعارات
                                         </a>
                                     </li>
                                 {% else %}
                                     <li>
-                                        <div class="dropdown-item text-center text-muted">
-                                            <i class="fas fa-bell-slash"></i>
-                                            <br>
-                                            لا توجد إشعارات
+                                        <div class="text-center text-muted py-4 px-3">
+                                            <i class="fas fa-bell-slash fa-2x mb-2 d-block opacity-50"></i>
+                                            <small>لا توجد إشعارات</small>
                                         </div>
                                     </li>
                                 {% endif %}
@@ -1388,37 +1250,6 @@
         .rtl-popup {
             direction: rtl !important;
             text-align: right !important;
-        }
-
-        /* تحسين القائمة المنسدلة للإشعارات */
-        .notification-dropdown-item {
-            transition: all 0.3s ease !important;
-        }
-
-        .notification-dropdown-item:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .pulse-badge {
-            animation: pulse-glow 1.5s infinite;
-        }
-
-        @keyframes pulse-glow {
-            0% {
-                transform: scale(1);
-                box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
-            }
-
-            50% {
-                transform: scale(1.05);
-                box-shadow: 0 0 15px rgba(33, 150, 243, 0.8);
-            }
-
-            100% {
-                transform: scale(1);
-                box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
-            }
         }
 
         .rtl-title {
@@ -2073,111 +1904,93 @@
 
         // تحديث قائمة الإشعارات الحديثة
         function updateRecentNotifications() {
-            // التحقق من وجود عنصر الإشعارات أولاً
             const notificationsDropdown = document.querySelector('#notificationsDropdown');
-            if (!notificationsDropdown) {
-                return; // لا توجد إشعارات في هذه الصفحة
-            }
+            if (!notificationsDropdown) return;
 
             fetch('{% url "notifications:ajax_recent" %}?limit=10&_=' + Date.now())
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         const dropdown = notificationsDropdown.nextElementSibling;
-                        if (!dropdown) {
-                            return; // لا يوجد dropdown
-                        }
+                        if (!dropdown) return;
 
-                        const notificationsList = dropdown.querySelector('.dropdown-menu');
-                        if (!notificationsList) {
-                            return; // لا توجد قائمة الإشعارات
-                        }
-
-                        // إعادة بناء قائمة الإشعارات
-                        let newContent = `
-                            <li><h6 class="dropdown-header d-flex justify-content-between align-items-center py-3 px-4 bg-light border-bottom">
-                                <span class="fw-bold text-dark">
-                                    <i class="fas fa-bell me-2 text-primary"></i>
-                                    الإشعارات
-                                    ${data.count > 0 ? `<span class="badge bg-primary ms-2">${data.count}</span>`:''}
-                                </span>
-                                ${data.count > 0 ? `<button type="button" class="btn btn-sm btn-outline-primary" onclick="markAllNotificationsRead()" title="تحديد جميع الإشعارات كمقروءة"><i class="fas fa-check-double"></i> تحديد الكل</button>`:''}
-                            </h6></li>
+                        let html = `
+                            <li>
+                                <div class="dropdown-header d-flex justify-content-between align-items-center py-2 px-3 bg-light border-bottom">
+                                    <span class="fw-bold text-dark small">
+                                        <i class="fas fa-bell me-1 text-primary"></i>الإشعارات
+                                        ${data.count > 0 ? `<span class="badge bg-primary rounded-pill ms-1" style="font-size: 0.65rem;">${data.count}</span>` : ''}
+                                    </span>
+                                    ${data.count > 0 ? `<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="markAllNotificationsRead()" style="font-size: 0.7rem;"><i class="fas fa-check-double me-1"></i>تحديد الكل</button>` : ''}
+                                </div>
+                            </li>
                         `;
 
                         if (data.notifications.length > 0) {
-                            data.notifications.forEach((notification, index) => {
+                            data.notifications.forEach(notification => {
                                 const extraData = notification.extra_data || {};
-                                newContent += `
+                                const iconClass = notification.icon_class || 'fas fa-bell';
+                                const iconColor = notification.color_class || '#6c757d';
+                                const iconBg = notification.bg_color || '#f5f5f5';
+                                html += `
                                     <li>
-                                        <a class="dropdown-item py-3 px-3 notification-dropdown-item ${!notification.is_read ? 'bg-light border-start border-primary border-3':''}" href="${notification.url}" data-notification-id="${notification.id}" data-is-read="${notification.is_read}" style="border-radius: 8px; margin: 2px 8px; white-space: normal; word-wrap: break-word; transition: all 0.3s ease;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='${!notification.is_read ? '#f8f9fa':'transparent'}'"  <div class="d-flex align-items-start">
-                                                <div class="me-3 flex-shrink-0">
-                                                    <div class="notification-icon-wrapper d-flex align-items-center justify-content-center">
-                                                        <i class="${notification.icon_class}" style="color: ${notification.color_class};"></i>
-                                                    </div>
+                                        <a class="dropdown-item notification-dropdown-item px-3 py-2 ${!notification.is_read ? 'bg-light' : ''}"
+                                           href="${notification.url}"
+                                           data-notification-id="${notification.id}"
+                                           data-is-read="${notification.is_read}">
+                                            <div class="d-flex gap-2 align-items-start">
+                                                <div class="flex-shrink-0" style="width: 36px; height: 36px; border-radius: 50%;
+                                                     background: ${iconBg}; border: 1.5px solid ${iconColor};
+                                                     display: flex; align-items: center; justify-content: center;">
+                                                    <i class="${iconClass}" style="color: ${iconColor}; font-size: 14px;"></i>
                                                 </div>
-                                                <div class="flex-grow-1 min-width-0">
-                                                    <div class="d-flex justify-content-between align-items-start mb-1">
-                                                        <div class="d-flex align-items-center gap-2" style="white-space: nowrap; overflow: hidden; width: 100%;">
-                                                            <h6 class="mb-0 text-truncate ${!notification.is_read ? 'fw-bold text-dark':'text-muted'}" style="line-height: 1.2; font-size: 0.85rem; max-width: 280px;">
-                                                                ${!notification.is_read ? '<i class="fas fa-circle text-primary me-1" style="font-size: 6px;"></i>':''}
-                                                                <span class="text-decoration-underline text-primary">${notification.title}</span>
-                                                            </h6>
-
-                                                            ${notification.created_by_name ? `
-                                                            <span class="badge bg-light text-dark border flex-shrink-0" style="font-weight: normal; font-size: 0.75em;">
-                                                                <i class="fas fa-user-tie text-primary me-1"></i>${notification.created_by_name}
-                                                            </span>`:''}
-
-                                                            <small class="text-muted flex-shrink-0 ms-auto" style="font-size: 0.7em;">
-                                                                <i class="far fa-clock me-1"></i>${timeAgo(notification.created_at)}
-                                                            </small>
-                                                        </div>
-                                                        ${!notification.is_read ? '<span class="badge bg-primary rounded-pill ms-2 flex-shrink-0" style="font-size: 0.6em;">جديد</span>':''}
+                                                <div class="flex-grow-1" style="min-width: 0;">
+                                                    <div class="d-flex justify-content-between align-items-center mb-0">
+                                                        <h6 class="mb-0 text-truncate ${!notification.is_read ? 'fw-semibold text-dark' : 'text-muted'}"
+                                                            style="font-size: 0.8rem; max-width: 260px;">
+                                                            ${!notification.is_read ? '<i class="fas fa-circle text-primary me-1" style="font-size: 5px; vertical-align: middle;"></i>' : ''}
+                                                            ${notification.title}
+                                                        </h6>
+                                                        <small class="text-muted flex-shrink-0 ms-2" style="font-size: 0.65rem;">
+                                                            ${timeAgo(notification.created_at)}
+                                                        </small>
                                                     </div>
-
-                                                    <div class="notification-details mb-1 ms-1">
-                                                        ${extraData.customer_name ? `
-                                                        <div class="small text-muted">
-                                                            <i class="fas fa-user me-1 text-info"></i>
-                                                            ${extraData.customer_name}
-                                                        </div>`:''}
-                                                    </div>
-
-                                                    <p class="mb-1 text-muted small" style="line-height: 1.3; font-size: 0.75rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                                    <p class="mb-0 text-muted" style="font-size: 0.72rem; line-height: 1.3;
+                                                       display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;">
                                                         ${notification.message}
                                                     </p>
+                                                    ${(extraData.customer_name || extraData.order_number) ? `
+                                                    <div class="d-flex gap-1 mt-1">
+                                                        ${extraData.order_number ? `<span class="badge bg-light text-dark border" style="font-size: 0.6rem; font-weight: normal;"><i class="fas fa-hashtag text-info me-1"></i>${extraData.order_number}</span>` : ''}
+                                                        ${extraData.customer_name ? `<span class="badge bg-light text-dark border" style="font-size: 0.6rem; font-weight: normal;"><i class="fas fa-user text-success me-1"></i>${extraData.customer_name}</span>` : ''}
+                                                    </div>` : ''}
                                                 </div>
                                             </div>
                                         </a>
                                     </li>
-                                    ${index < data.notifications.length - 1 ? '<li><hr class="dropdown-divider" style="margin: 0.5rem 1rem; opacity: 0.3;"></li>':''}
                                 `;
                             });
-                            newContent += `
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item text-center" href="{% url 'notifications:list' %}">
-                                        <i class="fas fa-eye"></i> عرض جميع الإشعارات
+                            html += `
+                                <li class="border-top">
+                                    <a class="dropdown-item text-center py-2 text-primary fw-semibold" style="font-size: 0.8rem;"
+                                       href="{% url 'notifications:list' %}">
+                                        <i class="fas fa-list me-1"></i>عرض جميع الإشعارات
                                     </a>
                                 </li>
                             `;
                         } else {
-                            newContent += `
+                            html += `
                                 <li>
-                                    <div class="dropdown-item text-center text-muted">
-                                        <i class="fas fa-bell-slash"></i>
-                                        <br>
-                                        لا توجد إشعارات
+                                    <div class="text-center text-muted py-4 px-3">
+                                        <i class="fas fa-bell-slash fa-2x mb-2 d-block opacity-50"></i>
+                                        <small>لا توجد إشعارات</small>
                                     </div>
                                 </li>
                             `;
                         }
 
-                        notificationsList.innerHTML = newContent;
+                        dropdown.innerHTML = html;
 
-
-                        // إضافة event listeners للنقر على الإشعارات
                         setTimeout(() => {
                             setupDropdownNotificationListeners();
                         }, 100);

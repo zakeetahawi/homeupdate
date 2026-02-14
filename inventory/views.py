@@ -926,8 +926,18 @@ def barcode_scan_api(request):
         )
 
     try:
-        # البحث عن المنتج بواسطة الكود (الباركود = كود الصنف)
-        product = Product.objects.select_related("category").get(code=barcode)
+        # البحث عن المنتج بواسطة الكود أولاً، ثم بالاسم
+        try:
+            product = Product.objects.select_related("category").get(code=barcode)
+        except Product.DoesNotExist:
+            # محاولة البحث بالاسم (مطابقة تامة أو جزئية)
+            products = Product.objects.select_related("category").filter(
+                Q(name__iexact=barcode) | Q(name__icontains=barcode)
+            )
+            if products.exists():
+                product = products.first()
+            else:
+                raise Product.DoesNotExist()
 
         # حساب المخزون الحالي من جميع المستودعات
         current_stock = product.current_stock

@@ -1,0 +1,552 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}ترتيب الأداء{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 100px;">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header py-3 {% if report_type == 'installations' %}bg-primary{% elif report_type == 'production' %}bg-warning{% elif report_type == 'cutting' %}bg-info{% elif report_type == 'inventory' %}bg-secondary{% else %}bg-success{% endif %} text-white">
+                    <h4 class="mb-0 d-flex align-items-center">
+                        <i class="fas fa-trophy me-2"></i>
+                        <span>ترتيب الأداء —
+                            {% if report_type == 'installations' %}التركيبات
+                            {% elif report_type == 'production' %}الإنتاج
+                            {% elif report_type == 'cutting' %}التقطيع
+                            {% elif report_type == 'inventory' %}الخامات
+                            {% else %}المبيعات{% endif %}
+                        </span>
+                    </h4>
+                </div>
+
+                <div class="card-body p-4">
+                    {# ====== TABS ====== #}
+                    <ul class="nav nav-pills mb-4 gap-2 flex-wrap" role="tablist">
+                        <li class="nav-item">
+                            <a href="?type=installations&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}{% if filters.exclude_modifications %}&exclude_modifications=1{% endif %}"
+                               class="nav-link {% if report_type == 'installations' %}active{% endif %} d-flex align-items-center gap-2">
+                                <i class="fas fa-tools"></i> التركيبات
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="?type=production&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}{% if filters.exclude_modifications %}&exclude_modifications=1{% endif %}"
+                               class="nav-link {% if report_type == 'production' %}active{% endif %} d-flex align-items-center gap-2">
+                                <i class="fas fa-industry"></i> الإنتاج
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="?type=sales&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}{% if filters.exclude_modifications %}&exclude_modifications=1{% endif %}"
+                               class="nav-link {% if report_type == 'sales' %}active{% endif %} d-flex align-items-center gap-2">
+                                <i class="fas fa-cash-register"></i> المبيعات
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="?type=cutting&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}{% if filters.exclude_modifications %}&exclude_modifications=1{% endif %}"
+                               class="nav-link {% if report_type == 'cutting' %}active{% endif %} d-flex align-items-center gap-2">
+                                <i class="fas fa-cut"></i> التقطيع
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="?type=inventory&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}{% if filters.exclude_modifications %}&exclude_modifications=1{% endif %}"
+                               class="nav-link {% if report_type == 'inventory' %}active{% endif %} d-flex align-items-center gap-2">
+                                <i class="fas fa-boxes"></i> الخامات
+                            </a>
+                        </li>
+                    </ul>
+
+                    {# ====== FILTERS ====== #}
+                    <form method="get" class="mb-4 bg-light p-4 rounded shadow-sm border">
+                        <input type="hidden" name="type" value="{{ report_type }}">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-calendar-alt me-1 text-muted"></i> من تاريخ:
+                                </label>
+                                <input type="date" name="date_from"
+                                       class="form-control" value="{{ filters.date_from }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-calendar-alt me-1 text-muted"></i> إلى تاريخ:
+                                </label>
+                                <input type="date" name="date_to"
+                                       class="form-control" value="{{ filters.date_to }}">
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check mt-4 pt-2">
+                                    <input type="checkbox" class="form-check-input" id="excludeMod"
+                                           name="exclude_modifications" value="1"
+                                           {% if filters.exclude_modifications %}checked{% endif %}>
+                                    <label class="form-check-label fw-bold" for="excludeMod">
+                                        استثناء طلبات التعديل
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-filter me-1"></i> تطبيق الفلتر
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    {# ====== SUMMARY CARDS ====== #}
+                    {% if report_type == 'installations' %}
+                    <div class="row mb-4 g-3">
+                        <div class="col-md-3">
+                            <div class="card bg-dark text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ ranking|length }}</div>
+                                    <div class="text-white-50 small">عدد الفنيين</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.windows|floatformat:0 }}</div>
+                                    <div class="text-white-50 small">إجمالي الشبابيك</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.paid|floatformat:0|intcomma }}</div>
+                                    <div class="text-white-50 small">المدفوع</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.unpaid|floatformat:0|intcomma }}</div>
+                                    <div class="text-white-50 small">المتبقي</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% elif report_type == 'production' %}
+                    <div class="row mb-4 g-3">
+                        <div class="col-md-3">
+                            <div class="card bg-dark text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ ranking|length }}</div>
+                                    <div class="text-white-50 small">عدد الخياطين</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-dark h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.meters|floatformat:1|intcomma }}</div>
+                                    <div class="small opacity-75">إجمالي الأمتار</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.paid|floatformat:0|intcomma }}</div>
+                                    <div class="text-white-50 small">المدفوع</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.unpaid|floatformat:0|intcomma }}</div>
+                                    <div class="text-white-50 small">المتبقي</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% elif report_type == 'sales' %}
+                    <div class="row mb-4 g-3">
+                        <div class="col-md-3">
+                            <div class="card bg-dark text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ ranking|length }}</div>
+                                    <div class="text-white-50 small">عدد البائعين</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.orders|intcomma }}</div>
+                                    <div class="text-white-50 small">إجمالي الطلبات</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.total_amount|floatformat:0|intcomma }}</div>
+                                    <div class="text-white-50 small">إجمالي المبيعات</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.remaining|floatformat:0|intcomma }}</div>
+                                    <div class="text-white-50 small">المتبقي</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% elif report_type == 'cutting' %}
+                    <div class="row mb-4 g-3">
+                        <div class="col-md-3">
+                            <div class="card bg-dark text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ ranking|length }}</div>
+                                    <div class="text-white-50 small">عدد المستودعات</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.completed_orders|intcomma }}</div>
+                                    <div class="text-white-50 small">طلبات مكتملة</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-dark h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.total_items|intcomma }}</div>
+                                    <div class="small opacity-75">إجمالي الأصناف</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.total_quantity|floatformat:1|intcomma }}</div>
+                                    <div class="text-white-50 small">إجمالي الكمية</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% elif report_type == 'inventory' %}
+                    <div class="row mb-4 g-3">
+                        <div class="col-md-3">
+                            <div class="card bg-dark text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.products_count|intcomma }}</div>
+                                    <div class="text-white-50 small">عدد الخامات</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-secondary text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.times_cut|intcomma }}</div>
+                                    <div class="text-white-50 small">إجمالي مرات التقطيع</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.total_quantity|floatformat:1|intcomma }}</div>
+                                    <div class="text-white-50 small">إجمالي الكمية</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white h-100 border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <div class="fs-1 fw-bold">{{ totals.orders_count|intcomma }}</div>
+                                    <div class="text-white-50 small">عدد الطلبات</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {# ====== RANKING TABLE ====== #}
+                    {% if ranking %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered align-middle mb-0" id="rankingTable">
+                            <thead class="table-dark">
+                                <tr class="text-center">
+                                    <th style="width: 60px;">#</th>
+                                    <th>الاسم</th>
+
+                                    {% if report_type == 'installations' %}
+                                        <th>عدد الشبابيك</th>
+                                        <th>عدد الطلبات</th>
+                                        <th>المبلغ الإجمالي</th>
+                                        <th>المدفوع</th>
+                                        <th>المتبقي</th>
+                                        <th>النسبة</th>
+                                    {% elif report_type == 'production' %}
+                                        <th>الأمتار</th>
+                                        <th>عدد الطلبات</th>
+                                        <th>المبلغ الإجمالي</th>
+                                        <th>المدفوع</th>
+                                        <th>المتبقي</th>
+                                        <th>النسبة</th>
+                                    {% elif report_type == 'sales' %}
+                                        <th>عدد الطلبات</th>
+                                        <th>إجمالي المبيعات</th>
+                                        <th>المحصّل</th>
+                                        <th>المتبقي</th>
+                                        <th>النسبة</th>
+                                    {% elif report_type == 'cutting' %}
+                                        <th>طلبات مكتملة</th>
+                                        <th>عدد الأصناف</th>
+                                        <th>إجمالي الكمية</th>
+                                        <th>متوسط أيام الإنجاز</th>
+                                        <th>النسبة</th>
+                                    {% elif report_type == 'inventory' %}
+                                        <th>الكود</th>
+                                        <th>مرات التقطيع</th>
+                                        <th>إجمالي الكمية</th>
+                                        <th>الوحدة</th>
+                                        <th>عدد الطلبات</th>
+                                        <th>النسبة</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in ranking %}
+                                <tr class="text-center {% if item.rank == 1 %}table-warning{% elif item.rank == 2 %}table-light{% elif item.rank == 3 %}table-light{% endif %}">
+                                    <td>
+                                        {% if item.rank == 1 %}
+                                            <span class="fs-4">🥇</span>
+                                        {% elif item.rank == 2 %}
+                                            <span class="fs-4">🥈</span>
+                                        {% elif item.rank == 3 %}
+                                            <span class="fs-4">🥉</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary rounded-pill">{{ item.rank }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="fw-bold text-start">{{ item.name }}</td>
+
+                                    {% if report_type == 'installations' %}
+                                        <td>
+                                            <span class="fw-bold text-primary fs-5">{{ item.windows|floatformat:1 }}</span>
+                                        </td>
+                                        <td>{{ item.orders }}</td>
+                                        <td>{{ item.amount|floatformat:0|intcomma }}</td>
+                                        <td class="text-success">{{ item.paid|floatformat:0|intcomma }}</td>
+                                        <td class="text-danger">{{ item.unpaid|floatformat:0|intcomma }}</td>
+                                        <td>
+                                            {% widthratio item.windows totals.windows 100 as pct %}
+                                            <div class="d-flex align-items-center gap-2 justify-content-center">
+                                                <div class="progress flex-grow-1" style="height: 8px; max-width: 80px;">
+                                                    <div class="progress-bar bg-primary" style="width: {{ pct }}%"></div>
+                                                </div>
+                                                <small class="text-muted">{{ pct }}%</small>
+                                            </div>
+                                        </td>
+
+                                    {% elif report_type == 'production' %}
+                                        <td>
+                                            <span class="fw-bold text-warning fs-5">{{ item.meters|floatformat:1|intcomma }}</span>
+                                        </td>
+                                        <td>{{ item.orders }}</td>
+                                        <td>{{ item.amount|floatformat:0|intcomma }}</td>
+                                        <td class="text-success">{{ item.paid|floatformat:0|intcomma }}</td>
+                                        <td class="text-danger">{{ item.unpaid|floatformat:0|intcomma }}</td>
+                                        <td>
+                                            {% widthratio item.meters totals.meters 100 as pct %}
+                                            <div class="d-flex align-items-center gap-2 justify-content-center">
+                                                <div class="progress flex-grow-1" style="height: 8px; max-width: 80px;">
+                                                    <div class="progress-bar bg-warning" style="width: {{ pct }}%"></div>
+                                                </div>
+                                                <small class="text-muted">{{ pct }}%</small>
+                                            </div>
+                                        </td>
+
+                                    {% elif report_type == 'sales' %}
+                                        <td>
+                                            <span class="fw-bold text-success fs-5">{{ item.orders }}</span>
+                                        </td>
+                                        <td>{{ item.total_amount|floatformat:0|intcomma }}</td>
+                                        <td class="text-success">{{ item.paid|floatformat:0|intcomma }}</td>
+                                        <td class="text-danger">{{ item.remaining|floatformat:0|intcomma }}</td>
+                                        <td>
+                                            {% widthratio item.orders totals.orders 100 as pct %}
+                                            <div class="d-flex align-items-center gap-2 justify-content-center">
+                                                <div class="progress flex-grow-1" style="height: 8px; max-width: 80px;">
+                                                    <div class="progress-bar bg-success" style="width: {{ pct }}%"></div>
+                                                </div>
+                                                <small class="text-muted">{{ pct }}%</small>
+                                            </div>
+                                        </td>
+
+                                    {% elif report_type == 'cutting' %}
+                                        <td>
+                                            <span class="fw-bold text-info fs-5">{{ item.completed_orders }}</span>
+                                        </td>
+                                        <td>{{ item.total_items|intcomma }}</td>
+                                        <td>{{ item.total_quantity|floatformat:1|intcomma }}</td>
+                                        <td>
+                                            {% if item.avg_days %}
+                                                <span class="badge {% if item.avg_days <= 2 %}bg-success{% elif item.avg_days <= 5 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                                    {{ item.avg_days }} يوم
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% widthratio item.completed_orders totals.completed_orders 100 as pct %}
+                                            <div class="d-flex align-items-center gap-2 justify-content-center">
+                                                <div class="progress flex-grow-1" style="height: 8px; max-width: 80px;">
+                                                    <div class="progress-bar bg-info" style="width: {{ pct }}%"></div>
+                                                </div>
+                                                <small class="text-muted">{{ pct }}%</small>
+                                            </div>
+                                        </td>
+
+                                    {% elif report_type == 'inventory' %}
+                                        <td><code>{{ item.code }}</code></td>
+                                        <td>
+                                            <span class="fw-bold text-secondary fs-5">{{ item.times_cut }}</span>
+                                        </td>
+                                        <td>{{ item.total_quantity|floatformat:1|intcomma }}</td>
+                                        <td>{{ item.unit }}</td>
+                                        <td>{{ item.orders_count|intcomma }}</td>
+                                        <td>
+                                            {% widthratio item.times_cut totals.times_cut 100 as pct %}
+                                            <div class="d-flex align-items-center gap-2 justify-content-center">
+                                                <div class="progress flex-grow-1" style="height: 8px; max-width: 80px;">
+                                                    <div class="progress-bar bg-secondary" style="width: {{ pct }}%"></div>
+                                                </div>
+                                                <small class="text-muted">{{ pct }}%</small>
+                                            </div>
+                                        </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+
+                            <tfoot class="table-dark fw-bold">
+                                <tr class="text-center">
+                                    <td colspan="2">الإجمالي</td>
+                                    {% if report_type == 'installations' %}
+                                        <td>{{ totals.windows|floatformat:0 }}</td>
+                                        <td>{{ totals.orders }}</td>
+                                        <td>{{ totals.amount|floatformat:0|intcomma }}</td>
+                                        <td>{{ totals.paid|floatformat:0|intcomma }}</td>
+                                        <td>{{ totals.unpaid|floatformat:0|intcomma }}</td>
+                                        <td>100%</td>
+                                    {% elif report_type == 'production' %}
+                                        <td>{{ totals.meters|floatformat:1|intcomma }}</td>
+                                        <td>{{ totals.orders }}</td>
+                                        <td>{{ totals.amount|floatformat:0|intcomma }}</td>
+                                        <td>{{ totals.paid|floatformat:0|intcomma }}</td>
+                                        <td>{{ totals.unpaid|floatformat:0|intcomma }}</td>
+                                        <td>100%</td>
+                                    {% elif report_type == 'sales' %}
+                                        <td>{{ totals.orders }}</td>
+                                        <td>{{ totals.total_amount|floatformat:0|intcomma }}</td>
+                                        <td>{{ totals.paid|floatformat:0|intcomma }}</td>
+                                        <td>{{ totals.remaining|floatformat:0|intcomma }}</td>
+                                        <td>100%</td>
+                                    {% elif report_type == 'cutting' %}
+                                        <td>{{ totals.completed_orders|intcomma }}</td>
+                                        <td>{{ totals.total_items|intcomma }}</td>
+                                        <td>{{ totals.total_quantity|floatformat:1|intcomma }}</td>
+                                        <td>—</td>
+                                        <td>100%</td>
+                                    {% elif report_type == 'inventory' %}
+                                        <td>—</td>
+                                        <td>{{ totals.times_cut|intcomma }}</td>
+                                        <td>{{ totals.total_quantity|floatformat:1|intcomma }}</td>
+                                        <td>—</td>
+                                        <td>{{ totals.orders_count|intcomma }}</td>
+                                        <td>100%</td>
+                                    {% endif %}
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-search fa-4x text-muted mb-3 d-block"></i>
+                        <h5 class="text-muted">لا توجد بيانات للفترة المحددة</h5>
+                        <p class="text-muted">جرّب تغيير الفلتر أو الفترة الزمنية</p>
+                    </div>
+                    {% endif %}
+
+                    {# ====== NAVIGATION ====== #}
+                    <div class="mt-4 d-flex gap-2 flex-wrap">
+                        {% if report_type == 'installations' %}
+                        <a href="{% url 'installation_accounting:reports' %}?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}"
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-right me-1"></i> العودة لتقرير التركيبات
+                        </a>
+                        {% elif report_type == 'production' %}
+                        <a href="{% url 'factory_accounting:reports' %}?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}"
+                           class="btn btn-outline-warning">
+                            <i class="fas fa-arrow-right me-1"></i> العودة لتقرير الإنتاج
+                        </a>
+                        {% endif %}
+                        <button onclick="window.print()" class="btn btn-outline-secondary">
+                            <i class="fas fa-print me-1"></i> طباعة
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 12px;
+    }
+    .nav-pills .nav-link {
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    .nav-pills .nav-link:not(.active) {
+        background-color: var(--bs-light);
+        color: var(--bs-dark);
+    }
+    .nav-pills .nav-link:not(.active):hover {
+        background-color: var(--bs-gray-300);
+    }
+    .nav-pills .nav-link.active {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    #rankingTable th {
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+    }
+    .progress {
+        border-radius: 4px;
+    }
+    .table-warning td {
+        background-color: rgba(255, 193, 7, 0.08) !important;
+    }
+
+    @media print {
+        .navbar, form, .btn, .nav-pills { display: none !important; }
+        .card { box-shadow: none !important; border: none !important; }
+        .card-header { background: #333 !important; -webkit-print-color-adjust: exact; }
+        .container { margin-top: 0 !important; }
+    }
+</style>
+{% endblock %}

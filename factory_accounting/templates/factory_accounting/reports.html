@@ -90,6 +90,10 @@
                                        class="btn btn-success">
                                         <i class="fas fa-file-excel"></i> تصدير Excel
                                     </a>
+                                    <a href="{% url 'reports:ranking' %}?type=production&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}"
+                                       class="btn btn-warning">
+                                        <i class="fas fa-trophy"></i> ترتيب الخياطين
+                                    </a>
                                 </div>
                             </div>
                         </form>

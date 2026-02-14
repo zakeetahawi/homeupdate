@@ -2,13 +2,14 @@ from django.urls import path
 
 from . import api_views, views
 from .orders_report_views import orders_report_view
+from .views_ranking import ranking_report
 
 app_name = "reports"
 
 # Main urlpatterns for reports app. Include seller-activity routes alongside the standard CRUD/dashboard routes.
 urlpatterns = [
-    # Production Reports - تقارير الإنتاج
-    path("production/", views.production_reports_list, name="production_reports_list"),
+    # Ranking Report - تقرير الترتيب
+    path("ranking/", ranking_report, name="ranking"),
     # Orders Report - تقرير الطلبات
     path("orders/", orders_report_view, name="orders_report"),
     # Seller activity report index/detail/csv

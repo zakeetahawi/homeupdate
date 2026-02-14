@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
+from django.db import models
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -39,10 +40,20 @@ class NotificationListView(PaginationFixMixin, LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         """الحصول على الإشعارات المرئية للمستخدم الحالي"""
+        from notifications.models import NotificationVisibility
+
         queryset = (
             Notification.objects.for_user(self.request.user)
             .select_related("created_by", "content_type")
-            .prefetch_related("visibility_records")
+            .prefetch_related(
+                models.Prefetch(
+                    "visibility_records",
+                    queryset=NotificationVisibility.objects.filter(
+                        user=self.request.user
+                    ),
+                    to_attr="user_vis_list",
+                )
+            )
         )
 
         # فلترة حسب النوع
@@ -89,24 +100,18 @@ class NotificationListView(PaginationFixMixin, LoginRequiredMixin, ListView):
             search_query = Q(title__icontains=search) | Q(message__icontains=search)
 
             # البحث في extra_data (JSON)
-            # نبحث في القيم النصية في extra_data
             search_query |= Q(extra_data__icontains=search)
 
             queryset = queryset.filter(search_query)
 
-        # إضافة visibility record لكل إشعار
-        notifications = list(queryset.distinct())
-        for notification in notifications:
-            notification.user_visibility = notification.get_visibility_for_user(
-                self.request.user
-            )
-
-        return notifications
+        return queryset.distinct()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         # إضافة معلومات إضافية للسياق
+        unread_count = get_user_notification_count(self.request.user)
+        total_count = context["paginator"].count if context.get("paginator") else 0
         context.update(
             {
                 "notification_types": Notification.NOTIFICATION_TYPES,
@@ -115,17 +120,23 @@ class NotificationListView(PaginationFixMixin, LoginRequiredMixin, ListView):
                 "current_priority": self.request.GET.get("priority", ""),
                 "current_read": self.request.GET.get("read", ""),
                 "current_search": self.request.GET.get("search", ""),
-                "unread_count": get_user_notification_count(self.request.user),
+                "unread_count": unread_count,
+                "read_count": max(0, total_count - unread_count),
+                "total_count": total_count,
             }
         )
 
-        # إضافة المستخدمين الذين لديهم إشعارات
+        # إضافة المستخدمين الذين لديهم إشعارات (cached subquery)
         User = get_user_model()
-        users_with_notifications = User.objects.filter(
-            id__in=Notification.objects.for_user(self.request.user)
-            .values("created_by")
-            .distinct()
-        ).order_by("first_name", "last_name", "username")
+        users_with_notifications = (
+            User.objects.filter(
+                id__in=Notification.objects.for_user(self.request.user)
+                .values("created_by")
+                .distinct()
+            )
+            .only("id", "first_name", "last_name", "username")
+            .order_by("first_name", "last_name", "username")
+        )
         context["users_with_notifications"] = users_with_notifications
 
         return context

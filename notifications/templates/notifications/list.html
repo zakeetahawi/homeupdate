@@ -4,498 +4,293 @@
 {% block title %}الإشعارات{% endblock %}
 {% block extra_head %}
     <style>
+/* ===== صفحة الإشعارات ===== */
+.notifications-page { margin-top: 100px; }
+
+/* بطاقة الإشعار */
 .notification-item {
-    transition: all 0.3s ease;
-    border-left: 4px solid transparent;
-    position: relative;
+    transition: all 0.2s ease;
+    border-right: 4px solid transparent;
+    cursor: pointer;
 }
-
-/* الإشعارات غير المقروءة - تمييز واضح */
-.notification-item.unread {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
-    border-left-color: #2196f3 !important;
-    border-left-width: 6px !important;
-    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
-    border-radius: 8px;
-    margin-bottom: 8px;
-}
-
-.notification-item.unread::before {
-    content: '';
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    width: 10px;
-    height: 10px;
-    background-color: #2196f3;
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-    z-index: 10;
-}
-
-@keyframes pulse {
-    0% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.7; transform: scale(1.2); }
-    100% { opacity: 1; transform: scale(1); }
-}
-
-/* الإشعارات المقروءة - مظهر هادئ */
-.notification-item.read {
-    background-color: #fafafa;
-    border-left-color: #e0e0e0;
-    border-left-width: 3px;
-    opacity: 0.85;
-    border-radius: 6px;
-    margin-bottom: 6px;
-}
-
-/* تحسين badges الإشعارات */
-.notification-item.unread .badge {
-    animation: badge-glow 2s infinite;
-}
-
-@keyframes badge-glow {
-    0% { box-shadow: 0 0 5px rgba(33, 150, 243, 0.5); }
-    50% { box-shadow: 0 0 15px rgba(33, 150, 243, 0.8); }
-    100% { box-shadow: 0 0 5px rgba(33, 150, 243, 0.5); }
-}
-
-/* أيقونات الإشعارات حسب النوع */
-/* إشعارات الطلبات */
-.notification-icon-order_created, .notification-icon-order_status_changed {
-    background-color: #fff3e0 !important; border: 2px solid #ff9800 !important;
-}
-.notification-icon-order_created .notification-icon-i::before {
-    content: "\f07a"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #ff9800; font-size: 18px;
-}
-.notification-icon-order_status_changed .notification-icon-i::before {
-    content: "\f362"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #ff9800; font-size: 18px;
-}
-
-.notification-icon-order_completed, .notification-icon-order_delivered {
-    background-color: #e8f5e8 !important; border: 2px solid #4caf50 !important;
-}
-.notification-icon-order_completed .notification-icon-i::before {
-    content: "\f058"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #4caf50; font-size: 18px;
-}
-.notification-icon-order_delivered .notification-icon-i::before {
-    content: "\f0d1"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #4caf50; font-size: 18px;
-}
-
-/* إشعارات المعاينات */
-.notification-icon-inspection_created, .notification-icon-inspection_status_changed, .notification-icon-inspection_scheduled {
-    background-color: #f3e5f5 !important; border: 2px solid #9c27b0 !important;
-}
-.notification-icon-inspection_created .notification-icon-i::before {
-    content: "\f002"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #9c27b0; font-size: 18px;
-}
-.notification-icon-inspection_status_changed .notification-icon-i::before {
-    content: "\f46c"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #9c27b0; font-size: 18px;
-}
-.notification-icon-inspection_scheduled .notification-icon-i::before {
-    content: "\f274"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #9c27b0; font-size: 18px;
-}
-
-/* إشعارات التصنيع */
-.notification-icon-manufacturing_created, .notification-icon-manufacturing_status_changed, .notification-icon-manufacturing_completed {
-    background-color: #eceff1 !important; border: 2px solid #607d8b !important;
-}
-.notification-icon-manufacturing_created .notification-icon-i::before {
-    content: "\f275"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #607d8b; font-size: 18px;
-}
-.notification-icon-manufacturing_status_changed .notification-icon-i::before {
-    content: "\f085"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #607d8b; font-size: 18px;
-}
-.notification-icon-manufacturing_completed .notification-icon-i::before {
-    content: "\f560"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #607d8b; font-size: 18px;
-}
-
-/* إشعارات التركيب */
-.notification-icon-installation_scheduled, .notification-icon-installation_completed, .notification-icon-installation_updated {
-    background-color: #efebe9 !important; border: 2px solid #795548 !important;
-}
-.notification-icon-installation_scheduled .notification-icon-i::before {
-    content: "\f0ad"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #795548; font-size: 18px;
-}
-.notification-icon-installation_completed .notification-icon-i::before {
-    content: "\f015"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #795548; font-size: 18px;
-}
-.notification-icon-installation_updated .notification-icon-i::before {
-    content: "\f0ad"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #795548; font-size: 18px;
-}
-
-/* إشعارات العملاء */
-.notification-icon-customer_created, .notification-icon-customer_updated {
-    background-color: #e0f2f1 !important; border: 2px solid #00bcd4 !important;
-}
-.notification-icon-customer_created .notification-icon-i::before {
-    content: "\f234"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #00bcd4; font-size: 18px;
-}
-.notification-icon-customer_updated .notification-icon-i::before {
-    content: "\f4ff"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #00bcd4; font-size: 18px;
-}
-
-/* إشعارات افتراضية */
-.notification-icon {
-    background-color: #f5f5f5 !important; border: 2px solid #757575 !important;
-}
-.notification-icon .notification-icon-i::before {
-    content: "\f05a"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #757575; font-size: 18px;
-}
-
-/* تحريك badge الجديد */
-.pulse-badge {
-    animation: badge-pulse 1.5s infinite;
-}
-
-@keyframes badge-pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-/* تحسين العناوين والنصوص */
-.notification-item.unread .notification-content h6 {
-    font-weight: 700 !important;
-    color: #1565c0 !important;
-}
-
-.notification-item.read .notification-content h6 {
-    font-weight: 500;
-    color: #757575;
-}
-
-.notification-item.unread .notification-content p {
-    color: #424242 !important;
-    font-weight: 500;
-}
-
-.notification-item.read .notification-content p {
-    color: #9e9e9e;
-}
-
-.notification-item.priority-urgent {
-    border-left-color: #dc3545;
-}
-
-.notification-item.priority-high {
-    border-left-color: #ffc107;
-}
-
-.notification-item.priority-normal {
-    border-left-color: #17a2b8;
-}
-
-.notification-item.priority-low {
-    border-left-color: #6c757d;
-}
-
+.notification-item:last-child { border-bottom: none !important; }
 .notification-item:hover {
-    background-color: #f1f3f4;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background-color: #f8f9fa !important;
+    transform: translateX(2px);
 }
 
-.notification-icon {
-    width: 50px;
-    height: 50px;
+/* غير مقروء */
+.notification-item.unread {
+    background-color: #f0f7ff !important;
+    border-right-color: #0d6efd;
+}
+
+/* مقروء */
+.notification-item.read {
+    background-color: #fff;
+    border-right-color: #dee2e6;
+    opacity: 0.85;
+}
+
+/* أولويات */
+.notification-item.priority-urgent { border-right-color: #dc3545 !important; }
+.notification-item.priority-high   { border-right-color: #fd7e14 !important; }
+.notification-item.priority-normal  { border-right-color: #0d6efd; }
+.notification-item.priority-low    { border-right-color: #6c757d; }
+
+/* أيقونة الإشعار */
+.notif-icon {
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: 15px;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    flex-shrink: 0;
 }
+.notif-icon i { font-size: 16px; }
+.notification-item.read .notif-icon { opacity: 0.6; }
 
-.notification-item.unread .notification-icon {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+/* محتوى الإشعار */
+.notif-body { flex: 1; min-width: 0; }
+.notif-body h6 { font-size: 0.9rem; line-height: 1.4; }
+.notif-body p  { font-size: 0.82rem; line-height: 1.5; }
+
+/* إحصائيات */
+.stats-row .stat-box {
+    text-align: center;
+    padding: 1rem 0.5rem;
 }
-
-.notification-item.read .notification-icon {
-    opacity: 0.7;
-    transform: scale(0.95);
+.stats-row .stat-box h4 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
 }
-
-.notification-content {
-    flex: 1;
-}
-
-.notification-meta {
-    font-size: 0.875rem;
-    color: #6c757d;
-}
-
-.filter-card {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.stats-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 20px;
+.stats-row .stat-box small {
+    font-size: 0.78rem;
+    opacity: 0.9;
 }
     </style>
 {% endblock %}
 {% block content %}
-    <div class="container-fluid">
+    <div class="container-fluid notifications-page">
         <!-- عنوان الصفحة -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3 mb-0">
-                <i class="fas fa-bell me-2"></i>
-                الإشعارات
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <h1 class="h4 mb-0">
+                <i class="fas fa-bell text-primary me-2"></i>الإشعارات
             </h1>
-            <div class="btn-group">
-                {% if unread_count > 0 %}
-                    <!-- زر سريع مع AJAX -->
+            {% if unread_count > 0 %}
+                <div class="d-flex gap-2">
                     <button type="button"
-                            class="btn btn-outline-primary me-2"
+                            class="btn btn-outline-primary btn-sm"
                             id="mark-all-read-ajax-btn"
                             title="تحديد سريع بدون إعادة تحميل">
-                        <i class="fas fa-check-double"></i>
-                        تحديد سريع
+                        <i class="fas fa-check-double me-1"></i>تحديد سريع
                     </button>
-                    <!-- رابط لصفحة التأكيد -->
                     <a href="{% url 'notifications:mark_all_read' %}"
-                       class="btn btn-primary"
-                       title="تحديد مع صفحة تأكيد">
-                        <i class="fas fa-check-circle"></i>
-                        تحديد الكل كمقروء
+                       class="btn btn-primary btn-sm">
+                        <i class="fas fa-check-circle me-1"></i>تحديد الكل كمقروء
                     </a>
-                {% endif %}
-            </div>
+                </div>
+            {% endif %}
         </div>
+
         <!-- إحصائيات سريعة -->
-        <div class="stats-card">
-            <div class="row text-center">
-                <div class="col-md-3">
-                    <h4>{{ notifications.paginator.count }}</h4>
-                    <small>إجمالي الإشعارات</small>
-                </div>
-                <div class="col-md-3">
-                    <h4>{{ unread_count }}</h4>
-                    <small>غير مقروءة</small>
-                </div>
-                <div class="col-md-3">
-                    <h4>{{ notifications.paginator.count|add:"-"|add:unread_count }}</h4>
-                    <small>مقروءة</small>
-                </div>
-                <div class="col-md-3">
-                    <h4>{{ notifications|length }}</h4>
-                    <small>في هذه الصفحة</small>
-                </div>
-            </div>
-        </div>
-        <!-- فلاتر البحث -->
-        <div class="filter-card">
-            <form method="get" class="row g-3">
-                <div class="col-md-2">
-                    <label for="type" class="form-label">نوع الإشعار</label>
-                    <select name="type" id="type" class="form-select">
-                        <option value="">جميع الأنواع</option>
-                        {% for value, label in notification_types %}
-                            <option value="{{ value }}" {% if current_type == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="priority" class="form-label">الأولوية</label>
-                    <select name="priority" id="priority" class="form-select">
-                        <option value="">جميع الأولويات</option>
-                        {% for value, label in priority_levels %}
-                            <option value="{{ value }}"
-                                    {% if current_priority == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="read" class="form-label">حالة القراءة</label>
-                    <select name="read" id="read" class="form-select">
-                        <option value="">الكل</option>
-                        <option value="unread" {% if current_read == 'unread' %}selected{% endif %}>غير مقروءة</option>
-                        <option value="read" {% if current_read == 'read' %}selected{% endif %}>مقروءة</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="search" class="form-label">البحث</label>
-                    <div class="input-group">
-                        <input type="text"
-                               name="search"
-                               id="search"
-                               class="form-control"
-                               placeholder="رقم الطلب، كود العميل، العنوان..."
-                               value="{{ current_search }}">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i>
-                        </button>
+        <div class="card border-0 bg-primary bg-gradient text-white mb-3">
+            <div class="card-body py-2">
+                <div class="row stats-row">
+                    <div class="col-6 col-md-3 stat-box">
+                        <h4>{{ total_count }}</h4>
+                        <small>إجمالي الإشعارات</small>
+                    </div>
+                    <div class="col-6 col-md-3 stat-box">
+                        <h4>{{ unread_count }}</h4>
+                        <small>غير مقروءة</small>
+                    </div>
+                    <div class="col-6 col-md-3 stat-box">
+                        <h4>{{ read_count }}</h4>
+                        <small>مقروءة</small>
+                    </div>
+                    <div class="col-6 col-md-3 stat-box">
+                        <h4>{{ notifications|length }}</h4>
+                        <small>في هذه الصفحة</small>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <label for="date_from" class="form-label">من تاريخ</label>
-                    <input type="date"
-                           name="date_from"
-                           id="date_from"
-                           class="form-control"
-                           value="{{ request.GET.date_from }}">
-                </div>
-                <div class="col-md-3">
-                    <label for="date_to" class="form-label">إلى تاريخ</label>
-                    <input type="date"
-                           name="date_to"
-                           id="date_to"
-                           class="form-control"
-                           value="{{ request.GET.date_to }}">
-                </div>
-                <div class="col-md-3">
-                    <label for="created_by" class="form-label">المستخدم</label>
-                    <select name="created_by" id="created_by" class="form-select">
-                        <option value="">جميع المستخدمين</option>
-                        {% for user in users_with_notifications %}
-                            <option value="{{ user.id }}"
-                                    {% if request.GET.created_by == user.id|stringformat:'s' %}selected{% endif %}>
-                                {{ user.get_full_name|default:user.username }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <div class="btn-group w-100">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-filter"></i> فلترة
+            </div>
+        </div>
+
+        <!-- فلاتر البحث -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body py-3">
+                <form method="get" class="row g-2 align-items-end">
+                    <div class="col-6 col-md-2">
+                        <label for="type" class="form-label small mb-1">نوع الإشعار</label>
+                        <select name="type" id="type" class="form-select form-select-sm">
+                            <option value="">جميع الأنواع</option>
+                            {% for value, label in notification_types %}
+                                <option value="{{ value }}" {% if current_type == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label for="priority" class="form-label small mb-1">الأولوية</label>
+                        <select name="priority" id="priority" class="form-select form-select-sm">
+                            <option value="">جميع الأولويات</option>
+                            {% for value, label in priority_levels %}
+                                <option value="{{ value }}" {% if current_priority == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label for="read" class="form-label small mb-1">حالة القراءة</label>
+                        <select name="read" id="read" class="form-select form-select-sm">
+                            <option value="">الكل</option>
+                            <option value="unread" {% if current_read == 'unread' %}selected{% endif %}>غير مقروءة</option>
+                            <option value="read" {% if current_read == 'read' %}selected{% endif %}>مقروءة</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label for="created_by" class="form-label small mb-1">المستخدم</label>
+                        <select name="created_by" id="created_by" class="form-select form-select-sm">
+                            <option value="">جميع المستخدمين</option>
+                            {% for user in users_with_notifications %}
+                                <option value="{{ user.id }}"
+                                        {% if request.GET.created_by == user.id|stringformat:'s' %}selected{% endif %}>
+                                    {{ user.get_full_name|default:user.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label for="date_from" class="form-label small mb-1">من تاريخ</label>
+                        <input type="date" name="date_from" id="date_from"
+                               class="form-control form-control-sm"
+                               value="{{ request.GET.date_from }}">
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label for="date_to" class="form-label small mb-1">إلى تاريخ</label>
+                        <input type="date" name="date_to" id="date_to"
+                               class="form-control form-control-sm"
+                               value="{{ request.GET.date_to }}">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label for="search" class="form-label small mb-1">البحث</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="search" id="search"
+                                   class="form-control"
+                                   placeholder="رقم الطلب، كود العميل، العنوان..."
+                                   value="{{ current_search }}">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                            <i class="fas fa-filter me-1"></i>فلترة
                         </button>
-                        <a href="{% url 'notifications:list' %}"
-                           class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i> مسح
+                        <a href="{% url 'notifications:list' %}" class="btn btn-outline-secondary btn-sm flex-grow-1">
+                            <i class="fas fa-times me-1"></i>مسح
                         </a>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
+
         <!-- قائمة الإشعارات -->
         {% if notifications %}
-            <div class="card">
+            <div class="card border-0 shadow-sm">
                 <div class="card-body p-0">
                     {% for notification in notifications %}
-                        {% with visibility=notification.user_visibility %}
-                            <div class="notification-item p-3 border-bottom d-flex align-items-start {% if visibility and not visibility.is_read %}unread{% else %}read{% endif %} priority-{{ notification.priority }}"
+                        {% with visibility=notification.user_vis_list.0 %}
+                            {% with icon_data=notification.get_icon_and_color %}
+                            <div class="notification-item p-3 border-bottom d-flex gap-3 align-items-start {% if visibility and not visibility.is_read %}unread{% else %}read{% endif %} priority-{{ notification.priority }}"
                                  data-notification-id="{{ notification.pk }}"
                                  data-is-read="{% if visibility %}{{ visibility.is_read|yesno:'true,false' }}{% else %}false{% endif %}">
-                                <!-- أيقونة الإشعار -->
-                                <div class="notification-icon notification-icon-{{ notification.notification_type }}"
-                                     data-notification-type="{{ notification.notification_type }}">
-                                    <i class="notification-icon-i"
-                                       data-notification-type="{{ notification.notification_type }}"></i>
+                                <!-- أيقونة -->
+                                <div class="notif-icon" style="background-color: {{ icon_data.bg }}; border: 2px solid {{ icon_data.color }};">
+                                    <i class="{{ icon_data.icon }}" style="color: {{ icon_data.color }};"></i>
                                 </div>
-                                <!-- محتوى الإشعار -->
-                                <div class="notification-content">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h6 class="mb-0 {% if not visibility.is_read %}fw-bold text-primary{% else %}text-muted{% endif %}">
+                                <!-- محتوى -->
+                                <div class="notif-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <h6 class="mb-0">
                                             <a href="{{ notification.get_absolute_url }}"
-                                               class="text-decoration-none {% if not visibility.is_read %}text-primary fw-bold{% else %}text-muted{% endif %}">
-                                                {% if not visibility.is_read %}<i class="fas fa-circle text-primary me-1" style="font-size: 8px;"></i>{% endif %}
+                                               class="text-decoration-none {% if not visibility.is_read %}text-dark fw-bold{% else %}text-muted{% endif %}">
+                                                {% if not visibility.is_read %}<i class="fas fa-circle text-primary me-1" style="font-size: 6px; vertical-align: middle;"></i>{% endif %}
                                                 {{ notification.title }}
                                             </a>
                                             {% if not visibility.is_read %}
-                                                <span class="badge bg-primary ms-2 pulse-badge">جديد</span>
-                                            {% else %}
-                                                <span class="badge bg-secondary ms-2">مقروء</span>
+                                                <span class="badge bg-primary rounded-pill ms-1" style="font-size: 0.65rem;">جديد</span>
                                             {% endif %}
                                         </h6>
-                                        <small class="{% if not visibility.is_read %}text-primary fw-bold{% else %}text-muted{% endif %}">
-                                            {{ notification.created_at|timesince }}
+                                        <small class="text-muted text-nowrap ms-2" style="font-size: 0.75rem;">
+                                            <i class="far fa-clock me-1"></i>{{ notification.created_at|timesince }}
                                         </small>
                                     </div>
-                                    <p class="mb-2 {% if not visibility.is_read %}text-dark{% else %}text-muted{% endif %}">
-                                        {{ notification.message|truncatewords:20 }}
+                                    <p class="mb-2 {% if not visibility.is_read %}text-body{% else %}text-muted{% endif %}">
+                                        {{ notification.message|truncatewords:25 }}
                                     </p>
-                                    <div class="notification-meta d-flex justify-content-between align-items-center">
-                                        <div class="w-100">
-                                            <div class="d-flex flex-wrap gap-2 mb-1">
-                                                <span class="badge bg-secondary">{{ notification.get_notification_type_display }}</span>
-                                                <span class="badge bg-{{ notification.priority }}">{{ notification.get_priority_display }}</span>
-                                                {% if notification.created_by %}
-                                                    <span class="badge bg-primary">
-                                                        <i class="fas fa-user"></i>
-                                                        {{ notification.created_by.get_full_name|default:notification.created_by.username }}
-                                                    </span>
-                                                {% elif notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}
-                                                    <span class="badge bg-info">
-                                                        <i class="fas fa-user"></i>
-                                                        {{ notification.extra_data.changed_by }}
-                                                    </span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary">
-                                                        <i class="fas fa-robot"></i>
-                                                        مستخدم النظام
-                                                    </span>
-                                                {% endif %}
-                                            </div>
-                                            {% with related_info=notification.get_related_info %}
-                                                {% if related_info %}
-                                                    <div class="d-flex flex-wrap gap-2 text-sm">
-                                                        {% if related_info.code %}
-                                                            <span class="badge bg-info">
-                                                                <i class="fas fa-tag me-1"></i>{{ related_info.code }}
-                                                            </span>
-                                                        {% endif %}
-                                                        {% if related_info.customer %}
-                                                            <span class="badge bg-success">
-                                                                <i class="fas fa-user me-1"></i>{{ related_info.customer }}
-                                                            </span>
-                                                        {% endif %}
-                                                        {% if related_info.order %}
-                                                            <span class="badge bg-warning text-dark">
-                                                                <i class="fas fa-shopping-cart me-1"></i>{{ related_info.order }}
-                                                            </span>
-                                                        {% endif %}
-                                                        {% if related_info.url %}
-                                                            <a href="{{ related_info.url }}"
-                                                               class="btn btn-sm btn-outline-primary"
-                                                               title="عرض التفاصيل">
-                                                                <i class="fas fa-external-link-alt"></i>
-                                                            </a>
-                                                        {% endif %}
-                                                    </div>
-                                                {% endif %}
-                                            {% endwith %}
-                                        </div>
-                                        <div class="btn-group btn-group-sm">
+                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                        <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">{{ notification.get_notification_type_display }}</span>
+                                        {% if notification.priority == 'urgent' %}
+                                            <span class="badge bg-danger" style="font-size: 0.7rem;">{{ notification.get_priority_display }}</span>
+                                        {% elif notification.priority == 'high' %}
+                                            <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">{{ notification.get_priority_display }}</span>
+                                        {% elif notification.priority == 'low' %}
+                                            <span class="badge bg-secondary" style="font-size: 0.7rem;">{{ notification.get_priority_display }}</span>
+                                        {% endif %}
+                                        {% if notification.created_by %}
+                                            <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">
+                                                <i class="fas fa-user me-1 text-primary"></i>{{ notification.created_by.get_full_name|default:notification.created_by.username }}
+                                            </span>
+                                        {% elif notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}
+                                            <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">
+                                                <i class="fas fa-user me-1 text-info"></i>{{ notification.extra_data.changed_by }}
+                                            </span>
+                                        {% endif %}
+                                        {% if notification.extra_data.order_number %}
+                                            <span class="badge bg-info bg-opacity-10 text-info border border-info" style="font-size: 0.7rem;">
+                                                <i class="fas fa-hashtag me-1"></i>{{ notification.extra_data.order_number }}
+                                            </span>
+                                        {% endif %}
+                                        {% if notification.extra_data.customer_name %}
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success" style="font-size: 0.7rem;">
+                                                <i class="fas fa-user me-1"></i>{{ notification.extra_data.customer_name }}
+                                            </span>
+                                        {% endif %}
+                                        <!-- أزرار الإجراءات -->
+                                        <span class="ms-auto d-flex gap-1">
                                             {% if not visibility.is_read %}
                                                 <a href="{% url 'notifications:mark_read' notification.pk %}"
-                                                   class="btn btn-outline-primary btn-sm"
-                                                   title="تحديد كمقروء">
+                                                   class="btn btn-outline-primary btn-sm py-0 px-1" style="font-size: 0.75rem;"
+                                                   title="تحديد كمقروء" onclick="event.stopPropagation();">
                                                     <i class="fas fa-check"></i>
                                                 </a>
                                             {% endif %}
                                             <a href="{{ notification.get_absolute_url }}"
-                                               class="btn btn-outline-secondary btn-sm"
-                                               title="عرض التفاصيل">
+                                               class="btn btn-outline-secondary btn-sm py-0 px-1" style="font-size: 0.75rem;"
+                                               title="عرض التفاصيل" onclick="event.stopPropagation();">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                        </div>
+                                        </span>
                                     </div>
                                 </div>
                             </div>
+                            {% endwith %}
                         {% endwith %}
                     {% endfor %}
                 </div>
             </div>
+
             <!-- ترقيم الصفحات -->
             {% if notifications.has_other_pages %}
-                <nav aria-label="ترقيم الصفحات" class="mt-4">
-                    <ul class="pagination justify-content-center">
+                <nav aria-label="ترقيم الصفحات" class="mt-3 mb-4">
+                    <ul class="pagination pagination-sm justify-content-center">
                         {% if notifications.has_previous %}
                             <li class="page-item">
-                                <a class="page-link"
-                                   href="?page={{ notifications.previous_page_number }}&{{ request.GET.urlencode }}">
-                                    السابق
+                                <a class="page-link" href="?page={{ notifications.previous_page_number }}&{{ request.GET.urlencode }}">
+                                    <i class="fas fa-chevron-right"></i>
                                 </a>
                             </li>
                         {% endif %}
@@ -512,9 +307,8 @@
                         {% endfor %}
                         {% if notifications.has_next %}
                             <li class="page-item">
-                                <a class="page-link"
-                                   href="?page={{ notifications.next_page_number }}&{{ request.GET.urlencode }}">
-                                    التالي
+                                <a class="page-link" href="?page={{ notifications.next_page_number }}&{{ request.GET.urlencode }}">
+                                    <i class="fas fa-chevron-left"></i>
                                 </a>
                             </li>
                         {% endif %}
@@ -522,44 +316,33 @@
                 </nav>
             {% endif %}
         {% else %}
-            <!-- رسالة عدم وجود إشعارات -->
-            <div class="text-center py-5">
-                <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
-                <h4 class="text-muted">لا توجد إشعارات</h4>
-                <p class="text-muted">لم يتم العثور على إشعارات تطابق معايير البحث المحددة.</p>
-                <a href="{% url 'notifications:list' %}" class="btn btn-primary">
-                    <i class="fas fa-refresh"></i>
-                    عرض جميع الإشعارات
-                </a>
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3 d-block"></i>
+                    <h5 class="text-muted">لا توجد إشعارات</h5>
+                    <p class="text-muted small">لم يتم العثور على إشعارات تطابق معايير البحث المحددة.</p>
+                    <a href="{% url 'notifications:list' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-sync me-1"></i>عرض جميع الإشعارات
+                    </a>
+                </div>
             </div>
         {% endif %}
     </div>
     <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // تحديث عداد الإشعارات في الـ navbar
     updateNotificationCount();
-
-    // تحديث العداد كل 30 ثانية
     setInterval(updateNotificationCount, 30000);
-
-    // إضافة مستمع للنقر على الإشعارات لتحديدها كمقروءة تلقائياً
     setupNotificationClickHandlers();
 
-    // معالجة الزر السريع لتحديد جميع الإشعارات كمقروءة
     const markAllAjaxBtn = document.getElementById('mark-all-read-ajax-btn');
     if (markAllAjaxBtn) {
         markAllAjaxBtn.addEventListener('click', function() {
-            if (!confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟\n\nسيتم التحديث فوراً بدون إعادة تحميل الصفحة.')) {
-                return;
-            }
+            if (!confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')) return;
 
             const originalText = markAllAjaxBtn.innerHTML;
-
-            // إظهار مؤشر التحميل
             markAllAjaxBtn.disabled = true;
-            markAllAjaxBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
+            markAllAjaxBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري التحديث...';
 
-            // إرسال الطلب
             fetch('{% url "notifications:mark_all_read" %}', {
                 method: 'POST',
                 headers: {
@@ -568,39 +351,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 }
             })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    throw new Error('فشل في تحديث الإشعارات');
-                }
-            })
+            .then(r => r.ok ? r.json() : Promise.reject('فشل'))
             .then(data => {
                 if (data.success) {
-                    // إظهار رسالة نجاح
-                    showSuccessMessage(data.message);
-
-                    // تحديث الواجهة فوراً
+                    showAlert('success', data.message);
                     updateNotificationsUI();
-
-                    // تحديث العداد
                     updateNotificationCount();
-
-                    // إخفاء الزر إذا لم تعد هناك إشعارات غير مقروءة
-                    if (data.count === 0) {
-                        markAllAjaxBtn.style.display = 'none';
-                        document.querySelector('a[href*="mark-all-read"]').style.display = 'none';
-                    }
                 } else {
-                    throw new Error(data.message || 'فشل في تحديث الإشعارات');
+                    throw new Error(data.message || 'فشل');
                 }
             })
-            .catch(error => {
-                console.error('خطأ:', error);
-                showErrorMessage('حدث خطأ أثناء تحديث الإشعارات. يرجى المحاولة مرة أخرى.');
-            })
+            .catch(e => showAlert('danger', 'حدث خطأ. يرجى المحاولة مرة أخرى.'))
             .finally(() => {
-                // إعادة تفعيل الزر
                 markAllAjaxBtn.disabled = false;
                 markAllAjaxBtn.innerHTML = originalText;
             });
@@ -610,155 +372,66 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function updateNotificationCount() {
     fetch('{% url "notifications:ajax_count" %}')
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
             if (data.success) {
                 const badge = document.querySelector('#notification-count-badge');
                 if (badge) {
-                    if (data.count > 0) {
-                        badge.textContent = data.count;
-                        badge.style.display = 'inline';
-                    } else {
-                        badge.style.display = 'none';
-                    }
+                    badge.textContent = data.count;
+                    badge.style.display = data.count > 0 ? 'inline' : 'none';
                 }
             }
         })
-        .catch(error => console.error('Error updating notification count:', error));
+        .catch(() => {});
 }
 
-// دالة لإظهار رسالة نجاح
-function showSuccessMessage(message) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-success alert-dismissible fade show';
-    alertDiv.innerHTML = `
-        <i class="fas fa-check-circle me-2"></i>
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-
-    const container = document.querySelector('.container-fluid');
-    container.insertBefore(alertDiv, container.firstChild);
-
-    setTimeout(() => alertDiv.remove(), 5000);
+function showAlert(type, message) {
+    const div = document.createElement('div');
+    div.className = `alert alert-${type} alert-dismissible fade show mb-2`;
+    div.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    const container = document.querySelector('.notifications-page');
+    container.insertBefore(div, container.firstChild);
+    setTimeout(() => div.remove(), 5000);
 }
 
-// دالة لإظهار رسالة خطأ
-function showErrorMessage(message) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
-    alertDiv.innerHTML = `
-        <i class="fas fa-exclamation-circle me-2"></i>
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-
-    const container = document.querySelector('.container-fluid');
-    container.insertBefore(alertDiv, container.firstChild);
-
-    setTimeout(() => alertDiv.remove(), 8000);
-}
-
-// دالة لتحديث واجهة الإشعارات
 function updateNotificationsUI() {
-    const unreadNotifications = document.querySelectorAll('.notification-item.unread');
-    unreadNotifications.forEach(notification => {
-        // تغيير الكلاسات
-        notification.classList.remove('unread');
-        notification.classList.add('read');
-        notification.setAttribute('data-is-read', 'true');
+    document.querySelectorAll('.notification-item.unread').forEach(item => {
+        item.classList.remove('unread');
+        item.classList.add('read');
+        item.setAttribute('data-is-read', 'true');
 
-        // تحديث العنوان
-        const title = notification.querySelector('h6 a');
-        if (title) {
-            title.classList.remove('text-primary', 'fw-bold');
-            title.classList.add('text-muted');
-        }
+        const title = item.querySelector('h6 a');
+        if (title) { title.classList.remove('text-dark', 'fw-bold'); title.classList.add('text-muted'); }
 
-        // إزالة النقطة الزرقاء
-        const dot = notification.querySelector('.fas.fa-circle');
+        const dot = item.querySelector('.fas.fa-circle');
         if (dot) dot.remove();
 
-        // تحديث badge
-        const badge = notification.querySelector('.badge');
-        if (badge) {
-            badge.classList.remove('bg-primary', 'pulse-badge');
-            badge.classList.add('bg-secondary');
-            badge.textContent = 'مقروء';
-        }
+        const badge = item.querySelector('.badge.bg-primary');
+        if (badge) { badge.remove(); }
 
-        // تحديث الوقت
-        const timeElement = notification.querySelector('small');
-        if (timeElement) {
-            timeElement.classList.remove('text-primary', 'fw-bold');
-            timeElement.classList.add('text-muted');
-        }
+        const msg = item.querySelector('p');
+        if (msg) { msg.classList.remove('text-body'); msg.classList.add('text-muted'); }
 
-        // تحديث النص
-        const message = notification.querySelector('p');
-        if (message) {
-            message.classList.remove('text-dark');
-            message.classList.add('text-muted');
-        }
-
-        // تحديث الأيقونة
-        const iconContainer = notification.querySelector('.notification-icon');
-        if (iconContainer) {
-            iconContainer.style.opacity = '0.7';
-            iconContainer.style.transform = 'scale(0.95)';
-        }
+        const icon = item.querySelector('.notif-icon');
+        if (icon) { icon.style.opacity = '0.6'; }
     });
 
-    // إخفاء أزرار "تحديد الكل" إذا لم تعد هناك إشعارات غير مقروءة
-    const markAllBtns = document.querySelectorAll('#mark-all-read-ajax-btn, a[href*="mark-all-read"]');
-    markAllBtns.forEach(btn => btn.style.display = 'none');
-
-    // تحديث الإحصائيات
-    const unreadCountElement = document.querySelector('.stats-card h4:nth-child(1)');
-    if (unreadCountElement) {
-        unreadCountElement.textContent = '0';
-    }
+    document.querySelectorAll('#mark-all-read-ajax-btn, a[href*="mark-all-read"]').forEach(b => b.style.display = 'none');
 }
 
-// دالة إعداد مستمعي النقر على الإشعارات
 function setupNotificationClickHandlers() {
-    const notificationItems = document.querySelectorAll('.notification-item');
-
-    notificationItems.forEach(item => {
-        // إضافة مستمع للنقر على الإشعار بالكامل
+    document.querySelectorAll('.notification-item').forEach(item => {
         item.addEventListener('click', function(e) {
-            // تجاهل النقر على الأزرار
-            if (e.target.closest('.btn-group')) {
-                return;
-            }
-
-            const notificationId = item.getAttribute('data-notification-id');
+            if (e.target.closest('a.btn, button')) return;
+            const id = item.getAttribute('data-notification-id');
             const isRead = item.getAttribute('data-is-read') === 'true';
-
-            // إذا كان الإشعار غير مقروء، قم بتحديده كمقروء
-            if (!isRead && notificationId) {
-                markNotificationAsRead(notificationId, item);
-            }
-
-            // الانتقال إلى رابط الإشعار
-            const link = item.querySelector('a[href]');
-            if (link && !e.target.closest('.btn-group')) {
-                window.location.href = link.href;
-            }
+            if (!isRead && id) markNotificationAsRead(id, item);
+            const link = item.querySelector('h6 a[href]');
+            if (link) window.location.href = link.href;
         });
-
-        // إضافة مؤشر اليد للإشعارات غير المقروءة
-        if (item.classList.contains('unread')) {
-            item.style.cursor = 'pointer';
-            item.title = 'انقر لتحديد كمقروء والانتقال للتفاصيل';
-        } else {
-            item.style.cursor = 'pointer';
-            item.title = 'انقر لعرض التفاصيل';
-        }
     });
 }
 
-// دالة تحديد إشعار واحد كمقروء
 function markNotificationAsRead(notificationId, itemElement) {
     fetch(`{% url 'notifications:mark_read' 0 %}`.replace('0', notificationId), {
         method: 'POST',
@@ -768,78 +441,33 @@ function markNotificationAsRead(notificationId, itemElement) {
             'Content-Type': 'application/x-www-form-urlencoded'
         }
     })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else {
-            throw new Error('فشل في تحديث الإشعار');
-        }
-    })
+    .then(r => r.ok ? r.json() : Promise.reject())
     .then(data => {
         if (data.success) {
-            // تحديث الواجهة فوراً
             updateSingleNotificationUI(itemElement);
-
-            // تحديث العداد
             updateNotificationCount();
-
-            console.log('✅ تم تحديد الإشعار كمقروء');
-        } else {
-            console.error('❌ فشل في تحديث الإشعار:', data.message);
         }
     })
-    .catch(error => {
-        console.error('❌ خطأ في تحديث الإشعار:', error);
-    });
+    .catch(() => {});
 }
 
-// دالة تحديث واجهة إشعار واحد
-function updateSingleNotificationUI(itemElement) {
-    // تغيير الكلاسات
-    itemElement.classList.remove('unread');
-    itemElement.classList.add('read');
-    itemElement.setAttribute('data-is-read', 'true');
-    itemElement.style.cursor = 'default';
+function updateSingleNotificationUI(el) {
+    el.classList.remove('unread');
+    el.classList.add('read');
+    el.setAttribute('data-is-read', 'true');
 
-    // تحديث العنوان
-    const title = itemElement.querySelector('h6 a');
-    if (title) {
-        title.classList.remove('text-primary', 'fw-bold');
-        title.classList.add('text-muted');
-    }
+    const title = el.querySelector('h6 a');
+    if (title) { title.classList.remove('text-dark', 'fw-bold'); title.classList.add('text-muted'); }
 
-    // إزالة النقطة الزرقاء
-    const dot = itemElement.querySelector('.fas.fa-circle');
+    const dot = el.querySelector('.fas.fa-circle');
     if (dot) dot.remove();
 
-    // تحديث badge
-    const badge = itemElement.querySelector('.badge');
-    if (badge) {
-        badge.classList.remove('bg-primary', 'pulse-badge');
-        badge.classList.add('bg-secondary');
-        badge.textContent = 'مقروء';
-    }
+    const badge = el.querySelector('.badge.bg-primary');
+    if (badge) badge.remove();
 
-    // تحديث الوقت
-    const timeElement = itemElement.querySelector('small');
-    if (timeElement) {
-        timeElement.classList.remove('text-primary', 'fw-bold');
-        timeElement.classList.add('text-muted');
-    }
+    const msg = el.querySelector('p');
+    if (msg) { msg.classList.remove('text-body'); msg.classList.add('text-muted'); }
 
-    // تحديث النص
-    const message = itemElement.querySelector('p');
-    if (message) {
-        message.classList.remove('text-dark');
-        message.classList.add('text-muted');
-    }
-
-    // تحديث الأيقونة
-    const iconContainer = itemElement.querySelector('.notification-icon');
-    if (iconContainer) {
-        iconContainer.style.opacity = '0.7';
-        iconContainer.style.transform = 'scale(0.95)';
-    }
-}
-    </script>
+    const icon = el.querySelector('.notif-icon');
+    if (icon) icon.style.opacity = '0.6';
 {% endblock %}

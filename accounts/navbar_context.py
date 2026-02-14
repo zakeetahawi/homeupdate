@@ -257,6 +257,13 @@ def navbar_departments(request):
                 "url_name": "/installation-accounting/reports/",
             }
         )
+        navbar_items["reports"]["units"].append(
+            {
+                "name": "ترتيب الأداء",
+                "icon": "fa-trophy",
+                "url_name": "/reports/ranking/",
+            }
+        )
 
     # إزالة العناصر الفارغة
     navbar_items_filtered = {
