@@ -117,7 +117,7 @@ class ManufacturingOrderListView(
             return 25
 
     def get_queryset(self):
-        from django.db.models import Case, F, Value, When
+        from django.db.models import Case, Count, F, Q, Value, When
         from django.db.models.functions import Coalesce
 
         from core.monthly_filter_utils import apply_monthly_filter
@@ -126,7 +126,67 @@ class ManufacturingOrderListView(
         queryset = ManufacturingOrder.objects.select_related(
             "order",  # This is the only direct foreign key in the model
             "order__customer",  # Access customer through order
+            "order__branch",  # Branch info accessed in template
+            "order__salesperson",  # Salesperson name accessed in template
             "production_line",  # Production line information
+        )
+
+        # ---- Annotate fabric counts in SQL to eliminate N+1 ----
+        # Get display warehouse IDs (cached) for warehouse filter
+        from manufacturing.models import ManufacturingSettings
+
+        try:
+            _settings = ManufacturingSettings.get_settings()
+            _display_wh_ids = _settings.get_display_warehouse_ids()
+        except Exception:
+            _display_wh_ids = []
+
+        # Define "actually cut" filter
+        _is_cut = Q(order__items__cutting_items__status="completed") | (
+            Q(order__items__cutting_items__receiver_name__isnull=False)
+            & ~Q(order__items__cutting_items__receiver_name="")
+            & Q(order__items__cutting_items__permit_number__isnull=False)
+            & ~Q(order__items__cutting_items__permit_number="")
+        )
+
+        if _display_wh_ids:
+            _wh_filter = Q(
+                order__items__cutting_items__cutting_order__warehouse_id__in=_display_wh_ids
+            )
+            queryset = queryset.annotate(
+                annotated_total=Count(
+                    "order__items", filter=_wh_filter, distinct=True
+                ),
+                annotated_cut=Count(
+                    "order__items", filter=_wh_filter & _is_cut, distinct=True
+                ),
+                annotated_received=Count(
+                    "order__items",
+                    filter=_wh_filter
+                    & Q(order__items__manufacturing_items__fabric_received=True),
+                    distinct=True,
+                ),
+            )
+        else:
+            queryset = queryset.annotate(
+                annotated_total=Count("order__items", distinct=True),
+                annotated_cut=Count(
+                    "order__items",
+                    filter=Q(order__items__cutting_items__isnull=False) & _is_cut,
+                    distinct=True,
+                ),
+                annotated_received=Count(
+                    "order__items",
+                    filter=Q(
+                        order__items__manufacturing_items__fabric_received=True
+                    ),
+                    distinct=True,
+                ),
+            )
+
+        # Compute pending = total - received in SQL
+        queryset = queryset.annotate(
+            annotated_pending=F("annotated_total") - F("annotated_received"),
         )
 
         # استثناء طلبات المنتجات (products) من أوامر التصنيع - لا يجب أن تظهر هنا أبداً
@@ -539,19 +599,6 @@ class ManufacturingOrderListView(
 
         from .models import ManufacturingDisplaySettings
 
-        # Get manufacturing orders for statistics (مفلترة بالسنة الافتراضية)
-        # استخدام نفس الفلتر المطبق على القائمة
-        filtered_orders = ManufacturingOrder.objects.select_related(
-            "order", "order__customer"
-        )
-
-        # تطبيق فلتر السنة الافتراضية على الإحصائيات
-        from accounts.utils import apply_default_year_filter
-
-        filtered_orders = apply_default_year_filter(
-            filtered_orders, self.request, "order_date"
-        )
-
         # Add necessary data for the form
         context.update(
             {
@@ -577,18 +624,19 @@ class ManufacturingOrderListView(
             }
         )
 
-        # Add filter options
+        # Add filter options (single query each, reused below)
         from accounts.models import Branch
 
         from .models import ProductionLine
 
+        _production_lines = list(
+            ProductionLine.objects.filter(is_active=True).order_by("-priority", "name")
+        )
         context.update(
             {
                 "branches": Branch.objects.filter(is_active=True).order_by("name"),
-                "production_lines": ProductionLine.objects.filter(
-                    is_active=True
-                ).order_by("name"),
-                "order_types": ManufacturingOrder.ORDER_TYPE_CHOICES,  # فقط أنواع التصنيع (بدون معاينات)
+                "production_lines": _production_lines,
+                "order_types": ManufacturingOrder.ORDER_TYPE_CHOICES,
             }
         )
 
@@ -601,13 +649,6 @@ class ManufacturingOrderListView(
             )
         except Exception:
             context["available_display_settings"] = []
-
-        # Add production lines for filter dropdown
-        from .models import ProductionLine
-
-        context["production_lines"] = ProductionLine.objects.filter(
-            is_active=True
-        ).order_by("-priority", "name")
 
         # Add order types for filter dropdown (إخفاء نوع "معاينات" من فلاتر المصنع)
         context["order_types"] = [
@@ -729,15 +770,9 @@ class ManufacturingOrderListView(
         ):
             active_filters.append("month")
 
-        # الحصول على البيانات المطلوبة للفلاتر
-        from manufacturing.models import ProductionLine
-
-        production_lines = ProductionLine.objects.filter(is_active=True)
-
-        # سياق الفلتر المضغوط
+        # سياق الفلتر المضغوط (production_lines already set above)
         context["has_active_filters"] = len(active_filters) > 0
         context["active_filters_count"] = len(active_filters)
-        context["production_lines"] = production_lines
         context["status_filter"] = context.get("status_filters", [])
         context["production_line_filter"] = context.get("production_line_filters", [])
         context["priority_filter"] = context.get("priority_filters", [])

@@ -553,9 +553,9 @@ DATABASES = {
         "PASSWORD": "5525",
         "HOST": "localhost",
         "PORT": "5432",
-        # ✅ تحسين: إبقاء الاتصالات مفتوحة لمدة 5 دقائق (تقليل من 10 دقائق)
-        # يوفر موارد الذاكرة مع الحفاظ على الأداء
-        "CONN_MAX_AGE": 0,
+        # ✅ تحسين: إبقاء الاتصالات مفتوحة لمدة 5 دقائق
+        # يوفر موارد الذاكرة مع الحفاظ على الأداء — CONN_HEALTH_CHECKS يحمي من الاتصالات المعطلة
+        "CONN_MAX_AGE": 300,
         # ✅ تحسين: تفعيل فحص صحة الاتصالات
         # يمنع استخدام اتصالات معطلة ويحسن الاستقرار
         "CONN_HEALTH_CHECKS": True,
@@ -1706,7 +1706,7 @@ X_FRAME_OPTIONS = "DENY"
 USE_SRI = True  # للتحقق من سلامة الملفات الخارجية
 
 # Database Connection Security
-CONN_MAX_AGE = 0  # ⚠️ لا تغير هذا - ضروري لمنع تراكم الاتصالات
+CONN_MAX_AGE = 300  # مطابق لـ DATABASES.default.CONN_MAX_AGE
 CONN_HEALTH_CHECKS = True  # فحص صحة الاتصال
 
 # Password Validation مشدد

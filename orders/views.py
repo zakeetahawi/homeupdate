@@ -146,14 +146,22 @@ def order_list(request):
     if show_branch_filter and branch_filter:
         orders = (
             Order.objects.select_related("customer", "salesperson", "branch")
-            .prefetch_related("items", "items__product")
+            .prefetch_related(
+                "items", "items__product",
+                "manufacturing_orders",
+                "inspections",
+            )
             .filter(branch__id=branch_filter)
         )
     else:
         orders = (
             get_user_orders_queryset(request.user)
             .select_related("customer", "salesperson", "branch")
-            .prefetch_related("items", "items__product")
+            .prefetch_related(
+                "items", "items__product",
+                "manufacturing_orders",
+                "inspections",
+            )
         )
 
     # تطبيق الفلترة الشهرية
@@ -305,7 +313,7 @@ def order_list(request):
         "selected_years": selected_years,
         "available_years": available_years,
         "current_year": timezone.now().year,
-        "total_orders": orders.count(),
+        "total_orders": paginator.count,
         "currency_symbol": currency_symbol,  # Add currency symbol to context
         "page_size": page_size,
         "show_branch_filter": show_branch_filter,

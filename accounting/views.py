@@ -62,7 +62,7 @@ def dashboard(request):
     3. Prefetch محسّن مع select_related
     4. استخدام aggregate بدلاً من Python loops
     """
-    from django.db.models import Prefetch, Min, Max, Value, BooleanField, Case, When, Subquery, OuterRef, DecimalField
+    from django.db.models import Prefetch, Min, Max, Value, BooleanField, Case, When, Subquery, OuterRef, DecimalField, F
     from orders.models import Order, Payment
     from accounts.models import Branch
     from django.contrib.auth import get_user_model
@@ -89,12 +89,28 @@ def dashboard(request):
         start_2026 = datetime.datetime(2026, 1, 1, tzinfo=timezone.get_current_timezone())
         start_2025 = datetime.datetime(2025, 1, 1, tzinfo=timezone.get_current_timezone())
         
-        # جلب العملاء المديونين
+        # Prefetch all unpaid orders in 1 query instead of N queries
+        unpaid_orders_prefetch = Prefetch(
+            'customer__customer_orders',
+            queryset=Order.objects.filter(
+                final_price__gt=F('paid_amount')
+            ).select_related('branch', 'created_by').only(
+                'id', 'order_number', 'final_price', 'paid_amount',
+                'order_date', 'customer_id',
+                'branch__name', 'created_by__first_name', 'created_by__username',
+                'discount_percentage', 'discount_amount'
+            ).order_by('-order_date'),
+            to_attr='prefetched_unpaid_orders'
+        )
+        
+        # جلب العملاء المديونين مع Prefetch
         debt_summaries = CustomerFinancialSummary.objects.filter(
             total_debt__gt=0
         ).select_related('customer').only(
             'total_debt', 'total_paid', 'total_orders_amount', 'financial_status',
             'customer__id', 'customer__name', 'customer__code', 'customer__phone'
+        ).prefetch_related(
+            unpaid_orders_prefetch
         ).order_by('-total_debt')
         
         if branch_id:
@@ -117,14 +133,8 @@ def dashboard(request):
         for summary in debt_summaries[:300]:
             customer = summary.customer
             
-            # طلبات العميل المستحقة (final_price > paid_amount)
-            all_orders = Order.objects.filter(
-                customer=customer
-            ).select_related('branch', 'created_by').only(
-                'id', 'order_number', 'final_price', 'paid_amount',
-                'order_date', 'branch__name', 'created_by__first_name', 'created_by__username',
-                'discount_percentage', 'discount_amount'
-            ).order_by('-order_date')
+            # Use prefetched orders — NO extra query per customer
+            all_orders = getattr(customer, 'prefetched_unpaid_orders', [])
             
             # تصنيف الطلبات حسب الفترة
             orders_2026 = []

@@ -6,57 +6,68 @@ from accounts.models import SystemSettings as AccountsSystemSettings
 
 from .models import BranchMessage, CompanyInfo, Department
 
+# ====== Cache TTL Constants ======
+_CACHE_TTL_LONG = 600  # 10 دقائق — بيانات تتغير نادراً
+_CACHE_TTL_SHORT = 60  # 1 دقيقة — بيانات تتغير أحياناً
+
 
 def departments(request):
     """
     Context processor to add departments to all templates in a hierarchical
-    structure.
+    structure. Cached per-user for 10 minutes.
     """
+    if not request.user.is_authenticated:
+        return {
+            "all_departments": [],
+            "parent_departments": [],
+            "user_departments": [],
+            "user_parent_departments": [],
+        }
+
+    user = request.user
+    cache_key = f"ctx_departments_{user.pk}_{user.is_superuser}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     # Get all active departments
-    all_departments = Department.objects.filter(is_active=True).order_by("order")
+    all_departments = list(Department.objects.filter(is_active=True).order_by("order"))
+    parent_departments = [d for d in all_departments if d.parent_id is None]
 
-    # Create hierarchical structure for parent/child departments
-    parent_departments = all_departments.filter(parent__isnull=True)
+    if user.is_superuser:
+        user_departments = all_departments
+        user_parent_departments = parent_departments
+    else:
+        user_departments = list(
+            user.departments.filter(is_active=True).order_by("order")
+        )
+        user_parent_ids = set()
+        for dept in user_departments:
+            dept_id = dept.parent_id if dept.parent_id else dept.id
+            user_parent_ids.add(dept_id)
+        user_parent_departments = [
+            d for d in all_departments if d.id in user_parent_ids
+        ]
 
-    # Get user-accessible departments
-    user_departments = []
-    user_parent_departments = []
-
-    if request.user.is_authenticated:
-        if request.user.is_superuser:
-            user_departments = all_departments
-            user_parent_departments = parent_departments
-        else:  # Get user departments with ordering
-            user_departments = request.user.departments.filter(is_active=True).order_by(
-                "order"
-            )
-
-            # Get unique parent departments
-            user_parent_ids = set()
-            for dept in user_departments:
-                # Add either parent id or own id
-                dept_id = dept.parent.id if dept.parent else dept.id
-                user_parent_ids.add(dept_id)
-
-            # Get parent departments
-            user_parent_departments = Department.objects.filter(
-                id__in=user_parent_ids, is_active=True
-            ).order_by("order")
-
-    return {
+    result = {
         "all_departments": all_departments,
         "parent_departments": parent_departments,
         "user_departments": user_departments,
         "user_parent_departments": user_parent_departments,
     }
+    cache.set(cache_key, result, _CACHE_TTL_LONG)
+    return result
 
 
 def company_info(request):
-    """توفير معلومات الشركة لجميع القوالب"""
+    """توفير معلومات الشركة لجميع القوالب — Cached 10 minutes"""
+    cached = cache.get("ctx_company_info")
+    if cached is not None:
+        return cached
+
     try:
         company = CompanyInfo.objects.first()
         if not company:
-            # إنشاء كائن بقيم افتراضية إذا لم يكن موجوداً
             company = CompanyInfo.objects.create(
                 name="الخواجة للستائر والمفروشات",
                 description="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
@@ -67,7 +78,6 @@ def company_info(request):
                 copyright_text="جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi",
             )
     except Exception:
-        # في حالة حدوث أي خطأ، إنشاء كائن بقيم افتراضية
         company = CompanyInfo(
             name="الخواجة للستائر والمفروشات",
             description="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
@@ -78,71 +88,70 @@ def company_info(request):
             copyright_text="جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi",
         )
 
-    # التأكد من أن اللوغو موجود قبل إرجاعه
     if hasattr(company, "logo") and company.logo:
         try:
-            # اختبار الوصول إلى URL للتأكد من وجود الملف
             company.logo.url
         except (ValueError, FileNotFoundError):
-            # إذا لم يكن الملف موجود، تعيين اللوغو كـ None
             company.logo = None
 
-    return {"company_info": company}
+    result = {"company_info": company}
+    cache.set("ctx_company_info", result, _CACHE_TTL_LONG)
+    return result
 
 
 def footer_settings(request):
-    """توفير إعدادات التذييل لجميع القوالب"""
+    """توفير إعدادات التذييل لجميع القوالب — Cached 10 minutes"""
+    cached = cache.get("ctx_footer_settings")
+    if cached is not None:
+        return cached
+
     try:
-        footer_settings = FooterSettings.objects.first()
-        if not footer_settings:
-            footer_settings = FooterSettings.objects.create(
+        fs = FooterSettings.objects.first()
+        if not fs:
+            fs = FooterSettings.objects.create(
                 left_column_title="عن الشركة",
                 left_column_text="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
                 middle_column_title="روابط سريعة",
                 right_column_title="تواصل معنا",
             )
     except Exception:
-        # في حالة حدوث أي خطأ، إنشاء كائن بقيم افتراضية
-        footer_settings = FooterSettings(
+        fs = FooterSettings(
             left_column_title="عن الشركة",
             left_column_text="نظام متكامل لإدارة العملاء والمبيعات والإنتاج والمخزون",
             middle_column_title="روابط سريعة",
             right_column_title="تواصل معنا",
         )
 
-    return {"footer_settings": footer_settings, "current_year": timezone.now().year}
+    result = {"footer_settings": fs, "current_year": timezone.now().year}
+    cache.set("ctx_footer_settings", result, _CACHE_TTL_LONG)
+    return result
 
 
 def system_settings(request):
-    """
-    توفير إعدادات النظام لجميع القوالب
-    """
-    # محاولة الحصول على الإعدادات من الذاكرة المؤقتة
-    settings = cache.get("system_settings")
+    """توفير إعدادات النظام لجميع القوالب — Cached 1 hour"""
+    _CACHE_KEY = "ctx_system_settings"
+    cached = cache.get(_CACHE_KEY)
+    if cached is not None:
+        return cached
 
-    if not settings:
-        try:
-            # الحصول على الإعدادات أو إنشاؤها إذا لم تكن موجودة
-            settings, created = AccountsSystemSettings.objects.get_or_create(pk=1)
-            # تخزين في الذاكرة المؤقتة لمدة ساعة
-            cache.set("accounts_system_settings", settings, 3600)
-        except Exception:
-            # إرجاع قيم افتراضية في حالة حدوث خطأ
-            return {
-                "system_settings": None,
-                "currency_code": "SAR",
-                "currency_symbol": "ر.س",
-            }
+    try:
+        settings, _created = AccountsSystemSettings.objects.get_or_create(pk=1)
+    except Exception:
+        return {
+            "system_settings": None,
+            "currency_code": "SAR",
+            "currency_symbol": "ر.س",
+        }
 
-    # تم إلغاء السنة الافتراضية
-
-    return {
+    result = {
         "system_settings": settings,
         "currency_code": settings.currency,
         "currency_symbol": settings.CURRENCY_SYMBOLS.get(
             settings.currency, settings.currency
         ),
     }
+    cache.set(_CACHE_KEY, result, 3600)
+    return result
 
 
 def user_context(request):
@@ -184,28 +193,27 @@ def branch_messages(request):
 
 
 def notifications_context(request):
-    """إضافة عدادات الإشعارات إلى السياق"""
-    context = {}
+    """إضافة عدادات الإشعارات إلى السياق — Cached 30s per user"""
+    if not request.user.is_authenticated:
+        return {}
 
-    if request.user.is_authenticated:
-        # الإشعارات - تم إزالتها
-        simple_unread = 0
-        total_unread = 0
+    user = request.user
+    cache_key = f"ctx_notifications_{user.pk}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
 
-        # عدد الرسائل الداخلية غير المقروءة
-        from .models import InternalMessage
+    from .models import InternalMessage
 
-        internal_messages_unread = InternalMessage.get_unread_count(request.user)
+    internal_messages_unread = InternalMessage.get_unread_count(user)
 
-        context.update(
-            {
-                "simple_notifications_unread": simple_unread,
-                "total_notifications_unread": total_unread,
-                "internal_messages_unread": internal_messages_unread,
-            }
-        )
-
-    return context
+    result = {
+        "simple_notifications_unread": 0,
+        "total_notifications_unread": 0,
+        "internal_messages_unread": internal_messages_unread,
+    }
+    cache.set(cache_key, result, 30)
+    return result
 
 
 def admin_notifications_context(request):

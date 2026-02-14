@@ -1,22 +1,31 @@
 """
 Context processor لعرض قائمة الأقسام والوحدات في navbar
+Cached per-user for 5 minutes to eliminate 2-5 queries per page load.
 """
 
+from django.core.cache import cache
+
 from accounts.models import Department
+
+_NAVBAR_CACHE_TTL = 300  # 5 دقائق
 
 
 def navbar_departments(request):
     """
     إرجاع الأقسام والوحدات التي يجب عرضها في navbar
-    بناءً على صلاحيات المستخدم وأقسامه
+    بناءً على صلاحيات المستخدم وأقسامه — Cached per user
     """
     if not request.user.is_authenticated:
         return {"navbar_departments": []}
 
+    user = request.user
+    cache_key = f"ctx_navbar_{user.pk}_{user.is_staff}_{user.is_superuser}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     # Import Warehouse here to avoid circular imports
     from inventory.models import Warehouse
-
-    user = request.user
 
     # جلب أقسام المستخدم
     user_departments = user.departments.all()
@@ -270,4 +279,6 @@ def navbar_departments(request):
         key: value for key, value in navbar_items.items() if value["units"]
     }
 
-    return {"navbar_departments": navbar_items_filtered}
+    result = {"navbar_departments": navbar_items_filtered}
+    cache.set(cache_key, result, _NAVBAR_CACHE_TTL)
+    return result

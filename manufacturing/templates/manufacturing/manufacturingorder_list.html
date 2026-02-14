@@ -2387,7 +2387,7 @@
                                             {% endif %}
                                         </td>
                                         <td class="text-center column-items" data-column="items">
-                                            {% with total=order.total_items_count cut=order.cut_items_count received=order.received_items_count pending=order.pending_items_count %}
+                                            {% with total=order.annotated_total cut=order.annotated_cut received=order.annotated_received pending=order.annotated_pending %}
                                                 {% comment %}
                                     الحالات:
                                     1. مستلم كاملاً = قماش كامل (أخضر)

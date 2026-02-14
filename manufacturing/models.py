@@ -72,9 +72,26 @@ class ManufacturingSettings(models.Model):
 
     @classmethod
     def get_settings(cls):
-        """الحصول على الإعدادات (إنشاء إذا لم تكن موجودة)"""
-        settings, created = cls.objects.get_or_create(is_active=True)
+        """الحصول على الإعدادات (إنشاء إذا لم تكن موجودة) — Cached"""
+        from django.core.cache import cache
+
+        _CACHE_KEY = "manufacturing_settings_obj"
+        settings = cache.get(_CACHE_KEY)
+        if settings is None:
+            settings, created = cls.objects.get_or_create(is_active=True)
+            cache.set(_CACHE_KEY, settings, 600)
         return settings
+
+    def get_display_warehouse_ids(self):
+        """الحصول على IDsمستودعات العرض — Cached"""
+        from django.core.cache import cache
+
+        _CACHE_KEY = "manufacturing_display_wh_ids"
+        ids = cache.get(_CACHE_KEY)
+        if ids is None:
+            ids = list(self.warehouses_for_display.values_list("id", flat=True))
+            cache.set(_CACHE_KEY, ids, 600)
+        return ids
 
 
 class ManufacturingOrderManager(SoftDeleteManager):
@@ -566,10 +583,14 @@ class ManufacturingOrder(SoftDeleteMixin, models.Model):
         )
 
     def _get_display_warehouses(self):
-        """الحصول على المستودعات المحددة للعرض من الإعدادات"""
+        """الحصول على المستودعات المحددة للعرض من الإعدادات — Uses cached settings"""
         settings = ManufacturingSettings.get_settings()
-        display_warehouses = list(settings.warehouses_for_display.all())
-        return display_warehouses if display_warehouses else None
+        display_warehouse_ids = settings.get_display_warehouse_ids()
+        if display_warehouse_ids:
+            from inventory.models import Warehouse
+
+            return list(Warehouse.objects.filter(id__in=display_warehouse_ids))
+        return None
 
     def _get_filtered_order_items(self):
         """الحصول على عناصر الطلب الأصلي المفلترة حسب إعدادات المستودعات"""

@@ -1,20 +1,26 @@
-from .auto_fix import get_items_needing_fix
+from django.core.cache import cache
+
 from .models import CuttingOrder
+
+_CUTTING_CACHE_TTL = 120  # 2 دقائق
 
 
 def cutting_notifications(request):
-    """Add cutting order notification count to context"""
+    """Add cutting order notification count to context — Cached 2 min"""
     if not request.user.is_authenticated:
         return {}
 
-    # Check if user has permission to see warehouse actions
-    # (Superusers or specific roles)
     if not (request.user.is_superuser or request.user.is_staff):
         return {}
 
-    # Count orders with issues that are pending or in progress using the optimized flag
+    cached = cache.get("ctx_cutting_pending_fix")
+    if cached is not None:
+        return cached
+
     pending_fix_count = CuttingOrder.objects.filter(
         status__in=["pending", "in_progress", "partially_completed"], needs_fix=True
     ).count()
 
-    return {"cutting_orders_pending_fix": pending_fix_count}
+    result = {"cutting_orders_pending_fix": pending_fix_count}
+    cache.set("ctx_cutting_pending_fix", result, _CUTTING_CACHE_TTL)
+    return result

@@ -1673,12 +1673,19 @@ class Order(SoftDeleteMixin, models.Model):
 
     @property
     def manufacturing_order(self):
-        """إرجاع أحدث أمر تصنيع مرتبط بالطلب"""
-        # إذا كان هناك قيمة محفوظة مؤقتاً، استخدمها
+        """إرجاع أحدث أمر تصنيع مرتبط بالطلب — Uses prefetched data when available"""
         if hasattr(self, "_cached_manufacturing_order"):
             return self._cached_manufacturing_order
 
         try:
+            # If manufacturing_orders were prefetched, use them without extra query
+            if "manufacturing_orders" in getattr(
+                self, "_prefetched_objects_cache", {}
+            ):
+                mos = self.manufacturing_orders.all()
+                if mos:
+                    return max(mos, key=lambda m: m.created_at)
+                return None
             return self.manufacturing_orders.latest("created_at")
         except Exception:
             return None
