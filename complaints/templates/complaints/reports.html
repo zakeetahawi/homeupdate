@@ -1,548 +1,106 @@
 {% extends 'base.html' %}
-{% load pagination_tags %}
+{% load static %}
 {% block title %}تقارير الشكاوى المتقدمة{% endblock %}
 {% block extra_css %}
-    <!-- Chart.js CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css"
-          rel="stylesheet">
-    <!-- Select2 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
-          rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
-          rel="stylesheet" />
-    <style>
-    .reports-header {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        color: white;
-        border-radius: 15px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-    }
-    
-    .stats-card {
-        background: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        border-left: 4px solid;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-    
-    .stats-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-    }
-    
-    .stats-card.total { border-left-color: #007bff; }
-    .stats-card.resolved { border-left-color: #28a745; }
-    .stats-card.pending { border-left-color: #ffc107; }
-    .stats-card.urgent { border-left-color: #dc3545; }
-    
-    .chart-container {
-        background: white;
-        border-radius: 15px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-    
-    .filter-section {
-        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-        color: white;
-        border-radius: 15px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-    }
-    
-    .export-buttons {
-        background: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-    
-    .metric-value {
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-    }
-    
-    .metric-label {
-        font-size: 0.9rem;
-        color: #6c757d;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    
-    .top-performers {
-        background: white;
-        border-radius: 15px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-    
-    .performer-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem;
-        border-bottom: 1px solid #eee;
-        transition: background-color 0.3s ease;
-    }
-    
-    .performer-item:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .performer-item:last-child {
-        border-bottom: none;
-    }
-    
-    .performer-rank {
-        background: linear-gradient(45deg, #007bff, #0056b3);
-        color: white;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        margin-left: 1rem;
-    }
-    </style>
+<link rel="stylesheet" href="{% static 'css/complaints-module.css' %}?v={% now 'U' %}">
 {% endblock %}
+
 {% block content %}
-    <div class="container-fluid">
-        <!-- Reports Header -->
-        <div class="reports-header">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h2 class="mb-2">
-                        <i class="fas fa-chart-line me-2"></i>
-                        تقارير الشكاوى المتقدمة
-                    </h2>
-                    <p class="mb-0">تحليل شامل لأداء نظام الشكاوى مع إحصائيات تفصيلية ومؤشرات الأداء</p>
-                </div>
-                <div class="col-md-4 text-end">
-                    <div class="d-flex gap-2 justify-content-end">
-                        <button class="btn btn-light" onclick="refreshReports()">
-                            <i class="fas fa-sync-alt me-1"></i>
-                            تحديث
-                        </button>
-                        <button class="btn btn-outline-light" onclick="printReport()">
-                            <i class="fas fa-print me-1"></i>
-                            طباعة
-                        </button>
-                    </div>
-                </div>
+<div class="container-fluid cm-page">
+
+    <div class="cm-page-header mb-4" style="background:linear-gradient(135deg,#28a745 0%,#20c997 100%)">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h2 class="mb-1"><i class="fas fa-chart-line me-2"></i>تقارير الشكاوى المتقدمة</h2>
+                <p class="mb-0" style="opacity:.85">تحليل شامل لأداء نظام الشكاوى</p>
             </div>
-        </div>
-        <!-- Key Metrics -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="stats-card total">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="metric-value text-primary">{{ total_complaints }}</div>
-                            <div class="metric-label">إجمالي الشكاوى</div>
-                        </div>
-                        <i class="fas fa-clipboard-list fa-3x text-primary opacity-50"></i>
-                    </div>
-                </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-light btn-sm" onclick="location.reload()"><i class="fas fa-sync-alt me-1"></i>تحديث</button>
+                <button class="btn btn-outline-light btn-sm" onclick="window.print()"><i class="fas fa-print me-1"></i>طباعة</button>
             </div>
-            <div class="col-md-3">
-                <div class="stats-card resolved">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="metric-value text-success">{{ resolved_complaints }}</div>
-                            <div class="metric-label">شكاوى محلولة</div>
-                        </div>
-                        <i class="fas fa-check-circle fa-3x text-success opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stats-card pending">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="metric-value text-warning">{{ pending_complaints }}</div>
-                            <div class="metric-label">شكاوى معلقة</div>
-                        </div>
-                        <i class="fas fa-clock fa-3x text-warning opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stats-card urgent">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="metric-value text-danger">{{ priority_stats.urgent }}</div>
-                            <div class="metric-label">شكاوى عاجلة</div>
-                        </div>
-                        <i class="fas fa-exclamation-triangle fa-3x text-danger opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Time-based Metrics -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="stats-card">
-                    <div class="text-center">
-                        <div class="metric-value text-info">{{ this_week }}</div>
-                        <div class="metric-label">شكاوى هذا الأسبوع</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stats-card">
-                    <div class="text-center">
-                        <div class="metric-value text-info">{{ this_month }}</div>
-                        <div class="metric-label">شكاوى هذا الشهر</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stats-card">
-                    <div class="text-center">
-                        <div class="metric-value text-info">{{ avg_resolution_time }}</div>
-                        <div class="metric-label">متوسط وقت الحل (ساعة)</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Export Options -->
-        <div class="export-buttons">
-            <h5 class="mb-3">
-                <i class="fas fa-download me-2"></i>
-                تصدير التقارير
-            </h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="btn-group w-100" role="group">
-                        <button type="button"
-                                class="btn btn-outline-success"
-                                onclick="exportToExcel()">
-                            <i class="fas fa-file-excel me-1"></i>
-                            Excel
-                        </button>
-                        <button type="button" class="btn btn-outline-danger" onclick="exportToPDF()">
-                            <i class="fas fa-file-pdf me-1"></i>
-                            PDF
-                        </button>
-                        <button type="button" class="btn btn-outline-info" onclick="exportToCSV()">
-                            <i class="fas fa-file-csv me-1"></i>
-                            CSV
-                        </button>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="btn-group w-100" role="group">
-                        <button type="button"
-                                class="btn btn-outline-primary"
-                                onclick="generateDetailedReport()">
-                            <i class="fas fa-file-alt me-1"></i>
-                            تقرير مفصل
-                        </button>
-                        <button type="button"
-                                class="btn btn-outline-secondary"
-                                onclick="generateSummaryReport()">
-                            <i class="fas fa-file-contract me-1"></i>
-                            تقرير موجز
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Charts Section -->
-        <div class="row">
-            <!-- Status Distribution Chart -->
-            <div class="col-md-6">
-                <div class="chart-container">
-                    <h5 class="mb-3">
-                        <i class="fas fa-chart-pie me-2"></i>
-                        توزيع الشكاوى حسب الحالة
-                    </h5>
-                    <canvas id="statusChart" width="400" height="300"></canvas>
-                </div>
-            </div>
-            <!-- Priority Distribution Chart -->
-            <div class="col-md-6">
-                <div class="chart-container">
-                    <h5 class="mb-3">
-                        <i class="fas fa-chart-donut me-2"></i>
-                        توزيع الشكاوى حسب الأولوية
-                    </h5>
-                    <canvas id="priorityChart" width="400" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <!-- Complaint Types Chart -->
-            <div class="col-md-8">
-                <div class="chart-container">
-                    <h5 class="mb-3">
-                        <i class="fas fa-chart-bar me-2"></i>
-                        أكثر أنواع الشكاوى شيوعاً
-                    </h5>
-                    <canvas id="typesChart" width="600" height="300"></canvas>
-                </div>
-            </div>
-            <!-- Top Performers -->
-            <div class="col-md-4">
-                <div class="top-performers">
-                    <h5 class="mb-3">
-                        <i class="fas fa-trophy me-2"></i>
-                        أفضل الموظفين في حل الشكاوى
-                    </h5>
-                    {% for resolver in top_resolvers %}
-                        <div class="performer-item">
-                            <div class="d-flex align-items-center">
-                                <div class="performer-rank">{{ forloop.counter }}</div>
-                                <div>
-                                    <div class="fw-bold">{{ resolver.get_full_name|default:resolver.username }}</div>
-                                    <small class="text-muted">{{ resolver.resolved_count }} شكوى محلولة</small>
-                                </div>
-                            </div>
-                            <div class="text-end">
-                                <span class="badge bg-success">{{ resolver.resolved_count }}</span>
-                            </div>
-                        </div>
-                    {% empty %}
-                        <div class="text-center text-muted py-3">
-                            <i class="fas fa-info-circle me-1"></i>
-                            لا توجد بيانات متاحة
-                        </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        <!-- Advanced Filters -->
-        <div class="filter-section">
-            <h5 class="mb-3">
-                <i class="fas fa-filter me-2"></i>
-                فلاتر التقارير المتقدمة
-            </h5>
-            <form method="get" class="row g-3" id="reportsFilterForm">
-                <div class="col-md-3">
-                    <label class="form-label text-white">فترة التقرير</label>
-                    <select class="form-select" name="period">
-                        <option value="all">جميع الفترات</option>
-                        <option value="today">اليوم</option>
-                        <option value="week">هذا الأسبوع</option>
-                        <option value="month">هذا الشهر</option>
-                        <option value="quarter">هذا الربع</option>
-                        <option value="year">هذا العام</option>
-                        <option value="custom">فترة مخصصة</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label text-white">نوع التقرير</label>
-                    <select class="form-select" name="report_type">
-                        <option value="summary">تقرير موجز</option>
-                        <option value="detailed">تقرير مفصل</option>
-                        <option value="performance">تقرير الأداء</option>
-                        <option value="trends">تقرير الاتجاهات</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label text-white">تجميع البيانات</label>
-                    <select class="form-select" name="group_by">
-                        <option value="status">حسب الحالة</option>
-                        <option value="priority">حسب الأولوية</option>
-                        <option value="type">حسب النوع</option>
-                        <option value="department">حسب القسم</option>
-                        <option value="assignee">حسب المسؤول</option>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-light w-100">
-                        <i class="fas fa-chart-line me-1"></i>
-                        إنشاء التقرير
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
-    {% csrf_token %}
+
+    {# Key Metrics #}
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3"><div class="cm-stat"><div class="cm-stat-icon" style="background:var(--cm-primary)"><i class="fas fa-clipboard-list"></i></div><div class="cm-stat-value">{{ total_complaints }}</div><div class="cm-stat-label">إجمالي</div></div></div>
+        <div class="col-6 col-md-3"><div class="cm-stat"><div class="cm-stat-icon" style="background:var(--cm-green)"><i class="fas fa-check-circle"></i></div><div class="cm-stat-value">{{ resolved_complaints }}</div><div class="cm-stat-label">محلولة</div></div></div>
+        <div class="col-6 col-md-3"><div class="cm-stat"><div class="cm-stat-icon" style="background:var(--cm-amber)"><i class="fas fa-clock"></i></div><div class="cm-stat-value">{{ pending_complaints }}</div><div class="cm-stat-label">معلقة</div></div></div>
+        <div class="col-6 col-md-3"><div class="cm-stat"><div class="cm-stat-icon" style="background:var(--cm-red)"><i class="fas fa-exclamation-triangle"></i></div><div class="cm-stat-value">{{ priority_stats.urgent }}</div><div class="cm-stat-label">عاجلة</div></div></div>
+    </div>
+
+    {# Time metrics #}
+    <div class="row g-3 mb-4">
+        <div class="col-md-4"><div class="cm-stat"><div class="cm-stat-value text-info">{{ this_week }}</div><div class="cm-stat-label">هذا الأسبوع</div></div></div>
+        <div class="col-md-4"><div class="cm-stat"><div class="cm-stat-value text-info">{{ this_month }}</div><div class="cm-stat-label">هذا الشهر</div></div></div>
+        <div class="col-md-4"><div class="cm-stat"><div class="cm-stat-value text-info">{{ avg_resolution_time }}</div><div class="cm-stat-label">متوسط وقت الحل (ساعة)</div></div></div>
+    </div>
+
+    {# Export #}
+    <div class="cm-card mb-4">
+        <div class="cm-card-header"><h6><i class="fas fa-download me-2"></i>تصدير التقارير</h6></div>
+        <div class="cm-card-body">
+            <div class="btn-group btn-group-sm" role="group">
+                <button class="btn btn-outline-success" onclick="location.href='{% url "complaints:reports" %}?export=excel'"><i class="fas fa-file-excel me-1"></i>Excel</button>
+                <button class="btn btn-outline-danger" onclick="location.href='{% url "complaints:reports" %}?export=pdf'"><i class="fas fa-file-pdf me-1"></i>PDF</button>
+                <button class="btn btn-outline-info" onclick="location.href='{% url "complaints:reports" %}?export=csv'"><i class="fas fa-file-csv me-1"></i>CSV</button>
+            </div>
+        </div>
+    </div>
+
+    {# Charts #}
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="cm-card"><div class="cm-card-header"><h6><i class="fas fa-chart-pie me-2"></i>حسب الحالة</h6></div>
+                <div class="cm-card-body cm-chart-wrap"><canvas id="statusChart"></canvas></div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="cm-card"><div class="cm-card-header"><h6><i class="fas fa-chart-pie me-2"></i>حسب الأولوية</h6></div>
+                <div class="cm-card-body cm-chart-wrap"><canvas id="priorityChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-8">
+            <div class="cm-card"><div class="cm-card-header"><h6><i class="fas fa-chart-bar me-2"></i>حسب النوع</h6></div>
+                <div class="cm-card-body cm-chart-wrap"><canvas id="typesChart"></canvas></div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="cm-card"><div class="cm-card-header"><h6><i class="fas fa-trophy me-2 text-warning"></i>أفضل الموظفين</h6></div>
+                <div class="cm-card-body p-0 px-3">
+                    {% for r in top_resolvers %}
+                    <div class="cm-leaderboard-item"><div class="d-flex align-items-center gap-2"><span class="badge rounded-pill bg-primary" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center">{{ forloop.counter }}</span><span class="fw-semibold">{{ r.get_full_name|default:r.username }}</span></div><span class="cm-badge cm-badge-resolved">{{ r.resolved_count }}</span></div>
+                    {% empty %}<div class="cm-empty py-3"><p>لا توجد بيانات</p></div>{% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Filter #}
+    <div class="cm-filter mb-4">
+        <div class="cm-filter-header" data-bs-toggle="collapse" data-bs-target="#reportFilters"><h6><i class="fas fa-filter me-2"></i>فلاتر التقارير</h6><i class="fas fa-chevron-down"></i></div>
+        <div class="collapse" id="reportFilters">
+            <div class="cm-filter-body">
+                <form method="get" class="row g-2" id="reportsFilterForm">
+                    <div class="col-md-3"><label class="form-label">الفترة</label><select name="period" class="form-select form-select-sm"><option value="all">الكل</option><option value="today">اليوم</option><option value="week">الأسبوع</option><option value="month">الشهر</option><option value="quarter">الربع</option><option value="year">السنة</option></select></div>
+                    <div class="col-md-3"><label class="form-label">نوع التقرير</label><select name="report_type" class="form-select form-select-sm"><option value="summary">موجز</option><option value="detailed">مفصل</option><option value="performance">أداء</option></select></div>
+                    <div class="col-md-3"><label class="form-label">تجميع</label><select name="group_by" class="form-select form-select-sm"><option value="status">الحالة</option><option value="priority">الأولوية</option><option value="type">النوع</option><option value="department">القسم</option></select></div>
+                    <div class="col-md-3 d-flex align-items-end"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="fas fa-chart-line me-1"></i>إنشاء</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
+
 {% block extra_js %}
-    <!-- Chart.js JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
-    <!-- Select2 JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script>
-    // Chart.js configuration for RTL
-    Chart.defaults.font.family = 'Cairo, sans-serif';
-    Chart.defaults.plugins.legend.rtl = true;
-    Chart.defaults.plugins.tooltip.rtl = true;
-
-    // Status Distribution Chart
-    const statusCtx = document.getElementById('statusChart').getContext('2d');
-    const statusChart = new Chart(statusCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['جديدة', 'قيد الحل', 'محلولة', 'مغلقة', 'مصعدة', 'متأخرة'],
-            datasets: [{
-                data: [
-                    {{ status_stats.new }},
-                    {{ status_stats.in_progress }},
-                    {{ status_stats.resolved }},
-                    {{ status_stats.closed }},
-                    {{ status_stats.escalated }},
-                    {{ status_stats.overdue }}
-                ],
-                backgroundColor: [
-                    '#007bff',
-                    '#ffc107',
-                    '#28a745',
-                    '#6c757d',
-                    '#6f42c1',
-                    '#dc3545'
-                ],
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true
-                    }
-                }
-            }
-        }
-    });
-
-    // Priority Distribution Chart
-    const priorityCtx = document.getElementById('priorityChart').getContext('2d');
-    const priorityChart = new Chart(priorityCtx, {
-        type: 'pie',
-        data: {
-            labels: ['عاجلة', 'عالية', 'متوسطة', 'منخفضة'],
-            datasets: [{
-                data: [
-                    {{ priority_stats.urgent }},
-                    {{ priority_stats.high }},
-                    {{ priority_stats.medium }},
-                    {{ priority_stats.low }}
-                ],
-                backgroundColor: [
-                    '#dc3545',
-                    '#fd7e14',
-                    '#ffc107',
-                    '#28a745'
-                ],
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true
-                    }
-                }
-            }
-        }
-    });
-
-    // Complaint Types Chart
-    const typesCtx = document.getElementById('typesChart').getContext('2d');
-    const typesChart = new Chart(typesCtx, {
-        type: 'bar',
-        data: {
-            labels: [
-                {% for type in type_stats %}
-                    '{{ type.name|escapejs }}'{% if not forloop.last %},{% endif %}
-                {% endfor %}
-            ],
-            datasets: [{
-                label: 'عدد الشكاوى',
-                data: [
-                    {% for type in type_stats %}
-                        {{ type.complaint_count }}{% if not forloop.last %},{% endif %}
-                    {% endfor %}
-                ],
-                backgroundColor: 'rgba(54, 162, 235, 0.8)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                }
-            }
-        }
-    });
-
-    // Export functions
-    function exportToExcel() {
-        window.location.href = '{% url "complaints:reports" %}?export=excel&' + getFilterParams();
-    }
-
-    function exportToPDF() {
-        window.location.href = '{% url "complaints:reports" %}?export=pdf&' + getFilterParams();
-    }
-
-    function exportToCSV() {
-        window.location.href = '{% url "complaints:reports" %}?export=csv&' + getFilterParams();
-    }
-
-    function generateDetailedReport() {
-        window.open('{% url "complaints:reports" %}?report_type=detailed&' + getFilterParams(), '_blank');
-    }
-
-    function generateSummaryReport() {
-        window.open('{% url "complaints:reports" %}?report_type=summary&' + getFilterParams(), '_blank');
-    }
-
-    function getFilterParams() {
-        const form = document.getElementById('reportsFilterForm');
-        const formData = new FormData(form);
-        return new URLSearchParams(formData).toString();
-    }
-
-    function refreshReports() {
-        location.reload();
-    }
-
-    function printReport() {
-        window.print();
-    }
-
-    // Initialize Select2 for better dropdowns
-    $(document).ready(function() {
-        $('.form-select').select2({
-            theme: 'bootstrap-5',
-            dir: 'rtl'
-        });
-    });
-    </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+<script>
+Chart.defaults.font.family='Cairo, sans-serif';Chart.defaults.plugins.legend.rtl=true;
+new Chart(document.getElementById('statusChart'),{type:'doughnut',data:{labels:['جديدة','قيد الحل','محلولة','مغلقة','مصعدة','متأخرة'],datasets:[{data:[{{ status_stats.new }},{{ status_stats.in_progress }},{{ status_stats.resolved }},{{ status_stats.closed }},{{ status_stats.escalated }},{{ status_stats.overdue }}],backgroundColor:['#4361ee','#f59e0b','#10b981','#6c757d','#7c3aed','#ef4444'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:15,usePointStyle:true}}}}});
+new Chart(document.getElementById('priorityChart'),{type:'pie',data:{labels:['عاجلة','عالية','متوسطة','منخفضة'],datasets:[{data:[{{ priority_stats.urgent }},{{ priority_stats.high }},{{ priority_stats.medium }},{{ priority_stats.low }}],backgroundColor:['#ef4444','#f97316','#f59e0b','#10b981'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:15,usePointStyle:true}}}}});
+new Chart(document.getElementById('typesChart'),{type:'bar',data:{labels:[{% for t in type_stats %}'{{ t.name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],datasets:[{label:'عدد الشكاوى',data:[{% for t in type_stats %}{{ t.complaint_count }}{% if not forloop.last %},{% endif %}{% endfor %}],backgroundColor:'rgba(67,97,238,0.8)',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,ticks:{stepSize:1}}},plugins:{legend:{display:false}}}});
+</script>
 {% endblock %}

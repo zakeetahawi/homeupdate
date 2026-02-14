@@ -1,91 +1,42 @@
 {% extends 'base.html' %}
 {% load static i18n %}
-{% block title %}شكاوى العميل {{ customer.name }} - نظام الخواجه{% endblock %}
-{% block extra_css %}
-    <style>
-    .complaint-row {
-        background: white;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        padding: 1rem;
-        border-left: 4px solid;
-        transition: all 0.3s ease;
-    }
-    .complaint-row:hover {
-        transform: translateX(5px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
-    .complaint-row.new { border-left-color: #007bff; }
-    .complaint-row.in_progress { border-left-color: #ffc107; }
-    .complaint-row.resolved { border-left-color: #28a745; }
-    .complaint-row.overdue { border-left-color: #dc3545; }
-    .complaint-row.escalated { border-left-color: #6f42c1; }
-    .complaint-row.closed { border-left-color: #6c757d; }
+{% block title %}شكاوى العميل {{ customer.name }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/complaints-module.css' %}?v={% now 'U' %}">{% endblock %}
 
-    .customer-info-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    </style>
-{% endblock %}
 {% block content %}
-    <div class="container-fluid">
-        <div class="customer-info-card mb-4">
-            <h1 class="h3 mb-2 text-white">شكاوى العميل: {{ customer.name }}</h1>
-            <p class="mb-0">الهاتف: {{ customer.phone }}</p>
-        </div>
-        {% if complaints %}
-            {% for complaint in complaints %}
-                <div class="complaint-row {{ complaint.status }}">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <a href="{% url 'complaints:complaint_detail' complaint.pk %}"
-                               class="text-dark font-weight-bold">
-                                <h5>{{ complaint.complaint_type.name }} - #{{ complaint.id }}</h5>
-                            </a>
-                            <p class="mb-1 text-muted">تاريخ الإنشاء: {{ complaint.created_at|date:"d/m/Y H:i" }}</p>
-                        </div>
-                        <div class="col-md-3 text-center">
-                            <span class="badge badge-pill badge-{{ complaint.get_status_display.1 }}">{{ complaint.get_status_display.0 }}</span>
-                        </div>
-                        <div class="col-md-3 text-right">
-                            <a href="{% url 'complaints:complaint_detail' complaint.pk %}"
-                               class="btn btn-sm btn-outline-primary">عرض التفاصيل</a>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <div class="alert alert-info text-center">لا توجد شكاوى مسجلة لهذا العميل.</div>
-        {% endif %}
-        <!-- Pagination -->
-        {% if page_obj.has_other_pages %}
-            <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1">&laquo; {% trans 'first' %}</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">{% trans 'previous' %}</a>
-                        </li>
-                    {% endif %}
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#">{% trans 'Page' %} {{ page_obj.number }} {% trans 'of' %} {{ page_obj.paginator.num_pages }}.</a>
-                    </li>
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">{% trans 'next' %}</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">{% trans 'last' %} &raquo;</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% endif %}
+<div class="container-fluid cm-page">
+    <div class="cm-page-header mb-4">
+        <h2 class="mb-1"><i class="fas fa-user me-2"></i>شكاوى العميل: {{ customer.name }}</h2>
+        <p class="mb-0" style="opacity:.85"><i class="fas fa-phone me-1"></i>{{ customer.phone }}</p>
     </div>
+
+    {% if complaints %}
+    <div class="table-responsive">
+        <table class="cm-table">
+            <thead><tr><th>النوع</th><th>الحالة</th><th>التاريخ</th><th></th></tr></thead>
+            <tbody>
+            {% for c in complaints %}
+            <tr data-status="{{ c.status }}">
+                <td><strong>{{ c.complaint_type.name }}</strong><br><small class="text-muted">#{{ c.id }}</small></td>
+                <td><span class="cm-badge cm-badge-{{ c.status }}">{{ c.get_status_display }}</span></td>
+                <td style="font-size:.85rem">{{ c.created_at|date:"Y-m-d H:i" }}</td>
+                <td><a href="{% url 'complaints:complaint_detail' c.pk %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-eye"></i></a></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <nav><ul class="pagination justify-content-center mt-3">
+        {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}"><i class="fas fa-chevron-right"></i></a></li>{% endif %}
+        <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}"><i class="fas fa-chevron-left"></i></a></li>{% endif %}
+    </ul></nav>
+    {% endif %}
+
+    {% else %}
+    <div class="cm-empty"><i class="fas fa-inbox"></i><p>لا توجد شكاوى مسجلة لهذا العميل</p></div>
+    {% endif %}
+</div>
 {% endblock %}

@@ -1,171 +1,77 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}تصدير الشكاوى - نظام الخواجه{% endblock %}
-{% block extra_css %}
-    <style>
-    .export-form {
-        background: white;
-        border-radius: 15px;
-        padding: 2rem;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
-    
-    .filter-section {
-        border-bottom: 1px solid #dee2e6;
-        padding-bottom: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .filter-section:last-child {
-        border-bottom: none;
-        margin-bottom: 0;
-    }
-    
-    .checkbox-group {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1rem;
-    }
-    
-    .form-check {
-        margin-bottom: 0.5rem;
-    }
-    
-    .export-options {
-        display: flex;
-        gap: 2rem;
-        margin-bottom: 1rem;
-    }
-    
-    .export-option {
-        padding: 1rem;
-        border: 2px solid #dee2e6;
-        border-radius: 10px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    
-    .export-option:hover {
-        border-color: #007bff;
-    }
-    
-    .export-option.selected {
-        border-color: #007bff;
-        background-color: #f8f9fa;
-    }
-    </style>
-{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/complaints-module.css' %}?v={% now 'U' %}">{% endblock %}
+
 {% block content %}
-    <div class="container-fluid">
-        <!-- Page Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>
-                <i class="fas fa-file-export me-2"></i>تصدير الشكاوى
-            </h2>
-            <a href="{% url 'complaints:complaint_list' %}"
-               class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-right me-1"></i>
-                العودة لقائمة الشكاوى
-            </a>
-        </div>
-        <div class="export-form">
+<div class="container-fluid cm-page">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-file-export me-2"></i>تصدير الشكاوى</h2>
+        <a href="{% url 'complaints:complaint_list' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-right me-1"></i>العودة</a>
+    </div>
+
+    <div class="cm-card">
+        <div class="cm-card-body">
             <form method="post">
                 {% csrf_token %}
-                <!-- صيغة التصدير -->
-                <div class="filter-section">
-                    <h5 class="mb-3">صيغة التصدير</h5>
-                    <div class="export-options">
+
+                {# Format #}
+                <div class="border-bottom pb-3 mb-3">
+                    <h6 class="fw-semibold mb-3"><i class="fas fa-file me-2"></i>صيغة التصدير</h6>
+                    <div class="d-flex flex-wrap gap-3">
                         {% for value, label in form.export_format.field.choices %}
-                            <label class="export-option {% if form.export_format.value == value %}selected{% endif %}">
-                                <input type="radio"
-                                       name="{{ form.export_format.name }}"
-                                       value="{{ value }}"
-                                       class="d-none"
-                                       {% if form.export_format.value == value %}checked{% endif %}>
-                                <i class="fas fa-file-{{ value }} me-2"></i>
-                                {{ label }}
-                            </label>
+                        <label class="border rounded-3 px-4 py-3 text-center cursor-pointer export-opt {% if form.export_format.value == value %}border-primary bg-light{% endif %}" style="cursor:pointer;min-width:120px">
+                            <input type="radio" name="{{ form.export_format.name }}" value="{{ value }}" class="d-none" {% if form.export_format.value == value %}checked{% endif %}>
+                            <i class="fas fa-file-{{ value }} d-block mb-1 fs-4"></i>{{ label }}
+                        </label>
                         {% endfor %}
                     </div>
-                    {% if form.export_format.errors %}
-                        <div class="invalid-feedback d-block">{{ form.export_format.errors|join:", " }}</div>
-                    {% endif %}
                 </div>
-                <!-- نطاق التاريخ -->
-                <div class="filter-section">
-                    <h5 class="mb-3">نطاق التاريخ</h5>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label">{{ form.date_from.label }}</label>
-                            {{ form.date_from }}
-                            {% if form.date_from.errors %}
-                                <div class="invalid-feedback d-block">{{ form.date_from.errors|join:", " }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">{{ form.date_to.label }}</label>
-                            {{ form.date_to }}
-                            {% if form.date_to.errors %}<div class="invalid-feedback d-block">{{ form.date_to.errors|join:", " }}</div>{% endif %}
-                        </div>
+
+                {# Date range #}
+                <div class="border-bottom pb-3 mb-3">
+                    <h6 class="fw-semibold mb-3"><i class="fas fa-calendar me-2"></i>نطاق التاريخ</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="form-label">{{ form.date_from.label }}</label>{{ form.date_from }}</div>
+                        <div class="col-md-6"><label class="form-label">{{ form.date_to.label }}</label>{{ form.date_to }}</div>
                     </div>
                 </div>
-                <!-- الحالة -->
-                <div class="filter-section">
-                    <h5 class="mb-3">{{ form.status.label }}</h5>
-                    <div class="checkbox-group">{{ form.status }}</div>
-                    {% if form.status.errors %}<div class="invalid-feedback d-block">{{ form.status.errors|join:", " }}</div>{% endif %}
+
+                {# Status #}
+                <div class="border-bottom pb-3 mb-3">
+                    <h6 class="fw-semibold mb-3">{{ form.status.label }}</h6>
+                    <div class="row g-2">{{ form.status }}</div>
                 </div>
-                <!-- نوع الشكوى -->
-                <div class="filter-section">
-                    <h5 class="mb-3">{{ form.complaint_type.label }}</h5>
-                    <div class="checkbox-group">{{ form.complaint_type }}</div>
-                    {% if form.complaint_type.errors %}
-                        <div class="invalid-feedback d-block">{{ form.complaint_type.errors|join:", " }}</div>
-                    {% endif %}
+
+                {# Complaint type #}
+                <div class="border-bottom pb-3 mb-3">
+                    <h6 class="fw-semibold mb-3">{{ form.complaint_type.label }}</h6>
+                    <div class="row g-2">{{ form.complaint_type }}</div>
                 </div>
-                <!-- الأولوية -->
-                <div class="filter-section">
-                    <h5 class="mb-3">{{ form.priority.label }}</h5>
-                    <div class="checkbox-group">{{ form.priority }}</div>
-                    {% if form.priority.errors %}
-                        <div class="invalid-feedback d-block">{{ form.priority.errors|join:", " }}</div>
-                    {% endif %}
+
+                {# Priority #}
+                <div class="border-bottom pb-3 mb-3">
+                    <h6 class="fw-semibold mb-3">{{ form.priority.label }}</h6>
+                    <div class="row g-2">{{ form.priority }}</div>
                 </div>
-                <!-- أزرار التحكم -->
-                <div class="d-flex justify-content-between align-items-center mt-4">
-                    <button type="reset" class="btn btn-outline-secondary">
-                        <i class="fas fa-undo me-1"></i>
-                        إعادة تعيين
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-file-export me-1"></i>
-                        تصدير
-                    </button>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="reset" class="btn btn-outline-secondary btn-sm" id="resetBtn"><i class="fas fa-undo me-1"></i>إعادة تعيين</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-file-export me-1"></i>تصدير</button>
                 </div>
             </form>
         </div>
     </div>
+</div>
 {% endblock %}
+
 {% block extra_js %}
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // تحديث تنسيق خيارات التصدير
-        const exportOptions = document.querySelectorAll('.export-option');
-        exportOptions.forEach(option => {
-            option.addEventListener('click', function() {
-                exportOptions.forEach(opt => opt.classList.remove('selected'));
-                this.classList.add('selected');
-                this.querySelector('input[type="radio"]').checked = true;
-            });
-        });
-        
-        // إعادة تعيين النموذج
-        document.querySelector('button[type="reset"]').addEventListener('click', function(e) {
-            e.preventDefault();
-            document.querySelector('form').reset();
-            exportOptions.forEach(opt => opt.classList.remove('selected'));
-            exportOptions[0].classList.add('selected');
-        });
-    });
-    </script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+    var opts=document.querySelectorAll('.export-opt');
+    opts.forEach(function(o){o.addEventListener('click',function(){opts.forEach(function(x){x.classList.remove('border-primary','bg-light')});this.classList.add('border-primary','bg-light');this.querySelector('input').checked=true})});
+    document.getElementById('resetBtn').addEventListener('click',function(e){e.preventDefault();document.querySelector('form').reset();opts.forEach(function(x){x.classList.remove('border-primary','bg-light')});opts[0].classList.add('border-primary','bg-light')});
+});
+</script>
 {% endblock %}

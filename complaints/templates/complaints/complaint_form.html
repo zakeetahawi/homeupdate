@@ -1,1342 +1,295 @@
 {% extends 'base.html' %}
-{% load static %}
-{% load widget_tweaks %}
-{% block title %}
-    {% if complaint %}
-        تعديل شكوى {{ complaint.complaint_number }} - نظام الخواجه
-    {% else %}
-        شكوى جديدة - نظام الخواجه
-    {% endif %}
-{% endblock %}
+{% load static widget_tweaks %}
+{% block title %}{% if complaint %}تعديل {{ complaint.complaint_number }}{% else %}شكوى جديدة{% endif %} - نظام الخواجه{% endblock %}
 {% block extra_css %}
-    <!-- Select2 CSS for smart search -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
-          rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css"
-          rel="stylesheet" />
-    <style>
-    /* Mobile-first styles */
-    .form-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 15px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-    
-    @media (min-width: 768px) {
-        .form-header {
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
-    }
-    
-    .form-card {
-        background: white;
-        border-radius: 15px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
-    
-    @media (min-width: 768px) {
-        .form-card {
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
-    }
-    
-    .form-section {
-        border-bottom: 1px solid #dee2e6;
-        padding-bottom: 2rem;
-        margin-bottom: 2rem;
-    }
-    
-    .form-section:last-child {
-        border-bottom: none;
-        margin-bottom: 0;
-        padding-bottom: 0;
-    }
-    
-    .form-section-title {
-        color: #495057;
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 1.5rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #007bff;
-        display: inline-block;
-    }
-    
-    .required-field::after {
-        content: " *";
-        color: #dc3545;
-    }
-    
-    .form-control, .form-select {
-        border-radius: 10px;
-        border: 2px solid #e9ecef;
-        padding: 0.75rem 1rem;
-        transition: all 0.3s ease;
-    }
-    
-    .form-control:focus, .form-select:focus {
-        border-color: #007bff;
-        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-    }
-    
-    .form-help-text {
-        font-size: 0.875rem;
-        color: #6c757d;
-        margin-top: 0.25rem;
-    }
-    
-    .customer-info-card {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 1rem;
-        border-left: 3px solid #007bff;
-    }
-    
-    .btn-action {
-        border-radius: 10px;
-        padding: 0.75rem 1rem;
-        font-weight: 600;
-        width: 100%;
-        margin-bottom: 0.5rem;
-    }
-    
-    @media (min-width: 768px) {
-        .btn-action {
-            width: auto;
-            min-width: 120px;
-            padding: 0.75rem 2rem;
-            margin-bottom: 0;
-        }
-    }
-    
-    /* Responsive grid adjustments */
-    .grid-col {
-        flex: 0 0 100%;
-        max-width: 100%;
-        padding: 0.5rem;
-    }
-    
-    @media (min-width: 768px) {
-        .grid-col {
-            flex: 0 0 50%;
-            max-width: 50%;
-            padding: 1rem;
-        }
-    }
-    
-    /* Mobile-friendly form controls */
-    .form-control, .form-select {
-        font-size: 16px; /* Prevents zoom on iOS */
-        -webkit-appearance: none; /* Better styling on iOS */
-        margin-bottom: 1rem;
-    }
-    
-    /* Touch-friendly checkboxes and radio buttons */
-    .form-check-input {
-        width: 1.5rem;
-        height: 1.5rem;
-        margin-top: 0.25rem;
-    }
-    
-    .form-check-label {
-        padding-left: 0.5rem;
-        padding-top: 0.25rem;
-    }
-    
-    .priority-preview {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        margin-left: 10px;
-    }
-    
-    .priority-urgent { background-color: #dc3545; }
-    .priority-high { background-color: #fd7e14; }
-    .priority-medium { background-color: #ffc107; }
-    .priority-low { background-color: #20c997; }
-    
-    .related-object-card {
-        background: #e3f2fd;
-        border-radius: 10px;
-        padding: 1rem;
-        margin-top: 1rem;
-        border-left: 3px solid #2196f3;
-    }
-    
-    #id_deadline {
-        min-width: 200px;
-    }
-    
-    /* تنسيق البحث الذكي */
-    .dropdown-menu {
-        max-height: 300px;
-        overflow-y: auto;
-        z-index: 9999 !important;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    
-    .customer-search-item {
-        padding: 0.75rem;
-        border-bottom: 1px solid #eee;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    
-    .customer-search-item:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .customer-search-item:last-child {
-        border-bottom: none;
-    }
-    
-    #customerSearchResults {
-        position: relative;
-        z-index: 9999;
-    }
-    
-    .position-relative {
-        position: relative !important;
-    }
-    </style>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.rtl.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/complaints-module.css' %}?v={% now 'U' %}">
 {% endblock %}
+
 {% block content %}
-    <div class="container-fluid">
-        <!-- Page Header -->
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">
-                    <a href="{% url 'complaints:dashboard' %}">لوحة التحكم</a>
-                </li>
-                <li class="breadcrumb-item">
-                    <a href="{% url 'complaints:complaint_list' %}">قائمة الشكاوى</a>
-                </li>
-                {% if complaint %}
-                    <li class="breadcrumb-item">
-                        <a href="{% url 'complaints:complaint_detail' complaint.pk %}">{{ complaint.complaint_number }}</a>
-                    </li>
-                    <li class="breadcrumb-item active">تعديل</li>
-                {% else %}
-                    <li class="breadcrumb-item active">شكوى جديدة</li>
-                {% endif %}
-            </ol>
-        </nav>
-        <!-- Form Header -->
-        <div class="form-header">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h1 class="mb-2">
-                        <i class="fas fa-edit me-2"></i>
-                        {% if complaint %}
-                            تعديل شكوى {{ complaint.complaint_number }}
-                        {% else %}
-                            إنشاء شكوى جديدة
-                        {% endif %}
-                    </h1>
-                    <p class="mb-0 opacity-75">
-                        {% if complaint %}
-                            قم بتعديل بيانات الشكوى وحفظ التغييرات
-                        {% else %}
-                            املأ البيانات المطلوبة لإنشاء شكوى جديدة
-                        {% endif %}
-                    </p>
+<div class="container-fluid cm-page">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb" style="font-size:.85rem">
+            <li class="breadcrumb-item"><a href="{% url 'complaints:dashboard' %}">الشكاوى</a></li>
+            {% if complaint %}<li class="breadcrumb-item"><a href="{% url 'complaints:complaint_detail' complaint.pk %}">{{ complaint.complaint_number }}</a></li><li class="breadcrumb-item active">تعديل</li>
+            {% else %}<li class="breadcrumb-item active">شكوى جديدة</li>{% endif %}
+        </ol>
+    </nav>
+
+    <div class="cm-page-header mb-4">
+        <div class="d-flex align-items-center gap-2">
+            <h2 class="mb-0"><i class="fas fa-{% if complaint %}edit{% else %}plus-circle{% endif %} me-2"></i>{% if complaint %}تعديل {{ complaint.complaint_number }}{% else %}شكوى جديدة{% endif %}</h2>
+            {% if complaint %}<span class="cm-badge cm-badge-{{ complaint.status }}">{{ complaint.get_status_display }}</span>{% endif %}
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate id="complaintForm">
+        {% csrf_token %}
+        <div class="row g-3">
+            {# ── Main form ── #}
+            <div class="col-lg-8">
+
+                {# Basic info #}
+                <div class="cm-card">
+                    <div class="cm-card-header"><h6><i class="fas fa-info-circle me-2"></i>معلومات الشكوى</h6></div>
+                    <div class="cm-card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">العميل <span class="text-danger">*</span></label>
+                                <select id="customer_search_select" class="form-select" style="width:100%">
+                                    {% if complaint.customer %}<option value="{{ complaint.customer.id }}" selected>{{ complaint.customer.name }} - {{ complaint.customer.phone }}</option>{% endif %}
+                                </select>
+                                {{ form.customer }}
+                                {% if form.customer.errors %}<div class="invalid-feedback d-block">{{ form.customer.errors|join:", " }}</div>{% endif %}
+                                <small class="text-muted">ابحث بالاسم أو الهاتف</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">نوع الشكوى <span class="text-danger">*</span></label>
+                                {{ form.complaint_type|add_class:"form-select" }}
+                                {% if form.complaint_type.errors %}<div class="invalid-feedback d-block">{{ form.complaint_type.errors|join:", " }}</div>{% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">العنوان <span class="text-danger">*</span></label>
+                                {{ form.title|add_class:"form-control" }}
+                                {% if form.title.errors %}<div class="invalid-feedback d-block">{{ form.title.errors|join:", " }}</div>{% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">الوصف <span class="text-danger">*</span></label>
+                                {{ form.description|add_class:"form-control"|attr:"rows:5" }}
+                                {% if form.description.errors %}<div class="invalid-feedback d-block">{{ form.description.errors|join:", " }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-4 text-end">
-                    {% if complaint %}
-                        <span class="badge bg-light text-dark fs-6">{{ complaint.get_status_display }}</span>
-                    {% else %}
-                        <span class="badge bg-light text-dark fs-6">
-                            <i class="fas fa-plus me-1"></i>
-                            شكوى جديدة
-                        </span>
-                    {% endif %}
+
+                {# Priority & Deadline #}
+                <div class="cm-card">
+                    <div class="cm-card-header"><h6><i class="fas fa-tags me-2"></i>الأولوية والتوقيت</h6></div>
+                    <div class="cm-card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">الأولوية <span class="text-danger">*</span></label>
+                                {{ form.priority|add_class:"form-select" }}
+                                {% if form.priority.errors %}<div class="invalid-feedback d-block">{{ form.priority.errors|join:", " }}</div>{% endif %}
+                                <div id="deadline-preview" class="alert alert-info py-2 px-3 mt-2 d-none" style="font-size:.78rem">
+                                    <i class="fas fa-clock me-1"></i>الموعد المتوقع: <strong id="expected-deadline"></strong>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">الحالة</label>
+                                {{ form.status|add_class:"form-select" }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">الموعد النهائي</label>
+                                {{ form.deadline|add_class:"form-control" }}
+                                {% if form.deadline.errors %}<div class="invalid-feedback d-block">{{ form.deadline.errors|join:", " }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Assignment #}
+                <div class="cm-card">
+                    <div class="cm-card-header"><h6><i class="fas fa-users me-2"></i>التعيين</h6></div>
+                    <div class="cm-card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">الموظف المسؤول</label>
+                                {{ form.assigned_to|add_class:"form-select" }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">القسم المختص</label>
+                                {{ form.assigned_department|add_class:"form-select" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Sidebar ── #}
+            <div class="col-lg-4">
+
+                {# Customer info #}
+                <div class="cm-card">
+                    <div class="cm-card-header"><h6><i class="fas fa-user me-2"></i>بيانات العميل</h6></div>
+                    <div class="cm-card-body">
+                        <div id="customer-info" style="display:none">
+                            <div id="customer-details"></div>
+                        </div>
+                        <div id="no-customer-selected" class="cm-empty py-3"><i class="fas fa-user-slash"></i><p>لم يتم اختيار عميل</p></div>
+                    </div>
+                </div>
+
+                {# Complaint type info #}
+                <div class="cm-card">
+                    <div class="cm-card-header"><h6><i class="fas fa-tag me-2"></i>معلومات النوع</h6></div>
+                    <div class="cm-card-body">
+                        <div id="complaint-type-info" style="display:none"><div id="complaint-type-details"></div></div>
+                        <div id="no-type-selected" class="cm-empty py-3"><i class="fas fa-tag"></i><p>لم يتم اختيار نوع</p></div>
+                    </div>
+                </div>
+
+                {# Status info (edit mode) #}
+                {% if complaint %}
+                <div class="cm-card">
+                    <div class="cm-card-header"><h6><i class="fas fa-chart-line me-2"></i>معلومات الحالة</h6></div>
+                    <div class="cm-card-body p-0 px-3">
+                        <div class="cm-sidebar-item"><span class="cm-sidebar-label">الحالة</span><span class="cm-sidebar-value"><span class="cm-badge cm-badge-{{ complaint.status }}">{{ complaint.get_status_display }}</span></span></div>
+                        <div class="cm-sidebar-item"><span class="cm-sidebar-label">الإنشاء</span><span class="cm-sidebar-value">{{ complaint.created_at|date:"Y-m-d H:i" }}</span></div>
+                        {% if complaint.deadline %}<div class="cm-sidebar-item"><span class="cm-sidebar-label">الموعد</span><span class="cm-sidebar-value {% if complaint.is_overdue %}text-danger{% endif %}">{{ complaint.deadline|date:"Y-m-d H:i" }}</span></div>{% endif %}
+                        {% if complaint.resolved_at %}<div class="cm-sidebar-item"><span class="cm-sidebar-label">الحل</span><span class="cm-sidebar-value text-success">{{ complaint.resolved_at|date:"Y-m-d H:i" }}</span></div>{% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Save buttons #}
+                <div class="cm-card" style="position:sticky;top:1rem">
+                    <div class="cm-card-body">
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="action" value="save" class="btn btn-primary submit-btn"><i class="fas fa-save me-1"></i>{% if complaint %}تحديث{% else %}حفظ{% endif %} الشكوى</button>
+                            {% if not complaint %}<button type="submit" name="action" value="save_and_new" class="btn btn-success submit-btn"><i class="fas fa-plus me-1"></i>حفظ وإنشاء جديدة</button>{% endif %}
+                            <a href="{% if complaint %}{% url 'complaints:complaint_detail' complaint.pk %}{% else %}{% url 'complaints:complaint_list' %}{% endif %}" class="btn btn-outline-secondary"><i class="fas fa-times me-1"></i>إلغاء</a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <form method="post"
-              enctype="multipart/form-data"
-              class="needs-validation"
-              novalidate>
-            {% csrf_token %}
-            <div class="row">
-                <div class="col-md-8">
-                    <!-- معلومات الشكوى الأساسية -->
-                    <div class="form-card">
-                        <div class="form-section">
-                            <h5 class="form-section-title">
-                                <i class="fas fa-info-circle me-2"></i>
-                                معلومات الشكوى الأساسية
-                            </h5>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.customer.id_for_label }}"
-                                           class="form-label required-field">{{ form.customer.label }}</label>
-                                    <select id="customer_search_select" class="form-select" style="width: 100%;">
-                                        {% if complaint.customer %}
-                                            <option value="{{ complaint.customer.id }}" selected>
-                                                {{ complaint.customer.name }} - {{ complaint.customer.phone }}
-                                            </option>
-                                        {% endif %}
-                                    </select>
-                                    {{ form.customer }}
-                                    {{ form.customer_search|add_class:"d-none" }}
-                                    {% if form.customer.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.customer.errors|join:", " }}</div>
-                                    {% endif %}
-                                    <div class="form-help-text">ابحث عن العميل بالاسم أو الهاتف</div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="id_complaint_type" class="form-label required-field">نوع الشكوى</label>
-                                    {{ form.complaint_type }}
-                                    {% if form.complaint_type.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.complaint_type.errors|join:", " }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="id_title" class="form-label required-field">{{ form.title.label }}</label>
-                                {{ form.title }}
-                                {% if form.title.errors %}<div class="invalid-feedback d-block">{{ form.title.errors|join:", " }}</div>{% endif %}
-                                <div class="form-help-text">عنوان مختصر وواضح للشكوى</div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="id_description" class="form-label required-field">{{ form.description.label }}</label>
-                                {{ form.description }}
-                                {% if form.description.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.description.errors|join:", " }}</div>
-                                {% endif %}
-                                <div class="form-help-text">وصف تفصيلي للشكوى والمشكلة المراد حلها</div>
-                            </div>
-                        </div>
-                        <!-- تصنيف ومعلومات إضافية -->
-                        <div class="form-section">
-                            <h5 class="form-section-title">
-                                <i class="fas fa-tags me-2"></i>
-                                التصنيف والأولوية
-                            </h5>
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label for="id_priority" class="form-label required-field">الأولوية</label>
-                                    {{ form.priority }}
-                                    {% if form.priority.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.priority.errors|join:", " }}</div>
-                                    {% endif %}
-                                    <div id="priority-preview" class="mt-2" style="display:none;">
-                                        <span class="priority-preview"></span>
-                                        <span class="priority-text"></span>
-                                    </div>
-                                    <!-- عرض التاريخ والموعد النهائي -->
-                                    <div id="deadline-preview" class="mt-2" style="display:none;">
-                                        <div class="alert alert-info p-2">
-                                            <small>
-                                                <i class="fas fa-clock me-1"></i>
-                                                <strong>التاريخ الحالي:</strong> <span id="current-date"></span>
-                                                <br>
-                                                <i class="fas fa-calendar-alt me-1"></i>
-                                                <strong>الموعد النهائي المتوقع:</strong> <span id="expected-deadline"></span>
-                                            </small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="id_status" class="form-label">{{ form.status.label }}</label>
-                                    {{ form.status }}
-                                    {% if form.status.errors %}<div class="invalid-feedback d-block">{{ form.status.errors|join:", " }}</div>{% endif %}
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="id_deadline" class="form-label">{{ form.deadline.label }}</label>
-                                    {{ form.deadline }}
-                                    {% if form.deadline.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.deadline.errors|join:", " }}</div>
-                                    {% endif %}
-                                    <div class="form-help-text">تاريخ ووقت الموعد النهائي لحل الشكوى</div>
-                                </div>
-                                {% if complaint and complaint.resolved_at %}
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">
-                                            <i class="fas fa-check-circle text-success me-1"></i>
-                                            تاريخ الحل
-                                        </label>
-                                        <div class="form-control-plaintext bg-light border rounded p-2">
-                                            <i class="fas fa-calendar me-1"></i>
-                                            {{ complaint.resolved_at|date:"Y-m-d H:i" }}
-                                        </div>
-                                        <div class="form-help-text text-success">تم حل الشكوى في هذا التاريخ</div>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <!-- الأشخاص المسؤولون -->
-                        <div class="form-section">
-                            <h5 class="form-section-title">
-                                <i class="fas fa-users me-2"></i>
-                                التعيين والمسؤولية
-                            </h5>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="id_assigned_to" class="form-label">{{ form.assigned_to.label }}</label>
-                                    {{ form.assigned_to }}
-                                    {% if form.assigned_to.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.assigned_to.errors|join:", " }}</div>
-                                    {% endif %}
-                                    <div class="form-help-text">الموظف المسؤول عن متابعة الشكوى</div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="id_assigned_department" class="form-label">{{ form.assigned_department.label }}</label>
-                                    {{ form.assigned_department }}
-                                    {% if form.assigned_department.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.assigned_department.errors|join:", " }}</div>
-                                    {% endif %}
-                                    <div class="form-help-text">القسم المختص بحل هذا النوع من الشكاوى</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- العمود الجانبي -->
-                <div class="col-md-4">
-                    <!-- معلومات العميل -->
-                    <div class="form-card">
-                        <h5 class="mb-3">
-                            <i class="fas fa-user me-2"></i>
-                            معلومات العميل
-                        </h5>
-                        <div id="customer-info" class="customer-info-card" style="display:none;">
-                            <div id="customer-details"></div>
-                        </div>
-                        <div id="no-customer-selected" class="text-muted text-center py-3">
-                            <i class="fas fa-user-slash me-2"></i>
-                            لم يتم اختيار عميل بعد
-                        </div>
-                    </div>
-                    <!-- معلومات نوع الشكوى -->
-                    <div class="form-card">
-                        <h5 class="mb-3">
-                            <i class="fas fa-info-circle me-2"></i>
-                            معلومات نوع الشكوى
-                        </h5>
-                        <div id="complaint-type-info" style="display:none;">
-                            <div id="complaint-type-details"></div>
-                        </div>
-                        <div id="no-type-selected" class="text-muted text-center py-3">
-                            <i class="fas fa-tag me-2"></i>
-                            لم يتم اختيار نوع الشكوى بعد
-                        </div>
-                    </div>
-                    <!-- معلومات السجل المرتبط -->
-                    <div class="form-card" id="related-object-card" style="display:none;">
-                        <h5 class="mb-3">
-                            <i class="fas fa-link me-2"></i>
-                            السجل المرتبط
-                        </h5>
-                        <div id="related-object-info" class="related-object-card">
-                            <div id="related-object-details"></div>
-                        </div>
-                    </div>
-                    <!-- معلومات حالة الشكوى -->
-                    {% if complaint %}
-                        <div class="form-card">
-                            <h5 class="mb-3">
-                                <i class="fas fa-info-circle me-2"></i>
-                                معلومات الحالة
-                            </h5>
-                            <div class="customer-info-card">
-                                <div class="mb-2">
-                                    <strong>الحالة الحالية:</strong>
-                                    <span class="badge bg-{{ complaint.get_status_badge_class }} ms-1">{{ complaint.get_status_display }}</span>
-                                </div>
-                                <div class="mb-2">
-                                    <strong>تاريخ الإنشاء:</strong>
-                                    <small class="text-muted">{{ complaint.created_at|date:"Y-m-d H:i" }}</small>
-                                </div>
-                                {% if complaint.deadline %}
-                                    <div class="mb-2">
-                                        <strong>الموعد النهائي:</strong>
-                                        <small class="text-{% if complaint.is_overdue %}danger{% else %}primary{% endif %}">
-                                            {{ complaint.deadline|date:"Y-m-d H:i" }}
-                                        </small>
-                                    </div>
-                                {% endif %}
-                                {% if complaint.resolved_at %}
-                                    <div class="mb-2">
-                                        <strong>تاريخ الحل:</strong>
-                                        <small class="text-success">{{ complaint.resolved_at|date:"Y-m-d H:i" }}</small>
-                                    </div>
-                                    <div class="mb-0">
-                                        <strong>مدة الحل:</strong>
-                                        <small class="text-info">{{ complaint.get_resolution_time_display }}</small>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% endif %}
-                    <!-- أزرار الحفظ -->
-                    <div class="form-card">
-                        <h5 class="mb-3">
-                            <i class="fas fa-save me-2"></i>
-                            حفظ الشكوى
-                        </h5>
-                        <div class="d-grid gap-2">
-                            <button type="submit"
-                                    name="action"
-                                    value="save"
-                                    class="btn btn-primary btn-action submit-btn">
-                                <i class="fas fa-save me-1"></i>
-                                {% if complaint %}
-                                    تحديث الشكوى
-                                {% else %}
-                                    حفظ الشكوى
-                                {% endif %}
-                            </button>
-                            {% if not complaint %}
-                                <button type="submit"
-                                        name="action"
-                                        value="save_and_new"
-                                        class="btn btn-success btn-action submit-btn">
-                                    <i class="fas fa-plus me-1"></i>
-                                    حفظ وإنشاء جديدة
-                                </button>
-                            {% endif %}
-                            <a href="{% if complaint %}{% url 'complaints:complaint_detail' complaint.pk %}{% else %}{% url 'complaints:complaint_list' %}{% endif %}"
-                               class="btn btn-secondary btn-action">
-                                <i class="fas fa-times me-1"></i>
-                                إلغاء
-                            </a>
-                        </div>
-                        {% if complaint %}
-                            <hr>
-                            <div class="d-grid">
-                                <a href="{% url 'complaints:complaint_detail' complaint.pk %}"
-                                   class="btn btn-outline-info btn-action">
-                                    <i class="fas fa-eye me-1"></i>
-                                    عرض تفاصيل الشكوى
-                                </a>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
+    </form>
+</div>
 {% endblock %}
+
 {% block extra_js %}
-    <!-- Select2 JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script>
-    // تحديث معلومات العميل عند الاختيار
-    function updateCustomerInfo(customerId) {
-        console.log('تحديث معلومات العميل:', customerId);
-        if (customerId) {
-            console.log('إرسال طلب جلب معلومات العميل...');
-            $.get(`/complaints/ajax/customer-info/${customerId}/`, function(data) {
-                console.log('تم استلام معلومات العميل:', data);
-                $('#customer-details').html(`
-                    <h6 class="mb-2">${data.name}</h6>
-                    <p class="mb-1"><i class="fas fa-phone me-1"></i> ${data.phone}</p>
-                    <p class="mb-1"><i class="fas fa-envelope me-1"></i> ${data.email}</p>
-                    <p class="mb-0"><i class="fas fa-map-marker-alt me-1"></i> ${data.address}</p>
-                `);
-                $('#customer-info').show();
-                $('#no-customer-selected').hide();
-                console.log('تم تحديث عرض معلومات العميل');
-            }).fail(function(xhr, status, error) {
-                console.error('خطأ في جلب معلومات العميل:');
-                console.error('Status:', status);
-                console.error('Error:', error);
-                console.error('Response:', xhr.responseText);
-                $('#customer-info').hide();
-                $('#no-customer-selected').show();
-            });
-        } else {
-            console.log('لا يوجد معرف عميل - إخفاء المعلومات');
-            $('#customer-info').hide();
-            $('#no-customer-selected').show();
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+function updateCustomerInfo(id){
+    if(!id){$('#customer-info').hide();$('#no-customer-selected').show();return}
+    $.get('/complaints/ajax/customer-info/'+id+'/',function(d){
+        $('#customer-details').html('<h6 class="mb-1">'+d.name+'</h6><p class="mb-1" style="font-size:.85rem"><i class="fas fa-phone me-1"></i>'+d.phone+'</p><p class="mb-1" style="font-size:.85rem"><i class="fas fa-envelope me-1"></i>'+d.email+'</p><p class="mb-0" style="font-size:.85rem"><i class="fas fa-map-marker-alt me-1"></i>'+d.address+'</p>');
+        $('#customer-info').show();$('#no-customer-selected').hide()
+    }).fail(function(){$('#customer-info').hide();$('#no-customer-selected').show()})
+}
+
+$(document).ready(function(){
+    // Track clicked submit button
+    $('.submit-btn').click(function(){$('.submit-btn').removeAttr('clicked');$(this).attr('clicked','true')});
+
+    // Select2 customer search
+    $('#customer_search_select').select2({
+        theme:'bootstrap-5',language:'ar',placeholder:'ابحث عن العميل...',allowClear:true,minimumInputLength:2,
+        ajax:{url:'/complaints/ajax/customers/search/',dataType:'json',delay:300,
+            data:function(p){return{q:p.term,page:p.page}},
+            processResults:function(d){return{results:(d.results||[]).map(function(c){return{id:c.id,text:c.name+' - '+c.phone,customer:c}})}},
+            cache:true
+        },
+        templateResult:function(c){if(c.loading||!c.customer)return c.text;return $('<div><strong>'+c.customer.name+'</strong><br><small class="text-muted">'+c.customer.phone+'</small></div>')},
+        templateSelection:function(c){return c.customer?c.customer.name+' - '+c.customer.phone:c.text}
+    });
+
+    $('#customer_search_select').on('select2:select',function(e){
+        var c=e.params.data.customer;
+        if(c){$('#id_customer').val(c.id);updateCustomerInfo(c.id)}
+    }).on('select2:clear',function(){$('#id_customer').val('');$('#customer-info').hide();$('#no-customer-selected').show()});
+
+    // Priority → auto deadline
+    var priorityHours={urgent:4,high:24,medium:72,low:168};
+    $('#id_priority').change(function(){
+        var p=$(this).val();
+        if(p&&priorityHours[p]){
+            var d=new Date();d.setHours(d.getHours()+priorityHours[p]);
+            $('#expected-deadline').text(d.toLocaleString('ar-EG',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+' (بعد '+priorityHours[p]+' ساعة)');
+            $('#deadline-preview').removeClass('d-none');
+            if(!$('#id_deadline').val())$('#id_deadline').val(d.toISOString().slice(0,16))
+        }else{$('#deadline-preview').addClass('d-none')}
+    });
+
+    // Complaint type → staff/dept update
+    window.selectedComplaintType=null;
+    $('#id_complaint_type').change(function(){
+        var tid=$(this).val();window.selectedComplaintType=tid;
+        if(!tid){$('#complaint-type-info').hide();$('#no-type-selected').show();return}
+        $.get('/complaints/api/complaint-types/'+tid+'/',function(d){
+            if(!d.success)return;
+            var name=$('#id_complaint_type option:selected').text();
+            $('#complaint-type-details').html('<h6 class="mb-1">'+name+'</h6><p class="mb-1" style="font-size:.85rem"><i class="fas fa-clock me-1"></i>المهلة: '+d.default_deadline_hours+' ساعة</p><p class="mb-0" style="font-size:.85rem"><i class="fas fa-users me-1"></i>الموظفين: '+(d.staff?d.staff.length:0)+'</p>');
+            $('#complaint-type-info').show();$('#no-type-selected').hide();
+            // Update staff
+            var as=$('#id_assigned_to'),cv=as.val();as.empty().append('<option value="">اختر الموظف</option>');
+            if(d.staff)d.staff.forEach(function(s){var sel=s.is_default&&!cv?' selected':'';var di=s.department?' ('+s.department+')':'';as.append('<option value="'+s.id+'"'+sel+'>'+s.name+di+'</option>')});
+            // Update depts
+            var ds=$('#id_assigned_department'),dv=ds.val();ds.empty().append('<option value="">اختر القسم</option>');
+            if(d.departments)d.departments.forEach(function(dp){var sel=dp.is_default&&!dv?' selected':'';ds.append('<option value="'+dp.id+'"'+sel+'>'+dp.name+'</option>')});
+            // Defaults
+            if(d.default_priority&&!$('#id_priority').val()){$('#id_priority').val(d.default_priority).trigger('change')}
+            if(d.default_deadline_hours&&!$('#id_deadline').val()){var dl=new Date();dl.setHours(dl.getHours()+d.default_deadline_hours);$('#id_deadline').val(dl.toISOString().slice(0,16))}
+        })
+    });
+
+    // Dept → filter staff
+    $('#id_assigned_department').change(function(){
+        var did=$(this).val(),tid=window.selectedComplaintType;
+        if(did&&tid){
+            $.get('/complaints/api/complaint-types/'+tid+'/',function(d){
+                if(!d.success)return;var as=$('#id_assigned_to'),cv=as.val();as.empty().append('<option value="">اختر الموظف</option>');
+                var dn=$('#id_assigned_department option:selected').text();
+                var fs=(d.staff||[]).filter(function(s){return s.source==='responsible_staff'||(s.department&&s.department.trim()===dn.trim())});
+                fs.forEach(function(s){as.append('<option value="'+s.id+'">'+s.name+(s.department?' ('+s.department+')':'')+'</option>')});
+                if(cv)as.val(cv)
+            })
+        }else if(did){
+            $.get('/complaints/api/department/'+did+'/staff/',function(d){
+                var as=$('#id_assigned_to'),cv=as.val();as.empty().append('<option value="">اختر الموظف</option>');
+                if(d.staff)d.staff.forEach(function(s){as.append('<option value="'+s.id+'">'+s.name+'</option>')});
+                if(cv)as.val(cv)
+            })
         }
+    });
+
+    // AJAX form submit
+    $('#complaintForm').on('submit',function(e){
+        e.preventDefault();
+        var form=$(this),fd=new FormData(form[0]),btn=$('button[type="submit"][clicked=true]'),origHtml=btn.html();
+        if(btn.length)fd.append('action',btn.val());
+        // Validate required
+        var req=['customer','title','complaint_type','priority','description'],err=[];
+        req.forEach(function(f){var v=$('#id_'+f).val();if(!v||!v.trim()){$('#id_'+f).addClass('is-invalid');err.push(f)}else{$('#id_'+f).removeClass('is-invalid')}});
+        if(err.length){Swal.fire({icon:'warning',title:'حقول مطلوبة',text:'يرجى ملء جميع الحقول المطلوبة',confirmButtonText:'حسناً'});return false}
+        btn.prop('disabled',true).html('<i class="fas fa-spinner fa-spin me-1"></i>جاري الحفظ...');
+        $.ajax({
+            url:form.attr('action')||window.location.href,method:'POST',data:fd,processData:false,contentType:false,
+            headers:{'X-CSRFToken':$('[name=csrfmiddlewaretoken]').val()},
+            success:function(r){window.formChanged=false;window.location.href=r.redirect_url||'/complaints/'},
+            error:function(xhr){
+                var msg='حدث خطأ أثناء الحفظ';
+                try{var r=JSON.parse(xhr.responseText);if(r.errors){msg='';Object.entries(r.errors).forEach(function(e){msg+=e[0]+': '+e[1].join(', ')+'\n';$('#id_'+e[0]).addClass('is-invalid')})}}catch(ex){}
+                Swal.fire({icon:'error',title:'خطأ',text:msg,confirmButtonText:'حسناً'});
+                btn.prop('disabled',false).html(origHtml)
+            }
+        });
+        return false
+    });
+
+    // Auto-select customer from URL param
+    var cid=new URLSearchParams(window.location.search).get('customer_id');
+    if(cid){
+        $('#id_customer').val(cid);
+        $.get('/customers/api/customer/'+cid+'/',function(r){
+            if(r.success&&r.customer){var o=new Option(r.customer.name+' - '+r.customer.phone,r.customer.id,true,true);$('#customer_search_select').append(o).trigger('change');updateCustomerInfo(cid)}
+        })
     }
 
-    $(document).ready(function() {
-        // تتبع الزر المضغوط
-        $('.submit-btn').click(function() {
-            $('.submit-btn').removeAttr('clicked');
-            $(this).attr('clicked', 'true');
-        });
-        
-        // تهيئة Select2 للبحث الذكي عن العملاء
-        console.log('تهيئة Select2 للبحث عن العملاء...');
-        $('#customer_search_select').select2({
-            theme: 'bootstrap-5',
-            language: 'ar',
-            placeholder: 'ابحث عن العميل بالاسم أو الهاتف...',
-            allowClear: true,
-            minimumInputLength: 2,
-            ajax: {
-                url: '/complaints/ajax/customers/search/',
-                dataType: 'json',
-                delay: 300,
-                data: function (params) {
-                    console.log('إرسال طلب بحث:', params.term);
-                    return {
-                        q: params.term,
-                        page: params.page
-                    };
-                },
-                processResults: function (data, params) {
-                    console.log('استلام نتائج البحث:', data);
-                    if (data.error) {
-                        console.error('خطأ في البحث:', data.error);
-                        return { results: [] };
-                    }
-                    return {
-                        results: data.results.map(function(customer) {
-                            return {
-                                id: customer.id,
-                                text: customer.name + ' - ' + customer.phone,
-                                customer: customer
-                            };
-                        })
-                    };
-                },
-                cache: true
-            },
-            templateResult: function(customer) {
-                if (customer.loading) return customer.text;
-                if (!customer.customer) return customer.text;
-                
-                return $('<div><div class="fw-bold">' + customer.customer.name + '</div><div class="text-muted small">' + customer.customer.phone + ' - ' + customer.customer.email + '</div></div>');
-            },
-            templateSelection: function(customer) {
-                if (!customer.customer) return customer.text;
-                return customer.customer.name + ' - ' + customer.customer.phone;
-            }
-        }).on('select2:open', function() {
-            console.log('تم فتح قائمة Select2');
-        }).on('select2:close', function() {
-            console.log('تم إغلاق قائمة Select2');
-        });
+    // Fire initial events
+    var ic=$('#id_customer').val(),it=$('#id_complaint_type').val(),ip=$('#id_priority').val();
+    window.selectedComplaintType=it||null;
+    if(ic)updateCustomerInfo(ic);
+    if(it)$('#id_complaint_type').trigger('change');
+    if(ip)$('#id_priority').trigger('change');
 
-        // عند اختيار عميل
-        $('#customer_search_select').on('select2:select', function (e) {
-            console.log('تم اختيار عميل:', e.params.data);
-            var customerData = e.params.data.customer;
-            if (customerData) {
-                console.log('بيانات العميل:', customerData);
-                $('#id_customer').val(customerData.id);
-                console.log('تم تعيين ID العميل:', customerData.id);
-                updateCustomerInfo(customerData.id);
-                updateCustomerOrders(customerData.id);
-            } else {
-                console.error('لا توجد بيانات عميل في الاختيار');
-            }
-        });
-
-        // عند إزالة اختيار العميل
-        $('#customer_search_select').on('select2:clear', function (e) {
-            console.log('تم إزالة اختيار العميل');
-            $('#id_customer').val('');
-            $('#customer-info').hide();
-            $('#no-customer-selected').show();
-        });
-
-        // تحديث مؤشر الأولوية
-        $('#id_priority').change(function() {
-            const priority = $(this).val();
-            console.log('تم تغيير الأولوية إلى:', priority);
-            
-            const priorityTexts = {
-                'urgent': 'عاجل',
-                'high': 'مرتفع',
-                'medium': 'متوسط',
-                'low': 'منخفض'
-            };
-            
-            if (priority) {
-                // تحديث مؤشر الأولوية
-                $('.priority-preview').removeClass().addClass(`priority-preview priority-${priority}`);
-                $('.priority-text').text(priorityTexts[priority]);
-                $('#priority-preview').show();
-                
-                // تحديث التواريخ
-                updateDeadlinePreview(priority);
-            } else {
-                $('#priority-preview').hide();
-                $('#deadline-preview').hide();
-            }
-        });
-        
-        // دالة تحديث عرض الموعد النهائي
-        function updateDeadlinePreview(priority) {
-            const priorityHours = {
-                'urgent': 4,
-                'high': 24,
-                'medium': 72,
-                'low': 168
-            };
-            
-            if (priority && priorityHours[priority]) {
-                const now = new Date();
-                const deadline = new Date();
-                deadline.setHours(deadline.getHours() + priorityHours[priority]);
-                
-                // تنسيق التواريخ
-                const currentDateStr = now.toLocaleString('ar-EG', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-                
-                const deadlineStr = deadline.toLocaleString('ar-EG', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-                
-                // عرض التواريخ
-                $('#current-date').text(currentDateStr);
-                $('#expected-deadline').text(deadlineStr + ` (بعد ${priorityHours[priority]} ساعة)`);
-                $('#deadline-preview').show();
-                
-                // تحديث حقل الموعد النهائي
-                const deadlineValue = deadline.toISOString().slice(0, 16);
-                $('#id_deadline').val(deadlineValue);
-                
-                console.log(`تم تحديد الموعد النهائي تلقائياً: ${deadlineValue}`);
-            } else {
-                $('#deadline-preview').hide();
-                console.log('لم يتم تحديد موعد نهائي تلقائي');
-            }
-        }
-
-        // تفعيل التحقق من صحة النموذج وإرسال النموذج
-        $('.needs-validation').on('submit', function(e) {
-            e.preventDefault();
-            console.log('بدء التحقق من صحة النموذج...');
-            
-            const form = $(this);
-            
-            // Reset any previous validation states
-            $('.related-order-error').remove();
-            
-            const formData = new FormData(form[0]);
-            const submitBtn = $(document.activeElement);
-            const originalText = submitBtn.html();
-            
-            // طباعة جميع البيانات للتحقق
-            console.log('===== بيانات النموذج =====');
-            for (let [key, value] of formData.entries()) {
-                console.log(`${key}: ${value}`);
-            }
-            
-            // إضافة action إذا كان موجوداً
-            const submitButton = $('button[type="submit"][clicked=true]');
-            if (submitButton.length) {
-                formData.append('action', submitButton.val());
-            }
-            
-            // التحقق من الحقول المطلوبة
-            const requiredFields = ['customer', 'title', 'complaint_type', 'priority', 'description'];
-            let hasErrors = false;
-            let errorMessages = [];
-            
-            requiredFields.forEach(function(field) {
-                const element = $(`#id_${field}`);
-                const value = element.val();
-                console.log(`فحص ${field}:`, value);
-                
-                if (!value || value.trim() === '') {
-                    element.addClass('is-invalid');
-                    hasErrors = true;
-                    errorMessages.push(`يجب ملء حقل ${field}`);
-                } else {
-                    element.removeClass('is-invalid').addClass('is-valid');
-                }
-            });
-            
-            if (hasErrors) {
-                alert('يرجى تصحيح الأخطاء التالية:\n' + errorMessages.join('\n'));
-                return false;
-            }
-            
-            // تعطيل زر الحفظ وإظهار مؤشر التحميل
-            submitBtn.prop('disabled', true)
-                .html('<i class="fas fa-spinner fa-spin me-1"></i> جاري الحفظ...');
-            
-            // إضافة CSRF token
-            const csrftoken = $('[name=csrfmiddlewaretoken]').val();
-            
-            // إرسال النموذج
-            $.ajax({
-                url: form.attr('action') || window.location.href,
-                method: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                headers: {
-                    'X-CSRFToken': csrftoken
-                },
-                success: function(response) {
-                    console.log('تم الحفظ بنجاح:', response);
-                    if (response.redirect_url) {
-                        window.location.href = response.redirect_url;
-                    } else {
-                        window.location.href = '/complaints/';
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('خطأ في الحفظ:', error);
-                    console.error('استجابة الخادم:', xhr.responseText);
-                    
-                    let errorMessage = 'حدث خطأ أثناء الحفظ:\n';
-                    
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        if (response.errors) {
-                            // إظهار الأخطاء في النموذج
-                            Object.entries(response.errors).forEach(([field, errors]) => {
-                                errorMessage += `${field}: ${errors.join(', ')}\n`;
-                                // تحديث واجهة المستخدم لإظهار الخطأ
-                                const fieldElement = $(`#id_${field}`);
-                                if (fieldElement.length) {
-                                    fieldElement.addClass('is-invalid');
-                                    // إضافة رسالة الخطأ أسفل الحقل
-                                    let errorFeedback = fieldElement.next('.invalid-feedback');
-                                    if (!errorFeedback.length) {
-                                        fieldElement.after(`<div class="invalid-feedback">${errors.join(', ')}</div>`);
-                                    } else {
-                                        errorFeedback.text(errors.join(', ')).show();
-                                    }
-                                }
-                            });
-                        } else if (response.message) {
-                            errorMessage += response.message;
-                        }
-                    } catch (e) {
-                        errorMessage += xhr.responseText || 'حدث خطأ غير متوقع';
-                    }
-                    
-                    alert(errorMessage);
-                    submitBtn.prop('disabled', false).html(originalText);
-                }
-            });
-            
-            return false;
-        });
-
-        // تحديث حقول التعيين عند تغيير نوع الشكوى
-        $('#id_complaint_type').change(function() {
-            const typeId = $(this).val();
-            console.log('تم اختيار نوع الشكوى:', typeId);
-
-            // حفظ نوع الشكوى المختار للاستخدام في تغيير القسم
-            window.selectedComplaintType = typeId;
-
-            if (typeId) {
-                $.ajax({
-                    url: `/complaints/api/complaint-types/${typeId}/`,
-                    method: 'GET',
-                    success: function(data) {
-                        console.log('تم جلب معلومات نوع الشكوى بنجاح:', data);
-
-                        if (data.success) {
-                            // تحديث بطاقة معلومات نوع الشكوى
-                            const selectedTypeName = $('#id_complaint_type option:selected').text();
-                            $('#complaint-type-details').html(`
-                                <h6 class="mb-2">${selectedTypeName}</h6>
-                                <p class="mb-1"><i class="fas fa-info-circle me-1"></i> ${data.description || 'لا يوجد وصف'}</p>
-                                <p class="mb-1"><i class="fas fa-users me-1"></i> الموظفين المتاحين: ${data.staff ? data.staff.length : 0}</p>
-                                <p class="mb-1"><i class="fas fa-building me-1"></i> الأقسام المتاحة: ${data.departments ? data.departments.length : 0}</p>
-                                <p class="mb-1"><i class="fas fa-clock me-1"></i> المهلة الافتراضية: ${data.default_deadline_hours} ساعة</p>
-                                <p class="mb-0"><i class="fas fa-flag me-1"></i> الأولوية الافتراضية: ${data.default_priority}</p>
-                            `);
-                            $('#complaint-type-info').show();
-                            $('#no-type-selected').hide();
-
-                            // تحديث قائمة الموظفين
-                            const assignedToSelect = $('#id_assigned_to');
-                            const currentAssignedValue = assignedToSelect.val();
-                            assignedToSelect.empty();
-                            assignedToSelect.append('<option value="">اختر الموظف المسؤول</option>');
-
-                            if (data.staff && data.staff.length > 0) {
-                                data.staff.forEach(function(staff) {
-                                    const isSelected = staff.is_default && !currentAssignedValue ? 'selected' : '';
-                                    const departmentInfo = staff.department ? ` (${staff.department})` : '';
-                                    assignedToSelect.append(`<option value="${staff.id}" ${isSelected}>${staff.name}${departmentInfo}</option>`);
-                                });
-                                console.log('تم تحديث قائمة الموظفين:', data.staff.length, 'موظف');
-                            } else {
-                                console.log('لا توجد موظفين متاحين');
-                            }
-
-                            // تحديث قائمة الأقسام
-                            const deptSelect = $('#id_assigned_department');
-                            const currentDeptValue = deptSelect.val();
-                            deptSelect.empty();
-                            deptSelect.append('<option value="">اختر القسم المختص</option>');
-
-                            if (data.departments && data.departments.length > 0) {
-                                data.departments.forEach(function(dept) {
-                                    const isSelected = dept.is_default && !currentDeptValue ? 'selected' : '';
-                                    deptSelect.append(`<option value="${dept.id}" ${isSelected}>${dept.name}</option>`);
-                                });
-                                console.log('تم تحديث قائمة الأقسام:', data.departments.length, 'قسم');
-                            } else {
-                                console.log('لا توجد أقسام متاحة');
-                            }
-
-                            // تطبيق الإعدادات الافتراضية
-                            if (data.default_priority && !$('#id_priority').val()) {
-                                $('#id_priority').val(data.default_priority);
-                            }
-
-                            // تحديث الموعد النهائي بناءً على المهلة الافتراضية
-                            if (data.default_deadline_hours && !$('#id_deadline').val()) {
-                                const now = new Date();
-                                now.setHours(now.getHours() + data.default_deadline_hours);
-                                const deadlineStr = now.toISOString().slice(0, 16);
-                                $('#id_deadline').val(deadlineStr);
-                            }
-                        } else {
-                            console.error('فشل في جلب معلومات نوع الشكوى:', data.error || 'خطأ غير معروف');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('خطأ في جلب معلومات نوع الشكوى:');
-                        console.error('Status:', status);
-                        console.error('Error:', error);
-                        console.error('Response:', xhr.responseText);
-                        console.error('URL المطلوب:', `/complaints/api/complaint-types/${typeId}/`);
-                        
-                        // إظهار رسالة خطأ للمستخدم
-                        alert('حدث خطأ في تحديث معلومات نوع الشكوى. يرجى المحاولة مرة أخرى.');
-                    }
-                });
-            } else {
-                console.log('لم يتم اختيار نوع شكوى');
-                // مسح نوع الشكوى المحفوظ
-                window.selectedComplaintType = null;
-                // إعادة تعيين القوائم إلى الحالة الافتراضية
-                $('#id_assigned_to').empty().append('<option value="">اختر الموظف المسؤول</option>');
-                $('#id_assigned_department').empty().append('<option value="">اختر القسم المختص</option>');
-            }
-        });
-
-        // تحديث الموظفين عند تغيير القسم مع مراعاة نوع الشكوى
-        $('#id_assigned_department').change(function() {
-            const departmentId = $(this).val();
-            const complaintTypeId = window.selectedComplaintType;
-
-            console.log('تم تغيير القسم إلى:', departmentId);
-            console.log('نوع الشكوى المحدد:', complaintTypeId);
-
-            if (departmentId && complaintTypeId) {
-                // إذا كان هناك نوع شكوى محدد، استخدم منطق نوع الشكوى مع فلترة القسم
-                updateStaffForComplaintTypeAndDepartment(complaintTypeId, departmentId);
-            } else if (departmentId) {
-                // إذا لم يكن هناك نوع شكوى، استخدم منطق القسم العادي
-                updateStaffByDepartment(departmentId);
-            } else {
-                // مسح قائمة الموظفين
-                const assignedToSelect = $('#id_assigned_to');
-                assignedToSelect.empty();
-                assignedToSelect.append('<option value="">اختر الموظف المسؤول</option>');
-            }
-        });
-
-        // تشغيل التحديثات عند تحميل الصفحة للبيانات المحفوظة
-        console.log('تهيئة الصفحة...');
-        
-        // التحقق من وجود قيم محددة مسبقاً
-        const initialCustomer = $('#id_customer').val();
-        const initialComplaintType = $('#id_complaint_type').val();
-        const initialPriority = $('#id_priority').val();
-
-        // تهيئة متغير نوع الشكوى المختار
-        window.selectedComplaintType = initialComplaintType || null;
-        
-        console.log('القيم الأولية:');
-        console.log('- العميل:', initialCustomer);
-        console.log('- نوع الشكوى:', initialComplaintType);
-        console.log('- الأولوية:', initialPriority);
-        
-        // تفعيل الأحداث
-        if (initialCustomer) {
-            $('#id_customer').trigger('change');
-        }
-        if (initialComplaintType) {
-            $('#id_complaint_type').trigger('change');
-        }
-        if (initialPriority) {
-            $('#id_priority').trigger('change');
-        }
-    });
-
-    // تأكيد قبل الخروج إذا كانت هناك تغييرات غير محفوظة
-    window.formChanged = false;
-    $('form input, form select, form textarea').change(function() {
-        window.formChanged = true;
-    });
-
-    $(window).on('beforeunload', function() {
-        if (window.formChanged) {
-            return 'هناك تغييرات غير محفوظة. هل أنت متأكد من المغادرة؟';
-        }
-    });
-
-    $('form').on('submit', function() {
-        window.formChanged = false;
-    });
-
-    // إضافة رسائل تصحيح شاملة للحفظ
-    $('form').on('submit', function(e) {
-        console.log('===== بدء عملية حفظ الشكوى =====');
-        
-        // طباعة جميع بيانات النموذج أولاً
-        const formData = new FormData(this);
-        console.log('بيانات النموذج:');
-        for (let [key, value] of formData.entries()) {
-            console.log(`${key}: ${value}`);
-        }
-        
-        // التحقق من الحقول المطلوبة
-        const requiredFields = ['title', 'complaint_type', 'priority', 'description'];
-        let hasErrors = false;
-        
-        console.log('فحص الحقول المطلوبة:');
-        requiredFields.forEach(function(field) {
-            const element = $(`#id_${field}`);
-            const value = element.val();
-            console.log(`- فحص ${field}: "${value}"`);
-            
-            if (!value || value.trim() === '') {
-                console.error(`❌ الحقل المطلوب "${field}" فارغ`);
-                element.addClass('is-invalid');
-                hasErrors = true;
-            } else {
-                console.log(`✅ الحقل "${field}" صحيح`);
-                element.removeClass('is-invalid').addClass('is-valid');
-            }
-        });
-        
-        // التحقق من اختيار العميل
-        const customerId = $('#id_customer').val();
-        console.log(`- فحص العميل: "${customerId}"`);
-        if (customerId) {
-            console.log('✅ تم اختيار العميل');
-            $('#id_customer').removeClass('is-invalid').addClass('is-valid');
-        } else {
-            console.error('❌ لم يتم اختيار عميل');
-            $('#id_customer').addClass('is-invalid');
-            hasErrors = true;
-        }
-        
-        // التحقق من الموعد النهائي
-        const deadline = $('#id_deadline').val();
-        console.log(`- فحص الموعد النهائي: "${deadline}"`);
-        if (!deadline) {
-            console.error('❌ لم يتم تحديد موعد نهائي');
-            $('#id_deadline').addClass('is-invalid');
-            hasErrors = true;
-        } else {
-            console.log('✅ تم تحديد الموعد النهائي');
-            $('#id_deadline').removeClass('is-invalid').addClass('is-valid');
-        }
-        
-        // التحقق من صحة النموذج HTML5
-        const form = this;
-        const isValid = form.checkValidity();
-        console.log('صحة النموذج HTML5:', isValid);
-        
-        if (!isValid || hasErrors) {
-            console.error('===== يوجد أخطاء في النموذج - لن يتم الحفظ =====');
-            console.error('أخطاء HTML5:', !isValid);
-            console.error('أخطاء مخصصة:', hasErrors);
-            
-            form.classList.add('was-validated');
-            e.preventDefault();
-            
-            // عرض رسالة تفصيلية للمستخدم
-            let errorMessage = 'يرجى تصحيح الأخطاء التالية:\n';
-            if (!customerId) errorMessage += '- اختر عميل\n';
-            if (!$('#id_title').val()) errorMessage += '- أدخل عنوان الشكوى\n';
-            if (!$('#id_complaint_type').val()) errorMessage += '- اختر نوع الشكوى\n';
-            if (!$('#id_priority').val()) errorMessage += '- اختر أولوية الشكوى\n';
-            if (!$('#id_description').val()) errorMessage += '- أدخل وصف الشكوى\n';
-            if (!deadline) errorMessage += '- حدد الموعد النهائي\n';
-            
-            alert(errorMessage);
-            return false;
-        }
-        
-        console.log('===== تم التحقق من جميع البيانات - سيتم الحفظ =====');
-        
-        // تعطيل زر الحفظ لمنع الإرسال المتكرر
-        $('button[type="submit"]').prop('disabled', true).text('جاري الحفظ...');
-        
-        return true;
-    });
-
-    // تحديد العميل تلقائياً إذا تم تمرير customer_id في URL
-    $(document).ready(function() {
-        console.log('Document ready - starting auto customer selection');
-        console.log('Current URL:', window.location.href);
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const customerId = urlParams.get('customer_id');
-
-        console.log('URL Parameters:', window.location.search);
-        console.log('Customer ID from URL:', customerId);
-
-        if (customerId) {
-            // تحديد العميل في الحقل المخفي
-            $('#id_customer').val(customerId);
-            console.log('Set customer ID in hidden field:', customerId);
-
-            // جلب معلومات العميل وعرضها في Select2
-            $.ajax({
-                url: `/customers/api/customer/${customerId}/`,
-                method: 'GET',
-                success: function(response) {
-                    console.log('API Response received:', response);
-                    if (response.success && response.customer) {
-                        const customer = response.customer;
-                        const customerInfo = `${customer.name} - ${customer.phone}`;
-
-                        // إضافة الخيار المحدد إلى Select2
-                        const option = new Option(customerInfo, customer.id, true, true);
-                        $('#customer_search_select').append(option).trigger('change');
-
-                        // تحديث معلومات العميل المعروضة
-                        updateCustomerInfo(customerId);
-
-                        // إضافة تنبيه نجاح
-                        showCustomerSelectedAlert(customer);
-
-                        // تحديث قائمة الطلبات للعميل المحدد
-                        updateOrdersForCustomer(customerId);
-
-                        console.log(`تم تحديد العميل تلقائياً: ${customerInfo}`);
-                    } else {
-                        showErrorAlert('فشل في جلب بيانات العميل');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('خطأ في جلب معلومات العميل:', error);
-                    console.error('AJAX Error Details:', {xhr, status, error});
-                    showErrorAlert('خطأ في الاتصال بالخادم');
-                }
-            });
-        } else {
-            console.log('No customer_id parameter found in URL');
-        }
-    });
-
-    // دالة لإظهار تنبيه نجاح تحديد العميل
-    function showCustomerSelectedAlert(customer) {
-        const alertHtml = `
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle me-2"></i>
-                <strong>تم تحديد العميل تلقائياً:</strong> ${customer.name}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
-
-        // إضافة التنبيه في أعلى النموذج
-        $('.card-body').first().prepend(alertHtml);
-
-        // إزالة التنبيه تلقائياً بعد 5 ثوان
-        setTimeout(function() {
-            $('.alert-success').fadeOut();
-        }, 5000);
-    }
-
-    // دالة لإظهار تنبيه خطأ
-    function showErrorAlert(message) {
-        const alertHtml = `
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>تنبيه:</strong> ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
-
-        $('.card-body').first().prepend(alertHtml);
-
-        setTimeout(function() {
-            $('.alert-warning').fadeOut();
-        }, 5000);
-    }
-
-    // دالة تحديث الموظفين المسؤولين بناءً على نوع الشكوى
-    window.updateResponsibleStaff = function(complaintTypeId) {
-        if (!complaintTypeId) {
-            // إذا لم يتم اختيار نوع شكوى، عرض جميع الموظفين
-            return;
-        }
-
-        $.ajax({
-            url: `/complaints/api/complaint-type/${complaintTypeId}/responsible-staff/`,
-            method: 'GET',
-            success: function(response) {
-                if (response.success) {
-                    const assignedToSelect = $('#id_assigned_to');
-                    const currentValue = assignedToSelect.val();
-
-                    // مسح الخيارات الحالية
-                    assignedToSelect.empty();
-                    assignedToSelect.append('<option value="">اختر الموظف المختص</option>');
-
-                    // إضافة الموظفين المسؤولين
-                    response.staff.forEach(function(staff) {
-                        assignedToSelect.append(
-                            `<option value="${staff.id}">${staff.name}</option>`
-                        );
-                    });
-
-                    // استعادة القيمة المحددة سابقاً إذا كانت متاحة
-                    if (currentValue) {
-                        assignedToSelect.val(currentValue);
-                    }
-
-                    console.log(`تم تحديث قائمة الموظفين المسؤولين لنوع الشكوى ${complaintTypeId}`);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('خطأ في جلب الموظفين المسؤولين:', error);
-            }
-        });
-    };
-
-    // دالة تحديث الموظفين بناءً على نوع الشكوى والقسم معاً
-    window.updateStaffForComplaintTypeAndDepartment = function(complaintTypeId, departmentId) {
-        console.log('تحديث الموظفين لنوع الشكوى:', complaintTypeId, 'والقسم:', departmentId);
-
-        $.ajax({
-            url: `/complaints/api/complaint-types/${complaintTypeId}/`,
-            method: 'GET',
-            success: function(data) {
-                console.log('بيانات نوع الشكوى:', data);
-
-                if (data.success) {
-                    const assignedToSelect = $('#id_assigned_to');
-                    const currentValue = assignedToSelect.val();
-
-                    // مسح الخيارات الحالية
-                    assignedToSelect.empty();
-                    assignedToSelect.append('<option value="">اختر الموظف المسؤول</option>');
-
-                    // فلترة الموظفين حسب القسم المختار
-                    if (data.staff && data.staff.length > 0) {
-                        const selectedDepartmentName = $('#id_assigned_department option:selected').text();
-                        console.log('القسم المختار:', selectedDepartmentName);
-
-                        const filteredStaff = data.staff.filter(function(staff) {
-                            // إذا كان الموظف من responsible_staff المحددين صراحة، أظهره دائماً
-                            if (staff.source === 'responsible_staff') {
-                                console.log('موظف مسؤول مخصص:', staff.name);
-                                return true;
-                            }
-                            // إذا كان من موظفي القسم، تحقق من تطابق القسم
-                            if (staff.department && selectedDepartmentName &&
-                                staff.department.trim() === selectedDepartmentName.trim()) {
-                                console.log('موظف من القسم المطابق:', staff.name, staff.department);
-                                return true;
-                            }
-                            console.log('موظف مستبعد:', staff.name, 'قسمه:', staff.department, 'القسم المطلوب:', selectedDepartmentName);
-                            return false;
-                        });
-
-                        if (filteredStaff.length > 0) {
-                            filteredStaff.forEach(function(staff) {
-                                const isSelected = staff.is_default && !currentValue ? 'selected' : '';
-                                const departmentInfo = staff.department ? ` (${staff.department})` : '';
-                                const sourceInfo = staff.source === 'responsible_staff' ? ' [مسؤول مخصص]' : '';
-                                assignedToSelect.append(`<option value="${staff.id}" ${isSelected}>${staff.name}${departmentInfo}${sourceInfo}</option>`);
-                            });
-                            console.log('تم تحديث قائمة الموظفين المفلترة:', filteredStaff.length, 'موظف');
-                        } else {
-                            assignedToSelect.append('<option value="" disabled>لا يوجد موظفين مناسبين لهذا القسم</option>');
-                            console.log('لا توجد موظفين مناسبين للقسم المختار');
-                        }
-                    } else {
-                        assignedToSelect.append('<option value="" disabled>لا يوجد موظفين متاحين</option>');
-                        console.log('لا توجد موظفين متاحين لنوع الشكوى');
-                    }
-
-                    // استعادة القيمة المحددة سابقاً إذا كانت متاحة
-                    if (currentValue) {
-                        assignedToSelect.val(currentValue);
-                    }
-                } else {
-                    console.error('فشل في جلب بيانات نوع الشكوى:', data.error);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('خطأ في جلب بيانات نوع الشكوى:', error);
-                // في حالة الخطأ، استخدم منطق القسم العادي
-                updateStaffByDepartment(departmentId);
-            }
-        });
-    };
-
-    // دالة تحديث الموظفين بناءً على القسم المختار فقط
-    window.updateStaffByDepartment = function(departmentId) {
-        if (!departmentId) {
-            // إذا لم يتم اختيار قسم، عرض جميع الموظفين
-            const assignedToSelect = $('#id_assigned_to');
-            assignedToSelect.empty();
-            assignedToSelect.append('<option value="">اختر الموظف المختص</option>');
-            return;
-        }
-
-        $.ajax({
-            url: `/complaints/api/department/${departmentId}/staff/`,
-            method: 'GET',
-            success: function(data) {
-                const assignedToSelect = $('#id_assigned_to');
-                const currentValue = assignedToSelect.val();
-
-                // مسح الخيارات الحالية
-                assignedToSelect.empty();
-                assignedToSelect.append('<option value="">اختر الموظف المختص</option>');
-
-                // إضافة موظفي القسم
-                if (data.staff && data.staff.length > 0) {
-                    data.staff.forEach(function(staff) {
-                        assignedToSelect.append(`<option value="${staff.id}">${staff.name}</option>`);
-                    });
-                } else {
-                    assignedToSelect.append('<option value="" disabled>لا يوجد موظفين في هذا القسم</option>');
-                }
-
-                // استعادة القيمة المحددة سابقاً إذا كانت متاحة
-                if (currentValue) {
-                    assignedToSelect.val(currentValue);
-                }
-
-                console.log(`تم تحديث قائمة الموظفين للقسم ${departmentId}`);
-            },
-            error: function(xhr, status, error) {
-                console.error('خطأ في جلب موظفي القسم:', error);
-            }
-        });
-    };
-    </script>
+    // Unsaved changes warning
+    window.formChanged=false;
+    $('form input,form select,form textarea').change(function(){window.formChanged=true});
+    $(window).on('beforeunload',function(){if(window.formChanged)return'هناك تغييرات غير محفوظة'});
+});
+</script>
 {% endblock %}

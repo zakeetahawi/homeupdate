@@ -1,373 +1,107 @@
 {% extends 'base.html' %}
-{% load pagination_tags %}
+{% load static pagination_tags %}
 {% block title %}إدارة الشكاوى - وصول المدراء{% endblock %}
 {% block extra_css %}
-    <!-- Select2 CSS for enhanced dropdowns -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
-          rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
-          rel="stylesheet" />
-    <style>
-    .admin-header {
-        background: linear-gradient(135deg, #dc3545 0%, #6f42c1 100%);
-        color: white;
-        border-radius: 15px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-    }
-    
-    .stats-card {
-        background: white;
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-        border-left: 4px solid;
-        transition: all 0.3s ease;
-    }
-    
-    .stats-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
-    
-    .stats-card.urgent { border-left-color: #dc3545; }
-    .stats-card.overdue { border-left-color: #fd7e14; }
-    .stats-card.escalated { border-left-color: #6f42c1; }
-    .stats-card.unassigned { border-left-color: #6c757d; }
-    
-    .complaint-row {
-        background: white;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        padding: 1rem;
-        border-left: 4px solid;
-        transition: all 0.3s ease;
-    }
-    
-    .complaint-row:hover {
-        transform: translateX(5px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    }
-    
-    .complaint-row.new { border-left-color: #007bff; }
-    .complaint-row.in_progress { border-left-color: #ffc107; }
-    .complaint-row.overdue { border-left-color: #dc3545; }
-    .complaint-row.escalated { border-left-color: #6f42c1; }
-    
-    .filter-card {
-        background: linear-gradient(135deg, #495057 0%, #343a40 100%);
-        color: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    
-    .admin-badge {
-        background: linear-gradient(45deg, #dc3545, #6f42c1);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-weight: bold;
-    }
-    </style>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/complaints-module.css' %}?v={% now 'U' %}">
 {% endblock %}
+
 {% block content %}
-    <div class="container-fluid">
-        <!-- Admin Header -->
-        <div class="admin-header">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h2 class="mb-2">
-                        <i class="fas fa-shield-alt me-2"></i>
-                        إدارة الشكاوى - وصول المدراء
-                    </h2>
-                    <p class="mb-0">عرض شامل لجميع الشكاوى غير المحلولة في النظام</p>
-                </div>
-                <div class="col-md-4 text-end">
-                    <span class="admin-badge">
-                        <i class="fas fa-crown me-1"></i>
-                        صلاحيات إدارية
-                    </span>
-                </div>
-            </div>
-        </div>
-        <!-- Statistics Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="stats-card urgent">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="text-danger">{{ stats.urgent_count }}</h4>
-                            <p class="mb-0">شكاوى عاجلة</p>
-                        </div>
-                        <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stats-card overdue">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="text-warning">{{ stats.overdue_count }}</h4>
-                            <p class="mb-0">شكاوى متأخرة</p>
-                        </div>
-                        <i class="fas fa-clock fa-2x text-warning"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stats-card escalated">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="text-purple">{{ stats.escalated_count }}</h4>
-                            <p class="mb-0">شكاوى مصعدة</p>
-                        </div>
-                        <i class="fas fa-arrow-up fa-2x" style="color: #6f42c1;"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stats-card unassigned">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="text-secondary">{{ stats.unassigned_count }}</h4>
-                            <p class="mb-0">غير معينة</p>
-                        </div>
-                        <i class="fas fa-user-slash fa-2x text-secondary"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Navigation Links -->
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <a href="{% url 'complaints:complaint_list' %}"
-                   class="btn btn-outline-primary">
-                    <i class="fas fa-list me-1"></i>
-                    العرض العادي
-                </a>
-                <a href="{% url 'complaints:complaint_create' %}"
-                   class="btn btn-success">
-                    <i class="fas fa-plus me-1"></i>
-                    شكوى جديدة
-                </a>
-            </div>
-            <div class="col-md-6 text-end">
-                <div class="btn-group">
-                    <button type="button"
-                            class="btn btn-info dropdown-toggle"
-                            data-bs-toggle="dropdown">
-                        <i class="fas fa-download me-1"></i>
-                        تصدير البيانات
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li>
-                            <a class="dropdown-item" href="#" onclick="exportToExcel()">
-                                <i class="fas fa-file-excel me-1"></i>Excel
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#" onclick="exportToPDF()">
-                                <i class="fas fa-file-pdf me-1"></i>PDF
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <!-- Enhanced Filters -->
-        <div class="filter-card">
-            <h5 class="mb-3">
-                <i class="fas fa-filter me-2"></i>فلاتر البحث المتقدمة
-            </h5>
-            <form method="get" class="row g-3" id="filterForm">
-                <div class="col-md-3">
-                    <label for="{{ filter_form.status.id_for_label }}"
-                           class="form-label text-white">
-                        <i class="fas fa-tasks me-1"></i>{{ filter_form.status.label }}
-                    </label>
-                    {{ filter_form.status }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ filter_form.priority.id_for_label }}"
-                           class="form-label text-white">
-                        <i class="fas fa-exclamation-triangle me-1"></i>{{ filter_form.priority.label }}
-                    </label>
-                    {{ filter_form.priority }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ filter_form.complaint_type.id_for_label }}"
-                           class="form-label text-white">
-                        <i class="fas fa-tags me-1"></i>{{ filter_form.complaint_type.label }}
-                    </label>
-                    {{ filter_form.complaint_type }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ filter_form.assigned_to.id_for_label }}"
-                           class="form-label text-white">
-                        <i class="fas fa-user me-1"></i>{{ filter_form.assigned_to.label }}
-                    </label>
-                    {{ filter_form.assigned_to }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ filter_form.assigned_department.id_for_label }}"
-                           class="form-label text-white">
-                        <i class="fas fa-building me-1"></i>{{ filter_form.assigned_department.label }}
-                    </label>
-                    {{ filter_form.assigned_department }}
-                </div>
-                <div class="col-md-2">
-                    <label for="{{ filter_form.date_from.id_for_label }}"
-                           class="form-label text-white">
-                        <i class="fas fa-calendar me-1"></i>{{ filter_form.date_from.label }}
-                    </label>
-                    {{ filter_form.date_from }}
-                </div>
-                <div class="col-md-2">
-                    <label for="{{ filter_form.date_to.id_for_label }}"
-                           class="form-label text-white">
-                        <i class="fas fa-calendar me-1"></i>{{ filter_form.date_to.label }}
-                    </label>
-                    {{ filter_form.date_to }}
-                </div>
-                <div class="col-md-5">
-                    <label for="{{ filter_form.search.id_for_label }}"
-                           class="form-label text-white">
-                        <i class="fas fa-search me-1"></i>{{ filter_form.search.label }}
-                    </label>
-                    {{ filter_form.search }}
-                </div>
-                <div class="col-md-12 d-flex justify-content-center gap-2 mt-3">
-                    <button type="submit" class="btn btn-light btn-lg">
-                        <i class="fas fa-search me-2"></i>
-                        تطبيق الفلاتر
-                    </button>
-                    <a href="{% url 'complaints:admin_complaint_list' %}"
-                       class="btn btn-outline-light btn-lg">
-                        <i class="fas fa-undo me-2"></i>
-                        إعادة تعيين
-                    </a>
-                </div>
-            </form>
-        </div>
-        <!-- Total Count -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5>
-                إجمالي الشكاوى غير المحلولة: <span class="badge bg-primary">{{ stats.total_unresolved }}</span>
-            </h5>
+<div class="container-fluid cm-page">
+
+    <div class="cm-page-header mb-4" style="background:linear-gradient(135deg,#dc3545 0%,#6f42c1 100%)">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-                {% if complaints %}عرض {{ complaints|length }} من أصل {{ paginator.count }} شكوى{% endif %}
+                <h2 class="mb-1"><i class="fas fa-shield-alt me-2"></i>إدارة الشكاوى — وصول المدراء</h2>
+                <p class="mb-0" style="opacity:.85">عرض شامل لجميع الشكاوى غير المحلولة</p>
+            </div>
+            <span class="badge bg-light text-dark fs-6"><i class="fas fa-crown me-1 text-warning"></i>صلاحيات إدارية</span>
+        </div>
+    </div>
+
+    {# Stats #}
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3"><div class="cm-stat"><div class="cm-stat-icon" style="background:var(--cm-red)"><i class="fas fa-exclamation-triangle"></i></div><div class="cm-stat-value">{{ stats.urgent_count }}</div><div class="cm-stat-label">عاجلة</div></div></div>
+        <div class="col-6 col-md-3"><div class="cm-stat"><div class="cm-stat-icon" style="background:var(--cm-amber)"><i class="fas fa-clock"></i></div><div class="cm-stat-value">{{ stats.overdue_count }}</div><div class="cm-stat-label">متأخرة</div></div></div>
+        <div class="col-6 col-md-3"><div class="cm-stat"><div class="cm-stat-icon" style="background:var(--cm-purple)"><i class="fas fa-arrow-up"></i></div><div class="cm-stat-value">{{ stats.escalated_count }}</div><div class="cm-stat-label">مصعدة</div></div></div>
+        <div class="col-6 col-md-3"><div class="cm-stat"><div class="cm-stat-icon" style="background:#6c757d"><i class="fas fa-user-slash"></i></div><div class="cm-stat-value">{{ stats.unassigned_count }}</div><div class="cm-stat-label">غير معينة</div></div></div>
+    </div>
+
+    {# Toolbar #}
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div class="d-flex gap-2">
+            <a href="{% url 'complaints:complaint_list' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-list me-1"></i>العرض العادي</a>
+            <a href="{% url 'complaints:complaint_create' %}" class="btn btn-success btn-sm"><i class="fas fa-plus me-1"></i>شكوى جديدة</a>
+        </div>
+        <div>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown"><i class="fas fa-download me-1"></i>تصدير</button>
+                <ul class="dropdown-menu"><li><a class="dropdown-item" href="{% url 'complaints:admin_complaint_list' %}?export=excel">Excel</a></li><li><a class="dropdown-item" href="{% url 'complaints:admin_complaint_list' %}?export=pdf">PDF</a></li></ul>
             </div>
         </div>
-        <!-- Complaints List -->
-        {% if complaints %}
-            {% for complaint in complaints %}
-                <div class="complaint-row {{ complaint.status }}">
-                    <div class="row align-items-center">
-                        <div class="col-md-2">
-                            <h6 class="mb-1">
-                                <a href="{% url 'complaints:complaint_detail' complaint.pk %}"
-                                   class="text-decoration-none">{{ complaint.complaint_number }}</a>
-                            </h6>
-                            <small class="text-muted">{{ complaint.created_at|date:"Y-m-d H:i" }}</small>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="mb-1">{{ complaint.customer.name }}</div>
-                            <small class="text-muted">{{ complaint.customer.phone }}</small>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1">{{ complaint.title|truncatechars:40 }}</div>
-                            <small class="text-muted">{{ complaint.complaint_type.name }}</small>
-                        </div>
-                        <div class="col-md-1 text-center">
-                            <span class="badge bg-{{ complaint.get_priority_badge_class }}">{{ complaint.get_priority_display }}</span>
-                        </div>
-                        <div class="col-md-2 text-center">
-                            <span class="badge bg-{{ complaint.get_status_badge_class }}">{{ complaint.get_status_display }}</span>
-                            {% if complaint.escalations.exists %}
-                                <br>
-                                <small class="text-warning">
-                                    <i class="fas fa-arrow-up me-1"></i>
-                                    مصعدة
-                                </small>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-2">
-                            {% if complaint.assigned_to %}
-                                <small class="text-muted">معين إلى:</small>
-                                <br>
-                                {{ complaint.assigned_to.get_full_name|default:complaint.assigned_to.username }}
-                            {% else %}
-                                <span class="text-danger">غير معين</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-            <!-- Pagination -->
-            {% if is_paginated %}
-                {% render_pagination page_obj %}
-            {% endif %}
-        {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                <h4>ممتاز! لا توجد شكاوى غير محلولة</h4>
-                <p class="text-muted">جميع الشكاوى تم حلها أو إغلاقها</p>
-            </div>
-        {% endif %}
     </div>
-    {% csrf_token %}
+
+    {# Filters #}
+    <div class="cm-filter mb-4">
+        <div class="cm-filter-header" data-bs-toggle="collapse" data-bs-target="#adminFilters"><h6><i class="fas fa-filter me-2"></i>فلاتر البحث المتقدمة</h6><i class="fas fa-chevron-down"></i></div>
+        <div class="collapse show" id="adminFilters">
+            <div class="cm-filter-body">
+                <form method="get" class="row g-2" id="filterForm">
+                    <div class="col-md-2"><label class="form-label">الحالة</label>{{ filter_form.status }}</div>
+                    <div class="col-md-2"><label class="form-label">الأولوية</label>{{ filter_form.priority }}</div>
+                    <div class="col-md-2"><label class="form-label">النوع</label>{{ filter_form.complaint_type }}</div>
+                    <div class="col-md-2"><label class="form-label">المسؤول</label>{{ filter_form.assigned_to }}</div>
+                    <div class="col-md-2"><label class="form-label">القسم</label>{{ filter_form.assigned_department }}</div>
+                    <div class="col-md-2"><label class="form-label">من</label>{{ filter_form.date_from }}</div>
+                    <div class="col-md-2"><label class="form-label">إلى</label>{{ filter_form.date_to }}</div>
+                    <div class="col-md-4"><label class="form-label">بحث</label>{{ filter_form.search }}</div>
+                    <div class="col-md-6 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search me-1"></i>تطبيق</button>
+                        <a href="{% url 'complaints:admin_complaint_list' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-undo me-1"></i>إعادة</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# Count #}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0">إجمالي: <span class="badge bg-primary">{{ stats.total_unresolved }}</span></h6>
+    </div>
+
+    {# Table #}
+    {% if complaints %}
+    <div class="table-responsive">
+        <table class="cm-table">
+            <thead><tr><th>#</th><th>العميل</th><th>العنوان</th><th>الأولوية</th><th>الحالة</th><th>المسؤول</th><th>التاريخ</th></tr></thead>
+            <tbody>
+                {% for c in complaints %}
+                <tr data-status="{{ c.status }}">
+                    <td><a href="{% url 'complaints:complaint_detail' c.pk %}" class="fw-semibold text-decoration-none">{{ c.complaint_number }}</a></td>
+                    <td>{{ c.customer.name }}<br><small class="text-muted">{{ c.customer.phone }}</small></td>
+                    <td>{{ c.title|truncatechars:40 }}<br><small class="text-muted">{{ c.complaint_type.name }}</small></td>
+                    <td><span class="cm-badge cm-priority-{{ c.priority }}">{{ c.get_priority_display }}</span></td>
+                    <td><span class="cm-badge cm-badge-{{ c.status }}">{{ c.get_status_display }}</span>{% if c.escalations.exists %}<br><small class="text-warning"><i class="fas fa-arrow-up me-1"></i>مصعدة</small>{% endif %}</td>
+                    <td>{% if c.assigned_to %}{{ c.assigned_to.get_full_name|default:c.assigned_to.username }}{% else %}<span class="text-danger">غير معين</span>{% endif %}</td>
+                    <td style="font-size:.8rem">{{ c.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if is_paginated %}{% render_pagination page_obj %}{% endif %}
+    {% else %}
+    <div class="cm-empty"><i class="fas fa-check-circle"></i><h5>ممتاز!</h5><p>لا توجد شكاوى غير محلولة</p></div>
+    {% endif %}
+</div>
 {% endblock %}
+
 {% block extra_js %}
-    <!-- Select2 JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script>
-    // Initialize enhanced dropdowns
-    $(document).ready(function() {
-        // Initialize Select2 for all multi-select fields
-        $('#id_status').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'اختر الحالات...',
-            allowClear: true,
-            dir: 'rtl'
-        });
-        
-        $('#id_priority').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'اختر الأولويات...',
-            allowClear: true,
-            dir: 'rtl'
-        });
-        
-        $('#id_complaint_type').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'اختر الأنواع...',
-            allowClear: true,
-            dir: 'rtl'
-        });
-        
-        $('#id_assigned_to').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'اختر الموظفين...',
-            allowClear: true,
-            dir: 'rtl'
-        });
-        
-        $('#id_assigned_department').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'اختر الأقسام...',
-            allowClear: true,
-            dir: 'rtl'
-        });
-    });
-
-    // Export functions
-    function exportToExcel() {
-        window.location.href = '{% url "complaints:admin_complaint_list" %}?export=excel&' + window.location.search.substring(1);
-    }
-
-    function exportToPDF() {
-        window.location.href = '{% url "complaints:admin_complaint_list" %}?export=pdf&' + window.location.search.substring(1);
-    }
-    </script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function(){
+    $('#filterForm select').each(function(){$(this).select2({theme:'bootstrap-5',placeholder:$(this).find('option:first').text()||'اختر...',allowClear:true,dir:'rtl'})});
+});
+</script>
 {% endblock %}
