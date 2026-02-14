@@ -36,7 +36,7 @@ def _get_order_type_name_for_signal(order_types):
     return "الطلب"
 
 
-@receiver(pre_save, sender=Order)
+@receiver(pre_save, sender=Order, dispatch_uid='track_order_changes')
 def track_order_changes(sender, instance, **kwargs):
     """تتبع جميع التغييرات على الطلب وتسجيلها في OrderStatusLog"""
     if instance.pk:  # تحقق من أن هذا تحديث وليس إنشاء جديد
@@ -99,21 +99,23 @@ def track_order_changes(sender, instance, **kwargs):
                     is_automatic=False,
                 )
 
-            # تتبع تغيير السعر (فقط التعديلات اليدوية)
+            # تتبع تغيير السعر (فقط التعديلات اليدوية) مع مقارنة دقيقة
             if (
-                old_instance.final_price != instance.final_price
-                and hasattr(instance, "_modified_by")
+                hasattr(instance, "_modified_by")
                 and instance._modified_by
             ):
-                OrderStatusLog.create_detailed_log(
-                    order=instance,
-                    change_type="price",
-                    old_value=old_instance.final_price,
-                    new_value=instance.final_price,
-                    changed_by=instance._modified_by,
-                    notes="تم تغيير السعر النهائي",
-                    is_automatic=False,
-                )
+                old_price = Decimal(str(old_instance.final_price or 0)).quantize(Decimal('0.01'))
+                new_price = Decimal(str(instance.final_price or 0)).quantize(Decimal('0.01'))
+                if old_price != new_price:
+                    OrderStatusLog.create_detailed_log(
+                        order=instance,
+                        change_type="price",
+                        old_value=old_instance.final_price,
+                        new_value=instance.final_price,
+                        changed_by=instance._modified_by,
+                        notes="تم تغيير السعر النهائي",
+                        is_automatic=False,
+                    )
 
             # تتبع تغيير تاريخ التسليم (فقط التعديلات اليدوية)
             if (
@@ -174,6 +176,33 @@ def track_order_changes(sender, instance, **kwargs):
                     changed_by=instance._modified_by,
                     notes=f'تم تغيير أنواع الطلب من "{old_types}" إلى "{new_types}"',
                     field_name="أنواع الطلب",
+                    is_automatic=False,
+                )
+
+            # تتبع تغيير نوع الطلب (منتج/خدمة) (فقط التعديلات اليدوية)
+            if (
+                old_instance.order_type != instance.order_type
+                and hasattr(instance, "_modified_by")
+                and instance._modified_by
+            ):
+                old_type_display = (
+                    old_instance.get_order_type_display()
+                    if old_instance.order_type
+                    else "غير محدد"
+                )
+                new_type_display = (
+                    instance.get_order_type_display()
+                    if instance.order_type
+                    else "غير محدد"
+                )
+                OrderStatusLog.create_detailed_log(
+                    order=instance,
+                    change_type="general",
+                    old_value=old_type_display,
+                    new_value=new_type_display,
+                    changed_by=instance._modified_by,
+                    notes=f'تم تغيير نوع الطلب من "{old_type_display}" إلى "{new_type_display}"',
+                    field_name="نوع الطلب",
                     is_automatic=False,
                 )
 
@@ -477,28 +506,7 @@ def track_order_changes(sender, instance, **kwargs):
                     is_automatic=False,
                 )
 
-            # تتبع تغيير حالة المعاينة (فقط التعديلات اليدوية)
-            if (
-                old_instance.inspection_status != instance.inspection_status
-                and hasattr(instance, "_modified_by")
-                and instance._modified_by
-            ):
-                old_inspection_display = dict(
-                    old_instance._meta.get_field("inspection_status").choices
-                ).get(old_instance.inspection_status, old_instance.inspection_status)
-                new_inspection_display = dict(
-                    instance._meta.get_field("inspection_status").choices
-                ).get(instance.inspection_status, instance.inspection_status)
-                OrderStatusLog.create_detailed_log(
-                    order=instance,
-                    change_type="status",
-                    old_value=old_inspection_display,
-                    new_value=new_inspection_display,
-                    changed_by=instance._modified_by,
-                    notes=f"تم تغيير حالة المعاينة من {old_inspection_display} إلى {new_inspection_display}",
-                    field_name="حالة المعاينة",
-                    is_automatic=False,
-                )
+            # ملاحظة: تتبع حالة المعاينة تم بالفعل أعلاه — تم حذف النسخة المكررة
 
             # تتبع تغيير الخصم (فقط التعديلات اليدوية)
             if (
@@ -560,7 +568,7 @@ def track_order_changes(sender, instance, **kwargs):
             pass  # حالة الإنشاء الجديد
 
 
-@receiver(pre_save, sender="orders.Order")
+@receiver(pre_save, sender="orders.Order", dispatch_uid='track_price_changes')
 def track_price_changes(sender, instance, **kwargs):
     """تتبع تغييرات الأسعار في الطلبات"""
     if instance.pk:  # تحقق من أن هذا تحديث وليس إنشاء جديد
@@ -571,7 +579,10 @@ def track_price_changes(sender, instance, **kwargs):
         try:
             Order = instance.__class__
             old_instance = Order.objects.get(pk=instance.pk)
-            if old_instance.final_price != instance.final_price:
+            # مقارنة دقيقة باستخدام Decimal مع تقريب لمنع التغييرات الوهمية
+            old_price = Decimal(str(old_instance.final_price or 0)).quantize(Decimal('0.01'))
+            new_price = Decimal(str(instance.final_price or 0)).quantize(Decimal('0.01'))
+            if old_price != new_price:
                 # لا نسجل التعديلات إذا كان هذا تحديث تلقائي (غير من قبل المستخدم)
                 if not instance.is_auto_update:
                     instance.price_changed = True
@@ -582,7 +593,7 @@ def track_price_changes(sender, instance, **kwargs):
             pass  # حالة الإنشاء الجديد
 
 
-@receiver(post_save, sender=Order)
+@receiver(post_save, sender=Order, dispatch_uid='create_manufacturing_order_on_order_creation')
 def create_manufacturing_order_on_order_creation(sender, instance, created, **kwargs):
     """
     Creates a ManufacturingOrder automatically when a new Order is created
@@ -673,7 +684,7 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
         transaction.on_commit(create_manufacturing_order)
 
 
-@receiver(post_save, sender="manufacturing.ManufacturingOrder")
+@receiver(post_save, sender="manufacturing.ManufacturingOrder", dispatch_uid='sync_order_from_manufacturing')
 def sync_order_from_manufacturing(sender, instance, created, **kwargs):
     """Ensure the linked Order has its order_status and tracking_status updated
     when the ManufacturingOrder changes. This prevents display mismatches where
@@ -729,7 +740,7 @@ def sync_order_from_manufacturing(sender, instance, created, **kwargs):
         )
 
 
-@receiver(post_save, sender=Order)
+@receiver(post_save, sender=Order, dispatch_uid='create_inspection_on_order_creation')
 def create_inspection_on_order_creation(sender, instance, created, **kwargs):
     """
     إنشاء معاينة تلقائية عند إنشاء طلب من نوع معاينة
@@ -842,7 +853,7 @@ def create_production_order(order):
     return None
 
 
-@receiver(post_save, sender=Order)
+@receiver(post_save, sender=Order, dispatch_uid='order_post_save')
 def order_post_save(sender, instance, created, **kwargs):
     """معالج حفظ الطلب"""
     if created:
@@ -881,19 +892,29 @@ def order_post_save(sender, instance, created, **kwargs):
         # تتبع التغييرات في المبلغ الإجمالي
         from .models import OrderModificationLog
 
-        if (
-            hasattr(instance, "_old_total_amount")
-            and instance._old_total_amount != instance.final_price
-        ):
-            OrderModificationLog.objects.create(
-                order=instance,
-                modification_type="تعديلات البيانات الأساسية",
-                old_total_amount=instance._old_total_amount,
-                new_total_amount=instance.final_price,
-                modified_by=getattr(instance, "_modified_by", None),
-                details=f"تم تغيير إجمالي المبلغ من {instance._old_total_amount} إلى {instance.final_price}",
-                notes="تعديل في المبلغ الإجمالي للطلب",
-            )
+        if hasattr(instance, "_old_total_amount"):
+            # مقارنة دقيقة لمنع تسجيل تغييرات وهمية بسبب فرق الدقة العشرية
+            old_amt = Decimal(str(instance._old_total_amount or 0)).quantize(Decimal('0.01'))
+            new_amt = Decimal(str(instance.final_price or 0)).quantize(Decimal('0.01'))
+            if old_amt != new_amt:
+                # فحص التكرار: عدم تسجيل نفس التغيير خلال 5 ثوانٍ
+                from datetime import timedelta
+                recent_cutoff = timezone.now() - timedelta(seconds=5)
+                existing = OrderModificationLog.objects.filter(
+                    order=instance,
+                    modification_type="تعديلات البيانات الأساسية",
+                    created_at__gte=recent_cutoff,
+                ).first()
+                if not existing:
+                    OrderModificationLog.objects.create(
+                        order=instance,
+                        modification_type="تعديلات البيانات الأساسية",
+                        old_total_amount=instance._old_total_amount,
+                        new_total_amount=instance.final_price,
+                        modified_by=getattr(instance, "_modified_by", None),
+                        details=f"تم تغيير إجمالي المبلغ من {instance._old_total_amount} إلى {instance.final_price}",
+                        notes="تعديل في المبلغ الإجمالي للطلب",
+                    )
 
         # تتبع التغييرات في حقول الطلب الأساسية إذا كان هناك مستخدم محدد
         modified_by = getattr(instance, "_modified_by", None)
@@ -957,15 +978,24 @@ def order_post_save(sender, instance, created, **kwargs):
                     continue
 
             if field_changes:
-                OrderModificationLog.objects.create(
+                # فحص التكرار: عدم تسجيل إذا سُجل نفس النوع خلال 5 ثوانٍ
+                from datetime import timedelta
+                recent_cutoff = timezone.now() - timedelta(seconds=5)
+                existing = OrderModificationLog.objects.filter(
                     order=instance,
                     modification_type="تعديل حقول الطلب الأساسية",
-                    modified_by=modified_by,
-                    details=" | ".join(field_changes),
-                    notes="تعديل يدوي في حقول الطلب الأساسية",
-                    is_manual_modification=True,
-                    modified_fields=modified_fields_data,
-                )
+                    created_at__gte=recent_cutoff,
+                ).first()
+                if not existing:
+                    OrderModificationLog.objects.create(
+                        order=instance,
+                        modification_type="تعديل حقول الطلب الأساسية",
+                        modified_by=modified_by,
+                        details=" | ".join(field_changes),
+                        notes="تعديل يدوي في حقول الطلب الأساسية",
+                        is_manual_modification=True,
+                        modified_fields=modified_fields_data,
+                    )
 
             # تحديث ManufacturingOrder عند تغيير invoice_number
             if instance.tracker.has_changed("invoice_number"):
@@ -1012,7 +1042,7 @@ def order_post_save(sender, instance, created, **kwargs):
                     print(f"❌ خطأ في تحديث ManufacturingOrder: {e}")
 
 
-@receiver(post_save, sender=Order)
+@receiver(post_save, sender=Order, dispatch_uid='deduct_inventory_on_order_creation')
 def deduct_inventory_on_order_creation(sender, instance, created, **kwargs):
     """
     خصم المخزون تلقائياً عند إنشاء طلب منتجات
@@ -1064,7 +1094,7 @@ def deduct_inventory_on_order_creation(sender, instance, created, **kwargs):
         transaction.on_commit(process_inventory_deduction)
 
 
-@receiver(post_save, sender=OrderItem)
+@receiver(post_save, sender=OrderItem, dispatch_uid='order_item_post_save')
 def order_item_post_save(sender, instance, created, **kwargs):
     """معالج حفظ عنصر الطلب"""
     if created:

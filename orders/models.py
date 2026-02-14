@@ -337,6 +337,15 @@ class Order(SoftDeleteMixin, models.Model):
         null=True,
         verbose_name="تم الإنشاء بواسطة",
     )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders_updated",
+        verbose_name="آخر تعديل بواسطة",
+        editable=False,
+    )
     branch = models.ForeignKey(
         "accounts.Branch",
         on_delete=models.CASCADE,
@@ -2372,6 +2381,15 @@ class Payment(SoftDeleteMixin, models.Model):
         null=True,
         verbose_name="تم الإنشاء بواسطة",
     )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payments_updated",
+        verbose_name="آخر تعديل بواسطة",
+        editable=False,
+    )
 
     class Meta:
         verbose_name = "دفعة"
@@ -2731,6 +2749,9 @@ class OrderStatusLog(models.Model):
         verbose_name=_("تغيير تلقائي"),
         help_text=_("هل هذا التغيير تم تلقائياً أم يدوياً"),
     )
+    ip_address = models.GenericIPAddressField(
+        null=True, blank=True, verbose_name=_("عنوان IP"),
+    )
 
     class Meta:
         verbose_name = _("سجل حالة الطلب")
@@ -3074,8 +3095,47 @@ class OrderStatusLog(models.Model):
         field_name=None,
         **extra_details,
     ):
-        """إنشاء سجل مفصل للتغيير"""
+        """إنشاء سجل مفصل للتغيير مع حماية من التكرار"""
         try:
+            # === حماية من التكرار ===
+            # التحقق من عدم وجود سجل مطابق في آخر 5 ثوانٍ
+            from datetime import timedelta
+            from django.utils import timezone as tz
+
+            recent_cutoff = tz.now() - timedelta(seconds=5)
+            duplicate_filter = {
+                'order': order,
+                'change_type': change_type,
+                'created_at__gte': recent_cutoff,
+            }
+
+            # للتغييرات من نوع price/status - مقارنة القيم الفعلية
+            if change_type == 'price':
+                from decimal import Decimal, InvalidOperation
+                try:
+                    old_dec = Decimal(str(old_value or 0)).quantize(Decimal('0.01'))
+                    new_dec = Decimal(str(new_value or 0)).quantize(Decimal('0.01'))
+                    if old_dec == new_dec:
+                        # القيم متطابقة بعد التقريب — تغيير وهمي بسبب فرق في الدقة العشرية
+                        return None
+                except (InvalidOperation, TypeError, ValueError):
+                    pass
+
+            # فحص التكرار في الـ DB
+            if field_name:
+                # لنفس الحقل: إذا تم تسجيل نفس الحقل في آخر 5 ثوانٍ → تخطي
+                existing = cls.objects.filter(
+                    **duplicate_filter,
+                    change_details__field_name=field_name,
+                ).first()
+                if existing:
+                    return existing  # إرجاع السجل الموجود بدلاً من إنشاء مكرر
+            else:
+                # بدون field_name: إذا تم تسجيل نفس النوع في آخر 5 ثوانٍ → تخطي
+                existing = cls.objects.filter(**duplicate_filter).first()
+                if existing:
+                    return existing
+
             change_details = extra_details.copy()
 
             # حفظ القيم الأساسية دائماً
@@ -3469,6 +3529,9 @@ class OrderModificationLog(models.Model):
         blank=True,
         verbose_name="الحقول المعدلة",
         help_text="قاموس يحتوي على الحقول المعدلة وقيمها السابقة والجديدة",
+    )
+    ip_address = models.GenericIPAddressField(
+        null=True, blank=True, verbose_name=_("عنوان IP"),
     )
 
     class Meta:

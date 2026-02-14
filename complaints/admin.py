@@ -824,6 +824,15 @@ class ComplaintUpdateAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("complaint", "created_by")
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(ComplaintAttachment)
 class ComplaintAttachmentAdmin(admin.ModelAdmin):
@@ -876,6 +885,15 @@ class ComplaintEscalationAdmin(admin.ModelAdmin):
                 "complaint", "escalated_from", "escalated_to", "escalated_by"
             )
         )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(ComplaintSLA)

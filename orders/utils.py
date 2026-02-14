@@ -450,7 +450,7 @@ def quick_update_order(order, user, **updates):
                       invoice_number='INV-2024-001',
                       notes='ملاحظات جديدة')
     """
-    from .middleware import set_current_user
+    from accounts.middleware.current_user import set_current_user
     from .tracking import track_order_change
 
     # تعيين المستخدم الحالي

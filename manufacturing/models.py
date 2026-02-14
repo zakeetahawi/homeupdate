@@ -240,6 +240,15 @@ class ManufacturingOrder(SoftDeleteMixin, models.Model):
         blank=True,
         verbose_name="تم الإنشاء بواسطة",
     )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="manufacturing_orders_updated",
+        verbose_name="آخر تعديل بواسطة",
+        editable=False,
+    )
 
     # Tracker for status changes
     tracker = FieldTracker(fields=["status"])
@@ -1757,6 +1766,9 @@ class ManufacturingStatusLog(models.Model):
     )
 
     notes = models.TextField(blank=True, null=True, verbose_name="ملاحظات")
+    ip_address = models.GenericIPAddressField(
+        null=True, blank=True, verbose_name="عنوان IP",
+    )
 
     class Meta:
         verbose_name = "سجل حالة التصنيع"

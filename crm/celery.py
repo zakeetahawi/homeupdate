@@ -121,6 +121,12 @@ app.conf.update(
             ),  # كل اثنين الساعة 3 صباحاً
             "options": {"queue": "default"},
         },
+        # مهام صيانة سجلات التدقيق
+        "cleanup-old-audit-logs": {
+            "task": "core.tasks.cleanup_old_audit_logs",
+            "schedule": crontab(hour=3, minute=30),  # يومياً الساعة 3:30 صباحاً
+            "options": {"queue": "maintenance"},
+        },
     },
 )
 

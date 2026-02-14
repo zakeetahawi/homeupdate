@@ -586,6 +586,9 @@ class ComplaintUpdate(models.Model):
         User, on_delete=models.SET_NULL, null=True, verbose_name="تم الإنشاء بواسطة"
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ التحديث")
+    ip_address = models.GenericIPAddressField(
+        null=True, blank=True, verbose_name="عنوان IP"
+    )
     is_visible_to_customer = models.BooleanField(
         default=True, verbose_name="مرئي للعميل"
     )

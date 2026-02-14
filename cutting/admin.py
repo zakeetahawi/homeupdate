@@ -344,6 +344,15 @@ class CuttingOrderFixLogAdmin(admin.ModelAdmin):
 
     details_display.short_description = "تفاصيل العملية"
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 # تخصيص عنوان الإدارة
 admin.site.site_header = "إدارة نظام التقطيع"

@@ -442,6 +442,15 @@ class InstallationSchedule(SoftDeleteMixin, models.Model):
     completion_date = models.DateTimeField(_("تاريخ الإكمال"), null=True, blank=True)
     created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
     updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="installation_schedules_updated",
+        verbose_name=_("آخر تعديل بواسطة"),
+        editable=False,
+    )
 
     class Meta:
         verbose_name = _("جدولة تركيب")
@@ -1074,6 +1083,9 @@ class InstallationStatusLog(models.Model):
         help_text="سبب تغيير الحالة (مطلوب لبعض التغييرات)",
     )
     notes = models.TextField(_("ملاحظات"), blank=True)
+    ip_address = models.GenericIPAddressField(
+        null=True, blank=True, verbose_name=_("عنوان IP"),
+    )
     created_at = models.DateTimeField(_("تاريخ التغيير"), auto_now_add=True)
 
     class Meta:

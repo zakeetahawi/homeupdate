@@ -1655,9 +1655,13 @@ class ManufacturingStatusLogAdmin(admin.ModelAdmin):
         """منع الإضافة اليدوية - يتم الإنشاء تلقائياً"""
         return False
 
+    def has_change_permission(self, request, obj=None):
+        """منع التعديل للحفاظ على سلامة السجلات"""
+        return False
+
     def has_delete_permission(self, request, obj=None):
         """منع الحذف للحفاظ على سجل التتبع"""
-        return request.user.is_superuser
+        return False
 
 
 # Force Reload

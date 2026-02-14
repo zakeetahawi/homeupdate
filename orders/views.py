@@ -876,6 +876,16 @@ def order_update(request, pk):
                 # تعيين المستخدم المعدل على الطلب قبل الحفظ
                 order._modified_by = request.user
 
+                # ⚠️ حماية من الكتابة فوق حالات تم تحديثها بواسطة signals أخرى
+                # (مثل sync_order_from_manufacturing). نقرأ أحدث قيم من قاعدة البيانات
+                # لأن الحالة قد تكون تغيرت منذ تحميل الصفحة.
+                db_order = Order.objects.filter(pk=order.pk).values(
+                    'order_status', 'tracking_status'
+                ).first()
+                if db_order:
+                    order.order_status = db_order['order_status']
+                    order.tracking_status = db_order['tracking_status']
+
                 # حفظ الطلب
                 order.save()
 
@@ -2135,7 +2145,9 @@ def check_contract_upload_status(request, pk):
 @login_required
 def order_status_history(request, order_id):
     """عرض سجل تفصيلي لتغييرات حالة الطلب"""
-    order = get_object_or_404(Order, id=order_id)
+    order = get_object_or_404(
+        Order.objects.select_related("customer"), id=order_id
+    )
 
     # التحقق من الصلاحيات
     if not request.user.has_perm("orders.view_order"):
@@ -2143,8 +2155,14 @@ def order_status_history(request, order_id):
 
         return HttpResponseForbidden("ليس لديك صلاحية لعرض تفاصيل الطلب")
 
-    # الحصول على سجلات تغيير الحالة
-    status_logs = order.status_logs.all().order_by("-created_at")
+    # الحصول على سجلات تغيير الحالة مع تحسين الأداء
+    # استبعاد سجلات المزامنة من الاستعلام مباشرة بدلاً من القالب
+    status_logs = (
+        order.status_logs
+        .select_related("changed_by", "order")
+        .exclude(notes__icontains="مزامنة حالة الطلب")
+        .order_by("-created_at")
+    )
 
     # البحث والفلترة
     search_query = request.GET.get("search", "")
@@ -2174,89 +2192,82 @@ def order_status_history(request, order_id):
         is_auto = is_automatic_filter.lower() == "true"
         status_logs = status_logs.filter(is_automatic=is_auto)
 
+    # إحصائيات مفيدة
+    all_logs_qs = order.status_logs.exclude(notes__icontains="مزامنة حالة الطلب")
+    total_logs = status_logs.count()
+    status_change_count = all_logs_qs.filter(change_type="status").count()
+    modification_count = all_logs_qs.exclude(
+        change_type__in=["status", "creation"]
+    ).count()
+
+    # تجميع التغييرات التي تمت في نفس الثانية (نفس عملية الحفظ)
+    # لعرض عدد التغييرات المجمّعة
+    from django.db.models import Count
+    from django.db.models.functions import TruncSecond
+
+    group_counts = dict(
+        all_logs_qs
+        .annotate(ts=TruncSecond("created_at"))
+        .values("ts")
+        .annotate(cnt=Count("id"))
+        .filter(cnt__gt=1)
+        .values_list("ts", "cnt")
+    )
+
     # الترقيم
-    paginator = Paginator(status_logs, 20)
+    paginator = Paginator(status_logs, 25)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    # الحصول على قائمة الحالات للمفلتر (حالات الأقسام)
-    status_choices = []
+    # إضافة عدد المجموعة لكل سجل
+    for log in page_obj:
+        ts_key = log.created_at.replace(microsecond=0)
+        log.group_count = group_counts.get(ts_key, 1)
 
-    # إضافة حالات الطلب الأساسية
-    status_choices.extend(Order.ORDER_STATUS_CHOICES)
+    # الحصول على قائمة الحالات للفلتر (حالات الأقسام)
+    status_choices = list(Order.ORDER_STATUS_CHOICES)
 
-    # إضافة حالات المعاينة
-    try:
-        from inspections.models import Inspection
+    for app_label, model_name, prefix, label in [
+        ("inspections", "Inspection", "inspection", "معاينة"),
+        ("installations", "InstallationSchedule", "installation", "تركيب"),
+        ("manufacturing", "ManufacturingOrder", "manufacturing", "تصنيع"),
+        ("cutting", "CuttingOrder", "cutting", "تقطيع"),
+    ]:
+        try:
+            from django.apps import apps
+            model_cls = apps.get_model(app_label, model_name)
+            status_choices.extend(
+                (f"{prefix}_{c[0]}", f"{label}: {c[1]}")
+                for c in model_cls.STATUS_CHOICES
+            )
+        except (LookupError, ImportError):
+            pass
 
-        inspection_choices = [
-            (f"inspection_{choice[0]}", f"معاينة: {choice[1]}")
-            for choice in Inspection.STATUS_CHOICES
-        ]
-        status_choices.extend(inspection_choices)
-    except ImportError:
-        pass
-
-    # إضافة حالات التركيب
-    try:
-        from installations.models import InstallationSchedule
-
-        installation_choices = [
-            (f"installation_{choice[0]}", f"تركيب: {choice[1]}")
-            for choice in InstallationSchedule.STATUS_CHOICES
-        ]
-        status_choices.extend(installation_choices)
-    except ImportError:
-        pass
-
-    # إضافة حالات التصنيع
-    try:
-        from manufacturing.models import ManufacturingOrder
-
-        manufacturing_choices = [
-            (f"manufacturing_{choice[0]}", f"تصنيع: {choice[1]}")
-            for choice in ManufacturingOrder.STATUS_CHOICES
-        ]
-        status_choices.extend(manufacturing_choices)
-    except ImportError:
-        pass
-
-    # إضافة حالات التقطيع
-    try:
-        from cutting.models import CuttingOrder
-
-        cutting_choices = [
-            (f"cutting_{choice[0]}", f"تقطيع: {choice[1]}")
-            for choice in CuttingOrder.STATUS_CHOICES
-        ]
-        status_choices.extend(cutting_choices)
-    except ImportError:
-        pass
-
-    # الحصول على قائمة المستخدمين للمفلتر
+    # الحصول على قائمة المستخدمين للفلتر
     from django.contrib.auth import get_user_model
 
     User = get_user_model()
     users = User.objects.filter(
-        id__in=status_logs.values_list("changed_by", flat=True).distinct()
+        id__in=all_logs_qs.values_list("changed_by", flat=True).distinct()
     ).order_by("first_name", "last_name")
+
+    has_filters = any([search_query, status_filter, user_filter,
+                       change_type_filter, is_automatic_filter])
 
     context = {
         "order": order,
         "page_obj": page_obj,
-        "status_logs": page_obj,
         "status_choices": status_choices,
         "users": users,
-        "total_logs": status_logs.count(),
+        "total_logs": total_logs,
+        "status_change_count": status_change_count,
+        "modification_count": modification_count,
         "search_query": search_query,
         "status_filter": status_filter,
         "user_filter": user_filter,
         "change_type_filter": change_type_filter,
         "is_automatic_filter": is_automatic_filter,
-        "search_query": search_query,
-        "status_filter": status_filter,
-        "user_filter": user_filter,
-        "total_logs": status_logs.count(),
+        "has_filters": has_filters,
     }
 
     return render(request, "orders/status_history.html", context)

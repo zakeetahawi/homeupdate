@@ -93,8 +93,8 @@ class AuditLogAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
-        """السماح بالحذف فقط للمشرفين"""
-        return request.user.is_superuser
+        """منع حذف سجلات التدقيق نهائياً — لأغراض الامتثال والأمان"""
+        return False
 
     def severity_badge(self, obj):
         """عرض مستوى الخطورة بألوان"""
@@ -241,8 +241,8 @@ class SecurityEventAdmin(admin.ModelAdmin):
         return request.user.is_superuser
 
     def has_delete_permission(self, request, obj=None):
-        """السماح بالحذف فقط للمشرفين"""
-        return request.user.is_superuser
+        """منع حذف الأحداث الأمنية نهائياً — لأغراض الامتثال والأمان"""
+        return False
 
     def event_badge(self, obj):
         """عرض نوع الحدث بألوان"""

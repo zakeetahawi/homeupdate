@@ -319,6 +319,15 @@ class Transaction(models.Model):
         related_name="created_transactions",
         verbose_name=_("تم الإنشاء بواسطة"),
     )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_transactions",
+        verbose_name=_("آخر تعديل بواسطة"),
+        editable=False,
+    )
     posted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

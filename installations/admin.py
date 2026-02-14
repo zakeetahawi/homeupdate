@@ -1828,6 +1828,15 @@ class InstallationStatusLogAdmin(admin.ModelAdmin):
 
     reason_short.short_description = "السبب"
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(InstallationEventLog)
 class InstallationEventLogAdmin(admin.ModelAdmin):
@@ -1891,6 +1900,15 @@ class InstallationEventLogAdmin(admin.ModelAdmin):
         return "-"
 
     description_short.short_description = "الوصف"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(InstallationAnalytics)

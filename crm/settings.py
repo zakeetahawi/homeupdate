@@ -426,6 +426,8 @@ MIDDLEWARE = [
     "accounts.middleware.current_user.CurrentUserMiddleware",
     # تتبع جلسات المستخدمين
     "user_activity.middleware.UserSessionTrackingMiddleware",
+    # سجل التدقيق التلقائي
+    "core.audit.AuditLoggingMiddleware",
 ]
 
 # Debug toolbar configuration for performance monitoring

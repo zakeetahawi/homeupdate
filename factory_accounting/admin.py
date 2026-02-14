@@ -135,6 +135,9 @@ class ProductionStatusLogAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False  # Logs should not be edited
 
+    def has_delete_permission(self, request, obj=None):
+        return False  # Logs should not be deleted
+
 
 class CardMeasurementSplitInline(admin.TabularInline):
     model = CardMeasurementSplit

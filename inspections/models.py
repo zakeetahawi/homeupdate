@@ -312,6 +312,15 @@ class Inspection(SoftDeleteMixin, models.Model):
         related_name="created_inspections",
         verbose_name=_("تم الإنشاء بواسطة"),
     )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_inspections",
+        verbose_name=_("آخر تعديل بواسطة"),
+        editable=False,
+    )
     order = models.ForeignKey(
         "orders.Order",
         on_delete=models.SET_NULL,

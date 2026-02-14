@@ -520,6 +520,15 @@ class Customer(SoftDeleteMixin, models.Model):
         related_name="customers_created",
         verbose_name=_("تم الإنشاء بواسطة"),
     )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="customers_updated",
+        verbose_name=_("آخر تعديل بواسطة"),
+        editable=False,
+    )
     # ملاحظة: هذا الحقل يجب أن يكون قابل للتعيين من الكود (وليس auto_now_add) حتى يمكن استيراد التاريخ من مصادر خارجية مثل Google Sheets
     created_at = models.DateTimeField(
         _("تاريخ الإنشاء"), default=timezone.now, editable=True

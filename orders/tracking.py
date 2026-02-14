@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
-from .middleware import get_current_user
+from accounts.middleware.current_user import get_current_user
 from .models import Order, OrderItem, OrderStatusLog
 
 logger = logging.getLogger(__name__)

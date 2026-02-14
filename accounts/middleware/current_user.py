@@ -20,6 +20,11 @@ def get_current_request():
     return getattr(_thread_locals, "request", None)
 
 
+def set_current_user(user):
+    """تعيين المستخدم يدوياً في thread local storage (للعمليات خارج HTTP)"""
+    _thread_locals.user = user
+
+
 class CurrentUserMiddleware(MiddlewareMixin):
     """
     Middleware لتخزين المستخدم الحالي في thread local storage

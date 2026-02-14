@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.db.models.signals import post_save
@@ -756,6 +757,16 @@ class CuttingOrderFixLog(models.Model):
     # النجاح/الفشل
     success = models.BooleanField(default=True, verbose_name="نجاح")
     error_message = models.TextField(blank=True, verbose_name="رسالة الخطأ")
+
+    # المستخدم الذي شغّل العملية
+    triggered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cutting_fix_logs",
+        verbose_name="تم التشغيل بواسطة",
+    )
 
     class Meta:
         verbose_name = "سجل إصلاح أمر تقطيع"

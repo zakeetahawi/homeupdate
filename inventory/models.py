@@ -137,6 +137,22 @@ class Product(SoftDeleteMixin, models.Model):
     qr_code_base64 = models.TextField(_("رمز QR (مخزن)"), blank=True, null=True)
     created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
     updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_products",
+        verbose_name=_("أنشئ بواسطة"),
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_products",
+        verbose_name=_("آخر تعديل بواسطة"),
+    )
 
     objects = ProductManager()
 
@@ -262,6 +278,18 @@ class Product(SoftDeleteMixin, models.Model):
             return False
 
     def save(self, *args, **kwargs):
+        # تعيين updated_by تلقائياً من CurrentUserMiddleware
+        try:
+            from accounts.middleware.current_user import get_current_user
+
+            current_user = get_current_user()
+            if current_user and current_user.is_authenticated:
+                self.updated_by = current_user
+                if not self.pk:
+                    self.created_by = current_user
+        except Exception:
+            pass
+
         # توليد QR تلقائياً إذا كان هناك كود ولم يكن موجوداً
         if self.code and not self.qr_code_base64:
             self.generate_qr()

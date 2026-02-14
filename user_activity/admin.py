@@ -138,6 +138,9 @@ class UserActivityLogAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
+    def has_delete_permission(self, request, obj=None):
+        return False
+
     def bulk_delete_selected(self, request, queryset):
         """حذف مجمّع سريع بدون تنفيذ signals"""
         count = queryset.count()

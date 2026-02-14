@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.db.models import Q
-from django.db.models.signals import post_save
+from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
 
 from .models import Department, Role, UserRole
@@ -167,3 +168,116 @@ def log_user_logout(sender, request, user, **kwargs):
 
     except Exception as e:
         print(f"❌ خطأ في تسجيل خروج المستخدم: {e}")
+
+
+# ============================================
+# تتبع تغييرات الصلاحيات والمجموعات
+# ============================================
+
+
+@receiver(
+    m2m_changed,
+    sender=User.groups.through,
+    dispatch_uid="track_user_groups_changed",
+)
+def track_user_groups_changed(sender, instance, action, pk_set, **kwargs):
+    """تسجيل تغيير مجموعات المستخدم (إضافة/إزالة أدوار)"""
+    if action not in ("post_add", "post_remove", "post_clear"):
+        return
+    try:
+        from core.audit import AuditLog
+
+        if action == "post_clear":
+            description = f"إزالة جميع المجموعات من المستخدم: {instance.username}"
+            AuditLog.log(
+                user=None,
+                action="update",
+                app_label="accounts",
+                model_name="User",
+                object_id=str(instance.pk),
+                object_repr=instance.username,
+                description=description,
+                severity="WARNING",
+                extra_data={"change_type": "groups_cleared"},
+            )
+        elif pk_set:
+            group_names = list(
+                Group.objects.filter(pk__in=pk_set).values_list("name", flat=True)
+            )
+            if action == "post_add":
+                desc = f"إضافة مجموعات [{', '.join(group_names)}] للمستخدم: {instance.username}"
+            else:
+                desc = f"إزالة مجموعات [{', '.join(group_names)}] من المستخدم: {instance.username}"
+            AuditLog.log(
+                user=None,
+                action="update",
+                app_label="accounts",
+                model_name="User",
+                object_id=str(instance.pk),
+                object_repr=instance.username,
+                description=desc,
+                severity="WARNING",
+                extra_data={
+                    "change_type": "groups_changed",
+                    "action": action,
+                    "groups": group_names,
+                },
+            )
+    except Exception as e:
+        print(f"❌ خطأ في تسجيل تغيير المجموعات: {e}")
+
+
+@receiver(
+    m2m_changed,
+    sender=User.user_permissions.through,
+    dispatch_uid="track_user_permissions_changed",
+)
+def track_user_permissions_changed(sender, instance, action, pk_set, **kwargs):
+    """تسجيل تغيير صلاحيات المستخدم المباشرة"""
+    if action not in ("post_add", "post_remove", "post_clear"):
+        return
+    try:
+        from django.contrib.auth.models import Permission
+
+        from core.audit import AuditLog
+
+        if action == "post_clear":
+            description = f"إزالة جميع الصلاحيات المباشرة من المستخدم: {instance.username}"
+            AuditLog.log(
+                user=None,
+                action="update",
+                app_label="accounts",
+                model_name="User",
+                object_id=str(instance.pk),
+                object_repr=instance.username,
+                description=description,
+                severity="CRITICAL",
+                extra_data={"change_type": "permissions_cleared"},
+            )
+        elif pk_set:
+            perm_names = list(
+                Permission.objects.filter(pk__in=pk_set).values_list(
+                    "codename", flat=True
+                )
+            )
+            if action == "post_add":
+                desc = f"إضافة صلاحيات [{', '.join(perm_names)}] للمستخدم: {instance.username}"
+            else:
+                desc = f"إزالة صلاحيات [{', '.join(perm_names)}] من المستخدم: {instance.username}"
+            AuditLog.log(
+                user=None,
+                action="update",
+                app_label="accounts",
+                model_name="User",
+                object_id=str(instance.pk),
+                object_repr=instance.username,
+                description=desc,
+                severity="CRITICAL",
+                extra_data={
+                    "change_type": "permissions_changed",
+                    "action": action,
+                    "permissions": perm_names,
+                },
+            )
+    except Exception as e:
+        print(f"❌ خطأ في تسجيل تغيير الصلاحيات: {e}")

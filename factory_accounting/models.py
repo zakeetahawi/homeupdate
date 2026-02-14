@@ -274,6 +274,10 @@ class ProductionStatusLog(models.Model):
         verbose_name=_("أمر التصنيع"),
     )
     status = models.CharField(_("الحالة"), max_length=30, db_index=True)
+    previous_status = models.CharField(
+        _("الحالة السابقة"), max_length=30, blank=True,
+        help_text="الحالة قبل التغيير",
+    )
     timestamp = models.DateTimeField(
         _("التاريخ والوقت"), default=timezone.now, db_index=True
     )
