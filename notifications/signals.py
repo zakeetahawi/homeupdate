@@ -600,3 +600,139 @@ def complaint_created_notification(sender, instance, created, **kwargs):
                 ),
             },
         )
+
+
+@receiver(post_save, sender="complaints.Complaint")
+def complaint_status_and_assignment_notification(sender, instance, created, **kwargs):
+    """إشعارات تغيير حالة الشكوى وتغيير المسؤول في النظام الرئيسي"""
+    if created:
+        return  # يتم التعامل مع الإنشاء في complaint_created_notification
+
+    changed_by_user = getattr(instance, "_changed_by", None)
+    status_map = {
+        "new": "جديدة",
+        "in_progress": "قيد الحل",
+        "resolved": "محلولة",
+        "pending_evaluation": "بانتظار التقييم",
+        "closed": "مغلقة",
+        "overdue": "متأخرة",
+        "escalated": "مصعدة",
+    }
+
+    # إشعار تغيير الحالة
+    if hasattr(instance, "_status_changed") and instance._status_changed:
+        old_status = getattr(instance, "_old_status", "")
+        new_status = instance.status
+
+        # تحديد نوع الإشعار
+        if new_status in ("resolved", "pending_evaluation"):
+            notif_type = "complaint_resolved"
+            priority = "normal"
+        elif new_status == "overdue":
+            notif_type = "complaint_overdue"
+            priority = "high"
+        elif new_status == "escalated":
+            notif_type = "complaint_escalated"
+            priority = "urgent"
+        else:
+            notif_type = "complaint_status_changed"
+            priority = "normal"
+
+        title = f"تغيير حالة الشكوى {instance.complaint_number}"
+        message = f'تم تغيير حالة الشكوى من "{status_map.get(old_status, old_status)}" إلى "{status_map.get(new_status, new_status)}"'
+
+        create_notification(
+            title=title,
+            message=message,
+            notification_type=notif_type,
+            related_object=instance,
+            created_by=changed_by_user,
+            priority=priority,
+            extra_data={
+                "complaint_number": instance.complaint_number,
+                "customer_name": instance.customer.name,
+                "old_status": old_status,
+                "new_status": new_status,
+                "url": f"/complaints/{instance.pk}/",
+                "changed_by": (
+                    changed_by_user.get_full_name() or changed_by_user.username
+                    if changed_by_user
+                    else None
+                ),
+                "changed_by_username": (
+                    changed_by_user.username if changed_by_user else None
+                ),
+            },
+        )
+
+    # إشعار تغيير المسؤول
+    if hasattr(instance, "_assignee_changed") and instance._assignee_changed:
+        old_assignee = getattr(instance, "_old_assignee", None)
+        new_assignee = instance.assigned_to
+
+        title = f"إسناد الشكوى {instance.complaint_number}"
+        message = f"تم إسناد الشكوى إلى {new_assignee.get_full_name() if new_assignee else 'غير محدد'}"
+        if old_assignee:
+            message += f" (كانت مسندة إلى {old_assignee.get_full_name()})"
+
+        create_notification(
+            title=title,
+            message=message,
+            notification_type="complaint_assigned",
+            related_object=instance,
+            created_by=changed_by_user,
+            priority="high",
+            extra_data={
+                "complaint_number": instance.complaint_number,
+                "customer_name": instance.customer.name,
+                "old_assignee": old_assignee.get_full_name() if old_assignee else None,
+                "new_assignee": new_assignee.get_full_name() if new_assignee else None,
+                "url": f"/complaints/{instance.pk}/",
+                "changed_by": (
+                    changed_by_user.get_full_name() or changed_by_user.username
+                    if changed_by_user
+                    else None
+                ),
+                "changed_by_username": (
+                    changed_by_user.username if changed_by_user else None
+                ),
+            },
+        )
+
+
+@receiver(post_save, sender="complaints.ComplaintEscalation")
+def complaint_escalation_notification(sender, instance, created, **kwargs):
+    """إشعار تصعيد الشكوى في النظام الرئيسي"""
+    if created:
+        changed_by_user = getattr(instance, "escalated_by", None)
+        escalated_to = instance.escalated_to
+
+        title = f"تصعيد الشكوى {instance.complaint.complaint_number}"
+        message = f"تم تصعيد الشكوى إلى {escalated_to.get_full_name() if escalated_to else 'غير محدد'}"
+        if instance.escalated_from:
+            message += f" من {instance.escalated_from.get_full_name()}"
+
+        create_notification(
+            title=title,
+            message=message,
+            notification_type="complaint_escalated",
+            related_object=instance.complaint,
+            created_by=changed_by_user,
+            priority="urgent",
+            extra_data={
+                "complaint_number": instance.complaint.complaint_number,
+                "customer_name": instance.complaint.customer.name,
+                "escalation_reason": instance.get_reason_display() if hasattr(instance, 'get_reason_display') else str(instance.reason),
+                "escalated_to": escalated_to.get_full_name() if escalated_to else None,
+                "escalated_from": instance.escalated_from.get_full_name() if instance.escalated_from else None,
+                "url": f"/complaints/{instance.complaint.pk}/",
+                "changed_by": (
+                    changed_by_user.get_full_name() or changed_by_user.username
+                    if changed_by_user
+                    else None
+                ),
+                "changed_by_username": (
+                    changed_by_user.username if changed_by_user else None
+                ),
+            },
+        )

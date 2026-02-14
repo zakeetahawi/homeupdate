@@ -276,12 +276,25 @@ class Complaint(models.Model):
                 and self.complaint_type.responsible_department
             ):
                 self.assigned_department = self.complaint_type.responsible_department
-            # جعل منشئ الشكوى هو المسؤول الافتراضي
+            # الأولوية: المسؤول الافتراضي من نوع الشكوى، ثم أحد الموظفين المسؤولين، ثم المنشئ كمرجع أخير
             if not self.assigned_to:
-                if self.created_by:
-                    self.assigned_to = self.created_by
-                elif self.complaint_type.default_assignee:
+                if self.complaint_type.default_assignee:
                     self.assigned_to = self.complaint_type.default_assignee
+                elif self.complaint_type.responsible_staff.exists():
+                    # اختيار الموظف الأقل شكاوى مسندة (توزيع عادل)
+                    from django.db.models import Count, Q
+                    least_busy = self.complaint_type.responsible_staff.annotate(
+                        active_complaints=Count(
+                            'assigned_complaints',
+                            filter=Q(assigned_complaints__status__in=['new', 'in_progress', 'escalated'])
+                        )
+                    ).order_by('active_complaints').first()
+                    if least_busy:
+                        self.assigned_to = least_busy
+                    elif self.created_by:
+                        self.assigned_to = self.created_by
+                elif self.created_by:
+                    self.assigned_to = self.created_by
             if not self.priority:
                 self.priority = self.complaint_type.default_priority
 
@@ -762,12 +775,6 @@ class ComplaintSLA(models.Model):
         on_delete=models.CASCADE,
         related_name="sla",
         verbose_name="نوع الشكوى",
-    )
-    response_time_hours = models.PositiveIntegerField(
-        default=4, verbose_name="وقت الاستجابة (ساعات)"
-    )
-    resolution_time_hours = models.PositiveIntegerField(
-        default=72, verbose_name="وقت الحل (ساعات)"
     )
     # أوقات الاستجابة والحل
     response_time_hours = models.PositiveIntegerField(

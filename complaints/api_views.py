@@ -767,33 +767,31 @@ def assigned_complaints_api(request):
 def escalated_complaints_api(request):
     """
     API endpoint للشكاوى المصعدة للمستخدم الحالي فقط
+    (محسّن بـ Subquery بدلاً من N+1 queries)
     """
     try:
-        # الحصول على الشكاوى المصعدة إلى المستخدم الحالي (آخر تصعيد فقط)
-        from django.db.models import Max
+        from django.db.models import Max, OuterRef, Subquery
 
         from .models import ComplaintEscalation
 
-        # الحصول على آخر تصعيد لكل شكوى
-        latest_escalations = (
-            ComplaintEscalation.objects.filter(complaint__status="escalated")
-            .values("complaint_id")
-            .annotate(latest_escalation_date=Max("escalated_at"))
+        # استعلام فرعي لإيجاد آخر تصعيد لكل شكوى مصعدة إلى المستخدم الحالي
+        latest_escalation_subquery = (
+            ComplaintEscalation.objects.filter(
+                complaint_id=OuterRef("pk"),
+            )
+            .order_by("-escalated_at")
+            .values("escalated_to_id")[:1]
         )
 
-        # الحصول على IDs الشكاوى التي آخر تصعيد لها هو للمستخدم الحالي
-        escalated_complaint_ids = []
-        for escalation_info in latest_escalations:
-            latest_escalation = ComplaintEscalation.objects.filter(
-                complaint_id=escalation_info["complaint_id"],
-                escalated_at=escalation_info["latest_escalation_date"],
-            ).first()
-
-            if latest_escalation and latest_escalation.escalated_to == request.user:
-                escalated_complaint_ids.append(escalation_info["complaint_id"])
-
+        # الحصول على الشكاوى التي آخر تصعيد لها هو للمستخدم الحالي مباشرة
         escalated_complaints = (
-            Complaint.objects.filter(id__in=escalated_complaint_ids, status="escalated")
+            Complaint.objects.filter(
+                status="escalated",
+            )
+            .annotate(
+                latest_escalated_to=Subquery(latest_escalation_subquery)
+            )
+            .filter(latest_escalated_to=request.user.id)
             .select_related("customer", "complaint_type", "assigned_to")
             .prefetch_related("escalations")
             .order_by("-created_at")[:10]
@@ -872,6 +870,24 @@ class ComplaintAssignmentUpdateView(View):
 
                 User = get_user_model()
                 new_assignee = get_object_or_404(User, pk=new_assignee_id)
+
+                # فحص صلاحيات المستخدم الجديد عبر ComplaintUserPermissions
+                from .models import ComplaintUserPermissions
+                try:
+                    perms = ComplaintUserPermissions.objects.get(user=new_assignee, is_active=True)
+                    if not perms.can_be_assigned_complaints:
+                        return JsonResponse(
+                            {"success": False, "error": f"المستخدم {new_assignee.get_full_name()} غير مصرح له باستقبال الشكاوى"},
+                            status=400,
+                        )
+                    if not perms.can_accept_new_complaint():
+                        return JsonResponse(
+                            {"success": False, "error": f"المستخدم {new_assignee.get_full_name()} وصل للحد الأقصى من الشكاوى المسندة ({perms.max_assigned_complaints})"},
+                            status=400,
+                        )
+                except ComplaintUserPermissions.DoesNotExist:
+                    pass  # إذا لم يكن لديه إعدادات، نسمح بالإسناد (التوافق مع النظام القديم)
+
                 complaint.assigned_to = new_assignee
             else:
                 complaint.assigned_to = None
@@ -911,7 +927,17 @@ class ComplaintAssignmentUpdateView(View):
     def has_permission(self, user, complaint):
         """
         Check if user has permission to update complaint assignment
+        - يفحص ComplaintUserPermissions أولاً، ثم المجموعات كمرجع
         """
+        # فحص صلاحيات مخصصة
+        from .models import ComplaintUserPermissions
+        try:
+            perms = ComplaintUserPermissions.objects.get(user=user, is_active=True)
+            if perms.can_assign_complaints:
+                return True
+        except ComplaintUserPermissions.DoesNotExist:
+            pass
+
         # مدير القسم يمكنه التحديث
         if (
             complaint.assigned_department
@@ -925,6 +951,10 @@ class ComplaintAssignmentUpdateView(View):
 
         # المدراء يمكنهم التحديث
         if user.groups.filter(name="Managers").exists():
+            return True
+
+        # المستخدم المسند إليه حالياً يمكنه إعادة الإسناد
+        if complaint.assigned_to == user:
             return True
 
         return False

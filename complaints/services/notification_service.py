@@ -391,12 +391,20 @@ class ComplaintNotificationService:
             if not recipient.email:
                 return
 
+            # بناء رابط الشكوى ديناميكياً
+            site_url = getattr(settings, 'SITE_URL', None)
+            if not site_url:
+                allowed_hosts = getattr(settings, 'ALLOWED_HOSTS', [])
+                host = next((h for h in allowed_hosts if h not in ('*', 'localhost', '127.0.0.1')), 'localhost:8000')
+                scheme = 'https' if not host.startswith('localhost') else 'http'
+                site_url = f"{scheme}://{host}"
+
             context = {
                 "recipient": recipient,
                 "complaint": complaint,
                 "title": title,
                 "message": message,
-                "complaint_url": f"http://localhost:8000{reverse('complaints:complaint_detail', kwargs={'pk': complaint.pk})}",
+                "complaint_url": f"{site_url}{reverse('complaints:complaint_detail', kwargs={'pk': complaint.pk})}",
             }
 
             html_message = render_to_string(

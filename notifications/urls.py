@@ -17,6 +17,7 @@ urlpatterns = [
     path("mark-all-read/", views.mark_all_notifications_read, name="mark_all_read"),
     path("ajax/count/", views.notification_count_ajax, name="ajax_count"),
     path("ajax/recent/", views.recent_notifications_ajax, name="ajax_recent"),
+    path("ajax/popup/", views.popup_notifications_api, name="ajax_popup"),
     # API endpoints
     path("", include(router.urls)),
 ]

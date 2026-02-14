@@ -280,6 +280,85 @@ def notification_count_ajax(request):
 
 
 @login_required
+def popup_notifications_api(request):
+    """
+    API endpoint للإشعارات المنبثقة - يعرض أحدث الإشعارات غير المقروءة
+    بنفس تصميم popup الشكاوى المسندة
+    """
+    try:
+        # الحصول على آخر 5 إشعارات غير مقروءة
+        unread_notifications = (
+            Notification.objects.for_user(request.user)
+            .filter(
+                visibility_records__user=request.user,
+                visibility_records__is_read=False,
+            )
+            .select_related("created_by", "content_type")
+            .order_by("-created_at")[:5]
+        )
+
+        notifications_data = []
+        for notification in unread_notifications:
+            icon_data = notification.get_icon_and_color()
+
+            # تحديد الأولوية كنص
+            priority_map = {
+                "urgent": "عاجلة",
+                "high": "عالية",
+                "normal": "عادية",
+                "low": "منخفضة",
+            }
+
+            # تحديد لون الأولوية
+            priority_color_map = {
+                "urgent": "danger",
+                "high": "danger",
+                "normal": "warning",
+                "low": "success",
+            }
+
+            # الحصول على اسم المستخدم المنشئ
+            created_by_name = None
+            if notification.created_by:
+                created_by_name = notification.created_by.get_full_name() or notification.created_by.username
+            elif notification.extra_data and notification.extra_data.get("changed_by"):
+                created_by_name = notification.extra_data["changed_by"]
+
+            notifications_data.append(
+                {
+                    "id": notification.pk,
+                    "title": notification.title,
+                    "message": notification.message[:150] + "..." if len(notification.message) > 150 else notification.message,
+                    "type": notification.notification_type,
+                    "type_display": notification.get_notification_type_display(),
+                    "priority": notification.priority,
+                    "priority_text": priority_map.get(notification.priority, "عادية"),
+                    "priority_color": priority_color_map.get(notification.priority, "secondary"),
+                    "icon_class": icon_data.get("icon", "fas fa-bell"),
+                    "icon_color": icon_data.get("color", "#6c757d"),
+                    "icon_bg": icon_data.get("bg", "#f8f9fa"),
+                    "created_at": notification.created_at.isoformat(),
+                    "created_by": created_by_name,
+                    "url": notification.get_absolute_url(),
+                }
+            )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "notifications": notifications_data,
+                "count": len(notifications_data),
+            }
+        )
+
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in popup_notifications_api: {str(e)}")
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@login_required
 def recent_notifications_ajax(request):
     """الحصول على آخر الإشعارات عبر AJAX"""
     limit = int(request.GET.get("limit", 10))

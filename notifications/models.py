@@ -46,6 +46,11 @@ class Notification(models.Model):
         ("inspection_status_changed", _("تغيير حالة معاينة")),
         ("manufacturing_status_changed", _("تغيير حالة أمر التصنيع")),
         ("complaint_created", _("شكوى جديدة")),
+        ("complaint_status_changed", _("تغيير حالة شكوى")),
+        ("complaint_assigned", _("إسناد شكوى")),
+        ("complaint_escalated", _("تصعيد شكوى")),
+        ("complaint_resolved", _("حل شكوى")),
+        ("complaint_overdue", _("تأخر شكوى")),
         # إشعارات التقطيع الجديدة
         ("cutting_order_created", _("أمر تقطيع جديد")),
         ("cutting_completed", _("اكتمال التقطيع")),
@@ -300,6 +305,37 @@ class Notification(models.Model):
                 "icon": "fas fa-hand-holding",
                 "color": "#17a2b8",
                 "bg": "#d1ecf1",
+            },
+            # إشعارات الشكاوى
+            "complaint_created": {
+                "icon": "fas fa-exclamation-triangle",
+                "color": "#ff9800",
+                "bg": "#fff3e0",
+            },
+            "complaint_status_changed": {
+                "icon": "fas fa-exchange-alt",
+                "color": "#ff5722",
+                "bg": "#fbe9e7",
+            },
+            "complaint_assigned": {
+                "icon": "fas fa-user-tag",
+                "color": "#e91e63",
+                "bg": "#fce4ec",
+            },
+            "complaint_escalated": {
+                "icon": "fas fa-fire",
+                "color": "#dc3545",
+                "bg": "#f8d7da",
+            },
+            "complaint_resolved": {
+                "icon": "fas fa-check-circle",
+                "color": "#28a745",
+                "bg": "#d4edda",
+            },
+            "complaint_overdue": {
+                "icon": "fas fa-clock",
+                "color": "#dc3545",
+                "bg": "#f8d7da",
             },
         }
 

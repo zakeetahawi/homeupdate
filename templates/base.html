@@ -1032,6 +1032,37 @@
         </div>
     </div>
 </div>
+<!-- General System Notifications Popup -->
+<div id="systemNotificationsPopup"
+     class="system-notifications-popup"
+     style="display: none">
+    <div class="popup-content">
+        <div class="popup-header system-popup-header">
+            <h5>
+                <i class="fas fa-bell text-white me-2"></i>إشعارات جديدة
+            </h5>
+            <div class="popup-controls">
+                <button class="btn btn-sm btn-outline-light me-2"
+                        onclick="snoozeSystemPopup()">
+                    <i class="fas fa-clock"></i> تأجيل
+                </button>
+                <button class="btn btn-sm btn-outline-light" onclick="hideSystemPopup()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="popup-body" id="systemNotificationsContent">
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
+            </div>
+        </div>
+        <div class="popup-footer text-center p-2 border-top">
+            <a href="/notifications/" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-list me-1"></i>عرض جميع الإشعارات
+            </a>
+        </div>
+    </div>
+</div>
 <!-- Main Content -->
 <main class="container-fluid mt-4 flex-grow" id="main-content">
     {% block content %}{% endblock %}
@@ -1826,6 +1857,119 @@
             }
         }
 
+        // ========== نظام الإشعارات المنبثقة العام ==========
+
+        function checkSystemNotifications() {
+            // التحقق من التأجيل
+            const snoozedUntil = localStorage.getItem('systemPopupSnoozed');
+            if (snoozedUntil && new Date() < new Date(snoozedUntil)) {
+                return;
+            }
+
+            // التحقق من عدم وجود popup شكاوى مفتوح (لتجنب التراكم)
+            const complaintsPopup = document.getElementById('assignedComplaintsPopup');
+            const escalatedPopup = document.getElementById('escalatedComplaintsPopup');
+            if ((complaintsPopup && complaintsPopup.style.display !== 'none') ||
+                (escalatedPopup && escalatedPopup.style.display !== 'none')) {
+                return;
+            }
+
+            fetch('/notifications/ajax/popup/?_=' + Date.now())
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.notifications && data.notifications.length > 0) {
+                        showSystemNotificationsPopup(data.notifications);
+                    }
+                })
+                .catch(err => {});
+        }
+
+        function showSystemNotificationsPopup(notifications) {
+            const popup = document.getElementById('systemNotificationsPopup');
+            const content = document.getElementById('systemNotificationsContent');
+
+            if (!popup || !content) return;
+
+            // تحديد لون الـ header حسب أعلى أولوية
+            const header = popup.querySelector('.system-popup-header');
+            const hasUrgent = notifications.some(n => n.priority === 'urgent' || n.priority === 'high');
+            if (hasUrgent) {
+                header.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
+            } else {
+                header.style.background = 'linear-gradient(135deg, #0d6efd, #0b5ed7)';
+            }
+
+            let html = '';
+            notifications.forEach(notification => {
+                const timeAgo = getTimeAgo(notification.created_at);
+                const priorityBorderColor = {
+                    'urgent': '#dc3545',
+                    'high': '#dc3545',
+                    'normal': '#ffc107',
+                    'low': '#28a745'
+                }[notification.priority] || '#6c757d';
+
+                html += `
+                    <div class="notification-popup-item" style="border-right: 4px solid ${priorityBorderColor};">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div class="d-flex align-items-center">
+                                <span class="notification-popup-icon" style="color: ${notification.icon_color}; background: ${notification.icon_bg};">
+                                    <i class="${notification.icon_class}"></i>
+                                </span>
+                                <div class="me-2">
+                                    <h6 class="mb-0 small fw-bold">
+                                        <a href="${notification.url}" class="text-decoration-none text-dark" onclick="markNotifAndGo(${notification.id}, '${notification.url}'); return false;">
+                                            ${notification.title}
+                                        </a>
+                                    </h6>
+                                </div>
+                            </div>
+                            <span class="badge bg-${notification.priority_color} badge-sm">${notification.priority_text}</span>
+                        </div>
+                        <p class="mb-1 small text-muted pe-3">${notification.message}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            ${notification.created_by ? `<small class="text-primary"><i class="fas fa-user-edit me-1"></i>${notification.created_by}</small>` : '<small></small>'}
+                            <small class="text-muted">${timeAgo}</small>
+                        </div>
+                    </div>
+                `;
+            });
+
+            content.innerHTML = html;
+            popup.style.display = 'block';
+        }
+
+        function hideSystemPopup() {
+            const popup = document.getElementById('systemNotificationsPopup');
+            if (popup) {
+                popup.style.display = 'none';
+            }
+        }
+
+        function snoozeSystemPopup() {
+            const hours = prompt('كم ساعة تريد تأجيل الإشعارات المنبثقة؟ (افتراضي: 1 ساعة)', '1');
+            if (hours && !isNaN(hours)) {
+                const snoozeUntil = new Date();
+                snoozeUntil.setHours(snoozeUntil.getHours() + parseInt(hours));
+                localStorage.setItem('systemPopupSnoozed', snoozeUntil.toISOString());
+                hideSystemPopup();
+                showNotificationMessage(`تم تأجيل الإشعارات المنبثقة لمدة ${hours} ساعة`, 'info');
+            }
+        }
+
+        function markNotifAndGo(notifId, url) {
+            // تحديد الإشعار كمقروء ثم الانتقال
+            fetch('/notifications/mark-read/' + notifId + '/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'Content-Type': 'application/json',
+                },
+            }).finally(() => {
+                window.location.href = url;
+            });
+        }
+
         // دالة تحديد إشعار من القائمة المنسدلة كمقروء
         function markDropdownNotificationAsRead(notificationId, targetUrl) {
             // البحث عن CSRF token
@@ -2198,9 +2342,10 @@
                 });
             }
 
-            // فحص الشكاوى المسندة والمصعدة عند تحميل الصفحة
+            // فحص الشكاوى المسندة والمصعدة والإشعارات العامة عند تحميل الصفحة
             setTimeout(checkAssignedComplaints, 2000); // تأخير 2 ثانية
             setTimeout(checkEscalatedComplaints, 3000); // تأخير 3 ثواني للشكاوى المصعدة
+            setTimeout(checkSystemNotifications, 4000); // تأخير 4 ثواني للإشعارات العامة
 
             // إضافة زر لمسح التأجيل (للاختبار)
 
@@ -2234,6 +2379,7 @@
                 updateRecentNotifications();
                 checkAssignedComplaints(); // فحص الشكاوى المسندة دورياً
                 checkEscalatedComplaints(); // فحص الشكاوى المصعدة دورياً
+                checkSystemNotifications(); // فحص الإشعارات العامة دورياً
             }, 60000);
         });
     </script>
@@ -2242,8 +2388,101 @@
 {% csrf_token %}
 <!-- معالج CSRF التلقائي -->
 <script src="{% static 'js/csrf-handler.js' %}"></script>
-<!-- Assigned Complaints Popup CSS -->
+<!-- System & Complaints Popup CSS -->
 <style>
+        /* ===== General System Notifications Popup ===== */
+        .system-notifications-popup {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 420px;
+            max-width: 90vw;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+            z-index: 9998;
+            border: 2px solid #0d6efd;
+            animation: slideInUp 0.4s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .system-popup-header {
+            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .system-popup-header h5 {
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .notification-popup-item {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .notification-popup-item:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .notification-popup-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .notification-popup-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .popup-footer {
+            background: #f8f9fa;
+            border-radius: 0 0 10px 10px;
+        }
+
+        .badge-sm {
+            font-size: 0.65rem;
+            padding: 3px 6px;
+        }
+
+        @media (max-width: 768px) {
+            .system-notifications-popup {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                width: auto;
+            }
+        }
+
+        /* ===== Assigned Complaints Popup ===== */
         .assigned-complaints-popup {
             position: fixed;
             top: 20px;

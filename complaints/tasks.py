@@ -225,3 +225,86 @@ def system_health_check(self):
     except Exception as e:
         logger.error(f"خطأ في فحص صحة النظام: {str(e)}")
         return {"success": False, "error": str(e), "message": "فشل في فحص صحة النظام"}
+
+
+@shared_task(
+    bind=True, max_retries=2, default_retry_delay=120, autoretry_for=(Exception,)
+)
+def check_complaint_deadlines_task(self):
+    """
+    مهمة Celery لفحص المواعيد النهائية للشكاوى وإرسال إشعارات
+    يتم تشغيلها كل ساعة عبر Celery Beat
+    """
+    try:
+        from django.db.models import Q
+        from django.utils import timezone
+
+        from complaints.models import Complaint
+        from complaints.services.notification_service import ComplaintNotificationService
+
+        notification_svc = ComplaintNotificationService()
+        results = {"approaching_deadline": 0, "overdue": 0, "escalated": 0}
+
+        # 1. الشكاوى التي يقترب موعدها النهائي (خلال 24 ساعة)
+        deadline_approaching = Complaint.objects.filter(
+            Q(status__in=["new", "in_progress"])
+            & Q(deadline__lte=timezone.now() + timedelta(hours=24))
+            & Q(deadline__gt=timezone.now())
+        ).select_related("assigned_to", "customer", "complaint_type")
+
+        for complaint in deadline_approaching:
+            notification_svc.notify_deadline_approaching(complaint)
+            results["approaching_deadline"] += 1
+
+        # 2. الشكاوى المتأخرة - تحديث حالتها
+        overdue_complaints = Complaint.objects.filter(
+            status__in=["new", "in_progress"],
+            deadline__lt=timezone.now(),
+        ).select_related("assigned_to", "customer", "complaint_type", "assigned_department")
+
+        for complaint in overdue_complaints:
+            if complaint.status != "overdue":
+                complaint.status = "overdue"
+                complaint.save(update_fields=["status", "updated_at"])
+                results["overdue"] += 1
+
+            # إرسال تنبيهات للمستخدمين المعنيين
+            notification_svc.notify_overdue(complaint)
+            notification_svc.notify_overdue_to_escalation_users(complaint)
+
+        # 3. تنظيف الإشعارات القديمة (أكثر من 30 يوم)
+        notification_svc.cleanup_old_notifications(days=30)
+
+        logger.info(
+            f"فحص المواعيد النهائية: {results['approaching_deadline']} اقتراب موعد، "
+            f"{results['overdue']} متأخرة"
+        )
+
+        return {
+            "success": True,
+            "results": results,
+            "message": f"تم فحص المواعيد النهائية بنجاح",
+        }
+
+    except Exception as e:
+        logger.error(f"خطأ في فحص المواعيد النهائية: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+
+@shared_task(bind=True, max_retries=1, autoretry_for=(Exception,))
+def daily_complaints_report_task(self):
+    """
+    مهمة يومية لإرسال تقرير الشكاوى المتأخرة
+    """
+    try:
+        from complaints.services.notification_service import ComplaintNotificationService
+
+        notification_svc = ComplaintNotificationService()
+        notification_svc.notify_overdue_complaints_daily()
+
+        logger.info("تم إرسال تقرير الشكاوى اليومي")
+        return {"success": True, "message": "تم إرسال التقرير اليومي"}
+
+    except Exception as e:
+        logger.error(f"خطأ في التقرير اليومي: {str(e)}")
+        return {"success": False, "error": str(e)}

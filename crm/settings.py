@@ -1386,6 +1386,24 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BROKER_CONNECTION_RETRY = True
 CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
 
+# ===== Celery Beat Schedule - مهام دورية =====
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    # فحص المواعيد النهائية للشكاوى كل ساعة
+    "check-complaint-deadlines": {
+        "task": "complaints.tasks.check_complaint_deadlines_task",
+        "schedule": crontab(minute=0),  # كل ساعة عند الدقيقة 0
+        "options": {"queue": "default"},
+    },
+    # تقرير الشكاوى المتأخرة يومياً الساعة 8 صباحاً
+    "daily-complaints-report": {
+        "task": "complaints.tasks.daily_complaints_report_task",
+        "schedule": crontab(hour=8, minute=0),
+        "options": {"queue": "default"},
+    },
+}
+
 # إعدادات الذاكرة
 CELERY_WORKER_MAX_MEMORY_PER_CHILD = 200000  # 200MB
 
