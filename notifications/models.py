@@ -148,7 +148,7 @@ class Notification(models.Model):
 
             # بناء رابط الطلب من رقم الطلب
             if "order_number" in self.extra_data:
-                return f"/orders/{self.extra_data['order_number']}/"
+                return f"/orders/order/{self.extra_data['order_number']}/"
 
             # بناء رابط من order_id
             if "order_id" in self.extra_data:

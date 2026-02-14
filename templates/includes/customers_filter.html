@@ -1,9 +1,9 @@
 {% extends 'includes/compact_filter.html' %}
 {% block additional_filters %}
-    <div class="filter-group">
-        <label class="filter-label">التصنيف</label>
-        <select name="category" class="filter-select">
-            <option value="">كل التصنيفات</option>
+    <div class="cf-field">
+        <label class="cf-label">التصنيف</label>
+        <select name="category" class="cf-select">
+            <option value="">الكل</option>
             {% for category in categories %}
                 <option value="{{ category.id }}"
                         {% if form.category.value == category.id|stringformat:'s' %}selected{% endif %}>
@@ -12,10 +12,10 @@
             {% endfor %}
         </select>
     </div>
-    <div class="filter-group">
-        <label class="filter-label">الفرع</label>
-        <select name="branch" class="filter-select">
-            <option value="">كل الفروع</option>
+    <div class="cf-field">
+        <label class="cf-label">الفرع</label>
+        <select name="branch" class="cf-select">
+            <option value="">الكل</option>
             {% for branch in branches %}
                 <option value="{{ branch.id }}"
                         {% if form.branch.value == branch.id|stringformat:'s' %}selected{% endif %}>
@@ -24,10 +24,10 @@
             {% endfor %}
         </select>
     </div>
-    <div class="filter-group">
-        <label class="filter-label">نوع العميل</label>
-        <select name="customer_type" class="filter-select">
-            <option value="">كل الأنواع</option>
+    <div class="cf-field">
+        <label class="cf-label">نوع العميل</label>
+        <select name="customer_type" class="cf-select">
+            <option value="">الكل</option>
             {% for value, label in form.customer_type.field.choices %}
                 {% if value %}
                     <option value="{{ value }}"
@@ -36,40 +36,32 @@
             {% endfor %}
         </select>
     </div>
-    <div class="filter-group">
-        <label class="filter-label">الحالة</label>
-        <select name="status" class="filter-select">
-            <option value="">كل الحالات</option>
+    <div class="cf-field">
+        <label class="cf-label">الحالة</label>
+        <select name="status" class="cf-select">
+            <option value="">الكل</option>
             <option value="active"
                     {% if form.status.value == 'active' %}selected{% endif %}>نشط</option>
             <option value="inactive"
                     {% if form.status.value == 'inactive' %}selected{% endif %}>غير نشط</option>
         </select>
     </div>
-    <div class="filter-group">
-        <label class="filter-label">من تاريخ</label>
-        <input type="date"
-               name="date_from"
-               class="filter-input"
-               value="{{ form.date_from.value|default:'' }}">
+    <div class="cf-field">
+        <label class="cf-label">من تاريخ</label>
+        <input type="date" name="date_from" class="cf-input" value="{{ form.date_from.value|default:'' }}">
     </div>
-    <div class="filter-group">
-        <label class="filter-label">إلى تاريخ</label>
-        <input type="date"
-               name="date_to"
-               class="filter-input"
-               value="{{ form.date_to.value|default:'' }}">
+    <div class="cf-field">
+        <label class="cf-label">إلى تاريخ</label>
+        <input type="date" name="date_to" class="cf-input" value="{{ form.date_to.value|default:'' }}">
     </div>
 {% endblock %}
 {% block active_filter_tags %}
     {% if form.category.value %}
         {% for category in categories %}
             {% if category.id|stringformat:'s' == form.category.value %}
-                <span class="filter-tag">
-                    تصنيف: {{ category.name }}
-                    <button type="button"
-                            onclick="removeFilter('category')"
-                            class="remove-filter">×</button>
+                <span class="cf-chip cf-chip-type">
+                    <i class="fas fa-folder me-1"></i>{{ category.name }}
+                    <button type="button" onclick="removeFilter('category')" class="cf-chip-x">&times;</button>
                 </span>
             {% endif %}
         {% endfor %}
@@ -77,47 +69,39 @@
     {% if form.branch.value %}
         {% for branch in branches %}
             {% if branch.id|stringformat:'s' == form.branch.value %}
-                <span class="filter-tag">
-                    فرع: {{ branch.name }}
-                    <button type="button" onclick="removeFilter('branch')" class="remove-filter">×</button>
+                <span class="cf-chip cf-chip-branch">
+                    <i class="fas fa-code-branch me-1"></i>{{ branch.name }}
+                    <button type="button" onclick="removeFilter('branch')" class="cf-chip-x">&times;</button>
                 </span>
             {% endif %}
         {% endfor %}
     {% endif %}
     {% if form.customer_type.value %}
-        <span class="filter-tag">
-            نوع:
+        <span class="cf-chip cf-chip-type">
+            <i class="fas fa-tag me-1"></i>
             {% for value, label in form.customer_type.field.choices %}
                 {% if value == form.customer_type.value %}{{ label }}{% endif %}
             {% endfor %}
-            <button type="button"
-                    onclick="removeFilter('customer_type')"
-                    class="remove-filter">×</button>
+            <button type="button" onclick="removeFilter('customer_type')" class="cf-chip-x">&times;</button>
         </span>
     {% endif %}
     {% if form.status.value %}
-        <span class="filter-tag">
-            حالة:
-            {% if form.status.value == 'active' %}
-                نشط
-            {% else %}
-                غير نشط
-            {% endif %}
-            <button type="button" onclick="removeFilter('status')" class="remove-filter">×</button>
+        <span class="cf-chip cf-chip-status">
+            <i class="fas fa-circle me-1" style="font-size:0.45rem"></i>
+            {% if form.status.value == 'active' %}نشط{% else %}غير نشط{% endif %}
+            <button type="button" onclick="removeFilter('status')" class="cf-chip-x">&times;</button>
         </span>
     {% endif %}
     {% if form.date_from.value %}
-        <span class="filter-tag">
-            من: {{ form.date_from.value }}
-            <button type="button"
-                    onclick="removeFilter('date_from')"
-                    class="remove-filter">×</button>
+        <span class="cf-chip cf-chip-date">
+            <i class="fas fa-calendar me-1"></i>من: {{ form.date_from.value }}
+            <button type="button" onclick="removeFilter('date_from')" class="cf-chip-x">&times;</button>
         </span>
     {% endif %}
     {% if form.date_to.value %}
-        <span class="filter-tag">
-            إلى: {{ form.date_to.value }}
-            <button type="button" onclick="removeFilter('date_to')" class="remove-filter">×</button>
+        <span class="cf-chip cf-chip-date">
+            <i class="fas fa-calendar me-1"></i>إلى: {{ form.date_to.value }}
+            <button type="button" onclick="removeFilter('date_to')" class="cf-chip-x">&times;</button>
         </span>
     {% endif %}
 {% endblock %}

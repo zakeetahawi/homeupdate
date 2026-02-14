@@ -1,9 +1,9 @@
 {% extends 'includes/compact_filter.html' %}
 {% block additional_filters %}
-    <div class="filter-group">
-        <label class="filter-label">الحالة</label>
-        <select name="status" class="filter-select">
-            <option value="">كل الحالات</option>
+    <div class="cf-field">
+        <label class="cf-label">الحالة</label>
+        <select name="status" class="cf-select">
+            <option value="">الكل</option>
             <option value="needs_scheduling"
                     {% if status_filter == 'needs_scheduling' %}selected{% endif %}>يحتاج جدولة</option>
             <option value="scheduled"
@@ -22,10 +22,10 @@
                     {% if status_filter == 'modification_completed' %}selected{% endif %}>تم التعديل</option>
         </select>
     </div>
-    <div class="filter-group">
-        <label class="filter-label">الفرع</label>
-        <select name="branch" class="filter-select">
-            <option value="">كل الفروع</option>
+    <div class="cf-field">
+        <label class="cf-label">الفرع</label>
+        <select name="branch" class="cf-select">
+            <option value="">الكل</option>
             {% for branch in branches %}
                 <option value="{{ branch.id }}"
                         {% if branch_filter == branch.id|stringformat:'s' %}selected{% endif %}>
@@ -34,60 +34,47 @@
             {% endfor %}
         </select>
     </div>
-    <div class="filter-group">
-        <label class="filter-label">الفريق</label>
-        <select name="team" class="filter-select">
-            <option value="">كل الفرق</option>
+    <div class="cf-field">
+        <label class="cf-label">الفريق</label>
+        <select name="team" class="cf-select">
+            <option value="">الكل</option>
             {% for team in teams %}
                 <option value="{{ team.id }}"
                         {% if team_filter == team.id|stringformat:'s' %}selected{% endif %}>{{ team.name }}</option>
             {% endfor %}
         </select>
     </div>
-    <div class="filter-group">
-        <label class="filter-label">من تاريخ</label>
-        <input type="date"
-               name="date_from"
-               class="filter-input"
-               value="{{ date_from }}">
+    <div class="cf-field">
+        <label class="cf-label">من تاريخ</label>
+        <input type="date" name="date_from" class="cf-input" value="{{ date_from }}">
     </div>
-    <div class="filter-group">
-        <label class="filter-label">إلى تاريخ</label>
-        <input type="date" name="date_to" class="filter-input" value="{{ date_to }}">
+    <div class="cf-field">
+        <label class="cf-label">إلى تاريخ</label>
+        <input type="date" name="date_to" class="cf-input" value="{{ date_to }}">
     </div>
 {% endblock %}
 {% block active_filter_tags %}
     {% if status_filter %}
-        <span class="filter-tag">
-            حالة:
-            {% if status_filter == 'needs_scheduling' %}
-                يحتاج جدولة
-            {% elif status_filter == 'scheduled' %}
-                مجدول
-            {% elif status_filter == 'in_installation' %}
-                قيد التركيب
-            {% elif status_filter == 'completed' %}
-                مكتمل
-            {% elif status_filter == 'cancelled' %}
-                ملغي
-            {% elif status_filter == 'modification_required' %}
-                يحتاج تعديل
-            {% elif status_filter == 'modification_in_progress' %}
-                قيد التعديل
-            {% elif status_filter == 'modification_completed' %}
-                تم التعديل
-            {% else %}
-                {{ status_filter }}
-            {% endif %}
-            <button type="button" onclick="removeFilter('status')" class="remove-filter">×</button>
+        <span class="cf-chip cf-chip-status">
+            <i class="fas fa-circle me-1" style="font-size:0.45rem"></i>
+            {% if status_filter == 'needs_scheduling' %}يحتاج جدولة
+            {% elif status_filter == 'scheduled' %}مجدول
+            {% elif status_filter == 'in_installation' %}قيد التركيب
+            {% elif status_filter == 'completed' %}مكتمل
+            {% elif status_filter == 'cancelled' %}ملغي
+            {% elif status_filter == 'modification_required' %}يحتاج تعديل
+            {% elif status_filter == 'modification_in_progress' %}قيد التعديل
+            {% elif status_filter == 'modification_completed' %}تم التعديل
+            {% else %}{{ status_filter }}{% endif %}
+            <button type="button" onclick="removeFilter('status')" class="cf-chip-x">&times;</button>
         </span>
     {% endif %}
     {% if team_filter %}
         {% for team in teams %}
             {% if team.id|stringformat:'s' == team_filter %}
-                <span class="filter-tag">
-                    فريق: {{ team.name }}
-                    <button type="button" onclick="removeFilter('team')" class="remove-filter">×</button>
+                <span class="cf-chip cf-chip-person">
+                    <i class="fas fa-users me-1"></i>{{ team.name }}
+                    <button type="button" onclick="removeFilter('team')" class="cf-chip-x">&times;</button>
                 </span>
             {% endif %}
         {% endfor %}
@@ -95,25 +82,23 @@
     {% if area_filter %}
         {% for area in areas %}
             {% if area.id|stringformat:'s' == area_filter %}
-                <span class="filter-tag">
-                    منطقة: {{ area.name }}
-                    <button type="button" onclick="removeFilter('area')" class="remove-filter">×</button>
+                <span class="cf-chip cf-chip-branch">
+                    <i class="fas fa-map-marker-alt me-1"></i>{{ area.name }}
+                    <button type="button" onclick="removeFilter('area')" class="cf-chip-x">&times;</button>
                 </span>
             {% endif %}
         {% endfor %}
     {% endif %}
     {% if date_from %}
-        <span class="filter-tag">
-            من: {{ date_from }}
-            <button type="button"
-                    onclick="removeFilter('date_from')"
-                    class="remove-filter">×</button>
+        <span class="cf-chip cf-chip-date">
+            <i class="fas fa-calendar me-1"></i>من: {{ date_from }}
+            <button type="button" onclick="removeFilter('date_from')" class="cf-chip-x">&times;</button>
         </span>
     {% endif %}
     {% if date_to %}
-        <span class="filter-tag">
-            إلى: {{ date_to }}
-            <button type="button" onclick="removeFilter('date_to')" class="remove-filter">×</button>
+        <span class="cf-chip cf-chip-date">
+            <i class="fas fa-calendar me-1"></i>إلى: {{ date_to }}
+            <button type="button" onclick="removeFilter('date_to')" class="cf-chip-x">&times;</button>
         </span>
     {% endif %}
 {% endblock %}

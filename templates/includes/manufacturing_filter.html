@@ -1,9 +1,9 @@
 {% extends 'includes/compact_filter.html' %}
 {% block additional_filters %}
-    <div class="filter-group">
-        <label class="filter-label">حالة التصنيع</label>
-        <select name="status" class="filter-select">
-            <option value="">كل الحالات</option>
+    <div class="cf-field">
+        <label class="cf-label">حالة التصنيع</label>
+        <select name="status" class="cf-select">
+            <option value="">الكل</option>
             <option value="pending"
                     {% if status_filter == 'pending' %}selected{% endif %}>قيد الانتظار</option>
             <option value="in_progress"
@@ -16,10 +16,10 @@
                     {% if status_filter == 'cancelled' %}selected{% endif %}>ملغي</option>
         </select>
     </div>
-    <div class="filter-group">
-        <label class="filter-label">خط الإنتاج</label>
-        <select name="production_line" class="filter-select">
-            <option value="">كل الخطوط</option>
+    <div class="cf-field">
+        <label class="cf-label">خط الإنتاج</label>
+        <select name="production_line" class="cf-select">
+            <option value="">الكل</option>
             {% for line in production_lines %}
                 <option value="{{ line.id }}"
                         {% if production_line_filter == line.id|stringformat:'s' %}selected{% endif %}>
@@ -28,10 +28,10 @@
             {% endfor %}
         </select>
     </div>
-    <div class="filter-group">
-        <label class="filter-label">الأولوية</label>
-        <select name="priority" class="filter-select">
-            <option value="">كل الأولويات</option>
+    <div class="cf-field">
+        <label class="cf-label">الأولوية</label>
+        <select name="priority" class="cf-select">
+            <option value="">الكل</option>
             <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>منخفضة</option>
             <option value="normal"
                     {% if priority_filter == 'normal' %}selected{% endif %}>عادية</option>
@@ -40,81 +40,59 @@
                     {% if priority_filter == 'urgent' %}selected{% endif %}>عاجلة</option>
         </select>
     </div>
-    <div class="filter-group">
-        <label class="filter-label">من تاريخ</label>
-        <input type="date"
-               name="date_from"
-               class="filter-input"
-               value="{{ date_from }}">
+    <div class="cf-field">
+        <label class="cf-label">من تاريخ</label>
+        <input type="date" name="date_from" class="cf-input" value="{{ date_from }}">
     </div>
-    <div class="filter-group">
-        <label class="filter-label">إلى تاريخ</label>
-        <input type="date" name="date_to" class="filter-input" value="{{ date_to }}">
+    <div class="cf-field">
+        <label class="cf-label">إلى تاريخ</label>
+        <input type="date" name="date_to" class="cf-input" value="{{ date_to }}">
     </div>
 {% endblock %}
 {% block active_filter_tags %}
     {% if status_filter %}
-        <span class="filter-tag">
-            حالة:
-            {% if status_filter == 'pending' %}
-                قيد الانتظار
-            {% elif status_filter == 'in_progress' %}
-                قيد التصنيع
-            {% elif status_filter == 'completed' %}
-                مكتمل
-            {% elif status_filter == 'delivered' %}
-                تم التسليم
-            {% elif status_filter == 'cancelled' %}
-                ملغي
-            {% else %}
-                {{ status_filter }}
-            {% endif %}
-            <button type="button" onclick="removeFilter('status')" class="remove-filter">×</button>
+        <span class="cf-chip cf-chip-status">
+            <i class="fas fa-circle me-1" style="font-size:0.45rem"></i>
+            {% if status_filter == 'pending' %}قيد الانتظار
+            {% elif status_filter == 'in_progress' %}قيد التصنيع
+            {% elif status_filter == 'completed' %}مكتمل
+            {% elif status_filter == 'delivered' %}تم التسليم
+            {% elif status_filter == 'cancelled' %}ملغي
+            {% else %}{{ status_filter }}{% endif %}
+            <button type="button" onclick="removeFilter('status')" class="cf-chip-x">&times;</button>
         </span>
     {% endif %}
     {% if production_line_filter %}
         {% for line in production_lines %}
             {% if line.id|stringformat:'s' == production_line_filter %}
-                <span class="filter-tag">
-                    خط إنتاج: {{ line.name }}
-                    <button type="button"
-                            onclick="removeFilter('production_line')"
-                            class="remove-filter">×</button>
+                <span class="cf-chip cf-chip-branch">
+                    <i class="fas fa-industry me-1"></i>{{ line.name }}
+                    <button type="button" onclick="removeFilter('production_line')" class="cf-chip-x">&times;</button>
                 </span>
             {% endif %}
         {% endfor %}
     {% endif %}
     {% if priority_filter %}
-        <span class="filter-tag">
-            أولوية:
-            {% if priority_filter == 'low' %}
-                منخفضة
-            {% elif priority_filter == 'normal' %}
-                عادية
-            {% elif priority_filter == 'high' %}
-                عالية
-            {% elif priority_filter == 'urgent' %}
-                عاجلة
-            {% else %}
-                {{ priority_filter }}
-            {% endif %}
-            <button type="button"
-                    onclick="removeFilter('priority')"
-                    class="remove-filter">×</button>
+        <span class="cf-chip cf-chip-vip">
+            <i class="fas fa-flag me-1"></i>
+            {% if priority_filter == 'low' %}منخفضة
+            {% elif priority_filter == 'normal' %}عادية
+            {% elif priority_filter == 'high' %}عالية
+            {% elif priority_filter == 'urgent' %}عاجلة
+            {% else %}{{ priority_filter }}{% endif %}
+            <button type="button" onclick="removeFilter('priority')" class="cf-chip-x">&times;</button>
         </span>
     {% endif %}
     {% if date_from %}
-        <span class="filter-tag">
-            من: {{ date_from }}
-            <button type="button"
-                    onclick="removeFilter('date_from')"
-                    class="remove-filter">×</button>
+        <span class="cf-chip cf-chip-date">
+            <i class="fas fa-calendar me-1"></i>من: {{ date_from }}
+            <button type="button" onclick="removeFilter('date_from')" class="cf-chip-x">&times;</button>
         </span>
     {% endif %}
     {% if date_to %}
-        <span class="filter-tag">
-            إلى: {{ date_to }}
-            <button type="button" onclick="removeFilter('date_to')" class="remove-filter">×</button>
+        <span class="cf-chip cf-chip-date">
+            <i class="fas fa-calendar me-1"></i>إلى: {{ date_to }}
+            <button type="button" onclick="removeFilter('date_to')" class="cf-chip-x">&times;</button>
         </span>
     {% endif %}
 {% endblock %}

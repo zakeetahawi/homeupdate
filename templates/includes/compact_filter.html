@@ -1,46 +1,71 @@
 {% load static %}
 <!-- Compact Filter Component -->
-<div class="compact-filter-component">
-    <div class="filter-toggle-header" onclick="toggleFilters()">
-        <div class="filter-title">
-            <i class="fas fa-filter me-2"></i>
-            <span>فلاتر البحث</span>
-            {% if has_active_filters %}<span class="active-filters-count">{{ active_filters_count }}</span>{% endif %}
+<div class="cf-component">
+    <div class="cf-header" onclick="toggleFilters()">
+        <div class="cf-header-right">
+            <div class="cf-icon-wrap">
+                <i class="fas fa-sliders-h"></i>
+            </div>
+            <span class="cf-header-text">فلاتر البحث</span>
+            {% if has_active_filters %}<span class="cf-badge">{{ active_filters_count }}</span>{% endif %}
         </div>
-        <div class="filter-actions">
+        <div class="cf-header-left">
             {% if has_active_filters %}
-                <button type="button"
-                        class="btn btn-sm btn-outline-danger me-2"
-                        onclick="clearAllFilters(event)">
-                    <i class="fas fa-times me-1"></i>
-                    مسح الكل
+                <button type="button" class="cf-clear-btn" onclick="clearAllFilters(event)">
+                    <i class="fas fa-eraser me-1"></i>مسح
                 </button>
             {% endif %}
-            <i class="fas fa-chevron-down toggle-icon"></i>
+            <i class="fas fa-chevron-down cf-toggle-arrow" id="cfToggleArrow"></i>
         </div>
     </div>
-    <div class="filter-content"
-         id="filterContent"
+
+    <!-- الفلاتر النشطة - تظهر دائماً فوق المحتوى -->
+    {% if has_active_filters %}
+    <div class="cf-active-bar">
+        {% if selected_year %}
+            <span class="cf-chip"><i class="fas fa-calendar-alt me-1"></i>{{ selected_year }}<button type="button" onclick="removeFilter('year')" class="cf-chip-x">&times;</button></span>
+        {% endif %}
+        {% if selected_month %}
+            <span class="cf-chip"><i class="fas fa-calendar-day me-1"></i>شهر {{ selected_month }}<button type="button" onclick="removeFilter('month')" class="cf-chip-x">&times;</button></span>
+        {% endif %}
+        {% if search_query %}
+            <span class="cf-chip cf-chip-search"><i class="fas fa-search me-1"></i>"{{ search_query }}"<button type="button" onclick="removeFilter('search')" class="cf-chip-x">&times;</button></span>
+        {% endif %}
+        {% block active_filter_tags %}{% endblock %}
+    </div>
+    {% endif %}
+
+    <div class="cf-body" id="filterContent"
          style="display: {% if has_active_filters %}block{% else %}none{% endif %}">
-        <form method="get" id="filterForm" class="compact-filter-form">
-            <!-- Monthly Filter Row -->
-            <div class="filter-row">
-                <div class="filter-group">
-                    <label class="filter-label">السنة</label>
-                    <select name="year" class="filter-select">
-                        <option value="">كل السنوات</option>
+        <form method="get" id="filterForm" class="cf-form">
+            <!-- كل الحقول في صف واحد -->
+            <div class="cf-filters-grid">
+                <div class="cf-field cf-field-search">
+                    <label class="cf-label">بحث</label>
+                    <div class="cf-search-wrap">
+                        <i class="fas fa-search cf-search-icon"></i>
+                        <input type="text"
+                               name="search"
+                               class="cf-search-input"
+                               placeholder="رقم الطلب، العميل..."
+                               value="{{ search_query }}"
+                               autocomplete="off"
+                               dir="auto">
+                    </div>
+                </div>
+                <div class="cf-field">
+                    <label class="cf-label">السنة</label>
+                    <select name="year" class="cf-select">
+                        <option value="">الكل</option>
                         {% for year in available_years %}
-                            <option value="{{ year }}"
-                                    {% if selected_year == year|stringformat:'s' %}selected{% endif %}>
-                                {{ year }}
-                            </option>
+                            <option value="{{ year }}" {% if selected_year == year|stringformat:'s' %}selected{% endif %}>{{ year }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="filter-group">
-                    <label class="filter-label">الشهر</label>
-                    <select name="month" class="filter-select">
-                        <option value="">كل الشهور</option>
+                <div class="cf-field">
+                    <label class="cf-label">الشهر</label>
+                    <select name="month" class="cf-select">
+                        <option value="">الكل</option>
                         <option value="1" {% if selected_month == '1' %}selected{% endif %}>يناير</option>
                         <option value="2" {% if selected_month == '2' %}selected{% endif %}>فبراير</option>
                         <option value="3" {% if selected_month == '3' %}selected{% endif %}>مارس</option>
@@ -55,316 +80,305 @@
                         <option value="12" {% if selected_month == '12' %}selected{% endif %}>ديسمبر</option>
                     </select>
                 </div>
-                <div class="filter-group search-group">
-                    <label class="filter-label">البحث</label>
-                    <input type="text"
-                           name="search"
-                           class="filter-input"
-                           placeholder="البحث في جميع الحقول..."
-                           value="{{ search_query }}"
-                           title="البحث في: رقم الطلب، العميل، الهاتف، العنوان، المكان، البائع، رقم العقد، رقم الفاتورة">
+
+                {% block additional_filters %}{% endblock %}
+
+                <div class="cf-field">
+                    <label class="cf-label">نتائج/صفحة</label>
+                    <select name="page_size" class="cf-select">
+                        <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
+                        <option value="25" {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>25</option>
+                        <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
+                        <option value="100" {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
+                    </select>
                 </div>
-                <div class="filter-group">
-                    <button type="submit" class="search-btn-main">
-                        <i class="fas fa-search me-1"></i>
-                        بحث
+                <div class="cf-field cf-field-submit">
+                    <label class="cf-label">&nbsp;</label>
+                    <button type="submit" class="cf-search-btn">
+                        <i class="fas fa-search me-1"></i>بحث
                     </button>
                 </div>
             </div>
-            <!-- Additional Filters Row -->
-            <div class="filter-row">
-                {% block additional_filters %}<!-- يتم إضافة فلاتر إضافية هنا حسب الصفحة -->{% endblock %}
-                <div class="filter-group">
-                    <label class="filter-label">عدد النتائج</label>
-                    <select name="page_size" class="filter-select">
-                        <option value="10" {% if request.GET.page_size == '10' %}selected{% endif %}>10</option>
-                        <option value="25"
-                                {% if request.GET.page_size == '25' or not request.GET.page_size %}selected{% endif %}>
-                            25
-                        </option>
-                        <option value="50" {% if request.GET.page_size == '50' %}selected{% endif %}>50</option>
-                        <option value="100"
-                                {% if request.GET.page_size == '100' %}selected{% endif %}>100</option>
-                    </select>
-                </div>
-            </div>
-            <!-- Active Filters Display -->
-            {% if has_active_filters %}
-                <div class="active-filters-display">
-                    <span class="active-filters-label">الفلاتر النشطة:</span>
-                    {% if selected_year %}
-                        <span class="filter-tag">
-                            سنة {{ selected_year }}
-                            <button type="button" onclick="removeFilter('year')" class="remove-filter">×</button>
-                        </span>
-                    {% endif %}
-                    {% if selected_month %}
-                        <span class="filter-tag">
-                            شهر {{ selected_month }}
-                            <button type="button" onclick="removeFilter('month')" class="remove-filter">×</button>
-                        </span>
-                    {% endif %}
-                    {% if search_query %}
-                        <span class="filter-tag">
-                            بحث: "{{ search_query }}"
-                            <button type="button" onclick="removeFilter('search')" class="remove-filter">×</button>
-                        </span>
-                    {% endif %}
-                    {% block active_filter_tags %}<!-- يتم إضافة تاجات الفلاتر النشطة هنا -->{% endblock %}
-                </div>
-            {% endif %}
         </form>
     </div>
 </div>
+
 <style>
-.compact-filter-component {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
+/* ========== Compact Filter — Theme-Aware ========== */
+.cf-component {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #DED5CE);
+    border-radius: var(--radius-large, 12px);
     margin-bottom: 1rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    overflow: hidden;
 }
 
-.filter-toggle-header {
-    padding: 0.75rem 1rem;
+/* ---- Header ---- */
+.cf-header {
+    padding: 0.6rem 0.85rem;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
     user-select: none;
-    transition: background-color 0.2s ease;
+    background: var(--surface, #F8F8F8);
+    transition: background 0.15s;
 }
-
-.filter-toggle-header:hover {
-    background-color: rgba(0,0,0,0.02);
+.cf-header:hover {
+    background: rgba(139,115,90,0.06);
 }
-
-.filter-title {
+.cf-header-right,
+.cf-header-left {
     display: flex;
     align-items: center;
-    font-weight: 600;
-    color: #495057;
-    font-size: 0.9rem;
+    gap: 0.5rem;
 }
-
-.active-filters-count {
-    background: #007bff;
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
+.cf-icon-wrap {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: var(--primary, #8B735A);
+    color: #fff;
+    font-size: 0.72rem;
+}
+.cf-header-text {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-primary, #3D3427);
+}
+.cf-badge {
+    background: var(--primary, #8B735A);
+    color: #fff;
+    border-radius: 10px;
+    min-width: 18px;
+    height: 18px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
-    margin-left: 0.5rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0 5px;
 }
-
-.filter-actions {
-    display: flex;
-    align-items: center;
-}
-
-.toggle-icon {
-    transition: transform 0.3s ease;
-    color: #6c757d;
-}
-
-.filter-content.expanded .toggle-icon {
-    transform: rotate(180deg);
-}
-
-.filter-content {
-    border-top: 1px solid #dee2e6;
-    padding: 1rem;
-    background: white;
-}
-
-.compact-filter-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.filter-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    align-items: end;
-}
-
-.filter-group {
-    display: flex;
-    flex-direction: column;
-    min-width: fit-content;
-    flex: 0 0 auto;
-}
-
-.search-group {
-    min-width: 150px;
-    flex: 1 1 auto;
-}
-
-.filter-label {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: #6c757d;
-    margin-bottom: 0.25rem;
-}
-
-.filter-select, .filter-input {
-    padding: 0.375rem 0.5rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    min-width: 80px;
-    width: auto;
-}
-
-.filter-select:focus, .filter-input:focus {
-    border-color: #007bff;
-    outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-.search-input-group {
-    display: flex;
-}
-
-.search-input-group .filter-input {
-    border-radius: 4px 0 0 4px;
-    border-right: none;
-}
-
-.search-btn {
-    background: #007bff;
-    color: white;
-    border: 1px solid #007bff;
-    border-radius: 0 4px 4px 0;
-    padding: 0.375rem 0.75rem;
-    cursor: pointer;
-    transition: background-color 0.15s ease-in-out;
-}
-
-.search-btn:hover {
-    background: #0056b3;
-}
-
-.search-btn-main {
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 0.5rem 1.5rem;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
-    min-width: 100px;
-}
-
-.search-btn-main:hover {
-    background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.4);
-}
-
-.active-filters-display {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid #e9ecef;
-}
-
-.active-filters-label {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: #6c757d;
-}
-
-.filter-tag {
-    background: #e3f2fd;
-    color: #1976d2;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.remove-filter {
+.cf-clear-btn {
     background: none;
-    border: none;
-    color: #1976d2;
+    border: 1px solid var(--border, #DED5CE);
+    color: var(--text-tertiary, #8B8178);
+    font-size: 0.72rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
     cursor: pointer;
-    font-weight: bold;
-    padding: 0;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
+    transition: all 0.15s;
+}
+.cf-clear-btn:hover {
+    background: #dc3545;
+    color: #fff;
+    border-color: #dc3545;
+}
+.cf-toggle-arrow {
+    color: var(--text-tertiary, #8B8178);
+    font-size: 0.7rem;
+    transition: transform 0.25s;
+}
+
+/* ---- Active Filters Bar ---- */
+.cf-active-bar {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    border-top: 1px solid var(--separator, #E8DCCA);
+    background: rgba(139,115,90,0.03);
+}
+.cf-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    background: var(--primary, #8B735A);
+    color: #fff;
+    padding: 0.15rem 0.5rem;
+    border-radius: 14px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.cf-chip-search { background: #198754; }
+.cf-chip-status { background: #6c757d; }
+.cf-chip-type   { background: #6f42c1; }
+.cf-chip-branch { background: #fd7e14; }
+.cf-chip-person { background: #0dcaf0; color: #000; }
+.cf-chip-vip    { background: #ffc107; color: #000; }
+.cf-chip-date   { background: #6c757d; }
+.cf-chip-x {
+    background: rgba(255,255,255,0.25);
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.82rem;
+    line-height: 1;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    padding: 0;
+    margin-right: 2px;
+    transition: background 0.12s;
+}
+.cf-chip-x:hover {
+    background: rgba(255,255,255,0.45);
 }
 
-.remove-filter:hover {
-    background: rgba(25, 118, 210, 0.1);
+/* ---- Body ---- */
+.cf-body {
+    border-top: 1px solid var(--border, #DED5CE);
+    padding: 0.85rem;
+    background: var(--card-bg, #fff);
+}
+.cf-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
+/* ---- Search Field ---- */
+.cf-field-search {
+    flex: 0 0 auto;
+}
+.cf-search-wrap {
+    position: relative;
+}
+.cf-search-icon {
+    position: absolute;
+    right: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary, #8B8178);
+    font-size: 0.78rem;
+    pointer-events: none;
+}
+.cf-search-input {
+    width: 160px;
+    padding: 0.35rem 2rem 0.35rem 0.65rem;
+    border: 1px solid var(--border, #DED5CE);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--text-primary, #3D3427);
+    background: var(--card-bg, #fff);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.cf-search-input:focus {
+    border-color: var(--primary, #8B735A);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(139,115,90,0.1);
+}
+.cf-search-input::placeholder {
+    color: var(--text-tertiary, #8B8178);
+    font-size: 0.8rem;
+}
+.cf-search-btn {
+    background: var(--primary, #8B735A);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+.cf-search-btn:hover {
+    background: var(--accent, #5F4B32);
+}
+
+/* ---- Filters Grid ---- */
+.cf-filters-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    align-items: end;
+}
+.cf-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 0 0 auto;
+}
+.cf-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-tertiary, #8B8178);
+    margin-bottom: 0.15rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.cf-select,
+.cf-input {
+    padding: 0.35rem 0.45rem;
+    border: 1px solid var(--border, #DED5CE);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--text-primary, #3D3427);
+    background: var(--card-bg, #fff);
+    min-width: 80px;
+    width: auto;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: auto;
+}
+.cf-select:focus,
+.cf-input:focus {
+    border-color: var(--primary, #8B735A);
+    outline: 0;
+    box-shadow: 0 0 0 2px rgba(139,115,90,0.1);
+}
+
+/* ---- Responsive ---- */
 @media (max-width: 768px) {
-    .filter-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .search-group {
-        min-width: auto;
-    }
-    
-    .filter-toggle-header {
-        padding: 0.5rem;
-    }
-    
-    .filter-content {
-        padding: 0.75rem;
-    }
+    .cf-header { padding: 0.5rem 0.65rem; }
+    .cf-body { padding: 0.65rem; }
+    .cf-filters-grid { gap: 0.45rem; }
+    .cf-search-input { width: 100%; }
+    .cf-search-btn { padding: 0.35rem 0.8rem; }
+    .cf-field { flex: 1 1 calc(50% - 0.25rem); min-width: 0; }
+    .cf-select, .cf-input { width: 100%; }
+}
+@media (max-width: 480px) {
+    .cf-field { flex: 1 1 100%; }
 }
 </style>
+
 <script>
 function toggleFilters() {
     const content = document.getElementById('filterContent');
-    const icon = document.querySelector('.toggle-icon');
-    
+    const arrow = document.getElementById('cfToggleArrow');
     if (content.style.display === 'none') {
         content.style.display = 'block';
-        icon.style.transform = 'rotate(180deg)';
+        arrow.style.transform = 'rotate(180deg)';
     } else {
         content.style.display = 'none';
-        icon.style.transform = 'rotate(0deg)';
+        arrow.style.transform = 'rotate(0deg)';
     }
 }
-
-// تم إزالة التطبيق التلقائي - الآن يتم التطبيق فقط عند الضغط على زر البحث
 
 function clearAllFilters(event) {
     event.stopPropagation();
     const form = document.getElementById('filterForm');
     const inputs = form.querySelectorAll('input, select');
     inputs.forEach(input => {
-        if (input.name !== 'page_size') {
-            input.value = '';
-        }
+        if (input.name !== 'page_size') input.value = '';
     });
     form.submit();
 }
 
 function removeFilter(filterName) {
     const form = document.getElementById('filterForm');
-    const input = form.querySelector(`[name="${filterName}"]`);
+    const input = form.querySelector('[name="' + filterName + '"]');
     if (input) {
         input.value = '';
         form.submit();

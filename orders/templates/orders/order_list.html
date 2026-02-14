@@ -3,747 +3,846 @@
 {% load order_extras %}
 {% block title %}الطلبات - نظام الخواجه{% endblock %}
 {% block meta_tags %}
-    <meta name="description"
-          content="إدارة جميع طلبات العملاء في نظام الخواجه - عرض، تعديل، وتتبع حالة الطلبات من البداية حتى التسليم">
-    <meta name="keywords"
-          content="إدارة الطلبات, طلبات العملاء, تتبع الطلبات, حالة الطلب, نظام الطلبات">
-    <meta property="og:title" content="إدارة الطلبات - نظام الخواجه">
-    <meta property="og:type" content="website">
+    <meta name="description" content="إدارة جميع طلبات العملاء في نظام الخواجه">
 {% endblock %}
+
 {% block extra_css %}
-    <style>
-/* تنسيق الجدول ليكون بنفس مقاس جدول التصنيع */
-.container {
-    max-width: 100%;
-    padding: 1rem;
+<style>
+/* ========== صفحة الطلبات - تصميم متوافق مع الهوية البصرية ========== */
+
+/* هيدر الصفحة */
+.orders-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.orders-page-header h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary, #3D3427);
+    margin: 0;
+}
+.orders-page-header h2 i {
+    color: var(--primary, #8B735A);
+    margin-left: 0.5rem;
+}
+.header-actions .btn {
+    border-radius: var(--radius, 8px);
+    font-size: 0.85rem;
+    padding: 0.4rem 1rem;
+    font-weight: 500;
 }
 
-.table-responsive {
-    border-radius: 0 0 8px 8px;
+/* الكارد الرئيسي */
+.orders-card {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #DED5CE);
+    border-radius: var(--radius-large, 12px);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
-
-.table {
-    margin-bottom: 0;
+.orders-card-header {
+    background: var(--surface, #F8F8F8);
+    border-bottom: 1px solid var(--border, #DED5CE);
+    padding: 0.65rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
-
-/* تنسيق هيد الجدول - سيتم تطبيق التنسيق من CSS العام */
-
-.table tbody td {
-    padding: 0.75rem;
-    vertical-align: middle;
-    text-align: center;
-    border-bottom: 1px solid #dee2e6;
+.orders-card-header h5 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary, #3D3427);
+    margin: 0;
 }
-
-.table tbody tr:hover {
-    background-color: rgba(139, 69, 19, 0.05);
-}
-
-/* تحسين عرض الأزرار */
-.btn-group-sm .btn {
-    padding: 0.375rem 0.5rem;
-    font-size: 0.875rem;
-    border-radius: 4px;
-}
-
-/* تحسين عرض الـ badges */
-.badge {
+.orders-count-badge {
+    background: var(--primary, #8B735A);
+    color: #fff;
     font-size: 0.75rem;
-    padding: 0.375rem 0.5rem;
-    border-radius: 0.375rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
     font-weight: 600;
 }
 
-/* تحسين عرض النصوص */
-.table td {
-    font-size: 0.9rem;
+/* ========== جدول الطلبات ========== */
+.orders-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.orders-tbl {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.82rem;
 }
 
-.table th {
-    font-size: 0.9rem;
+/* رؤوس الأعمدة */
+.orders-tbl thead th {
+    background: var(--primary, #8B735A);
+    color: #fff;
+    padding: 0;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: center;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    border: none;
+    user-select: none;
 }
-    .card-body .form-label {
-        font-weight: 600;
-        color: #3c2415;
-        margin-bottom: 0.25rem;
-    }
-    .card-body .form-select, .card-body .form-control {
-        font-size: 1rem;
-        padding: 0.375rem 0.75rem;
-        border-radius: 0.375rem;
-        min-width: 100px;
-    }
-    .card-body .btn, .card-body .btn-group .btn {
-        font-size: 1rem;
-        padding: 0.375rem 1rem;
-        border-radius: 0.375rem;
-    }
-.action-buttons {
+
+/* زر الترتيب داخل رأس العمود */
+.col-sort-btn {
     display: flex;
-    gap: 0.1rem;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    width: 100%;
+    padding: 0.55rem 0.4rem;
+    background: none;
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
 }
-.orders-table th, .orders-table td {
-    padding: 0.15rem 0.2rem !important;
+.col-sort-btn:hover {
+    background: rgba(255,255,255,0.12);
+}
+.col-sort-btn .sort-icon {
+    font-size: 0.6rem;
+    opacity: 0.5;
+}
+.col-sort-btn.sort-active .sort-icon {
+    opacity: 1;
+}
+/* رأس عمود بدون ترتيب */
+.col-header-label {
+    display: block;
+    padding: 0.55rem 0.4rem;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* قائمة الترتيب المنبثقة */
+.sort-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 50%;
+    transform: translateX(50%);
+    z-index: 99;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #DED5CE);
+    border-radius: var(--radius, 8px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    min-width: 160px;
+    padding: 0.35rem 0;
+    display: none;
+}
+.sort-dropdown.show { display: block; }
+.sort-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.8rem;
+    color: var(--text-primary, #3D3427);
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: right;
+    cursor: pointer;
+    transition: background 0.12s;
+    white-space: nowrap;
+}
+.sort-dropdown-item:hover {
+    background: var(--surface, #F8F8F8);
+}
+.sort-dropdown-item.active {
+    color: var(--primary, #8B735A);
+    font-weight: 700;
+    background: rgba(139,115,90,0.08);
+}
+.sort-dropdown-item i {
+    width: 16px;
+    text-align: center;
+    font-size: 0.72rem;
+}
+
+/* صفوف الجدول */
+.orders-tbl tbody td {
+    padding: 0.45rem 0.35rem;
     vertical-align: middle;
+    text-align: center;
+    border-bottom: 1px solid var(--separator, #E8DCCA);
+    color: var(--text-primary, #3D3427);
+    transition: background 0.12s;
 }
-/* أعمدة الحالات - عدم قطع البادجات */
-.orders-table td:nth-child(7), 
-.orders-table td:nth-child(8), 
-.orders-table td:nth-child(9), 
-.orders-table td:nth-child(10) {
-    overflow: visible !important;
-    white-space: normal !important;
-    word-wrap: break-word;
+.orders-tbl tbody tr:hover td {
+    background: rgba(139,115,90,0.04);
 }
-/* باقي الأعمدة */
-.orders-table td:not(:nth-child(7)):not(:nth-child(8)):not(:nth-child(9)):not(:nth-child(10)) {
-    overflow: hidden;
-    text-overflow: ellipsis;
+.orders-tbl tbody tr:last-child td {
+    border-bottom: none;
 }
-.orders-table th {
-    white-space: normal !important;
-    word-break: break-word !important;
-    line-height: 1.3;
+
+/* روابط الطلبات */
+.order-link {
+    color: var(--primary, #8B735A);
+    text-decoration: none;
+    font-weight: 700;
+    transition: color 0.15s;
 }
-.orders-table {
-    border-spacing: 0 1px;
+.order-link:hover {
+    color: var(--accent, #5F4B32);
+    text-decoration: underline;
 }
-.orders-table th:nth-child(1), .orders-table td:nth-child(1),
-.orders-table th:nth-child(3), .orders-table td:nth-child(3),
-.orders-table th:nth-child(4), .orders-table td:nth-child(4) {
-    min-width: 120px;
-    max-width: 180px;
-    font-weight: bold;
-    font-size: 1em;
+.customer-link {
+    color: var(--text-primary, #3D3427);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.15s;
 }
-.orders-table th:nth-child(2), .orders-table td:nth-child(2) {
-    min-width: 120px;
-    max-width: 200px;
-    font-size: 0.9em;
-    font-weight: bold;
+.customer-link:hover {
+    color: var(--primary, #8B735A);
 }
-.orders-table th:nth-child(5), .orders-table td:nth-child(5),
-.orders-table th:nth-child(6), .orders-table td:nth-child(6) {
-    max-width: 80px;
-    min-width: 70px;
-    font-size: 0.8em;
+
+/* تواريخ */
+.date-cell {
+    white-space: nowrap;
+    font-size: 0.8rem;
 }
-.orders-table th:nth-child(7), .orders-table td:nth-child(7) {
-    min-width: 120px;
-    max-width: 150px;
-    font-size: 0.85em;
+.date-cell .date-note {
+    display: block;
+    font-size: 0.68rem;
+    color: var(--text-tertiary, #8B8178);
+    margin-top: 1px;
 }
-.orders-table th:nth-child(8), .orders-table td:nth-child(8) {
-    min-width: 100px;
-    max-width: 130px;
-    font-size: 0.8em;
+
+/* أرقام المرجع */
+.ref-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    justify-content: center;
 }
-.orders-table th:nth-child(9), .orders-table td:nth-child(9) {
-    min-width: 100px;
-    max-width: 130px;
-    font-size: 0.8em;
+.ref-badge {
+    background: rgba(139,115,90,0.1);
+    color: var(--accent, #5F4B32);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    border: 1px solid rgba(139,115,90,0.15);
 }
-.orders-table th:nth-child(10), .orders-table td:nth-child(10) {
-    min-width: 110px;
-    max-width: 140px;
-    font-size: 0.8em;
+
+/* المبلغ المتبقي */
+.amount-paid {
+    background: #d4edda;
+    color: #155724;
+    padding: 0.2rem 0.55rem;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    display: inline-block;
 }
-.orders-table th:nth-child(11), .orders-table td:nth-child(11),
-.orders-table th:nth-child(12), .orders-table td:nth-child(12) {
-    max-width: 80px;
-    font-size: 0.8em;
+.amount-due {
+    color: #dc3545;
+    font-weight: 700;
+    font-size: 0.82rem;
 }
-.orders-table th:nth-child(11), .orders-table td:nth-child(11) {
-    min-width: 80px;
-    max-width: 100px;
+
+/* أزرار الإجراءات */
+.actions-cell {
+    white-space: nowrap;
 }
-.orders-table th:nth-child(12), .orders-table td:nth-child(12) {
-    min-width: 70px;
-    max-width: 90px;
+.actions-cell .btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.72rem;
+    border-radius: 4px;
+    line-height: 1;
 }
-/* تحسين مظهر الروابط */
-.orders-table a {
-    transition: all 0.2s ease;
+.actions-cell .btn i {
+    font-size: 0.68rem;
 }
-.orders-table a:hover {
-    text-decoration: underline !important;
-    opacity: 0.8;
+
+/* ========== الفلاتر المطبقة ========== */
+.applied-filters-bar {
+    background: rgba(139,115,90,0.05);
+    border-bottom: 1px solid var(--separator, #E8DCCA);
+    padding: 0.5rem 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
 }
-.orders-table .text-primary:hover {
-    color: #0056b3 !important;
+.applied-filters-bar .filter-chip {
+    background: var(--primary, #8B735A);
+    color: #fff;
+    padding: 0.15rem 0.55rem;
+    border-radius: 14px;
+    font-size: 0.72rem;
+    font-weight: 500;
 }
-.orders-table .text-dark:hover {
-    color: #495057 !important;
+.applied-filters-bar .filter-chip.type-status { background: #6c757d; }
+.applied-filters-bar .filter-chip.type-search { background: #198754; }
+.applied-filters-bar .filter-chip.type-branch { background: #fd7e14; }
+.applied-filters-bar .filter-chip.type-salesperson { background: #0dcaf0; color: #000; }
+.applied-filters-bar .filter-chip.type-type { background: #6f42c1; }
+.applied-filters-bar .filter-chip.type-date { background: #6c757d; }
+.applied-filters-bar .filter-chip.type-vip { background: #ffc107; color: #000; }
+
+/* ========== Pagination ========== */
+.orders-pagination {
+    background: var(--surface, #F8F8F8);
+    border-top: 1px solid var(--border, #DED5CE);
+    padding: 0.6rem 1rem;
 }
-    </style>
+.orders-pagination .pagination {
+    margin: 0;
+    gap: 2px;
+}
+.orders-pagination .page-item .page-link {
+    border: 1px solid var(--border, #DED5CE);
+    color: var(--text-primary, #3D3427);
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: var(--radius, 8px) !important;
+    transition: all 0.15s;
+}
+.orders-pagination .page-item.active .page-link {
+    background: var(--primary, #8B735A);
+    border-color: var(--primary, #8B735A);
+    color: #fff;
+}
+.orders-pagination .page-item .page-link:hover {
+    background: rgba(139,115,90,0.1);
+}
+
+/* حالة فارغة */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-tertiary, #8B8178);
+}
+.empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.4;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .orders-page-header { flex-direction: column; align-items: stretch; }
+    .header-actions { display: flex; gap: 0.5rem; }
+    .header-actions .btn { flex: 1; font-size: 0.78rem; padding: 0.35rem 0.5rem; }
+    .orders-card-header { flex-direction: column; gap: 0.3rem; }
+    .orders-tbl { font-size: 0.75rem; }
+    .orders-tbl thead th { font-size: 0.72rem; }
+    .col-sort-btn { font-size: 0.72rem; padding: 0.4rem 0.25rem; }
+}
+</style>
 {% endblock %}
+
 {% block extra_js %}
-    <script>
-// حفظ معاملات الفلتر في localStorage
-function saveFilters() {
-    const form = document.querySelector('form[method="get"]');
-    const formData = new FormData(form);
-    const params = new URLSearchParams();
-    
-    for (let [key, value] of formData.entries()) {
-        if (value) {
-            params.append(key, value);
-        }
-    }
-    
-    // حفظ في localStorage
-    localStorage.setItem('orderListFilters', params.toString());
-}
-
-// استعادة معاملات الفلتر من localStorage
-function restoreFilters() {
-    const savedFilters = localStorage.getItem('orderListFilters');
-    if (savedFilters) {
-        const params = new URLSearchParams(savedFilters);
-        const form = document.querySelector('form[method="get"]');
-        
-        // تطبيق القيم المحفوظة على النموذج
-        for (let [key, value] of params.entries()) {
-            const field = form.querySelector(`[name="${key}"]`);
-            if (field) {
-                field.value = value;
-            }
-        }
-    }
-}
-
-// تطبيق الفلتر عند تغيير أي حقل
+<script>
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form[method="get"]');
-    const filterFields = form.querySelectorAll('select, input[type="text"]');
-    
-    // استعادة الفلاتر المحفوظة
-    restoreFilters();
-    
-    // حفظ الفلاتر عند التغيير
-    filterFields.forEach(field => {
-        field.addEventListener('change', saveFilters);
+    // ============ نظام الترتيب بقائمة منبثقة ============
+    let openDropdown = null;
+
+    // فتح/إغلاق قائمة الترتيب
+    document.querySelectorAll('.col-sort-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const dd = this.nextElementSibling;
+            if (!dd || !dd.classList.contains('sort-dropdown')) return;
+
+            if (openDropdown && openDropdown !== dd) {
+                openDropdown.classList.remove('show');
+            }
+            dd.classList.toggle('show');
+            openDropdown = dd.classList.contains('show') ? dd : null;
+        });
     });
-    
-    // حفظ الفلاتر عند إرسال النموذج
-    form.addEventListener('submit', saveFilters);
-    
-    // إضافة زر مسح الفلاتر
-    const clearFiltersBtn = document.createElement('button');
-    clearFiltersBtn.type = 'button';
-    clearFiltersBtn.className = 'btn btn-outline-secondary ms-2';
-    clearFiltersBtn.innerHTML = '<i class="fas fa-times"></i> مسح الفلاتر';
-    clearFiltersBtn.onclick = function() {
-        localStorage.removeItem('orderListFilters');
-        form.reset();
-        form.submit();
-    };
-    
-    // إضافة الزر بجانب زر التصفية
-    const submitBtn = form.querySelector('button[type="submit"]');
-    submitBtn.parentNode.appendChild(clearFiltersBtn);
+
+    // إغلاق القوائم عند النقر خارجها
+    document.addEventListener('click', function() {
+        if (openDropdown) {
+            openDropdown.classList.remove('show');
+            openDropdown = null;
+        }
+    });
+
+    // تطبيق الترتيب
+    document.querySelectorAll('.sort-dropdown-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const sortValue = this.dataset.sort;
+            const url = new URL(window.location);
+            url.searchParams.set('sort', sortValue);
+            url.searchParams.set('page', '1');
+            window.location.href = url.toString();
+        });
+    });
+
+    // ============ حفظ/استعادة الفلاتر ============
+    const form = document.getElementById('filterForm');
+    if (form) {
+        form.addEventListener('submit', function() {
+            const formData = new FormData(form);
+            const params = new URLSearchParams();
+            for (let [key, value] of formData.entries()) {
+                if (value) params.append(key, value);
+            }
+            localStorage.setItem('orderListFilters', params.toString());
+        });
+    }
 });
 
-// تحسين روابط التنقل بين الصفحات
+// بناء رابط صفحة يحافظ على الفلاتر
 function buildPageUrl(pageNumber) {
-    const currentUrl = new URL(window.location);
-    currentUrl.searchParams.set('page', pageNumber);
-    return currentUrl.toString();
+    const url = new URL(window.location);
+    url.searchParams.set('page', pageNumber);
+    return url.toString();
 }
-
-// تطبيق الروابط المحسنة على جميع روابط التنقل
-document.addEventListener('DOMContentLoaded', function() {
-    const pageLinks = document.querySelectorAll('.pagination .page-link');
-    pageLinks.forEach(link => {
-        if (link.href && link.href.includes('page=')) {
-            const pageMatch = link.href.match(/page=(\d+)/);
-            if (pageMatch) {
-                const pageNumber = pageMatch[1];
-                link.href = buildPageUrl(pageNumber);
-            }
-        }
-    });
-});
-    </script>
+</script>
 {% endblock %}
+
 {% block content %}
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>
-                <i class="fas fa-shopping-cart"></i> الطلبات
-            </h2>
-            <div class="btn-group">
-                <a href="{% url 'orders:wizard_start_new' %}"
-                   class="btn btn-success btn-lg">
-                    <i class="fas fa-magic me-2"></i>إنشاء طلب إلكتروني جديد
-                </a>
-                <a href="{% url 'orders:wizard_drafts_list' %}"
-                   class="btn btn-info btn-lg">
-                    <i class="fas fa-file-alt me-2"></i>المسودات
-                </a>
-            </div>
-        </div>
-        <!-- Orders Filter -->
-        {% include 'includes/orders_filter.html' %}
-        <!-- Orders List -->
-        <div class="card">
-            <div class="card-header bg-light">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <h5 class="mb-0">
-                            قائمة الطلبات
-                            <span class="badge bg-primary ms-2">
-                                <i class="fas fa-list-ol me-1"></i>
-                                عدد النتائج: {{ page_obj.paginator.count }}
-                            </span>
-                        </h5>
-                    </div>
-                    {% if page_obj.paginator.num_pages > 1 %}
-                        <div class="col-auto">
-                            <small class="text-muted">صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}</small>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="card-body p-0">
-                <!-- معلومات الفلاتر المطبقة -->
-                {% if status_filter or search_query or date_from or date_to or branch_filter or salesperson_filter or order_type_filter %}
-                    <div class="alert alert-info mb-0 rounded-0" role="alert">
-                        <i class="fas fa-filter me-2"></i>
-                        <strong>الفلاتر المطبقة:</strong>
-                        {% if status_filter %}
-                            <span class="badge bg-primary me-1">
-                                الحالة:
-                                {% if status_filter == 'pending_approval' %}
-                                    قيد الموافقة
-                                {% elif status_filter == 'pending' %}
-                                    قيد الانتظار
-                                {% elif status_filter == 'in_progress' %}
-                                    قيد التنفيذ
-                                {% elif status_filter == 'ready_install' %}
-                                    جاهز للتركيب
-                                {% elif status_filter == 'completed' %}
-                                    مكتمل
-                                {% elif status_filter == 'delivered' %}
-                                    تم التسليم
-                                {% elif status_filter == 'rejected' %}
-                                    مرفوض
-                                {% elif status_filter == 'cancelled' %}
-                                    ملغي
-                                {% else %}
-                                    {{ status_filter }}
-                                {% endif %}
-                            </span>
-                        {% endif %}
-                        {% if search_query %}<span class="badge bg-success me-1">البحث: "{{ search_query }}"</span>{% endif %}
-                        {% if branch_filter %}
-                            {% for branch in branches %}
-                                {% if branch.id|stringformat:'s' == branch_filter %}
-                                    <span class="badge bg-warning text-dark me-1">الفرع: {{ branch.name }}</span>
-                                {% endif %}
-                            {% endfor %}
-                        {% endif %}
-                        {% if salesperson_filter %}
-                            {% for salesperson in salespersons %}
-                                {% if salesperson.id|stringformat:'s' == salesperson_filter %}
-                                    <span class="badge bg-info me-1">البائع: {{ salesperson.name }}</span>
-                                {% endif %}
-                            {% endfor %}
-                        {% endif %}
-                        {% if order_type_filter %}
-                            <span class="badge bg-info me-1">
-                                النوع:
-                                {% if order_type_filter == 'installation' %}
-                                    تركيب
-                                {% elif order_type_filter == 'accessory' %}
-                                    إكسسوار
-                                {% elif order_type_filter == 'tailoring' %}
-                                    تسليم
-                                {% elif order_type_filter == 'inspection' %}
-                                    معاينة
-                                {% elif order_type_filter == 'products' %}
-                                    منتجات
-                                {% else %}
-                                    {{ order_type_filter }}
-                                {% endif %}
-                            </span>
-                        {% endif %}
-                        {% if status_param %}
-                            <span class="badge bg-primary me-1">وضع العميل:
-                                {% if status_param == 'vip' %}
-                                    VIP
-                                {% else %}
-                                    عادي
-                                {% endif %}
-                            </span>
-                        {% endif %}
-                        {% if date_from or date_to %}
-                            <span class="badge bg-secondary me-1">
-                                التاريخ:
-                                {% if date_from %}{{ date_from }}{% endif %}
-                                {% if date_from and date_to %}-{% endif %}
-                                {% if date_to %}{{ date_to }}{% endif %}
-                            </span>
-                        {% endif %}
-                        <a href="{% url 'orders:order_list' %}"
-                           class="btn btn-sm btn-outline-secondary ms-2">
-                            <i class="fas fa-times me-1"></i>إزالة جميع الفلاتر
-                        </a>
-                    </div>
-                {% endif %}
-                {% if page_obj %}
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped mb-0 orders-table">
-                            <thead>
-                                <tr>
-                                    <th class="text-center"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 90px;
-                                               word-break: break-word;
-                                               white-space: normal">رقم الطلب</th>
-                                    <th class="text-center"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 90px;
-                                               word-break: break-word;
-                                               white-space: normal">العميل</th>
-                                    <th class="text-center"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 120px;
-                                               word-break: break-word;
-                                               white-space: normal">رقم المرجع</th>
-                                    <th class="text-center"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 110px;
-                                               word-break: break-word;
-                                               white-space: normal">تاريخ الطلب</th>
-                                    <th class="text-center"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 110px;
-                                               word-break: break-word;
-                                               white-space: normal">تاريخ التسليم</th>
-                                    <th class="text-center"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 80px;
-                                               word-break: break-word;
-                                               white-space: normal">نوع الطلب</th>
-                                    <th class="text-center"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 70px;
-                                               word-break: break-word;
-                                               white-space: normal">وضع الطلب</th>
-                                    <th class="text-center"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 90px;
-                                               word-break: break-word;
-                                               white-space: normal">الحالة</th>
-                                    <th class="text-center"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 80px;
-                                               word-break: break-word;
-                                               white-space: normal">حالة المصنع</th>
-                                    <th class="text-center"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 80px;
-                                               word-break: break-word;
-                                               white-space: normal">حالة التركيب</th>
-                                    <th class="text-center"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 100px;
-                                               word-break: break-word;
-                                               white-space: normal">حالة المعاينة</th>
-                                    <th class="text-end"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 80px;
-                                               word-break: break-word;
-                                               white-space: normal">المبلغ المتبقي</th>
-                                    <th class="text-center"
-                                        style="padding: 0.3rem 0.4rem;
-                                               min-width: 70px;
-                                               word-break: break-word;
-                                               white-space: normal">الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for order in page_obj %}
-                                    <tr>
-                                        <td class="text-center"
-                                            style="padding: 0.15rem 0.2rem;
-                                                   font-weight: bold;
-                                                   font-size: 1em;
-                                                   white-space: nowrap">
-                                            <a href="{% url 'orders:order_detail' order.pk %}"
-                                               style="color: var(--primary);
-                                                      text-decoration: none;
-                                                      font-weight: bold">{{ order.order_number }}</a>
-                                        </td>
-                                        <td class="text-center"
-                                            style="padding: 0.15rem 0.2rem;
-                                                   white-space: nowrap">
-                                            <a href="{% url 'customers:customer_detail' order.customer.pk %}"
-                                               style="color: var(--primary);
-                                                      text-decoration: none;
-                                                      font-weight: bold">
-                                                <strong>{{ order.customer.name }}</strong>
-                                            </a>
-                                        </td>
-                                        <td class="text-center" style="padding: 0.15rem 0.2rem;">
-                                            <div class="d-flex flex-wrap gap-1 justify-content-center">
-                                                {% with all_invoices=order.get_all_invoice_numbers %}
-                                                    {% for invoice in all_invoices %}
-                                                        <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">{{ invoice }}</span>
-                                                    {% empty %}
-                                                        <span class="text-muted" style="font-size: 0.75rem;">-</span>
-                                                    {% endfor %}
-                                                {% endwith %}
-                                            </div>
-                                        </td>
-                                        <td class="text-center"
-                                            style="padding: 0.2rem 0.3rem;
-                                                   white-space: nowrap">
-                                            <span>{{ order.order_date|date:"Y-m-d" }}</span>
-                                            {% if order.get_order_date_note %}
-                                                <br>
-                                                <small class="text-muted" style="font-size: 0.75em;">{{ order.get_order_date_note }}</small>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center"
-                                            style="padding: 0.2rem 0.3rem;
-                                                   white-space: nowrap">
-                                            {% if order.get_smart_delivery_date %}
-                                                <span>{{ order.get_smart_delivery_date|date:"Y-m-d" }}</span>
-                                                {% if order.get_delivery_date_label %}
-                                                    <br>
-                                                    <small class="text-muted" style="font-size: 0.75em;">{{ order.get_delivery_date_label }}</small>
-                                                {% endif %}
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            {% with order_types=order.get_selected_types_list %}
-                                                {% if order_types %}
-                                                    {% for type in order_types %}
-                                                        {% get_order_type_badge type order %}
-                                                        {% if not forloop.last %}<br>{% endif %}
-                                                    {% endfor %}
-                                                {% else %}
-                                                    <span class="text-muted">-</span>
-                                                {% endif %}
-                                            {% endwith %}
-                                        </td>
-                                        <td class="text-center">
-                                            {% with order_types=order.get_selected_types_list %}
-                                                {% if 'inspection' in order_types %}
-                                                    <!-- للمعاينات: عرض وضع الطلب العادي -->
-                                                    {% if order.status == 'vip' %}
-                                                        {% get_vip_badge %}
-                                                    {% else %}
-                                                        {% get_normal_badge %}
-                                                    {% endif %}
-                                                {% else %}
-                                                    <!-- للخدمات الأخرى: عرض وضع الطلب العادي -->
-                                                    {% if order.status == 'vip' %}
-                                                        {% get_vip_badge %}
-                                                    {% else %}
-                                                        <span class="unified-badge status-secondary" style="font-size: 0.75rem;">
-                                                            <i class="fas fa-clock me-1"></i>
-                                                            عادي
-                                                        </span>
-                                                    {% endif %}
-                                                {% endif %}
-                                            {% endwith %}
-                                        </td>
-                                        <td class="text-center">
-                                            {# عرض حالة الطلب الحقيقية (order_status) كالمصدر الرئيسي للفلتر #}
-                                            {% get_status_badge order.order_status order=order %}
-                                            {# إذا كانت حالة العرض مختلفة (مصادر أخرى مثل المعاينة/التركيب/المصنع)، أعرضها كمعلومة ثانوية #}
-                                            {% with display_info=order.get_display_status %}
-                                                {% if display_info.source != 'order' %}
-                                                    <br>
-                                                    <small class="text-muted" style="font-size: 0.65rem;">
-                                                        {% if display_info.source == 'inspection' %}
-                                                            <i class="fas fa-search me-1"></i>{{ order.get_display_status_text }} (معاينة)
-                                                        {% elif display_info.source == 'installation' %}
-                                                            <i class="fas fa-tools me-1"></i>{{ order.get_display_status_text }} (تركيب)
-                                                        {% elif display_info.source == 'manufacturing' %}
-                                                            <i class="fas fa-industry me-1"></i>{{ order.get_display_status_text }} (مصنع)
-                                                        {% else %}
-                                                            {{ order.get_display_status_text }}
-                                                        {% endif %}
-                                                    </small>
-                                                {% endif %}
-                                            {% endwith %}
-                                        </td>
-                                        <td class="text-center">
-                                            {% with order_types=order.get_selected_types_list %}
-                                                {% if 'inspection' in order_types or 'products' in order_types %}
-                                                    <!-- للمعاينات والمنتجات: لا يوجد مصنع -->
-                                                    <span class="text-muted">لا يوجد</span>
-                                                {% else %}
-                                                    <!-- للطلبات الأخرى: عرض حالة أمر التصنيع -->
-                                                    {% if order.manufacturing_order %}
-                                                        {% with manufacturing_order=order.manufacturing_order %}
-                                                            {% get_status_badge manufacturing_order.status "manufacturing" %}
-                                                        {% endwith %}
-                                                    {% else %}
-                                                        <span class="text-muted">-</span>
-                                                    {% endif %}
-                                                {% endif %}
-                                            {% endwith %}
-                                        </td>
-                                        <!-- حالة التركيب -->
-                                        <td class="text-center">
-                                            {% if 'installation' in order.get_selected_types_list %}
-                                                {% get_status_badge order.installation_status "installation" %}
-                                                <!-- إظهار تاريخ الجدولة إذا كانت الحالة مجدول -->
-                                                {% if order.installation_status == 'scheduled' %}
-                                                    {% with scheduling_date=order.get_scheduling_date_display %}
-                                                        {% if scheduling_date %}
-                                                            <br>
-                                                            <small class="text-muted" style="font-size: 0.65rem;">
-                                                                <i class="fas fa-calendar me-1"></i>تاريخ الجدولة: {{ scheduling_date }}
-                                                            </small>
-                                                        {% endif %}
-                                                    {% endwith %}
-                                                {% endif %}
-                                                <!-- إظهار تاريخ الجدولة إذا كانت الحالة قيد التركيب -->
-                                                {% if order.installation_status == 'in_installation' %}
-                                                    {% with scheduling_date=order.get_scheduling_date_display %}
-                                                        {% if scheduling_date %}
-                                                            <br>
-                                                            <small class="text-muted" style="font-size: 0.65rem;">
-                                                                <i class="fas fa-calendar me-1"></i>تاريخ الجدولة: {{ scheduling_date }}
-                                                            </small>
-                                                        {% endif %}
-                                                    {% endwith %}
-                                                {% endif %}
-                                            {% elif 'tailoring' in order.get_selected_types_list or 'accessory' in order.get_selected_types_list or 'products' in order.get_selected_types_list %}
-                                                <span class="text-muted">لا يوجد</span>
-                                            {% elif 'inspection' in order.get_selected_types_list %}
-                                                <span class="text-muted">لا يوجد</span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                        <!-- حالة المعاينة -->
-                                        <td class="text-center">
-                                            {% with inspection=order.inspections.first %}
-                                                {% if inspection %}
-                                                    <a href="{% url 'inspections:inspection_detail' inspection.id %}"
-                                                       class="text-decoration-none"
-                                                       style="font-size: 0.75rem">
-                                                        {% get_status_badge inspection.status "inspection" %}
-                                                    </a>
-                                                {% else %}
-                                                    <span class="badge bg-secondary" style="font-size: 0.75rem;">
-                                                        <i class="fas fa-minus me-1"></i>
-                                                        لا يوجد
-                                                    </span>
-                                                {% endif %}
-                                            {% endwith %}
-                                        </td>
-                                        <td class="text-end" style="font-size: 0.85rem;">
-                                            {% if order.remaining_amount == 0 or order.remaining_amount == None %}
-                                                <span class="badge bg-success"
-                                                      style="font-size: 0.8rem;
-                                                             padding: 0.4rem 0.8rem;
-                                                             border-radius: 20px">
-                                                    <i class="fas fa-check-circle me-1"></i>لا يوجد
-                                                </span>
-                                            {% else %}
-                                                <span style="color: #dc3545; font-weight: bold;">{{ order.remaining_amount|floatformat:2 }} {{ currency_symbol }}</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm action-buttons">
-                                                <a href="{% url 'orders:order_detail' order.pk %}"
-                                                   class="btn btn-info"
-                                                   title="عرض"
-                                                   style="font-size: 0.7em;
-                                                          padding: 0.15rem 0.3rem">
-                                                    <i class="fas fa-eye" style="font-size: 0.7em;"></i>
-                                                </a>
-                                                <a href="{% url 'orders:wizard_edit_options' order_pk=order.pk %}"
-                                                   class="btn btn-primary"
-                                                   title="تعديل"
-                                                   style="font-size: 0.7em;
-                                                          padding: 0.15rem 0.3rem">
-                                                    <i class="fas fa-edit" style="font-size: 0.7em;"></i>
-                                                </a>
-                                                {% if user.is_superuser or perms.orders.delete_order %}
-                                                    <a href="{% url 'orders:order_delete' order.pk %}"
-                                                       class="btn btn-danger"
-                                                       title="حذف"
-                                                       style="font-size: 0.7em;
-                                                              padding: 0.15rem 0.3rem">
-                                                        <i class="fas fa-trash" style="font-size: 0.7em;"></i>
-                                                    </a>
-                                                {% endif %}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="text-center py-5">
-                        <p class="text-muted mb-0">لا توجد طلبات متاحة</p>
-                    </div>
-                {% endif %}
-            </div>
-            {% if page_obj.has_other_pages %}
-                <div class="card-footer">
-                    <nav>
-                        <ul class="pagination justify-content-center mb-0">
-                            {% if page_obj.has_previous %}
-                                <li class="page-item">
-                                    <a class="page-link"
-                                       href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&order_status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
-                                        <i class="fas fa-angle-double-right"></i>
-                                    </a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link"
-                                       href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&order_status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
-                                        <i class="fas fa-angle-right"></i>
-                                    </a>
-                                </li>
-                            {% endif %}
-                            {% for num in page_obj.paginator.page_range %}
-                                {% if page_obj.number == num %}
-                                    <li class="page-item active">
-                                        <span class="page-link">{{ num }}</span>
-                                    </li>
-                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                                    <li class="page-item">
-                                        <a class="page-link"
-                                           href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&order_status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
-                                            {{ num }}
-                                        </a>
-                                    </li>
-                                {% endif %}
-                            {% endfor %}
-                            {% if page_obj.has_next %}
-                                <li class="page-item">
-                                    <a class="page-link"
-                                       href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&order_status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
-                                        <i class="fas fa-angle-left"></i>
-                                    </a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link"
-                                       href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&order_status={{ status_filter }}{% endif %}{% if order_type_filter %}&order_type={{ order_type_filter }}{% endif %}{% if year_filter %}&year={{ year_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}{% if page_size %}&page_size={{ page_size }}{% endif %}{% if selected_years %}{% for year in selected_years %}&years={{ year }}{% endfor %}{% endif %}">
-                                        <i class="fas fa-angle-double-left"></i>
-                                    </a>
-                                </li>
-                            {% endif %}
-                        </ul>
-                    </nav>
-                </div>
+<div class="container-fluid px-3 px-md-4">
+    <!-- ====== هيدر الصفحة ====== -->
+    <div class="orders-page-header">
+        <h2>
+            <i class="fas fa-shopping-cart"></i>
+            الطلبات
+        </h2>
+        <div class="header-actions">
+            {% if perms.orders.add_order %}
+            <a href="{% url 'orders:wizard_start_new' %}" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i>طلب جديد
+            </a>
             {% endif %}
+            <a href="{% url 'orders:wizard_drafts_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-file-alt me-1"></i>المسودات
+            </a>
         </div>
     </div>
+
+    <!-- ====== الفلاتر ====== -->
+    {% include 'includes/orders_filter.html' %}
+
+    <!-- ====== الكارد الرئيسي ====== -->
+    <div class="orders-card">
+        <!-- هيدر الكارد -->
+        <div class="orders-card-header">
+            <h5>
+                <i class="fas fa-list me-1"></i>
+                قائمة الطلبات
+                <span class="orders-count-badge ms-2">{{ page_obj.paginator.count }}</span>
+            </h5>
+            {% if page_obj.paginator.num_pages > 1 %}
+            <small style="color: var(--text-tertiary, #8B8178);">
+                صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+            </small>
+            {% endif %}
+        </div>
+
+        <!-- شريط الفلاتر المطبقة -->
+        {% if status_filter or search_query or date_from or date_to or branch_filter or salesperson_filter or order_type_filter or status_param %}
+        <div class="applied-filters-bar">
+            <i class="fas fa-filter me-1" style="color: var(--text-tertiary);"></i>
+            {% if search_query %}
+                <span class="filter-chip type-search"><i class="fas fa-search me-1"></i>"{{ search_query }}"</span>
+            {% endif %}
+            {% if status_filter %}
+                <span class="filter-chip type-status">
+                    {% if status_filter == 'pending_approval' %}قيد الموافقة
+                    {% elif status_filter == 'pending' %}قيد الانتظار
+                    {% elif status_filter == 'in_progress' %}قيد التنفيذ
+                    {% elif status_filter == 'under_cutting' %}قيد التقطيع
+                    {% elif status_filter == 'ready_install' %}جاهز للتركيب
+                    {% elif status_filter == 'completed' %}مكتمل
+                    {% elif status_filter == 'delivered' %}تم التسليم
+                    {% elif status_filter == 'rejected' %}مرفوض
+                    {% elif status_filter == 'cancelled' %}ملغي
+                    {% else %}{{ status_filter }}{% endif %}
+                </span>
+            {% endif %}
+            {% if order_type_filter %}
+                <span class="filter-chip type-type">
+                    {% if order_type_filter == 'installation' %}تركيب
+                    {% elif order_type_filter == 'accessory' %}إكسسوار
+                    {% elif order_type_filter == 'tailoring' %}تسليم
+                    {% elif order_type_filter == 'inspection' %}معاينة
+                    {% elif order_type_filter == 'products' %}منتجات
+                    {% else %}{{ order_type_filter }}{% endif %}
+                </span>
+            {% endif %}
+            {% if branch_filter %}
+                {% for branch in branches %}
+                    {% if branch.id|stringformat:'s' == branch_filter %}
+                        <span class="filter-chip type-branch">{{ branch.name }}</span>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            {% if salesperson_filter %}
+                {% for salesperson in salespersons %}
+                    {% if salesperson.id|stringformat:'s' == salesperson_filter %}
+                        <span class="filter-chip type-salesperson">{{ salesperson.name }}</span>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            {% if status_param %}
+                <span class="filter-chip type-vip">
+                    {% if status_param == 'vip' %}VIP{% else %}عادي{% endif %}
+                </span>
+            {% endif %}
+            {% if date_from or date_to %}
+                <span class="filter-chip type-date">
+                    {% if date_from %}{{ date_from }}{% endif %}
+                    {% if date_from and date_to %} ← {% endif %}
+                    {% if date_to %}{{ date_to }}{% endif %}
+                </span>
+            {% endif %}
+            <a href="{% url 'orders:order_list' %}" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-auto" style="font-size:.72rem; border-radius:12px;">
+                <i class="fas fa-times me-1"></i>مسح الكل
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- ====== الجدول ====== -->
+        {% if page_obj %}
+        <div class="orders-table-wrap">
+            <table class="orders-tbl">
+                <thead>
+                    <tr>
+                        {# رقم الطلب - قابل للترتيب #}
+                        <th style="position:relative;">
+                            <button class="col-sort-btn {% if sort_by == 'order_number' or sort_by == '-order_number' %}sort-active{% endif %}">
+                                رقم الطلب
+                                <i class="fas {% if sort_by == 'order_number' %}fa-sort-up{% elif sort_by == '-order_number' %}fa-sort-down{% else %}fa-sort{% endif %} sort-icon"></i>
+                            </button>
+                            <div class="sort-dropdown">
+                                <button class="sort-dropdown-item {% if sort_by == 'order_number' %}active{% endif %}" data-sort="order_number">
+                                    <i class="fas fa-sort-amount-up-alt"></i> تصاعدي (الأقدم)
+                                </button>
+                                <button class="sort-dropdown-item {% if sort_by == '-order_number' %}active{% endif %}" data-sort="-order_number">
+                                    <i class="fas fa-sort-amount-down"></i> تنازلي (الأحدث)
+                                </button>
+                            </div>
+                        </th>
+                        {# العميل - قابل للترتيب #}
+                        <th style="position:relative;">
+                            <button class="col-sort-btn {% if sort_by == 'customer__name' or sort_by == '-customer__name' %}sort-active{% endif %}">
+                                العميل
+                                <i class="fas {% if sort_by == 'customer__name' %}fa-sort-up{% elif sort_by == '-customer__name' %}fa-sort-down{% else %}fa-sort{% endif %} sort-icon"></i>
+                            </button>
+                            <div class="sort-dropdown">
+                                <button class="sort-dropdown-item {% if sort_by == 'customer__name' %}active{% endif %}" data-sort="customer__name">
+                                    <i class="fas fa-sort-alpha-up"></i> أ ← ي
+                                </button>
+                                <button class="sort-dropdown-item {% if sort_by == '-customer__name' %}active{% endif %}" data-sort="-customer__name">
+                                    <i class="fas fa-sort-alpha-down-alt"></i> ي ← أ
+                                </button>
+                            </div>
+                        </th>
+                        {# رقم المرجع - بدون ترتيب #}
+                        <th><span class="col-header-label">المرجع</span></th>
+                        {# تاريخ الطلب - قابل للترتيب #}
+                        <th style="position:relative;">
+                            <button class="col-sort-btn {% if sort_by == 'order_date' or sort_by == '-order_date' %}sort-active{% endif %}">
+                                تاريخ الطلب
+                                <i class="fas {% if sort_by == 'order_date' %}fa-sort-up{% elif sort_by == '-order_date' %}fa-sort-down{% else %}fa-sort{% endif %} sort-icon"></i>
+                            </button>
+                            <div class="sort-dropdown">
+                                <button class="sort-dropdown-item {% if sort_by == 'order_date' %}active{% endif %}" data-sort="order_date">
+                                    <i class="fas fa-sort-amount-up-alt"></i> الأقدم أولاً
+                                </button>
+                                <button class="sort-dropdown-item {% if sort_by == '-order_date' %}active{% endif %}" data-sort="-order_date">
+                                    <i class="fas fa-sort-amount-down"></i> الأحدث أولاً
+                                </button>
+                            </div>
+                        </th>
+                        {# تاريخ التسليم - قابل للترتيب #}
+                        <th style="position:relative;">
+                            <button class="col-sort-btn {% if sort_by == 'expected_delivery_date' or sort_by == '-expected_delivery_date' %}sort-active{% endif %}">
+                                التسليم
+                                <i class="fas {% if sort_by == 'expected_delivery_date' %}fa-sort-up{% elif sort_by == '-expected_delivery_date' %}fa-sort-down{% else %}fa-sort{% endif %} sort-icon"></i>
+                            </button>
+                            <div class="sort-dropdown">
+                                <button class="sort-dropdown-item {% if sort_by == 'expected_delivery_date' %}active{% endif %}" data-sort="expected_delivery_date">
+                                    <i class="fas fa-sort-amount-up-alt"></i> الأقرب أولاً
+                                </button>
+                                <button class="sort-dropdown-item {% if sort_by == '-expected_delivery_date' %}active{% endif %}" data-sort="-expected_delivery_date">
+                                    <i class="fas fa-sort-amount-down"></i> الأبعد أولاً
+                                </button>
+                            </div>
+                        </th>
+                        {# نوع الطلب #}
+                        <th><span class="col-header-label">النوع</span></th>
+                        {# وضع الطلب #}
+                        <th><span class="col-header-label">الوضع</span></th>
+                        {# الحالة - قابل للترتيب #}
+                        <th style="position:relative;">
+                            <button class="col-sort-btn {% if sort_by == 'order_status' or sort_by == '-order_status' %}sort-active{% endif %}">
+                                الحالة
+                                <i class="fas {% if sort_by == 'order_status' %}fa-sort-up{% elif sort_by == '-order_status' %}fa-sort-down{% else %}fa-sort{% endif %} sort-icon"></i>
+                            </button>
+                            <div class="sort-dropdown">
+                                <button class="sort-dropdown-item {% if sort_by == 'order_status' %}active{% endif %}" data-sort="order_status">
+                                    <i class="fas fa-sort-alpha-up"></i> أ ← ي
+                                </button>
+                                <button class="sort-dropdown-item {% if sort_by == '-order_status' %}active{% endif %}" data-sort="-order_status">
+                                    <i class="fas fa-sort-alpha-down-alt"></i> ي ← أ
+                                </button>
+                            </div>
+                        </th>
+                        {# حالة المصنع #}
+                        <th><span class="col-header-label">المصنع</span></th>
+                        {# حالة التركيب #}
+                        <th><span class="col-header-label">التركيب</span></th>
+                        {# حالة المعاينة #}
+                        <th><span class="col-header-label">المعاينة</span></th>
+                        {# المبلغ المتبقي - قابل للترتيب #}
+                        <th style="position:relative;">
+                            <button class="col-sort-btn {% if sort_by == 'total_amount' or sort_by == '-total_amount' %}sort-active{% endif %}">
+                                المتبقي
+                                <i class="fas {% if sort_by == 'total_amount' %}fa-sort-up{% elif sort_by == '-total_amount' %}fa-sort-down{% else %}fa-sort{% endif %} sort-icon"></i>
+                            </button>
+                            <div class="sort-dropdown">
+                                <button class="sort-dropdown-item {% if sort_by == 'total_amount' %}active{% endif %}" data-sort="total_amount">
+                                    <i class="fas fa-sort-amount-up-alt"></i> الأقل أولاً
+                                </button>
+                                <button class="sort-dropdown-item {% if sort_by == '-total_amount' %}active{% endif %}" data-sort="-total_amount">
+                                    <i class="fas fa-sort-amount-down"></i> الأكثر أولاً
+                                </button>
+                            </div>
+                        </th>
+                        {# الإجراءات #}
+                        <th><span class="col-header-label">إجراءات</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in page_obj %}
+                    <tr>
+                        {# رقم الطلب #}
+                        <td>
+                            <a href="{% url 'orders:order_detail' order.pk %}" class="order-link">
+                                {{ order.order_number }}
+                            </a>
+                        </td>
+                        {# العميل #}
+                        <td>
+                            <a href="{% url 'customers:customer_detail' order.customer.pk %}" class="customer-link">
+                                {{ order.customer.name }}
+                            </a>
+                        </td>
+                        {# رقم المرجع #}
+                        <td>
+                            <div class="ref-badges">
+                                {% with all_invoices=order.get_all_invoice_numbers %}
+                                    {% for invoice in all_invoices %}
+                                        <span class="ref-badge">{{ invoice }}</span>
+                                    {% empty %}
+                                        <span style="color: var(--text-tertiary); font-size:.72rem;">—</span>
+                                    {% endfor %}
+                                {% endwith %}
+                            </div>
+                        </td>
+                        {# تاريخ الطلب #}
+                        <td class="date-cell">
+                            {{ order.order_date|date:"Y-m-d" }}
+                            {% if order.get_order_date_note %}
+                                <span class="date-note">{{ order.get_order_date_note }}</span>
+                            {% endif %}
+                        </td>
+                        {# تاريخ التسليم #}
+                        <td class="date-cell">
+                            {% if order.get_smart_delivery_date %}
+                                {{ order.get_smart_delivery_date|date:"Y-m-d" }}
+                                {% if order.get_delivery_date_label %}
+                                    <span class="date-note">{{ order.get_delivery_date_label }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span style="color: var(--text-tertiary);">—</span>
+                            {% endif %}
+                        </td>
+                        {# نوع الطلب #}
+                        <td>
+                            {% with order_types=order.get_selected_types_list %}
+                                {% if order_types %}
+                                    {% for type in order_types %}
+                                        {% get_order_type_badge type order %}
+                                        {% if not forloop.last %}<br>{% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <span style="color: var(--text-tertiary);">—</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        {# وضع الطلب #}
+                        <td>
+                            {% if order.status == 'vip' %}
+                                {% get_vip_badge %}
+                            {% else %}
+                                {% get_normal_badge %}
+                            {% endif %}
+                        </td>
+                        {# الحالة #}
+                        <td>
+                            {% get_status_badge order.order_status order=order %}
+                            {% with display_info=order.get_display_status %}
+                                {% if display_info.source != 'order' %}
+                                    <br>
+                                    <small style="font-size: 0.62rem; color: var(--text-tertiary);">
+                                        {% if display_info.source == 'inspection' %}
+                                            <i class="fas fa-search me-1"></i>{{ order.get_display_status_text }}
+                                        {% elif display_info.source == 'installation' %}
+                                            <i class="fas fa-tools me-1"></i>{{ order.get_display_status_text }}
+                                        {% elif display_info.source == 'manufacturing' %}
+                                            <i class="fas fa-industry me-1"></i>{{ order.get_display_status_text }}
+                                        {% else %}
+                                            {{ order.get_display_status_text }}
+                                        {% endif %}
+                                    </small>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        {# حالة المصنع #}
+                        <td>
+                            {% with order_types=order.get_selected_types_list %}
+                                {% if 'inspection' in order_types or 'products' in order_types %}
+                                    <span style="color: var(--text-tertiary); font-size:.72rem;">لا يوجد</span>
+                                {% else %}
+                                    {% if order.manufacturing_order %}
+                                        {% with manufacturing_order=order.manufacturing_order %}
+                                            {% get_status_badge manufacturing_order.status "manufacturing" %}
+                                        {% endwith %}
+                                    {% else %}
+                                        <span style="color: var(--text-tertiary); font-size:.72rem;">—</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        {# حالة التركيب #}
+                        <td>
+                            {% if 'installation' in order.get_selected_types_list %}
+                                {% get_status_badge order.installation_status "installation" %}
+                                {% if order.installation_status == 'scheduled' or order.installation_status == 'in_installation' %}
+                                    {% with scheduling_date=order.get_scheduling_date_display %}
+                                        {% if scheduling_date %}
+                                            <br><small style="font-size:0.6rem; color: var(--text-tertiary);">
+                                                <i class="fas fa-calendar me-1"></i>{{ scheduling_date }}
+                                            </small>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endif %}
+                            {% elif 'tailoring' in order.get_selected_types_list or 'accessory' in order.get_selected_types_list or 'products' in order.get_selected_types_list or 'inspection' in order.get_selected_types_list %}
+                                <span style="color: var(--text-tertiary); font-size:.72rem;">لا يوجد</span>
+                            {% else %}
+                                <span style="color: var(--text-tertiary); font-size:.72rem;">—</span>
+                            {% endif %}
+                        </td>
+                        {# حالة المعاينة #}
+                        <td>
+                            {% with inspection=order.inspections.first %}
+                                {% if inspection %}
+                                    <a href="{% url 'inspections:inspection_detail' inspection.id %}" class="text-decoration-none" style="font-size: 0.75rem;">
+                                        {% get_status_badge inspection.status "inspection" %}
+                                    </a>
+                                {% else %}
+                                    <span style="color: var(--text-tertiary); font-size:.72rem;">لا يوجد</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        {# المبلغ المتبقي #}
+                        <td>
+                            {% if order.remaining_amount == 0 or order.remaining_amount == None %}
+                                <span class="amount-paid"><i class="fas fa-check-circle me-1"></i>مسدد</span>
+                            {% else %}
+                                <span class="amount-due">{{ order.remaining_amount|floatformat:2 }} {{ currency_symbol }}</span>
+                            {% endif %}
+                        </td>
+                        {# الإجراءات #}
+                        <td class="actions-cell">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'orders:order_detail' order.pk %}" class="btn btn-outline-secondary" title="عرض">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'orders:wizard_edit_options' order_pk=order.pk %}" class="btn btn-outline-secondary" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if user.is_superuser or perms.orders.delete_order %}
+                                <a href="{% url 'orders:order_delete' order.pk %}" class="btn btn-outline-danger" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-inbox d-block"></i>
+            <p class="mb-0">لا توجد طلبات متاحة</p>
+        </div>
+        {% endif %}
+
+        {# ====== Pagination ====== #}
+        {% if page_obj.has_other_pages %}
+        <div class="orders-pagination">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-4' and num < page_obj.number|add:'4' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}

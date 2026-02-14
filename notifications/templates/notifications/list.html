@@ -1,347 +1,844 @@
 {% extends 'base.html' %}
 {% load static %}
-{% csrf_token %}
 {% block title %}الإشعارات{% endblock %}
-{% block extra_head %}
-    <style>
-/* ===== صفحة الإشعارات ===== */
-.notifications-page { margin-top: 100px; }
+{% block extra_css %}
+<style>
+/* ===== صفحة الإشعارات — Bootstrap + Theme ===== */
+
+/* ---- هيدر ---- */
+.notif-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.85rem;
+    gap: 0.5rem;
+}
+.notif-page-header h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary, #2A2015);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.notif-page-header h2 i {
+    color: var(--primary, #8B735A);
+    font-size: 1.1rem;
+}
+.notif-header-actions {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+/* أزرار Theme */
+.btn-theme {
+    background: var(--primary, #8B735A);
+    border-color: var(--primary, #8B735A);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.35rem 0.85rem;
+    border-radius: var(--radius, 8px);
+    transition: all 0.15s;
+}
+.btn-theme:hover, .btn-theme:focus {
+    background: var(--accent, #5F4B32);
+    border-color: var(--accent, #5F4B32);
+    color: #fff;
+}
+.btn-theme-outline {
+    border: 1px solid var(--primary, #8B735A);
+    color: var(--primary, #8B735A);
+    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.35rem 0.85rem;
+    border-radius: var(--radius, 8px);
+    transition: all 0.15s;
+}
+.btn-theme-outline:hover, .btn-theme-outline:focus {
+    background: var(--primary, #8B735A);
+    color: #fff;
+}
+
+/* ---- شريط الإحصائيات ---- */
+.notif-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    margin-bottom: 0.85rem;
+}
+.stat-card {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #DED5CE);
+    border-radius: var(--radius, 8px);
+    padding: 0.65rem 0.75rem;
+    text-align: center;
+    transition: box-shadow 0.15s;
+}
+.stat-card:hover {
+    box-shadow: 0 2px 8px rgba(139,115,90,0.12);
+}
+.stat-card .stat-num {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary, #2A2015);
+    line-height: 1.2;
+}
+.stat-card .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #4A3F35);
+    font-weight: 600;
+    margin-top: 0.1rem;
+}
+.stat-card.stat-unread {
+    border-color: var(--primary, #8B735A);
+    background: rgba(139,115,90,0.04);
+}
+.stat-card.stat-unread .stat-num {
+    color: var(--primary, #8B735A);
+}
+
+/* ========== فلاتر — Compact Filter Style ========== */
+.nf-component {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #DED5CE);
+    border-radius: var(--radius-large, 12px);
+    margin-bottom: 0.85rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    overflow: hidden;
+}
+.nf-header {
+    padding: 0.55rem 0.85rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    background: var(--surface, #F8F8F8);
+    transition: background 0.15s;
+}
+.nf-header:hover { background: rgba(139,115,90,0.06); }
+.nf-header-right, .nf-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+.nf-icon-wrap {
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px;
+    background: var(--primary, #8B735A);
+    color: #fff;
+    font-size: 0.68rem;
+}
+.nf-header-text {
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--text-primary, #2A2015);
+}
+.nf-badge {
+    background: var(--primary, #8B735A);
+    color: #fff;
+    border-radius: 10px;
+    min-width: 18px; height: 18px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0 5px;
+}
+.nf-clear-btn {
+    background: none;
+    border: 1px solid var(--border, #DED5CE);
+    color: var(--text-secondary, #5A4E42);
+    font-size: 0.75rem;
+    padding: 0.12rem 0.45rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.nf-clear-btn:hover { background: #dc3545; color: #fff; border-color: #dc3545; }
+.nf-toggle-arrow {
+    color: var(--text-secondary, #5A4E42);
+    font-size: 0.72rem;
+    transition: transform 0.25s;
+}
+
+/* ---- Active Chips ---- */
+.nf-active-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.85rem;
+    border-top: 1px solid var(--separator, #E8DCCA);
+    background: rgba(139,115,90,0.03);
+}
+.nf-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    background: var(--primary, #8B735A);
+    color: #fff;
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.73rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.nf-chip-search   { background: #198754; }
+.nf-chip-type     { background: #6f42c1; }
+.nf-chip-priority { background: #fd7e14; }
+.nf-chip-read     { background: #0d6efd; }
+.nf-chip-user     { background: #0dcaf0; color: #000; }
+.nf-chip-date     { background: #6c757d; }
+.nf-chip-x {
+    background: rgba(255,255,255,0.25);
+    border: none; color: inherit; cursor: pointer;
+    font-size: 0.8rem; line-height: 1;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0; margin-right: 1px;
+}
+.nf-chip-x:hover { background: rgba(255,255,255,0.45); }
+
+/* ---- Filter Body ---- */
+.nf-body {
+    border-top: 1px solid var(--border, #DED5CE);
+    padding: 0.75rem 0.85rem;
+    background: var(--card-bg, #fff);
+}
+.nf-filters-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: end;
+}
+.nf-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 0 0 auto;
+}
+.nf-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-secondary, #4A3F35);
+    margin-bottom: 0.15rem;
+    letter-spacing: 0.02em;
+}
+.nf-select, .nf-input {
+    padding: 0.35rem 0.45rem;
+    border: 1px solid var(--border, #DED5CE);
+    border-radius: 6px;
+    font-size: 0.82rem;
+    color: var(--text-primary, #2A2015);
+    background: var(--card-bg, #fff);
+    min-width: 80px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: auto;
+}
+.nf-select:focus, .nf-input:focus {
+    border-color: var(--primary, #8B735A);
+    outline: 0;
+    box-shadow: 0 0 0 2px rgba(139,115,90,0.1);
+}
+.nf-search-wrap { position: relative; }
+.nf-search-icon {
+    position: absolute; right: 0.6rem; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary, #5A4E42);
+    font-size: 0.78rem; pointer-events: none;
+}
+.nf-search-input {
+    width: 180px;
+    padding: 0.35rem 1.8rem 0.35rem 0.6rem;
+    border: 1px solid var(--border, #DED5CE);
+    border-radius: 6px;
+    font-size: 0.82rem;
+    color: var(--text-primary, #2A2015);
+    background: var(--card-bg, #fff);
+}
+.nf-search-input:focus {
+    border-color: var(--primary, #8B735A);
+    outline: 0;
+    box-shadow: 0 0 0 2px rgba(139,115,90,0.1);
+}
+.nf-search-input::placeholder {
+    color: var(--text-secondary, #6D6055);
+}
+.nf-submit-btn {
+    background: var(--primary, #8B735A);
+    color: #fff; border: none;
+    border-radius: 6px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.82rem; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.15s;
+}
+.nf-submit-btn:hover { background: var(--accent, #5F4B32); }
+
+/* ---- قائمة الإشعارات ---- */
+.notif-list-card {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #DED5CE);
+    border-radius: var(--radius-large, 12px);
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+}
 
 /* بطاقة الإشعار */
 .notification-item {
-    transition: all 0.2s ease;
-    border-right: 4px solid transparent;
+    display: flex;
+    gap: 0.65rem;
+    align-items: flex-start;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid var(--separator, #E8DCCA);
+    border-right: 3px solid transparent;
     cursor: pointer;
+    transition: all 0.12s ease;
 }
-.notification-item:last-child { border-bottom: none !important; }
-.notification-item:hover {
-    background-color: #f8f9fa !important;
-    transform: translateX(2px);
-}
+.notification-item:last-child { border-bottom: none; }
+.notification-item:hover { background: rgba(139,115,90,0.04); }
 
-/* غير مقروء */
 .notification-item.unread {
-    background-color: #f0f7ff !important;
-    border-right-color: #0d6efd;
+    background: rgba(139,115,90,0.05);
+    border-right-color: var(--primary, #8B735A);
 }
-
-/* مقروء */
 .notification-item.read {
-    background-color: #fff;
-    border-right-color: #dee2e6;
-    opacity: 0.85;
+    background: var(--card-bg, #fff);
+    border-right-color: transparent;
+    opacity: 0.88;
 }
 
 /* أولويات */
 .notification-item.priority-urgent { border-right-color: #dc3545 !important; }
 .notification-item.priority-high   { border-right-color: #fd7e14 !important; }
-.notification-item.priority-normal  { border-right-color: #0d6efd; }
-.notification-item.priority-low    { border-right-color: #6c757d; }
 
-/* أيقونة الإشعار */
+/* أيقونة */
 .notif-icon {
-    width: 44px;
-    height: 44px;
+    width: 36px; height: 36px;
     border-radius: 50%;
-    display: flex;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 14px;
+}
+.notification-item.read .notif-icon { opacity: 0.7; }
+
+/* محتوى */
+.notif-body { flex: 1; min-width: 0; }
+.notif-body h6 {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin-bottom: 0.2rem;
+}
+.notif-body h6 a {
+    color: var(--text-primary, #2A2015);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+.notif-body h6 a:hover { color: var(--primary, #8B735A); }
+.notif-body h6 a.unread-link { font-weight: 700; }
+.notif-body h6 a.read-link {
+    color: var(--text-secondary, #4A3F35);
+    font-weight: 500;
+}
+.notif-msg {
+    font-size: 0.82rem;
+    line-height: 1.5;
+    margin-bottom: 0.3rem;
+}
+.notif-time {
+    font-size: 0.73rem;
+    color: var(--text-secondary, #5A4E42);
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* ---- شارات ---- */
+.notif-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.12rem 0.4rem;
+    border-radius: 4px;
+    line-height: 1.35;
+}
+.notif-badge-type {
+    background: rgba(139,115,90,0.12);
+    color: var(--accent, #4A3820);
+    border: 1px solid rgba(139,115,90,0.2);
+    font-weight: 600;
+}
+.notif-badge-new {
+    background: var(--primary, #8B735A);
+    color: #fff;
+    border-radius: 10px;
+    padding: 0.08rem 0.45rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+.notif-badge-urgent { background: #dc3545; color: #fff; }
+.notif-badge-high { background: #fd7e14; color: #fff; }
+.notif-badge-low { background: var(--text-tertiary, #8B8178); color: #fff; }
+.notif-badge-order {
+    background: rgba(139,115,90,0.1);
+    color: var(--accent, #5F4B32);
+    border: 1px solid rgba(139,115,90,0.2);
+    font-weight: 600;
+}
+.notif-badge-customer {
+    background: rgba(40,167,69,0.1);
+    color: #1e7e34;
+    border: 1px solid rgba(40,167,69,0.2);
+    font-weight: 600;
+}
+.notif-badge-user {
+    background: var(--surface, #F3F0EC);
+    color: var(--text-primary, #3D3427);
+    border: 1px solid var(--border, #DED5CE);
+    font-weight: 600;
+}
+
+/* أزرار الإجراءات */
+.notif-action-btn {
+    padding: 0.15rem 0.35rem;
+    font-size: 0.73rem;
+    border-radius: 4px;
+    line-height: 1;
+    border: 1px solid var(--border, #DED5CE);
+    color: var(--text-secondary, #5A4E42);
+    background: none;
+    transition: all 0.12s;
+    text-decoration: none;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
 }
-.notif-icon i { font-size: 16px; }
-.notification-item.read .notif-icon { opacity: 0.6; }
+.notif-action-btn:hover {
+    border-color: var(--primary, #8B735A);
+    color: var(--primary, #8B735A);
+    background: rgba(139,115,90,0.06);
+}
+.notif-action-btn.mark-read:hover {
+    border-color: #28a745;
+    color: #28a745;
+    background: rgba(40,167,69,0.06);
+}
 
-/* محتوى الإشعار */
-.notif-body { flex: 1; min-width: 0; }
-.notif-body h6 { font-size: 0.9rem; line-height: 1.4; }
-.notif-body p  { font-size: 0.82rem; line-height: 1.5; }
+/* ---- Pagination ---- */
+.notif-pagination {
+    background: var(--surface, #F8F8F8);
+    border: 1px solid var(--border, #DED5CE);
+    border-radius: var(--radius-large, 12px);
+    padding: 0.5rem 1rem;
+    margin-top: 0.75rem;
+}
+.notif-pagination .pagination { margin: 0; gap: 2px; }
+.notif-pagination .page-item .page-link {
+    border: 1px solid var(--border, #DED5CE);
+    color: var(--text-primary, #2A2015);
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.3rem 0.6rem;
+    border-radius: var(--radius, 8px) !important;
+    transition: all 0.12s;
+}
+.notif-pagination .page-item.active .page-link {
+    background: var(--primary, #8B735A);
+    border-color: var(--primary, #8B735A);
+    color: #fff;
+}
+.notif-pagination .page-item .page-link:hover {
+    background: rgba(139,115,90,0.1);
+}
 
-/* إحصائيات */
-.stats-row .stat-box {
+/* حالة فارغة */
+.notif-empty {
     text-align: center;
-    padding: 1rem 0.5rem;
+    padding: 2.5rem 1rem;
+    color: var(--text-secondary, #5A4E42);
 }
-.stats-row .stat-box h4 {
-    font-size: 1.5rem;
+.notif-empty i {
+    font-size: 2.5rem;
+    margin-bottom: 0.6rem;
+    opacity: 0.55;
+    display: block;
+}
+.notif-empty h5 {
+    font-size: 1.05rem;
     font-weight: 700;
-    margin-bottom: 0.25rem;
+    color: var(--text-primary, #3D3427);
+    margin-bottom: 0.3rem;
 }
-.stats-row .stat-box small {
-    font-size: 0.78rem;
-    opacity: 0.9;
+.notif-empty p {
+    font-size: 0.85rem;
+    margin-bottom: 0.65rem;
+    color: var(--text-secondary, #5A4E42);
 }
-    </style>
-{% endblock %}
-{% block content %}
-    <div class="container-fluid notifications-page">
-        <!-- عنوان الصفحة -->
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-            <h1 class="h4 mb-0">
-                <i class="fas fa-bell text-primary me-2"></i>الإشعارات
-            </h1>
-            {% if unread_count > 0 %}
-                <div class="d-flex gap-2">
-                    <button type="button"
-                            class="btn btn-outline-primary btn-sm"
-                            id="mark-all-read-ajax-btn"
-                            title="تحديد سريع بدون إعادة تحميل">
-                        <i class="fas fa-check-double me-1"></i>تحديد سريع
-                    </button>
-                    <a href="{% url 'notifications:mark_all_read' %}"
-                       class="btn btn-primary btn-sm">
-                        <i class="fas fa-check-circle me-1"></i>تحديد الكل كمقروء
-                    </a>
-                </div>
-            {% endif %}
-        </div>
 
-        <!-- إحصائيات سريعة -->
-        <div class="card border-0 bg-primary bg-gradient text-white mb-3">
-            <div class="card-body py-2">
-                <div class="row stats-row">
-                    <div class="col-6 col-md-3 stat-box">
-                        <h4>{{ total_count }}</h4>
-                        <small>إجمالي الإشعارات</small>
-                    </div>
-                    <div class="col-6 col-md-3 stat-box">
-                        <h4>{{ unread_count }}</h4>
-                        <small>غير مقروءة</small>
-                    </div>
-                    <div class="col-6 col-md-3 stat-box">
-                        <h4>{{ read_count }}</h4>
-                        <small>مقروءة</small>
-                    </div>
-                    <div class="col-6 col-md-3 stat-box">
-                        <h4>{{ notifications|length }}</h4>
-                        <small>في هذه الصفحة</small>
-                    </div>
-                </div>
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .notif-page-header { flex-direction: column; align-items: stretch; }
+    .notif-header-actions { justify-content: flex-end; }
+    .notif-stats { grid-template-columns: repeat(2, 1fr); gap: 0.4rem; }
+    .stat-card { padding: 0.5rem; }
+    .stat-card .stat-num { font-size: 1.1rem; }
+    .notif-icon { width: 30px; height: 30px; }
+    .notif-icon i { font-size: 12px; }
+    .notif-body h6 { font-size: 0.8rem; }
+    .nf-search-input { width: 100%; }
+    .nf-field { flex: 1 1 calc(50% - 0.25rem); min-width: 0; }
+    .nf-select, .nf-input { width: 100%; }
+}
+@media (max-width: 480px) {
+    .notif-stats { grid-template-columns: repeat(2, 1fr); }
+    .nf-field { flex: 1 1 100%; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4">
+    {% csrf_token %}
+    <!-- ====== هيدر الصفحة ====== -->
+    <div class="notif-page-header">
+        <h2>
+            <i class="fas fa-bell"></i>
+            الإشعارات
+            {% if unread_count > 0 %}
+                <span class="badge rounded-pill" style="background: var(--primary, #8B735A); font-size: 0.6rem; vertical-align: middle;">{{ unread_count }}</span>
+            {% endif %}
+        </h2>
+        {% if unread_count > 0 %}
+        <div class="notif-header-actions">
+            <button type="button"
+                    class="btn btn-theme-outline btn-sm"
+                    id="mark-all-read-ajax-btn"
+                    title="تحديد سريع بدون إعادة تحميل">
+                <i class="fas fa-check-double me-1"></i>تحديد سريع
+            </button>
+            <a href="{% url 'notifications:mark_all_read' %}"
+               class="btn btn-theme btn-sm">
+                <i class="fas fa-check-circle me-1"></i>تحديد الكل كمقروء
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ====== إحصائيات ====== -->
+    <div class="notif-stats">
+        <div class="stat-card">
+            <div class="stat-num">{{ total_count }}</div>
+            <div class="stat-label">إجمالي</div>
+        </div>
+        <div class="stat-card stat-unread">
+            <div class="stat-num">{{ unread_count }}</div>
+            <div class="stat-label">غير مقروءة</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num">{{ read_count }}</div>
+            <div class="stat-label">مقروءة</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num">{{ notifications|length }}</div>
+            <div class="stat-label">في الصفحة</div>
+        </div>
+    </div>
+
+    <!-- ====== فلاتر البحث ====== -->
+    {% with has_filters=current_type|default:""|add:current_priority|default:""|add:current_read|default:""|add:current_search|default:""|add:filter_created_by|default:""|add:filter_date_from|default:""|add:filter_date_to|default:"" %}
+    <div class="nf-component">
+        <div class="nf-header" onclick="nfToggle()">
+            <div class="nf-header-right">
+                <div class="nf-icon-wrap"><i class="fas fa-sliders-h"></i></div>
+                <span class="nf-header-text">فلاتر البحث</span>
+                {% if has_filters %}<span class="nf-badge" id="nfActiveCount"></span>{% endif %}
+            </div>
+            <div class="nf-header-left">
+                {% if has_filters %}
+                <button type="button" class="nf-clear-btn" onclick="nfClearAll(event)">
+                    <i class="fas fa-eraser me-1"></i>مسح
+                </button>
+                {% endif %}
+                <i class="fas fa-chevron-down nf-toggle-arrow" id="nfToggleArrow"></i>
             </div>
         </div>
 
-        <!-- فلاتر البحث -->
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body py-3">
-                <form method="get" class="row g-2 align-items-end">
-                    <div class="col-6 col-md-2">
-                        <label for="type" class="form-label small mb-1">نوع الإشعار</label>
-                        <select name="type" id="type" class="form-select form-select-sm">
-                            <option value="">جميع الأنواع</option>
+        {% if has_filters %}
+        <div class="nf-active-bar">
+            {% if current_search %}
+                <span class="nf-chip nf-chip-search"><i class="fas fa-search me-1"></i>"{{ current_search }}"<button type="button" onclick="nfRemove('search')" class="nf-chip-x">&times;</button></span>
+            {% endif %}
+            {% if current_type %}
+                <span class="nf-chip nf-chip-type"><i class="fas fa-tag me-1"></i>{{ current_type }}<button type="button" onclick="nfRemove('type')" class="nf-chip-x">&times;</button></span>
+            {% endif %}
+            {% if current_priority %}
+                <span class="nf-chip nf-chip-priority"><i class="fas fa-flag me-1"></i>{{ current_priority }}<button type="button" onclick="nfRemove('priority')" class="nf-chip-x">&times;</button></span>
+            {% endif %}
+            {% if current_read %}
+                <span class="nf-chip nf-chip-read"><i class="fas fa-eye me-1"></i>{% if current_read == 'unread' %}غير مقروءة{% else %}مقروءة{% endif %}<button type="button" onclick="nfRemove('read')" class="nf-chip-x">&times;</button></span>
+            {% endif %}
+            {% if filter_created_by %}
+                <span class="nf-chip nf-chip-user"><i class="fas fa-user me-1"></i>{{ filter_created_by }}<button type="button" onclick="nfRemove('created_by')" class="nf-chip-x">&times;</button></span>
+            {% endif %}
+            {% if filter_date_from %}
+                <span class="nf-chip nf-chip-date"><i class="fas fa-calendar me-1"></i>من: {{ filter_date_from }}<button type="button" onclick="nfRemove('date_from')" class="nf-chip-x">&times;</button></span>
+            {% endif %}
+            {% if filter_date_to %}
+                <span class="nf-chip nf-chip-date"><i class="fas fa-calendar me-1"></i>إلى: {{ filter_date_to }}<button type="button" onclick="nfRemove('date_to')" class="nf-chip-x">&times;</button></span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="nf-body" id="nfFilterContent" style="display: {% if has_filters %}block{% else %}none{% endif %}">
+            <form method="get" id="nfFilterForm">
+                <div class="nf-filters-grid">
+                    <div class="nf-field nf-field-search">
+                        <label class="nf-label">بحث</label>
+                        <div class="nf-search-wrap">
+                            <i class="fas fa-search nf-search-icon"></i>
+                            <input type="text" name="search" class="nf-search-input"
+                                   placeholder="رقم الطلب، العميل..."
+                                   value="{{ current_search }}" autocomplete="off" dir="auto">
+                        </div>
+                    </div>
+                    <div class="nf-field">
+                        <label class="nf-label">نوع الإشعار</label>
+                        <select name="type" class="nf-select">
+                            <option value="">الكل</option>
                             {% for value, label in notification_types %}
                                 <option value="{{ value }}" {% if current_type == value %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <label for="priority" class="form-label small mb-1">الأولوية</label>
-                        <select name="priority" id="priority" class="form-select form-select-sm">
-                            <option value="">جميع الأولويات</option>
+                    <div class="nf-field">
+                        <label class="nf-label">الأولوية</label>
+                        <select name="priority" class="nf-select">
+                            <option value="">الكل</option>
                             {% for value, label in priority_levels %}
                                 <option value="{{ value }}" {% if current_priority == value %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <label for="read" class="form-label small mb-1">حالة القراءة</label>
-                        <select name="read" id="read" class="form-select form-select-sm">
+                    <div class="nf-field">
+                        <label class="nf-label">حالة القراءة</label>
+                        <select name="read" class="nf-select">
                             <option value="">الكل</option>
                             <option value="unread" {% if current_read == 'unread' %}selected{% endif %}>غير مقروءة</option>
                             <option value="read" {% if current_read == 'read' %}selected{% endif %}>مقروءة</option>
                         </select>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <label for="created_by" class="form-label small mb-1">المستخدم</label>
-                        <select name="created_by" id="created_by" class="form-select form-select-sm">
-                            <option value="">جميع المستخدمين</option>
+                    <div class="nf-field">
+                        <label class="nf-label">المستخدم</label>
+                        <select name="created_by" class="nf-select">
+                            <option value="">الكل</option>
                             {% for user in users_with_notifications %}
                                 <option value="{{ user.id }}"
-                                        {% if request.GET.created_by == user.id|stringformat:'s' %}selected{% endif %}>
+                                        {% if filter_created_by == user.id|stringformat:'s' %}selected{% endif %}>
                                     {{ user.get_full_name|default:user.username }}
                                 </option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-6 col-md-2">
-                        <label for="date_from" class="form-label small mb-1">من تاريخ</label>
-                        <input type="date" name="date_from" id="date_from"
-                               class="form-control form-control-sm"
-                               value="{{ request.GET.date_from }}">
+                    <div class="nf-field">
+                        <label class="nf-label">من تاريخ</label>
+                        <input type="date" name="date_from" class="nf-input" value="{{ filter_date_from }}">
                     </div>
-                    <div class="col-6 col-md-2">
-                        <label for="date_to" class="form-label small mb-1">إلى تاريخ</label>
-                        <input type="date" name="date_to" id="date_to"
-                               class="form-control form-control-sm"
-                               value="{{ request.GET.date_to }}">
+                    <div class="nf-field">
+                        <label class="nf-label">إلى تاريخ</label>
+                        <input type="date" name="date_to" class="nf-input" value="{{ filter_date_to }}">
                     </div>
-                    <div class="col-12 col-md-4">
-                        <label for="search" class="form-label small mb-1">البحث</label>
-                        <div class="input-group input-group-sm">
-                            <input type="text" name="search" id="search"
-                                   class="form-control"
-                                   placeholder="رقم الطلب، كود العميل، العنوان..."
-                                   value="{{ current_search }}">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
+                    <div class="nf-field">
+                        <label class="nf-label">&nbsp;</label>
+                        <button type="submit" class="nf-submit-btn"><i class="fas fa-search me-1"></i>بحث</button>
                     </div>
-                    <div class="col-12 col-md-4 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
-                            <i class="fas fa-filter me-1"></i>فلترة
-                        </button>
-                        <a href="{% url 'notifications:list' %}" class="btn btn-outline-secondary btn-sm flex-grow-1">
-                            <i class="fas fa-times me-1"></i>مسح
-                        </a>
-                    </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
-
-        <!-- قائمة الإشعارات -->
-        {% if notifications %}
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-0">
-                    {% for notification in notifications %}
-                        {% with visibility=notification.user_vis_list.0 %}
-                            {% with icon_data=notification.get_icon_and_color %}
-                            <div class="notification-item p-3 border-bottom d-flex gap-3 align-items-start {% if visibility and not visibility.is_read %}unread{% else %}read{% endif %} priority-{{ notification.priority }}"
-                                 data-notification-id="{{ notification.pk }}"
-                                 data-is-read="{% if visibility %}{{ visibility.is_read|yesno:'true,false' }}{% else %}false{% endif %}">
-                                <!-- أيقونة -->
-                                <div class="notif-icon" style="background-color: {{ icon_data.bg }}; border: 2px solid {{ icon_data.color }};">
-                                    <i class="{{ icon_data.icon }}" style="color: {{ icon_data.color }};"></i>
-                                </div>
-                                <!-- محتوى -->
-                                <div class="notif-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-1">
-                                        <h6 class="mb-0">
-                                            <a href="{{ notification.get_absolute_url }}"
-                                               class="text-decoration-none {% if not visibility.is_read %}text-dark fw-bold{% else %}text-muted{% endif %}">
-                                                {% if not visibility.is_read %}<i class="fas fa-circle text-primary me-1" style="font-size: 6px; vertical-align: middle;"></i>{% endif %}
-                                                {{ notification.title }}
-                                            </a>
-                                            {% if not visibility.is_read %}
-                                                <span class="badge bg-primary rounded-pill ms-1" style="font-size: 0.65rem;">جديد</span>
-                                            {% endif %}
-                                        </h6>
-                                        <small class="text-muted text-nowrap ms-2" style="font-size: 0.75rem;">
-                                            <i class="far fa-clock me-1"></i>{{ notification.created_at|timesince }}
-                                        </small>
-                                    </div>
-                                    <p class="mb-2 {% if not visibility.is_read %}text-body{% else %}text-muted{% endif %}">
-                                        {{ notification.message|truncatewords:25 }}
-                                    </p>
-                                    <div class="d-flex flex-wrap gap-1 align-items-center">
-                                        <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">{{ notification.get_notification_type_display }}</span>
-                                        {% if notification.priority == 'urgent' %}
-                                            <span class="badge bg-danger" style="font-size: 0.7rem;">{{ notification.get_priority_display }}</span>
-                                        {% elif notification.priority == 'high' %}
-                                            <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">{{ notification.get_priority_display }}</span>
-                                        {% elif notification.priority == 'low' %}
-                                            <span class="badge bg-secondary" style="font-size: 0.7rem;">{{ notification.get_priority_display }}</span>
-                                        {% endif %}
-                                        {% if notification.created_by %}
-                                            <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">
-                                                <i class="fas fa-user me-1 text-primary"></i>{{ notification.created_by.get_full_name|default:notification.created_by.username }}
-                                            </span>
-                                        {% elif notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}
-                                            <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">
-                                                <i class="fas fa-user me-1 text-info"></i>{{ notification.extra_data.changed_by }}
-                                            </span>
-                                        {% endif %}
-                                        {% if notification.extra_data.order_number %}
-                                            <span class="badge bg-info bg-opacity-10 text-info border border-info" style="font-size: 0.7rem;">
-                                                <i class="fas fa-hashtag me-1"></i>{{ notification.extra_data.order_number }}
-                                            </span>
-                                        {% endif %}
-                                        {% if notification.extra_data.customer_name %}
-                                            <span class="badge bg-success bg-opacity-10 text-success border border-success" style="font-size: 0.7rem;">
-                                                <i class="fas fa-user me-1"></i>{{ notification.extra_data.customer_name }}
-                                            </span>
-                                        {% endif %}
-                                        <!-- أزرار الإجراءات -->
-                                        <span class="ms-auto d-flex gap-1">
-                                            {% if not visibility.is_read %}
-                                                <a href="{% url 'notifications:mark_read' notification.pk %}"
-                                                   class="btn btn-outline-primary btn-sm py-0 px-1" style="font-size: 0.75rem;"
-                                                   title="تحديد كمقروء" onclick="event.stopPropagation();">
-                                                    <i class="fas fa-check"></i>
-                                                </a>
-                                            {% endif %}
-                                            <a href="{{ notification.get_absolute_url }}"
-                                               class="btn btn-outline-secondary btn-sm py-0 px-1" style="font-size: 0.75rem;"
-                                               title="عرض التفاصيل" onclick="event.stopPropagation();">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endwith %}
-                        {% endwith %}
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- ترقيم الصفحات -->
-            {% if notifications.has_other_pages %}
-                <nav aria-label="ترقيم الصفحات" class="mt-3 mb-4">
-                    <ul class="pagination pagination-sm justify-content-center">
-                        {% if notifications.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ notifications.previous_page_number }}&{{ request.GET.urlencode }}">
-                                    <i class="fas fa-chevron-right"></i>
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% for num in notifications.paginator.page_range %}
-                            {% if num == notifications.number %}
-                                <li class="page-item active">
-                                    <span class="page-link">{{ num }}</span>
-                                </li>
-                            {% elif num > notifications.number|add:'-3' and num < notifications.number|add:'3' %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
-                                </li>
-                            {% endif %}
-                        {% endfor %}
-                        {% if notifications.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ notifications.next_page_number }}&{{ request.GET.urlencode }}">
-                                    <i class="fas fa-chevron-left"></i>
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-            {% endif %}
-        {% else %}
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center py-5">
-                    <i class="fas fa-bell-slash fa-3x text-muted mb-3 d-block"></i>
-                    <h5 class="text-muted">لا توجد إشعارات</h5>
-                    <p class="text-muted small">لم يتم العثور على إشعارات تطابق معايير البحث المحددة.</p>
-                    <a href="{% url 'notifications:list' %}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-sync me-1"></i>عرض جميع الإشعارات
-                    </a>
-                </div>
-            </div>
-        {% endif %}
     </div>
-    <script>
+    {% endwith %}
+
+    <!-- ====== قائمة الإشعارات ====== -->
+    {% if notifications %}
+    <div class="notif-list-card">
+        {% for notification in notifications %}
+            {% with visibility=notification.user_vis_list.0 %}
+            {% with icon_data=notification.get_icon_and_color %}
+            <div class="notification-item {% if visibility and not visibility.is_read %}unread{% else %}read{% endif %} priority-{{ notification.priority }}"
+                 data-notification-id="{{ notification.pk }}"
+                 data-is-read="{% if visibility %}{{ visibility.is_read|yesno:'true,false' }}{% else %}false{% endif %}">
+                <div class="notif-icon" style="background-color: {{ icon_data.bg }}; border: 2px solid {{ icon_data.color }};">
+                    <i class="{{ icon_data.icon }}" style="color: {{ icon_data.color }};"></i>
+                </div>
+                <div class="notif-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h6 class="mb-0">
+                            <a href="{{ notification.get_absolute_url }}"
+                               class="{% if visibility and not visibility.is_read %}unread-link{% else %}read-link{% endif %}">
+                                {% if visibility and not visibility.is_read %}<i class="fas fa-circle me-1" style="font-size: 5px; vertical-align: middle; color: var(--primary, #8B735A);"></i>{% endif %}
+                                {{ notification.title }}
+                            </a>
+                            {% if visibility and not visibility.is_read %}
+                            <span class="notif-badge notif-badge-new ms-1">جديد</span>
+                            {% endif %}
+                        </h6>
+                        <small class="notif-time ms-2">
+                            <i class="far fa-clock me-1"></i>{{ notification.created_at|timesince }}
+                        </small>
+                    </div>
+                    <p class="notif-msg mb-1" style="color: {% if visibility and not visibility.is_read %}var(--text-primary, #2A2015){% else %}var(--text-secondary, #4A3F35){% endif %}; font-weight: {% if visibility and not visibility.is_read %}500{% else %}400{% endif %};">
+                        {{ notification.message|truncatewords:25 }}
+                    </p>
+                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                        <span class="notif-badge notif-badge-type">{{ notification.get_notification_type_display }}</span>
+                        {% if notification.priority == 'urgent' %}
+                            <span class="notif-badge notif-badge-urgent">{{ notification.get_priority_display }}</span>
+                        {% elif notification.priority == 'high' %}
+                            <span class="notif-badge notif-badge-high">{{ notification.get_priority_display }}</span>
+                        {% elif notification.priority == 'low' %}
+                            <span class="notif-badge notif-badge-low">{{ notification.get_priority_display }}</span>
+                        {% endif %}
+                        {% if notification.created_by %}
+                            <span class="notif-badge notif-badge-user">
+                                <i class="fas fa-user me-1" style="color: var(--primary);"></i>{{ notification.created_by.get_full_name|default:notification.created_by.username }}
+                            </span>
+                        {% elif notification.extra_data.changed_by and notification.extra_data.changed_by != 'مستخدم النظام' %}
+                            <span class="notif-badge notif-badge-user">
+                                <i class="fas fa-user me-1" style="color: var(--secondary);"></i>{{ notification.extra_data.changed_by }}
+                            </span>
+                        {% endif %}
+                        {% if notification.extra_data.order_number %}
+                            <span class="notif-badge notif-badge-order">
+                                <i class="fas fa-hashtag me-1"></i>{{ notification.extra_data.order_number }}
+                            </span>
+                        {% endif %}
+                        {% if notification.extra_data.customer_name %}
+                            <span class="notif-badge notif-badge-customer">
+                                <i class="fas fa-user me-1"></i>{{ notification.extra_data.customer_name }}
+                            </span>
+                        {% endif %}
+                        <span class="ms-auto d-flex gap-1">
+                            {% if visibility and not visibility.is_read %}
+                            <a href="{% url 'notifications:mark_read' notification.pk %}"
+                               class="notif-action-btn mark-read"
+                               title="تحديد كمقروء" onclick="event.stopPropagation();">
+                                <i class="fas fa-check"></i>
+                            </a>
+                            {% endif %}
+                            <a href="{{ notification.get_absolute_url }}"
+                               class="notif-action-btn"
+                               title="عرض التفاصيل" onclick="event.stopPropagation();">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endwith %}
+            {% endwith %}
+        {% endfor %}
+    </div>
+
+    <!-- ترقيم الصفحات -->
+    {% if page_obj.has_other_pages %}
+    <div class="notif-pagination">
+        <ul class="pagination pagination-sm justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+            {% for num in page_obj.paginator.page_range %}
+                {% if num == page_obj.number %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="notif-list-card">
+        <div class="notif-empty">
+            <i class="fas fa-bell-slash"></i>
+            <h5>لا توجد إشعارات</h5>
+            <p>لم يتم العثور على إشعارات تطابق معايير البحث.</p>
+            <a href="{% url 'notifications:list' %}" class="btn btn-theme-outline btn-sm">
+                <i class="fas fa-sync me-1"></i>عرض جميع الإشعارات
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ===== Filter Toggle / Clear / Remove ===== */
+function nfToggle() {
+    const c = document.getElementById('nfFilterContent');
+    const a = document.getElementById('nfToggleArrow');
+    const show = c.style.display === 'none';
+    c.style.display = show ? 'block' : 'none';
+    a.style.transform = show ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+function nfClearAll(e) {
+    e.stopPropagation();
+    const f = document.getElementById('nfFilterForm');
+    f.querySelectorAll('input, select').forEach(el => el.value = '');
+    f.submit();
+}
+function nfRemove(name) {
+    const f = document.getElementById('nfFilterForm');
+    const el = f.querySelector('[name="' + name + '"]');
+    if (el) { el.value = ''; f.submit(); }
+}
+
+/* Badge count + arrow init */
+(function() {
+    const badge = document.getElementById('nfActiveCount');
+    if (badge) {
+        let c = 0;
+        const f = document.getElementById('nfFilterForm');
+        if (f) f.querySelectorAll('select, input').forEach(el => { if (el.value && el.value.trim()) c++; });
+        badge.textContent = c;
+        if (c === 0) badge.style.display = 'none';
+    }
+    const content = document.getElementById('nfFilterContent');
+    const arrow = document.getElementById('nfToggleArrow');
+    if (content && arrow && content.style.display !== 'none') arrow.style.transform = 'rotate(180deg)';
+})();
+
+/* ===== Notifications Logic ===== */
 document.addEventListener('DOMContentLoaded', function() {
     updateNotificationCount();
     setInterval(updateNotificationCount, 30000);
     setupNotificationClickHandlers();
 
-    const markAllAjaxBtn = document.getElementById('mark-all-read-ajax-btn');
-    if (markAllAjaxBtn) {
-        markAllAjaxBtn.addEventListener('click', function() {
+    const markAllBtn = document.getElementById('mark-all-read-ajax-btn');
+    if (markAllBtn) {
+        markAllBtn.addEventListener('click', function() {
             if (!confirm('هل تريد تحديد جميع الإشعارات كمقروءة؟')) return;
-
-            const originalText = markAllAjaxBtn.innerHTML;
-            markAllAjaxBtn.disabled = true;
-            markAllAjaxBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري التحديث...';
+            const orig = markAllBtn.innerHTML;
+            markAllBtn.disabled = true;
+            markAllBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري...';
 
             fetch('{% url "notifications:mark_all_read" %}', {
                 method: 'POST',
@@ -351,21 +848,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 }
             })
-            .then(r => r.ok ? r.json() : Promise.reject('فشل'))
+            .then(r => r.ok ? r.json() : Promise.reject())
             .then(data => {
                 if (data.success) {
                     showAlert('success', data.message);
                     updateNotificationsUI();
                     updateNotificationCount();
-                } else {
-                    throw new Error(data.message || 'فشل');
-                }
+                } else throw new Error(data.message || 'فشل');
             })
-            .catch(e => showAlert('danger', 'حدث خطأ. يرجى المحاولة مرة أخرى.'))
-            .finally(() => {
-                markAllAjaxBtn.disabled = false;
-                markAllAjaxBtn.innerHTML = originalText;
-            });
+            .catch(() => showAlert('danger', 'حدث خطأ. يرجى المحاولة مرة أخرى.'))
+            .finally(() => { markAllBtn.disabled = false; markAllBtn.innerHTML = orig; });
         });
     }
 });
@@ -375,54 +867,42 @@ function updateNotificationCount() {
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                const badge = document.querySelector('#notification-count-badge');
-                if (badge) {
-                    badge.textContent = data.count;
-                    badge.style.display = data.count > 0 ? 'inline' : 'none';
-                }
+                const b = document.querySelector('#notification-count-badge');
+                if (b) { b.textContent = data.count; b.style.display = data.count > 0 ? 'inline' : 'none'; }
             }
-        })
-        .catch(() => {});
+        }).catch(() => {});
 }
 
-function showAlert(type, message) {
-    const div = document.createElement('div');
-    div.className = `alert alert-${type} alert-dismissible fade show mb-2`;
-    div.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-    const container = document.querySelector('.notifications-page');
-    container.insertBefore(div, container.firstChild);
-    setTimeout(() => div.remove(), 5000);
+function showAlert(type, msg) {
+    const d = document.createElement('div');
+    d.className = `alert alert-${type} alert-dismissible fade show mb-2`;
+    d.style.borderRadius = 'var(--radius, 8px)';
+    d.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    const c = document.querySelector('.container-fluid');
+    c.insertBefore(d, c.firstChild);
+    setTimeout(() => d.remove(), 5000);
 }
 
 function updateNotificationsUI() {
     document.querySelectorAll('.notification-item.unread').forEach(item => {
-        item.classList.remove('unread');
-        item.classList.add('read');
+        item.classList.remove('unread'); item.classList.add('read');
         item.setAttribute('data-is-read', 'true');
-
-        const title = item.querySelector('h6 a');
-        if (title) { title.classList.remove('text-dark', 'fw-bold'); title.classList.add('text-muted'); }
-
-        const dot = item.querySelector('.fas.fa-circle');
-        if (dot) dot.remove();
-
-        const badge = item.querySelector('.badge.bg-primary');
-        if (badge) { badge.remove(); }
-
-        const msg = item.querySelector('p');
-        if (msg) { msg.classList.remove('text-body'); msg.classList.add('text-muted'); }
-
-        const icon = item.querySelector('.notif-icon');
-        if (icon) { icon.style.opacity = '0.6'; }
+        const t = item.querySelector('h6 a');
+        if (t) { t.classList.remove('unread-link', 'fw-bold'); t.classList.add('read-link'); }
+        const dot = item.querySelector('.fas.fa-circle'); if (dot) dot.remove();
+        const badge = item.querySelector('.notif-badge-new'); if (badge) badge.remove();
+        const msg = item.querySelector('.notif-msg');
+        if (msg) msg.style.color = 'var(--text-secondary, #4A3F35)';
+        const icon = item.querySelector('.notif-icon'); if (icon) icon.style.opacity = '0.7';
+        const btn = item.querySelector('.notif-action-btn.mark-read'); if (btn) btn.remove();
     });
-
     document.querySelectorAll('#mark-all-read-ajax-btn, a[href*="mark-all-read"]').forEach(b => b.style.display = 'none');
 }
 
 function setupNotificationClickHandlers() {
     document.querySelectorAll('.notification-item').forEach(item => {
         item.addEventListener('click', function(e) {
-            if (e.target.closest('a.btn, button')) return;
+            if (e.target.closest('a, button')) return;
             const id = item.getAttribute('data-notification-id');
             const isRead = item.getAttribute('data-is-read') === 'true';
             if (!isRead && id) markNotificationAsRead(id, item);
@@ -432,8 +912,8 @@ function setupNotificationClickHandlers() {
     });
 }
 
-function markNotificationAsRead(notificationId, itemElement) {
-    fetch(`{% url 'notifications:mark_read' 0 %}`.replace('0', notificationId), {
+function markNotificationAsRead(nid, el) {
+    fetch(`{% url 'notifications:mark_read' 0 %}`.replace('0', nid), {
         method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -442,32 +922,21 @@ function markNotificationAsRead(notificationId, itemElement) {
         }
     })
     .then(r => r.ok ? r.json() : Promise.reject())
-    .then(data => {
-        if (data.success) {
-            updateSingleNotificationUI(itemElement);
-            updateNotificationCount();
-        }
-    })
+    .then(data => { if (data.success) { updateSingleNotificationUI(el); updateNotificationCount(); } })
     .catch(() => {});
 }
 
 function updateSingleNotificationUI(el) {
-    el.classList.remove('unread');
-    el.classList.add('read');
+    el.classList.remove('unread'); el.classList.add('read');
     el.setAttribute('data-is-read', 'true');
-
-    const title = el.querySelector('h6 a');
-    if (title) { title.classList.remove('text-dark', 'fw-bold'); title.classList.add('text-muted'); }
-
-    const dot = el.querySelector('.fas.fa-circle');
-    if (dot) dot.remove();
-
-    const badge = el.querySelector('.badge.bg-primary');
-    if (badge) badge.remove();
-
-    const msg = el.querySelector('p');
-    if (msg) { msg.classList.remove('text-body'); msg.classList.add('text-muted'); }
-
-    const icon = el.querySelector('.notif-icon');
-    if (icon) icon.style.opacity = '0.6';
+    const t = el.querySelector('h6 a');
+    if (t) { t.classList.remove('unread-link', 'fw-bold'); t.classList.add('read-link'); }
+    const dot = el.querySelector('.fas.fa-circle'); if (dot) dot.remove();
+    const badge = el.querySelector('.notif-badge-new'); if (badge) badge.remove();
+    const msg = el.querySelector('.notif-msg');
+    if (msg) msg.style.color = 'var(--text-secondary, #4A3F35)';
+    const icon = el.querySelector('.notif-icon'); if (icon) icon.style.opacity = '0.7';
+    const btn = el.querySelector('.notif-action-btn.mark-read'); if (btn) btn.remove();
+}
+</script>
 {% endblock %}

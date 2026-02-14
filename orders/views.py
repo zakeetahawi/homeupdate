@@ -231,8 +231,21 @@ def order_list(request):
             | Q(salesperson__id=salesperson_filter)
         )
 
-    # Order by created_at
-    orders = orders.order_by("-created_at")
+    # Dynamic sorting
+    sort_by = request.GET.get("sort", "-created_at")
+    ALLOWED_SORT_FIELDS = {
+        "order_number", "-order_number",
+        "customer__name", "-customer__name",
+        "order_date", "-order_date",
+        "expected_delivery_date", "-expected_delivery_date",
+        "created_at", "-created_at",
+        "order_status", "-order_status",
+        "salesperson__name", "-salesperson__name",
+        "total_amount", "-total_amount",
+    }
+    if sort_by not in ALLOWED_SORT_FIELDS:
+        sort_by = "-created_at"
+    orders = orders.order_by(sort_by)
 
     # Pagination
     paginator = Paginator(orders, page_size)  # Show page_size orders per page
@@ -302,6 +315,7 @@ def order_list(request):
         "salesperson_filter": salesperson_filter,
         "date_from": date_from,
         "date_to": date_to,
+        "sort_by": sort_by,
         # سياق الفلتر المضغوط
         "has_active_filters": len(active_filters) > 0,
         "active_filters_count": len(active_filters),
