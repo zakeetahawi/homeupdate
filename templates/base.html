@@ -626,8 +626,17 @@
                                                                display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;">
                                                                 {{ notification.message|truncatewords:12 }}
                                                             </p>
-                                                            {% if notification.extra_data.customer_name or notification.extra_data.order_number %}
-                                                                <div class="d-flex gap-1 mt-1">
+                                                            {% if notification.extra_data.customer_name or notification.extra_data.order_number or notification.created_by or notification.extra_data.changed_by %}
+                                                                <div class="d-flex gap-1 mt-1 flex-wrap">
+                                                                    {% if notification.created_by %}
+                                                                        <span class="badge bg-light text-dark border" style="font-size: 0.6rem; font-weight: normal;">
+                                                                            <i class="fas fa-user-edit text-primary me-1"></i>{{ notification.created_by.get_full_name|default:notification.created_by.username }}
+                                                                        </span>
+                                                                    {% elif notification.extra_data.changed_by %}
+                                                                        <span class="badge bg-light text-dark border" style="font-size: 0.6rem; font-weight: normal;">
+                                                                            <i class="fas fa-user-edit text-primary me-1"></i>{{ notification.extra_data.changed_by }}
+                                                                        </span>
+                                                                    {% endif %}
                                                                     {% if notification.extra_data.order_number %}
                                                                         <span class="badge bg-light text-dark border" style="font-size: 0.6rem; font-weight: normal;">
                                                                             <i class="fas fa-hashtag text-info me-1"></i>{{ notification.extra_data.order_number }}
@@ -1959,8 +1968,9 @@
                                                        display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;">
                                                         ${notification.message}
                                                     </p>
-                                                    ${(extraData.customer_name || extraData.order_number) ? `
-                                                    <div class="d-flex gap-1 mt-1">
+                                                    ${(extraData.customer_name || extraData.order_number || notification.created_by_name || extraData.changed_by) ? `
+                                                    <div class="d-flex gap-1 mt-1 flex-wrap">
+                                                        ${notification.created_by_name ? `<span class="badge bg-light text-dark border" style="font-size: 0.6rem; font-weight: normal;"><i class="fas fa-user-edit text-primary me-1"></i>${notification.created_by_name}</span>` : (extraData.changed_by ? `<span class="badge bg-light text-dark border" style="font-size: 0.6rem; font-weight: normal;"><i class="fas fa-user-edit text-primary me-1"></i>${extraData.changed_by}</span>` : '')}
                                                         ${extraData.order_number ? `<span class="badge bg-light text-dark border" style="font-size: 0.6rem; font-weight: normal;"><i class="fas fa-hashtag text-info me-1"></i>${extraData.order_number}</span>` : ''}
                                                         ${extraData.customer_name ? `<span class="badge bg-light text-dark border" style="font-size: 0.6rem; font-weight: normal;"><i class="fas fa-user text-success me-1"></i>${extraData.customer_name}</span>` : ''}
                                                     </div>` : ''}

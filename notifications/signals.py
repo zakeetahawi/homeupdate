@@ -59,9 +59,9 @@ def create_notification(
 
     from django.utils import timezone
 
-    # فحص الإشعارات المكررة (نفس النوع والكائن المرتبط في آخر دقيقة)
+    # فحص الإشعارات المكررة (نفس النوع والكائن المرتبط في آخر 5 دقائق)
     if related_object:
-        recent_time = timezone.now() - timedelta(minutes=1)
+        recent_time = timezone.now() - timedelta(minutes=5)
         existing_notification = Notification.objects.filter(
             notification_type=notification_type,
             content_type=ContentType.objects.get_for_model(related_object),
@@ -73,6 +73,8 @@ def create_notification(
         if existing_notification and notification_type in [
             "order_status_changed",
             "manufacturing_status_changed",
+            "inspection_status_changed",
+            "installation_completed",
         ]:
             # فحص إذا كان نفس التغيير بالضبط
             if (
@@ -83,10 +85,10 @@ def create_notification(
                 and extra_data.get("new_status")
                 == existing_notification.extra_data.get("new_status")
             ):
-                print(f"⚠️ تم تجاهل إشعار مكرر: {title}")
+                logger.info(f"⚠️ تم تجاهل إشعار مكرر (نفس التغيير): {title}")
                 return existing_notification
         elif existing_notification:
-            print(f"⚠️ تم تجاهل إشعار مكرر: {title}")
+            logger.info(f"⚠️ تم تجاهل إشعار مكرر: {title}")
             return existing_notification
 
     # إنشاء الإشعار
@@ -147,6 +149,14 @@ def customer_created_notification(sender, instance, created, **kwargs):
             extra_data={
                 "customer_code": instance.code,
                 "branch_name": instance.branch.name if instance.branch else None,
+                "changed_by": (
+                    instance.created_by.get_full_name() or instance.created_by.username
+                    if instance.created_by
+                    else None
+                ),
+                "changed_by_username": (
+                    instance.created_by.username if instance.created_by else None
+                ),
             },
         )
 
@@ -188,6 +198,14 @@ def order_created_notification(sender, instance, created, **kwargs):
                     str(instance.total_amount)
                     if hasattr(instance, "total_amount")
                     else None
+                ),
+                "changed_by": (
+                    instance.created_by.get_full_name() or instance.created_by.username
+                    if instance.created_by
+                    else None
+                ),
+                "changed_by_username": (
+                    instance.created_by.username if instance.created_by else None
                 ),
             },
         )
@@ -232,12 +250,15 @@ def inspection_created_notification(sender, instance, created, **kwargs):
         if instance.responsible_employee:
             message += f" بواسطة {instance.responsible_employee.name}"
 
+        # محاولة الحصول على المستخدم المنشئ
+        created_by_user = getattr(instance, "_changed_by", None) or getattr(instance, "created_by", None)
+
         create_notification(
             title=title,
             message=message,
             notification_type="inspection_created",
             related_object=instance,
-            created_by=getattr(instance, "created_by", None),
+            created_by=created_by_user,
             priority="normal",
             extra_data={
                 "order_number": order_number,
@@ -247,6 +268,18 @@ def inspection_created_notification(sender, instance, created, **kwargs):
                     instance.responsible_employee.name
                     if instance.responsible_employee
                     else None
+                ),
+                "changed_by": (
+                    created_by_user.get_full_name() or created_by_user.username
+                    if created_by_user
+                    else (
+                        instance.responsible_employee.name
+                        if instance.responsible_employee
+                        else None
+                    )
+                ),
+                "changed_by_username": (
+                    created_by_user.username if created_by_user else None
                 ),
             },
         )
@@ -353,12 +386,21 @@ def installation_scheduled_notification(sender, instance, created, **kwargs):
         if instance.team:
             message += f" مع فريق {instance.team.name}"
 
+        # محاولة الحصول على المستخدم المنشئ
+        created_by_user = (
+            getattr(instance, "_changed_by", None)
+            or getattr(instance, "updated_by", None)
+        )
+
+        if created_by_user:
+            message += f" بواسطة {created_by_user.get_full_name() or created_by_user.username}"
+
         create_notification(
             title=title,
             message=message,
             notification_type="installation_scheduled",
             related_object=instance,
-            created_by=getattr(instance, "created_by", None),
+            created_by=created_by_user,
             priority="normal",
             extra_data={
                 "order_number": instance.order.order_number,
@@ -368,6 +410,14 @@ def installation_scheduled_notification(sender, instance, created, **kwargs):
                     else None
                 ),
                 "team_name": instance.team.name if instance.team else None,
+                "changed_by": (
+                    created_by_user.get_full_name() or created_by_user.username
+                    if created_by_user
+                    else None
+                ),
+                "changed_by_username": (
+                    created_by_user.username if created_by_user else None
+                ),
             },
         )
 
@@ -522,12 +572,14 @@ def complaint_created_notification(sender, instance, created, **kwargs):
             }
             priority = priority_map.get(instance.priority, "normal")
 
+        created_by_user = getattr(instance, "_changed_by", None) or getattr(instance, "created_by", None)
+
         create_notification(
             title=title,
             message=message,
             notification_type="complaint_created",
             related_object=instance,
-            created_by=getattr(instance, "created_by", None),
+            created_by=created_by_user,
             priority=priority,
             extra_data={
                 "complaint_number": instance.complaint_number,
@@ -537,6 +589,14 @@ def complaint_created_notification(sender, instance, created, **kwargs):
                     instance.complaint_type.name
                     if hasattr(instance, "complaint_type")
                     else None
+                ),
+                "changed_by": (
+                    created_by_user.get_full_name() or created_by_user.username
+                    if created_by_user
+                    else None
+                ),
+                "changed_by_username": (
+                    created_by_user.username if created_by_user else None
                 ),
             },
         )

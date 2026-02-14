@@ -931,6 +931,7 @@ def schedule_installation(request, installation_id):
         if form.is_valid():
             installation = form.save(commit=False)
             installation.status = "scheduled"  # تغيير الحالة إلى مجدول
+            installation._changed_by = request.user  # للإشعارات
 
             # إذا لم يتم اختيار فريق، قم بإلغاء الفريق القديم (بناءً على طلب المستخدم)
             if not form.cleaned_data.get("team"):
@@ -1517,6 +1518,7 @@ def schedule_from_needs_scheduling(request, installation_id):
         if form.is_valid():
             installation = form.save(commit=False)
             installation.status = "scheduled"  # تغيير الحالة إلى مجدول
+            installation._changed_by = request.user  # للإشعارات
             installation.save()
 
             # إنشاء سجل حدث
@@ -1876,6 +1878,7 @@ def quick_schedule_installation(request, order_id):
             installation = form.save(commit=False)
             installation.order = order
             installation.status = "scheduled"
+            installation._changed_by = request.user  # للإشعارات
             installation.save()
 
             # تحديث معلومات العميل إذا تم تعديل العنوان
@@ -2773,11 +2776,13 @@ def schedule_manufacturing_order(request, manufacturing_order_id):
             )
 
         # إنشاء جدولة تركيب جديدة بحالة "needs_scheduling" بدلاً من "scheduled"
-        installation_schedule = InstallationSchedule.objects.create(
+        installation_schedule = InstallationSchedule(
             order=manufacturing_order.order,
             status="needs_scheduling",  # بحاجة جدولة يدوية
             notes=f"تم إنشاء جدولة تركيب من أمر التصنيع #{manufacturing_order.id} - يحتاج جدولة يدوية",
         )
+        installation_schedule._changed_by = request.user  # للإشعارات
+        installation_schedule.save()
 
         # تحديث حالة أمر التصنيع إلى "completed"
         manufacturing_order.status = "completed"
