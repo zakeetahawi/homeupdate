@@ -21,7 +21,6 @@ from accounts.models import User
 from .models import (
     Complaint,
     ComplaintEscalation,
-    ComplaintNotification,
     ComplaintType,
     ComplaintUpdate,
     ResolutionMethod,
@@ -275,25 +274,8 @@ class ComplaintEscalationView(View):
                 is_visible_to_customer=True,
             )
 
-            # Create escalation notification for real-time alerts
-            ComplaintNotification.objects.create(
-                complaint=complaint,
-                recipient=escalated_to,
-                notification_type="escalation",
-                title=f"تصعيد شكوى عاجل - {complaint.complaint_number}",
-                message=f"تم تصعيد الشكوى إليك من {request.user.get_full_name()}\nسبب التصعيد: {reason}",
-                is_read=False,
-            )
-
-            # Also create assignment notification for the escalated user
-            ComplaintNotification.objects.create(
-                complaint=complaint,
-                recipient=escalated_to,
-                notification_type="assignment",
-                title=f"تعيين شكوى مصعدة - {complaint.complaint_number}",
-                message=f"تم تعيين شكوى مصعدة إليك\nالعميل: {complaint.customer.name}\nالأولوية: {complaint.get_priority_display()}",
-                is_read=False,
-            )
+            # الإشعارات يتم إنشاؤها تلقائياً عبر signals في notifications/signals.py
+            # عند حفظ ComplaintEscalation يتم إطلاق complaint_escalation_notification
 
             return JsonResponse(
                 {
@@ -599,21 +581,21 @@ class ComplaintNoteView(View):
 @require_http_methods(["POST"])
 def mark_complaint_notification_read(request, notification_id):
     """
-    API endpoint لتحديد إشعار شكوى كمقروء
+    API endpoint لتحديد إشعار شكوى كمقروء - يستخدم النظام الرئيسي الموحد
     """
     try:
-        from django.utils import timezone
+        from notifications.models import NotificationVisibility
 
-        from .models import ComplaintNotification
-
-        notification = get_object_or_404(
-            ComplaintNotification, pk=notification_id, recipient=request.user
+        vis = get_object_or_404(
+            NotificationVisibility,
+            notification_id=notification_id,
+            user=request.user,
         )
 
-        if not notification.is_read:
-            notification.is_read = True
-            notification.read_at = timezone.now()
-            notification.save()
+        if not vis.is_read:
+            vis.is_read = True
+            vis.read_at = timezone.now()
+            vis.save(update_fields=["is_read", "read_at"])
 
         return JsonResponse({"success": True, "message": "تم تحديد الإشعار كمقروء"})
 
@@ -627,50 +609,44 @@ def mark_complaint_notification_read(request, notification_id):
 @require_http_methods(["GET"])
 def complaints_notifications_api(request):
     """
-    API endpoint لإشعارات الشكاوى - يعرض فقط الشكاوى غير المحلولة
+    API endpoint لإشعارات الشكاوى - يستخدم النظام الرئيسي الموحد
     """
     try:
-        from .models import ComplaintNotification
+        from notifications.models import NotificationVisibility
 
-        # الحصول على المعاملات
         limit = int(request.GET.get("limit", 10))
 
-        # الحصول على الإشعارات غير المقروءة فقط للشكاوى النشطة
-        notifications_queryset = (
-            ComplaintNotification.objects.filter(
-                recipient=request.user,
-                is_read=False,  # فقط الإشعارات غير المقروءة
-                complaint__status__in=[
-                    "new",
-                    "in_progress",
-                    "escalated",
-                ],  # فقط الشكاوى التي تحتاج إجراء
+        vis_records = (
+            NotificationVisibility.objects.filter(
+                user=request.user,
+                is_read=False,
+                notification__notification_type__startswith="complaint_",
             )
-            .select_related("complaint", "complaint__customer")
-            .order_by("-created_at")[:limit]
+            .select_related("notification")
+            .order_by("-notification__created_at")[:limit]
         )
 
         notifications = []
-        for notification in notifications_queryset:
+        for vis in vis_records:
+            notif = vis.notification
+            extra = notif.extra_data or {}
             notifications.append(
                 {
-                    "id": notification.id,
-                    "type": notification.notification_type,
-                    "title": notification.title,
-                    "message": notification.message,
-                    "complaint_number": notification.complaint.complaint_number,
-                    "complaint_id": notification.complaint.id,
-                    "created_at": notification.created_at.isoformat(),
-                    "url": notification.url,
-                    "is_read": notification.is_read,
+                    "id": notif.id,
+                    "type": notif.notification_type,
+                    "title": notif.title,
+                    "message": notif.message,
+                    "complaint_number": extra.get("complaint_number", ""),
+                    "created_at": notif.created_at.isoformat(),
+                    "url": extra.get("url", "/complaints/"),
+                    "is_read": False,
                 }
             )
 
-        # حساب عدد الإشعارات غير المقروءة (فقط للشكاوى غير المحلولة)
-        unread_count = ComplaintNotification.objects.filter(
-            recipient=request.user,
+        unread_count = NotificationVisibility.objects.filter(
+            user=request.user,
             is_read=False,
-            complaint__status__in=["new", "in_progress", "escalated"],
+            notification__notification_type__startswith="complaint_",
         ).count()
 
         return JsonResponse(
@@ -690,16 +666,15 @@ def complaints_notifications_api(request):
 @require_http_methods(["POST"])
 def clear_complaints_notifications(request):
     """
-    API endpoint لمسح جميع إشعارات الشكاوى للمستخدم الحالي
+    API endpoint لمسح جميع إشعارات الشكاوى للمستخدم الحالي - يستخدم النظام الرئيسي الموحد
     """
     try:
-        from .models import ComplaintNotification
+        from notifications.models import NotificationVisibility
 
-        # تحديد إشعارات الشكاوى غير المحلولة فقط كمقروءة (نفس منطق العداد)
-        updated_count = ComplaintNotification.objects.filter(
-            recipient=request.user,
+        updated_count = NotificationVisibility.objects.filter(
+            user=request.user,
             is_read=False,
-            complaint__status__in=["new", "in_progress", "escalated"],
+            notification__notification_type__startswith="complaint_",
         ).update(is_read=True)
 
         return JsonResponse(
@@ -1100,32 +1075,34 @@ def complaint_stats_api(request):
 @require_http_methods(["GET"])
 def user_notifications_api(request):
     """
-    API endpoint for getting user notifications
+    API endpoint for getting user notifications - يستخدم النظام الرئيسي الموحد
     """
     try:
-        from .models import ComplaintNotification
+        from notifications.models import NotificationVisibility
 
-        notifications = (
-            ComplaintNotification.objects.filter(recipient=request.user, is_read=False)
-            .select_related("complaint")
-            .order_by("-created_at")[:10]
+        visibility_records = (
+            NotificationVisibility.objects.filter(
+                user=request.user,
+                is_read=False,
+                notification__notification_type__startswith="complaint_",
+            )
+            .select_related("notification")
+            .order_by("-notification__created_at")[:10]
         )
 
         results = []
-        for notification in notifications:
+        for vis in visibility_records:
+            notif = vis.notification
+            extra = notif.extra_data or {}
             results.append(
                 {
-                    "id": notification.id,
-                    "title": notification.title,
-                    "message": notification.message,
-                    "type": notification.notification_type,
-                    "url": notification.url,
-                    "created_at": notification.created_at.strftime("%Y-%m-%d %H:%M"),
-                    "complaint_number": (
-                        notification.complaint.complaint_number
-                        if notification.complaint
-                        else None
-                    ),
+                    "id": notif.id,
+                    "title": notif.title,
+                    "message": notif.message,
+                    "type": notif.notification_type,
+                    "url": extra.get("url", f"/complaints/"),
+                    "created_at": notif.created_at.strftime("%Y-%m-%d %H:%M"),
+                    "complaint_number": extra.get("complaint_number", ""),
                 }
             )
 
@@ -1133,7 +1110,7 @@ def user_notifications_api(request):
             {
                 "success": True,
                 "notifications": results,
-                "unread_count": notifications.count(),
+                "unread_count": len(results),
             }
         )
 
@@ -1148,55 +1125,50 @@ def user_notifications_api(request):
 class AssignmentNotificationsView(View):
     """
     API endpoint for getting assignment notifications for dashboard
+    يستخدم النظام الرئيسي الموحد
     """
 
     def get(self, request):
         """Get assignment notifications for current user"""
         try:
-            # Get assignment notifications for current user (only unread, for active complaints, and still assigned to user)
-            assignment_notifications = (
-                ComplaintNotification.objects.filter(
-                    recipient=request.user,
-                    notification_type__in=["assignment", "new_complaint"],
+            from notifications.models import NotificationVisibility
+
+            # البحث عن إشعارات التعيين في النظام الرئيسي
+            vis_records = (
+                NotificationVisibility.objects.filter(
+                    user=request.user,
                     is_read=False,
-                    complaint__status__in=[
-                        "new",
-                        "in_progress",
-                        "escalated",
-                    ],  # فقط الشكاوى النشطة
-                    complaint__assigned_to=request.user,  # فقط الشكاوى المسندة حالياً للمستخدم
+                    notification__notification_type__in=[
+                        "complaint_assigned", "complaint_created",
+                    ],
                 )
-                .select_related("complaint", "complaint__customer")
-                .order_by("-created_at")[:5]
+                .select_related("notification")
+                .order_by("-notification__created_at")[:5]
             )
 
             notifications_data = []
-
-            # Add assignment notifications
-            for notification in assignment_notifications:
+            for vis in vis_records:
+                notif = vis.notification
+                extra = notif.extra_data or {}
                 notifications_data.append(
                     {
-                        "id": notification.id,
+                        "id": notif.id,
                         "type": "assignment",
-                        "title": notification.title,
-                        "message": notification.message,
-                        "complaint_id": notification.complaint.id,
-                        "complaint_number": notification.complaint.complaint_number,
-                        "customer_name": notification.complaint.customer.name,
-                        "created_at": notification.created_at.strftime(
-                            "%Y-%m-%d %H:%M"
-                        ),
-                        "url": notification.url
-                        or f"/complaints/{notification.complaint.id}/",
-                        "is_read": notification.is_read,
+                        "title": notif.title,
+                        "message": notif.message,
+                        "complaint_number": extra.get("complaint_number", ""),
+                        "customer_name": extra.get("customer_name", ""),
+                        "created_at": notif.created_at.strftime("%Y-%m-%d %H:%M"),
+                        "url": extra.get("url", "/complaints/"),
+                        "is_read": False,
                     }
                 )
 
             return JsonResponse(
                 {
                     "success": True,
-                    "notifications": notifications_data[:5],  # Limit to 5
-                    "unread_assignments": assignment_notifications.count(),
+                    "notifications": notifications_data,
+                    "unread_assignments": len(notifications_data),
                 }
             )
 
@@ -1213,16 +1185,18 @@ class AssignmentNotificationsView(View):
 @login_required
 @require_http_methods(["POST"])
 def mark_assignment_notification_read(request, notification_id):
-    """Mark assignment notification as read"""
+    """Mark assignment notification as read - يستخدم النظام الرئيسي الموحد"""
     try:
-        notification = get_object_or_404(
-            ComplaintNotification,
-            id=notification_id,
-            recipient=request.user,
-            notification_type="assignment",
-        )
+        from notifications.models import NotificationVisibility
 
-        notification.mark_as_read()
+        vis = get_object_or_404(
+            NotificationVisibility,
+            notification_id=notification_id,
+            user=request.user,
+        )
+        vis.is_read = True
+        vis.read_at = timezone.now()
+        vis.save(update_fields=["is_read", "read_at"])
 
         return JsonResponse({"success": True, "message": "تم تحديد الإشعار كمقروء"})
 

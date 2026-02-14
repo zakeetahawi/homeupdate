@@ -604,7 +604,7 @@ def complaint_created_notification(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender="complaints.Complaint")
 def complaint_status_and_assignment_notification(sender, instance, created, **kwargs):
-    """إشعارات تغيير حالة الشكوى وتغيير المسؤول في النظام الرئيسي"""
+    """إشعارات تغيير حالة الشكوى وتغيير المسؤول - النظام الرئيسي الموحد"""
     if created:
         return  # يتم التعامل مع الإنشاء في complaint_created_notification
 
@@ -665,10 +665,30 @@ def complaint_status_and_assignment_notification(sender, instance, created, **kw
             },
         )
 
+        # إخفاء الإشعارات القديمة عند حل/إغلاق الشكوى
+        if new_status in ("resolved", "closed"):
+            try:
+                from complaints.services.notification_service import notification_service as complaint_notif_svc
+                complaint_notif_svc._hide_old_notifications_for_resolved_complaint(instance)
+            except Exception as e:
+                logger.error(f"Error hiding old notifications: {e}")
+
+        # تنظيف الأعلام المؤقتة
+        delattr(instance, "_old_status")
+        delattr(instance, "_status_changed")
+
     # إشعار تغيير المسؤول
     if hasattr(instance, "_assignee_changed") and instance._assignee_changed:
         old_assignee = getattr(instance, "_old_assignee", None)
         new_assignee = instance.assigned_to
+
+        # إخفاء الإشعارات القديمة للمسؤول السابق
+        if old_assignee:
+            try:
+                from complaints.services.notification_service import notification_service as complaint_notif_svc
+                complaint_notif_svc._hide_old_assignment_notifications(instance, old_assignee)
+            except Exception as e:
+                logger.error(f"Error hiding old assignment notifications: {e}")
 
         title = f"إسناد الشكوى {instance.complaint_number}"
         message = f"تم إسناد الشكوى إلى {new_assignee.get_full_name() if new_assignee else 'غير محدد'}"
@@ -698,6 +718,10 @@ def complaint_status_and_assignment_notification(sender, instance, created, **kw
                 ),
             },
         )
+
+        # تنظيف الأعلام المؤقتة
+        delattr(instance, "_old_assignee")
+        delattr(instance, "_assignee_changed")
 
 
 @receiver(post_save, sender="complaints.ComplaintEscalation")
@@ -733,6 +757,40 @@ def complaint_escalation_notification(sender, instance, created, **kwargs):
                 ),
                 "changed_by_username": (
                     changed_by_user.username if changed_by_user else None
+                ),
+            },
+        )
+
+
+@receiver(post_save, sender="complaints.ComplaintUpdate")
+def complaint_update_notification(sender, instance, created, **kwargs):
+    """إشعار عند إضافة تحديث/تعليق على الشكوى"""
+    if created:
+        complaint = instance.complaint
+        created_by_user = getattr(instance, "created_by", None)
+
+        title = f"تحديث على الشكوى {complaint.complaint_number}"
+        desc = instance.description or ""
+        message = desc[:100] + "..." if len(desc) > 100 else desc
+
+        create_notification(
+            title=title,
+            message=message,
+            notification_type="complaint_comment",
+            related_object=complaint,
+            created_by=created_by_user,
+            priority="normal",
+            extra_data={
+                "complaint_number": complaint.complaint_number,
+                "customer_name": complaint.customer.name if complaint.customer else "",
+                "url": f"/complaints/{complaint.pk}/",
+                "changed_by": (
+                    created_by_user.get_full_name() or created_by_user.username
+                    if created_by_user
+                    else None
+                ),
+                "changed_by_username": (
+                    created_by_user.username if created_by_user else None
                 ),
             },
         )

@@ -235,8 +235,64 @@ class ComplaintDashboardView(LoginRequiredMixin, TemplateView):
             "actual_overdue_count": actual_overdue_count,
         }
 
+        # إحصائيات SLA
+        dashboard_data["sla_stats"] = self.calculate_sla_stats()
+
+        # إحصائيات الشكاوى التلقائية
+        dashboard_data["auto_complaints"] = Complaint.objects.filter(
+            source="auto"
+        ).aggregate(
+            total=Count("id"),
+            open=Count("id", filter=Q(status__in=["new", "in_progress", "overdue"])),
+            resolved=Count("id", filter=Q(status__in=["resolved", "closed"])),
+        )
+
+        # إحصائيات حسب المصدر
+        dashboard_data["complaints_by_source"] = list(
+            Complaint.objects.values("source").annotate(count=Count("id")).order_by("-count")
+        )
+
         context.update(dashboard_data)
         return context
+
+    def calculate_sla_stats(self):
+        """حساب إحصائيات SLA"""
+        from django.db.models import DurationField, ExpressionWrapper, F
+
+        now = timezone.now()
+
+        # الشكاوى المحلولة ضمن SLA (قبل الموعد النهائي)
+        resolved_within_sla = Complaint.objects.filter(
+            resolved_at__isnull=False,
+            deadline__isnull=False,
+            resolved_at__lte=F("deadline"),
+        ).count()
+
+        # الشكاوى المحلولة خارج SLA (بعد الموعد النهائي)
+        resolved_outside_sla = Complaint.objects.filter(
+            resolved_at__isnull=False,
+            deadline__isnull=False,
+            resolved_at__gt=F("deadline"),
+        ).count()
+
+        total_resolved = resolved_within_sla + resolved_outside_sla
+        sla_compliance = (
+            round(resolved_within_sla / total_resolved * 100, 1) if total_resolved > 0 else 0
+        )
+
+        # الشكاوى النشطة التي تقترب من SLA (خلال 24 ساعة)
+        approaching_sla = Complaint.objects.filter(
+            status__in=["new", "in_progress"],
+            deadline__gt=now,
+            deadline__lte=now + timedelta(hours=24),
+        ).count()
+
+        return {
+            "compliance_rate": sla_compliance,
+            "within_sla": resolved_within_sla,
+            "outside_sla": resolved_outside_sla,
+            "approaching_deadline": approaching_sla,
+        }
 
     def calculate_avg_resolution_time(self):
         """حساب متوسط وقت الحل بشكل محسن"""
@@ -602,6 +658,50 @@ class ComplaintReportsView(LoginRequiredMixin, TemplateView):
             .order_by("-resolved_count")[:5]
         )
         context["top_resolvers"] = top_resolvers
+
+        # ---- إحصائيات SLA للتقارير ----
+        from django.db.models import F
+
+        resolved_with_deadline = all_complaints.filter(
+            resolved_at__isnull=False, deadline__isnull=False
+        )
+        within_sla = resolved_with_deadline.filter(resolved_at__lte=F("deadline")).count()
+        outside_sla = resolved_with_deadline.filter(resolved_at__gt=F("deadline")).count()
+        total_sla = within_sla + outside_sla
+        context["sla_report"] = {
+            "within_sla": within_sla,
+            "outside_sla": outside_sla,
+            "compliance_rate": round(within_sla / total_sla * 100, 1) if total_sla > 0 else 0,
+        }
+
+        # ---- إحصائيات حسب المصدر ----
+        context["source_stats"] = {
+            "manual": all_complaints.filter(source="manual").count(),
+            "auto": all_complaints.filter(source="auto").count(),
+            "customer": all_complaints.filter(source="customer").count(),
+        }
+
+        # ---- أداء الموظفين مع SLA ----
+        context["staff_sla_performance"] = (
+            User.objects.annotate(
+                total_assigned=Count("assigned_complaints"),
+                total_resolved=Count(
+                    "assigned_complaints",
+                    filter=Q(assigned_complaints__status__in=["resolved", "closed"]),
+                ),
+                resolved_in_sla=Count(
+                    "assigned_complaints",
+                    filter=Q(
+                        assigned_complaints__status__in=["resolved", "closed"],
+                        assigned_complaints__resolved_at__isnull=False,
+                        assigned_complaints__deadline__isnull=False,
+                        assigned_complaints__resolved_at__lte=F("assigned_complaints__deadline"),
+                    ),
+                ),
+            )
+            .filter(total_assigned__gt=0)
+            .order_by("-total_resolved")[:10]
+        )
 
         return context
 

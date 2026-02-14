@@ -1402,6 +1402,12 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(hour=8, minute=0),
         "options": {"queue": "default"},
     },
+    # إنشاء شكاوى تلقائية للتأخيرات يومياً الساعة 9 صباحاً
+    "auto-delay-complaints": {
+        "task": "complaints.tasks.auto_create_delay_complaints",
+        "schedule": crontab(hour=9, minute=0),
+        "options": {"queue": "default"},
+    },
 }
 
 # إعدادات الذاكرة

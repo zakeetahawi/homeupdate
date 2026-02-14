@@ -51,6 +51,7 @@ class Notification(models.Model):
         ("complaint_escalated", _("تصعيد شكوى")),
         ("complaint_resolved", _("حل شكوى")),
         ("complaint_overdue", _("تأخر شكوى")),
+        ("complaint_comment", _("تعليق على شكوى")),
         # إشعارات التقطيع الجديدة
         ("cutting_order_created", _("أمر تقطيع جديد")),
         ("cutting_completed", _("اكتمال التقطيع")),
@@ -336,6 +337,11 @@ class Notification(models.Model):
                 "icon": "fas fa-clock",
                 "color": "#dc3545",
                 "bg": "#f8d7da",
+            },
+            "complaint_comment": {
+                "icon": "fas fa-comment-alt",
+                "color": "#6f42c1",
+                "bg": "#e8daf5",
             },
         }
 

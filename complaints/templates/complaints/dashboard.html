@@ -602,6 +602,104 @@
                 </div>
             </div>
         </div>
+
+        <!-- إحصائيات SLA والشكاوى التلقائية -->
+        <div class="row">
+            <!-- مؤشرات SLA -->
+            <div class="col-lg-6 mb-4">
+                <div class="chart-container">
+                    <h5 class="mb-3">
+                        <i class="fas fa-tachometer-alt me-2"></i>
+                        أداء SLA
+                    </h5>
+                    <div class="metric-grid">
+                        <div class="metric-item">
+                            <div class="metric-value">
+                                <span class="badge {% if sla_stats.compliance_rate >= 80 %}bg-success{% elif sla_stats.compliance_rate >= 60 %}bg-warning text-dark{% else %}bg-danger{% endif %} fs-4 px-3 py-2">{{ sla_stats.compliance_rate }}%</span>
+                            </div>
+                            <div class="metric-label mt-2">
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-chart-pie me-1"></i>نسبة الالتزام بالـ SLA
+                                </span>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">
+                                <span class="badge bg-success fs-4 px-3 py-2">{{ sla_stats.within_sla }}</span>
+                            </div>
+                            <div class="metric-label mt-2">
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>ضمن SLA
+                                </span>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">
+                                <span class="badge bg-danger fs-4 px-3 py-2">{{ sla_stats.outside_sla }}</span>
+                            </div>
+                            <div class="metric-label mt-2">
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times me-1"></i>خارج SLA
+                                </span>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">
+                                <span class="badge bg-warning text-dark fs-4 px-3 py-2">{{ sla_stats.approaching_deadline }}</span>
+                            </div>
+                            <div class="metric-label mt-2">
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-hourglass-half me-1"></i>تقترب من الموعد
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- الشكاوى التلقائية -->
+            <div class="col-lg-6 mb-4">
+                <div class="chart-container">
+                    <h5 class="mb-3">
+                        <i class="fas fa-robot me-2"></i>
+                        الشكاوى التلقائية (تأخيرات)
+                    </h5>
+                    <div class="metric-grid">
+                        <div class="metric-item">
+                            <div class="metric-value">
+                                <span class="badge bg-info fs-4 px-3 py-2">{{ auto_complaints.total|default:"0" }}</span>
+                            </div>
+                            <div class="metric-label mt-2">
+                                <span class="badge bg-info">
+                                    <i class="fas fa-cogs me-1"></i>إجمالي تلقائية
+                                </span>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">
+                                <span class="badge bg-warning text-dark fs-4 px-3 py-2">{{ auto_complaints.open|default:"0" }}</span>
+                            </div>
+                            <div class="metric-label mt-2">
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-folder-open me-1"></i>مفتوحة
+                                </span>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value">
+                                <span class="badge bg-success fs-4 px-3 py-2">{{ auto_complaints.resolved|default:"0" }}</span>
+                            </div>
+                            <div class="metric-label mt-2">
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-double me-1"></i>محلولة
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- الشكاوى الحديثة والمتأخرة -->
         <div class="row">
             <!-- الشكاوى الحديثة -->

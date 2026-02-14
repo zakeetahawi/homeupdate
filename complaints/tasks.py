@@ -308,3 +308,139 @@ def daily_complaints_report_task(self):
     except Exception as e:
         logger.error(f"خطأ في التقرير اليومي: {str(e)}")
         return {"success": False, "error": str(e)}
+
+
+@shared_task(
+    bind=True, max_retries=2, default_retry_delay=300, autoretry_for=(Exception,)
+)
+def auto_create_delay_complaints(self):
+    """
+    إنشاء شكاوى تلقائية للطلبات المتأخرة عن تاريخ التسليم المتوقع
+    والتركيبات المتأخرة عن مواعيدها المجدولة
+
+    يتم تشغيلها يومياً عبر Celery Beat
+    """
+    try:
+        from django.contrib.contenttypes.models import ContentType
+
+        from complaints.models import Complaint, ComplaintType
+        from installations.models import InstallationSchedule
+        from orders.models import Order
+
+        results = {"order_complaints": 0, "installation_complaints": 0, "skipped": 0}
+        today = timezone.now().date()
+
+        # ---- 1. طلبات متأخرة عن تاريخ التسليم ----
+        # طلبات لها تاريخ تسليم متوقع مضى عليه أكثر من 3 أيام ولم تُسلَّم
+        delayed_orders = Order.objects.filter(
+            expected_delivery_date__lt=today - timedelta(days=3),
+            order_status__in=["pending", "in_progress", "ready_install"],
+        ).select_related("customer", "branch", "salesperson")
+
+        # الحصول على نوع الشكوى الخاص بالتأخير أو إنشاؤه
+        delay_type, _ = ComplaintType.objects.get_or_create(
+            name="تأخير تسليم",
+            defaults={
+                "description": "شكوى تلقائية بسبب تأخر تسليم الطلب عن الموعد المتوقع",
+                "default_priority": "high",
+                "default_deadline_hours": 48,
+            },
+        )
+        install_delay_type, _ = ComplaintType.objects.get_or_create(
+            name="تأخير تركيب",
+            defaults={
+                "description": "شكوى تلقائية بسبب تأخر التركيب عن الموعد المجدول",
+                "default_priority": "high",
+                "default_deadline_hours": 48,
+            },
+        )
+
+        order_ct = ContentType.objects.get_for_model(Order)
+
+        for order in delayed_orders:
+            # تجاهل إذا توجد شكوى مفتوحة لنفس الطلب من نوع التأخير
+            existing = Complaint.objects.filter(
+                related_order=order,
+                complaint_type=delay_type,
+                status__in=["new", "in_progress", "escalated", "overdue"],
+            ).exists()
+            if existing:
+                results["skipped"] += 1
+                continue
+
+            days_late = (today - order.expected_delivery_date).days
+            Complaint.objects.create(
+                customer=order.customer,
+                complaint_type=delay_type,
+                title=f"تأخير تسليم الطلب {order.order_number}",
+                description=(
+                    f"تم إنشاء هذه الشكوى تلقائياً بسبب تأخر تسليم الطلب رقم {order.order_number} "
+                    f"بمقدار {days_late} يوم عن تاريخ التسليم المتوقع "
+                    f"({order.expected_delivery_date.strftime('%Y-%m-%d')}).\n"
+                    f"حالة الطلب الحالية: {order.get_order_status_display()}"
+                ),
+                related_order=order,
+                content_type=order_ct,
+                object_id=order.pk,
+                priority="high" if days_late > 7 else "medium",
+                source="auto",
+            )
+            results["order_complaints"] += 1
+            logger.info(
+                f"✅ شكوى تأخير تلقائية للطلب {order.order_number} - متأخر {days_late} يوم"
+            )
+
+        # ---- 2. تركيبات متأخرة عن مواعيدها المجدولة ----
+        install_ct = ContentType.objects.get_for_model(InstallationSchedule)
+
+        delayed_installs = InstallationSchedule.objects.filter(
+            scheduled_date__lt=today - timedelta(days=2),
+            status__in=["scheduled", "needs_scheduling"],
+        ).select_related("order", "order__customer")
+
+        for install in delayed_installs:
+            if not install.order or not install.order.customer:
+                continue
+
+            existing = Complaint.objects.filter(
+                content_type=install_ct,
+                object_id=install.pk,
+                complaint_type=install_delay_type,
+                status__in=["new", "in_progress", "escalated", "overdue"],
+            ).exists()
+            if existing:
+                results["skipped"] += 1
+                continue
+
+            days_late = (today - install.scheduled_date).days
+            Complaint.objects.create(
+                customer=install.order.customer,
+                complaint_type=install_delay_type,
+                title=f"تأخير تركيب الطلب {install.order.order_number}",
+                description=(
+                    f"تم إنشاء هذه الشكوى تلقائياً بسبب تأخر تركيب الطلب رقم {install.order.order_number} "
+                    f"بمقدار {days_late} يوم عن الموعد المجدول "
+                    f"({install.scheduled_date.strftime('%Y-%m-%d')}).\n"
+                    f"حالة التركيب الحالية: {install.get_status_display()}"
+                ),
+                related_order=install.order,
+                content_type=install_ct,
+                object_id=install.pk,
+                priority="high" if days_late > 5 else "medium",
+                source="auto",
+            )
+            results["installation_complaints"] += 1
+            logger.info(
+                f"✅ شكوى تأخير تركيب تلقائية للطلب {install.order.order_number} - متأخر {days_late} يوم"
+            )
+
+        logger.info(
+            f"فحص التأخيرات: {results['order_complaints']} شكوى طلب، "
+            f"{results['installation_complaints']} شكوى تركيب، "
+            f"{results['skipped']} تم تجاهلها"
+        )
+        return {"success": True, "results": results}
+
+    except Exception as e:
+        logger.error(f"خطأ في إنشاء شكاوى التأخير التلقائية: {str(e)}")
+        return {"success": False, "error": str(e)}

@@ -1,5 +1,7 @@
 """
 Enhanced notification service for complaints system integration
+يستخدم نظام الإشعارات الرئيسي الموحد (Notification model)
+بدلاً من نظام ComplaintNotification المنفصل
 """
 
 import logging
@@ -13,10 +15,70 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 
-from ..models import ComplaintNotification
-
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
+
+def _create_main_notification(complaint, recipient, notification_type, title, message, priority="normal"):
+    """
+    إنشاء إشعار في النظام الرئيسي الموحد مع تحديد المستلم
+    """
+    from notifications.models import Notification, NotificationVisibility
+    from django.contrib.contenttypes.models import ContentType
+
+    # تحويل أنواع الإشعارات القديمة إلى الأنواع الرئيسية
+    type_map = {
+        "new_complaint": "complaint_created",
+        "status_change": "complaint_status_changed",
+        "assignment": "complaint_assigned",
+        "escalation": "complaint_escalated",
+        "escalation_alert": "complaint_escalated",
+        "overdue": "complaint_overdue",
+        "overdue_reminder": "complaint_overdue",
+        "deadline": "complaint_overdue",
+        "comment": "complaint_comment",
+    }
+    mapped_type = type_map.get(notification_type, "complaint_status_changed")
+
+    # فحص التكرار - نفس النوع ونفس الشكوى في آخر 5 دقائق
+    from datetime import timedelta
+    recent_time = timezone.now() - timedelta(minutes=5)
+    ct = ContentType.objects.get_for_model(complaint)
+    existing = Notification.objects.filter(
+        notification_type=mapped_type,
+        content_type=ct,
+        object_id=complaint.pk,
+        created_at__gte=recent_time,
+    ).first()
+    if existing:
+        # تأكد من أن المستلم لديه visibility record
+        NotificationVisibility.objects.get_or_create(
+            notification=existing,
+            user=recipient,
+            defaults={"is_read": False},
+        )
+        return existing
+
+    notification = Notification.objects.create(
+        title=title,
+        message=message,
+        notification_type=mapped_type,
+        priority=priority,
+        content_type=ct,
+        object_id=complaint.pk,
+        extra_data={
+            "complaint_number": complaint.complaint_number,
+            "customer_name": complaint.customer.name if complaint.customer else "",
+        },
+    )
+
+    NotificationVisibility.objects.create(
+        notification=notification,
+        user=recipient,
+        is_read=False,
+    )
+
+    return notification
 
 
 class ComplaintNotificationService:
@@ -353,20 +415,17 @@ class ComplaintNotificationService:
         self, complaint, recipient, notification_type, title, message, send_email=False
     ):
         """
-        Internal method to send notification
+        Internal method to send notification via main unified system
         """
         try:
-            # Create database notification
-            notification = ComplaintNotification.create_notification(
+            # إنشاء إشعار في النظام الرئيسي الموحد
+            _create_main_notification(
                 complaint=complaint,
-                notification_type=notification_type,
                 recipient=recipient,
+                notification_type=notification_type,
                 title=title,
                 message=message,
             )
-
-            # WebSocket notifications disabled - chat system removed
-            # self._send_websocket_notification(recipient, notification)
 
             # Send email if requested
             if send_email and hasattr(recipient, "email") and recipient.email:
@@ -429,89 +488,51 @@ class ComplaintNotificationService:
     def _hide_old_assignment_notifications(self, complaint, old_assignee):
         """
         إخفاء الإشعارات القديمة للمسؤول السابق عند تغيير التعيين
+        يعمل مع النظام الرئيسي الموحد (NotificationVisibility)
         """
         try:
-            from complaints.models import ComplaintNotification
+            from django.contrib.contenttypes.models import ContentType
+            from notifications.models import Notification, NotificationVisibility
 
-            # تحديد الإشعارات القديمة للمسؤول السابق كمقروءة
-            old_notifications = ComplaintNotification.objects.filter(
-                complaint=complaint,
-                recipient=old_assignee,
-                notification_type__in=["assignment", "new_complaint"],
+            ct = ContentType.objects.get_for_model(complaint)
+
+            # البحث عن إشعارات الشكوى القديمة للمسؤول السابق
+            old_visibility = NotificationVisibility.objects.filter(
+                user=old_assignee,
                 is_read=False,
+                notification__content_type=ct,
+                notification__object_id=complaint.pk,
+                notification__notification_type__in=[
+                    "complaint_assigned", "complaint_created",
+                ],
             )
 
-            # طباعة تفاصيل للتشخيص
-            logger.info(
-                f"🔍 البحث عن إشعارات قديمة للمسؤول {old_assignee.username} للشكوى {complaint.complaint_number}"
-            )
-            logger.info(
-                f"🔍 عدد الإشعارات الموجودة قبل الإخفاء: {old_notifications.count()}"
-            )
-
-            updated_count = old_notifications.update(is_read=True)
+            updated_count = old_visibility.update(is_read=True)
 
             if updated_count > 0:
                 logger.info(
                     f"✅ تم إخفاء {updated_count} إشعار قديم للمسؤول السابق {old_assignee.username} للشكوى {complaint.complaint_number}"
                 )
-            else:
-                logger.info(
-                    f"ℹ️ لا توجد إشعارات قديمة لإخفائها للمسؤول {old_assignee.username} للشكوى {complaint.complaint_number}"
-                )
-
-            # إضافة تنظيف شامل للإشعارات غير المتطابقة
-            self._cleanup_mismatched_assignment_notifications()
 
         except Exception as e:
             logger.error(f"Error hiding old assignment notifications: {str(e)}")
 
-    def _cleanup_mismatched_assignment_notifications(self):
-        """
-        تنظيف شامل للإشعارات غير المتطابقة - إخفاء الإشعارات للمستخدمين الذين لم يعودوا مسؤولين
-        """
-        try:
-            from complaints.models import Complaint, ComplaintNotification
-
-            # البحث عن الإشعارات غير المقروءة للتعيين
-            assignment_notifications = ComplaintNotification.objects.filter(
-                notification_type__in=["assignment", "new_complaint"],
-                is_read=False,
-                complaint__status__in=["new", "in_progress", "escalated"],
-            ).select_related("complaint")
-
-            cleaned_count = 0
-            for notification in assignment_notifications:
-                # إذا كان المستلم للإشعار ليس هو المسؤول الحالي عن الشكوى
-                if notification.complaint.assigned_to != notification.recipient:
-                    notification.is_read = True
-                    notification.save()
-                    cleaned_count += 1
-                    logger.info(
-                        f"🧹 تم إخفاء إشعار غير متطابق: الشكوى {notification.complaint.complaint_number} للمستخدم {notification.recipient.username}"
-                    )
-
-            if cleaned_count > 0:
-                logger.info(f"✅ تم تنظيف {cleaned_count} إشعار غير متطابق")
-
-        except Exception as e:
-            logger.error(
-                f"Error cleaning up mismatched assignment notifications: {str(e)}"
-            )
-
     def _hide_old_notifications_for_resolved_complaint(self, complaint):
         """
         إخفاء جميع الإشعارات القديمة عند حل الشكوى أو إغلاقها
+        يعمل مع النظام الرئيسي الموحد
         """
         try:
-            from complaints.models import ComplaintNotification
+            from django.contrib.contenttypes.models import ContentType
+            from notifications.models import NotificationVisibility
 
-            # تحديد جميع الإشعارات غير المقروءة للشكوى كمقروءة
-            old_notifications = ComplaintNotification.objects.filter(
-                complaint=complaint, is_read=False
-            )
+            ct = ContentType.objects.get_for_model(complaint)
 
-            updated_count = old_notifications.update(is_read=True)
+            updated_count = NotificationVisibility.objects.filter(
+                is_read=False,
+                notification__content_type=ct,
+                notification__object_id=complaint.pk,
+            ).update(is_read=True)
 
             if updated_count > 0:
                 logger.info(
@@ -523,51 +544,47 @@ class ComplaintNotificationService:
                 f"Error hiding old notifications for resolved complaint: {str(e)}"
             )
 
-    def cleanup_old_notifications(self):
+    def cleanup_old_notifications(self, days=30):
         """
-        تنظيف شامل للإشعارات القديمة
+        تنظيف شامل للإشعارات القديمة في النظام الرئيسي الموحد
         """
         try:
-            from complaints.models import Complaint, ComplaintNotification
+            from django.contrib.contenttypes.models import ContentType
+            from complaints.models import Complaint
+            from notifications.models import Notification, NotificationVisibility
 
-            # إخفاء إشعارات الشكاوى المحلولة/المغلقة
-            resolved_complaints = Complaint.objects.filter(
-                status__in=["resolved", "closed"]
-            )
+            ct = ContentType.objects.get_for_model(Complaint)
             total_hidden = 0
 
-            for complaint in resolved_complaints:
-                hidden_count = ComplaintNotification.objects.filter(
-                    complaint=complaint, is_read=False
+            # 1. إخفاء إشعارات الشكاوى المحلولة/المغلقة
+            resolved_ids = list(Complaint.objects.filter(
+                status__in=["resolved", "closed"]
+            ).values_list("pk", flat=True))
+
+            if resolved_ids:
+                hidden_count = NotificationVisibility.objects.filter(
+                    is_read=False,
+                    notification__content_type=ct,
+                    notification__object_id__in=resolved_ids,
                 ).update(is_read=True)
                 total_hidden += hidden_count
 
-                if hidden_count > 0:
-                    logger.info(
-                        f"تم إخفاء {hidden_count} إشعار للشكوى المحلولة {complaint.complaint_number}"
-                    )
-
-            # إخفاء إشعارات التعيين للمستخدمين الذين لم يعودوا مسؤولين
-            active_complaints = Complaint.objects.filter(
-                status__in=["new", "in_progress", "escalated"]
+            # 2. حذف الإشعارات القديمة جداً (أكثر من days يوم)
+            from datetime import timedelta
+            cutoff = timezone.now() - timedelta(days=days)
+            old_notifications = Notification.objects.filter(
+                content_type=ct,
+                created_at__lt=cutoff,
+                notification_type__startswith="complaint_",
             )
-
-            for complaint in active_complaints:
-                if complaint.assigned_to:
-                    # إخفاء إشعارات التعيين للمستخدمين الآخرين (عدا المسؤول الحالي)
-                    old_notifications = ComplaintNotification.objects.filter(
-                        complaint=complaint,
-                        notification_type__in=["assignment", "new_complaint"],
-                        is_read=False,
-                    ).exclude(recipient=complaint.assigned_to)
-
-                    hidden_count = old_notifications.update(is_read=True)
-                    total_hidden += hidden_count
-
-                    if hidden_count > 0:
-                        logger.info(
-                            f"تم إخفاء {hidden_count} إشعار قديم للشكوى {complaint.complaint_number}"
-                        )
+            old_count = old_notifications.count()
+            if old_count > 0:
+                # حذف visibility records أولاً ثم الإشعارات
+                NotificationVisibility.objects.filter(
+                    notification__in=old_notifications
+                ).delete()
+                old_notifications.delete()
+                logger.info(f"تم حذف {old_count} إشعار شكوى قديم (أكثر من {days} يوم)")
 
             logger.info(f"✅ تم تنظيف {total_hidden} إشعار قديم إجمالي")
             return total_hidden

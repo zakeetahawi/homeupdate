@@ -169,6 +169,19 @@ class Complaint(models.Model):
         verbose_name="الأولوية",
     )
 
+    SOURCE_CHOICES = [
+        ("manual", "يدوي"),
+        ("auto", "تلقائي"),
+        ("customer", "العميل"),
+    ]
+    source = models.CharField(
+        max_length=10,
+        choices=SOURCE_CHOICES,
+        default="manual",
+        verbose_name="مصدر الشكوى",
+        help_text="كيف تم إنشاء الشكوى (يدوياً أو تلقائياً من النظام)",
+    )
+
     # التوقيتات
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ التقديم")
     deadline = models.DateTimeField(verbose_name="الموعد النهائي للحل")
