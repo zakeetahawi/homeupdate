@@ -18,10 +18,7 @@ from django.utils.translation import gettext_lazy as _
 
 from installations.models import CustomerDebt
 
-# تطبيق الإعدادات على الموقع الافتراضي
-admin.site.site_header = "نظام إدارة الخواجة"
-admin.site.site_title = "لوحة التحكم"
-admin.site.index_title = "مرحباً بك في نظام إدارة الخواجة"
+# Jazzmin handles branding via JAZZMIN_SETTINGS in settings.py
 
 
 def get_admin_stats():

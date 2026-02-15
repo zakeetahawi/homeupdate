@@ -282,16 +282,16 @@ def notification_count_ajax(request):
 @login_required
 def popup_notifications_api(request):
     """
-    API endpoint للإشعارات المنبثقة - يعرض أحدث الإشعارات غير المقروءة
-    بنفس تصميم popup الشكاوى المسندة
+    API endpoint للإشعارات المنبثقة - يعرض فقط الإشعارات العاجلة والعالية الأولوية
     """
     try:
-        # الحصول على آخر 5 إشعارات غير مقروءة
+        # الحصول على آخر 5 إشعارات غير مقروءة عاجلة أو عالية الأولوية فقط
         unread_notifications = (
             Notification.objects.for_user(request.user)
             .filter(
                 visibility_records__user=request.user,
                 visibility_records__is_read=False,
+                priority__in=["urgent", "high"],
             )
             .select_related("created_by", "content_type")
             .order_by("-created_at")[:5]

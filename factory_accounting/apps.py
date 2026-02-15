@@ -9,7 +9,7 @@ from django.apps import AppConfig
 class FactoryAccountingConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "factory_accounting"
-    verbose_name = "حسابات المصنع (Factory Accounting)"
+    verbose_name = "حسابات المصنع"
 
     def ready(self):
         """Import signals when app is ready"""

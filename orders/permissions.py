@@ -375,7 +375,7 @@ def get_user_role_permissions(user):
         return {key: True for key in permissions.keys()}
 
     # الحصول على جميع الصلاحيات بما فيها الموروثة
-    user_permissions = user.get_all_permissions()
+    user_permissions = user.get_role_permissions()
 
     # تحويل صلاحيات الدور إلى صلاحيات محددة
     if "all" in user_permissions:

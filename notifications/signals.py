@@ -145,7 +145,7 @@ def customer_created_notification(sender, instance, created, **kwargs):
             notification_type="customer_created",
             related_object=instance,
             created_by=instance.created_by,
-            priority="normal",
+            priority="low",
             extra_data={
                 "customer_code": instance.code,
                 "branch_name": instance.branch.name if instance.branch else None,

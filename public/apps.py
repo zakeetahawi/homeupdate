@@ -4,7 +4,7 @@ from django.apps import AppConfig
 class PublicConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "public"
-    verbose_name = "صفحات عامة وإعدادات Cloudflare"
+    verbose_name = "الصفحات العامة"
 
     def ready(self):
         """Register signals for automatic product pipeline + Cloudflare sync"""

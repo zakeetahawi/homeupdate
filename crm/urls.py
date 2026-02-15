@@ -17,7 +17,6 @@ from inventory.views import dashboard_view
 
 from . import api_monitoring, views
 from .csrf_views import csrf_debug_view, get_csrf_token_view, test_csrf_view
-from .custom_admin import custom_admin_site  # استيراد الـ AdminSite المخصص
 from .views_health import health_check
 
 # تم حذف test_completion_view
@@ -39,10 +38,10 @@ urlpatterns = [
     path("api/customers/", customer_list, name="customer_list"),
     path("api/customers/<int:pk>/", customer_detail, name="customer_detail"),
     # Manufacturing app URLs - using include with explicit namespace
-    # مسارات لوحة التحكم - استخدام الـ AdminSite المخصص
+    # مسارات لوحة التحكم
     path(
-        "admin/", custom_admin_site.urls
-    ),  # استخدام custom_admin_site بدلاً من admin.site
+        "admin/", admin.site.urls
+    ),
     path("admin/logout/", admin_logout_view, name="admin_logout"),
     # مسارات فحص الصحة
     path("health-check/", health_check, name="health_check"),

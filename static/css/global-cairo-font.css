@@ -13,23 +13,32 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ضمان خط Font Awesome للأيقونات — بدلاً من ملف font-awesome-fix.css منفصل (133 سطر) */
-.fas, .far, .fa-solid, .fa-regular {
+.fas, .far, .fa-solid, .fa-regular,
+i.fas, i.far, i.fa-solid, i.fa-regular,
+i[class*="fa-"] {
     font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free' !important;
     font-style: normal !important;
     -webkit-font-smoothing: antialiased !important;
 }
-.fas, .fa-solid { font-weight: 900 !important; }
-.far, .fa-regular { font-weight: 400 !important; }
+.fas, .fa-solid,
+i.fas, i.fa-solid { font-weight: 900 !important; }
+.far, .fa-regular,
+i.far, i.fa-regular { font-weight: 400 !important; }
 
-.fab, .fa-brands {
+.fab, .fa-brands,
+i.fab, i.fa-brands {
     font-family: 'Font Awesome 6 Brands', 'Font Awesome 5 Brands' !important;
     font-weight: 400 !important;
     font-style: normal !important;
 }
 
 i[class*="fa-"]::before,
-.fas::before, .far::before, .fab::before {
-    font-family: inherit !important;
+.fas::before, .far::before, .fab::before,
+.fa-solid::before, .fa-regular::before, .fa-brands::before {
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free' !important;
+}
+.fab::before, .fa-brands::before {
+    font-family: 'Font Awesome 6 Brands', 'Font Awesome 5 Brands' !important;
 }
 
 .material-icons {

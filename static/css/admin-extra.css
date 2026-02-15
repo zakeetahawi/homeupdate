@@ -1,0 +1,14 @@
+/* Admin Extra Styles for El-Khawaga ERP */
+/* RTL Support and Arabic UI Enhancements */
+
+/* Ensure RTL direction for Arabic content */
+body[dir="rtl"] .sidebar,
+body[dir="rtl"] .main-sidebar {
+    direction: rtl;
+    text-align: right;
+}
+
+/* Better Arabic font rendering */
+body, .content-wrapper, .main-sidebar, .navbar {
+    font-family: 'Segoe UI', 'Cairo', 'Tajawal', Tahoma, Arial, sans-serif;
+}

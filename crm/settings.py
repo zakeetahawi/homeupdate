@@ -82,16 +82,315 @@ MANAGERS = ADMINS
 SILENCED_SYSTEM_CHECKS = ["urls.W002", "models.W042", "security.W019"]
 
 # ======================================
-# 3. Installed Apps
+# 3. Jazzmin Admin Theme
+# ======================================
+
+JAZZMIN_SETTINGS = {
+    # عنوان الموقع
+    "site_title": "الخواجة",
+    "site_header": "نظام إدارة الخواجة",
+    "site_brand": "الخواجة ERP",
+    "welcome_sign": "مرحباً بك في لوحة التحكم",
+    "copyright": "الخواجة للمفروشات",
+
+    # شعار الموقع
+    "site_logo": "img/logo-transparent-v3.png",
+    "site_logo_classes": "img-circle",
+    "site_icon": "img/logo.png",
+    "login_logo": "img/logo-transparent-v3.png",
+
+    # البحث
+    "search_model": ["customers.Customer", "orders.Order", "inventory.Product"],
+    "user_avatar": "image",
+
+    # قائمة المستخدم العلوية
+    "topmenu_links": [
+        {"name": "الرئيسية", "url": "admin:index", "new_window": False},
+        {"name": "الموقع", "url": "/", "new_window": True},
+        {"name": "العملاء", "url": "admin:customers_customer_changelist"},
+        {"name": "الطلبات", "url": "admin:orders_order_changelist"},
+        {"name": "المعاينات", "url": "admin:inspections_inspection_changelist"},
+        {"name": "التصنيع", "url": "admin:manufacturing_manufacturingorder_changelist"},
+        {"name": "التركيبات", "url": "admin:installations_installationschedule_changelist"},
+        {"name": "المخزون", "url": "admin:inventory_product_changelist"},
+        {"name": "التقارير", "url": "admin:reports_report_changelist"},
+        {"name": "النسخ", "url": "admin:backup_system_backupjob_changelist"},
+    ],
+    "usermenu_links": [
+        {"name": "إعدادات الشركة", "url": "/accounts/company_info/", "icon": "fas fa-building"},
+    ],
+
+    # إظهار الـ Sidebar
+    "show_sidebar": True,
+    "navigation_expanded": False,
+    "hide_apps": [
+        "token_blacklist",
+        "django_apscheduler",
+        "auth",
+        "axes",
+        "contenttypes",
+        "sessions",
+    ],
+    "hide_models": [
+        "auth.Permission",
+        "auth.Group",
+    ],
+
+    # ترتيب التطبيقات في الشريط الجانبي
+    "order_with_respect_to": [
+        # العملاء والمبيعات
+        "customers",
+        "orders",
+        # المعاينات والتركيبات
+        "inspections",
+        "installations",
+        "installation_accounting",
+        # التصنيع والتقطيع
+        "manufacturing",
+        "cutting",
+        "factory_accounting",
+        # المخزون
+        "inventory",
+        # المحاسبة
+        "accounting",
+        # الشكاوى والتقارير
+        "complaints",
+        "reports",
+        # التواصل
+        "whatsapp",
+        "notifications",
+        # النظام والإدارة
+        "accounts",
+        "core",
+        "user_activity",
+        "backup_system",
+        "odoo_db_manager",
+        "board_dashboard",
+        "public",
+    ],
+
+    # أيقونات التطبيقات
+    "icons": {
+        # العملاء والمبيعات
+        "customers": "fas fa-users",
+        "customers.Customer": "fas fa-user-tie",
+        "customers.CustomerCategory": "fas fa-tags",
+        "customers.CustomerType": "fas fa-user-tag",
+        "customers.DiscountType": "fas fa-percentage",
+        "customers.CustomerNote": "fas fa-sticky-note",
+        "customers.CustomerResponsible": "fas fa-user-shield",
+
+        "orders": "fas fa-shopping-cart",
+        "orders.Order": "fas fa-file-invoice",
+        "orders.DraftOrder": "fas fa-file-alt",
+        "orders.Payment": "fas fa-money-bill-wave",
+        "orders.PaymentAllocation": "fas fa-receipt",
+        "orders.OrderInvoiceImage": "fas fa-image",
+        "orders.InvoiceTemplate": "fas fa-file-contract",
+        "orders.WizardFieldOption": "fas fa-sliders-h",
+        "orders.WizardStepConfiguration": "fas fa-hat-wizard",
+        "orders.WizardGlobalSettings": "fas fa-cogs",
+        "orders.DeliveryTimeSettings": "fas fa-clock",
+
+        # المعاينات والتركيبات
+        "inspections": "fas fa-clipboard-check",
+        "inspections.Inspection": "fas fa-search-plus",
+        "inspections.InspectionReport": "fas fa-file-medical",
+        "inspections.InspectionEvaluation": "fas fa-star-half-alt",
+        "inspections.InspectionNotification": "fas fa-bell",
+
+        "installations": "fas fa-tools",
+        "installations.InstallationSchedule": "fas fa-calendar-alt",
+        "installations.Technician": "fas fa-hard-hat",
+        "installations.Driver": "fas fa-truck",
+        "installations.Vehicle": "fas fa-shuttle-van",
+        "installations.InstallationTeam": "fas fa-users-cog",
+        "installations.ModificationRequest": "fas fa-edit",
+        "installations.ReceiptMemo": "fas fa-file-signature",
+        "installations.InstallationPayment": "fas fa-hand-holding-usd",
+        "installations.CustomerDebt": "fas fa-money-check-alt",
+
+        "installation_accounting": "fas fa-file-invoice-dollar",
+        "installation_accounting.InstallationCard": "fas fa-id-card",
+        "installation_accounting.TechnicianShare": "fas fa-coins",
+
+        # التصنيع والتقطيع
+        "manufacturing": "fas fa-industry",
+        "manufacturing.ManufacturingOrder": "fas fa-clipboard-list",
+        "manufacturing.ManufacturingOrderItem": "fas fa-list-ol",
+        "manufacturing.ProductionLine": "fas fa-stream",
+        "manufacturing.FabricReceipt": "fas fa-scroll",
+        "manufacturing.FabricReceiptItem": "fas fa-ruler",
+
+        "cutting": "fas fa-cut",
+        "cutting.CuttingOrder": "fas fa-file-alt",
+        "cutting.CuttingOrderItem": "fas fa-ruler-combined",
+        "cutting.CuttingReport": "fas fa-chart-bar",
+
+        "factory_accounting": "fas fa-calculator",
+        "factory_accounting.FactoryCard": "fas fa-id-badge",
+        "factory_accounting.Tailor": "fas fa-user-tie",
+
+        # المخزون
+        "inventory": "fas fa-warehouse",
+        "inventory.Product": "fas fa-box-open",
+        "inventory.Category": "fas fa-th-large",
+        "inventory.Warehouse": "fas fa-building",
+        "inventory.StockTransaction": "fas fa-exchange-alt",
+        "inventory.StockTransfer": "fas fa-truck-loading",
+        "inventory.Supplier": "fas fa-truck",
+        "inventory.PurchaseOrder": "fas fa-shopping-bag",
+        "inventory.BaseProduct": "fas fa-cube",
+        "inventory.ProductVariant": "fas fa-cubes",
+        "inventory.StockAlert": "fas fa-exclamation-triangle",
+        "inventory.InventoryAdjustment": "fas fa-balance-scale",
+
+        # المحاسبة
+        "accounting": "fas fa-book",
+        "accounting.Account": "fas fa-file-invoice-dollar",
+        "accounting.AccountType": "fas fa-layer-group",
+        "accounting.Transaction": "fas fa-exchange-alt",
+        "accounting.TransactionLine": "fas fa-list",
+        "accounting.CustomerFinancialSummary": "fas fa-chart-pie",
+        "accounting.BankAccount": "fas fa-university",
+        "accounting.AccountingSettings": "fas fa-cog",
+
+        # الشكاوى والتقارير
+        "complaints": "fas fa-exclamation-circle",
+        "complaints.Complaint": "fas fa-comment-dots",
+        "complaints.ComplaintType": "fas fa-tags",
+        "complaints.ComplaintTemplate": "fas fa-file-alt",
+        "complaints.ComplaintSLA": "fas fa-hourglass-half",
+        "complaints.ComplaintEscalation": "fas fa-arrow-up",
+
+        "reports": "fas fa-chart-line",
+        "reports.Report": "fas fa-file-pdf",
+        "reports.SavedReport": "fas fa-bookmark",
+        "reports.ReportSchedule": "fas fa-calendar-check",
+
+        # التواصل
+        "whatsapp": "fab fa-whatsapp",
+        "whatsapp.WhatsAppSettings": "fas fa-cog",
+        "whatsapp.WhatsAppMessage": "fas fa-comment",
+        "whatsapp.WhatsAppMessageTemplate": "fas fa-file-alt",
+        "whatsapp.WhatsAppEventType": "fas fa-flag",
+
+        "notifications": "fas fa-bell",
+        "notifications.Notification": "fas fa-envelope",
+        "notifications.NotificationSettings": "fas fa-cog",
+
+        # النظام والإدارة
+        "accounts": "fas fa-user-cog",
+        "accounts.User": "fas fa-user",
+        "accounts.Branch": "fas fa-code-branch",
+        "accounts.Department": "fas fa-building",
+        "accounts.Salesperson": "fas fa-user-tie",
+        "accounts.CompanyInfo": "fas fa-info-circle",
+        "accounts.SystemSettings": "fas fa-sliders-h",
+        "accounts.Role": "fas fa-user-shield",
+        "accounts.BranchMessage": "fas fa-comment-alt",
+        "accounts.InternalMessage": "fas fa-envelope",
+        "accounts.BranchDevice": "fas fa-laptop",
+        "accounts.MasterQRCode": "fas fa-qrcode",
+
+        "core": "fas fa-shield-alt",
+        "core.AuditLog": "fas fa-history",
+        "core.SecurityEvent": "fas fa-lock",
+        "core.RecycleBin": "fas fa-trash-restore",
+
+        "user_activity": "fas fa-chart-bar",
+        "user_activity.OnlineUser": "fas fa-circle",
+        "user_activity.UserSession": "fas fa-desktop",
+        "user_activity.UserLoginHistory": "fas fa-sign-in-alt",
+        "user_activity.UserActivityLog": "fas fa-list-alt",
+
+        "backup_system": "fas fa-database",
+        "backup_system.BackupJob": "fas fa-download",
+        "backup_system.RestoreJob": "fas fa-upload",
+        "backup_system.BackupSchedule": "fas fa-clock",
+
+        "odoo_db_manager": "fas fa-server",
+
+        "board_dashboard": "fas fa-tachometer-alt",
+
+        "public": "fas fa-globe",
+
+        "axes": "fas fa-shield-alt",
+
+        # Django defaults
+        "auth": "fas fa-users-cog",
+        "auth.Group": "fas fa-users",
+    },
+
+    # إعدادات عامة
+    "default_icon_parents": "fas fa-folder",
+    "default_icon_children": "fas fa-circle",
+    "related_modal_active": True,
+    "use_google_fonts_cdn": True,
+    "show_ui_builder": False,
+
+    # Custom CSS/JS
+    "custom_css": "css/admin-custom.css",
+    "custom_js": None,
+
+    # الثيم
+    "theme": "cosmo",
+    "dark_mode_theme": None,
+
+    # تغيير ترتيب النماذج
+    "changeform_format": "horizontal_tabs",
+    "changeform_format_overrides": {
+        "orders.Order": "vertical_tabs",
+        "customers.Customer": "vertical_tabs",
+        "accounting.Transaction": "vertical_tabs",
+    },
+
+    "language_chooser": False,
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": True,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-white",
+    "accent": "accent-primary",
+    "navbar": "navbar-white navbar-light",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-light-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "cosmo",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-outline-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+    "actions_sticky_top": True,
+}
+
+# ======================================
+# 4. Installed Apps
 # ======================================
 
 INSTALLED_APPS = [
     # ASGI/Channels
     "daphne",
     "channels",
-    # Admin interface
-    "admin_interface",
-    "colorfield",
+    # Admin interface (jazzmin)
+    "jazzmin",
     # Django core
     "django.contrib.admin",
     "django.contrib.auth",
@@ -819,113 +1118,7 @@ ADMIN_SITE_TITLE = "لوحة الإدارة"
 ADMIN_INDEX_TITLE = "مرحباً بك في نظام إدارة الخواجة"
 
 # ======================================
-# 25. Admin Interface (Jazzmin)
-# ======================================
-
-JAZZMIN_SETTINGS = {
-    "site_title": "نظام إدارة الخواجة",
-    "site_header": "نظام إدارة الخواجة",
-    "site_brand": "الخواجة",
-    "site_logo": "img/logo.png",
-    "login_logo": "img/logo.png",
-    "login_logo_dark": "img/logo.png",
-    "site_logo_classes": "img-circle",
-    "site_icon": "img/logo.png",
-    "welcome_sign": "مرحباً بك في نظام إدارة الخواجة",
-    "copyright": "نظام إدارة الخواجة",
-    "search_model": ["auth.User", "customers.Customer", "orders.Order"],
-    "user_avatar": "accounts.User.image",
-    "topmenu_links": [
-        {"name": "الرئيسية", "url": "admin:index", "permissions": ["auth.view_user"]},
-        {"name": "الموقع الرئيسي", "url": "/", "new_window": True},
-        {"name": "العملاء", "url": "admin:customers_customer_changelist", "permissions": ["customers.view_customer"]},
-        {"name": "الطلبات", "url": "admin:orders_order_changelist", "permissions": ["orders.view_order"]},
-        {"name": "المعاينات", "url": "admin:inspections_inspection_changelist", "permissions": ["inspections.view_inspection"]},
-        {"name": "التصنيع", "url": "admin:manufacturing_manufacturingorder_changelist", "permissions": ["manufacturing.view_manufacturingorder"]},
-        {"name": "التركيبات", "url": "admin:installations_installationschedule_changelist", "permissions": ["installations.view_installationschedule"]},
-        {"name": "المخزون", "url": "admin:inventory_product_changelist", "permissions": ["inventory.view_product"]},
-        {"name": "التقارير", "url": "admin:reports_report_changelist", "permissions": ["reports.view_report"]},
-        {"name": "النسخ الاحتياطي", "url": "admin:backup_system_backupjob_changelist", "permissions": ["backup_system.view_backupjob"]},
-    ],
-    "usermenu_links": [
-        {"name": "إعدادات الشركة", "url": "/accounts/company_info/", "icon": "fas fa-building"},
-        {"model": "auth.user"},
-    ],
-    "show_sidebar": True,
-    "navigation_expanded": True,
-    "hide_apps": [],
-    "hide_models": [],
-    "order_with_respect_to": [
-        "accounts", "customers", "orders", "installations",
-        "factory_accounting", "installation_accounting",
-        "inventory", "reports", "complaints", "backup_system", "odoo_db_manager",
-    ],
-    "icons": {
-        "auth": "fas fa-users-cog",
-        "auth.user": "fas fa-user",
-        "auth.Group": "fas fa-users",
-        "accounts.User": "fas fa-user-tie",
-        "accounts.CompanyInfo": "fas fa-building",
-        "accounts.Branch": "fas fa-map-marker-alt",
-        "accounts.Department": "fas fa-sitemap",
-        "accounts.Salesperson": "fas fa-user-tag",
-        "customers.Customer": "fas fa-user-friends",
-        "customers.CustomerCategory": "fas fa-tags",
-        "orders.Order": "fas fa-shopping-cart",
-        "orders.Payment": "fas fa-credit-card",
-        "inspections.Inspection": "fas fa-search",
-        "manufacturing.ManufacturingOrder": "fas fa-industry",
-        "installations.InstallationSchedule": "fas fa-tools",
-        "installations.Technician": "fas fa-hard-hat",
-        "inventory.Product": "fas fa-box",
-        "inventory.Category": "fas fa-list",
-        "inventory.Warehouse": "fas fa-warehouse",
-        "reports.Report": "fas fa-chart-bar",
-        "complaints.Complaint": "fas fa-exclamation-triangle",
-        "backup_system.BackupJob": "fas fa-save",
-        "backup_system.RestoreJob": "fas fa-undo",
-        "odoo_db_manager.Database": "fas fa-database",
-    },
-    "default_icon_parents": "fas fa-chevron-circle-right",
-    "default_icon_children": "fas fa-circle",
-    "related_modal_active": False,
-    "custom_css": "admin/css/sidebar_left.css",
-    "custom_js": "admin/js/custom_admin.js",
-    "use_google_fonts_cdn": True,
-    "show_ui_builder": False,
-    "theme": "flatly",
-    "dark_mode_theme": "darkly",
-    "changeform_format": "horizontal_tabs",
-    "changeform_format_overrides": {
-        "auth.user": "collapsible",
-        "auth.group": "vertical_tabs",
-    },
-    "language_chooser": False,
-    "custom_links": {
-        "customers": [{"name": "إضافة عميل جديد", "url": "admin:customers_customer_add", "icon": "fas fa-plus", "permissions": ["customers.add_customer"]}],
-        "orders": [{"name": "إنشاء طلب جديد", "url": "admin:orders_order_add", "icon": "fas fa-plus", "permissions": ["orders.add_order"]}],
-    },
-}
-
-JAZZMIN_UI_TWEAKS = {
-    "navbar_small_text": False, "footer_small_text": False, "body_small_text": False,
-    "brand_small_text": False, "brand_colour": "navbar-primary", "accent": "accent-primary",
-    "navbar": "navbar-primary navbar-dark", "no_navbar_border": False,
-    "navbar_fixed": False, "layout_boxed": False, "footer_fixed": False,
-    "sidebar_fixed": False, "sidebar": "sidebar-dark-primary",
-    "sidebar_nav_small_text": False, "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": False, "sidebar_nav_compact_style": False,
-    "sidebar_nav_legacy_style": False, "sidebar_nav_flat_style": False,
-    "theme": "flatly", "dark_mode_theme": "darkly",
-    "button_classes": {
-        "primary": "btn-primary", "secondary": "btn-secondary", "info": "btn-info",
-        "warning": "btn-warning", "danger": "btn-danger", "success": "btn-success",
-    },
-    "actions_sticky_top": False,
-}
-
-# ======================================
-# 26. Logging (Unified — NO DUPLICATES)
+# 25. Logging (Unified — NO DUPLICATES)
 # ======================================
 
 LOGGING = {

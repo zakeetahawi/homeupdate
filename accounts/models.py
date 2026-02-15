@@ -362,8 +362,8 @@ class User(AbstractUser):
         collect_inherited(role)
         return inherited
 
-    def get_all_permissions(self):
-        """الحصول على جميع الصلاحيات بما في ذلك الموروثة"""
+    def get_role_permissions(self):
+        """الحصول على جميع صلاحيات الدور بما في ذلك الموروثة"""
         role = self.get_user_role()
         all_permissions = set()
 
@@ -385,7 +385,7 @@ class User(AbstractUser):
         if self.is_superuser:
             return True
 
-        all_perms = self.get_all_permissions()
+        all_perms = self.get_role_permissions()
         return "all" in all_perms or permission in all_perms
 
     def can_manage_user(self, other_user):
