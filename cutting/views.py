@@ -55,27 +55,26 @@ class CuttingDashboardView(LoginRequiredMixin, TemplateView):
         # الحصول على المستودعات المتاحة للمستخدم مع إحصائيات مفصلة
         user_warehouses = self.get_user_warehouses_with_stats()
 
-        # إحصائيات عامة
+        # إحصائيات عامة — استعلام واحد بدلاً من 4 استعلامات
+        warehouse_ids = [w["id"] for w in user_warehouses]
+        general_stats = CuttingOrder.objects.filter(
+            warehouse_id__in=warehouse_ids
+        ).aggregate(
+            total_orders=Count('id'),
+            pending_orders=Count('id', filter=Q(status="pending")),
+            in_progress_orders=Count('id', filter=Q(status="in_progress")),
+            completed_orders=Count('id', filter=Q(status="completed")),
+        )
+
         context.update(
             {
-                "total_orders": CuttingOrder.objects.filter(
-                    warehouse__in=[w["warehouse"] for w in user_warehouses]
-                ).count(),
-                "pending_orders": CuttingOrder.objects.filter(
-                    warehouse__in=[w["warehouse"] for w in user_warehouses],
-                    status="pending",
-                ).count(),
-                "in_progress_orders": CuttingOrder.objects.filter(
-                    warehouse__in=[w["warehouse"] for w in user_warehouses],
-                    status="in_progress",
-                ).count(),
-                "completed_orders": CuttingOrder.objects.filter(
-                    warehouse__in=[w["warehouse"] for w in user_warehouses],
-                    status="completed",
-                ).count(),
+                "total_orders": general_stats["total_orders"],
+                "pending_orders": general_stats["pending_orders"],
+                "in_progress_orders": general_stats["in_progress_orders"],
+                "completed_orders": general_stats["completed_orders"],
                 "user_warehouses": user_warehouses,
                 "recent_orders": CuttingOrder.objects.filter(
-                    warehouse__in=[w["warehouse"] for w in user_warehouses]
+                    warehouse_id__in=warehouse_ids
                 )
                 .select_related("order", "order__customer", "warehouse")
                 .defer("rejection_reason", "notes", "notifications_sent")
@@ -104,26 +103,26 @@ class CuttingDashboardView(LoginRequiredMixin, TemplateView):
         return Warehouse.objects.filter(is_active=True)
 
     def get_user_warehouses_with_stats(self):
-        """الحصول على المستودعات مع إحصائيات أوامر التقطيع"""
+        """الحصول على المستودعات مع إحصائيات أوامر التقطيع — محسّن باستعلام واحد"""
         warehouses = self.get_user_warehouses()
+
+        # استعلام واحد بدلاً من 3 استعلامات لكل مستودع
+        warehouses_annotated = warehouses.annotate(
+            total_orders=Count('cutting_orders'),
+            pending_orders=Count('cutting_orders', filter=Q(
+                cutting_orders__status__in=["pending", "in_progress", "partially_completed"]
+            )),
+            completed_orders=Count('cutting_orders', filter=Q(cutting_orders__status="completed")),
+        )
+
         warehouse_stats = []
-
-        for warehouse in warehouses:
-            total_orders = CuttingOrder.objects.filter(warehouse=warehouse).count()
-            pending_orders = CuttingOrder.objects.filter(
-                warehouse=warehouse,
-                status__in=["pending", "in_progress", "partially_completed"],
-            ).count()
-            completed_orders = CuttingOrder.objects.filter(
-                warehouse=warehouse, status="completed"
-            ).count()
-
+        for warehouse in warehouses_annotated:
             warehouse_stats.append(
                 {
                     "warehouse": warehouse,
-                    "total_orders": total_orders,
-                    "pending_orders": pending_orders,
-                    "completed_orders": completed_orders,
+                    "total_orders": warehouse.total_orders,
+                    "pending_orders": warehouse.pending_orders,
+                    "completed_orders": warehouse.completed_orders,
                     "name": warehouse.name,
                     "description": warehouse.notes or warehouse.address,
                     "id": warehouse.id,

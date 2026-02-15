@@ -167,30 +167,76 @@ def update_related_orders(installation, new_status, old_status, user=None):
 @login_required
 def dashboard(request):
     """لوحة تحكم التركيبات - محسّنة للأداء"""
-    from django.db.models import Count, Q
-
-    # استدعاء API الإحصائيات للحصول على البيانات المتسقة
-    from django.test import RequestFactory
+    from django.db.models import Count, F, Q
 
     from manufacturing.models import ManufacturingOrder
 
-    # استخدام select_related و prefetch_related لتحسين الأداء
-    factory = RequestFactory()
-    api_request = factory.get("/api/installation-stats/")
-    api_request.user = request.user
-
+    # حساب الإحصائيات مباشرة بدلاً من استدعاء API عبر RequestFactory
     try:
-        # استدعاء دالة API الإحصائيات مباشرة
-        from django.http import JsonResponse
+        installation_schedules_qs = InstallationSchedule.objects.filter(
+            order__isnull=False, order__selected_types__icontains="installation"
+        ).exclude(status="completed")
 
-        api_response = installation_stats_api(api_request)
-        stats_data = api_response.content.decode("utf-8")
-        import json
+        stats_agg = installation_schedules_qs.aggregate(
+            total=Count("id"),
+            pending=Count("id", filter=Q(status="pending")),
+            in_progress=Count("id", filter=Q(status="in_installation")),
+            scheduled=Count("id", filter=Q(status="scheduled")),
+            modification_required=Count(
+                "id",
+                filter=Q(status__in=["modification_required", "modification_scheduled", "modification_in_progress"]),
+            ),
+        )
 
-        stats = json.loads(stats_data)
+        completed_count = InstallationSchedule.objects.filter(
+            order__isnull=False,
+            order__selected_types__icontains="installation",
+            status="completed",
+        ).count()
+
+        total_orders = Order.objects.filter(
+            selected_types__icontains="installation"
+        ).count()
+
+        orders_needing_scheduling = ManufacturingOrder.objects.filter(
+            status__in=["ready_install", "delivered"],
+            order__selected_types__icontains="installation",
+            order__installationschedule__isnull=True,
+        ).count()
+
+        try:
+            orders_with_debt = (
+                Order.objects.filter(
+                    Q(total_amount__gt=F("paid_amount")) | Q(paid_amount__isnull=True)
+                )
+                .exclude(total_amount=0)
+                .count()
+            )
+        except Exception:
+            orders_with_debt = 0
+
+        try:
+            orders_in_manufacturing = ManufacturingOrder.objects.filter(
+                status__in=["pending_approval", "pending", "in_progress"],
+                order__selected_types__icontains="installation",
+            ).count()
+        except Exception:
+            orders_in_manufacturing = 0
+
+        stats = {
+            "total_scheduled": stats_agg["total"],
+            "total_orders": total_orders,
+            "completed": completed_count,
+            "pending": stats_agg["pending"],
+            "in_progress": stats_agg["in_progress"],
+            "scheduled": stats_agg["scheduled"],
+            "modification_required": stats_agg["modification_required"],
+            "orders_needing_scheduling": orders_needing_scheduling,
+            "orders_with_debt": orders_with_debt,
+            "orders_in_manufacturing": orders_in_manufacturing,
+        }
     except Exception as e:
-        logger.debug(f"خطأ في استدعاء API الإحصائيات: {e}")
-        # في حالة فشل API، استخدم حسابات احتياطية
+        logger.debug(f"خطأ في حساب الإحصائيات: {e}")
         stats = {
             "total_scheduled": 0,
             "total_orders": 0,

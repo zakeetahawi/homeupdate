@@ -76,7 +76,7 @@ def customer_list(request):
 
     customers = queryset.select_related(
         "category", "branch", "created_by"
-    ).prefetch_related("customer_orders").defer(
+    ).defer(
         "interests", "notes", "address"
     )
 
@@ -783,7 +783,7 @@ def get_customer_notes(request, pk):
     if not can_user_view_customer(request.user, customer):
         return JsonResponse({"status": "error", "message": "ليس لديك صلاحية عرض هذا العميل"}, status=403)
 
-    notes = customer.notes_history.all().order_by("-created_at")
+    notes = customer.notes_history.select_related("created_by").order_by("-created_at")[:50]
     notes_data = [
         {
             "note": note.note,
@@ -1086,7 +1086,7 @@ def customer_api(request):
         )
 
     # ترتيب النتائج
-    customers = customers.order_by("name")
+    customers = customers.select_related("branch").order_by("name")
 
     # تطبيق التصفح
     paginator = Paginator(customers, page_size)
@@ -1235,7 +1235,7 @@ def customer_detail_by_code(request, customer_code):
         )[:5]
     except AttributeError:
         # في حالة فشل select_related، نحاول الحصول على الملاحظات بدونها
-        notes = customer.notes_history.all().order_by("-created_at")[:5]
+        notes = customer.notes_history.select_related("created_by").order_by("-created_at")[:5]
 
     # جلب سجلات الوصول للعميل
     access_logs = customer.access_logs.select_related(

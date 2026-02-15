@@ -1002,31 +1002,27 @@ def trial_balance(request):
         .order_by("code")
     )
 
-    # حساب الأرصدة من بنود القيود المرحّلة فقط
+    # حساب الأرصدة باستعلام واحد مُحسّن بدلاً من استعلام لكل حساب
     trial_data = []
     total_debit = Decimal("0")
     total_credit = Decimal("0")
 
-    for account in accounts:
-        # فلترة بنود القيود المرحّلة فقط
-        lines_filter = Q(transaction_lines__transaction__status='posted')
-        if start_date:
-            lines_filter &= Q(transaction_lines__transaction__date__gte=start_date)
-        if end_date:
-            lines_filter &= Q(transaction_lines__transaction__date__lte=end_date)
+    # بناء فلتر التاريخ
+    line_filter = Q(transaction_lines__transaction__status='posted')
+    if start_date:
+        line_filter &= Q(transaction_lines__transaction__date__gte=start_date)
+    if end_date:
+        line_filter &= Q(transaction_lines__transaction__date__lte=end_date)
 
-        # حساب مجموع المدين والدائن من بنود القيود
-        totals = account.transaction_lines.filter(
-            transaction__status='posted',
-            **({"transaction__date__gte": start_date} if start_date else {}),
-            **({"transaction__date__lte": end_date} if end_date else {}),
-        ).aggregate(
-            sum_debit=Sum("debit"),
-            sum_credit=Sum("credit")
-        )
+    # استعلام واحد مع annotate بدلاً من حلقة N+1
+    accounts_with_totals = accounts.annotate(
+        sum_debit=Sum('transaction_lines__debit', filter=line_filter, default=Decimal("0")),
+        sum_credit=Sum('transaction_lines__credit', filter=line_filter, default=Decimal("0")),
+    )
 
-        sum_debit = totals["sum_debit"] or Decimal("0")
-        sum_credit = totals["sum_credit"] or Decimal("0")
+    for account in accounts_with_totals:
+        sum_debit = account.sum_debit or Decimal("0")
+        sum_credit = account.sum_credit or Decimal("0")
 
         # حساب الرصيد حسب الطبيعة الطبيعية للحساب
         if account.account_type.normal_balance == "debit":
@@ -1104,36 +1100,36 @@ def income_statement(request):
     if end_date:
         line_date_filter["transaction__date__lte"] = end_date
 
-    # الإيرادات (حسابات 4xxx)
+    # الإيرادات (حسابات 4xxx) — استعلام واحد مع annotate
     revenue_accounts = Account.objects.filter(
         account_type__code_prefix__startswith="4",
         is_active=True,
-    ).select_related("account_type")
+    ).select_related("account_type").annotate(
+        sum_debit=Sum('transaction_lines__debit', filter=date_filter, default=Decimal("0")),
+        sum_credit=Sum('transaction_lines__credit', filter=date_filter, default=Decimal("0")),
+    )
 
     revenue_data = []
     total_revenue = Decimal("0")
     for acc in revenue_accounts:
-        totals = acc.transaction_lines.filter(**line_date_filter).aggregate(
-            sum_debit=Sum("debit"), sum_credit=Sum("credit")
-        )
-        balance = (totals["sum_credit"] or Decimal("0")) - (totals["sum_debit"] or Decimal("0"))
+        balance = (acc.sum_credit or Decimal("0")) - (acc.sum_debit or Decimal("0"))
         if balance != 0:
             revenue_data.append({"account": acc, "balance": abs(balance)})
             total_revenue += abs(balance)
 
-    # المصروفات (حسابات 5xxx)
+    # المصروفات (حسابات 5xxx) — استعلام واحد مع annotate
     expense_accounts = Account.objects.filter(
         account_type__code_prefix__startswith="5",
         is_active=True,
-    ).select_related("account_type")
+    ).select_related("account_type").annotate(
+        sum_debit=Sum('transaction_lines__debit', filter=date_filter, default=Decimal("0")),
+        sum_credit=Sum('transaction_lines__credit', filter=date_filter, default=Decimal("0")),
+    )
 
     expense_data = []
     total_expenses = Decimal("0")
     for acc in expense_accounts:
-        totals = acc.transaction_lines.filter(**line_date_filter).aggregate(
-            sum_debit=Sum("debit"), sum_credit=Sum("credit")
-        )
-        balance = (totals["sum_debit"] or Decimal("0")) - (totals["sum_credit"] or Decimal("0"))
+        balance = (acc.sum_debit or Decimal("0")) - (acc.sum_credit or Decimal("0"))
         if balance != 0:
             expense_data.append({"account": acc, "balance": abs(balance)})
             total_expenses += abs(balance)
@@ -1163,53 +1159,53 @@ def balance_sheet(request):
     الميزانية العمومية - محسّنة باستخدام TransactionLine aggregates
     """
     # فلتر لبنود القيود المرحّلة فقط
-    line_filter = {"transaction__status": "posted"}
+    line_filter = Q(transaction_lines__transaction__status='posted')
 
-    # الأصول (حسابات 1xxx)
+    # الأصول (حسابات 1xxx) — استعلام واحد مع annotate
     asset_accounts = Account.objects.filter(
         account_type__code_prefix__startswith="1",
         is_active=True,
-    ).select_related("account_type").order_by("code")
+    ).select_related("account_type").order_by("code").annotate(
+        sum_debit=Sum('transaction_lines__debit', filter=line_filter, default=Decimal("0")),
+        sum_credit=Sum('transaction_lines__credit', filter=line_filter, default=Decimal("0")),
+    )
 
     asset_data = []
     total_assets = Decimal("0")
     for acc in asset_accounts:
-        totals = acc.transaction_lines.filter(**line_filter).aggregate(
-            sum_debit=Sum("debit"), sum_credit=Sum("credit")
-        )
-        balance = acc.opening_balance + (totals["sum_debit"] or Decimal("0")) - (totals["sum_credit"] or Decimal("0"))
+        balance = acc.opening_balance + (acc.sum_debit or Decimal("0")) - (acc.sum_credit or Decimal("0"))
         asset_data.append({"account": acc, "balance": balance})
         total_assets += balance
 
-    # الخصوم (حسابات 2xxx)
+    # الخصوم (حسابات 2xxx) — استعلام واحد مع annotate
     liability_accounts = Account.objects.filter(
         account_type__code_prefix__startswith="2",
         is_active=True,
-    ).select_related("account_type").order_by("code")
+    ).select_related("account_type").order_by("code").annotate(
+        sum_debit=Sum('transaction_lines__debit', filter=line_filter, default=Decimal("0")),
+        sum_credit=Sum('transaction_lines__credit', filter=line_filter, default=Decimal("0")),
+    )
 
     liability_data = []
     total_liabilities = Decimal("0")
     for acc in liability_accounts:
-        totals = acc.transaction_lines.filter(**line_filter).aggregate(
-            sum_debit=Sum("debit"), sum_credit=Sum("credit")
-        )
-        balance = acc.opening_balance + (totals["sum_credit"] or Decimal("0")) - (totals["sum_debit"] or Decimal("0"))
+        balance = acc.opening_balance + (acc.sum_credit or Decimal("0")) - (acc.sum_debit or Decimal("0"))
         liability_data.append({"account": acc, "balance": balance})
         total_liabilities += balance
 
-    # حقوق الملكية (حسابات 3xxx)
+    # حقوق الملكية (حسابات 3xxx) — استعلام واحد مع annotate
     equity_accounts = Account.objects.filter(
         account_type__code_prefix__startswith="3",
         is_active=True,
-    ).select_related("account_type").order_by("code")
+    ).select_related("account_type").order_by("code").annotate(
+        sum_debit=Sum('transaction_lines__debit', filter=line_filter, default=Decimal("0")),
+        sum_credit=Sum('transaction_lines__credit', filter=line_filter, default=Decimal("0")),
+    )
 
     equity_data = []
     total_equity = Decimal("0")
     for acc in equity_accounts:
-        totals = acc.transaction_lines.filter(**line_filter).aggregate(
-            sum_debit=Sum("debit"), sum_credit=Sum("credit")
-        )
-        balance = acc.opening_balance + (totals["sum_credit"] or Decimal("0")) - (totals["sum_debit"] or Decimal("0"))
+        balance = acc.opening_balance + (acc.sum_credit or Decimal("0")) - (acc.sum_debit or Decimal("0"))
         equity_data.append({"account": acc, "balance": balance})
         total_equity += balance
 
@@ -1623,24 +1619,30 @@ def aging_report(request):
         "days_120": {"label": "أكثر من 120 يوم", "min_days": 120, "max_days": 99999, "total": Decimal("0"), "customers": []},
     }
 
-    # جلب العملاء المديونين
-    summaries = CustomerFinancialSummary.objects.filter(
-        total_debt__gt=0
-    ).select_related("customer").order_by("-total_debt")
+    # جلب العملاء المديونين مع أقدم طلب عبر Subquery بدلاً من N+1
+    from django.db.models import F, Subquery, OuterRef
+    oldest_unpaid = (
+        Order.objects.filter(
+            customer=OuterRef('customer'),
+            total_amount__gt=0,
+        )
+        .exclude(paid_amount__gte=F('total_amount'))
+        .order_by('created_at')
+        .values('created_at')[:1]
+    )
+
+    summaries = (
+        CustomerFinancialSummary.objects.filter(total_debt__gt=0)
+        .select_related("customer")
+        .annotate(oldest_order_date=Subquery(oldest_unpaid))
+        .order_by("-total_debt")
+    )
 
     grand_total = Decimal("0")
 
     for summary in summaries:
-        # أقدم طلب غير مسدد
-        oldest_order = (
-            Order.objects.filter(
-                customer=summary.customer,
-                remaining_amount__gt=0,
-            )
-            .order_by("created_at")
-            .values_list("created_at", flat=True)
-            .first()
-        )
+        # أقدم طلب غير مسدد — من الـ annotation
+        oldest_order = summary.oldest_order_date
 
         if oldest_order:
             days_old = (today - oldest_order.date()).days
@@ -1693,6 +1695,10 @@ def export_trial_balance(request):
         Account.objects.filter(is_active=True)
         .select_related("account_type")
         .order_by("code")
+        .annotate(
+            agg_debit=Sum('transaction_lines__debit', filter=Q(transaction_lines__transaction__status='posted'), default=Decimal("0")),
+            agg_credit=Sum('transaction_lines__credit', filter=Q(transaction_lines__transaction__status='posted'), default=Decimal("0")),
+        )
     )
 
     trial_data = []
@@ -1700,12 +1706,8 @@ def export_trial_balance(request):
     total_credit = Decimal("0")
 
     for account in accounts:
-        totals = account.transaction_lines.filter(
-            transaction__status="posted",
-        ).aggregate(sum_debit=Sum("debit"), sum_credit=Sum("credit"))
-
-        debit_total = totals["sum_debit"] or Decimal("0")
-        credit_total = totals["sum_credit"] or Decimal("0")
+        debit_total = account.agg_debit or Decimal("0")
+        credit_total = account.agg_credit or Decimal("0")
         balance = account.opening_balance + debit_total - credit_total
 
         debit_balance = balance if balance > 0 else Decimal("0")

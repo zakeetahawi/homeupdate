@@ -44,19 +44,19 @@
         <!-- Global Font CSS (Cairo + Font Awesome fix merged) -->
         <link rel="stylesheet" href="{% static 'css/global-cairo-font.css' %}">
         <!-- Custom CSS -->
-        <link rel="stylesheet" href="{% static 'css/style.css' %}?v={% now 'U' %}">
+        <link rel="stylesheet" href="{% static 'css/style.css' %}?v=2.2.0">
         <!-- Ornamental Theme - loaded conditionally via data-theme attribute -->
         <link rel="stylesheet"
-              href="{% static 'css/ornamental-theme.css' %}?v={% now 'U' %}">
+              href="{% static 'css/ornamental-theme.css' %}?v=2.2.0">
         <!-- Custom Theme Enhancements CSS -->
         <link rel="stylesheet"
-              href="{% static 'css/extra-dark-fixes.css' %}?v={% now 'U' %}">
+              href="{% static 'css/extra-dark-fixes.css' %}?v=2.2.0">
         <!-- Custom Theme Enhancements -->
         <link rel="stylesheet"
-              href="{% static 'css/custom-theme-enhancements.css' %}?v={% now 'U' %}">
+              href="{% static 'css/custom-theme-enhancements.css' %}?v=2.2.0">
         <!-- ZakZak Theme - أزرق وفضي -->
         <link rel="stylesheet"
-              href="{% static 'css/zakzak-theme.css' %}?v={% now 'U' %}">
+              href="{% static 'css/zakzak-theme.css' %}?v=2.2.0">
         <!-- Unified Status System CSS (merged with colors) -->
         <link rel="stylesheet" href="{% static 'css/unified-status-system.css' %}">
         <!-- Responsive Footer CSS -->
@@ -888,18 +888,18 @@
 <!-- DataTables JS - يُحمّل فقط في الصفحات التي تحتاجه -->
 {% block datatables_js %}{% endblock %}
 <!-- SweetAlert2 - محلي -->
-<script src="{% static 'vendor/sweetalert2/sweetalert2.all.min.js' %}"></script>
+<script src="{% static 'vendor/sweetalert2/sweetalert2.all.min.js' %}" defer></script>
 <!-- Custom JS -->
-<script src="{% static 'js/main.js' %}"></script>
+<script src="{% static 'js/main.js' %}" defer></script>
 <!-- smooth-navigation.js removed: was causing page flash by setting body.opacity=0 -->
-<script src="{% static 'js/custom-theme-animations.js' %}"></script>
+<script src="{% static 'js/custom-theme-animations.js' %}" defer></script>
 <!-- Database Connection Test JS -->
 {% if 'database' in request.path %}
     <script src="{% static 'js/db_connection_test.js' %}"></script>
 {% endif %}
 <!-- Restore Alert, Logo Update JS moved to base-utilities.js -->
 <!-- Base Utilities JS (modal fix, dropdown, toast, etc.) -->
-<script src="{% static 'js/base-utilities.js' %}"></script>
+<script src="{% static 'js/base-utilities.js' %}" defer></script>
 {% block extra_js %}
 {% endblock %}
 <!-- Notifications JS (extracted to external file) -->
@@ -909,7 +909,7 @@
 <!-- CSRF Token للإشعارات -->
 {% csrf_token %}
 <!-- معالج CSRF التلقائي -->
-<script src="{% static 'js/csrf-handler.js' %}"></script>
+<script src="{% static 'js/csrf-handler.js' %}" defer></script>
 <!-- Popup CSS moved to base-layout.css -->
 <!-- JavaScript للرسائل الداخلية والمستخدمين النشطين -->
 {% if user.is_authenticated %}
@@ -925,9 +925,9 @@
 <!-- Floating Chat Button Include + JS -->
 {% if user.is_authenticated %}
     {% include 'includes/floating_chat_button.html' %}
-    <script src="{% static 'js/floating-button.js' %}?v={% now 'U' %}"></script>
+    <script src="{% static 'js/floating-button.js' %}?v=2.2.0" defer></script>
 {% endif %}
 <!-- Arabic to English Number Converter -->
-<script src="{% static 'js/arabic-numbers-converter.js' %}"></script>
+<script src="{% static 'js/arabic-numbers-converter.js' %}" defer></script>
 </body>
 </html>

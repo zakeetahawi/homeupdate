@@ -411,17 +411,22 @@ def order_detail(request, pk):
     """
     View for displaying order details
     """
-    order = get_object_or_404(Order, pk=pk)
+    order = get_object_or_404(
+        Order.objects.select_related(
+            "customer", "customer__branch", "salesperson", "salesperson__branch", "branch", "created_by"
+        ),
+        pk=pk
+    )
 
     # التحقق من صلاحية المستخدم لعرض هذا الطلب
     if not can_user_view_order(request.user, order):
         messages.error(request, "ليس لديك صلاحية لعرض هذا الطلب.")
         return redirect("orders:order_list")
 
-    payments = order.payments.all().order_by("-payment_date")
+    payments = order.payments.select_related("created_by").order_by("-payment_date")
 
     # Now all information is in the Order model
-    order_items = order.items.all()
+    order_items = order.items.select_related("product")
 
     # Get inspections related to this order
     inspections = []
@@ -1326,7 +1331,7 @@ def get_order_details_api(request, order_id):
 
         # إذا لم نجد في الملاحظات، نحسب من عناصر الطلب
         if windows_count == 0:
-            order_items = order.items.all()
+            order_items = order.items.select_related("product")
             for item in order_items:
                 if (
                     "شباك" in item.product.name.lower()
@@ -1388,7 +1393,7 @@ def get_customer_inspections(request):
             inspection_choices.append(
                 {
                     "value": str(inspection.id),  # تأكد من أن القيمة نصية
-                    "text": f"{inspection.customer.name if inspection.customer else 'عميل غير محدد'} - {inspection.contract_number or f'معاينة {inspection.id}'} - {inspection.created_at.strftime('%Y-%m-%d')}",
+                    "text": f"{customer.name} - {inspection.contract_number or f'معاينة {inspection.id}'} - {inspection.created_at.strftime('%Y-%m-%d')}",
                 }
             )
 
@@ -1408,7 +1413,12 @@ def get_customer_inspections(request):
 @login_required
 def order_detail_by_number(request, order_number):
     """عرض تفاصيل الطلب باستخدام رقم الطلب"""
-    order = get_object_or_404(Order, order_number=order_number)
+    order = get_object_or_404(
+        Order.objects.select_related(
+            "customer", "customer__branch", "salesperson", "salesperson__branch", "branch", "created_by"
+        ),
+        order_number=order_number
+    )
 
     # التحقق من صلاحية المستخدم لحذف أو تعديل أو عرض هذا الطلب
     if not can_user_view_order(request.user, order):
@@ -1419,8 +1429,8 @@ def order_detail_by_number(request, order_number):
     if not can_user_delete_order(request.user, order):
         messages.warning(request, "ليس لديك صلاحية لحذف هذا الطلب.")
 
-    payments = order.payments.all().order_by("-payment_date")
-    order_items = order.items.all()
+    payments = order.payments.select_related("created_by").order_by("-payment_date")
+    order_items = order.items.select_related("product")
 
     # Get inspections related to this order
     inspections = []
@@ -1621,7 +1631,12 @@ def order_delete_redirect(request, pk):
 @login_required
 def invoice_print(request, order_number):
     """طباعة فاتورة الطلب مباشرةً وفق القالب المحفوظ أو قالب افتراضي، مع ضمان A4 والطباعة مباشرة عند الطلب."""
-    order = get_object_or_404(Order, order_number=order_number)
+    order = get_object_or_404(
+        Order.objects.select_related(
+            "customer", "salesperson", "salesperson__branch", "branch"
+        ),
+        order_number=order_number
+    )
 
     # نماذج القوالب والسجلات
     from accounts.models import CompanyInfo, SystemSettings
@@ -1664,7 +1679,7 @@ def invoice_print(request, order_number):
 
     # إنشاء جدول العناصر مرة واحدة للاستخدام في كلا الفرعين (يشمل عمود الخصم وحساب الإجمالي بعد الخصم)
     items_html_rows = []
-    for item in order.items.all():
+    for item in order.items.select_related("product"):
         # تنسيق الأرقام وإجراء حسابات الخصم لكل سطر
         try:
             unit_price = float(item.unit_price or 0)

@@ -256,20 +256,16 @@ class InspectionListView(PaginationFixMixin, LoginRequiredMixin, ListView):
         if is_duplicated == "1":
             dashboard_qs = dashboard_qs.filter(notes__contains="تكرار من المعاينة رقم:")
 
-        # إحصائيات الداشبورد بناءً على الفلترة
-        context["dashboard"] = {
-            "total_inspections": dashboard_qs.count(),
-            "new_inspections": dashboard_qs.filter(status="pending").count(),
-            "scheduled_inspections": dashboard_qs.filter(status="scheduled").count(),
-            "successful_inspections": dashboard_qs.filter(status="completed").count(),
-            "cancelled_inspections": dashboard_qs.filter(status="cancelled").count(),
-            "postponed_by_customer_inspections": dashboard_qs.filter(
-                status="postponed_by_customer"
-            ).count(),
-            "duplicated_inspections": dashboard_qs.filter(
-                notes__contains="تكرار من المعاينة رقم:"
-            ).count(),
-        }
+        # إحصائيات الداشبورد بناءً على الفلترة — استعلام واحد بدلاً من 7
+        context["dashboard"] = dashboard_qs.aggregate(
+            total_inspections=Count('id'),
+            new_inspections=Count('id', filter=Q(status="pending")),
+            scheduled_inspections=Count('id', filter=Q(status="scheduled")),
+            successful_inspections=Count('id', filter=Q(status="completed")),
+            cancelled_inspections=Count('id', filter=Q(status="cancelled")),
+            postponed_by_customer_inspections=Count('id', filter=Q(status="postponed_by_customer")),
+            duplicated_inspections=Count('id', filter=Q(notes__contains="تكرار من المعاينة رقم:")),
+        )
         context["branches"] = Branch.objects.all()
         # قائمة الفنيين للفلتر
         from accounts.models import User

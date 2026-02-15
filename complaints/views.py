@@ -491,7 +491,8 @@ class AdminComplaintListView(PaginationFixMixin, LoginRequiredMixin, ListView):
         # المدراء يرون جميع الشكاوى غير المحلولة
         queryset = (
             Complaint.objects.select_related(
-                "customer", "complaint_type", "assigned_to", "assigned_department"
+                "customer", "complaint_type", "assigned_to", "assigned_department",
+                "created_by", "branch", "related_order"
             )
             .exclude(status__in=["resolved", "closed"])
             .order_by("-created_at", "-priority")
@@ -546,15 +547,16 @@ class AdminComplaintListView(PaginationFixMixin, LoginRequiredMixin, ListView):
         context["filter_form"] = ComplaintFilterForm(self.request.GET)
         context["bulk_action_form"] = ComplaintBulkActionForm()
 
-        # إحصائيات للمدراء
-        all_unresolved = Complaint.objects.exclude(status__in=["resolved", "closed"])
-        context["stats"] = {
-            "total_unresolved": all_unresolved.count(),
-            "urgent_count": all_unresolved.filter(priority="urgent").count(),
-            "overdue_count": all_unresolved.filter(deadline__lt=timezone.now()).count(),
-            "escalated_count": all_unresolved.filter(status="escalated").count(),
-            "unassigned_count": all_unresolved.filter(assigned_to__isnull=True).count(),
-        }
+        # إحصائيات للمدراء — استعلام واحد بدلاً من 5
+        context["stats"] = Complaint.objects.exclude(
+            status__in=["resolved", "closed"]
+        ).aggregate(
+            total_unresolved=Count('id'),
+            urgent_count=Count('id', filter=Q(priority="urgent")),
+            overdue_count=Count('id', filter=Q(deadline__lt=timezone.now())),
+            escalated_count=Count('id', filter=Q(status="escalated")),
+            unassigned_count=Count('id', filter=Q(assigned_to__isnull=True)),
+        )
 
         context["is_admin_view"] = True
 
@@ -584,15 +586,8 @@ class ComplaintReportsView(LoginRequiredMixin, TemplateView):
         # نموذج الفلترة للتقارير
         context["filter_form"] = ComplaintFilterForm(self.request.GET)
 
-        # إحصائيات عامة
+        # إحصائيات عامة — استعلام واحد مجمع بدلاً من 16 استعلام
         all_complaints = Complaint.objects.all()
-        context["total_complaints"] = all_complaints.count()
-        context["resolved_complaints"] = all_complaints.filter(
-            status="resolved"
-        ).count()
-        context["pending_complaints"] = all_complaints.exclude(
-            status__in=["resolved", "closed"]
-        ).count()
 
         # إحصائيات حسب الفترة الزمنية
         from datetime import datetime, timedelta
@@ -601,29 +596,47 @@ class ComplaintReportsView(LoginRequiredMixin, TemplateView):
         week_ago = today - timedelta(days=7)
         month_ago = today - timedelta(days=30)
 
-        context["this_week"] = all_complaints.filter(
-            created_at__date__gte=week_ago
-        ).count()
-        context["this_month"] = all_complaints.filter(
-            created_at__date__gte=month_ago
-        ).count()
+        # استعلام واحد يجمع كل الإحصائيات
+        agg = all_complaints.aggregate(
+            total_complaints=Count('id'),
+            resolved_complaints=Count('id', filter=Q(status="resolved")),
+            pending_complaints=Count('id', filter=~Q(status__in=["resolved", "closed"])),
+            this_week=Count('id', filter=Q(created_at__date__gte=week_ago)),
+            this_month=Count('id', filter=Q(created_at__date__gte=month_ago)),
+            # أولوية
+            priority_urgent=Count('id', filter=Q(priority="urgent")),
+            priority_high=Count('id', filter=Q(priority="high")),
+            priority_medium=Count('id', filter=Q(priority="medium")),
+            priority_low=Count('id', filter=Q(priority="low")),
+            # حالة
+            status_new=Count('id', filter=Q(status="new")),
+            status_in_progress=Count('id', filter=Q(status="in_progress")),
+            status_resolved=Count('id', filter=Q(status="resolved")),
+            status_closed=Count('id', filter=Q(status="closed")),
+            status_escalated=Count('id', filter=Q(status="escalated")),
+            status_overdue=Count('id', filter=Q(status="overdue")),
+        )
 
-        # إحصائيات حسب الأولوية
+        context["total_complaints"] = agg["total_complaints"]
+        context["resolved_complaints"] = agg["resolved_complaints"]
+        context["pending_complaints"] = agg["pending_complaints"]
+        context["this_week"] = agg["this_week"]
+        context["this_month"] = agg["this_month"]
+
         context["priority_stats"] = {
-            "urgent": all_complaints.filter(priority="urgent").count(),
-            "high": all_complaints.filter(priority="high").count(),
-            "medium": all_complaints.filter(priority="medium").count(),
-            "low": all_complaints.filter(priority="low").count(),
+            "urgent": agg["priority_urgent"],
+            "high": agg["priority_high"],
+            "medium": agg["priority_medium"],
+            "low": agg["priority_low"],
         }
 
-        # إحصائيات حسب الحالة
         context["status_stats"] = {
-            "new": all_complaints.filter(status="new").count(),
-            "in_progress": all_complaints.filter(status="in_progress").count(),
-            "resolved": all_complaints.filter(status="resolved").count(),
-            "closed": all_complaints.filter(status="closed").count(),
-            "escalated": all_complaints.filter(status="escalated").count(),
-            "overdue": all_complaints.filter(status="overdue").count(),
+            "new": agg["status_new"],
+            "in_progress": agg["status_in_progress"],
+            "resolved": agg["status_resolved"],
+            "closed": agg["status_closed"],
+            "escalated": agg["status_escalated"],
+            "overdue": agg["status_overdue"],
         }
 
         # إحصائيات حسب نوع الشكوى
@@ -632,23 +645,14 @@ class ComplaintReportsView(LoginRequiredMixin, TemplateView):
         ).order_by("-complaint_count")[:10]
         context["type_stats"] = complaint_types
 
-        # متوسط وقت الحل
-        resolved_complaints = all_complaints.filter(
+        # متوسط وقت الحل — باستخدام SQL بدلاً من Python
+        from django.db.models import Avg, DurationField, ExpressionWrapper, F
+        avg_duration = all_complaints.filter(
             status="resolved", resolved_at__isnull=False
-        )
-        if resolved_complaints.exists():
-            total_resolution_time = sum(
-                [
-                    (complaint.resolved_at - complaint.created_at).total_seconds()
-                    / 3600
-                    for complaint in resolved_complaints
-                ]
-            )
-            context["avg_resolution_time"] = round(
-                total_resolution_time / resolved_complaints.count(), 2
-            )
-        else:
-            context["avg_resolution_time"] = 0
+        ).annotate(
+            duration=ExpressionWrapper(F("resolved_at") - F("created_at"), output_field=DurationField())
+        ).aggregate(avg=Avg("duration"))["avg"]
+        context["avg_resolution_time"] = round(avg_duration.total_seconds() / 3600, 2) if avg_duration else 0
 
         # أفضل الموظفين في حل الشكاوى
         from django.contrib.auth import get_user_model

@@ -2,40 +2,64 @@
 Middleware لتتبع جلسات المستخدمين
 """
 
+from django.core.cache import cache
 from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
 
 from .models import OnlineUser, UserSession
 
+# Throttle interval in seconds — only write to DB once per this interval per session
+SESSION_TRACKING_THROTTLE = 60
+
 
 class UserSessionTrackingMiddleware(MiddlewareMixin):
     """
     Middleware لتتبع وتحديث جلسات المستخدمين النشطين
+    محسّن: يكتب في قاعدة البيانات مرة واحدة كل 60 ثانية بدلاً من كل request
     """
+
+    # المسارات التي لا تحتاج تتبع (AJAX, API, static)
+    SKIP_PATHS = ('/api/', '/static/', '/media/', '/favicon.ico', '/__debug__/')
 
     def process_request(self, request):
         """معالجة الطلب وتحديث معلومات الجلسة"""
-        if request.user and request.user.is_authenticated:
-            session_key = request.session.session_key
+        if not (request.user and request.user.is_authenticated):
+            return None
 
-            if session_key:
-                # تحديث أو إنشاء UserSession
-                user_session, created = UserSession.objects.update_or_create(
-                    session_key=session_key,
-                    defaults={
-                        "user": request.user,
-                        "ip_address": self.get_client_ip(request),
-                        "user_agent": request.META.get("HTTP_USER_AGENT", "")[:500],
-                        "last_activity": timezone.now(),
-                        "is_active": True,
-                        "device_type": self.get_device_type(request),
-                        "browser": self.get_browser(request),
-                        "operating_system": self.get_os(request),
-                    },
-                )
+        # تخطي مسارات AJAX و API و static
+        path = request.path
+        if any(path.startswith(skip) for skip in self.SKIP_PATHS):
+            return None
 
-                # تحديث OnlineUser
-                OnlineUser.update_user_activity(request.user, request)
+        session_key = request.session.session_key
+        if not session_key:
+            return None
+
+        # Throttle: فقط كتابة في DB مرة كل 60 ثانية لكل جلسة
+        cache_key = f"session_track_{session_key}"
+        if cache.get(cache_key):
+            return None
+
+        # تحديث أو إنشاء UserSession
+        UserSession.objects.update_or_create(
+            session_key=session_key,
+            defaults={
+                "user": request.user,
+                "ip_address": self.get_client_ip(request),
+                "user_agent": request.META.get("HTTP_USER_AGENT", "")[:500],
+                "last_activity": timezone.now(),
+                "is_active": True,
+                "device_type": self.get_device_type(request),
+                "browser": self.get_browser(request),
+                "operating_system": self.get_os(request),
+            },
+        )
+
+        # تحديث OnlineUser
+        OnlineUser.update_user_activity(request.user, request)
+
+        # تعيين الـ throttle cache
+        cache.set(cache_key, True, timeout=SESSION_TRACKING_THROTTLE)
 
         return None
 
