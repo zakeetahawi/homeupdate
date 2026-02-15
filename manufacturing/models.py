@@ -843,7 +843,7 @@ class ManufacturingOrderItem(models.Model):
     product_name = models.CharField(max_length=255, verbose_name="اسم المنتج")
 
     quantity = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=3,
         default=1,
         verbose_name="الكمية",
@@ -1727,7 +1727,7 @@ class FabricReceiptItem(models.Model):
 
     # الكمية المستلمة
     quantity_received = models.DecimalField(
-        max_digits=10, decimal_places=3, verbose_name="الكمية المستلمة"
+        max_digits=12, decimal_places=3, verbose_name="الكمية المستلمة"
     )
 
     # ملاحظات خاصة بالعنصر

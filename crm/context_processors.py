@@ -32,7 +32,7 @@ def admin_stats(request):
         try:
             company_info = CompanyInfo.objects.first()
             stats["company_info"] = company_info
-        except:
+        except Exception:
             stats["company_info"] = None
 
         return stats

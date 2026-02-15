@@ -259,7 +259,7 @@ def bulk_upload_products_fast(
                                     price = float(price_val)
                                 else:
                                     price = 0
-                            except:
+                            except Exception:
                                 price = 0
 
                             # سعر الجملة - تجربة عدة أعمدة (4 ثم 1 للملفات بعمودين أو بالاسم)
@@ -273,19 +273,19 @@ def bulk_upload_products_fast(
                                         if ws_val:
                                             wholesale_price = float(ws_val)
                                             break
-                                    except:
+                                    except Exception:
                                         continue
                             try:
                                 if wholesale_price is not None:
                                     wholesale_price = float(wholesale_price)
-                            except:
+                            except Exception:
                                 wholesale_price = None
 
                             # الكمية (عمود 5 أو حسب الاسم)
                             quantity_val = row.get("الكمية", safe_get(5))
                             try:
                                 quantity = float(quantity_val) if quantity_val else 0
-                            except:
+                            except Exception:
                                 quantity = 0
 
                             # الوصف (عمود 7)
@@ -295,7 +295,7 @@ def bulk_upload_products_fast(
                             min_stock_val = row.get("الحد الأدنى", safe_get(8))
                             try:
                                 minimum_stock = int(float(min_stock_val)) if min_stock_val is not None else None
-                            except:
+                            except Exception:
                                 minimum_stock = None
 
                             # Material (عمود 9 أو حسب الاسم)
@@ -541,7 +541,7 @@ def bulk_upload_products_fast(
         # إغلاق ملف اللوج
         try:
             log_file.close()
-        except:
+        except Exception:
             pass
 
         # 🚀 تشغيل خط الإنتاج التلقائي: ترحيل + QR + مزامنة Cloudflare
@@ -564,7 +564,7 @@ def bulk_upload_products_fast(
         
         try:
             log_file.close()
-        except:
+        except Exception:
             pass
             
         if "upload_log" in locals():

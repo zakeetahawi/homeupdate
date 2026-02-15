@@ -154,7 +154,7 @@ class Command(BaseCommand):
         try:
             reshaped = arabic_reshaper.reshape(str(text))
             return get_display(reshaped)
-        except:
+        except Exception:
             return str(text)
 
     def generate_pdf(self, items, output_path, total_count, compress=True):
@@ -202,7 +202,7 @@ class Command(BaseCommand):
                 leading=9,
                 spaceBefore=1,
             )
-        except:
+        except Exception:
             title_style = styles["Heading1"]
             arabic_normal = styles["Normal"]
             product_name_style = styles["Normal"]
@@ -233,7 +233,7 @@ class Command(BaseCommand):
                 try:
                     if hasattr(item, "save"):
                         item.save(update_fields=["qr_code_base64"])
-                except:
+                except Exception:
                     pass
 
             qr_base64 = item.qr_code_base64

@@ -76,7 +76,9 @@ def customer_list(request):
 
     customers = queryset.select_related(
         "category", "branch", "created_by"
-    ).prefetch_related("customer_orders")
+    ).prefetch_related("customer_orders").defer(
+        "interests", "notes", "address"
+    )
 
     # تطبيق الفلترة الشهرية (بناءً على تاريخ إنشاء العميل)
     customers, monthly_filter_context = apply_monthly_filter(
@@ -148,7 +150,7 @@ def customer_list(request):
             match = re.search(r"\[(\d+)\]", str(page_number))
             if match:
                 page_number = match.group(1)
-        except:
+        except Exception:
             page_number = "1"
 
     page_obj = paginator.get_page(page_number)
@@ -912,7 +914,10 @@ def find_customer_by_phone(request):
         | Q(phone2__icontains=phone_clean)
         | Q(phone=phone)
         | Q(phone2=phone)
-    ).select_related("branch")
+    ).select_related("branch").only(
+        "id", "name", "code", "phone", "phone2", "email", "address",
+        "branch__id", "branch__name"
+    )
 
     if customers.exists():
         customer_data = []
@@ -1154,14 +1159,7 @@ def customer_detail_by_code(request, customer_code):
     from django.utils import timezone
 
     from customers.models import CustomerAccessLog
-
-    def get_client_ip(request):
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0]
-        else:
-            ip = request.META.get("REMOTE_ADDR")
-        return ip
+    from user_activity.utils import get_client_ip_from_request
 
     # التحقق من عدم وجود سجل وصول مماثل في آخر دقيقة لتجنب التكرار
     one_minute_ago = timezone.now() - timedelta(minutes=1)
@@ -1176,7 +1174,7 @@ def customer_detail_by_code(request, customer_code):
             user_branch=getattr(request.user, "branch", None),
             customer_branch=customer.branch,
             is_cross_branch=is_cross_branch,
-            ip_address=get_client_ip(request),
+            ip_address=get_client_ip_from_request(request),
             user_agent=request.META.get("HTTP_USER_AGENT", ""),
         )
 

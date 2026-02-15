@@ -716,7 +716,7 @@ class AdvancedSyncService:
         try:
             parsed_date = self._parse_date(value_str)
             return parsed_date is not None
-        except:
+        except Exception:
             return False
 
     def _create_customer(self, mapped_data: Dict[str, str]) -> Customer:

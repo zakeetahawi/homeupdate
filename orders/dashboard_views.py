@@ -182,7 +182,7 @@ def inspection_orders(request):
             page_size = 100
         elif page_size < 1:
             page_size = 25
-    except:
+    except Exception:
         page_size = 25
 
     paginator = Paginator(orders, page_size)
@@ -251,7 +251,7 @@ def installation_orders(request):
             page_size = 100
         elif page_size < 1:
             page_size = 25
-    except:
+    except Exception:
         page_size = 25
 
     paginator = Paginator(orders, page_size)
@@ -320,7 +320,7 @@ def accessory_orders(request):
             page_size = 100
         elif page_size < 1:
             page_size = 25
-    except:
+    except Exception:
         page_size = 25
 
     paginator = Paginator(orders, page_size)
@@ -395,7 +395,7 @@ def tailoring_orders(request):
             page_size = 100
         elif page_size < 1:
             page_size = 25
-    except:
+    except Exception:
         page_size = 25
 
     paginator = Paginator(orders, page_size)

@@ -213,7 +213,7 @@ class InventoryIntegrationService:
                 return cutting_item.cutting_order.warehouse
             # في حالة عدم وجود مستودع محدد، استخدم أول مستودع متاح
             return InventoryWarehouse.objects.filter(is_active=True).first()
-        except:
+        except Exception:
             return None
 
     @staticmethod
@@ -231,7 +231,7 @@ class InventoryIntegrationService:
                 return last_transaction.running_balance
             else:
                 return Decimal("0")
-        except:
+        except Exception:
             return Decimal("0")
 
     @staticmethod

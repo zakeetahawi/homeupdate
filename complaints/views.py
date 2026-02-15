@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from django.contrib import messages
@@ -18,6 +19,8 @@ from django.views.generic import (
     TemplateView,
     UpdateView,
 )
+
+logger = logging.getLogger(__name__)
 
 from accounts.models import Department
 from core.mixins import PaginationFixMixin
@@ -110,6 +113,8 @@ class ComplaintDashboardView(LoginRequiredMixin, TemplateView):
         # الشكاوى الحديثة مع تحسين العلاقات
         recent_complaints = Complaint.objects.select_related(
             "customer", "complaint_type", "assigned_to", "assigned_department"
+        ).defer(
+            "description", "customer_feedback", "internal_notes"
         ).order_by("-created_at")[:10]
 
         # الشكاوى المتأخرة مع تحسين الاستعلام
@@ -337,6 +342,8 @@ class ComplaintListView(PaginationFixMixin, LoginRequiredMixin, ListView):
             "created_by",
             "branch",
             "related_order",
+        ).defer(
+            "description", "customer_feedback", "internal_notes"
         ).order_by("-created_at")
 
         # تطبيق صلاحيات الوصول للشكاوى
@@ -846,57 +853,48 @@ class ComplaintCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         """حفظ الشكوى مع رسائل تصحيح شاملة ودعم AJAX"""
-        print("===== بدء حفظ الشكوى في الخلفية =====")
-
+        logger.info("===== بدء حفظ الشكوى في الخلفية =====")
         # طباعة بيانات النموذج
-        print("بيانات النموذج المستلمة:")
+        logger.info("بيانات النموذج المستلمة:")
         for field_name, field_value in form.cleaned_data.items():
-            print(f"  {field_name}: {field_value}")
-
+            logger.info(f"  {field_name}: {field_value}")
         # التحقق من المستخدم الحالي
         user_info = f"المستخدم الحالي: {self.request.user.username}"
         user_info += f" (ID: {self.request.user.id})"
-        print(user_info)
-
+        logger.info(user_info)
         try:
             # تعيين المستخدم كمُنشئ للشكوى
             form.instance.created_by = self.request.user
-            print(f"تم تعيين منشئ الشكوى: {self.request.user.username}")
-
+            logger.info(f"تم تعيين منشئ الشكوى: {self.request.user.username}")
             # حفظ الشكوى
-            print("جاري حفظ الشكوى...")
+            logger.info("جاري حفظ الشكوى...")
             response = super().form_valid(form)
-            print(f"تم حفظ الشكوى بنجاح. رقم الشكوى: {self.object.complaint_number}")
-            print(f"معرف الشكوى: {self.object.pk}")
-
+            logger.info(f"تم حفظ الشكوى بنجاح. رقم الشكوى: {self.object.complaint_number}")
+            logger.info(f"معرف الشكوى: {self.object.pk}")
             # طباعة تفاصيل الشكوى المحفوظة
-            print("تفاصيل الشكوى المحفوظة:")
-            print(f"  العنوان: {self.object.title}")
-            print(f"  نوع الشكوى: {self.object.complaint_type}")
-            print(f"  العميل: {self.object.customer}")
-            print(f"  الأولوية: {self.object.priority}")
-            print(f"  الموعد النهائي: {self.object.deadline}")
-            print(f"  الموظف المسؤول: {self.object.assigned_to}")
-            print(f"  القسم المختص: {self.object.assigned_department}")
-            print(f"  تاريخ الإنشاء: {self.object.created_at}")
-
+            logger.info("تفاصيل الشكوى المحفوظة:")
+            logger.info(f"  العنوان: {self.object.title}")
+            logger.info(f"  نوع الشكوى: {self.object.complaint_type}")
+            logger.info(f"  العميل: {self.object.customer}")
+            logger.info(f"  الأولوية: {self.object.priority}")
+            logger.info(f"  الموعد النهائي: {self.object.deadline}")
+            logger.info(f"  الموظف المسؤول: {self.object.assigned_to}")
+            logger.info(f"  القسم المختص: {self.object.assigned_department}")
+            logger.info(f"  تاريخ الإنشاء: {self.object.created_at}")
             # التحقق من الطلب المرتبط
             if self.object.related_order:
-                print(
+                logger.info(
                     f"الطلب المرتبط: طلب رقم {self.object.related_order.id}: {self.object.related_order}"
                 )
             else:
-                print("لا يوجد طلب مرتبط")
-
+                logger.info("لا يوجد طلب مرتبط")
             # التحقق من نوع الطلب (AJAX أم عادي)
             if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 # طلب AJAX - إرسال استجابة JSON
-                print("📡 إرسال استجابة AJAX")
-
+                logger.info("📡 إرسال استجابة AJAX")
                 # معالجة العمليات المختلفة
                 action = self.request.POST.get("action", "save")
-                print(f"العملية المطلوبة: {action}")
-
+                logger.info(f"العملية المطلوبة: {action}")
                 if action == "save_and_new":
                     redirect_url = reverse("complaints:complaint_create")
                 else:
@@ -921,18 +919,17 @@ class ComplaintCreateView(LoginRequiredMixin, CreateView):
                 # إرسال رسالة نجاح
                 message = f"تم إنشاء الشكوى بنجاح برقم {self.object.complaint_number}"
                 messages.success(self.request, message)
-                print("تم إرسال رسالة النجاح للمستخدم")
-
+                logger.info("تم إرسال رسالة النجاح للمستخدم")
                 # معالجة العمليات المختلفة
                 action = self.request.POST.get("action", "save")
                 if action == "save_and_new":
                     return redirect("complaints:complaint_create")
 
-                print("===== تم حفظ الشكوى بنجاح =====")
+                logger.info("===== تم حفظ الشكوى بنجاح =====")
                 return response
 
         except Exception as e:
-            print("===== خطأ في حفظ الشكوى =====")
+            logger.debug("===== خطأ في حفظ الشكوى =====")
             print(f"نوع الخطأ: {type(e).__name__}")
             print(f"رسالة الخطأ: {str(e)}")
 
@@ -955,25 +952,21 @@ class ComplaintCreateView(LoginRequiredMixin, CreateView):
 
     def form_invalid(self, form):
         """التعامل مع أخطاء النموذج مع رسائل تصحيح ودعم AJAX"""
-        print("===== أخطاء في النموذج =====")
-
+        logger.info("===== أخطاء في النموذج =====")
         # طباعة أخطاء النموذج
         if form.errors:
-            print("أخطاء الحقول:")
+            logger.info("أخطاء الحقول:")
             for field, errors in form.errors.items():
-                print(f"  {field}: {errors}")
-
+                logger.debug(f"  {field}: {errors}")
         # طباعة أخطاء عامة
         if form.non_field_errors():
-            print("أخطاء عامة:")
+            logger.info("أخطاء عامة:")
             for error in form.non_field_errors():
-                print(f"  - {error}")
-
+                logger.debug(f"  - {error}")
         # طباعة البيانات المرسلة
-        print("البيانات المرسلة:")
+        logger.info("البيانات المرسلة:")
         for key, value in self.request.POST.items():
-            print(f"  {key}: {value}")
-
+            logger.info(f"  {key}: {value}")
         # التحقق من نوع الطلب
         if self.request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return JsonResponse(
@@ -1126,8 +1119,7 @@ def complaint_status_update(request, pk):
                         notes=f"تغيير حالة الشكوى #{complaint.complaint_number} من {old_status_display} إلى {complaint.get_status_display()}",
                     )
                 except Exception as e:
-                    print(f"خطأ في تسجيل تغيير حالة الشكوى: {e}")
-
+                    logger.debug(f"خطأ في تسجيل تغيير حالة الشكوى: {e}")
             # رسائل نجاح مختلفة حسب الحالة
             if complaint.status == "in_progress":
                 success_message = (
@@ -1276,7 +1268,7 @@ def complaint_escalate(request, pk):
             user_permissions = user.complaint_permissions
             if user_permissions.is_active and user_permissions.can_escalate_complaints:
                 has_permission = True
-    except:
+    except Exception:
         pass
 
     # 5. التحقق من كون المستخدم هو المسؤول عن الشكوى
@@ -1302,7 +1294,7 @@ def complaint_escalate(request, pk):
                         request, "المستخدم المحدد لا يمكن تصعيد الشكاوى إليه"
                     )
                     return redirect("complaints:complaint_detail", pk=pk)
-            except:
+            except Exception:
                 # إذا لم يكن لديه سجل صلاحيات، نتحقق من المجموعات
                 if not (
                     escalated_to.is_superuser
@@ -1661,6 +1653,7 @@ def bulk_action(request):
     return redirect("complaints:complaint_list")
 
 
+@login_required
 def complaints_analysis(request):
     """تحليل الشكاوى وطرق الحل"""
     from datetime import timedelta
@@ -1948,6 +1941,7 @@ def notification_bulk_action(request):
     return JsonResponse({"status": "success", "message": message})
 
 
+@login_required
 def ajax_complaint_stats(request):
     """
     AJAX endpoint to get complaint statistics
@@ -2141,18 +2135,17 @@ def create_evaluation(request, complaint_id):
 @login_required
 def search_customers(request):
     """البحث الذكي عن العملاء"""
-    print("===== بدء البحث عن العملاء =====")
-
+    logger.info("===== بدء البحث عن العملاء =====")
     query = request.GET.get("q", "")
-    print(f"مصطلح البحث: '{query}'")
+    logger.info(f"مصطلح البحث: '{query}'")
     print(f"طول المصطلح: {len(query)}")
 
     if len(query) < 2:
-        print("مصطلح البحث قصير جداً - إرجاع نتائج فارغة")
+        logger.info("مصطلح البحث قصير جداً - إرجاع نتائج فارغة")
         return JsonResponse({"results": []})
 
     try:
-        print("جاري البحث في قاعدة البيانات...")
+        logger.info("جاري البحث في قاعدة البيانات...")
         customers = Customer.objects.filter(
             Q(name__icontains=query)
             | Q(phone__icontains=query)
@@ -2179,7 +2172,7 @@ def search_customers(request):
         return JsonResponse({"results": results})
 
     except Exception as e:
-        print("===== خطأ في البحث عن العملاء =====")
+        logger.debug("===== خطأ في البحث عن العملاء =====")
         print(f"نوع الخطأ: {type(e).__name__}")
         print(f"رسالة الخطأ: {str(e)}")
         return JsonResponse(
@@ -2218,14 +2211,12 @@ def get_customer_info(request, customer_id):
 @login_required
 def get_customer_orders(request, customer_id):
     """جلب طلبات العميل مع رسائل تصحيح"""
-    print(f"===== بدء جلب طلبات العميل {customer_id} =====")
-
+    logger.info(f"===== بدء جلب طلبات العميل {customer_id} =====")
     try:
-        print(f"البحث عن العميل برقم: {customer_id}")
+        logger.info(f"البحث عن العميل برقم: {customer_id}")
         customer = Customer.objects.get(pk=customer_id)
-        print(f"تم العثور على العميل: {customer.name}")
-
-        print("جاري جلب طلبات العميل...")
+        logger.info(f"تم العثور على العميل: {customer.name}")
+        logger.info("جاري جلب طلبات العميل...")
         orders = (
             Order.objects.filter(customer=customer)
             .select_related("salesperson", "created_by")
@@ -2236,19 +2227,17 @@ def get_customer_orders(request, customer_id):
 
         orders_data = []
         for order in orders:
-            print(f"معالجة الطلب {order.id}:")
-
+            logger.info(f"معالجة الطلب {order.id}:")
             # معلومات البائع
             salesperson_name = "غير محدد"
             if order.salesperson:
                 salesperson_name = order.salesperson.name
-                print(f"  البائع: {salesperson_name}")
+                logger.info(f"  البائع: {salesperson_name}")
             elif hasattr(order, "salesperson_name_raw") and order.salesperson_name_raw:
                 salesperson_name = order.salesperson_name_raw
                 print(f"  البائع (خام): {salesperson_name}")
             else:
-                print("  البائع: غير محدد")
-
+                logger.info("  البائع: غير محدد")
             # معلومات منشئ الطلب
             created_by_name = "غير محدد"
             if hasattr(order, "created_by") and order.created_by:
@@ -2258,40 +2247,35 @@ def get_customer_orders(request, customer_id):
                 created_by_name = full_name.strip()
                 if not created_by_name:
                     created_by_name = order.created_by.username
-                print(f"  منشئ الطلب: {created_by_name}")
+                logger.info(f"  منشئ الطلب: {created_by_name}")
             else:
-                print("  منشئ الطلب: غير محدد")
-
+                logger.info("  منشئ الطلب: غير محدد")
             # حساب المبلغ الإجمالي
             total_amount = 0
             if hasattr(order, "total_amount") and order.total_amount:
                 total_amount = float(order.total_amount)
-                print(f"  المبلغ الإجمالي: {total_amount}")
+                logger.info(f"  المبلغ الإجمالي: {total_amount}")
             else:
-                print("  المبلغ الإجمالي: 0")
-
+                logger.info("  المبلغ الإجمالي: 0")
             # حالة الطلب
             order_status = "غير محدد"
             if hasattr(order, "status"):
                 order_status = order.get_status_display()
-                print(f"  حالة الطلب: {order_status}")
+                logger.info(f"  حالة الطلب: {order_status}")
             else:
-                print("  حالة الطلب: غير محدد")
-
+                logger.info("  حالة الطلب: غير محدد")
             # تاريخ الإنشاء
             created_date = ""
             if order.created_at:
                 created_date = order.created_at.strftime("%Y-%m-%d")
-                print(f"  تاريخ الإنشاء: {created_date}")
-
+                logger.info(f"  تاريخ الإنشاء: {created_date}")
             # وصف الطلب
             description = (
                 getattr(order, "description", "")
                 or getattr(order, "notes", "")
                 or "لا يوجد وصف"
             )
-            print(f"  الوصف: {description[:50]}...")
-
+            logger.info(f"  الوصف: {description[:50]}...")
             order_data = {
                 "id": order.id,
                 "order_number": getattr(order, "order_number", f"طلب #{order.id}"),
@@ -2308,10 +2292,10 @@ def get_customer_orders(request, customer_id):
         return JsonResponse({"orders": orders_data})
 
     except Customer.DoesNotExist:
-        print(f"===== خطأ: العميل {customer_id} غير موجود =====")
+        logger.debug(f"===== خطأ: العميل {customer_id} غير موجود =====")
         return JsonResponse({"error": "العميل غير موجود"}, status=404)
     except Exception as e:
-        print("===== خطأ في جلب طلبات العميل =====")
+        logger.debug("===== خطأ في جلب طلبات العميل =====")
         print(f"نوع الخطأ: {type(e).__name__}")
         print(f"رسالة الخطأ: {str(e)}")
         return JsonResponse({"error": f"حدث خطأ في جلب الطلبات: {str(e)}"}, status=500)

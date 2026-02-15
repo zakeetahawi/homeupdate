@@ -2,7 +2,7 @@ import csv
 from datetime import date, datetime, timedelta
 
 from django.contrib import messages
-from django.contrib.auth.decorators import permission_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Avg, Count, F, Max, Sum, Window
 from django.db.models.functions import TruncDate
@@ -198,6 +198,7 @@ class ReportListView(LoginRequiredMixin, ListView):
     model = Report
     template_name = "reports/report_list.html"
     context_object_name = "reports"
+    paginate_by = 25  # ✅ FIX H-2: تصفح صفحات بدلاً من تحميل الكل
 
     @method_decorator(permission_required("reports.view_report", raise_exception=True))
     def dispatch(self, *args, **kwargs):
@@ -1132,6 +1133,7 @@ class ReportDetailView(LoginRequiredMixin, DetailView):
         }
 
 
+@login_required
 def save_report_result(request, pk):
     """Save the current report result"""
     if request.method == "POST":

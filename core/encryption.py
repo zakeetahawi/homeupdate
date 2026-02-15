@@ -79,7 +79,7 @@ class DataEncryption:
         try:
             decrypted = self.cipher.decrypt(encrypted_data)
             return decrypted.decode()
-        except:
+        except Exception:
             # إذا فشل فك التشفير، إرجاع البيانات كما هي
             return (
                 encrypted_data.decode()

@@ -76,7 +76,7 @@ const ComplaintsQuickActions = {
                 this.addNote(complaintId, button);
                 break;
             default:
-                console.warn('Unknown quick action:', action);
+                // console.warn('Unknown quick action:', action);
                 this.setButtonLoading(button, false);
         }
     },
@@ -682,20 +682,11 @@ const ComplaintsQuickActions = {
         });
     },
 
-    // Get CSRF token from cookies
+    // يستخدم CSRFHandler المركزي من csrf-handler.js
     getCookie: function(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
+        if (window.CSRFHandler) return window.CSRFHandler.getToken();
+        const input = document.querySelector('[name=csrfmiddlewaretoken]');
+        return input ? input.value : '';
     }
 };
 

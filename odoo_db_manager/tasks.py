@@ -74,7 +74,7 @@ def sync_google_sheet_task(self, mapping_id, task_id=None, user_id=None):
             try:
                 task = GoogleSyncTask.objects.get(id=task_id)
                 task.fail_task(str(e))
-            except:
+            except Exception:
                 pass
 
         return {"success": False, "error": str(e)}

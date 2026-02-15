@@ -311,7 +311,7 @@ def create_notification_for_alert(alert, product, alert_data, user=None):
         # الحصول على المحتوى المرتبط (المنتج)
         try:
             product_content_type = ContentType.objects.get_for_model(Product)
-        except:
+        except Exception:
             product_content_type = None
 
         # إنشاء الإشعار الرئيسي

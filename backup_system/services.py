@@ -108,7 +108,7 @@ class BackupService:
             try:
                 job = BackupJob.objects.get(id=job_id)
                 job.mark_as_failed(str(e))
-            except:
+            except Exception:
                 pass
 
     def _get_default_apps(self) -> List[str]:
@@ -309,7 +309,7 @@ class RestoreService:
             try:
                 job = RestoreJob.objects.get(id=job_id)
                 job.mark_as_failed(str(e))
-            except:
+            except Exception:
                 pass
 
     def _read_backup_file(self, file_path: str) -> List[Dict]:

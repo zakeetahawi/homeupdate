@@ -67,7 +67,7 @@ class BoardRevenueAPIView(APIView, DashboardFilterMixin):
                 # subtract 365 days (simple approximation, accurate enough for business dashboard)
                 prev_end = end_date - timedelta(days=365)
                 prev_start = start_date - timedelta(days=365)
-            except:
+            except Exception:
                 # fallback
                 prev_end = start_date - timedelta(seconds=1)
                 prev_start = prev_end - (end_date - start_date)

@@ -151,7 +151,7 @@ class CloudflareSync:
         def _safe_str(value):
             try:
                 return str(value) if value is not None else None
-            except:
+            except Exception:
                 return None
 
         unit = getattr(product, "unit", None)

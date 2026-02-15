@@ -258,7 +258,7 @@ def dashboard(request):
     ).only(
         'id', 'transaction_number', 'date', 'transaction_type', 'total_debit', 'total_credit',
         'description', 'customer__name', 'order__order_number', 'created_by__username'
-    ).order_by("-date", "-id")
+    ).order_by("-date", "-id")[:50]  # ✅ FIX H-2: تحديد آخر 50 قيد فقط بدلاً من جميع القيود
     
     # ===== تحسين #5: قوائم الفلاتر =====
     context['branches'] = Branch.objects.filter(is_active=True).only('id', 'name').order_by('name')
@@ -832,7 +832,7 @@ def customer_payments(request, customer_id):
         from customers.models import Customer
 
         customer = get_object_or_404(Customer, pk=customer_id)
-    except:
+    except Exception:
         return HttpResponse("خطأ في الوصول للعميل", status=400)
 
     try:
@@ -843,7 +843,7 @@ def customer_payments(request, customer_id):
             .select_related("order")
             .order_by("-payment_date")
         )
-    except:
+    except Exception:
         payments_qs = []
 
     # Pagination
@@ -868,7 +868,7 @@ def register_customer_payment(request, customer_id):
         from customers.models import Customer
 
         customer = get_object_or_404(Customer, pk=customer_id)
-    except:
+    except Exception:
         return HttpResponse("خطأ في الوصول للعميل", status=400)
 
     if request.method == "POST":
@@ -1838,7 +1838,7 @@ def api_customer_summary(request, customer_id):
         from customers.models import Customer
 
         customer = get_object_or_404(Customer, pk=customer_id)
-    except:
+    except Exception:
         return JsonResponse({"error": "Customer not found"}, status=404)
 
     summary, _ = CustomerFinancialSummary.objects.get_or_create(customer=customer)
@@ -1878,7 +1878,7 @@ def api_customer_badge(request, customer_id):
         from customers.models import Customer
 
         customer = get_object_or_404(Customer, pk=customer_id)
-    except:
+    except Exception:
         return JsonResponse({"error": "Customer not found"}, status=404)
 
     summary, _ = CustomerFinancialSummary.objects.get_or_create(customer=customer)
@@ -1971,7 +1971,7 @@ def api_dashboard_stats(request):
         ).filter(remaining__gt=0).aggregate(
             total=Sum('remaining')
         )['total'] or 0
-    except:
+    except Exception:
         general_payments_total = 0
 
     data = {

@@ -26,7 +26,7 @@
     function initCharts() {
         // التحقق من وجود Chart.js
         if (typeof Chart === 'undefined') {
-            console.warn('Chart.js غير متوفر');
+            // console.warn('Chart.js غير متوفر');
             return;
         }
         
@@ -151,7 +151,7 @@
     function initDataTables() {
         // التحقق من وجود DataTable
         if (typeof $.fn.DataTable === 'undefined') {
-            console.warn('DataTables غير متوفر');
+            // console.warn('DataTables غير متوفر');
             return;
         }
         

@@ -24,7 +24,7 @@ from .models import (
     InstallationStatusLog,
     InstallationTeam,
 )
-from .models import ManufacturingOrder as InstallationManufacturingOrder
+from .models import ModificationManufacturingOrder as InstallationManufacturingOrder
 from .models import (
     ModificationErrorAnalysis,
     ModificationErrorType,
@@ -522,7 +522,7 @@ class CustomerDebtAdmin(admin.ModelAdmin):
                 try:
                     if len(str(cell.value)) > max_length:
                         max_length = len(str(cell.value))
-                except:
+                except Exception:
                     pass
             adjusted_width = min(max_length + 2, 50)
             ws.column_dimensions[column_letter].width = adjusted_width

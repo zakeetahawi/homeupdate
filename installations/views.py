@@ -1,3 +1,4 @@
+import logging
 import json
 from datetime import timedelta
 
@@ -45,7 +46,7 @@ from .models import (
     InstallationSchedule,
     InstallationStatusLog,
     InstallationTeam,
-    ManufacturingOrder,
+    ModificationManufacturingOrder,
     ModificationErrorAnalysis,
     ModificationErrorType,
     ModificationImage,
@@ -54,6 +55,8 @@ from .models import (
     ReceiptMemo,
     Technician,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def currency_format(amount):
@@ -83,8 +86,7 @@ def update_related_orders(installation, new_status, old_status, user=None):
                 notes=f"تغيير حالة التركيب من {dict(InstallationSchedule.STATUS_CHOICES).get(old_status, old_status)} إلى {dict(InstallationSchedule.STATUS_CHOICES).get(new_status, new_status)}",
             )
         except Exception as e:
-            print(f"خطأ في تسجيل تغيير حالة التركيب: {e}")
-
+            logger.debug(f"خطأ في تسجيل تغيير حالة التركيب: {e}")
         # تحديث حالة الطلب فقط إذا كانت مختلفة
         if new_status == "completed" and old_status != "completed":
             old_order_status = installation.order.order_status
@@ -109,8 +111,7 @@ def update_related_orders(installation, new_status, old_status, user=None):
                         notes=f"تم إكمال التركيب #{installation.installation_code}",
                     )
                 except Exception as e:
-                    print(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
-
+                    logger.debug(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
         # البحث عن أمر التصنيع المقابل
         from manufacturing.models import ManufacturingOrder
 
@@ -154,7 +155,7 @@ def update_related_orders(installation, new_status, old_status, user=None):
 
         except ManufacturingOrder.DoesNotExist:
             # لا يوجد أمر تصنيع مقابل لهذا الطلب
-            print(f"لا يوجد أمر تصنيع للطلب {installation.order.order_number}")
+            logger.info(f"لا يوجد أمر تصنيع للطلب {installation.order.order_number}")
             pass
 
     except Exception as e:
@@ -188,7 +189,7 @@ def dashboard(request):
 
         stats = json.loads(stats_data)
     except Exception as e:
-        print(f"خطأ في استدعاء API الإحصائيات: {e}")
+        logger.debug(f"خطأ في استدعاء API الإحصائيات: {e}")
         # في حالة فشل API، استخدم حسابات احتياطية
         stats = {
             "total_scheduled": 0,
@@ -994,8 +995,7 @@ def schedule_installation(request, installation_id):
                 ):
                     windows_count = latest_inspection.windows_count
         except Exception as e:
-            print(f"خطأ في جلب عدد الشبابيك: {e}")
-
+            logger.debug(f"خطأ في جلب عدد الشبابيك: {e}")
         initial_data = {
             "scheduled_date": scheduled_date,
             "scheduled_time": default_time,
@@ -1106,8 +1106,7 @@ def update_status(request, installation_id):
                 )
             except Exception as e:
                 # لا نريد أن يفشل التحديث بسبب سجل الحدث
-                print(f"خطأ في إنشاء سجل الحدث: {e}")
-
+                logger.debug(f"خطأ في إنشاء سجل الحدث: {e}")
             # إنشاء إشعار لتحديث الحالة
             try:
                 from notifications.signals import create_notification
@@ -1139,8 +1138,7 @@ def update_status(request, installation_id):
                     },
                 )
             except Exception as e:
-                print(f"خطأ في إنشاء إشعار تحديث الحالة: {e}")
-
+                logger.debug(f"خطأ في إنشاء إشعار تحديث الحالة: {e}")
             # تحديث حالة الطلب عند الإكمال
             if new_status == "completed" and old_status != "completed":
                 old_order_status = installation.order.order_status
@@ -1159,8 +1157,7 @@ def update_status(request, installation_id):
                         notes=f"تم تحديث حالة الطلب تلقائياً عند إكمال التركيب #{installation.installation_code}",
                     )
                 except Exception as e:
-                    print(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
-
+                    logger.debug(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
             # إرسال رسالة نجاح
             success_message = f"تم تحديث حالة التركيب بنجاح إلى: {valid_statuses.get(new_status, new_status)}"
             if new_status == "completed":
@@ -1261,8 +1258,7 @@ def update_status_by_code(request, installation_code):
                 )
             except Exception as e:
                 # لا نريد أن يفشل التحديث بسبب سجل الحدث
-                print(f"خطأ في إنشاء سجل الحدث: {e}")
-
+                logger.debug(f"خطأ في إنشاء سجل الحدث: {e}")
             # إنشاء إشعار لتحديث الحالة
             try:
                 from notifications.signals import create_notification
@@ -1294,8 +1290,7 @@ def update_status_by_code(request, installation_code):
                     },
                 )
             except Exception as e:
-                print(f"خطأ في إنشاء إشعار تحديث الحالة: {e}")
-
+                logger.debug(f"خطأ في إنشاء إشعار تحديث الحالة: {e}")
             # تحديث حالة الطلب عند الإكمال
             if new_status == "completed" and old_status != "completed":
                 old_order_status = installation.order.order_status
@@ -1314,8 +1309,7 @@ def update_status_by_code(request, installation_code):
                         notes=f"تم تحديث حالة الطلب تلقائياً عند إكمال التركيب #{installation.installation_code}",
                     )
                 except Exception as e:
-                    print(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
-
+                    logger.debug(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
             # إرسال رسالة نجاح
             success_message = f"تم تحديث حالة التركيب بنجاح إلى: {valid_statuses.get(new_status, new_status)}"
             if new_status == "completed":
@@ -1343,7 +1337,6 @@ def update_status_by_code(request, installation_code):
 
 
 # API Views
-@csrf_exempt
 @require_http_methods(["POST"])
 def receive_completed_order(request):
     # تعطيل الجدولة التلقائية نهائياً
@@ -1698,7 +1691,7 @@ def create_manufacturing_order(request, modification_id):
 @login_required
 def manufacturing_order_detail(request, order_id):
     """تفاصيل أمر التصنيع"""
-    manufacturing_order = get_object_or_404(ManufacturingOrder, id=order_id)
+    manufacturing_order = get_object_or_404(ModificationManufacturingOrder, id=order_id)
 
     context = {
         "manufacturing_order": manufacturing_order,
@@ -1711,7 +1704,7 @@ def manufacturing_order_detail(request, order_id):
 @login_required
 def complete_manufacturing_order(request, order_id):
     """إكمال أمر التصنيع"""
-    manufacturing_order = get_object_or_404(ManufacturingOrder, id=order_id)
+    manufacturing_order = get_object_or_404(ModificationManufacturingOrder, id=order_id)
 
     if request.method == "POST":
         form = ModificationReportForm(request.POST, request.FILES)
@@ -1779,7 +1772,7 @@ def modification_requests_list(request):
 def manufacturing_orders_list(request):
     """قائمة أوامر التصنيع للتعديلات"""
     orders = (
-        ManufacturingOrder.objects.select_related(
+        ModificationManufacturingOrder.objects.select_related(
             "modification_request",
             "modification_request__installation",
             "modification_request__installation__order",
@@ -1862,7 +1855,7 @@ def quick_schedule_installation(request, order_id):
             "delivered",
         ]:
             is_ready_for_installation = True
-    except:
+    except Exception:
         pass
 
     if not is_ready_for_installation:
@@ -1936,8 +1929,7 @@ def quick_schedule_installation(request, order_id):
                                 inspection.notes = inspection_note
                             inspection.save(update_fields=["notes"])
                     except Exception as inspection_error:
-                        print(f"خطأ في تحديث عنوان المعاينات: {inspection_error}")
-
+                        logger.debug(f"خطأ في تحديث عنوان المعاينات: {inspection_error}")
                     messages.success(
                         request, "تم تحديث عنوان العميل بنجاح في التركيبات والمعاينات"
                     )
@@ -3151,8 +3143,16 @@ def installation_in_progress_list(request):
         ).count(),
     }
 
+    # ✅ FIX H-2: إضافة Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(installations, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     context = {
-        "installations": installations,
+        "installations": page_obj,
+        "page_obj": page_obj,
+        "is_paginated": page_obj.has_other_pages(),
         "stats": stats,
         "teams": InstallationTeam.objects.filter(is_active=True),
         "title": "التركيبات قيد التنفيذ",
@@ -3793,7 +3793,7 @@ def upcoming_installations_schedule(request):
     )
 
 
-@csrf_exempt
+@login_required
 def api_upcoming_installations(request):
     """API endpoint لجلب التركيبات القادمة مع المديونيات"""
     from decimal import Decimal
@@ -3807,7 +3807,7 @@ def api_upcoming_installations(request):
 
     try:
         selected_date = timezone.datetime.strptime(date_str, "%Y-%m-%d").date()
-    except:
+    except Exception:
         selected_date = timezone.now().date()
 
     # جلب التركيبات المجدولة لهذا اليوم

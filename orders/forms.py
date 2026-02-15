@@ -561,7 +561,7 @@ class OrderForm(forms.ModelForm):
                                     f'⚠️ رقم المرجع "{invoice_number}" مستخدم مسبقاً لهذا العميل في طلب من نفس النوع (رقم الطلب: {existing_order.order_number})',
                                 )
                                 break
-                        except:
+                        except Exception:
                             pass
 
         # التحقق من رقم العقد وملف العقد للتركيب والتفصيل والإكسسوار
@@ -814,7 +814,7 @@ class OrderEditForm(forms.ModelForm):
                 for t in types_list:
                     types_display.append(type_mapping.get(t, t))
                 self.fields["selected_types"].initial = " + ".join(types_display)
-            except:
+            except Exception:
                 self.fields["selected_types"].initial = self.instance.selected_types
 
     def clean(self):

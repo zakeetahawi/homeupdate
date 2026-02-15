@@ -76,7 +76,7 @@ class Account(models.Model):
     # ربط اختياري بالعميل للحسابات الفردية
     customer = models.OneToOneField(
         "customers.Customer",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="accounting_account",
@@ -609,7 +609,7 @@ class CustomerFinancialSummary(models.Model):
 
     customer = models.OneToOneField(
         "customers.Customer",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="financial_summary",
         verbose_name=_("العميل"),
     )
@@ -673,60 +673,78 @@ class CustomerFinancialSummary(models.Model):
         return f"ملخص مالي: {self.customer.name}"
 
     def refresh(self):
-        """تحديث الملخص المالي من البيانات الفعلية"""
-        from django.db.models import Sum
+        """تحديث الملخص المالي من البيانات الفعلية — استعلام DB بدلاً من حلقة Python"""
+        from django.db.models import (
+            Count, DecimalField, F, OuterRef, Subquery, Sum, Value,
+        )
+        from django.db.models.functions import Coalesce
 
-        from orders.models import Order, Payment
+        from orders.models import Order, OrderItem, Payment
         from accounting.performance_utils import invalidate_customer_cache
 
-        # إجماليات الطلبات - حساب دقيق باستخدام final_price_after_discount
-        orders = Order.objects.filter(customer=self.customer)
-        self.total_orders_count = orders.count()
-        
-        # حساب المجموع الصحيح (property لا يمكن استخدامه في aggregate)
-        self.total_orders_amount = Decimal("0.00")
-        for order in orders:
-            self.total_orders_amount += order.final_price_after_discount
-
-        # إجمالي المدفوع — استعلام واحد عبر customer FK
-        payments = Payment.objects.filter(customer=self.customer)
-        self.total_paid = payments.aggregate(total=Sum("amount"))["total"] or Decimal(
-            "0.00"
+        # ── إجماليات الطلبات — استعلام DB واحد ──
+        # Subquery: مجموع خصومات العناصر لكل طلب
+        item_discount_sq = (
+            OrderItem.objects.filter(order=OuterRef("pk"))
+            .values("order")
+            .annotate(_total=Sum("discount_amount"))
+            .values("_total")
         )
 
-        # حساب رصيد الدفعات العامة غير المخصصة بالكامل
-        general_payments = Payment.objects.filter(
-            customer=self.customer,
-            payment_type='general'
+        orders_agg = (
+            Order.objects.filter(customer=self.customer)
+            .annotate(
+                _item_disc=Coalesce(
+                    Subquery(item_discount_sq, output_field=DecimalField()),
+                    Value(Decimal("0.00")),
+                ),
+                _final_price=(
+                    Coalesce(F("total_amount"), Value(Decimal("0.00")))
+                    - F("_item_disc")
+                    - Coalesce(F("administrative_discount_amount"), Value(Decimal("0.00")))
+                    + Coalesce(F("financial_addition"), Value(Decimal("0.00")))
+                ),
+            )
+            .aggregate(
+                total_count=Count("id"),
+                total_amount=Sum("_final_price"),
+                last_order_date=models.Max("created_at"),
+            )
         )
-        general_payments_total = general_payments.aggregate(
-            total=Sum('amount'),
-            allocated=Sum('allocated_amount')
-        )
-        total_general = general_payments_total['total'] or Decimal('0.00')
-        total_allocated = general_payments_total['allocated'] or Decimal('0.00')
-        self.remaining_advances = total_general - total_allocated  # الرصيد المتبقي
 
-        # حساب المديونية الصحيح
+        self.total_orders_count = orders_agg["total_count"]
+        self.total_orders_amount = orders_agg["total_amount"] or Decimal("0.00")
+        last_order_dt = orders_agg["last_order_date"]
+        if last_order_dt:
+            self.last_order_date = last_order_dt
+
+        # ── إجمالي المدفوع + آخر دفعة + رصيد الدفعات العامة — استعلامان فقط ──
+        payment_agg = Payment.objects.filter(customer=self.customer).aggregate(
+            total=Sum("amount"),
+            last_date=models.Max("payment_date"),
+        )
+        self.total_paid = payment_agg["total"] or Decimal("0.00")
+        if payment_agg["last_date"]:
+            self.last_payment_date = payment_agg["last_date"]
+
+        # رصيد الدفعات العامة غير المخصصة بالكامل
+        general_agg = (
+            Payment.objects.filter(customer=self.customer, payment_type="general")
+            .aggregate(total=Sum("amount"), allocated=Sum("allocated_amount"))
+        )
+        total_general = general_agg["total"] or Decimal("0.00")
+        total_allocated = general_agg["allocated"] or Decimal("0.00")
+        self.remaining_advances = total_general - total_allocated
+
+        # ── حساب المديونية وتحديد الحالة ──
         self.total_debt = self.total_orders_amount - self.total_paid
 
-        # تحديد الحالة المالية
         if self.total_debt > 0:
             self.financial_status = "has_debt"
         elif self.total_debt < 0 or self.remaining_advances > 0:
             self.financial_status = "has_credit"
         else:
             self.financial_status = "clear"
-
-        # آخر دفعة
-        last_payment = payments.order_by("-payment_date").first()
-        if last_payment:
-            self.last_payment_date = last_payment.payment_date
-
-        # آخر طلب
-        last_order = orders.order_by("-created_at").first()
-        if last_order:
-            self.last_order_date = last_order.created_at
 
         self.save()
 
@@ -757,12 +775,41 @@ class CustomerFinancialSummary(models.Model):
         return status_icons.get(self.financial_status, "fa-question-circle")
     
     def get_orders_with_debt(self):
-        """الحصول على الطلبات التي لديها رصيد متبقي"""
-        from orders.models import Order
-        
-        all_orders = Order.objects.filter(customer=self.customer)
-        # تصفية في Python لأن remaining_amount هو property
-        return [order for order in all_orders if order.remaining_amount > 0]
+        """الحصول على الطلبات التي لديها رصيد متبقي — عبر استعلام DB"""
+        from django.db.models import (
+            DecimalField, F, OuterRef, Subquery, Sum, Value,
+        )
+        from django.db.models.functions import Coalesce
+
+        from orders.models import Order, OrderItem
+
+        item_discount_sq = (
+            OrderItem.objects.filter(order=OuterRef("pk"))
+            .values("order")
+            .annotate(_total=Sum("discount_amount"))
+            .values("_total")
+        )
+
+        return list(
+            Order.objects.filter(customer=self.customer)
+            .annotate(
+                _item_disc=Coalesce(
+                    Subquery(item_discount_sq, output_field=DecimalField()),
+                    Value(Decimal("0.00")),
+                ),
+                _final_price=(
+                    Coalesce(F("total_amount"), Value(Decimal("0.00")))
+                    - F("_item_disc")
+                    - Coalesce(F("administrative_discount_amount"), Value(Decimal("0.00")))
+                    + Coalesce(F("financial_addition"), Value(Decimal("0.00")))
+                ),
+                _remaining=(
+                    F("_final_price")
+                    - Coalesce(F("paid_amount"), Value(Decimal("0.00")))
+                ),
+            )
+            .filter(_remaining__gt=Decimal("0.01"))
+        )
 
 
 class AccountingSettings(models.Model):

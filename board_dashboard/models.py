@@ -29,7 +29,7 @@ class BoardWidgetSettings(models.Model):
 
     # Future-proofing: Thresholds (e.g., target revenue)
     target_value = models.DecimalField(
-        max_digits=12,
+        max_digits=15,
         decimal_places=2,
         null=True,
         blank=True,

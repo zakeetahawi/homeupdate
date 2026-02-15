@@ -54,6 +54,7 @@ def is_admin_user(user):
 # Helper functions removed
 
 
+@login_required
 def home(request):
     """
     View for the home page
@@ -183,12 +184,19 @@ def contact(request):
     return render(request, "contact.html", context)
 
 
+@login_required
 def serve_media_file(request, path):
     """
     Custom view to serve media files using FileResponse.
     Securely serves files from MEDIA_ROOT directory.
     """
-    file_path = os.path.join(settings.MEDIA_ROOT, path)
+    # ✅ FIX H-10: منع Directory Traversal — التحقق من أن المسار داخل MEDIA_ROOT
+    from pathlib import Path
+    media_root = Path(settings.MEDIA_ROOT).resolve()
+    file_path = (media_root / path).resolve()
+    if not str(file_path).startswith(str(media_root)):
+        raise Http404("Invalid file path")
+    file_path = str(file_path)
     if not os.path.exists(file_path):
         raise Http404("Media file not found")
 
@@ -221,6 +229,7 @@ def serve_media_file(request, path):
         raise Http404(f"Error processing file: {str(e)}")
 
 
+@login_required
 def data_management_redirect(request):
     """
     إعادة توجيه من المسارات القديمة إلى المسار الجديد لإدارة قواعد البيانات
@@ -312,6 +321,7 @@ def chat_gone_view(request):
     return response
 
 
+@staff_member_required
 def test_minimal_view(request):
     """صفحة اختبار نظيفة تماماً بدون أي JavaScript"""
     html = """
@@ -335,6 +345,7 @@ def test_minimal_view(request):
     return HttpResponse(html)
 
 
+@staff_member_required
 def clear_cache_view(request):
     """أداة لمسح cache المتصفح وإيقاف طلبات WebSocket"""
     html = """

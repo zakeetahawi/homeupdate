@@ -226,7 +226,7 @@ def get_user_complaint_permissions(user):
                 "can_delete": perm_obj.can_delete_complaints,
                 "is_active": perm_obj.is_active,
             }
-        except:
+        except Exception:
             permissions = {
                 "can_edit_all": False,
                 "can_view_all": False,

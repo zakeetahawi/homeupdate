@@ -128,7 +128,7 @@ def _create_default_settings():
     try:
         save_database_settings(default_settings)
         logger.info("تم إنشاء ملف إعدادات افتراضي")
-    except:
+    except Exception:
         logger.error("فشل إنشاء ملف الإعدادات الافتراضي")
 
     return default_settings

@@ -114,7 +114,7 @@ class DatabaseConnectionPool:
                 # في حالة الخطأ، أغلق الاتصال
                 try:
                     connection.rollback()
-                except:
+                except Exception:
                     pass
             raise
 
@@ -220,7 +220,7 @@ class SmartConnectionManager:
         finally:
             try:
                 conn.close()
-            except:
+            except Exception:
                 pass
 
     def reset_fallback(self):

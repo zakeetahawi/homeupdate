@@ -806,7 +806,7 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
                     import traceback
 
                     error_msg = f"❌ خطأ في إنشاء معاينة للطلب {instance.order_number}: {str(e)}"
-                    print(f"\033[31m{error_msg}\033[0m")
+                    logger.debug(f"\033[31m{error_msg}\033[0m")
                     traceback.print_exc()
             else:
                 pass
@@ -1010,10 +1010,9 @@ def order_post_save(sender, instance, created, **kwargs):
                     order_number = instance.order_number
                     order_pk = instance.pk
 
-                    print(
+                    logger.info(
                         f"🔍 [order_post_save] تغيير رقم الفاتورة من '{old_invoice}' إلى '{new_invoice_number}' للطلب {order_number}"
                     )
-
                     # استخدام on_commit لضمان التحديث بعد اكتمال الحفظ
                     def update_manufacturing_orders():
                         try:
@@ -1027,21 +1026,18 @@ def order_post_save(sender, instance, created, **kwargs):
                                 logger.info(
                                     f"✅ [on_commit] تم تحديث رقم الفاتورة من '{old_invoice}' إلى '{new_invoice_number}' في {updated_count} أمر تصنيع للطلب {order_number}"
                                 )
-                                print(
+                                logger.info(
                                     f"✅ [on_commit] تم تحديث {updated_count} أمر تصنيع بالرقم {new_invoice_number}"
                                 )
                             else:
-                                print(f"⚠️ لا توجد أوامر تصنيع للطلب {order_number}")
+                                logger.info(f"⚠️ لا توجد أوامر تصنيع للطلب {order_number}")
                         except Exception as e:
                             logger.error(f"❌ خطأ في تحديث رقم الفاتورة: {e}")
-                            print(f"❌ خطأ: {e}")
-
+                            logger.debug(f"❌ خطأ: {e}")
                     transaction.on_commit(update_manufacturing_orders)
                 except Exception as e:
                     logger.error(f"❌ خطأ في تحديث رقم الفاتورة في أوامر التصنيع: {e}")
-                    print(f"❌ خطأ في تحديث ManufacturingOrder: {e}")
-
-
+                    logger.debug(f"❌ خطأ في تحديث ManufacturingOrder: {e}")
 @receiver(post_save, sender=Order, dispatch_uid='deduct_inventory_on_order_creation')
 def deduct_inventory_on_order_creation(sender, instance, created, **kwargs):
     """
@@ -1479,7 +1475,7 @@ def log_order_item_changes(sender, instance, created, **kwargs):
                     changes.append(
                         f"المنتج: {old_product.name} → {instance.product.name}"
                     )
-                except:
+                except Exception:
                     changes.append(f"المنتج: تم التغيير")
 
             # تتبع تغيير نسبة الخصم
@@ -1768,7 +1764,7 @@ try:
                             changed_by = User.objects.filter(
                                 username__icontains=instance.cutter_name
                             ).first()
-                        except:
+                        except Exception:
                             pass
                     elif hasattr(instance, "created_by") and instance.created_by:
                         changed_by = instance.created_by

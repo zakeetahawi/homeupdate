@@ -133,7 +133,7 @@ def turbo_upload_products(
                         if price_str and price_str.lower() not in ["", "nan", "none"]
                         else 0
                     )
-                except:
+                except Exception:
                     price = 0
 
                 # سعر الجملة
@@ -146,7 +146,7 @@ def turbo_upload_products(
                         if wp_str and wp_str.lower() not in ["", "nan", "none"]
                         else None
                     )
-                except:
+                except Exception:
                     wholesale_price = None
 
                 # الفئة
@@ -279,7 +279,7 @@ def turbo_upload_products(
             upload_log.status = "failed"
             upload_log.summary = f"فشل: {str(e)}"
             upload_log.save()
-        except:
+        except Exception:
             pass
 
         return {"success": False, "error": str(e)}

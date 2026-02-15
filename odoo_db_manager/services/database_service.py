@@ -229,7 +229,7 @@ class DatabaseService:
                 check_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
             return result.returncode == 0
-        except:
+        except Exception:
             return False
 
     def activate_database(self, database_id):
@@ -374,7 +374,7 @@ class DatabaseService:
                         "connection_info": settings.DATABASES["default"],
                     }
                 ]
-            except:
+            except Exception:
                 return []
 
     def sync_discovered_databases(self):

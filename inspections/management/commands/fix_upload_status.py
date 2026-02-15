@@ -86,7 +86,7 @@ class Command(BaseCommand):
                                 fileId=inspection.google_drive_file_id
                             ).execute()
                             drive_file_exists = True
-                        except:
+                        except Exception:
                             drive_file_exists = False
                             should_be_uploaded = False
                     else:

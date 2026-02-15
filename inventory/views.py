@@ -762,6 +762,7 @@ def product_api_list(request):
     return JsonResponse(data, safe=False)
 
 
+@login_required
 def product_api_autocomplete(request):
     """
     API للبحث السريع عن المنتجات (autocomplete) مع التخزين المؤقت

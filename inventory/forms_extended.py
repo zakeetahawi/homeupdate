@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 from accounts.models import Branch, User
+from core.utils.general import clean_phone_number
 
 from .models import (
     Category,
@@ -148,20 +149,7 @@ class SupplierForm(forms.ModelForm):
 
     def clean_phone(self):
         """التحقق من صحة رقم الهاتف"""
-        phone = self.cleaned_data.get("phone")
-        if phone:
-            # إزالة المسافات والرموز
-            phone = (
-                phone.strip()
-                .replace(" ", "")
-                .replace("-", "")
-                .replace("(", "")
-                .replace(")", "")
-            )
-            # التحقق من أن الرقم يحتوي على أرقام فقط
-            if phone and not phone.replace("+", "").isdigit():
-                raise ValidationError(_("رقم الهاتف يجب أن يحتوي على أرقام فقط"))
-        return phone
+        return clean_phone_number(self.cleaned_data.get("phone"))
 
     def clean_email(self):
         """التحقق من صحة البريد الإلكتروني"""

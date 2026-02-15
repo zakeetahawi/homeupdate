@@ -370,4 +370,43 @@
         color: #adb5bd !important;
         border: 1px solid #6c757d;
     }
-} 
+}
+
+/* ========================================
+   ألوان Bootstrap Badges الموحدة
+   (merged from unified-status-colors.css)
+   ======================================== */
+
+.badge.bg-success {
+    background-color: #28a745 !important;
+    color: white !important;
+}
+
+.badge.bg-warning.text-dark,
+.badge.badge-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+    font-weight: 600 !important;
+}
+
+.badge.bg-secondary {
+    background-color: #6c757d !important;
+    color: white !important;
+}
+
+.badge.bg-info {
+    background-color: #17a2b8 !important;
+    color: white !important;
+}
+
+.badge.bg-primary,
+.badge.badge-primary {
+    background-color: #007bff !important;
+    color: white !important;
+    font-weight: 600 !important;
+}
+
+.badge.bg-danger {
+    background-color: #dc3545 !important;
+    color: white !important;
+}

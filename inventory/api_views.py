@@ -351,7 +351,7 @@ def warehouse_stock_summary_api(request, warehouse_id=None):
                         stock_value += float(trans.product.price) * float(
                             current_balance
                         )
-                    except:
+                    except Exception:
                         pass
 
             warehouse_data.append(
@@ -524,7 +524,7 @@ def inventory_value_report_api(request):
                         category_stock += stock_level
                         products_in_category += 1
                         total_inventory_value += product_value
-                except:
+                except Exception:
                     pass
 
             if category_value > 0:
@@ -573,7 +573,7 @@ def inventory_value_report_api(request):
                         )
                         warehouse_value += product_value
                         warehouse_stock += stock_level
-                except:
+                except Exception:
                     pass
 
             if warehouse_value > 0:
@@ -620,7 +620,7 @@ def inventory_value_report_api(request):
                             "price": float(product.price),
                         }
                     )
-            except:
+            except Exception:
                 pass
 
         # ترتيب حسب القيمة
@@ -759,7 +759,7 @@ def stock_turnover_analysis_api(request):
                         "status_color": status_color,
                     }
                 )
-            except:
+            except Exception:
                 pass
 
         # ترتيب حسب معدل الدوران
@@ -1030,7 +1030,7 @@ def reorder_recommendations_api(request):
                             ),
                         }
                     )
-            except:
+            except Exception:
                 pass
 
         # ترتيب حسب الأولوية
@@ -1117,7 +1117,7 @@ def bulk_upload_status_api(request, log_id):
                     # استخدام السرعة من المهمة إذا كانت متوفرة
                     if "speed" in task_info:
                         speed = task_info["speed"]
-            except:
+            except Exception:
                 pass
 
         return JsonResponse(

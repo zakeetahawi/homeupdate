@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load i18n %}
 {% block title %}{{ report.title }}{% endblock %}
+{% block datatables_css %}{% include 'includes/datatables_css.html' %}{% endblock %}
+{% block datatables_js %}{% include 'includes/datatables_js.html' %}{% endblock %}
 {% block content %}
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">

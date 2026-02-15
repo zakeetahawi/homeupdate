@@ -412,7 +412,7 @@ class JWTAuthenticationMiddleware:
             )
             user = jwt_auth.get_user(validated_token)
             return user
-        except:
+        except Exception:
             return user
 
 

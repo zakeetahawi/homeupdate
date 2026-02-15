@@ -457,18 +457,11 @@ class OnlineUser(models.Model):
 
     @staticmethod
     def get_client_ip(request):
-        """الحصول على عنوان IP الحقيقي للعميل"""
+        """الحصول على عنوان IP الحقيقي للعميل — يستخدم الدالة المركزية"""
         if not request:
-            return "127.0.0.1"  # default IP للحالات التي لا يوجد فيها request
-
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0].strip()
-        else:
-            ip = request.META.get("REMOTE_ADDR")
-
-        # ضمان وجود IP صالح
-        return ip if ip else "127.0.0.1"
+            return "127.0.0.1"
+        from user_activity.utils import get_client_ip_from_request
+        return get_client_ip_from_request(request)
 
     @staticmethod
     def get_device_info(request):

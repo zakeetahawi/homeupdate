@@ -182,7 +182,7 @@ def comprehensive_warehouse_audit():
 
                 if last_trans and last_trans.running_balance == 0:
                     zero_balance_count += 1
-            except:
+            except Exception:
                 continue
 
     print(f"   عدد المنتجات برصيد صفر: {zero_balance_count}")

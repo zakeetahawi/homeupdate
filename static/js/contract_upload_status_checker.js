@@ -20,7 +20,7 @@ window.contractUploadStatusChecker = {
      * بدء فحص حالة رفع العقد
      */
     startChecking: function(orderId) {
-        console.log('بدء فحص حالة رفع العقد:', orderId);
+        // console.log('بدء فحص حالة رفع العقد:', orderId);
         
         // إضافة إلى قائمة المعلقة
         this.pendingContracts.add(orderId);
@@ -53,7 +53,7 @@ window.contractUploadStatusChecker = {
         const retryCount = this.retryCounters.get(orderId) || 0;
         
         if (retryCount >= this.maxRetries) {
-            console.log('تم الوصول للحد الأقصى من المحاولات للعقد:', orderId);
+            // console.log('تم الوصول للحد الأقصى من المحاولات للعقد:', orderId);
             this.stopChecking(orderId);
             this.updateIcons(orderId, { is_uploaded: false, error: 'timeout' });
             return;
@@ -62,17 +62,17 @@ window.contractUploadStatusChecker = {
         // زيادة عداد المحاولات
         this.retryCounters.set(orderId, retryCount + 1);
         
-        console.log(`فحص حالة العقد ${orderId} - المحاولة ${retryCount + 1}/${this.maxRetries}`);
+        // console.log(`فحص حالة العقد ${orderId} - المحاولة ${retryCount + 1}/${this.maxRetries}`);
         
         // إرسال طلب فحص الحالة
         fetch(`/orders/${orderId}/check-contract-upload-status/`)
             .then(response => response.json())
             .then(data => {
-                console.log('نتيجة فحص العقد:', orderId, data);
+                // console.log('نتيجة فحص العقد:', orderId, data);
                 
                 if (data.is_uploaded && data.google_drive_url && data.file_id) {
                     // تم الرفع بنجاح
-                    console.log('تم رفع العقد بنجاح:', orderId);
+                    // console.log('تم رفع العقد بنجاح:', orderId);
                     this.stopChecking(orderId);
                     this.updateIcons(orderId, data);
                     
@@ -97,7 +97,7 @@ window.contractUploadStatusChecker = {
     stopChecking: function(orderId) {
         this.pendingContracts.delete(orderId);
         this.retryCounters.delete(orderId);
-        console.log('تم إيقاف فحص العقد:', orderId);
+        // console.log('تم إيقاف فحص العقد:', orderId);
     },
     
     /**
@@ -151,7 +151,7 @@ window.contractUploadStatusChecker = {
      * إعادة محاولة فحص العقد
      */
     retryCheck: function(orderId) {
-        console.log('إعادة محاولة فحص العقد:', orderId);
+        // console.log('إعادة محاولة فحص العقد:', orderId);
         this.startChecking(orderId);
     },
     
@@ -160,7 +160,7 @@ window.contractUploadStatusChecker = {
      */
     showSuccessNotification: function(orderId, data) {
         // تسجيل النجاح في وحدة التحكم فقط - بدون رسائل منبثقة
-        console.log(`✅ تم رفع العقد ${orderId} بنجاح إلى Google Drive`);
+        // console.log(`✅ تم رفع العقد ${orderId} بنجاح إلى Google Drive`);
     },
     
     /**
@@ -185,7 +185,7 @@ window.contractUploadStatusChecker = {
                         }
                     })
                     .catch(() => {
-                        console.log('فحص سريع فشل للعقد:', orderId);
+                        // console.log('فحص سريع فشل للعقد:', orderId);
                     });
             }
         });
@@ -194,7 +194,7 @@ window.contractUploadStatusChecker = {
 
 // تهيئة النظام عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('تهيئة نظام فحص حالة رفع العقود...');
+    // console.log('تهيئة نظام فحص حالة رفع العقود...');
     
     // فحص جميع العقود في الصفحة
     window.contractUploadStatusChecker.checkAllContractsOnPage();
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 })
                 .catch(() => {
-                    console.log('تحقق سريع فشل للعقد:', orderId);
+                    // console.log('تحقق سريع فشل للعقد:', orderId);
                 });
         }
     });

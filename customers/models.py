@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -443,19 +444,23 @@ class Customer(SoftDeleteMixin, models.Model):
     name = models.CharField(_("اسم العميل"), max_length=200, db_index=True)
     branch = models.ForeignKey(
         "accounts.Branch",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="customers",
         verbose_name=_("الفرع"),
         null=True,
         blank=True,
     )
-    phone = models.CharField(_("رقم الهاتف"), max_length=20, db_index=True)
+    phone = models.CharField(
+        _("رقم الهاتف"), max_length=20, db_index=True,
+        validators=[RegexValidator(r'^\+?[0-9\s\-]{7,20}$', _('أدخل رقم هاتف صحيح'))],
+    )
     phone2 = models.CharField(
         _("رقم الهاتف الثاني"),
         max_length=20,
         blank=True,
         null=True,
         help_text=_("رقم هاتف إضافي اختياري"),
+        validators=[RegexValidator(r'^\+?[0-9\s\-]{7,20}$', _('أدخل رقم هاتف صحيح'))],
     )
     email = models.EmailField(_("البريد الإلكتروني"), blank=True, null=True)
     birth_date = models.DateField(

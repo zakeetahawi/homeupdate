@@ -683,7 +683,7 @@ def api_recent_conversations(request):
         if hasattr(partner, "image") and partner.image:
             try:
                 avatar_url = partner.image.url
-            except:
+            except Exception:
                 pass
 
         conversations_data.append(

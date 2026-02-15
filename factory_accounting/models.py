@@ -44,7 +44,7 @@ class FactoryAccountingSettings(models.Model):
     # Default pricing
     default_rate_per_meter = models.DecimalField(
         _("السعر الافتراضي للمتر (خياط)"),
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("5.00"),
         validators=[MinValueValidator(Decimal("0.01"))],
@@ -53,7 +53,7 @@ class FactoryAccountingSettings(models.Model):
 
     default_cutter_rate = models.DecimalField(
         _("السعر الافتراضي للمتر (قصاص)"),
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("1.00"),
         validators=[MinValueValidator(Decimal("0.01"))],
@@ -184,7 +184,7 @@ class Tailor(models.Model):
 
     default_rate = models.DecimalField(
         _("السعر المخصص للمتر"),
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         null=True,
         blank=True,
@@ -324,7 +324,7 @@ class FactoryCard(models.Model):
 
     manufacturing_order = models.OneToOneField(
         "manufacturing.ManufacturingOrder",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="factory_card",
         verbose_name=_("أمر التصنيع"),
     )
@@ -335,7 +335,7 @@ class FactoryCard(models.Model):
 
     total_billable_meters = models.DecimalField(
         _("إجمالي الأمتار المستحقة"),
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         default=Decimal("0.00"),
     )
@@ -343,7 +343,7 @@ class FactoryCard(models.Model):
     # Cutter accounting
     cutter_price = models.DecimalField(
         _("سعر متر القصاص"),
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
         help_text=_("سعر المتر للقصاص في هذا الأمر"),
@@ -351,7 +351,7 @@ class FactoryCard(models.Model):
 
     total_cutter_cost = models.DecimalField(
         _("إجمالي تكلفة القصاص"),
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
         help_text=_("إجمالي الأمتار الفعلية × سعر القصاص"),
@@ -359,7 +359,7 @@ class FactoryCard(models.Model):
 
     total_double_meters = models.DecimalField(
         _("إجمالي الأمتار (مضاعف)"),
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         default=Decimal("0.00"),
         help_text=_("مجموع الأمتار بعد تطبيق المضاعفة لأنواع التفصيل المحددة"),
@@ -439,7 +439,7 @@ class FactoryCard(models.Model):
                 and self.manufacturing_order.production_line
             ):
                 return self.manufacturing_order.production_line.name or "-"
-        except:
+        except Exception:
             pass
         return "-"
 
@@ -646,7 +646,7 @@ class CardMeasurementSplit(models.Model):
 
     share_amount = models.DecimalField(
         _("الكمية المخصصة (متر)"),
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
         help_text=_("عدد الأمتار المخصصة للخياط"),
@@ -654,7 +654,7 @@ class CardMeasurementSplit(models.Model):
 
     unit_rate = models.DecimalField(
         _("السعر للمتر"),
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
         validators=[MinValueValidator(Decimal("0.00"))],
@@ -662,7 +662,7 @@ class CardMeasurementSplit(models.Model):
     )
 
     monetary_value = models.DecimalField(
-        _("القيمة المالية"), max_digits=10, decimal_places=2, default=Decimal("0.00")
+        _("القيمة المالية"), max_digits=15, decimal_places=2, default=Decimal("0.00")
     )
 
     is_paid = models.BooleanField(_("مدفوع"), default=False, db_index=True)

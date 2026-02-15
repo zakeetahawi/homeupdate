@@ -315,7 +315,6 @@ def google_sync_reset(request):
 @login_required
 @user_passes_test(is_staff_or_superuser)
 @require_POST
-@csrf_exempt
 def google_sync_advanced_settings(request):
     try:
         data = json.loads(request.body)
@@ -373,7 +372,6 @@ def google_sync_advanced_settings(request):
 @login_required
 @user_passes_test(is_staff_or_superuser)
 @require_POST
-@csrf_exempt
 def reverse_sync_view(request):
     """
     المزامنة العكسية - استقبال البيانات من Google Sheets إلى النظام

@@ -176,7 +176,7 @@ class NotificationAdmin(admin.ModelAdmin):
                         url,
                         str(obj.related_object),
                     )
-            except:
+            except Exception:
                 return str(obj.related_object)
         return _("لا يوجد")
 

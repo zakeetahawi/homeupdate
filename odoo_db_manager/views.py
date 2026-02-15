@@ -1445,7 +1445,7 @@ def _restore_json_simple_with_progress(
         try:
             with connection.cursor() as cursor:
                 cursor.execute("SET session_replication_role = DEFAULT;")
-        except:
+        except Exception:
             pass
 
         raise e
@@ -1935,7 +1935,6 @@ def restore_progress_stream(request, session_id):
     return response
 
 
-@csrf_exempt
 def restore_progress_status(request, session_id):
     """
     الحصول على حالة تقدم الاستعادة عبر AJAX
@@ -1977,7 +1976,7 @@ def restore_progress_status(request, session_id):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-@csrf_exempt
+@login_required
 @require_http_methods(["POST"])
 def generate_temp_token(request):
     """إنشاء رمز مؤقت للعمليات الطويلة"""

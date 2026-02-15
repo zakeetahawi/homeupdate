@@ -719,7 +719,7 @@ class PurchaseOrder(SoftDeleteMixin, models.Model):
     order_date = models.DateField(_("تاريخ الطلب"), auto_now_add=True)
     expected_date = models.DateField(_("تاريخ التسليم المتوقع"), null=True, blank=True)
     total_amount = models.DecimalField(
-        _("إجمالي المبلغ"), max_digits=12, decimal_places=2, default=0
+        _("إجمالي المبلغ"), max_digits=15, decimal_places=2, default=0
     )
     notes = models.TextField(_("ملاحظات"), blank=True)
     created_by = models.ForeignKey(

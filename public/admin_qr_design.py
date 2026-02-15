@@ -864,5 +864,5 @@ class QRDesignSettingsAdmin(admin.ModelAdmin):
 # إلغاء تسجيل CloudflareSettings القديم إذا كان موجود
 try:
     admin.site.unregister(CloudflareSettings)
-except:
+except Exception:
     pass

@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const script = document.createElement('script');
                 script.src = '/static/js/custom-theme-animations.js';
                 script.onload = function() {
-                    console.log('تم تطبيق تأثيرات الثيم المخصص بنجاح');
+                    // console.log('تم تطبيق تأثيرات الثيم المخصص بنجاح');
                 };
                 document.head.appendChild(script);
             }, 300);

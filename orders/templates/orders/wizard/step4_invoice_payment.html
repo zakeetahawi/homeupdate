@@ -99,10 +99,10 @@
                             <!-- الحقل الأول إجباري فقط إذا لم توجد صور محفوظة -->
                             <div class="invoice-image-input mb-2">{{ form.invoice_image }}</div>
                         {% else %}
-                            <!-- إذا كانت هناك صور محفوظة، الحقل الأول اختياري مع زر حذف -->
+                            <!-- إذا كانت هناك صور محفوظة، الحقل اختياري ويُضاف كصورة إضافية -->
                             <div class="invoice-image-input mb-2 d-flex gap-2">
                                 <input type="file"
-                                       name="invoice_image"
+                                       name="additional_invoice_image_0"
                                        class="form-control"
                                        accept="image/*"
                                        id="invoice_image_field">

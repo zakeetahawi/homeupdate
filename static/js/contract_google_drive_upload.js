@@ -58,7 +58,7 @@ function handleContractFileSelection(file) {
     } else {
         // في حالة الإنشاء الجديد، لا نعرض معاينة - سيتم الرفع عند الحفظ
         // تم إزالة showContractUploadPreview لتجنب الإزعاج
-        console.log('تم اختيار ملف العقد:', file.name, 'سيتم رفعه عند حفظ الطلب');
+        // console.log('تم اختيار ملف العقد:', file.name, 'سيتم رفعه عند حفظ الطلب');
     }
 }
 
@@ -69,7 +69,7 @@ function handleContractFileSelection(file) {
 function showContractUploadPreview(file) {
     // تم تعطيل معاينة رفع العقد نهائياً لتجنب الإزعاج
     // سيتم رفع الملف تلقائياً عند حفظ الطلب بدون أي إشعارات
-    console.log('تم تعطيل معاينة رفع العقد - الملف سيرفع تلقائياً');
+    // console.log('تم تعطيل معاينة رفع العقد - الملف سيرفع تلقائياً');
     return false;
 }
 

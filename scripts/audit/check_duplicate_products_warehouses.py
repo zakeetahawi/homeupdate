@@ -163,7 +163,7 @@ def check_duplicate_products():
 
             if not has_transfer:
                 products_without_transfer.append(product)
-        except:
+        except Exception:
             continue
 
     if products_without_transfer:

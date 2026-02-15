@@ -133,7 +133,7 @@ class Command(BaseCommand):
                                 "severity": "عالي جداً",
                             }
                         )
-            except:
+            except Exception:
                 pass
 
         return issues
@@ -164,7 +164,7 @@ class Command(BaseCommand):
                                 "severity": "عالي",
                             }
                         )
-            except:
+            except Exception:
                 pass
 
         return issues
@@ -195,7 +195,7 @@ class Command(BaseCommand):
                                 "severity": "متوسط",
                             }
                         )
-            except:
+            except Exception:
                 pass
 
         return issues
@@ -234,7 +234,7 @@ class Command(BaseCommand):
                             "severity": "متوسط",
                         }
                     )
-            except:
+            except Exception:
                 pass
 
         return issues
@@ -263,7 +263,7 @@ class Command(BaseCommand):
                             "severity": "منخفض",
                         }
                     )
-        except:
+        except Exception:
             pass
 
         return issues

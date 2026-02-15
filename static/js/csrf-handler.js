@@ -75,7 +75,7 @@
         }
         
         csrfToken = newToken;
-        console.log('✅ تم تحديث CSRF token في جميع النماذج');
+        // console.log('✅ تم تحديث CSRF token في جميع النماذج');
     }
     
     /**
@@ -109,11 +109,11 @@
      * معالج أخطاء CSRF
      */
     function handleCsrfError(error, originalRequest) {
-        console.warn('⚠️ خطأ CSRF detected:', error);
+        // console.warn('⚠️ خطأ CSRF detected:', error);
         
         if (retryCount < CSRF_CONFIG.maxRetries) {
             retryCount++;
-            console.log(`🔄 محاولة ${retryCount} من ${CSRF_CONFIG.maxRetries} لإعادة المحاولة...`);
+            // console.log(`🔄 محاولة ${retryCount} من ${CSRF_CONFIG.maxRetries} لإعادة المحاولة...`);
             
             return refreshCsrfToken().then(newToken => {
                 if (newToken && originalRequest) {
@@ -224,7 +224,7 @@
             if (form.method && form.method.toLowerCase() === 'post') {
                 const tokenInput = form.querySelector(`input[name="${CSRF_CONFIG.tokenName}"]`);
                 if (!tokenInput) {
-                    console.warn('⚠️ نموذج بدون CSRF token:', form);
+                    // console.warn('⚠️ نموذج بدون CSRF token:', form);
                     
                     // إضافة CSRF token تلقائياً
                     const token = getCurrentCsrfToken();
@@ -234,7 +234,7 @@
                         hiddenInput.name = CSRF_CONFIG.tokenName;
                         hiddenInput.value = token;
                         form.appendChild(hiddenInput);
-                        console.log('✅ تم إضافة CSRF token تلقائياً للنموذج');
+                        // console.log('✅ تم إضافة CSRF token تلقائياً للنموذج');
                     }
                 }
             }
@@ -249,7 +249,7 @@
         setInterval(() => {
             refreshCsrfToken().then(newToken => {
                 if (newToken) {
-                    console.log('🔄 تم تحديث CSRF token دورياً');
+                    // console.log('🔄 تم تحديث CSRF token دورياً');
                 }
             });
         }, 30 * 60 * 1000); // 30 دقيقة
@@ -263,7 +263,7 @@
         csrfToken = getCurrentCsrfToken();
 
         if (!csrfToken) {
-            console.warn('⚠️ لم يتم العثور على CSRF token');
+            // console.warn('⚠️ لم يتم العثور على CSRF token');
             refreshCsrfToken();
         }
 

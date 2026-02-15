@@ -235,7 +235,7 @@ class CuttingOrderItem(SoftDeleteMixin, models.Model):
         max_length=200, blank=True, verbose_name="اسم القماش الخارجي"
     )
     quantity = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=3,
         default=0,
         verbose_name="الكمية",
@@ -282,7 +282,7 @@ class CuttingOrderItem(SoftDeleteMixin, models.Model):
 
     # كمية إضافية
     additional_quantity = models.DecimalField(
-        max_digits=10, decimal_places=3, default=0, verbose_name="كمية إضافية"
+        max_digits=12, decimal_places=3, default=0, verbose_name="كمية إضافية"
     )
 
     # ملاحظات خاصة بالعنصر
@@ -455,7 +455,7 @@ class CuttingOrderItem(SoftDeleteMixin, models.Model):
                         message=f"فشل في خصم المخزون للعنصر {self.order_item.product.name}: {str(e)}",
                         notification_type="stock_shortage",
                     )
-                except:
+                except Exception:
                     pass
 
     def _update_order_status_if_completed(self):

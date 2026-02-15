@@ -6,6 +6,7 @@ from django.contrib.auth.models import Permission
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django_ratelimit.decorators import ratelimit
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
@@ -355,6 +356,7 @@ def dashboard_trends(request):
 
 @require_http_methods(["POST"])
 @csrf_exempt
+@ratelimit(key='ip', rate='10/m', method='POST', block=True)
 def check_device_api(request):
     """
     API للتحقق من تسجيل جهاز بناءً على Token أو Fingerprint

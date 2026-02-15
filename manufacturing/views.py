@@ -129,6 +129,8 @@ class ManufacturingOrderListView(
             "order__branch",  # Branch info accessed in template
             "order__salesperson",  # Salesperson name accessed in template
             "production_line",  # Production line information
+        ).defer(
+            "description", "notes", "rejection_reason", "rejection_reply"
         )
 
         # ---- Annotate fabric counts in SQL to eliminate N+1 ----
@@ -399,7 +401,7 @@ class ManufacturingOrderListView(
                 )
                 if not isinstance(search_columns, list):
                     search_columns = [search_columns]
-        except:
+        except Exception:
             pass
 
         if search:
@@ -451,7 +453,7 @@ class ManufacturingOrderListView(
         if date_from:
             try:
                 queryset = queryset.filter(order_date__gte=date_from)
-            except:
+            except Exception:
                 pass
 
         date_to = self.request.GET.get("date_to")
@@ -463,7 +465,7 @@ class ManufacturingOrderListView(
                     date_to, "%Y-%m-%d"
                 ) + datetime.timedelta(days=1)
                 queryset = queryset.filter(order_date__lt=end_date)
-            except:
+            except Exception:
                 pass
 
         # تطبيق الترتيب
@@ -1443,6 +1445,7 @@ class ChangeProductionLineView(LoginRequiredMixin, PermissionRequiredMixin, View
 
 
 @require_http_methods(["GET"])
+@login_required
 def get_production_lines_api(request):
     """API لجلب خطوط الإنتاج النشطة"""
     try:
@@ -1556,7 +1559,7 @@ class ProductionLinePrintView(LoginRequiredMixin, PermissionRequiredMixin, ListV
         if date_from:
             try:
                 queryset = queryset.filter(order_date__gte=date_from)
-            except:
+            except Exception:
                 pass
 
         date_to = self.request.GET.get("date_to")
@@ -1566,7 +1569,7 @@ class ProductionLinePrintView(LoginRequiredMixin, PermissionRequiredMixin, ListV
                     date_to, "%Y-%m-%d"
                 ) + datetime.timedelta(days=1)
                 queryset = queryset.filter(order_date__lt=end_date)
-            except:
+            except Exception:
                 pass
 
         return queryset
@@ -2303,6 +2306,7 @@ def update_exit_permit(request, pk):
         return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
+@login_required
 def create_from_order(request, order_id):
     if not request.user.has_perm("manufacturing.add_manufacturingorder"):
         messages.error(request, "ليس لديك صلاحية لإنشاء أمر تصنيع")
@@ -2481,8 +2485,7 @@ def sync_manufacturing_items(request, pk):
                                     )
                                     tailors_copied += 1
                         except Exception as e:
-                            print(f"Error copying to base order: {e}")
-
+                            logger.debug(f"Error copying to base order: {e}")
             # Refresh tailor info
             tailors_count = card.splits.count()
             tailor_names = list(card.splits.values_list("tailor__name", flat=True))
@@ -2527,6 +2530,7 @@ def sync_manufacturing_items(request, pk):
         return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
+@login_required
 def print_manufacturing_order(request, pk):
     """Generate a PDF for the manufacturing order"""
     manufacturing_order = get_object_or_404(ManufacturingOrder, pk=pk)
@@ -2669,6 +2673,7 @@ class DashboardView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
         return context
 
 
+@login_required
 def dashboard_data(request):
     """
     API endpoint to get dashboard data for AJAX requests
@@ -2715,6 +2720,7 @@ from .models import ManufacturingOrder
 
 
 @require_POST
+@login_required
 def update_approval_status(request, pk):
     """
     API endpoint to approve or reject manufacturing orders
@@ -2900,6 +2906,7 @@ def update_approval_status(request, pk):
         )
 
 
+@login_required
 def get_order_details(request, pk):
     """
     Get manufacturing order details including rejection reply
@@ -3074,6 +3081,7 @@ def send_reply(request, pk):
 
 
 @require_POST
+@login_required
 def send_reply_to_rejection_log(request, log_id):
     """
     إرسال رد على سجل رفض محدد
@@ -3190,6 +3198,7 @@ def send_reply_to_rejection_log(request, log_id):
 
 
 @require_POST
+@login_required
 def re_approve_after_reply(request, pk):
     """
     Re-approve manufacturing order after reply to rejection
@@ -3365,19 +3374,17 @@ def receive_fabric_item(request, item_id):
             data = json.loads(request.body)
 
             # طباعة البيانات المستلمة للتشخيص
-            print(f"DEBUG - Received data: {data}")
-
+            logger.debug(f"DEBUG - Received data: {data}")
             bag_number = data.get("bag_number", "").strip()
             use_previous_bag = data.get("use_previous_bag", False)
             notes = data.get("notes", "").strip()
 
-            print(f"DEBUG - bag_number: '{bag_number}'")
-            print(f"DEBUG - use_previous_bag: {use_previous_bag}")
-
+            logger.debug(f"DEBUG - bag_number: '{bag_number}'")
+            logger.debug(f"DEBUG - use_previous_bag: {use_previous_bag}")
             # إذا كان المستخدم يريد استخدام شنطة سابقة
             if use_previous_bag:
                 previous_bag_number = data.get("previous_bag_number", "").strip()
-                print(f"DEBUG - previous_bag_number: '{previous_bag_number}'")
+                logger.debug(f"DEBUG - previous_bag_number: '{previous_bag_number}'")
                 if not previous_bag_number:
                     return JsonResponse(
                         {"success": False, "message": "يجب اختيار رقم الشنطة السابقة"}
@@ -3386,13 +3393,12 @@ def receive_fabric_item(request, item_id):
             else:
                 # استخدام رقم الشنطة المُرسل (المُولد تلقائياً)
                 if not bag_number:
-                    print(f"DEBUG - bag_number is empty!")
+                    logger.debug(f"DEBUG - bag_number is empty!")
                     return JsonResponse(
                         {"success": False, "message": "رقم الشنطة مطلوب"}
                     )
 
-            print(f"DEBUG - Final bag_number before save: '{bag_number}'")
-
+            logger.debug(f"DEBUG - Final bag_number before save: '{bag_number}'")
             # تعيين العنصر كمستلم
             item.mark_fabric_received(
                 bag_number=bag_number, user=request.user, notes=notes
@@ -3400,8 +3406,7 @@ def receive_fabric_item(request, item_id):
 
             # التحقق من الحفظ
             item.refresh_from_db()
-            print(f"DEBUG - bag_number after save: '{item.bag_number}'")
-
+            logger.debug(f"DEBUG - bag_number after save: '{item.bag_number}'")
             return JsonResponse(
                 {
                     "success": True,
@@ -3808,6 +3813,7 @@ def get_cutting_order_data(request, cutting_order_id):
 
 
 @require_http_methods(["POST"])
+@login_required
 def receive_all_fabric_items(request, order_id):
     """استلام جميع عناصر أمر التصنيع الجاهزة"""
     try:
@@ -3845,7 +3851,7 @@ def receive_all_fabric_items(request, order_id):
                 related_object=order,
                 created_by=request.user,
             )
-        except:
+        except Exception:
             pass
 
         return JsonResponse(
@@ -3861,6 +3867,7 @@ def receive_all_fabric_items(request, order_id):
 
 
 @require_http_methods(["GET"])
+@login_required
 def recent_fabric_receipts(request):
     """الحصول على آخر عمليات استلام الأقمشة"""
     try:
@@ -4002,7 +4009,7 @@ def receive_cutting_order(request, cutting_order_id):
                 related_object=manufacturing_order,
                 created_by=request.user,
             )
-        except:
+        except Exception:
             pass
 
         return JsonResponse(
@@ -4569,7 +4576,7 @@ class ProductReceiptsListView(TemplateView):
 
         # تجميع الاستلامات حسب العميل
         receipts_by_customer = {}
-        for receipt in receipts:
+        for receipt in receipts[:500]:  # ✅ FIX H-2: تحديد أقصى 500 استلام
             customer_name = receipt.cutting_order.order.customer.name
             if customer_name not in receipts_by_customer:
                 receipts_by_customer[customer_name] = []

@@ -116,7 +116,7 @@ class SmartRestoreService:
         for app_label, model_name in required_content_types:
             try:
                 ContentType.objects.get_or_create(app_label=app_label, model=model_name)
-            except:
+            except Exception:
                 pass
 
     def preprocess_data(self, data):

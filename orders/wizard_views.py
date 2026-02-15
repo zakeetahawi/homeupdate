@@ -34,7 +34,7 @@ from .wizard_forms import (
     Step3OrderItemForm,
     Step4InvoicePaymentForm,
 )
-from .wizard_models import DraftOrder, DraftOrderItem
+from .wizard_models import DraftOrder, DraftOrderInvoiceImage, DraftOrderItem
 
 User = get_user_model()
 
@@ -1188,7 +1188,27 @@ def wizard_step_4_invoice_payment(request, draft):
             request=request,  # تمرير request للتحقق من وضع التعديل
         )
         if form.is_valid():
+            # ── حماية الصورة الرئيسية من الاستبدال ──
+            # إذا كانت هناك صورة رئيسية محفوظة مسبقاً، والمستخدم رفع صورة جديدة
+            # عبر حقل invoice_image، نحوّلها إلى صورة إضافية بدلاً من استبدال الأصلية
+            from .wizard_models import DraftOrderInvoiceImage
+
+            new_main_file = request.FILES.get("invoice_image")
+            had_existing_main = bool(draft.invoice_image)
+
+            if had_existing_main and new_main_file:
+                # إلغاء حفظ الصورة الجديدة في الحقل الرئيسي
+                form.cleaned_data.pop("invoice_image", None)
+                if "invoice_image" in form.changed_data:
+                    form.changed_data.remove("invoice_image")
+
             draft = form.save()
+
+            # حفظ الصورة الجديدة كصورة إضافية بدلاً من استبدال الرئيسية
+            if had_existing_main and new_main_file:
+                DraftOrderInvoiceImage.objects.create(
+                    draft_order=draft, image=new_main_file
+                )
 
             # تسجيل التعديلات
             if draft.created_by != request.user:
@@ -1212,8 +1232,6 @@ def wizard_step_4_invoice_payment(request, draft):
                     )
 
             # معالجة الصور الإضافية
-            from .wizard_models import DraftOrderInvoiceImage
-
             for key in request.FILES:
                 if key.startswith("additional_invoice_image_"):
                     image = request.FILES[key]
@@ -1660,21 +1678,21 @@ def wizard_finalize(request):
                             for mfg in manufacturing_orders:
                                 mfg.invoice_number = new_invoice_number
                                 mfg.save(update_fields=["invoice_number"])
-                                print(
+                                logger.info(
                                     f"✅ [on_commit] تم تحديث ManufacturingOrder #{mfg.id} invoice_number: {mfg.invoice_number}"
                                 )
                                 logger.info(
                                     f"✅ [on_commit] تم تحديث رقم الفاتورة إلى '{new_invoice_number}' في ManufacturingOrder #{mfg.id} للطلب {order_number}"
                                 )
                         except Exception as e:
-                            print(f"❌ [on_commit] خطأ: {e}")
+                            logger.debug(f"❌ [on_commit] خطأ: {e}")
                             logger.error(
                                 f"❌ خطأ في on_commit تحديث ManufacturingOrder: {e}"
                             )
 
                     transaction.on_commit(update_manufacturing_orders)
                 except Exception as e:
-                    print(f"❌ [wizard] خطأ: {e}")
+                    logger.debug(f"❌ [wizard] خطأ: {e}")
                     logger.error(f"❌ خطأ في تحديث رقم الفاتورة في أوامر التصنيع: {e}")
 
                 # ⚡ استراتيجية التحديث الذكي (Smart Update)
@@ -1792,11 +1810,11 @@ def wizard_finalize(request):
                     Order.objects.filter(pk=order.pk).update(
                         final_price=order.final_price, total_amount=order.total_amount
                     )
-                    print(
+                    logger.info(
                         f"✅ [wizard] تم إعادة حساب الإجماليات للطلب {order.order_number}: {order.final_price}"
                     )
                 except Exception as e:
-                    print(f"❌ [wizard] خطأ في إعادة الحساب: {e}")
+                    logger.debug(f"❌ [wizard] خطأ في إعادة الحساب: {e}")
                     logger.error(
                         f"❌ خطأ في إعادة حساب إجماليات الطلب {order.id} في الويزارد: {e}"
                     )
@@ -1818,8 +1836,7 @@ def wizard_finalize(request):
                                 order_item=updated_item
                             ).update(quantity=updated_item.quantity)
                     except Exception as e:
-                        print(f"Error syncing manufacturing items: {e}")
-
+                        logger.debug(f"Error syncing manufacturing items: {e}")
                 # 6. تحديث الستائر (Contract Curtains) - استراتيجية Smart Update
                 # بدلاً من حذف الكل، نقوم بـ: تحديث الموجود + إضافة الجديد + حذف المحذوف
 
@@ -2573,7 +2590,7 @@ def wizard_add_curtain(request):
                     try:
                         # تقريب القيمة إلى 3 منازل عشرية لتجنب مشاكل دقة الفاصلة العائمة
                         size = Decimal(str(round(float(size_val), 3)))
-                    except:
+                    except Exception:
                         size = Decimal("0")
                 else:
                     size = Decimal("0")  # بالقطعة
@@ -2589,7 +2606,7 @@ def wizard_add_curtain(request):
                     try:
                         # تقريب القيمة إلى 3 منازل عشرية لتجنب مشاكل دقة الفاصلة العائمة
                         quantity = Decimal(str(round(float(quantity_val), 3)))
-                    except:
+                    except Exception:
                         quantity = Decimal(str(count))
                 else:
                     if size > 0:
@@ -2960,7 +2977,7 @@ def wizard_edit_curtain(request, curtain_id):
                         try:
                             # تقريب القيمة إلى 3 منازل عشرية لتجنب مشاكل دقة الفاصلة العائمة
                             size = Decimal(str(round(float(size_val), 3)))
-                        except:
+                        except Exception:
                             size = Decimal("0")
                     else:
                         size = Decimal("0")  # بالقطعة
@@ -2975,7 +2992,7 @@ def wizard_edit_curtain(request, curtain_id):
                         try:
                             # تقريب القيمة إلى 3 منازل عشرية لتجنب مشاكل دقة الفاصلة العائمة
                             quantity = Decimal(str(round(float(quantity_val), 3)))
-                        except:
+                        except Exception:
                             quantity = Decimal(str(count))
                     else:
                         if size > 0:
@@ -3403,6 +3420,18 @@ def _create_draft_from_order(order, user):
 
     # حساب المجاميع
     draft.calculate_totals()
+
+    # نسخ صور الفاتورة المتعددة من الطلب الأصلي إلى المسودة
+    original_images = order.invoice_images.all()
+    if original_images.exists():
+        draft_images = [
+            DraftOrderInvoiceImage(draft_order=draft, image=img.image)
+            for img in original_images
+        ]
+        DraftOrderInvoiceImage.objects.bulk_create(draft_images, batch_size=50)
+        logger.info(
+            f"📷 تم نسخ {len(draft_images)} صورة فاتورة من الطلب {order.order_number} إلى المسودة {draft.pk}"
+        )
 
     # ربط المسودة بالطلب
     order.source_draft_id = draft.pk

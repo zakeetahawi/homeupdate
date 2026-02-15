@@ -1,6 +1,8 @@
 {% extends 'inventory/inventory_base_custom.html' %}
 {% load static %}
 {% block inventory_title %}تقرير حركة المخزون{% endblock %}
+{% block datatables_css %}{% include 'includes/datatables_css.html' %}{% endblock %}
+{% block datatables_js %}{% include 'includes/datatables_js.html' %}{% endblock %}
 {% block breadcrumb_items %}
     <li class="breadcrumb-item">
         <a href="{% url 'inventory:dashboard' %}">لوحة التحكم</a>

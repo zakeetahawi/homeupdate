@@ -41,18 +41,9 @@ class UserSessionTrackingMiddleware(MiddlewareMixin):
 
     @staticmethod
     def get_client_ip(request):
-        """الحصول على IP الحقيقي للمستخدم"""
-        # دعم Cloudflare
-        x_forwarded_for = request.META.get("HTTP_CF_CONNECTING_IP")
-        if x_forwarded_for:
-            return x_forwarded_for
-
-        # دعم Proxy عادي
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            return x_forwarded_for.split(",")[0].strip()
-
-        return request.META.get("REMOTE_ADDR", "0.0.0.0")
+        """الحصول على IP الحقيقي للمستخدم — يستخدم الدالة المركزية"""
+        from user_activity.utils import get_client_ip_from_request
+        return get_client_ip_from_request(request)
 
     @staticmethod
     def get_device_type(request):

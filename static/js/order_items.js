@@ -287,7 +287,7 @@ window.updateOrderItemQuantity = function(productId, newQuantity) {
                 syncOrderItemsToFormFields();
             }
 
-            console.log(`✅ تم تحديث كمية المنتج ${productId}: ${quantity}`);
+            // console.log(`✅ تم تحديث كمية المنتج ${productId}: ${quantity}`);
             return true;
 
         } catch (error) {

@@ -164,7 +164,7 @@ class UltimateIndexManager:
                     if next_part.upper() not in ["CONCURRENTLY", "IF"]:
                         return next_part
             return None
-        except:
+        except Exception:
             return None
 
     def apply_index(
@@ -230,7 +230,7 @@ class UltimateIndexManager:
             if "CONCURRENTLY" not in statement.upper():
                 try:
                     self.connection.rollback()
-                except:
+                except Exception:
                     pass
 
             return False, error_msg

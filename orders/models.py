@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -136,13 +137,13 @@ class Order(SoftDeleteMixin, models.Model):
 
     customer = models.ForeignKey(
         "customers.Customer",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="customer_orders",
         verbose_name="العميل",
     )
     salesperson = models.ForeignKey(
         "accounts.Salesperson",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="orders",
         verbose_name="البائع",
         null=True,
@@ -318,13 +319,15 @@ class Order(SoftDeleteMixin, models.Model):
         default=False, verbose_name="تم التحقق من السداد"
     )
     total_amount = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0, verbose_name="المبلغ الإجمالي"
+        max_digits=15, decimal_places=2, default=0, verbose_name="المبلغ الإجمالي",
+        validators=[MinValueValidator(Decimal("0.00"))],
     )
     paid_amount = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0, verbose_name="المبلغ المدفوع"
+        max_digits=15, decimal_places=2, default=0, verbose_name="المبلغ المدفوع",
+        validators=[MinValueValidator(Decimal("0.00"))],
     )
     financial_addition = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
         verbose_name="إضافة مالية",
@@ -348,7 +351,7 @@ class Order(SoftDeleteMixin, models.Model):
     )
     branch = models.ForeignKey(
         "accounts.Branch",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="orders",
         verbose_name="الفرع",
         null=True,
@@ -358,7 +361,7 @@ class Order(SoftDeleteMixin, models.Model):
     )
     updated_at = models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث")
     final_price = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         null=True,
         blank=True,
@@ -413,7 +416,7 @@ class Order(SoftDeleteMixin, models.Model):
 
     # حقول الخصم الإداري
     administrative_discount_amount = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
         verbose_name="قيمة الخصم الإداري",
@@ -883,7 +886,7 @@ class Order(SoftDeleteMixin, models.Model):
             return f"{customer_code}-{str(uuid.uuid4())[:8]}"
 
         except Exception as e:
-            print(f"Error generating order number: {e}")
+            logger.debug(f"Error generating order number: {e}")
             # Use a fallback order number if we can't generate one
             import uuid
 
@@ -1189,7 +1192,7 @@ class Order(SoftDeleteMixin, models.Model):
                         return inspection.completed_at.date()
                     elif inspection.scheduled_date:
                         return inspection.scheduled_date
-            except:
+            except Exception:
                 pass
 
         # إذا كان الطلب يحتوي على تركيب، اعرض التاريخ المحدث م�� التركيب
@@ -1203,7 +1206,7 @@ class Order(SoftDeleteMixin, models.Model):
                     installation_date = installation.get_installation_date()
                     if installation_date:
                         return installation_date
-            except:
+            except Exception:
                 pass
 
         # إذا كان الطلب مكتمل أو جاهز للتركيب أو تم التسليم
@@ -1228,7 +1231,7 @@ class Order(SoftDeleteMixin, models.Model):
             installation = InstallationSchedule.objects.filter(order=self).first()
             if installation:
                 return installation.get_installation_date()
-        except:
+        except Exception:
             pass
         return None
 
@@ -1240,7 +1243,7 @@ class Order(SoftDeleteMixin, models.Model):
             installation = InstallationSchedule.objects.filter(order=self).first()
             if installation:
                 return installation.get_installation_date_label()
-        except:
+        except Exception:
             pass
         return "تاريخ التركيب المتوقع"
 
@@ -1253,7 +1256,7 @@ class Order(SoftDeleteMixin, models.Model):
             installation = InstallationSchedule.objects.filter(order=self).first()
             if installation:
                 return installation.get_expected_installation_date()
-        except:
+        except Exception:
             pass
         # إذا لم توجد جدولة، إرجاع تاريخ التسليم المتوقع
         return self.expected_delivery_date
@@ -1288,7 +1291,7 @@ class Order(SoftDeleteMixin, models.Model):
                     self.save(update_fields=["installation_status"])
         except Exception as e:
             # تسجيل الخطأ بدون إيقاف العملية
-            print(f"خطأ في تحديث حالة التركيب للطلب {self.order_number}: {e}")
+            logger.debug(f"خطأ في تحديث حالة التركيب للطلب {self.order_number}: {e}")
             pass
         setattr(self, "_updating_installation_status", False)
 
@@ -1362,7 +1365,7 @@ class Order(SoftDeleteMixin, models.Model):
                         return "تاريخ إتمام المعاينة"
                     else:
                         return "تاريخ المعاينة المتوقع"
-            except:
+            except Exception:
                 pass
             return "تاريخ المعاينة المتوقع"
 
@@ -1374,7 +1377,7 @@ class Order(SoftDeleteMixin, models.Model):
                 installation = InstallationSchedule.objects.filter(order=self).first()
                 if installation:
                     return installation.get_installation_date_label()
-            except:
+            except Exception:
                 pass
 
         if self.order_status in ["completed", "ready_install"]:
@@ -1830,7 +1833,7 @@ class Order(SoftDeleteMixin, models.Model):
             from cutting.models import CuttingOrder
 
             return CuttingOrder.objects.filter(order=self)
-        except:
+        except Exception:
             return []
 
 
@@ -1869,8 +1872,7 @@ def update_order_installation_status(sender, instance, **kwargs):
                 try:
                     instance.order.update_completion_status()
                 except Exception as e:
-                    print(f"خطأ في تحديث حالة الإكمال: {e}")
-
+                    logger.debug(f"خطأ في تحديث حالة الإكمال: {e}")
                 # إذا تم إكمال التركيب، تحديث حالة الطلب إلى مكتمل
                 if instance.status == "completed":
                     if instance.order.order_status not in ["completed", "delivered"]:
@@ -1878,7 +1880,7 @@ def update_order_installation_status(sender, instance, **kwargs):
                         # استخدام update_fields لتجنب استدعاء دالة save الكاملة
                         instance.order.save(update_fields=["order_status"])
     except Exception as e:
-        print(f"خطأ في تحديث حالة الطلب من التركيب: {e}")
+        logger.debug(f"خطأ في تحديث حالة الطلب من التركيب: {e}")
         pass
 
 
@@ -1974,13 +1976,15 @@ class OrderItem(SoftDeleteMixin, models.Model):
     )
     
     quantity = models.DecimalField(
-        max_digits=10,
+        max_digits=12,
         decimal_places=3,
         verbose_name="الكمية",
         help_text="يمكن إدخال قيم عشرية مثل 4.25 متر",
+        validators=[MinValueValidator(Decimal("0.001"))],
     )
     unit_price = models.DecimalField(
-        max_digits=10, decimal_places=2, verbose_name="سعر الوحدة"
+        max_digits=15, decimal_places=2, verbose_name="سعر الوحدة",
+        validators=[MinValueValidator(Decimal("0.00"))],
     )
     discount_percentage = models.DecimalField(
         max_digits=5,
@@ -2002,7 +2006,7 @@ class OrderItem(SoftDeleteMixin, models.Model):
         verbose_name="حالة المعالجة",
     )
     discount_amount = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
         verbose_name="مبلغ الخصم",
@@ -2051,7 +2055,7 @@ class OrderItem(SoftDeleteMixin, models.Model):
     bag_number = models.CharField(max_length=50, blank=True, verbose_name="رقم الشنطة")
 
     additional_quantity = models.DecimalField(
-        max_digits=10, decimal_places=3, default=0, verbose_name="كمية إضافية"
+        max_digits=12, decimal_places=3, default=0, verbose_name="كمية إضافية"
     )
 
     cutting_notes = models.TextField(blank=True, verbose_name="ملاحظات التقطيع")
@@ -2099,25 +2103,9 @@ class OrderItem(SoftDeleteMixin, models.Model):
             ),
         ]
 
-    def save(self, *args, **kwargs):
-        """
-        🛡️ حماية البيانات التاريخية للطلب
-        حفظ نسخة من بيانات المنتج في وقت إنشاء الطلب لحماية السجلات المالية
-        من تأثر بحذف أو تعديل المنتج لاحقاً
-        """
-        # إذا كان عنصر جديد أو لم يتم حفظ snapshot بعد
-        if not self.pk or not self.product_name_snapshot:
-            if self.product:
-                # حفظ بيانات المنتج الحالية كـ snapshot
-                self.product_name_snapshot = self.product.name
-                self.product_code_snapshot = getattr(self.product, 'code', '') or getattr(self.product, 'sku', '')
-        
-        # ✅ حتى لو لم يكن هناك منتج (تم حذفه)، نتأكد من وجود snapshot
-        if not self.product and not self.product_name_snapshot:
-            # fallback: في حالة عدم وجود بيانات
-            self.product_name_snapshot = "[منتج محذوف]"
-        
-        super().save(*args, **kwargs)
+    def _product_snapshot_saved_in_second_save(self):
+        """Product snapshot logic merged into main save() below — see line ~2238"""
+        pass
     
     def get_display_name(self):
         """
@@ -2236,8 +2224,17 @@ class OrderItem(SoftDeleteMixin, models.Model):
         return bool(self.cutter_name and self.permit_number and self.receiver_name)
 
     def save(self, *args, **kwargs):
-        """Save order item with validation"""
+        """Save order item with validation and product snapshot protection"""
         try:
+            # 🛡️ حماية البيانات التاريخية — حفظ snapshot المنتج
+            if not self.pk or not self.product_name_snapshot:
+                if self.product:
+                    self.product_name_snapshot = self.product.name
+                    self.product_code_snapshot = getattr(self.product, 'code', '') or getattr(self.product, 'sku', '')
+
+            if not self.product and not self.product_name_snapshot:
+                self.product_name_snapshot = "[منتج محذوف]"
+
             # التحقق من أن الطلب له مفتاح أساسي
             if not self.order.pk:
                 raise models.ValidationError("يجب حفظ الطلب أولاً قبل إنشاء عنصر الطلب")
@@ -2334,7 +2331,7 @@ class Payment(SoftDeleteMixin, models.Model):
     # الطلب اختياري الآن
     order = models.ForeignKey(
         Order, 
-        on_delete=models.CASCADE, 
+        on_delete=models.SET_NULL, 
         related_name="payments", 
         verbose_name="الطلب",
         null=True,
@@ -2344,7 +2341,7 @@ class Payment(SoftDeleteMixin, models.Model):
     # العميل إجباري
     customer = models.ForeignKey(
         "customers.Customer",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="payments",
         verbose_name="العميل",
         null=True,  # مؤقتاً للـ migration
@@ -2352,9 +2349,10 @@ class Payment(SoftDeleteMixin, models.Model):
     )
     
     amount = models.DecimalField(
-        max_digits=10, 
+        max_digits=15, 
         decimal_places=2, 
-        verbose_name="المبلغ"
+        verbose_name="المبلغ",
+        validators=[MinValueValidator(Decimal("0.01"))],
     )
     
     # التخصيص
@@ -2365,7 +2363,7 @@ class Payment(SoftDeleteMixin, models.Model):
         verbose_name="نوع الدفعة",
     )
     allocated_amount = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
         verbose_name="المبلغ المخصص",
@@ -2550,12 +2548,13 @@ class PaymentAllocation(models.Model):
     )
     order = models.ForeignKey(
         Order,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="payment_allocations",
         verbose_name="الطلب",
+        null=True,
     )
     allocated_amount = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         verbose_name="المبلغ المخصص",
     )
@@ -3363,7 +3362,7 @@ class DeliveryTimeSettings(models.Model):
             installation = InstallationSchedule.objects.filter(order=self).first()
             if installation and installation.scheduled_date:
                 return installation.scheduled_date
-        except:
+        except Exception:
             pass
         return None
 
@@ -3435,7 +3434,7 @@ class OrderItemModificationLog(models.Model):
                     if str_value.endswith("."):
                         str_value = str_value[:-1]
                 return str_value
-            except:
+            except Exception:
                 return self.old_value
         elif self.field_name == "unit_price":
             try:
@@ -3443,7 +3442,7 @@ class OrderItemModificationLog(models.Model):
 
                 value = Decimal(self.old_value)
                 return f"{value} ج.م"
-            except:
+            except Exception:
                 return self.old_value
         elif self.field_name == "product":
             try:
@@ -3451,7 +3450,7 @@ class OrderItemModificationLog(models.Model):
 
                 product = Product.objects.get(id=self.old_value)
                 return product.name
-            except:
+            except Exception:
                 return self.old_value
         return self.old_value
 
@@ -3468,7 +3467,7 @@ class OrderItemModificationLog(models.Model):
                     if str_value.endswith("."):
                         str_value = str_value[:-1]
                 return str_value
-            except:
+            except Exception:
                 return self.new_value
         elif self.field_name == "unit_price":
             try:
@@ -3476,7 +3475,7 @@ class OrderItemModificationLog(models.Model):
 
                 value = Decimal(self.new_value)
                 return f"{value} ج.م"
-            except:
+            except Exception:
                 return self.new_value
         elif self.field_name == "product":
             try:
@@ -3484,7 +3483,7 @@ class OrderItemModificationLog(models.Model):
 
                 product = Product.objects.get(id=self.new_value)
                 return product.name
-            except:
+            except Exception:
                 return self.new_value
         return self.new_value
 
@@ -3500,14 +3499,14 @@ class OrderModificationLog(models.Model):
     )
     modification_type = models.CharField(max_length=50, verbose_name="نوع التعديل")
     old_total_amount = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         null=True,
         blank=True,
         verbose_name="المبلغ الإجمالي السابق",
     )
     new_total_amount = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         null=True,
         blank=True,

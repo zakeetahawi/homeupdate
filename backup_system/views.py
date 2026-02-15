@@ -275,7 +275,7 @@ def restore_upload(request):
                 if file_path and file_path.exists():
                     try:
                         file_path.unlink()
-                    except:
+                    except Exception:
                         pass
 
                 error_msg = f"خطأ في رفع الملف أو بدء عملية الاستعادة: {str(e)}"

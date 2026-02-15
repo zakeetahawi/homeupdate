@@ -921,7 +921,7 @@ def sync_orders(service, spreadsheet_id):
                         import json
 
                         types_list = json.loads(order.selected_types)
-                    except:
+                    except Exception:
                         # إذا فشل، نعتبرها نوع واحد
                         types_list = (
                             [order.selected_types] if order.selected_types else []
@@ -1932,7 +1932,7 @@ def sync_comprehensive_inventory(service, spreadsheet_id):
                         for trans in stock_transactions
                     ]
                 )
-            except:
+            except Exception:
                 available_quantity = 0
 
             # حساب قيمة المخزون
@@ -2170,7 +2170,7 @@ def sync_complete_orders_lifecycle(service, spreadsheet_id):
                         import json
 
                         types_list = json.loads(order.selected_types)
-                    except:
+                    except Exception:
                         types_list = (
                             [order.selected_types] if order.selected_types else []
                         )

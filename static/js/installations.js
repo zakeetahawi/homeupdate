@@ -151,20 +151,11 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// الحصول على CSRF token
+// يستخدم CSRFHandler المركزي من csrf-handler.js
 function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
+    if (window.CSRFHandler) return window.CSRFHandler.getToken();
+    const input = document.querySelector('[name=csrfmiddlewaretoken]');
+    return input ? input.value : '';
 }
 
 // تحديث الإحصائيات

@@ -299,7 +299,7 @@ const ChatManager = {
         this.socket = new WebSocket(socketUrl);
         
         this.socket.onopen = () => {
-            console.log('Chat WebSocket Connected');
+            // console.log('Chat WebSocket Connected');
             this._wsRetryDelay = 3000; // إعادة تعيين مدة الانتظار عند النجاح
         };
         
@@ -318,12 +318,12 @@ const ChatManager = {
         this.socket.onclose = (e) => {
             // كود 4001 = رفض المصادقة - لا تحاول مرة أخرى
             if (e.code === 4001) {
-                console.warn('Chat WebSocket: Authentication failed. Will not reconnect.');
+                // console.warn('Chat WebSocket: Authentication failed. Will not reconnect.');
                 this._wsAuthFailed = true;
                 return;
             }
             // Exponential backoff لإعادة المحاولة
-            console.warn(`Chat WebSocket Closed. Reconnecting in ${this._wsRetryDelay/1000}s...`);
+            // console.warn(`Chat WebSocket Closed. Reconnecting in ${this._wsRetryDelay/1000}s...`);
             setTimeout(() => this.connectWebSocket(), this._wsRetryDelay);
             this._wsRetryDelay = Math.min(this._wsRetryDelay * 2, this._wsMaxRetryDelay);
         };
@@ -354,7 +354,7 @@ const ChatManager = {
     },
     
     handleTyping: function(data) {
-        console.log("DEBUG: Handling Typing UI", data);
+        // console.log("DEBUG: Handling Typing UI", data);
         const userId = String(data.sender_id);
         const win = this.activeChats[userId];
         if (!win) return;
@@ -388,7 +388,7 @@ const ChatManager = {
     },
     
     sendTyping: function(recipientId, isTyping) {
-        console.log("DEBUG: Sending Typing", isTyping);
+        // console.log("DEBUG: Sending Typing", isTyping);
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({
                 type: 'typing',
@@ -866,20 +866,11 @@ const ChatManager = {
     }
 };
 
-// Helper: Get Cookie for CSRF
+// يستخدم CSRFHandler المركزي من csrf-handler.js
 function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
+    if (window.CSRFHandler) return window.CSRFHandler.getToken();
+    const input = document.querySelector('[name=csrfmiddlewaretoken]');
+    return input ? input.value : '';
 }
 
 // Expose as global for external calls (like Inbox)

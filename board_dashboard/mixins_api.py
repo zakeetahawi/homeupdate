@@ -88,7 +88,7 @@ class DashboardFilterMixin:
         if date_from:
             try:
                 start = timezone.make_aware(datetime.strptime(date_from, "%Y-%m-%d"))
-            except:
+            except Exception:
                 pass
 
         if date_to:
@@ -96,7 +96,7 @@ class DashboardFilterMixin:
                 end = timezone.make_aware(
                     datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59)
                 )
-            except:
+            except Exception:
                 pass
 
         return start, end

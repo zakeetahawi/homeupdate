@@ -51,7 +51,7 @@
                 // إيقاف التحديث إذا تكررت الأخطاء (مثل انتهاء الجلسة)
                 if (errorCount >= CONFIG.MAX_ERRORS) {
                     this.stopAutoUpdate();
-                    console.warn('تم إيقاف التحديث التلقائي للرسائل بسبب تكرار الأخطاء (ربما انتهت الجلسة).');
+                    // console.warn('تم إيقاف التحديث التلقائي للرسائل بسبب تكرار الأخطاء (ربما انتهت الجلسة).');
                     return;
                 }
 
@@ -189,10 +189,10 @@
             }
         },
 
+        // يستخدم CSRFHandler المركزي من csrf-handler.js
         getCsrfToken: function () {
-            const meta = document.querySelector('meta[name=csrf-token]');
-            return meta ? meta.getAttribute('content') :
-                document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            if (window.CSRFHandler) return window.CSRFHandler.getToken();
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
         }
     };
 

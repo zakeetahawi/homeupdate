@@ -83,12 +83,8 @@ class RateLimitMiddleware(MiddlewareMixin):
 
     def get_client_ip(self, request):
         """الحصول على IP العميل الحقيقي"""
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0].strip()
-        else:
-            ip = request.META.get("REMOTE_ADDR")
-        return ip
+        from user_activity.utils import get_client_ip_from_request
+        return get_client_ip_from_request(request)
 
     def process_request(self, request):
         # تخطي للطلبات الآمنة
@@ -176,12 +172,8 @@ class BruteForceProtectionMiddleware(MiddlewareMixin):
         return response
 
     def get_client_ip(self, request):
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(",")[0].strip()
-        else:
-            ip = request.META.get("REMOTE_ADDR")
-        return ip
+        from user_activity.utils import get_client_ip_from_request
+        return get_client_ip_from_request(request)
 
     def record_failed_login(self, request):
         """تسجيل محاولة فاشلة"""

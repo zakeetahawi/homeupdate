@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import traceback
 
 from django.contrib import messages
@@ -14,6 +15,7 @@ from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.safestring import mark_safe
 from django.views.decorators.cache import never_cache
+from django_ratelimit.decorators import ratelimit
 
 from .forms import (
     CompanyInfoForm,
@@ -37,7 +39,7 @@ from .models import (
     UserRole,
 )
 
-# سيتم إضافة دوال الإشعارات هنا
+logger = logging.getLogger(__name__)
 
 # الحصول على نموذج المستخدم المخصص
 User = get_user_model()
@@ -52,7 +54,7 @@ def generate_device_fingerprint(request):
 
     try:
         device_data = json.loads(device_info)
-    except:
+    except Exception:
         device_data = {}
 
     # العوامل الثابتة فقط - لا تتغير بسهولة
@@ -82,35 +84,13 @@ def generate_device_fingerprint(request):
 
 
 def get_client_ip(request):
-    """
-    استخراج عنوان IP الحقيقي للمستخدم من HTTP headers
-    يدعم Cloudflare و reverse proxies
-    """
-    import logging
-
-    logger = logging.getLogger("django")
-
-    # التحقق من HTTP_X_FORWARDED_FOR أولاً (Cloudflare, nginx, etc)
-    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-    cf_connecting_ip = request.META.get("HTTP_CF_CONNECTING_IP")  # Cloudflare specific
-
-    if cf_connecting_ip:
-        # Cloudflare يرسل IP الحقيقي في CF-Connecting-IP
-        ip = cf_connecting_ip
-        logger.info(f"🌐 IP from Cloudflare: {ip}")
-    elif x_forwarded_for:
-        # قد يحتوي على عدة IPs مفصولة بفواصل، الأول هو IP العميل الحقيقي
-        ip = x_forwarded_for.split(",")[0].strip()
-        logger.info(f"🌐 IP from X-Forwarded-For: {ip}")
-    else:
-        # إذا لم يكن هناك proxy، استخدم REMOTE_ADDR
-        ip = request.META.get("REMOTE_ADDR", "unknown")
-        logger.info(f"🖥️ Direct IP (localhost): {ip}")
-
-    return ip
+    """Wrapper — يستخدم الدالة المركزية من user_activity.utils"""
+    from user_activity.utils import get_client_ip_from_request
+    return get_client_ip_from_request(request)
 
 
 @never_cache
+@ratelimit(key='ip', rate='5/m', method='POST', block=True)
 def login_view(request):
     """
     View for user login with rate limiting
@@ -881,7 +861,7 @@ def register_device_view(request):
             # استخراج معلومات الجهاز
             try:
                 device_info = json.loads(device_info_str)
-            except:
+            except Exception:
                 device_info = {}
 
             user_agent = device_info.get(
@@ -1083,7 +1063,7 @@ def company_info_view(request):
     except Exception as e:
         import traceback
 
-        print("[CompanyInfo Error]", e)
+        logger.debug("[CompanyInfo Error]", e)
         traceback.print_exc()
         messages.error(
             request,

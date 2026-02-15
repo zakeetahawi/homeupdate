@@ -107,7 +107,7 @@ class NotificationSerializer(serializers.ModelSerializer):
                         else None
                     ),
                 }
-            except:
+            except Exception:
                 return {
                     "type": obj.content_type.model if obj.content_type else None,
                     "id": obj.object_id,

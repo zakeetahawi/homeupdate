@@ -53,9 +53,14 @@ class CustomerDebt(models.Model):
         verbose_name = _("مديونية عميل")
         verbose_name_plural = _("مديونيات العملاء")
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["customer", "is_paid"], name="inst_debt_cust_paid_idx"),
+            models.Index(fields=["order"], name="inst_debt_order_idx"),
+            models.Index(fields=["-created_at"], name="inst_debt_created_idx"),
+        ]
 
     def __str__(self):
-        return f"مديونية {self.customer.name} - {self.order.order_number}"
+        return f"مديونية #{self.pk} - عميل {self.customer_id}"
 
     def save(self, *args, **kwargs):
         if self.is_paid and not self.payment_date:
@@ -210,6 +215,11 @@ class VehicleMission(SoftDeleteMixin, models.Model):
         verbose_name = _("مهمة مركبة")
         verbose_name_plural = _("مهام المركبات")
         ordering = ["-date", "-start_time"]
+        indexes = [
+            models.Index(fields=["vehicle", "date"], name="vmission_veh_date_idx"),
+            models.Index(fields=["status", "date"], name="vmission_status_date_idx"),
+            models.Index(fields=["installation"], name="vmission_inst_idx"),
+        ]
 
     def __str__(self):
         return f"{self.get_mission_type_display()} - {self.vehicle}"
@@ -293,6 +303,10 @@ class VehicleRequest(SoftDeleteMixin, models.Model):
         verbose_name = _("طلب مركبة")
         verbose_name_plural = _("طلبات المركبات")
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "-created_at"], name="vreq_status_created_idx"),
+            models.Index(fields=["requester"], name="vreq_requester_idx"),
+        ]
 
     def __str__(self):
         return f"طلب مركبة من {self.requester} ليوم {self.requested_date}"
@@ -741,9 +755,13 @@ class ModificationRequest(SoftDeleteMixin, models.Model):
         verbose_name = _("طلب تعديل")
         verbose_name_plural = _("طلبات التعديل")
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["installation", "priority"], name="modreq_inst_pri_idx"),
+            models.Index(fields=["-created_at"], name="modreq_created_idx"),
+        ]
 
     def __str__(self):
-        return f"طلب تعديل - {self.installation.order.order_number}"
+        return f"طلب تعديل #{self.pk} - تركيب {self.installation_id}"
 
 
 class ModificationImage(models.Model):
@@ -762,11 +780,11 @@ class ModificationImage(models.Model):
         ordering = ["-uploaded_at"]
 
     def __str__(self):
-        return f"صورة تعديل - {self.modification.installation.order.order_number}"
+        return f"صورة تعديل #{self.pk} - طلب {self.modification_id}"
 
 
-class ManufacturingOrder(SoftDeleteMixin, models.Model):
-    """نموذج أمر التصنيع للتعديلات"""
+class ModificationManufacturingOrder(SoftDeleteMixin, models.Model):
+    """نموذج أمر التصنيع للتعديلات — مختلف عن manufacturing.ManufacturingOrder"""
 
     ORDER_TYPE_CHOICES = [
         ("new", _("جديد")),
@@ -783,7 +801,10 @@ class ManufacturingOrder(SoftDeleteMixin, models.Model):
     ]
 
     modification_request = models.ForeignKey(
-        ModificationRequest, on_delete=models.CASCADE, verbose_name=_("طلب التعديل")
+        ModificationRequest,
+        on_delete=models.CASCADE,
+        verbose_name=_("طلب التعديل"),
+        related_name="modification_manufacturing_orders",
     )
     order_type = models.CharField(
         _("نوع الأمر"),
@@ -814,14 +835,17 @@ class ManufacturingOrder(SoftDeleteMixin, models.Model):
     updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
 
     class Meta:
-        verbose_name = _("أمر تصنيع")
-        verbose_name_plural = _("أوامر التصنيع")
+        db_table = "installations_manufacturingorder"  # تثبيت اسم الجدول القديم
+        verbose_name = _("أمر تصنيع تعديل")
+        verbose_name_plural = _("أوامر تصنيع التعديلات")
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["modification_request", "status"], name="instmfg_modreq_sts_idx"),
+            models.Index(fields=["-created_at"], name="instmfg_created_idx"),
+        ]
 
     def __str__(self):
-        return (
-            f"أمر تصنيع - {self.modification_request.installation.order.order_number}"
-        )
+        return f"أمر تصنيع #{self.pk} - طلب تعديل {self.modification_request_id}"
 
 
 class ModificationReport(models.Model):
@@ -831,7 +855,7 @@ class ModificationReport(models.Model):
         ModificationRequest, on_delete=models.CASCADE, verbose_name=_("طلب التعديل")
     )
     manufacturing_order = models.ForeignKey(
-        ManufacturingOrder,
+        ModificationManufacturingOrder,
         on_delete=models.CASCADE,
         verbose_name=_("أمر التصنيع"),
         null=True,
@@ -856,9 +880,7 @@ class ModificationReport(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return (
-            f"تقرير تعديل - {self.modification_request.installation.order.order_number}"
-        )
+        return f"تقرير تعديل #{self.pk} - طلب {self.modification_request_id}"
 
 
 class ReceiptMemo(models.Model):
@@ -882,7 +904,7 @@ class ReceiptMemo(models.Model):
         verbose_name_plural = _("مذكرات الاستلام")
 
     def __str__(self):
-        return f"مذكرة استلام - {self.installation.order.order_number}"
+        return f"مذكرة استلام - تركيب {self.installation_id}"
 
 
 class InstallationPayment(models.Model):
@@ -900,7 +922,7 @@ class InstallationPayment(models.Model):
     payment_type = models.CharField(
         _("نوع الدفع"), max_length=20, choices=PAYMENT_TYPE_CHOICES
     )
-    amount = models.DecimalField(_("المبلغ"), max_digits=10, decimal_places=2)
+    amount = models.DecimalField(_("المبلغ"), max_digits=15, decimal_places=2)
     payment_method = models.CharField(_("طريقة الدفع"), max_length=50, blank=True)
     receipt_number = models.CharField(_("رقم الإيصال"), max_length=50, blank=True)
     notes = models.TextField(_("ملاحظات"), blank=True)
@@ -918,9 +940,13 @@ class InstallationPayment(models.Model):
         verbose_name = _("دفعة تركيب")
         verbose_name_plural = _("مدفوعات التركيب")
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["installation", "-created_at"], name="instpay_inst_created_idx"),
+            models.Index(fields=["payment_type"], name="instpay_type_idx"),
+        ]
 
     def __str__(self):
-        return f"دفعة {self.get_payment_type_display()} - {self.installation.order.order_number}"
+        return f"دفعة {self.get_payment_type_display()} - تركيب {self.installation_id}"
 
 
 class InstallationArchive(models.Model):
@@ -944,7 +970,7 @@ class InstallationArchive(models.Model):
         ordering = ["-completion_date"]
 
     def __str__(self):
-        return f"أرشيف - {self.installation.order.order_number}"
+        return f"أرشيف - تركيب {self.installation_id}"
 
 
 class InstallationAnalytics(models.Model):
@@ -1092,9 +1118,12 @@ class InstallationStatusLog(models.Model):
         verbose_name = _("سجل حالة التركيب")
         verbose_name_plural = _("سجلات حالات التركيب")
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["installation", "-created_at"], name="inststatlog_inst_crtd_idx"),
+        ]
 
     def __str__(self):
-        return f"تغيير حالة {self.installation.order.order_number} من {self.get_old_status_display()} إلى {self.get_new_status_display()}"
+        return f"تغيير حالة تركيب {self.installation_id} من {self.get_old_status_display()} إلى {self.get_new_status_display()}"
 
 
 class InstallationSchedulingSettings(models.Model):
@@ -1194,8 +1223,10 @@ class InstallationEventLog(models.Model):
         verbose_name = _("سجل حدث التركيب")
         verbose_name_plural = _("سجل أحداث التركيبات")
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["installation", "event_type"], name="instevt_inst_type_idx"),
+            models.Index(fields=["-created_at"], name="instevt_created_idx"),
+        ]
 
     def __str__(self):
-        return (
-            f"{self.get_event_type_display()} - {self.installation.order.order_number}"
-        )
+        return f"{self.get_event_type_display()} - تركيب {self.installation_id}"

@@ -77,7 +77,7 @@ def user_complaints_role(user):
                 return "assignee"
             else:
                 return "viewer"
-    except:
+    except Exception:
         pass
 
     return "none"

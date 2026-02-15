@@ -19,7 +19,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "homeupdate.settings")
 
 try:
     django.setup()
-except:
+except Exception:
     pass
 
 from decimal import Decimal
@@ -96,13 +96,13 @@ for mfg_order in mfg_orders_completed:
                     # الحصول على اسم المنتج
                     try:
                         product_name = cutting_item.order_item.product.name
-                    except:
+                    except Exception:
                         product_name = "غير محدد"
 
                     # الكمية من order_item
                     try:
                         quantity = cutting_item.order_item.quantity or Decimal("1.00")
-                    except:
+                    except Exception:
                         quantity = Decimal("1.00")
 
                     # إنشاء ManufacturingOrderItem

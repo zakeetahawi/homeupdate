@@ -73,7 +73,7 @@ class PaginationFixMixin:
                         new_value = match.group(1) or match.group(2) or match.group(3)
                         new_get[key] = new_value
                         fixed_params = True
-                except:
+                except Exception:
                     pass
 
         if fixed_params:

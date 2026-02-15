@@ -630,7 +630,7 @@ class ComplaintAdmin(admin.ModelAdmin):
             permissions = user.complaint_permissions
             if permissions.is_active and permissions.can_view_all_complaints:
                 return queryset
-        except:
+        except Exception:
             pass
 
         # المستخدمون العاديون يرون الشكاوى المسندة إليهم أو التي أنشأوها
@@ -664,7 +664,7 @@ class ComplaintAdmin(admin.ModelAdmin):
             permissions = user.complaint_permissions
             if permissions.is_active and permissions.can_edit_all_complaints:
                 return True
-        except:
+        except Exception:
             pass
 
         # إذا كان هناك كائن محدد، فحص إذا كان المستخدم مسؤولاً عنه
@@ -687,7 +687,7 @@ class ComplaintAdmin(admin.ModelAdmin):
                         and user.complaint_permissions.can_receive_escalations
                     ):
                         return True
-                except:
+                except Exception:
                     pass
 
             return obj.assigned_to == user or obj.created_by == user
@@ -710,7 +710,7 @@ class ComplaintAdmin(admin.ModelAdmin):
             permissions = user.complaint_permissions
             if permissions.is_active and permissions.can_delete_complaints:
                 return True
-        except:
+        except Exception:
             pass
 
         return False

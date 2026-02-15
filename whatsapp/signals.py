@@ -111,7 +111,7 @@ def send_template_notification(
                 whatsapp_message.status = "FAILED"
                 whatsapp_message.error_message = str(e)
                 whatsapp_message.save()
-        except:
+        except Exception:
             pass
         return None
 

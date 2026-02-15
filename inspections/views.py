@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 
 from django.contrib import messages
@@ -19,6 +20,8 @@ from django.views.generic import (
     TemplateView,
     UpdateView,
 )
+
+logger = logging.getLogger(__name__)
 
 from core.mixins import PaginationFixMixin
 from core.utils.secure_files import serve_protected_file
@@ -84,7 +87,7 @@ class CompletedInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, Lis
 
         # تم إلغاء الفلترة الافتراضية
 
-        return queryset.select_related("customer", "inspector", "branch")
+        return queryset.select_related("customer", "inspector", "branch").defer("notes", "order_notes")
 
 
 class CancelledInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, ListView):
@@ -105,7 +108,7 @@ class CancelledInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, Lis
 
         # تم إلغاء الفلترة الافتراضية
 
-        return queryset.select_related("customer", "inspector", "branch")
+        return queryset.select_related("customer", "inspector", "branch").defer("notes", "order_notes")
 
 
 class PendingInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, ListView):
@@ -126,7 +129,7 @@ class PendingInspectionsDetailView(PaginationFixMixin, LoginRequiredMixin, ListV
 
         # تم إلغاء الفلترة الافتراضية
 
-        return queryset.select_related("customer", "inspector", "branch")
+        return queryset.select_related("customer", "inspector", "branch").defer("notes", "order_notes")
 
 
 class InspectionListView(PaginationFixMixin, LoginRequiredMixin, ListView):
@@ -505,8 +508,7 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
                             installation.location_address = update_customer_address
                             installation.save(update_fields=["location_address"])
                 except Exception as install_error:
-                    print(f"خطأ في تحديث عنوان التركيب: {install_error}")
-
+                    logger.debug(f"خطأ في تحديث عنوان التركيب: {install_error}")
                 messages.success(
                     self.request, "تم تحديث عنوان العميل بنجاح في المعاينات والتركيبات"
                 )
@@ -537,8 +539,7 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
                     )
                     files_added += 1
                 except Exception as e:
-                    print(f"خطأ في إنشاء ملف المعاينة: {e}")
-
+                    logger.debug(f"خطأ في إنشاء ملف المعاينة: {e}")
             if files_added > 0:
                 messages.success(
                     self.request,
@@ -565,8 +566,7 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
                     notes=f"تغيير حالة المعاينة من {old_status_display} إلى {new_status_display}",
                 )
             except Exception as e:
-                print(f"خطأ في تسجيل تغيير حالة المعاينة: {e}")
-
+                logger.debug(f"خطأ في تسجيل تغيير حالة المعاينة: {e}")
         # إنشاء إشعار لتحديث حالة المعاينة إذا تغيرت
         if old_status != new_status:
             try:
@@ -611,8 +611,7 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
                     },
                 )
             except Exception as e:
-                print(f"خطأ في إنشاء إشعار تحديث حالة المعاينة: {e}")
-
+                logger.debug(f"خطأ في إنشاء إشعار تحديث حالة المعاينة: {e}")
         # التحقق من وجود ملف جديد وإعطاء رسالة مناسبة
         old_file = old_inspection.inspection_file
         new_file = inspection.inspection_file
@@ -867,6 +866,7 @@ class NotificationCreateView(LoginRequiredMixin, CreateView):
         )
 
 
+@login_required
 def mark_notification_read(request, pk):
     notification = get_object_or_404(InspectionNotification, pk=pk)
     if request.user == notification.recipient:

@@ -87,7 +87,7 @@ def format_currency(value, currency_symbol=None):
 
             settings = SystemSettings.get_settings()
             currency_symbol = settings.currency_symbol
-        except:
+        except Exception:
             currency_symbol = "ج.م"
 
     # إضافة الفواصل للأرقام الكبيرة (اختياري)
@@ -96,7 +96,7 @@ def format_currency(value, currency_symbol=None):
         if abs(num) >= 1000:
             # تنسيق مع فواصل الآلاف
             clean_value = f"{num:,.10f}".rstrip("0").rstrip(".")
-    except:
+    except Exception:
         pass
 
     return f"{clean_value} {currency_symbol}"

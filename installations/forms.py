@@ -13,7 +13,7 @@ from .models import (
     InstallationSchedule,
     InstallationSchedulingSettings,
     InstallationTeam,
-    ManufacturingOrder,
+    ModificationManufacturingOrder,
     ModificationErrorAnalysis,
     ModificationImage,
     ModificationReport,
@@ -165,7 +165,7 @@ class ManufacturingOrderForm(forms.ModelForm):
     """نموذج أمر التصنيع للتعديلات"""
 
     class Meta:
-        model = ManufacturingOrder
+        model = ModificationManufacturingOrder
         fields = [
             "order_type",
             "status",

@@ -1,3 +1,4 @@
+import logging
 import json
 from datetime import datetime, timedelta
 
@@ -19,6 +20,9 @@ from orders.models import Order
 
 from .models import CuttingOrder, CuttingOrderItem, CuttingReport
 
+
+
+logger = logging.getLogger(__name__)
 
 def get_user_warehouses_for_user(user):
     """Helper function للحصول على المستودعات المتاحة للمستخدم - يدعم مستودعات متعددة"""
@@ -74,6 +78,7 @@ class CuttingDashboardView(LoginRequiredMixin, TemplateView):
                     warehouse__in=[w["warehouse"] for w in user_warehouses]
                 )
                 .select_related("order", "order__customer", "warehouse")
+                .defer("rejection_reason", "notes", "notifications_sent")
                 .order_by("-created_at")[:10],
             }
         )
@@ -139,7 +144,9 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         queryset = CuttingOrder.objects.select_related(
             "order", "order__customer", "warehouse", "assigned_to"
-        ).prefetch_related("items")
+        ).prefetch_related("items").defer(
+            "rejection_reason", "notes", "notifications_sent"
+        )
 
         # الحصول على المستودعات المتاحة للمستخدم أولاً
         user_warehouses = self.get_user_warehouses()
@@ -1355,8 +1362,7 @@ def start_cutting_order(request, order_id):
                         notes=f"تم بدء أمر التقطيع #{cutting_order.cutting_code}",
                     )
             except Exception as e:
-                print(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
-
+                logger.debug(f"خطأ في تسجيل تغيير حالة الطلب: {e}")
             return JsonResponse(
                 {"success": True, "message": "تم بدء أمر التقطيع بنجاح"}
             )

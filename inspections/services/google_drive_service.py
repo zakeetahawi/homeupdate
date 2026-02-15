@@ -294,7 +294,7 @@ Service Account: {user_email}
 - اختر صلاحية "Editor"
 - انقر على "إرسال"
                         """
-                    except:
+                    except Exception:
                         detailed_message = f"""
 خطأ 404: المجلد غير موجود أو غير مشارك مع Service Account
 

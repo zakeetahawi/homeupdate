@@ -4,6 +4,7 @@ import logging
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django_ratelimit.decorators import ratelimit
 
 from .models import WhatsAppMessage
 
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @csrf_exempt
+@ratelimit(key='ip', rate='60/m', method='POST', block=True)
 def meta_webhook(request):
     """
     Webhook من Meta WhatsApp Cloud API

@@ -20,7 +20,7 @@ class InstallationAccountingSettings(models.Model):
 
     default_price_per_window = models.DecimalField(
         _("سعر الشباك الافتراضي"),
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("35.00"),
         validators=[MinValueValidator(Decimal("0.00"))],
@@ -67,7 +67,7 @@ class InstallationCard(models.Model):
 
     installation_schedule = models.OneToOneField(
         "installations.InstallationSchedule",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="accounting_card",
         verbose_name=_("جدولة التركيب"),
     )
@@ -84,7 +84,7 @@ class InstallationCard(models.Model):
 
     price_per_window = models.DecimalField(
         _("سعر الشباك"),
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
         help_text=_("سعر التركيب للشباك الواحد لهذا الطلب"),
@@ -92,7 +92,7 @@ class InstallationCard(models.Model):
 
     total_cost = models.DecimalField(
         _("إجمالي التكلفة"),
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
         help_text=_("عدد الشبابيك × سعر الشباك"),
@@ -179,7 +179,7 @@ class TechnicianShare(models.Model):
 
     assigned_windows = models.DecimalField(
         _("عدد الشبابيك المخصصة"),
-        max_digits=10,
+        max_digits=12,
         decimal_places=2,
         default=Decimal("0.00"),
         help_text=_("حصة الفني من عدد الشبابيك"),
@@ -187,7 +187,7 @@ class TechnicianShare(models.Model):
 
     amount = models.DecimalField(
         _("المبلغ المستحق"),
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
         help_text=_("حصة الفني من المبلغ الإجمالي"),

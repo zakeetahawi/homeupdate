@@ -265,7 +265,7 @@ def generate_cache_report():
             report["cache_keys"] = list(cache.keys("orders:*"))[
                 :10
             ]  # أول 10 مفاتيح فقط
-    except:
+    except Exception:
         report["cache_keys"] = ["غير متاح"]
 
     # توصيات بناءً على النتائج

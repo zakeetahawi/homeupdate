@@ -2,6 +2,8 @@
 {% load static %}
 {% load i18n %}
 {% block title %}تقارير الإنتاج{% endblock %}
+{% block datatables_css %}{% include 'includes/datatables_css.html' %}{% endblock %}
+{% block datatables_js %}{% include 'includes/datatables_js.html' %}{% endblock %}
 {% block extra_css %}
     <style>
     .page-header {

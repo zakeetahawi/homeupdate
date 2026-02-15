@@ -230,6 +230,11 @@ class User(AbstractUser):
     class Meta:
         verbose_name = _("مستخدم")
         verbose_name_plural = _("المستخدمين")
+        indexes = [
+            models.Index(fields=["branch", "is_active"], name="user_branch_active_idx"),
+            models.Index(fields=["is_salesperson", "is_active"], name="user_sales_active_idx"),
+            models.Index(fields=["-date_joined"], name="user_date_joined_idx"),
+        ]
 
     def __str__(self):
         return self.username

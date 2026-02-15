@@ -11,25 +11,11 @@ window.isSubmitting = false;
 window.submissionStartTime = null;
 window.progressInterval = null;
 
-// دالة للحصول على CSRF Token
+// يستخدم CSRFHandler المركزي من csrf-handler.js
 function getCSRFToken() {
-    // محاولة الحصول من الكوكيز
-    const cookieValue = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrftoken='))
-        ?.split('=')[1];
-    
-    if (cookieValue) {
-        return cookieValue;
-    }
-    
-    // محاولة الحصول من عنصر مخفي
+    if (window.CSRFHandler) return window.CSRFHandler.getToken();
     const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (csrfInput) {
-        return csrfInput.value;
-    }
-    
-    return '';
+    return csrfInput ? csrfInput.value : '';
 }
 
 // دالة لإظهار مؤشر التقدم المحسن
@@ -121,7 +107,7 @@ function showProgressIndicator() {
     }).then((result) => {
         // إذا تم الضغط على إلغاء
         if (result.dismiss === Swal.DismissReason.cancel) {
-            console.log('⚠️ تم إلغاء العملية من قبل المستخدم');
+            // console.log('⚠️ تم إلغاء العملية من قبل المستخدم');
             hideProgressIndicator();
             Swal.fire({
                 icon: 'info',
@@ -211,7 +197,7 @@ function hideProgressIndicator() {
     }
 
     disableFormButtons(); // إعادة تفعيل الأزرار
-    console.log('✅ تم إخفاء مؤشر التقدم وإعادة تعيين الحالة');
+    // console.log('✅ تم إخفاء مؤشر التقدم وإعادة تعيين الحالة');
     Swal.close();
 }
 
@@ -273,32 +259,32 @@ function toggleErrorDetails() {
 
 // تهيئة Select2 للبحث عن العملاء
 function initializeCustomerSearch() {
-    console.log('تهيئة Select2 للبحث عن العملاء...');
+    // console.log('تهيئة Select2 للبحث عن العملاء...');
 
     // التحقق من وجود jQuery و Select2
     if (typeof $ === 'undefined') {
-        console.log('jQuery غير محمل - تأجيل التهيئة');
+        // console.log('jQuery غير محمل - تأجيل التهيئة');
         setTimeout(initializeCustomerSearch, 500);
         return;
     }
 
     if (typeof $.fn.select2 === 'undefined') {
-        console.log('Select2 غير محمل - تأجيل التهيئة');
+        // console.log('Select2 غير محمل - تأجيل التهيئة');
         setTimeout(initializeCustomerSearch, 500);
         return;
     }
 
     const searchSelect = $('#customer_search_select');
     if (searchSelect.length === 0) {
-        console.log('عنصر البحث عن العملاء غير موجود - البحث عن بدائل...');
+        // console.log('عنصر البحث عن العملاء غير موجود - البحث عن بدائل...');
 
         // البحث عن حقل العميل الأصلي
         const originalCustomerField = $('#id_customer');
         if (originalCustomerField.length > 0) {
-            console.log('تم العثور على حقل العميل الأصلي - تهيئة Select2 عليه');
+            // console.log('تم العثور على حقل العميل الأصلي - تهيئة Select2 عليه');
             initializeSelect2OnOriginalField(originalCustomerField);
         } else {
-            console.log('لم يتم العثور على أي حقل عميل');
+            // console.log('لم يتم العثور على أي حقل عميل');
         }
         return;
     }
@@ -350,37 +336,37 @@ function initializeCustomerSearch() {
     // عند اختيار عميل
     searchSelect.on('select2:select', function (e) {
         var data = e.params.data;
-        console.log('✅ تم اختيار العميل من Select2:', data);
+        // console.log('✅ تم اختيار العميل من Select2:', data);
 
         // الحصول على معرف العميل من البيانات
         var customerId = data.id || (data.customer && data.customer.id);
         var customerName = data.text || (data.customer && (data.customer.name + ' - ' + data.customer.phone));
 
         if (customerId) {
-            console.log('✅ معرف العميل:', customerId);
-            console.log('✅ اسم العميل:', customerName);
+            // console.log('✅ معرف العميل:', customerId);
+            // console.log('✅ اسم العميل:', customerName);
 
             // تعيين القيمة في الحقل المخفي باستخدام jQuery
             const customerField = $('#id_customer');
-            console.log('🔍 حقل العميل موجود؟', customerField.length > 0);
-            console.log('🔍 نوع حقل العميل:', customerField.prop('tagName'));
-            console.log('🔍 القيمة الحالية:', customerField.val());
+            // console.log('🔍 حقل العميل موجود؟', customerField.length > 0);
+            // console.log('🔍 نوع حقل العميل:', customerField.prop('tagName'));
+            // console.log('🔍 القيمة الحالية:', customerField.val());
 
             if (customerField.length > 0) {
                 // التحقق من وجود الخيار في القائمة
                 var optionExists = customerField.find('option[value="' + customerId + '"]').length > 0;
-                console.log('🔍 الخيار موجود في القائمة؟', optionExists);
+                // console.log('🔍 الخيار موجود في القائمة؟', optionExists);
 
                 if (!optionExists) {
                     // إضافة الخيار إلى القائمة إذا لم يكن موجودًا
                     var newOption = new Option(customerName, customerId, true, true);
                     customerField.append(newOption);
-                    console.log('✅ تم إضافة خيار جديد للعميل:', customerId);
+                    // console.log('✅ تم إضافة خيار جديد للعميل:', customerId);
                 }
 
                 // تعيين القيمة
                 customerField.val(customerId);
-                console.log('✅ تم تعيين قيمة العميل في الحقل:', customerField.val());
+                // console.log('✅ تم تعيين قيمة العميل في الحقل:', customerField.val());
 
                 // إزالة علامة invalid وإضافة valid
                 customerField.removeClass('is-invalid');
@@ -403,7 +389,7 @@ function initializeCustomerSearch() {
 
     // عند إزالة اختيار العميل
     searchSelect.on('select2:clear', function (e) {
-        console.log('⚠️ تم إزالة اختيار العميل');
+        // console.log('⚠️ تم إزالة اختيار العميل');
 
         const customerField = document.getElementById('id_customer');
         if (customerField) {
@@ -468,14 +454,14 @@ function initializeSelect2OnOriginalField(field) {
         // معالج تغيير الاختيار
         field.on('select2:select', function (e) {
             const data = e.params.data;
-            console.log('✅ تم اختيار العميل من الحقل الأصلي:', data);
+            // console.log('✅ تم اختيار العميل من الحقل الأصلي:', data);
 
             // الحصول على معرف العميل من البيانات
             var customerId = data.id || (data.customer && data.customer.id);
             var customerName = data.text || (data.customer && (data.customer.name + ' - ' + data.customer.phone));
 
             if (customerId) {
-                console.log('✅ معرف العميل:', customerId);
+                // console.log('✅ معرف العميل:', customerId);
 
                 // حفظ بيانات العميل في المتغير العام
                 if (data.customer) {
@@ -492,11 +478,11 @@ function initializeSelect2OnOriginalField(field) {
                         // إضافة الخيار إلى القائمة إذا لم يكن موجودًا
                         var newOption = new Option(customerName, customerId, true, true);
                         customerField.append(newOption);
-                        console.log('✅ تم إضافة خيار جديد للعميل:', customerId);
+                        // console.log('✅ تم إضافة خيار جديد للعميل:', customerId);
                     }
 
                     customerField.val(customerId);
-                    console.log('✅ تم تعيين قيمة العميل:', customerField.val());
+                    // console.log('✅ تم تعيين قيمة العميل:', customerField.val());
 
                     // إزالة علامة invalid وإضافة valid
                     customerField.removeClass('is-invalid');
@@ -517,7 +503,7 @@ function initializeSelect2OnOriginalField(field) {
 
         // معالج إزالة الاختيار
         field.on('select2:clear', function (e) {
-            console.log('⚠️ تم إزالة اختيار العميل من الحقل الأصلي');
+            // console.log('⚠️ تم إزالة اختيار العميل من الحقل الأصلي');
 
             const customerField = document.getElementById('id_customer');
             if (customerField) {
@@ -533,7 +519,7 @@ function initializeSelect2OnOriginalField(field) {
             }, 150);
         });
 
-        console.log('تم تهيئة Select2 على حقل العميل الأصلي بنجاح');
+        // console.log('تم تهيئة Select2 على حقل العميل الأصلي بنجاح');
 
     } catch (error) {
         console.error('خطأ في تهيئة Select2 على الحقل الأصلي:', error);
@@ -551,18 +537,18 @@ function updateFormFields() {
         radio.checked = (radio.value === selectedType);
     });
 
-    console.log('✅ تم تحديث نوع الطلب:', selectedType);
-    console.log('✅ عدد الراديو الأصلي:', realRadios.length);
+    // console.log('✅ تم تحديث نوع الطلب:', selectedType);
+    // console.log('✅ عدد الراديو الأصلي:', realRadios.length);
 
     const showForContract = ['installation', 'tailoring', 'accessory'].includes(selectedType);
     const showRelatedInspection = ['installation', 'tailoring', 'accessory'].includes(selectedType);
     // إظهار صورة الفاتورة لجميع الأنواع ما عدا المعاينة
     const showInvoiceImage = selectedType !== 'inspection' && selectedType !== '';
 
-    console.log('🔍 نوع الطلب:', selectedType);
-    console.log('🔍 إظهار حقول العقد:', showForContract);
-    console.log('🔍 إظهار المعاينة المرتبطة:', showRelatedInspection);
-    console.log('🔍 إظهار صورة الفاتورة:', showInvoiceImage);
+    // console.log('🔍 نوع الطلب:', selectedType);
+    // console.log('🔍 إظهار حقول العقد:', showForContract);
+    // console.log('🔍 إظهار المعاينة المرتبطة:', showRelatedInspection);
+    // console.log('🔍 إظهار صورة الفاتورة:', showInvoiceImage);
 
     // إظهار/إخفاء حقول العقد
     const contractFields = document.querySelectorAll('.contract-field');
@@ -571,11 +557,11 @@ function updateFormFields() {
     const relatedInspectionField = document.querySelector('.related-inspection-field');
     const invoiceImageField = document.getElementById('invoice-image-container');
 
-    console.log('🔍 عدد حقول العقد:', contractFields.length);
-    console.log('🔍 حقل زر العقد الإلكتروني:', contractElectronicBtnField ? 'موجود' : 'غير موجود');
-    console.log('🔍 حقل ملف العقد:', contractFileField ? 'موجود' : 'غير موجود');
-    console.log('🔍 حقل المعاينة المرتبطة:', relatedInspectionField ? 'موجود' : 'غير موجود');
-    console.log('🔍 حقل صورة الفاتورة:', invoiceImageField ? 'موجود' : 'غير موجود');
+    // console.log('🔍 عدد حقول العقد:', contractFields.length);
+    // console.log('🔍 حقل زر العقد الإلكتروني:', contractElectronicBtnField ? 'موجود' : 'غير موجود');
+    // console.log('🔍 حقل ملف العقد:', contractFileField ? 'موجود' : 'غير موجود');
+    // console.log('🔍 حقل المعاينة المرتبطة:', relatedInspectionField ? 'موجود' : 'غير موجود');
+    // console.log('🔍 حقل صورة الفاتورة:', invoiceImageField ? 'موجود' : 'غير موجود');
 
     contractFields.forEach(field => {
         if (field) field.style.display = showForContract ? 'block' : 'none';
@@ -768,7 +754,7 @@ function syncOrderItemsToFormFields() {
         selectedProductsField.value = itemsJson;
     }
     
-    console.log('تم حفظ العناصر:', document.orderItems.length > 0 ? `${document.orderItems.length} عنصر` : 'لا توجد عناصر');
+    // console.log('تم حفظ العناصر:', document.orderItems.length > 0 ? `${document.orderItems.length} عنصر` : 'لا توجد عناصر');
 }
 
 // حذف عنصر من القائمة
@@ -883,7 +869,7 @@ function showAddItemModal() {
                     return false;
                 }
 
-                console.log(`✅ تم التحقق من الكمية: ${quantityStr} → ${quantity}`);
+                // console.log(`✅ تم التحقق من الكمية: ${quantityStr} → ${quantity}`);
 
             } catch (error) {
                 console.error('خطأ في معالجة الكمية:', error);
@@ -1003,7 +989,7 @@ function setupProductSearch() {
                 })
                 .catch(error => {
                     if (error.name === 'AbortError') {
-                        console.log('تم إلغاء طلب البحث');
+                        // console.log('تم إلغاء طلب البحث');
                         return;
                     }
                     console.error('خطأ في البحث:', error);
@@ -1103,7 +1089,7 @@ function checkInvoiceNumberDuplicate(invoiceNumber) {
                            document.querySelector('[name="customer"]') ||
                            document.getElementById('customer');
     if (!customerIdInput || !customerIdInput.value) {
-        console.log('لم يتم اختيار عميل بعد');
+        // console.log('لم يتم اختيار عميل بعد');
         return;
     }
     const customerId = customerIdInput.value;
@@ -1114,7 +1100,7 @@ function checkInvoiceNumberDuplicate(invoiceNumber) {
                           document.querySelector('input[name="selected_types"]:checked');
     const orderType = orderTypeRadio ? orderTypeRadio.value : '';
     
-    console.log('التحقق من رقم الفاتورة:', { invoiceNumber, customerId, orderType });
+    // console.log('التحقق من رقم الفاتورة:', { invoiceNumber, customerId, orderType });
     
     // إظهار مؤشر التحميل
     if (feedbackDiv) {
@@ -1195,7 +1181,7 @@ async function checkInvoiceNumberDuplicateAsync(invoiceNumber) {
                            document.querySelector('[name="customer"]') ||
                            document.getElementById('customer');
     if (!customerIdInput || !customerIdInput.value) {
-        console.log('لم يتم اختيار عميل بعد');
+        // console.log('لم يتم اختيار عميل بعد');
         return { exists: false };
     }
     const customerId = customerIdInput.value;
@@ -1206,7 +1192,7 @@ async function checkInvoiceNumberDuplicateAsync(invoiceNumber) {
                           document.querySelector('input[name="selected_types"]:checked');
     const orderType = orderTypeRadio ? orderTypeRadio.value : '';
     
-    console.log('التحقق غير المتزامن من رقم الفاتورة:', { invoiceNumber, customerId, orderType });
+    // console.log('التحقق غير المتزامن من رقم الفاتورة:', { invoiceNumber, customerId, orderType });
     
     try {
         const response = await fetch('/orders/api/check-invoice-number/', {
@@ -1375,7 +1361,7 @@ function showPaymentModal() {
             // حفظ العناصر
             syncOrderItemsToFormFields();
 
-            console.log('تم حفظ جميع البيانات، سيتم إرسال النموذج...');
+            // console.log('تم حفظ جميع البيانات، سيتم إرسال النموذج...');
 
             // إظهار مؤشر التقدم
             setTimeout(() => {
@@ -1389,7 +1375,7 @@ function showPaymentModal() {
                             // إضافة معالج للنموذج لمنع الإرسال المتعدد
                             orderForm.addEventListener('submit', function(e) {
                                 if (window.isSubmitting && e.type === 'submit') {
-                                    console.log('⚠️ منع الإرسال المتعدد');
+                                    // console.log('⚠️ منع الإرسال المتعدد');
                                     e.preventDefault();
                                     return false;
                                 }
@@ -1398,7 +1384,7 @@ function showPaymentModal() {
                             // إضافة timeout للحماية من التعليق
                             const submitTimeout = setTimeout(() => {
                                 if (window.isSubmitting) {
-                                    console.log('⚠️ انتهت مهلة الإرسال - إعادة تعيين');
+                                    // console.log('⚠️ انتهت مهلة الإرسال - إعادة تعيين');
                                     hideProgressIndicator();
                                     Swal.fire({
                                         icon: 'error',
@@ -1409,7 +1395,7 @@ function showPaymentModal() {
                                 }
                             }, 30000); // 30 ثانية
 
-                            console.log('🚀 إرسال النموذج عبر AJAX...');
+                            // console.log('🚀 إرسال النموذج عبر AJAX...');
                             submitFormViaAjax(orderForm);
 
                         } catch (error) {
@@ -1489,9 +1475,9 @@ function performValidation() {
 
                 // إذا كان الحقل مخفي، تحقق من وجود قيمة صحيحة
                 if (!isEmpty) {
-                    console.log('✅ حقل العميل يحتوي على قيمة:', value);
+                    // console.log('✅ حقل العميل يحتوي على قيمة:', value);
                 } else {
-                    console.log('❌ حقل العميل فارغ أو غير صحيح:', value);
+                    // console.log('❌ حقل العميل فارغ أو غير صحيح:', value);
                 }
             } else {
                 isEmpty = !element.value || element.value === '';
@@ -1510,7 +1496,7 @@ function performValidation() {
             }
         } else {
             // إذا لم يتم العثور على العنصر
-            console.log('⚠️ لم يتم العثور على العنصر:', field.id);
+            // console.log('⚠️ لم يتم العثور على العنصر:', field.id);
         }
     }
 
@@ -1602,8 +1588,8 @@ function setupFormEvents() {
                 }
             });
 
-            console.log('✅ تم تحديث selected_types إلى:', selectedType);
-            console.log('✅ عدد الراديو المحدث:', realRadios.length);
+            // console.log('✅ تم تحديث selected_types إلى:', selectedType);
+            // console.log('✅ عدد الراديو المحدث:', realRadios.length);
         });
     });
     
@@ -1691,7 +1677,7 @@ function submitFormViaAjax(form) {
         }
     })
     .then(data => {
-        console.log('✅ تم إرسال النموذج بنجاح:', data);
+        // console.log('✅ تم إرسال النموذج بنجاح:', data);
         hideProgressIndicator();
 
         if (data.success) {
@@ -1780,7 +1766,7 @@ function setupMobileDecimalSupport() {
                      window.innerWidth <= 768;
 
     if (isMobile) {
-        console.log('🔧 تطبيق تحسينات الهواتف المحمولة للقيم العشرية...');
+        // console.log('🔧 تطبيق تحسينات الهواتف المحمولة للقيم العشرية...');
 
         // تحسين جميع حقول الأرقام
         const numberInputs = document.querySelectorAll('input[type="number"]');
@@ -1832,12 +1818,12 @@ function setupMobileDecimalSupport() {
             });
         });
 
-        console.log(`✅ تم تطبيق تحسينات الهواتف المحمولة على ${numberInputs.length} حقل رقمي`);
+        // console.log(`✅ تم تطبيق تحسينات الهواتف المحمولة على ${numberInputs.length} حقل رقمي`);
     }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('تهيئة نموذج الطلب المبسط...');
+    // console.log('تهيئة نموذج الطلب المبسط...');
 
     // تطبيق تحسينات الهواتف المحمولة
     setupMobileDecimalSupport();
@@ -1860,12 +1846,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // إذا كان هناك حقل احتياطي مخفي، استخدمه لتعيين قيمة الحقل الأصلي
     if (hiddenCustomerBackup && hiddenCustomerBackup.value && customerField) {
-        console.log('✅ تم العثور على حقل احتياطي للعميل:', hiddenCustomerBackup.value);
+        // console.log('✅ تم العثور على حقل احتياطي للعميل:', hiddenCustomerBackup.value);
         customerField.value = hiddenCustomerBackup.value;
         customerField.classList.remove('is-invalid');
         customerField.classList.add('is-valid');
     } else if (customerField && customerField.value) {
-        console.log('✅ تم العثور على عميل محدد مسبقاً:', customerField.value);
+        // console.log('✅ تم العثور على عميل محدد مسبقاً:', customerField.value);
         // إزالة علامة invalid إذا كانت موجودة
         customerField.classList.remove('is-invalid');
         customerField.classList.add('is-valid');
@@ -1877,7 +1863,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // منع مغادرة الصفحة أثناء الإرسال
     preventPageLeave();
 
-    console.log('تم تهيئة النموذج بنجاح');
+    // console.log('تم تهيئة النموذج بنجاح');
 });
 
 // ==================== دوال إدارة العقد الإلكتروني ====================
@@ -1888,7 +1874,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function handleElectronicContractClick() {
     const orderItems = document.orderItems || [];
 
-    console.log('🔍 عدد عناصر الطلب الحالية:', orderItems.length);
+    // console.log('🔍 عدد عناصر الطلب الحالية:', orderItems.length);
 
     if (orderItems.length === 0) {
         Swal.fire({
@@ -1923,7 +1909,7 @@ function handleElectronicContractClick() {
         });
     } else {
         // فتح المودال لإضافة تفاصيل الستائر
-        console.log('✅ فتح مودال العقد الإلكتروني');
+        // console.log('✅ فتح مودال العقد الإلكتروني');
         openElectronicContractModal();
     }
 }
@@ -2007,7 +1993,7 @@ function addCurtainToModal() {
         curtainsList.appendChild(card);
     }
 
-    console.log(`✅ تم إضافة ستارة ${window.curtainCounter}`);
+    // console.log(`✅ تم إضافة ستارة ${window.curtainCounter}`);
 }
 
 /**

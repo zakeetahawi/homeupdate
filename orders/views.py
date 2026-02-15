@@ -151,6 +151,8 @@ def order_list(request):
                 "manufacturing_orders",
                 "inspections",
             )
+            .defer("notes", "delivery_address", "location_address",
+                   "administrative_discount_notes", "service_types")
             .filter(branch__id=branch_filter)
         )
     else:
@@ -162,6 +164,8 @@ def order_list(request):
                 "manufacturing_orders",
                 "inspections",
             )
+            .defer("notes", "delivery_address", "location_address",
+                   "administrative_discount_notes", "service_types")
         )
 
     # تطبيق الفلترة الشهرية
@@ -520,7 +524,7 @@ def order_create(request):
     View for creating a new order
     """
     if request.method == "POST":
-        print("POST DATA:", request.POST)
+        logger.info("POST DATA:", request.POST)
         # الحصول على معرف العميل من POST أو GET
         customer_param = request.POST.get("customer")
         customer = None
@@ -540,7 +544,7 @@ def order_create(request):
         )
 
         if form.is_valid():
-            print("Form is valid. Proceeding to save.")
+            logger.info("Form is valid. Proceeding to save.")
             try:
                 # Save order
                 # 1. إنشاء كائن الطلب بدون حفظه
@@ -587,13 +591,13 @@ def order_create(request):
 
                 # 5. معالجة المنتجات المحددة إن وجدت
                 selected_products_json = request.POST.get("selected_products", "")
-                print("selected_products_json:", selected_products_json)
+                logger.info("selected_products_json:", selected_products_json)
                 subtotal = 0
                 total_discount_for_items = 0
                 if selected_products_json:
                     try:
                         selected_products = json.loads(selected_products_json)
-                        print("selected_products:", selected_products)
+                        logger.info("selected_products:", selected_products)
                         for product_data in selected_products:
                             # تحسين معالجة القيم العشرية لحل مشكلة الاقتطاع في الهواتف المحمولة
                             from decimal import Decimal, InvalidOperation
@@ -602,7 +606,7 @@ def order_create(request):
                             try:
                                 quantity = Decimal(str(product_data["quantity"]))
                                 if quantity < 0:
-                                    print(f"تحذير: كمية سالبة تم تجاهلها: {quantity}")
+                                    logger.info(f"تحذير: كمية سالبة تم تجاهلها: {quantity}")
                                     continue
                             except (InvalidOperation, ValueError, TypeError) as e:
                                 print(
@@ -614,7 +618,7 @@ def order_create(request):
                             try:
                                 unit_price = Decimal(str(product_data["unit_price"]))
                                 if unit_price < 0:
-                                    print(f"تحذير: سعر سالب تم تجاهله: {unit_price}")
+                                    logger.info(f"تحذير: سعر سالب تم تجاهله: {unit_price}")
                                     continue
                             except (InvalidOperation, ValueError, TypeError) as e:
                                 print(
@@ -628,7 +632,7 @@ def order_create(request):
                                     str(product_data.get("discount_percentage", 0))
                                 )
                                 if discount_percentage < 0 or discount_percentage > 100:
-                                    print(
+                                    logger.info(
                                         f"تحذير: نسبة خصم غير صالحة: {discount_percentage}% - تم تعيينها إلى 0%"
                                     )
                                     discount_percentage = Decimal("0")
@@ -638,10 +642,9 @@ def order_create(request):
                                 )
                                 discount_percentage = Decimal("0")
 
-                            print(
+                            logger.info(
                                 f"إنشاء عنصر طلب: المنتج={product_data['product_id']}, الكمية={quantity}, السعر={unit_price}, الخصم={discount_percentage}%"
                             )
-
                             item = OrderItem.objects.create(
                                 order=order,
                                 product_id=product_data["product_id"],
@@ -651,7 +654,7 @@ def order_create(request):
                                 item_type=product_data.get("item_type", "product"),
                                 notes=product_data.get("notes", ""),
                             )
-                            print("تم إنشاء عنصر:", item)
+                            logger.info("تم إنشاء عنصر:", item)
                             # حساب المجموع قبل الخصم ومبلغ الخصم لكل عنصر بشكل منفصل
                             item_total = item.quantity * item.unit_price
                             item_discount = (
@@ -661,9 +664,9 @@ def order_create(request):
                             )
                             subtotal += item_total
                             total_discount_for_items += item_discount
-                            print("subtotal حتى الآن:", subtotal)
+                            logger.info("subtotal حتى الآن:", subtotal)
                     except Exception as e:
-                        print(f"Error creating order items: {e}")
+                        logger.debug(f"Error creating order items: {e}")
                 # أعد حساب الإجماليات باستخدام ميثود الموديل لضمان الاتساق
                 order.calculate_final_price(force_update=True)
                 order.save(update_fields=["final_price", "total_amount"])
@@ -712,8 +715,7 @@ def order_create(request):
                         except Exception:
                             pass
                 else:
-                    print("Formset errors:", formset.errors)
-
+                    logger.debug("Formset errors:", formset.errors)
                 # تم إزالة نظام إنشاء العقد الإلكتروني من النموذج التقليدي
                 # يرجى استخدام نظام الويزارد لإنشاء العقود الإلكترونية
                 messages.success(request, "تم إنشاء الطلب بنجاح!")
@@ -745,7 +747,7 @@ def order_create(request):
                     return redirect("orders:order_success", pk=order.pk)
 
             except Exception as e:
-                print("حدث خطأ أثناء حفظ الطلب:", e)
+                logger.debug("حدث خطأ أثناء حفظ الطلب:", e)
                 print(traceback.format_exc())
 
                 # إذا كان الطلب AJAX، أرجع JSON response
@@ -761,9 +763,8 @@ def order_create(request):
 
                 messages.error(request, f"حدث خطأ أثناء حفظ الطلب: {e}")
         else:
-            print("--- FORM IS INVALID ---")
-            print("Validation Errors:", form.errors)
-
+            logger.info("--- FORM IS INVALID ---")
+            logger.debug("Validation Errors:", form.errors)
             # إذا كان الطلب AJAX، أرجع JSON response
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return JsonResponse(
@@ -999,11 +1000,11 @@ def order_update(request, pk):
                         order.calculate_final_price(force_update=True)
                         order.save(update_fields=["final_price", "total_amount"])
                     except Exception as e:
-                        print(
+                        logger.debug(
                             f"Error in synchronous recalculation in order_update: {e}"
                         )
                 else:
-                    print("UPDATE - Formset errors:", formset.errors)
+                    logger.debug("UPDATE - Formset errors:", formset.errors)
                     messages.warning(
                         request, "تم تحديث الطلب ولكن هناك أخطاء في عناصر الطلب."
                     )
@@ -1055,11 +1056,11 @@ def order_update(request, pk):
                 return redirect("orders:order_detail", pk=order.pk)
 
             except Exception as e:
-                print(f"Error updating order: {e}")
+                logger.debug(f"Error updating order: {e}")
                 messages.error(request, f"حدث خطأ أثناء تحديث الطلب: {str(e)}")
         else:
-            print("--- UPDATE FORM IS INVALID ---")
-            print("Validation Errors:", form.errors)
+            logger.info("--- UPDATE FORM IS INVALID ---")
+            logger.debug("Validation Errors:", form.errors)
             messages.error(request, "يرجى تصحيح الأخطاء في النموذج.")
     else:
         # GET request - استخدام عميل الطلب الحالي
@@ -1228,7 +1229,18 @@ def salesperson_list(request):
         .prefetch_related("order_set")
     )
 
-    context = {"salespersons": salespersons, "title": "قائمة مندوبي المبيعات"}
+    # ✅ FIX H-2: إضافة Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(salespersons, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "salespersons": page_obj,
+        "page_obj": page_obj,
+        "is_paginated": page_obj.has_other_pages(),
+        "title": "قائمة مندوبي المبيعات",
+    }
 
     return render(request, "orders/salesperson_list.html", context)
 
@@ -2334,7 +2346,7 @@ def check_invoice_duplicate(request):
                             "order_number": existing_order.order_number,
                         }
                     )
-            except:
+            except Exception:
                 pass
 
         return JsonResponse({"is_duplicate": False, "message": ""})

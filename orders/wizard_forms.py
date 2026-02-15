@@ -578,7 +578,7 @@ class Step4InvoicePaymentForm(forms.ModelForm):
                         )
                 except ValidationError:
                     raise
-                except:
+                except Exception:
                     pass
 
         return invoice_number

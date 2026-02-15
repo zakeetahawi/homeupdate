@@ -109,52 +109,52 @@ def safe_read_excel(file_data):
     """
     قراءة ملف إكسل بطريقة آمنة تتجنب أخطاء extLst و PatternFill
     """
-    print("🔍 محاولة قراءة ملف الإكسل...")
+    logger.info("🔍 محاولة قراءة ملف الإكسل...")
     print(f"📊 حجم الملف: {len(file_data)} بايت")
 
     # الطريقة الأولى: openpyxl مع تجاهل التنسيقات
     try:
-        print("📈 محاولة القراءة بمحرك openpyxl مع تجاهل التنسيقات...")
+        logger.info("📈 محاولة القراءة بمحرك openpyxl مع تجاهل التنسيقات...")
         df = pd.read_excel(BytesIO(file_data), engine="openpyxl", keep_default_na=False)
-        print("✅ تم قراءة الملف بنجاح بمحرك openpyxl")
+        logger.info("✅ تم قراءة الملف بنجاح بمحرك openpyxl")
         return df
     except Exception as e:
         print(f"❌ فشل openpyxl: {str(e)}")
 
         # الطريقة الثانية: xlrd للملفات القديمة
         try:
-            print("📊 محاولة القراءة بمحرك xlrd...")
+            logger.info("📊 محاولة القراءة بمحرك xlrd...")
             df = pd.read_excel(BytesIO(file_data), engine="xlrd")
-            print("✅ تم قراءة الملف بنجاح بمحرك xlrd")
+            logger.info("✅ تم قراءة الملف بنجاح بمحرك xlrd")
             return df
         except Exception as e2:
             print(f"❌ فشل xlrd: {str(e2)}")
 
             # الطريقة الثالثة: بدون تحديد محرك
             try:
-                print("🔄 محاولة القراءة بدون تحديد محرك...")
+                logger.info("🔄 محاولة القراءة بدون تحديد محرك...")
                 df = pd.read_excel(BytesIO(file_data))
-                print("✅ تم قراءة الملف بنجاح بدون تحديد محرك")
+                logger.info("✅ تم قراءة الملف بنجاح بدون تحديد محرك")
                 return df
             except Exception as e3:
                 print(f"❌ فشل القراءة العامة: {str(e3)}")
 
                 # الطريقة الرابعة: قراءة كـ CSV
                 try:
-                    print("📄 محاولة القراءة كملف CSV...")
+                    logger.info("📄 محاولة القراءة كملف CSV...")
                     # تحويل البيانات إلى نص
                     import io
 
                     text_data = file_data.decode("utf-8", errors="ignore")
                     df = pd.read_csv(io.StringIO(text_data), sep="\t")
-                    print("✅ تم قراءة الملف بنجاح كملف CSV")
+                    logger.info("✅ تم قراءة الملف بنجاح كملف CSV")
                     return df
                 except Exception as e4:
                     print(f"❌ فشل القراءة كـ CSV: {str(e4)}")
 
                     # الطريقة الخامسة: محاولة مع xlrd مباشرة
                     try:
-                        print("📊 محاولة مع xlrd مباشرة...")
+                        logger.info("📊 محاولة مع xlrd مباشرة...")
                         # حفظ الملف مؤقتاً
                         import tempfile
 
@@ -185,15 +185,14 @@ def safe_read_excel(file_data):
                                 headers = data[0]
                                 rows = data[1:]
                                 df = pd.DataFrame(rows, columns=headers)
-                                print("✅ تم قراءة الملف بنجاح باستخدام xlrd مباشرة")
-
+                                logger.info("✅ تم قراءة الملف بنجاح باستخدام xlrd مباشرة")
                                 # تنظيف الملف المؤقت
                                 os.unlink(tmp_file_path)
                                 return df
                             else:
                                 raise Exception("الملف فارغ")
 
-                        except:
+                        except Exception:
                             # تنظيف الملف المؤقت
                             os.unlink(tmp_file_path)
                             raise Exception("فشل في قراءة الملف")
@@ -203,8 +202,7 @@ def safe_read_excel(file_data):
 
                         # الطريقة السادسة: إنشاء ملف جديد بسيط من البيانات
                         try:
-                            print("🆕 محاولة إنشاء ملف جديد بسيط...")
-
+                            logger.info("🆕 محاولة إنشاء ملف جديد بسيط...")
                             # محاولة استخراج البيانات من الملف المعقد
                             try:
                                 # محاولة قراءة مع openpyxl مع تجاهل كامل للتنسيقات
@@ -238,12 +236,12 @@ def safe_read_excel(file_data):
                                     headers = data[0]
                                     rows = data[1:]
                                     df = pd.DataFrame(rows, columns=headers)
-                                    print("✅ تم استخراج البيانات من الملف المعقد")
+                                    logger.info("✅ تم استخراج البيانات من الملف المعقد")
                                     return df
                                 else:
                                     raise Exception("لا توجد بيانات صحيحة")
 
-                            except:
+                            except Exception:
                                 # إنشاء DataFrame بسيط مع البيانات الأساسية
                                 data = {
                                     "اسم المنتج": ["منتج تجريبي"],
@@ -258,8 +256,8 @@ def safe_read_excel(file_data):
                                 }
 
                                 df = pd.DataFrame(data)
-                                print("✅ تم إنشاء ملف تجريبي بسيط")
-                                print(
+                                logger.info("✅ تم إنشاء ملف تجريبي بسيط")
+                                logger.info(
                                     "⚠️ تحذير: تم استخدام ملف تجريبي بسبب مشاكل في الملف الأصلي"
                                 )
                                 return df
@@ -439,7 +437,7 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
     
     def log_message(msg):
         """حفظ رسالة في الملف والطباعة"""
-        print(msg)
+        logger.info(msg)
         log_file.write(msg + '\n')
         log_file.flush()  # تأكد من الكتابة الفورية
 
@@ -549,29 +547,27 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                     material = get_field_value("الخامة", "")
                     width = get_field_value("العرض", "")
                     
-                    print(f"   📝 البيانات المقروءة: اسم={name}, فئة={category_name}, مستودع={warehouse_name}")
-                    print(f"   📝 وصف={description[:30] if description else 'فارغ'}, خامة={material}, عرض={width}")
-                    
+                    logger.info(f"   📝 البيانات المقروءة: اسم={name}, فئة={category_name}, مستودع={warehouse_name}")
+                    logger.info(f"   📝 وصف={description[:30] if description else 'فارغ'}, خامة={material}, عرض={width}")
                     # معالجة الحقول الرقمية بشكل آمن
                     price = None
                     price_value = get_field_value("السعر")
                     if price_value:
                         try:
                             price = float(price_value)
-                            print(f"   💵 السعر المقروء: {price}")
+                            logger.info(f"   💵 السعر المقروء: {price}")
                         except (ValueError, TypeError):
                             price = None
-                            print(f"   ⚠️ فشل تحويل السعر: {price_value}")
-
+                            logger.debug(f"   ⚠️ فشل تحويل السعر: {price_value}")
                     wholesale_price = None
                     wholesale_value = get_field_value("سعر الجملة")
                     if wholesale_value:
                         try:
                             wholesale_price = float(wholesale_value)
-                            print(f"   💰 سعر الجملة المقروء: {wholesale_price}")
+                            logger.info(f"   💰 سعر الجملة المقروء: {wholesale_price}")
                         except (ValueError, TypeError):
                             wholesale_price = None
-                            print(f"   ⚠️ فشل تحويل سعر الجملة: {wholesale_value}")
+                            logger.debug(f"   ⚠️ فشل تحويل سعر الجملة: {wholesale_value}")
                     else:
                         print(f"   💰 سعر الجملة: غير محدد (سيبقى كما هو)")
 
@@ -583,8 +579,7 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                             print(f"   📦 الكمية المقروءة: {quantity} (من '{quantity_value}')")
                         except (ValueError, TypeError):
                             quantity = None
-                            print(f"   ⚠️ فشل تحويل الكمية: {quantity_value}")
-
+                            logger.debug(f"   ⚠️ فشل تحويل الكمية: {quantity_value}")
                     minimum_stock = None
                     min_stock_value = get_field_value("الحد الأدنى")
                     if min_stock_value is not None:  # ✅ تغيير: نقبل حتى القيمة 0
@@ -593,17 +588,16 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                             print(f"   📊 الحد الأدنى المقروء: {minimum_stock} (من '{min_stock_value}')")
                         except (ValueError, TypeError):
                             minimum_stock = None
-                            print(f"   ⚠️ فشل تحويل الحد الأدنى: {min_stock_value}")
-
+                            logger.debug(f"   ⚠️ فشل تحويل الحد الأدنى: {min_stock_value}")
                     # العملة (فقط إذا كانت مكتوبة في الملف)
                     currency = get_field_value("العملة")
                     if currency:
                         if currency.upper() in ["EGP", "USD", "EUR", "SAR"]:
                             currency = currency.upper()
-                            print(f"   💰 العملة المقروءة: {currency}")
+                            logger.info(f"   💰 العملة المقروءة: {currency}")
                         else:
                             currency = None  # قيمة غير صالحة
-                            print(f"   ⚠️ عملة غير صالحة: {currency}")
+                            logger.info(f"   ⚠️ عملة غير صالحة: {currency}")
                     else:
                         currency = None  # لم يتم تحديد عملة
                         print(f"   💰 العملة: غير محددة (ستبقى كما هي)")
@@ -621,9 +615,9 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                             unit = unit_map.get(unit, None)
                         
                         if unit:
-                            print(f"   📏 الوحدة المقروءة: {unit}")
+                            logger.info(f"   📏 الوحدة المقروءة: {unit}")
                         else:
-                            print(f"   ⚠️ وحدة غير صالحة")
+                            logger.info(f"   ⚠️ وحدة غير صالحة")
                     else:
                         unit = None  # لم يتم تحديد وحدة
                         print(f"   📏 الوحدة: غير محددة (ستبقى كما هي)")
@@ -727,10 +721,8 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                         if updated_fields:
                             print(f"   🔄 تحديث {code}: {', '.join(updated_fields[:3])}" + (f" +{len(updated_fields)-3} أكثر" if len(updated_fields) > 3 else ""))
                         else:
-                            print(f"   ✅ {code}: لا توجد تغييرات في البيانات")
-                        
-                        print(f"   📊 ملخص التحديث: السعر={product.price}, الجملة={product.wholesale_price}, الحد الأدنى={product.minimum_stock}")
-
+                            logger.info(f"   ✅ {code}: لا توجد تغييرات في البيانات")
+                        logger.info(f"   📊 ملخص التحديث: السعر={product.price}, الجملة={product.wholesale_price}, الحد الأدنى={product.minimum_stock}")
                     except Product.DoesNotExist:
                         # ✅ 6. منتج جديد → التحقق من الحقول الإلزامية
                         required_fields = {
@@ -782,7 +774,7 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                     print(f"   🔍 فحص الكمية: quantity={quantity}, product={product.code if product else None}, warehouse={target_warehouse if 'target_warehouse' in locals() else 'غير محدد'}")
                     
                     if quantity is not None and quantity > 0 and product:
-                        print(f"   ✅ دخول قسم إضافة الكمية: {quantity}")
+                        logger.info(f"   ✅ دخول قسم إضافة الكمية: {quantity}")
                         # تحديد المستودع المناسب
                         target_warehouse = default_warehouse  # المستودع الافتراضي
 
@@ -803,7 +795,7 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                         # التأكد من وجود مستودع صالح
                         if not target_warehouse:
                             error_msg = "لا يمكن تحديد المستودع"
-                            print(f"   ❌ خطأ: {error_msg}")
+                            logger.debug(f"   ❌ خطأ: {error_msg}")
                             result["errors"].append(f"الصف {row_number}: {error_msg}")
                             errors_to_create.append(
                                 BulkUploadError(
@@ -851,8 +843,7 @@ def process_excel_upload(excel_file, default_warehouse, upload_mode, user):
                                     created_by=user,
                                     transaction_date=timezone.now(),
                                 )
-                                print(f"   ⚠️ تصفير رصيد {product.code} من {current_balance} في {target_warehouse.name}")
-
+                                logger.info(f"   ⚠️ تصفير رصيد {product.code} من {current_balance} في {target_warehouse.name}")
                         # إنشاء معاملة دخول بالكمية (إضافة في smart_update، استبدال في replace_quantity)
                         transaction = StockTransaction.objects.create(
                             product=product,
@@ -1044,7 +1035,7 @@ def process_stock_update(excel_file, warehouse, update_type, reason, user):
                     # التأكد من تحويل current_stock بشكل صحيح
                     try:
                         current_stock_decimal = Decimal(str(current_stock))
-                    except:
+                    except Exception:
                         current_stock_decimal = Decimal("0")
 
                     if update_type == "replace":

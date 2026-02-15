@@ -67,7 +67,7 @@
             applyConverter(input);
         });
         
-        console.log(`✅ Arabic Numbers Converter initialized on ${inputs.length} inputs`);
+        // console.log(`✅ Arabic Numbers Converter initialized on ${inputs.length} inputs`);
     }
 
     /**

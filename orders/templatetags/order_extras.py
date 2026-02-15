@@ -243,7 +243,7 @@ def get_status_badge(status, status_type="default", order=None):
                         selected_types = json.loads(val)
                     elif isinstance(val, list):
                         selected_types = val
-                except:
+                except Exception:
                     pass
 
             if "products" in selected_types:
@@ -317,7 +317,7 @@ def currency_format(amount):
                 str(amount).replace(",", "").replace(" ", "").strip() or 0
             )
             return f"{amount_float:,.2f} ر.س"
-        except:
+        except Exception:
             return f"{amount} ر.س"
 
 

@@ -283,7 +283,7 @@ class FastSyncService:
             try:
                 self._create_manufacturing_order_fast(mapped_data, main_order)
                 self.stats["manufacturing_orders_created"] += 1
-            except:
+            except Exception:
                 self.stats["manufacturing_orders_failed"] += 1
         else:
             self.stats["orders_skipped"] += 1
@@ -300,7 +300,7 @@ class FastSyncService:
             try:
                 self._create_inspection_fast(mapped_data, inspection_order)
                 self.stats["inspections_created"] += 1
-            except:
+            except Exception:
                 pass
 
     def _map_order_type_fast(self, order_type_value: str) -> str:
@@ -343,7 +343,7 @@ class FastSyncService:
             try:
                 dt = datetime.strptime(value.strip(), fmt)
                 return timezone.make_aware(dt)
-            except:
+            except Exception:
                 continue
 
         return None

@@ -29,7 +29,7 @@ def edit_tracking_report(request):
     period = request.GET.get("period", "30")  # آخر 30 يوم افتراضياً
     try:
         days = int(period)
-    except:
+    except Exception:
         days = 30
 
     start_date = timezone.now() - timedelta(days=days)

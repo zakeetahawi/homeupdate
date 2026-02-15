@@ -550,6 +550,9 @@ class ComplaintUpdate(models.Model):
         verbose_name = "تحديث شكوى"
         verbose_name_plural = "تحديثات الشكاوى"
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["complaint", "-created_at"], name="compupd_compl_crt_idx"),
+        ]
 
     UPDATE_TYPES = [
         ("status_change", "تغيير الحالة"),

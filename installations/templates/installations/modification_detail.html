@@ -141,7 +141,7 @@
                     </div>
                 </div>
                 <!-- أوامر التصنيع المرتبطة -->
-                {% if modification_request.manufacturingorder_set.exists %}
+                {% if modification_request.modification_manufacturing_orders.exists %}
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
                             <h6 class="m-0 font-weight-bold text-info">
@@ -162,7 +162,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% for order in modification_request.manufacturingorder_set.all %}
+                                        {% for order in modification_request.modification_manufacturing_orders.all %}
                                             <tr>
                                                 <td>{{ order.get_order_type_display }}</td>
                                                 <td>

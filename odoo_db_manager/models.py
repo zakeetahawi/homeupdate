@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 """
 نماذج إدارة قواعد البيانات على طراز أودو
 """
@@ -143,7 +147,7 @@ class Database(models.Model):
             env_file = os.path.join(BASE_DIR, ".env")
             # التحقق من وجود ملف .env
             if not os.path.exists(env_file):
-                print(f"ملف .env غير موجود في {env_file}")
+                logger.info(f"ملف .env غير موجود في {env_file}")
                 return False  # إنشاء نسخة احتياطية من ملف .env
             backup_file = os.path.join(BASE_DIR, f".env.backup.{int(time.time())}")
             try:
@@ -151,7 +155,7 @@ class Database(models.Model):
                     backup_file, "w", encoding="utf-8"
                 ) as dst:
                     dst.write(src.read())
-                print(f"تم إنشاء نسخة احتياطية من ملف .env في {backup_file}")
+                logger.info(f"تم إنشاء نسخة احتياطية من ملف .env في {backup_file}")
             except Exception as e:
                 print(f"حدث خطأ أثناء إنشاء نسخة احتياطية من ملف .env: {str(e)}")
             # قراءة محتوى ملف .env
@@ -245,7 +249,7 @@ class Database(models.Model):
             # كتابة المحتوى المحدث إلى ملف .env
             with open(env_file, "w", encoding="utf-8") as f:
                 f.writelines(new_lines)
-            print(f"تم تحديث ملف .env بنجاح")
+            logger.info(f"تم تحديث ملف .env بنجاح")
             return True
         except Exception as e:
             print(f"حدث خطأ أثناء تحديث ملف .env: {str(e)}")
@@ -279,7 +283,7 @@ class Database(models.Model):
             # كتابة المحتوى المحدث إلى ملف db_settings.json
             with open(settings_file, "w") as f:
                 json.dump(settings, f, indent=4)
-            print(f"تم تحديث ملف db_settings.json بنجاح")
+            logger.info(f"تم تحديث ملف db_settings.json بنجاح")
             return True
         except Exception as e:
             print(f"حدث خطأ أثناء تحديث ملف db_settings.json: {str(e)}")
@@ -312,33 +316,30 @@ class Database(models.Model):
     def activate(self):
         """تنشيط قاعدة البيانات"""
         try:
-            print(f"🔄 بدء تنشيط قاعدة البيانات: {self.name}")
-
+            logger.info(f"🔄 بدء تنشيط قاعدة البيانات: {self.name}")
             # تعطيل جميع قواعد البيانات الأخرى
-            print("📝 تعطيل قواعد البيانات الأخرى...")
+            logger.info("📝 تعطيل قواعد البيانات الأخرى...")
             Database.objects.exclude(pk=self.pk).update(is_active=False)
 
             # تنشيط قاعدة البيانات الحالية
-            print("✅ تنشيط قاعدة البيانات الحالية...")
+            logger.info("✅ تنشيط قاعدة البيانات الحالية...")
             self.is_active = True
             self.save()
 
             # تحديث ملف .env
-            print("📄 تحديث ملف .env...")
+            logger.info("📄 تحديث ملف .env...")
             env_updated = self.update_env_file()
-            print(f"نتيجة تحديث .env: {env_updated}")
-
+            logger.info(f"نتيجة تحديث .env: {env_updated}")
             # تحديث ملف db_settings.json
-            print("⚙️ تحديث ملف db_settings.json...")
+            logger.info("⚙️ تحديث ملف db_settings.json...")
             settings_updated = self.update_settings_file()
-            print(f"نتيجة تحديث settings: {settings_updated}")
-
+            logger.info(f"نتيجة تحديث settings: {settings_updated}")
             # التحقق من نجاح التحديث
             if env_updated and settings_updated:
-                print(f"✅ تم تنشيط قاعدة البيانات {self.name} بنجاح")
+                logger.info(f"✅ تم تنشيط قاعدة البيانات {self.name} بنجاح")
                 # محاولة تحديث إعدادات Django في الذاكرة
                 try:
-                    print("🔄 محاولة تحديث إعدادات Django في الذاكرة...")
+                    logger.info("🔄 محاولة تحديث إعدادات Django في الذاكرة...")
                     import importlib
 
                     from django.conf import settings
@@ -362,13 +363,13 @@ class Database(models.Model):
                         "TIME_ZONE": None,  # Django يحتاج هذا المفتاح
                         "OPTIONS": {},
                     }
-                    print(f"🔧 إعدادات قاعدة البيانات الجديدة: {db_config}")
+                    logger.info(f"🔧 إعدادات قاعدة البيانات الجديدة: {db_config}")
                     # إغلاق جميع الاتصالات الحالية أولاً
-                    print("🔌 إغلاق جميع الاتصالات الحالية...")
+                    logger.info("🔌 إغلاق جميع الاتصالات الحالية...")
                     connections.close_all()
 
                     # تحديث إعدادات قاعدة البيانات
-                    print("⚙️ تحديث إعدادات قاعدة البيانات في Django...")
+                    logger.info("⚙️ تحديث إعدادات قاعدة البيانات في Django...")
                     settings.DATABASES["default"] = db_config
 
                     # إعادة تعيين مدير الاتصالات لضمان استخدام الإعدادات الجديدة
@@ -377,7 +378,7 @@ class Database(models.Model):
                         del connections["default"]
 
                     # اختبار الاتصال الجديد
-                    print("🧪 اختبار الاتصال الجديد...")
+                    logger.info("🧪 اختبار الاتصال الجديد...")
                     from django.db import connection
 
                     with connection.cursor() as cursor:
@@ -385,17 +386,16 @@ class Database(models.Model):
                         result = cursor.fetchone()
                     current_db = result[0] if result else "غير معروف"
 
-                    print(
+                    logger.info(
                         f"✅ تم تحديث إعدادات Django في الذاكرة بنجاح - قاعدة البيانات الحالية: {current_db}"
                     )
-
                     if current_db == connection_info.get("NAME"):
-                        print("🎉 تم التبديل بنجاح إلى قاعدة البيانات الجديدة!")
+                        logger.info("🎉 تم التبديل بنجاح إلى قاعدة البيانات الجديدة!")
                         # تشغيل migrations للتأكد من وجود جميع الجداول المطلوبة
                         try:
-                            print("🔄 تشغيل migrations للتأكد من وجود جميع الجداول...")
+                            logger.info("🔄 تشغيل migrations للتأكد من وجود جميع الجداول...")
                             # self.run_migrations()  # مؤقتاً معطل
-                            print("✅ سيتم تشغيل migrations بعد إعادة التشغيل")
+                            logger.info("✅ سيتم تشغيل migrations بعد إعادة التشغيل")
                         except Exception as migration_error:
                             print(f"⚠️ خطأ في تشغيل migrations: {str(migration_error)}")
                             # رغم خطأ migrations، التبديل نجح
@@ -746,7 +746,7 @@ class RestoreProgress(models.Model):
                 if current_step:
                     self.current_step = current_step
                 self.save(update_fields=["status", "current_step", "updated_at"])
-            except:
+            except Exception:
                 pass  # إذا فشل حتى هذا، نتجاهل الخطأ
 
     def set_completed(self, result_data=None):

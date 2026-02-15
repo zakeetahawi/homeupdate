@@ -139,7 +139,7 @@ class ComplaintStatusUpdateView(View):
         try:
             data = json.loads(self.request.body)
             new_status = data.get("status")
-        except:
+        except Exception:
             new_status = None
 
         # Check user's complaint permissions
@@ -147,7 +147,7 @@ class ComplaintStatusUpdateView(View):
             permissions = user.complaint_permissions
             if not permissions.is_active:
                 return False
-        except:
+        except Exception:
             # If no permissions record, fall back to group-based permissions
             permissions = None
 
@@ -325,7 +325,7 @@ class ComplaintEscalationView(View):
                 permissions = user.complaint_permissions
                 if permissions.is_active and permissions.can_escalate_complaints:
                     return True
-        except:
+        except Exception:
             pass
 
         # 5. المسؤول المعين يمكنه التصعيد
@@ -468,7 +468,7 @@ class ComplaintAssignmentView(View):
                 # If user doesn't have assignment permission, check if they can at least assign their own
                 if complaint.assigned_to != user and complaint.created_by != user:
                     return False
-        except:
+        except Exception:
             # If no permissions record, fall back to group-based permissions
             pass
 
@@ -484,7 +484,7 @@ class ComplaintAssignmentView(View):
         try:
             if user.complaint_permissions.can_assign_complaints:
                 return True
-        except:
+        except Exception:
             pass
 
         # المشرفون يمكنهم التعيين

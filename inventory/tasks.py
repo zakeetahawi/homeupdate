@@ -123,7 +123,7 @@ def process_bulk_upload_async(
                         price = (
                             float(str(row["السعر"]).strip()) if row["السعر"] else 0.0
                         )
-                    except:
+                    except Exception:
                         price = 0.0
 
                     try:
@@ -132,7 +132,7 @@ def process_bulk_upload_async(
                             if pd.notna(row["الكمية"])
                             else 0.0
                         )
-                    except:
+                    except Exception:
                         quantity = 0.0
 
                     description = str(row.get("الوصف", "")).strip()
@@ -143,7 +143,7 @@ def process_bulk_upload_async(
                             if pd.notna(row.get("الحد الأدنى"))
                             else 0
                         )
-                    except:
+                    except Exception:
                         minimum_stock = 0
 
                     currency = str(row.get("العملة", "EGP")).strip().upper()

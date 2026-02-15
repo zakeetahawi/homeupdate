@@ -71,14 +71,14 @@ class BaseSortableModelAdmin(BaseModelAdmin):
                     try:
                         if hasattr(self.model, field_name):
                             sortable_fields.append(field_name)
-                    except:
+                    except Exception:
                         pass
             else:
                 # إضافة الحقل مباشرة إذا كان موجود في النموذج
                 try:
                     if hasattr(self.model, field_name):
                         sortable_fields.append(field_name)
-                except:
+                except Exception:
                     pass
 
         # الحصول على جميع حقول النموذج
@@ -145,7 +145,7 @@ def create_foreign_key_display(field_name, display_name, order_field=None):
             if related_obj:
                 return str(related_obj)
             return "-"
-        except:
+        except Exception:
             return "-"
 
     display_method.short_description = display_name

@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 from accounts.models import Branch
+from core.utils.general import clean_phone_number
 
 from .models import (
     Customer,
@@ -138,18 +139,8 @@ class CustomerForm(forms.ModelForm):
         return image
 
     def clean_phone(self):
-        phone = self.cleaned_data.get("phone")
+        phone = clean_phone_number(self.cleaned_data.get("phone"))
         if phone:
-            # تنظيف الرقم من المسافات والرموز
-            phone = re.sub(r"[^\d]", "", phone)
-
-            # فحص صيغة الرقم
-            if not re.match(r"^01[0-9]{9}$", phone):
-                raise ValidationError(
-                    _("رقم الهاتف يجب أن يكون 11 رقم ويبدأ بـ 01 (مثال: 01234567890)"),
-                    code="invalid_phone_format",
-                )
-
             # فحص التكرار
             qs = Customer.objects.filter(phone=phone)
             if self.instance.pk:
@@ -171,20 +162,8 @@ class CustomerForm(forms.ModelForm):
         return phone
 
     def clean_phone2(self):
-        phone2 = self.cleaned_data.get("phone2")
+        phone2 = clean_phone_number(self.cleaned_data.get("phone2"))
         if phone2:
-            # تنظيف الرقم من المسافات والرموز
-            phone2 = re.sub(r"[^\d]", "", phone2)
-
-            # فحص صيغة الرقم
-            if not re.match(r"^01[0-9]{9}$", phone2):
-                raise ValidationError(
-                    _(
-                        "رقم الهاتف الثاني يجب أن يكون 11 رقم ويبدأ بـ 01 (مثال: 01234567890)"
-                    ),
-                    code="invalid_phone2_format",
-                )
-
             # فحص التكرار
             qs = Customer.objects.filter(phone2=phone2)
             if self.instance.pk:
@@ -328,16 +307,7 @@ class CustomerResponsibleForm(forms.ModelForm):
         }
 
     def clean_phone(self):
-        phone = self.cleaned_data.get("phone")
-        if phone:
-            # تنظيف الرقم من المسافات والرموز
-            phone = re.sub(r"[^\d]", "", phone)
-
-            # فحص صيغة الرقم
-            if not re.match(r"^01[0-9]{9}$", phone):
-                raise ValidationError(
-                    _("رقم الهاتف يجب أن يكون 11 رقم ويبدأ بـ 01 (مثال: 01234567890)")
-                )
+        phone = clean_phone_number(self.cleaned_data.get("phone"))
         return phone
 
 

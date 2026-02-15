@@ -84,7 +84,7 @@ def export_bank_qr_pdf(request):
             pdf.setFont("Arabic", 12)
         else:
             pdf.setFont("Helvetica", 12)
-    except:
+    except Exception:
         pdf.setFont("Helvetica", 12)
 
     y_position = height - 2 * cm
@@ -103,7 +103,7 @@ def export_bank_qr_pdf(request):
         # معلومات البنك
         try:
             pdf.setFont("Arabic", 12)
-        except:
+        except Exception:
             pdf.setFont("Helvetica", 12)
 
         pdf.drawString(3 * cm, y_position, f"Bank: {bank.bank_name}")
@@ -161,7 +161,7 @@ def export_bank_qr_pdf(request):
             y_position = height - 2 * cm
             try:
                 pdf.setFont("Arabic", 12)
-            except:
+            except Exception:
                 pdf.setFont("Helvetica", 12)
 
     # إنهاء PDF

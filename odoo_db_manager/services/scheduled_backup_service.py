@@ -246,7 +246,7 @@ class ScheduledBackupService:
         """خاصية للتوافق مع الكود القديم - ترجع المجدول أو None"""
         try:
             return get_scheduler()
-        except:
+        except Exception:
             return None
 
     # تم نقل دوال إنشاء النسخ الاحتياطية إلى دوال منفصلة لتجنب مشاكل التسلسل

@@ -112,7 +112,7 @@ def smart_update_product(
                     try:
                         product.wholesale_price = Decimal(str(ws_price))
                         update_fields_legacy.append("wholesale_price")
-                    except:
+                    except Exception:
                         pass
 
                 # تحديث الفئة (فقط إذا كانت موجودة)
@@ -134,7 +134,7 @@ def smart_update_product(
                     try:
                         product.minimum_stock = int(float(str(min_stock)))
                         update_fields_legacy.append("minimum_stock")
-                    except:
+                    except Exception:
                         pass
 
                 # تحديث العملة (فقط إذا كانت ممتلئة)
@@ -307,7 +307,7 @@ def smart_update_product(
                             if base_product.minimum_stock != min_stock_int:
                                 base_product.minimum_stock = min_stock_int
                                 update_fields.append("minimum_stock")
-                        except:
+                        except Exception:
                             pass
 
                     if update_fields:
