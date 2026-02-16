@@ -150,20 +150,81 @@ class SoftDeleteAdminMixin:
 
         deleted_count = 0
         for obj in queryset:
-            if hasattr(obj, "hard_delete"):
-                obj.hard_delete()
-                deleted_count += 1
-            else:
-                # Fallback if hard_delete not present but inherited standard delete
-                obj.delete()  # CAUTION: If obj.delete is soft delete, this is loop!
-                # But SoftDeleteMixin.delete() checks is_deleted.
-                # If we want REAL DB delete, we need super().delete() but we can't call super() on instance here easily.
-                # SoftDeleteMixin MUST have hard_delete().
-                pass
+            try:
+                from django.db import transaction as db_transaction
+                with db_transaction.atomic():
+                    self._hard_delete_cascade(obj)
+                    deleted_count += 1
+            except Exception as e:
+                self.message_user(
+                    request, _(f"خطأ في حذف {obj}: {e}"), messages.ERROR
+                )
 
         self.message_user(
             request, _(f"تم حذف {deleted_count} عنصر بشكل نهائي."), messages.WARNING
         )
+
+    @staticmethod
+    def _hard_delete_cascade(obj):
+        """
+        حذف نهائي متسلسل: يحذف العنصر وكل العلاقات المرتبطة من قاعدة البيانات.
+        يعطّل فحص FK مؤقتاً ثم يحذف كل شيء بأمان.
+        """
+        from django.db import connection
+
+        # جمع كل الكائنات المرتبطة للحذف (من الأعمق للأعلى)
+        to_delete = []
+        SoftDeleteAdminMixin._collect_for_hard_delete(obj, to_delete, set())
+
+        with connection.cursor() as cursor:
+            # تعطيل فحص المفاتيح الأجنبية مؤقتاً
+            if connection.vendor == 'mysql':
+                cursor.execute('SET FOREIGN_KEY_CHECKS = 0')
+            elif connection.vendor == 'postgresql':
+                cursor.execute('SET CONSTRAINTS ALL DEFERRED')
+
+            try:
+                # حذف من الأعمق للأعلى
+                for del_obj in to_delete:
+                    table = del_obj._meta.db_table
+                    pk_col = del_obj._meta.pk.column
+                    cursor.execute(
+                        f'DELETE FROM {connection.ops.quote_name(table)} '
+                        f'WHERE {connection.ops.quote_name(pk_col)} = %s',
+                        [del_obj.pk]
+                    )
+            finally:
+                # إعادة تفعيل فحص المفاتيح الأجنبية
+                if connection.vendor == 'mysql':
+                    cursor.execute('SET FOREIGN_KEY_CHECKS = 1')
+
+    @staticmethod
+    def _collect_for_hard_delete(obj, to_delete, visited):
+        """
+        جمع العنصر وكل العلاقات المرتبطة به بشكل متسلسل.
+        يبني قائمة مرتبة من الأعمق (الأبناء) للأعلى (الأب).
+        """
+        obj_key = (type(obj).__name__, obj.pk)
+        if obj_key in visited:
+            return
+        visited.add(obj_key)
+
+        # أولاً: نجمع الأبناء (العلاقات المرتبطة)
+        for related in obj._meta.related_objects:
+            accessor = related.get_accessor_name()
+            if not hasattr(obj, accessor):
+                continue
+            try:
+                related_model = related.related_model
+                manager = getattr(related_model, 'all_objects', related_model.objects)
+                related_objs = list(manager.filter(**{related.field.name: obj}))
+                for related_obj in related_objs:
+                    SoftDeleteAdminMixin._collect_for_hard_delete(related_obj, to_delete, visited)
+            except Exception:
+                continue
+
+        # ثانياً: نضيف العنصر نفسه (بعد أبنائه)
+        to_delete.append(obj)
 
     def get_actions(self, request):
         actions = super().get_actions(request)

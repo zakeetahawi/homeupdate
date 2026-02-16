@@ -360,6 +360,7 @@ class SecurityEventAdmin(admin.ModelAdmin):
 class RecycleBinAdmin(admin.ModelAdmin):
     """
     Global Recycle Bin Dashboard - عرض جميع العناصر المحذوفة من جميع الأقسام
+    سلة محذوفات مركزية تعرض كل العناصر المحذوفة مع العلاقات المرتبطة بها
     """
 
     def has_add_permission(self, request):
@@ -372,23 +373,228 @@ class RecycleBinAdmin(admin.ModelAdmin):
         return False
 
     def get_queryset(self, request):
-        """
-        Return empty queryset since this is an unmanaged model.
-        We don't want Django to query the database.
-        """
         return RecycleBin.objects.none()
+
+    def _get_all_soft_delete_models(self):
+        """
+        اكتشاف جميع الموديلات التي تستخدم SoftDeleteMixin تلقائياً
+        """
+        from django.apps import apps
+        from core.soft_delete import SoftDeleteMixin
+
+        soft_delete_models = []
+        for model in apps.get_models():
+            if issubclass(model, SoftDeleteMixin) and not model._meta.abstract:
+                soft_delete_models.append(model)
+        return soft_delete_models
+
+    def _get_admin_url(self, model):
+        """Get admin changelist URL for a model with is_deleted filter."""
+        from django.urls import reverse, NoReverseMatch
+        try:
+            app_label = model._meta.app_label
+            model_name = model._meta.model_name
+            url = reverse(f"admin:{app_label}_{model_name}_changelist")
+            return url + "?is_deleted__exact=1"
+        except NoReverseMatch:
+            return None
+
+    def _get_model_display_info(self, model):
+        """Get display metadata for a model."""
+        APP_LABELS = {
+            'orders': 'الطلبات',
+            'customers': 'العملاء',
+            'inventory': 'المخزون',
+            'manufacturing': 'التصنيع',
+            'installations': 'التركيبات',
+            'cutting': 'القص',
+            'inspections': 'المعاينات',
+        }
+        app_label = model._meta.app_label
+        return {
+            'app_label': app_label,
+            'app_label_ar': APP_LABELS.get(app_label, app_label),
+            'model_name': model._meta.model_name,
+            'verbose_name': str(model._meta.verbose_name),
+            'verbose_name_plural': str(model._meta.verbose_name_plural),
+        }
+
+    def _get_deleted_items_detail(self, model, max_items=50):
+        """
+        Get deleted items with their related deleted children.
+        Returns list of dicts with item info + related items.
+        """
+        from core.soft_delete import SoftDeleteMixin
+
+        deleted_qs = model.all_objects.filter(is_deleted=True).select_related()
+        if hasattr(model, 'deleted_by'):
+            deleted_qs = deleted_qs.select_related('deleted_by')
+
+        items = []
+        for obj in deleted_qs[:max_items]:
+            item = {
+                'pk': obj.pk,
+                'str': str(obj),
+                'deleted_at': getattr(obj, 'deleted_at', None),
+                'deleted_by': str(getattr(obj, 'deleted_by', None) or ''),
+                'related': [],
+            }
+
+            # Find related deleted objects
+            for related in model._meta.related_objects:
+                accessor = related.get_accessor_name()
+                if not hasattr(obj, accessor):
+                    continue
+                try:
+                    related_model = related.related_model
+                    if not issubclass(related_model, SoftDeleteMixin):
+                        continue
+
+                    related_manager = getattr(obj, accessor)
+                    if hasattr(related_model, 'all_objects'):
+                        related_deleted = related_model.all_objects.filter(
+                            **{related.field.name: obj},
+                            is_deleted=True,
+                        )
+                    else:
+                        continue
+
+                    count = related_deleted.count()
+                    if count > 0:
+                        item['related'].append({
+                            'verbose_name_plural': str(related_model._meta.verbose_name_plural),
+                            'count': count,
+                            'items': [
+                                {'pk': r.pk, 'str': str(r)}
+                                for r in related_deleted[:10]
+                            ],
+                        })
+                except Exception:
+                    continue
+
+            items.append(item)
+        return items
+
+    def _handle_restore(self, request):
+        """Handle restore action from POST."""
+        from django.apps import apps
+        from django.contrib import messages as msg
+
+        app_label = request.POST.get('app_label')
+        model_name = request.POST.get('model_name')
+        pk = request.POST.get('pk')
+        cascade = request.POST.get('cascade', '') == '1'
+
+        if not all([app_label, model_name, pk]):
+            msg.error(request, 'بيانات غير صحيحة')
+            return
+
+        try:
+            model = apps.get_model(app_label, model_name)
+            obj = model.all_objects.get(pk=pk)
+            obj.restore(cascade=cascade)
+            label = 'متسلسلة ' if cascade else ''
+            msg.success(request, f'تمت الاستعادة {label}بنجاح: {obj}')
+        except Exception as e:
+            msg.error(request, f'خطأ في الاستعادة: {e}')
+
+    def _handle_hard_delete(self, request):
+        """Handle permanent delete action from POST.
+        يحذف العنصر نهائياً مع معالجة العلاقات المحمية (PROTECT) تلقائياً.
+        """
+        from django.apps import apps
+        from django.contrib import messages as msg
+        from django.db import transaction
+
+        if not request.user.is_superuser:
+            msg.error(request, 'الحذف النهائي متاح للمدير العام فقط')
+            return
+
+        app_label = request.POST.get('app_label')
+        model_name = request.POST.get('model_name')
+        pk = request.POST.get('pk')
+
+        if not all([app_label, model_name, pk]):
+            msg.error(request, 'بيانات غير صحيحة')
+            return
+
+        try:
+            model = apps.get_model(app_label, model_name)
+            obj = model.all_objects.get(pk=pk)
+            name = str(obj)
+
+            with transaction.atomic():
+                from core.admin_mixins import SoftDeleteAdminMixin
+                SoftDeleteAdminMixin._hard_delete_cascade(obj)
+
+            msg.success(request, f'تم الحذف النهائي بنجاح: {name}')
+        except Exception as e:
+            msg.error(request, f'خطأ في الحذف النهائي: {e}')
 
     def changelist_view(self, request, extra_context=None):
         """
-        Redirect to the Deleted Orders list view.
-        The user prefers a table view of deleted orders to manage cascade deletions.
+        سلة المحذوفات المركزية - تعرض كل العناصر المحذوفة من جميع الأقسام
+        مع عرض هرمي للعلاقات المرتبطة
         """
         from django.shortcuts import redirect
-        from django.urls import reverse
 
-        # Redirect to Order changelist with is_deleted=True filter
-        url = reverse("admin:orders_order_changelist") + "?is_deleted__exact=1"
-        return redirect(url)
+        # Handle POST actions (restore / hard delete)
+        if request.method == 'POST':
+            action = request.POST.get('recycle_action')
+            if action == 'restore':
+                self._handle_restore(request)
+            elif action == 'hard_delete':
+                self._handle_hard_delete(request)
+            return redirect(request.get_full_path())
+
+        extra_context = extra_context or {}
+
+        # Define primary models (top-level entities shown first)
+        PRIMARY_MODELS = ['Customer', 'Order', 'Inspection']
+
+        all_models = self._get_all_soft_delete_models()
+
+        # Categorize: primary models vs secondary (related) models
+        categories = []  # list of {model_info, count, items, url, is_primary}
+        total_deleted = 0
+
+        for model in all_models:
+            try:
+                count = model.all_objects.filter(is_deleted=True).count()
+            except Exception:
+                count = 0
+
+            if count == 0:
+                continue
+
+            total_deleted += count
+            info = self._get_model_display_info(model)
+            url = self._get_admin_url(model)
+            is_primary = model.__name__ in PRIMARY_MODELS
+
+            # Get detailed items for primary models, summary for secondary
+            if is_primary:
+                items = self._get_deleted_items_detail(model, max_items=50)
+            else:
+                items = self._get_deleted_items_detail(model, max_items=20)
+
+            categories.append({
+                'model': model,
+                'info': info,
+                'count': count,
+                'items': items,
+                'url': url,
+                'is_primary': is_primary,
+            })
+
+        # Sort: primary first, then by count descending
+        categories.sort(key=lambda c: (not c['is_primary'], -c['count']))
+
+        extra_context['categories'] = categories
+        extra_context['total_deleted'] = total_deleted
+        extra_context['title'] = 'سلة المحذوفات المركزية'
+
+        return super().changelist_view(request, extra_context)
 
 
 # تخصيص عنوان Admin

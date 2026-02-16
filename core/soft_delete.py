@@ -57,13 +57,23 @@ class SoftDeleteMixin(models.Model):
         Soft delete the object.
         Renames unique fields to allow reuse of the identifier.
         Cascades to related objects if cascade=True.
-        Optimized for performance with bulk operations.
 
         Args:
-            deleted_by_user: User instance who performed the deletion (optional)
+            deleted_by_user: User instance who performed the deletion (optional).
+                             If not provided, auto-detects from CurrentUserMiddleware.
         """
         if self.is_deleted:
             return  # Already deleted
+
+        # Auto-detect current user if not explicitly provided
+        if deleted_by_user is None:
+            try:
+                from accounts.middleware.current_user import get_current_user
+                current_user = get_current_user()
+                if current_user and hasattr(current_user, 'pk') and current_user.pk:
+                    deleted_by_user = current_user
+            except Exception:
+                pass
 
         with transaction.atomic():
             deletion_time = timezone.now()

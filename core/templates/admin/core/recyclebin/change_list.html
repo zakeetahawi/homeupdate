@@ -1,102 +1,288 @@
-{% extends "admin/change_list.html" %}
+{% extends "admin/base_site.html" %}
 {% load i18n static %}
+
+{% block title %}سلة المحذوفات المركزية{% endblock %}
+{% block content_title %}<h1>🗑️ سلة المحذوفات المركزية</h1>{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  .recycle-container { max-width: 1200px; margin: 0 auto; }
+  .recycle-header {
+    background: linear-gradient(135deg, #dc3545 0%, #a71d2a 100%);
+    color: #fff; padding: 20px 25px; border-radius: 10px 10px 0 0;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 0;
+  }
+  .recycle-header h2 { margin: 0; font-size: 22px; }
+  .total-badge {
+    background: rgba(255,255,255,.2); padding: 8px 20px; border-radius: 20px;
+    font-size: 16px; font-weight: bold;
+  }
+  .category-card {
+    background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+    margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.04);
+    overflow: hidden;
+  }
+  .category-card.primary { border-right: 4px solid #dc3545; }
+  .category-card.secondary { border-right: 4px solid #6c757d; }
+  .category-header {
+    padding: 14px 20px; cursor: pointer; display: flex;
+    justify-content: space-between; align-items: center;
+    background: #f8f9fa; border-bottom: 1px solid #eee;
+    transition: background .2s;
+  }
+  .category-header:hover { background: #eef1f5; }
+  .category-title { font-size: 16px; font-weight: bold; color: #333; display: flex; align-items: center; gap: 10px; }
+  .category-title .app-badge {
+    font-size: 11px; color: #888; background: #e9ecef;
+    padding: 2px 8px; border-radius: 10px; font-weight: normal;
+  }
+  .category-count {
+    background: #dc3545; color: #fff; padding: 4px 12px;
+    border-radius: 12px; font-weight: bold; font-size: 13px;
+    min-width: 30px; text-align: center;
+  }
+  .category-body { padding: 0; display: none; }
+  .category-body.open { display: block; }
+  .item-row {
+    padding: 12px 20px; border-bottom: 1px solid #f0f0f0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    transition: background .15s;
+  }
+  .item-row:hover { background: #fafbfc; }
+  .item-row:last-child { border-bottom: none; }
+  .item-info { flex: 1; }
+  .item-name { font-weight: 600; color: #333; font-size: 14px; margin-bottom: 4px; }
+  .item-meta { font-size: 12px; color: #888; }
+  .item-meta span { margin-left: 15px; }
+  .item-related {
+    margin-top: 8px; padding: 8px 12px; background: #fff3cd;
+    border-radius: 6px; border-right: 3px solid #ffc107;
+  }
+  .item-related-title { font-size: 12px; font-weight: bold; color: #856404; margin-bottom: 4px; }
+  .related-group { font-size: 12px; color: #666; margin-bottom: 3px; padding-right: 10px; }
+  .related-group .related-badge {
+    background: #ffc107; color: #333; padding: 1px 6px;
+    border-radius: 8px; font-size: 11px; font-weight: bold;
+  }
+  .related-items-list { font-size: 11px; color: #999; padding-right: 15px; margin-top: 2px; }
+  .item-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: flex-start; }
+  .btn-action {
+    border: none; padding: 6px 12px; border-radius: 5px;
+    font-size: 12px; cursor: pointer; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 4px;
+    transition: all .2s;
+  }
+  .btn-restore { background: #28a745; color: #fff; }
+  .btn-restore:hover { background: #218838; }
+  .btn-cascade-restore { background: #17a2b8; color: #fff; }
+  .btn-cascade-restore:hover { background: #138496; }
+  .btn-hard-delete { background: #dc3545; color: #fff; }
+  .btn-hard-delete:hover { background: #c82333; }
+  .btn-view { background: #fff; color: #333; text-decoration: none; padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: 600; border: 2px solid #6c757d; }
+  .btn-view:hover { background: #6c757d; color: #fff; }
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: #999;
+    background: #fff; border-radius: 10px; border: 1px solid #e0e0e0;
+  }
+  .empty-state i { font-size: 48px; opacity: .3; display: block; margin-bottom: 15px; }
+  .toggle-arrow { transition: transform .3s; display: inline-block; margin-left: 8px; }
+  .toggle-arrow.open { transform: rotate(90deg); }
+
+  /* Hide default Django admin elements */
+  #changelist-filter, #changelist-form, .paginator, .actions, .object-tools { display: none !important; }
+  #content-main { padding: 0 !important; }
+  #content { padding: 20px; }
+</style>
+{% endblock %}
+
 {% block content %}
-    <div class="module" id="changelist">
-        <div class="results">
-            <div style="padding: 15px;
-                        background-color: #f8f9fa;
-                        border-bottom: 1px solid #dee2e6;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center">
-                <h1 style="margin: 0; font-size: 18px; color: #333;">
-                    <i class="fas fa-trash-restore"
-                       style="margin-left: 10px;
-                              color: #dc3545"></i>
-                    سلة المحذوفات العامة
-                </h1>
-                <div style="font-weight: bold;">
-                    الإجمالي: <span style="color: #dc3545;">{{ total_deleted|default:0 }}</span>
-                </div>
-            </div>
-            <table id="result_list"
-                   class="table table-striped"
-                   style="width: 100%;
-                          border-collapse: collapse">
-                <thead>
-                    <tr style="background-color: #ffffff; border-bottom: 2px solid #eaeaea;">
-                        <th scope="col" style="padding: 12px; text-align: right; width: 40%;">نوع العنصر</th>
-                        <th scope="col" style="padding: 12px; text-align: center; width: 20%;">عدد المحذوفات</th>
-                        <th scope="col" style="padding: 12px; text-align: center; width: 40%;">الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in deleted_items %}
-                        <tr style="border-bottom: 1px solid #f0f0f0;">
-                            <td style="padding: 12px; vertical-align: middle;">
-                                <a href="{{ item.url|default:'#' }}"
-                                   style="font-weight: bold;
-                                          font-size: 14px;
-                                          text-decoration: none;
-                                          color: #444">{{ item.verbose_name_plural }}</a>
-                                <span style="color: #888; font-size: 12px; margin-right: 5px;">({{ item.app_label }})</span>
-                            </td>
-                            <td style="padding: 12px; text-align: center; vertical-align: middle;">
-                                <span style="background: #dc3545;
-                                             color: white;
-                                             padding: 4px 10px;
-                                             border-radius: 12px;
-                                             font-weight: bold;
-                                             font-size: 12px">{{ item.count }}</span>
-                            </td>
-                            <td style="padding: 12px; text-align: center; vertical-align: middle;">
-                                {% if item.url %}
-                                    <a href="{{ item.url }}"
-                                       class="button"
-                                       style="background-color: #4e73df;
-                                              color: white;
-                                              padding: 6px 15px;
-                                              text-decoration: none;
-                                              border-radius: 4px;
-                                              font-size: 13px">
-                                        <i class="fas fa-eye"></i> عرض
-                                    </a>
-                                {% else %}
-                                    <span style="color: #999; font-size: 12px;">غير متاح</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="3" style="text-align: center; padding: 40px; color: #666;">
-                                <div style="font-size: 30px; margin-bottom: 10px; opacity: 0.2;">
-                                    <i class="fas fa-check-circle"></i>
-                                </div>
-                                لا توجد عناصر محذوفة
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+<div class="recycle-container">
+  <!-- Header -->
+  <div class="recycle-header">
+    <h2><i class="fas fa-trash-restore" style="margin-left:8px"></i> سلة المحذوفات المركزية</h2>
+    <div class="total-badge">
+      الإجمالي: {{ total_deleted|default:0 }} عنصر محذوف
     </div>
-    <style>
-/* Hide default Django admin elements */
-#changelist-filter,
-#changelist-form,
-.paginator,
-.actions {
-    display: none !important;
+  </div>
+
+  <div style="background:#fff;padding:12px 20px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:13px;color:#666">
+      <i class="fas fa-info-circle" style="color:#17a2b8;margin-left:5px"></i>
+      اضغط على أي قسم لعرض العناصر المحذوفة فيه • يمكنك الاستعادة أو الحذف النهائي لكل عنصر
+    </div>
+    <div>
+      <button onclick="expandAll()" class="btn-action" style="background:#6c757d;color:#fff">
+        <i class="fas fa-expand-arrows-alt"></i> فتح الكل
+      </button>
+      <button onclick="collapseAll()" class="btn-action" style="background:#6c757d;color:#fff">
+        <i class="fas fa-compress-arrows-alt"></i> إغلاق الكل
+      </button>
+    </div>
+  </div>
+
+  {% if categories %}
+    {% for cat in categories %}
+    <div class="category-card {{ cat.is_primary|yesno:'primary,secondary' }}">
+      <!-- Category Header -->
+      <div class="category-header" onclick="toggleCategory('cat-{{ forloop.counter }}')">
+        <div class="category-title">
+          <span class="toggle-arrow" id="arrow-cat-{{ forloop.counter }}">◂</span>
+          {{ cat.info.verbose_name_plural }}
+          <span class="app-badge">{{ cat.info.app_label_ar }}</span>
+          {% if cat.is_primary %}
+            <span style="font-size:11px;color:#dc3545;font-weight:normal">★ رئيسي</span>
+          {% endif %}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          {% if cat.url %}
+            <a href="{{ cat.url }}" class="btn-view" onclick="event.stopPropagation()">
+              <i class="fas fa-external-link-alt"></i> عرض في الأدمن
+            </a>
+          {% endif %}
+          <div class="category-count">{{ cat.count }}</div>
+        </div>
+      </div>
+
+      <!-- Category Body - Items List -->
+      <div class="category-body" id="cat-{{ forloop.counter }}">
+        {% for item in cat.items %}
+        <div class="item-row">
+          <div class="item-info">
+            <div class="item-name">
+              #{{ item.pk }} — {{ item.str }}
+            </div>
+            <div class="item-meta">
+              {% if item.deleted_at %}
+                <span><i class="fas fa-clock"></i> {{ item.deleted_at|date:"Y/m/d H:i" }}</span>
+              {% endif %}
+              {% if item.deleted_by %}
+                <span><i class="fas fa-user"></i> {{ item.deleted_by }}</span>
+              {% endif %}
+            </div>
+
+            {% if item.related %}
+            <div class="item-related">
+              <div class="item-related-title">
+                <i class="fas fa-project-diagram"></i> عناصر مرتبطة محذوفة:
+              </div>
+              {% for rel in item.related %}
+              <div class="related-group">
+                <span class="related-badge">{{ rel.count }}</span>
+                {{ rel.verbose_name_plural }}
+                {% if rel.items %}
+                <div class="related-items-list">
+                  {% for ri in rel.items %}
+                    • {{ ri.str }}{% if not forloop.last %}<br>{% endif %}
+                  {% endfor %}
+                  {% if rel.count > 10 %}
+                    <br><em>... و {{ rel.count|add:"-10" }} عناصر أخرى</em>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="item-actions">
+            <!-- Restore -->
+            <form method="post" style="display:inline">
+              {% csrf_token %}
+              <input type="hidden" name="recycle_action" value="restore">
+              <input type="hidden" name="app_label" value="{{ cat.info.app_label }}">
+              <input type="hidden" name="model_name" value="{{ cat.info.model_name }}">
+              <input type="hidden" name="pk" value="{{ item.pk }}">
+              <button type="submit" class="btn-action btn-restore" title="استعادة">
+                <i class="fas fa-undo"></i> استعادة
+              </button>
+            </form>
+
+            {% if item.related %}
+            <!-- Cascade Restore -->
+            <form method="post" style="display:inline">
+              {% csrf_token %}
+              <input type="hidden" name="recycle_action" value="restore">
+              <input type="hidden" name="app_label" value="{{ cat.info.app_label }}">
+              <input type="hidden" name="model_name" value="{{ cat.info.model_name }}">
+              <input type="hidden" name="pk" value="{{ item.pk }}">
+              <input type="hidden" name="cascade" value="1">
+              <button type="submit" class="btn-action btn-cascade-restore" title="استعادة متسلسلة مع العناصر المرتبطة">
+                <i class="fas fa-redo"></i> استعادة متسلسلة
+              </button>
+            </form>
+            {% endif %}
+
+            <!-- Hard Delete (superuser only) -->
+            {% if request.user.is_superuser %}
+            <form method="post" style="display:inline" onsubmit="return confirm('⚠️ هل أنت متأكد من الحذف النهائي؟ لا يمكن التراجع عن هذه العملية!')">
+              {% csrf_token %}
+              <input type="hidden" name="recycle_action" value="hard_delete">
+              <input type="hidden" name="app_label" value="{{ cat.info.app_label }}">
+              <input type="hidden" name="model_name" value="{{ cat.info.model_name }}">
+              <input type="hidden" name="pk" value="{{ item.pk }}">
+              <button type="submit" class="btn-action btn-hard-delete" title="حذف نهائي">
+                <i class="fas fa-times"></i> حذف نهائي
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+
+        {% if cat.count > cat.items|length %}
+        <div style="padding:12px 20px;text-align:center;background:#f8f9fa;border-top:1px solid #eee">
+          <a href="{{ cat.url }}" style="color:#4e73df;font-size:13px;font-weight:500">
+            <i class="fas fa-arrow-left"></i>
+            عرض الكل ({{ cat.count }}) في صفحة الأدمن
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <i class="fas fa-check-circle"></i>
+      <h3>لا توجد عناصر محذوفة</h3>
+      <p>سلة المحذوفات فارغة — جميع البيانات نشطة</p>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+function toggleCategory(id) {
+  const body = document.getElementById(id);
+  const arrow = document.getElementById('arrow-' + id);
+  if (body.classList.contains('open')) {
+    body.classList.remove('open');
+    arrow.classList.remove('open');
+  } else {
+    body.classList.add('open');
+    arrow.classList.add('open');
+  }
 }
 
-/* Adjust content area */
-#content-main {
-    padding: 0 !important;
+function expandAll() {
+  document.querySelectorAll('.category-body').forEach(el => el.classList.add('open'));
+  document.querySelectorAll('.toggle-arrow').forEach(el => el.classList.add('open'));
 }
 
-/* Custom Table Styles */
-table tr:hover {
-    background-color: #f8f9fa;
+function collapseAll() {
+  document.querySelectorAll('.category-body').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.toggle-arrow').forEach(el => el.classList.remove('open'));
 }
-    </style>
+
+// Auto-expand primary categories on load
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.category-card.primary').forEach(card => {
+    const body = card.querySelector('.category-body');
+    const arrow = card.querySelector('.toggle-arrow');
+    if (body) body.classList.add('open');
+    if (arrow) arrow.classList.add('open');
+  });
+});
+</script>
 {% endblock %}
