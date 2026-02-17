@@ -223,6 +223,14 @@ def dashboard(request):
         except Exception:
             orders_in_manufacturing = 0
 
+        try:
+            delivered_manufacturing_orders = ManufacturingOrder.objects.filter(
+                status="delivered",
+                order__selected_types__icontains="installation",
+            ).count()
+        except Exception:
+            delivered_manufacturing_orders = 0
+
         stats = {
             "total_scheduled": stats_agg["total"],
             "total_orders": total_orders,
@@ -234,6 +242,7 @@ def dashboard(request):
             "orders_needing_scheduling": orders_needing_scheduling,
             "orders_with_debt": orders_with_debt,
             "orders_in_manufacturing": orders_in_manufacturing,
+            "delivered_manufacturing_orders": delivered_manufacturing_orders,
         }
     except Exception as e:
         logger.debug(f"خطأ في حساب الإحصائيات: {e}")
@@ -492,7 +501,8 @@ def installation_list(request):
     monthly_filter_context = {}
 
     # حدود الاستعلام لتجنب تحميل آلاف السجلات في الذاكرة
-    MAX_RESULTS = 500
+    # تم تقليل الحد من 500 إلى 100 لتحسين الأداء
+    MAX_RESULTS = 100
 
     # 1. جلب التركيبات المجدولة (مفلترة بالسنة الافتراضية والشهر)
     if not status_filter or status_filter in [
