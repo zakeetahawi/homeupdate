@@ -22,13 +22,15 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
 
     def process_response(self, request, response):
         # Content Security Policy
-        if not settings.DEBUG:
+        # ملاحظة: يتم إدارة CSP عبر django-csp middleware في settings.py
+        # هذا الكود احتياطي فقط في حال تعطيل django-csp
+        if not settings.DEBUG and "Content-Security-Policy" not in response:
             csp_policy = (
                 "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net code.jquery.com static.cloudflareinsights.com unpkg.com; "
-                "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; "
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net code.jquery.com static.cloudflareinsights.com cdnjs.cloudflare.com unpkg.com; "
+                "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com fonts.googleapis.com unpkg.com; "
                 "img-src 'self' data: https:; "
-                "font-src 'self' cdn.jsdelivr.net; "
+                "font-src 'self' data: fonts.gstatic.com cdn.jsdelivr.net cdnjs.cloudflare.com; "
                 "connect-src 'self' cloudflareinsights.com; "
                 "frame-ancestors 'none'; "
                 "base-uri 'self'; "
