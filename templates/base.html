@@ -572,60 +572,114 @@
                 iconSize: "{{ message.icon_size|default:'medium'|escapejs }}",
                 displayStyle: "{{ message.display_style|default:'sweetalert2'|escapejs }}",
                 displayDuration: {{ message.display_duration|default:20 }},
-            autoClose: {{ message.auto_close|yesno:"true,false" }},
-            showCloseButton: {{ message.show_close_button|yesno:"true,false" }},
-            allowOutsideClick: {{ message.allow_outside_click|yesno:"true,false" }}
+                autoClose: {{ message.auto_close|yesno:"true,false" }},
+                showCloseButton: {{ message.show_close_button|yesno:"true,false" }},
+                allowOutsideClick: {{ message.allow_outside_click|yesno:"true,false" }},
+                position: "{{ message.position|default:'center'|escapejs }}",
+                animation: "{{ message.animation|default:'zoom'|escapejs }}",
+                popupSize: "{{ message.popup_size|default:'medium'|escapejs }}",
+                showIcon: {{ message.show_icon|yesno:"true,false" }},
+                customBgColor: "{{ message.custom_bg_color|default:''|escapejs }}",
+                textColor: "{{ message.text_color|default:'dark'|escapejs }}",
+                customTextColor: "{{ message.custom_text_color|default:''|escapejs }}",
+                borderStyle: "{{ message.border_style|default:'none'|escapejs }}",
+                showShadow: {{ message.show_shadow|yesno:"true,false" }},
+                showSwalIcon: {{ message.show_swal_icon|yesno:"true,false" }}
                     }{% if not forloop.last %}, {% endif %}
         {% endfor %}
             ];
 
         let currentMessageIndex = 0;
-        const showMessage = () => {
-            if (currentMessageIndex >= branchMessages.length) return;
 
-            const message = branchMessages[currentMessageIndex];
-            currentMessageIndex++;
+        function getPopupWidth(size) {
+            const map = { small: '380px', medium: '480px', large: '600px', full: '95vw' };
+            return map[size] || '480px';
+        }
 
-            Swal.fire({
-                title: message.title,
-                html: message.message,
-                icon: getMessageIcon(message.type),
-                timer: message.displayDuration ? message.displayDuration * 1000:20000,
-                timerProgressBar: true,
-                showClass: {
-                    popup: 'animate__animated animate__zoomIn animate__faster'
-                },
-                hideClass: {
-                    popup: 'animate__animated animate__zoomOut animate__faster'
-                },
-                customClass: {
-                    popup: 'rtl-popup branch-message-popup',
-                    title: 'rtl-title branch-message-title',
-                    content: 'rtl-content branch-message-content',
-                    container: 'branch-message-container'
-                },
-                showCloseButton: true,
-                position: 'center',
+        function getShowAnimation(anim) {
+            const map = {
+                'fade': 'animate__animated animate__fadeIn animate__fast',
+                'slide-down': 'animate__animated animate__fadeInDown animate__fast',
+                'slide-up': 'animate__animated animate__fadeInUp animate__fast',
+                'zoom': 'animate__animated animate__zoomIn animate__fast',
+                'bounce': 'animate__animated animate__bounceIn',
+                'flip': 'animate__animated animate__flipInX'
+            };
+            return map[anim] || map['zoom'];
+        }
+
+        function getHideAnimation(anim) {
+            const map = {
+                'fade': 'animate__animated animate__fadeOut animate__fast',
+                'slide-down': 'animate__animated animate__fadeOutUp animate__fast',
+                'slide-up': 'animate__animated animate__fadeOutDown animate__fast',
+                'zoom': 'animate__animated animate__zoomOut animate__fast',
+                'bounce': 'animate__animated animate__bounceOut animate__fast',
+                'flip': 'animate__animated animate__flipOutX animate__fast'
+            };
+            return map[anim] || map['zoom'];
+        }
+
+        function getMessageIcon(type) {
+            const map = {
+                'welcome': 'success', 'goal': 'info', 'announcement': 'info',
+                'holiday': 'warning', 'urgent': 'error', 'congratulation': 'success',
+                'reminder': 'warning', 'info': 'info'
+            };
+            return map[type] || 'info';
+        }
+
+        function getIconSizeClass(size) {
+            const map = { small: 'fa-xs', medium: 'fa-sm', large: 'fa-lg' };
+            return map[size] || 'fa-sm';
+        }
+
+        function getMessageBackground(color, customBg) {
+            if (customBg) return customBg;
+            const map = {
+                'primary': '#e8f0fe', 'secondary': '#eef0f2', 'success': '#e6f4ea',
+                'danger': '#fce8e6', 'warning': '#fef7e0', 'info': '#e0f3fa',
+                'light': '#f8f9fa', 'dark': '#2d3436'
+            };
+            return map[color] || '#ffffff';
+        }
+
+        function getTextColorValue(textColor, customTextColor, bgColor) {
+            if (textColor === 'custom' && customTextColor) return customTextColor;
+            const map = {
+                'dark': '#2c3e50', 'light': '#f8f9fa', 'primary': '#1a73e8',
+                'danger': '#c62828', 'success': '#2e7d32'
+            };
+            return map[textColor] || (bgColor === 'dark' ? '#f8f9fa' : '#2c3e50');
+        }
+
+        function getBorderCSS(borderStyle, color) {
+            const colorMap = {
+                'primary': '#1a73e8', 'secondary': '#6c757d', 'success': '#28a745',
+                'danger': '#dc3545', 'warning': '#ffc107', 'info': '#17a2b8',
+                'light': '#dee2e6', 'dark': '#343a40'
+            };
+            const borderColor = colorMap[color] || colorMap['primary'];
+            const map = {
+                'none': 'none',
+                'thin': `1px solid ${borderColor}`,
+                'accent': `none`,
+                'accent-top': `none`,
+                'rounded': `2px solid ${borderColor}`
+            };
+            return map[borderStyle] || 'none';
+        }
+
+        function showToast(message) {
+            const isTop = message.position.includes('top') || message.position === 'center';
+            const toast = Swal.mixin({
+                toast: true,
+                position: message.position === 'center' ? 'top-end' : message.position,
                 showConfirmButton: false,
-                allowOutsideClick: true,
-                width: '500px',
-                padding: '2rem',
-                background: getMessageBackground(message.color),
-                backdrop: `
-                        rgba(0,0,0,0.6)
-                        center
-                        no-repeat
-                    `,
+                timer: message.displayDuration * 1000,
+                timerProgressBar: true,
+                showCloseButton: message.showCloseButton,
                 didOpen: (toast) => {
-                    const icon = document.createElement('i');
-                    const iconSizeClass = getIconSizeClass(message.iconSize);
-                    icon.className = `${message.icon} ${iconSizeClass}`;
-                    const title = toast.querySelector('.swal2-title');
-                    if (title) {
-                        title.insertBefore(icon, title.firstChild);
-                        icon.style.marginLeft = '10px';
-                    }
-
                     if (message.autoClose) {
                         toast.addEventListener('mouseenter', Swal.stopTimer);
                         toast.addEventListener('mouseleave', Swal.resumeTimer);
@@ -633,52 +687,211 @@
                 },
                 didClose: () => {
                     setTimeout(() => {
-                        if (currentMessageIndex < branchMessages.length) {
-                            showMessage();
-                        }
-                    }, 500);
+                        if (currentMessageIndex < branchMessages.length) showMessage();
+                    }, 300);
                 }
             });
+
+            const bg = getMessageBackground(message.color, message.customBgColor);
+            const txtColor = getTextColorValue(message.textColor, message.customTextColor, message.color);
+
+            const iconHtml = message.showIcon ?
+                `<i class="${message.icon} ${getIconSizeClass(message.iconSize)}" style="margin-left:8px;color:${txtColor};"></i>` : '';
+
+            toast.fire({
+                icon: message.showSwalIcon ? getMessageIcon(message.type) : undefined,
+                html: `<div style="color:${txtColor};">${iconHtml}<strong>${message.title}</strong><br><small>${message.message}</small></div>`,
+                background: bg,
+                customClass: {
+                    popup: 'branch-toast-popup',
+                }
+            });
+        }
+
+        function showBanner(message) {
+            const bg = getMessageBackground(message.color, message.customBgColor);
+            const txtColor = getTextColorValue(message.textColor, message.customTextColor, message.color);
+            const iconHtml = message.showIcon ?
+                `<i class="${message.icon} ${getIconSizeClass(message.iconSize)}" style="margin-left:10px;"></i>` : '';
+
+            const banner = document.createElement('div');
+            banner.className = 'branch-banner animate__animated animate__slideInDown';
+            banner.style.cssText = `background:${bg};color:${txtColor};`;
+            banner.innerHTML = `
+                <div class="branch-banner-content">
+                    ${iconHtml}
+                    <strong>${message.title}</strong>
+                    <span style="margin: 0 12px;">—</span>
+                    <span>${message.message}</span>
+                </div>
+                ${message.showCloseButton ? '<button class="branch-banner-close" onclick="this.parentElement.remove();">&times;</button>' : ''}
+            `;
+            document.body.prepend(banner);
+
+            if (message.autoClose) {
+                setTimeout(() => {
+                    banner.classList.replace('animate__slideInDown', 'animate__slideOutUp');
+                    setTimeout(() => {
+                        banner.remove();
+                        if (currentMessageIndex < branchMessages.length) showMessage();
+                    }, 400);
+                }, message.displayDuration * 1000);
+            }
+
+            // next message trigger if no auto close
+            if (!message.autoClose) {
+                const closeBtn = banner.querySelector('.branch-banner-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        setTimeout(() => {
+                            if (currentMessageIndex < branchMessages.length) showMessage();
+                        }, 300);
+                    });
+                }
+            }
+        }
+
+        function showCard(message) {
+            const bg = getMessageBackground(message.color, message.customBgColor);
+            const txtColor = getTextColorValue(message.textColor, message.customTextColor, message.color);
+            const iconHtml = message.showIcon ?
+                `<i class="${message.icon} fa-lg" style="color:${txtColor};opacity:0.7;"></i>` : '';
+
+            const card = document.createElement('div');
+            card.className = 'branch-card animate__animated animate__fadeInLeft';
+            const borderColor = {'primary':'#1a73e8','success':'#28a745','danger':'#dc3545','warning':'#ffc107','info':'#17a2b8'}[message.color] || '#1a73e8';
+            card.style.cssText = `background:${bg};color:${txtColor};border-right:4px solid ${borderColor};`;
+            card.innerHTML = `
+                <div class="branch-card-header">
+                    ${iconHtml}
+                    <strong>${message.title}</strong>
+                    ${message.showCloseButton ? '<button class="branch-card-close" onclick="this.closest(\'.branch-card\').remove();">&times;</button>' : ''}
+                </div>
+                <div class="branch-card-body">${message.message}</div>
+                ${message.autoClose ? '<div class="branch-card-progress"><div class="branch-card-progress-bar" style="background:' + borderColor + ';"></div></div>' : ''}
+            `;
+            document.body.appendChild(card);
+
+            if (message.autoClose) {
+                const progressBar = card.querySelector('.branch-card-progress-bar');
+                if (progressBar) {
+                    progressBar.style.transition = `width ${message.displayDuration}s linear`;
+                    requestAnimationFrame(() => { progressBar.style.width = '0%'; });
+                }
+                setTimeout(() => {
+                    card.classList.replace('animate__fadeInLeft', 'animate__fadeOutRight');
+                    setTimeout(() => {
+                        card.remove();
+                        if (currentMessageIndex < branchMessages.length) showMessage();
+                    }, 400);
+                }, message.displayDuration * 1000);
+            }
+
+            if (!message.autoClose) {
+                const closeBtn = card.querySelector('.branch-card-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        setTimeout(() => {
+                            if (currentMessageIndex < branchMessages.length) showMessage();
+                        }, 300);
+                    });
+                }
+            }
+        }
+
+        function showSwal(message) {
+            const bg = getMessageBackground(message.color, message.customBgColor);
+            const txtColor = getTextColorValue(message.textColor, message.customTextColor, message.color);
+            const borderCSS = getBorderCSS(message.borderStyle, message.color);
+            const colorMap = {
+                'primary': '#1a73e8', 'secondary': '#6c757d', 'success': '#28a745',
+                'danger': '#dc3545', 'warning': '#ffc107', 'info': '#17a2b8',
+                'light': '#dee2e6', 'dark': '#343a40'
+            };
+            const accentColor = colorMap[message.color] || colorMap['primary'];
+
+            let borderLeft = 'none', borderTop = 'none';
+            if (message.borderStyle === 'accent') borderLeft = `5px solid ${accentColor}`;
+            if (message.borderStyle === 'accent-top') borderTop = `4px solid ${accentColor}`;
+
+            Swal.fire({
+                title: message.title,
+                html: `<div style="color:${txtColor};opacity:0.85;">${message.message}</div>`,
+                icon: message.showSwalIcon ? getMessageIcon(message.type) : undefined,
+                timer: message.autoClose ? message.displayDuration * 1000 : undefined,
+                timerProgressBar: message.autoClose,
+                showClass: { popup: getShowAnimation(message.animation) },
+                hideClass: { popup: getHideAnimation(message.animation) },
+                customClass: {
+                    popup: `rtl-popup branch-message-popup ${!message.showShadow ? 'no-shadow' : ''}`,
+                    title: 'rtl-title branch-message-title',
+                    htmlContainer: 'rtl-content branch-message-content',
+                    container: 'branch-message-container'
+                },
+                showCloseButton: message.showCloseButton,
+                position: message.position,
+                showConfirmButton: false,
+                allowOutsideClick: message.allowOutsideClick,
+                width: getPopupWidth(message.popupSize),
+                padding: '1.5rem 2rem',
+                background: bg,
+                backdrop: `rgba(0,0,0,0.5)`,
+                didOpen: (popup) => {
+                    // apply border styles
+                    popup.style.border = borderCSS;
+                    popup.style.borderLeft = borderLeft;
+                    popup.style.borderTop = borderTop;
+
+                    // title color
+                    const titleEl = popup.querySelector('.swal2-title');
+                    if (titleEl) titleEl.style.color = txtColor;
+
+                    // insert icon in title
+                    if (message.showIcon && titleEl) {
+                        const iconEl = document.createElement('i');
+                        iconEl.className = `${message.icon} ${getIconSizeClass(message.iconSize)}`;
+                        iconEl.style.marginLeft = '8px';
+                        iconEl.style.color = txtColor;
+                        iconEl.style.opacity = '0.8';
+                        titleEl.insertBefore(iconEl, titleEl.firstChild);
+                    }
+
+                    // timer pause on hover
+                    if (message.autoClose) {
+                        popup.addEventListener('mouseenter', Swal.stopTimer);
+                        popup.addEventListener('mouseleave', Swal.resumeTimer);
+                    }
+                },
+                didClose: () => {
+                    setTimeout(() => {
+                        if (currentMessageIndex < branchMessages.length) showMessage();
+                    }, 400);
+                }
+            });
+        }
+
+        const showMessage = () => {
+            if (currentMessageIndex >= branchMessages.length) return;
+
+            const message = branchMessages[currentMessageIndex];
+            currentMessageIndex++;
+
+            switch (message.displayStyle) {
+                case 'toast':
+                    showToast(message);
+                    break;
+                case 'banner':
+                    showBanner(message);
+                    break;
+                case 'card':
+                    showCard(message);
+                    break;
+                case 'sweetalert2':
+                default:
+                    showSwal(message);
+                    break;
+            }
         };
-
-        function getMessageIcon(type) {
-            switch (type) {
-                case 'welcome':
-                    return 'success';
-                case 'goal':
-                    return 'info';
-                case 'announcement':
-                    return 'info';
-                case 'holiday':
-                    return 'warning';
-                default:
-                    return 'info';
-            }
-        }
-
-        function getIconSizeClass(size) {
-            switch (size) {
-                case 'small': return 'fa-sm';
-                case 'medium': return 'fa-lg';
-                case 'large': return 'fa-2x';
-                default: return 'fa-lg';
-            }
-        }
-
-        function getMessageBackground(color) {
-            switch (color) {
-                case 'danger':
-                    return '#f8d7da';
-                case 'warning':
-                    return '#fff3cd';
-                case 'success':
-                    return '#d4edda';
-                case 'info':
-                    return '#d1ecf1';
-                default:
-                    return '#ffffff';
-            }
-        }
 
         // Start showing messages after a short delay to ensure page is fully loaded
         setTimeout(showMessage, 500);

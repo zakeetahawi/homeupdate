@@ -889,14 +889,28 @@ class BranchMessageAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "المظهر والعرض",
+            "المظهر الأساسي",
             {
-                "fields": ("color", "icon", "icon_size", "display_style"),
-                "description": "تحكم في مظهر ونمط عرض الرسالة",
+                "fields": ("color", "custom_bg_color", "text_color", "custom_text_color", "icon", "icon_size", "show_icon"),
+                "description": "تحكم في ألوان وأيقونة الرسالة",
             },
         ),
         (
-            "إعدادات العرض",
+            "نمط العرض",
+            {
+                "fields": ("display_style", "position", "popup_size", "animation"),
+                "description": "تحكم في نمط وموقع وحركة الرسالة",
+            },
+        ),
+        (
+            "تخصيص متقدم",
+            {
+                "fields": ("border_style", "show_shadow", "show_swal_icon"),
+                "description": "خيارات إضافية لتخصيص مظهر الرسالة",
+            },
+        ),
+        (
+            "سلوك العرض",
             {
                 "fields": (
                     "display_duration",
@@ -904,7 +918,7 @@ class BranchMessageAdmin(admin.ModelAdmin):
                     "show_close_button",
                     "allow_outside_click",
                 ),
-                "description": "تحكم في سلوك عرض الرسالة",
+                "description": "تحكم في سلوك عرض الرسالة ومدتها",
             },
         ),
         ("التوقيت", {"fields": ("start_date", "end_date", "is_active")}),
@@ -928,6 +942,24 @@ class BranchMessageAdmin(admin.ModelAdmin):
         # استخدام DurationRangeWidget للحقل display_duration
         if "display_duration" in form.base_fields:
             form.base_fields["display_duration"].widget = DurationRangeWidget()
+
+        # Custom bg color - color input
+        if "custom_bg_color" in form.base_fields:
+            form.base_fields["custom_bg_color"].widget = forms.TextInput(
+                attrs={
+                    "type": "color",
+                    "style": "width: 60px; height: 35px; padding: 2px; border: 1px solid #ccc; border-radius: 6px; cursor: pointer;",
+                }
+            )
+
+        # Custom text color - color input
+        if "custom_text_color" in form.base_fields:
+            form.base_fields["custom_text_color"].widget = forms.TextInput(
+                attrs={
+                    "type": "color",
+                    "style": "width: 60px; height: 35px; padding: 2px; border: 1px solid #ccc; border-radius: 6px; cursor: pointer;",
+                }
+            )
 
         return form
 
@@ -973,7 +1005,7 @@ class BranchMessageAdmin(admin.ModelAdmin):
             size_class = (
                 obj.get_icon_size_class()
                 if hasattr(obj, "get_icon_size_class")
-                else "fa-lg"
+                else "fa-sm"
             )
             return mark_safe(
                 f"""

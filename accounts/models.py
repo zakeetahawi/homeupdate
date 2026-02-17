@@ -1057,13 +1057,42 @@ class BranchMessage(models.Model):
         ("announcement", "إعلان"),
         ("holiday", "إجازة"),
         ("info", "معلومات"),
+        ("urgent", "عاجل"),
+        ("congratulation", "تهنئة"),
+        ("reminder", "تذكير"),
     ]
 
     DISPLAY_STYLES = [
         ("sweetalert2", "SweetAlert2 - حديث وأنيق"),
-        ("toastr", "Toastr - إشعارات جانبية"),
-        ("notyf", "Notyf - بسيط وسريع"),
-        ("alertify", "Alertify - كلاسيكي"),
+        ("toast", "إشعار علوي - صغير وسريع"),
+        ("banner", "شريط علوي - بارز"),
+        ("card", "بطاقة جانبية - هادئ"),
+    ]
+
+    POSITION_CHOICES = [
+        ("center", "وسط الشاشة"),
+        ("top", "أعلى"),
+        ("top-start", "أعلى اليمين"),
+        ("top-end", "أعلى اليسار"),
+        ("bottom", "أسفل"),
+        ("bottom-start", "أسفل اليمين"),
+        ("bottom-end", "أسفل اليسار"),
+    ]
+
+    ANIMATION_CHOICES = [
+        ("fade", "تلاشي"),
+        ("slide-down", "انزلاق من الأعلى"),
+        ("slide-up", "انزلاق من الأسفل"),
+        ("zoom", "تكبير"),
+        ("bounce", "ارتداد"),
+        ("flip", "انقلاب"),
+    ]
+
+    POPUP_SIZE_CHOICES = [
+        ("small", "صغير - 380px"),
+        ("medium", "متوسط - 480px"),
+        ("large", "كبير - 600px"),
+        ("full", "عرض كامل"),
     ]
 
     branch = models.ForeignKey(
@@ -1092,7 +1121,7 @@ class BranchMessage(models.Model):
         max_length=50, default="fas fa-bell", verbose_name="الأيقونة"
     )
 
-    # إعدادات التوقيت والعرض الجديدة
+    # إعدادات التوقيت والعرض
     display_duration = models.IntegerField(
         default=20,
         verbose_name="مدة العرض (ثانية)",
@@ -1114,6 +1143,79 @@ class BranchMessage(models.Model):
             ("large", "كبير"),
         ],
     )
+
+    # خيارات التخصيص المتقدمة
+    position = models.CharField(
+        max_length=20,
+        choices=POSITION_CHOICES,
+        default="center",
+        verbose_name="موقع الرسالة",
+    )
+    animation = models.CharField(
+        max_length=20,
+        choices=ANIMATION_CHOICES,
+        default="zoom",
+        verbose_name="نوع الحركة",
+    )
+    popup_size = models.CharField(
+        max_length=10,
+        choices=POPUP_SIZE_CHOICES,
+        default="medium",
+        verbose_name="حجم النافذة",
+    )
+    show_icon = models.BooleanField(
+        default=True,
+        verbose_name="إظهار الأيقونة",
+    )
+    custom_bg_color = models.CharField(
+        max_length=7,
+        blank=True,
+        default="",
+        verbose_name="لون خلفية مخصص",
+        help_text="كود اللون بصيغة HEX مثل #f0f0f0",
+    )
+    text_color = models.CharField(
+        max_length=20,
+        default="dark",
+        verbose_name="لون النص",
+        choices=[
+            ("dark", "داكن"),
+            ("light", "فاتح"),
+            ("primary", "أزرق"),
+            ("danger", "أحمر"),
+            ("success", "أخضر"),
+            ("custom", "مخصص"),
+        ],
+    )
+    custom_text_color = models.CharField(
+        max_length=7,
+        blank=True,
+        default="",
+        verbose_name="لون نص مخصص",
+        help_text="كود اللون بصيغة HEX مثل #333333",
+    )
+    border_style = models.CharField(
+        max_length=20,
+        default="none",
+        verbose_name="نمط الحدود",
+        choices=[
+            ("none", "بدون حدود"),
+            ("thin", "حد رفيع"),
+            ("accent", "حد ملون - يسار"),
+            ("accent-top", "حد ملون - أعلى"),
+            ("rounded", "حدود دائرية"),
+        ],
+    )
+    show_shadow = models.BooleanField(
+        default=True,
+        verbose_name="إظهار الظل",
+    )
+    show_swal_icon = models.BooleanField(
+        default=False,
+        verbose_name="إظهار أيقونة SweetAlert الدائرية",
+        help_text="الأيقونة الكبيرة الدائرية الخاصة بـ SweetAlert2",
+    )
+
     auto_close = models.BooleanField(default=True, verbose_name="إغلاق تلقائي")
     show_close_button = models.BooleanField(
         default=True, verbose_name="إظهار زر الإغلاق"
@@ -1162,8 +1264,13 @@ class BranchMessage(models.Model):
 
     def get_icon_size_class(self):
         """الحصول على كلاس CSS لحجم الأيقونة"""
-        size_map = {"small": "fa-sm", "medium": "fa-lg", "large": "fa-2x"}
-        return size_map.get(self.icon_size, "fa-lg")
+        size_map = {"small": "fa-xs", "medium": "fa-sm", "large": "fa-lg"}
+        return size_map.get(self.icon_size, "fa-sm")
+
+    def get_popup_width(self):
+        """الحصول على عرض النافذة"""
+        width_map = {"small": "380px", "medium": "480px", "large": "600px", "full": "95vw"}
+        return width_map.get(self.popup_size, "480px")
 
     def get_display_duration_ms(self):
         """الحصول على مدة العرض بالميلي ثانية"""

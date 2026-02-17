@@ -180,90 +180,234 @@ html:not([data-theme="custom-theme"]):not([data-theme="ornamental"]) body .navba
    5. رسائل الفروع (Branch Messages)
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════
+   Branch Messages - SweetAlert2 Popup
+   ═══════════════════════════════════════════════════════════ */
 .branch-message-popup {
-    border-radius: 15px !important;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
     border: none !important;
     backdrop-filter: blur(10px);
+    font-family: 'Noto Naskh Arabic', 'Segoe UI', Tahoma, sans-serif !important;
+}
+
+.branch-message-popup.no-shadow {
+    box-shadow: none !important;
 }
 
 .branch-message-title {
-    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
-    font-weight: 600 !important;
-    font-size: 1.4rem !important;
-    color: #2c3e50 !important;
+    font-family: 'Noto Naskh Arabic', 'Segoe UI', Tahoma, sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 1.25rem !important;
     text-align: center !important;
-    margin-bottom: 15px !important;
+    margin-bottom: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
 }
 
 .branch-message-content {
-    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
-    font-size: 1.1rem !important;
-    line-height: 1.6 !important;
-    color: #34495e !important;
+    font-family: 'Noto Naskh Arabic', 'Segoe UI', Tahoma, sans-serif !important;
+    font-size: 1rem !important;
+    line-height: 1.7 !important;
     text-align: center !important;
 }
 
 .branch-message-container {
-    padding: 20px !important;
-    margin-bottom: 15px !important;
-    border-radius: 12px !important;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08) !important;
-    backdrop-filter: blur(10px) !important;
+    padding: 16px !important;
 }
 
-.branch-message-container i {
-    margin-left: 10px !important;
-    font-size: 1.4em !important;
-    vertical-align: middle !important;
+/* SweetAlert icon - smaller */
+.branch-message-popup .swal2-icon {
+    margin: 12px auto 8px !important;
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 1.5rem !important;
+    border-width: 3px !important;
 }
 
-/* تحسين مظهر الخلفية المظللة */
-.swal2-container.swal2-backdrop-show {
-    backdrop-filter: blur(8px) !important;
-}
-
-/* تحسين مظهر الأيقونات */
-.swal2-icon {
-    margin: 20px auto !important;
-    font-size: 3rem !important;
+.branch-message-popup .swal2-icon .swal2-icon-content {
+    font-size: 1.8rem !important;
 }
 
 /* تحسين شريط التقدم */
 .swal2-timer-progress-bar {
-    background: rgba(0, 0, 0, 0.2) !important;
     height: 3px !important;
+    border-radius: 0 0 16px 16px !important;
 }
 
 /* تحسين زر الإغلاق */
-.swal2-close {
-    font-size: 1.8rem !important;
-    color: rgba(0, 0, 0, 0.5) !important;
-    transition: all 0.3s ease !important;
+.branch-message-popup .swal2-close {
+    font-size: 1.4rem !important;
+    color: rgba(0, 0, 0, 0.35) !important;
+    transition: all 0.2s ease !important;
+    width: 32px !important;
+    height: 32px !important;
+    top: 8px !important;
 }
 
-.swal2-close:hover {
-    color: rgba(0, 0, 0, 0.8) !important;
+.branch-message-popup .swal2-close:hover {
+    color: rgba(0, 0, 0, 0.7) !important;
     transform: scale(1.1) !important;
 }
 
+/* تحسين مظهر الخلفية المظللة */
+.swal2-container.swal2-backdrop-show {
+    backdrop-filter: blur(4px) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Branch Messages - Toast Style
+   ═══════════════════════════════════════════════════════════ */
+.branch-toast-popup {
+    border-radius: 12px !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+    font-family: 'Noto Naskh Arabic', 'Segoe UI', Tahoma, sans-serif !important;
+    padding: 10px 16px !important;
+    font-size: 0.9rem !important;
+}
+
+.branch-toast-popup .swal2-html-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: right !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Branch Messages - Banner Style
+   ═══════════════════════════════════════════════════════════ */
+.branch-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 99999;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+    font-family: 'Noto Naskh Arabic', 'Segoe UI', Tahoma, sans-serif;
+    direction: rtl;
+}
+
+.branch-banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 4px;
+    font-size: 0.95rem;
+}
+
+.branch-banner-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    padding: 0 6px;
+    line-height: 1;
+    color: inherit;
+}
+
+.branch-banner-close:hover {
+    opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Branch Messages - Card Style
+   ═══════════════════════════════════════════════════════════ */
+.branch-card {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 99999;
+    width: 340px;
+    max-width: 90vw;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+    font-family: 'Noto Naskh Arabic', 'Segoe UI', Tahoma, sans-serif;
+    direction: rtl;
+}
+
+.branch-card-header {
+    padding: 14px 16px 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1rem;
+}
+
+.branch-card-close {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    margin-right: auto;
+    color: inherit;
+    padding: 0;
+    line-height: 1;
+}
+
+.branch-card-close:hover {
+    opacity: 1;
+}
+
+.branch-card-body {
+    padding: 0 16px 14px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    opacity: 0.85;
+}
+
+.branch-card-progress {
+    height: 3px;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.branch-card-progress-bar {
+    height: 100%;
+    width: 100%;
+    transition: width 20s linear;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Branch Messages - Responsive
+   ═══════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
     .branch-message-popup {
-        width: 90% !important;
+        width: 92% !important;
         margin: 10px auto !important;
-    }
-
-    .branch-message-container {
-        margin: 5px !important;
-        padding: 15px !important;
+        border-radius: 12px !important;
     }
 
     .branch-message-title {
-        font-size: 1.2rem !important;
+        font-size: 1.1rem !important;
     }
 
     .branch-message-content {
-        font-size: 1rem !important;
+        font-size: 0.95rem !important;
+    }
+
+    .branch-card {
+        width: calc(100vw - 24px);
+        left: 12px;
+        bottom: 12px;
+    }
+
+    .branch-banner {
+        padding: 10px 16px;
+    }
+
+    .branch-banner-content {
+        font-size: 0.85rem;
     }
 }
 
