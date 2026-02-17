@@ -752,8 +752,8 @@ if not DEBUG:
 
     # Content Security Policy
     CSP_DEFAULT_SRC = ("'self'",)
-    CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'", "https://static.cloudflareinsights.com")
-    CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
+    CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "'unsafe-eval'", "https://static.cloudflareinsights.com", "https://cdn.jsdelivr.net", "https://code.jquery.com")
+    CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net")
     CSP_IMG_SRC = ("'self'", "data:", "blob:")
     CSP_FONT_SRC = ("'self'", "data:")
     CSP_CONNECT_SRC = ("'self'", "https://cloudflareinsights.com")

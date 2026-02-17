@@ -106,6 +106,7 @@ media/
 *.auto-generated.*
 **/*.gz
 **/*.min.*
+!static/vendor/**/*.min.*
 **/_generated_/
 **/generated/
 **/.generated/
