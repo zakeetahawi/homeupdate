@@ -257,7 +257,7 @@ def dashboard(request):
 
     # 5. التركيبات المجدولة اليوم
     today = timezone.now().date()
-    today_installations = (
+    today_installations_query = (
         InstallationSchedule.objects.filter(
             scheduled_date=today,
             status__in=[
@@ -270,11 +270,13 @@ def dashboard(request):
             ],
         )
         .exclude(status="completed")
-        .select_related("order__customer", "team")[:10]
+        .select_related("order__customer", "team")
     )
+    today_installations_count = today_installations_query.count()
+    today_installations = today_installations_query[:10]
 
     # 6. التركيبات القادمة
-    upcoming_installations = (
+    upcoming_installations_query = (
         InstallationSchedule.objects.filter(
             scheduled_date__gt=today,
             status__in=[
@@ -287,8 +289,10 @@ def dashboard(request):
             ],
         )
         .exclude(status="completed")
-        .select_related("order__customer", "team")[:5]
+        .select_related("order__customer", "team")
     )
+    upcoming_installations_count = upcoming_installations_query.count()
+    upcoming_installations = upcoming_installations_query[:5]
 
     # 7. الطلبات الجديدة (آخر 7 أيام)
     recent_orders_query = Order.objects.filter(
@@ -339,9 +343,8 @@ def dashboard(request):
         "recent_orders": recent_orders,
         "orders_needing_scheduling": orders_needing_scheduling,
         "teams_stats": teams_stats,
-        "today_installations_count": stats.get(
-            "today_installations", 0
-        ),  # إضافة هذا المتغير
+        "today_installations_count": today_installations_count,  # استخدام العدد المحسوب
+        "upcoming_installations_count": upcoming_installations_count,  # عدد التركيبات القادمة
     }
 
     return render(request, "installations/dashboard.html", context)
