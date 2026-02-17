@@ -488,6 +488,9 @@ def installation_list(request):
     # تهيئة السياق الشهري
     monthly_filter_context = {}
 
+    # حدود الاستعلام لتجنب تحميل آلاف السجلات في الذاكرة
+    MAX_RESULTS = 500
+
     # 1. جلب التركيبات المجدولة (مفلترة بالسنة الافتراضية والشهر)
     if not status_filter or status_filter in [
         "scheduled",
@@ -498,8 +501,7 @@ def installation_list(request):
         "modification_in_progress",
         "modification_completed",
     ]:
-        # ✅ تحسين: إضافة جميع العلاقات المستخدمة في القالب + تحديد الحقول المطلوبة فقط
-        # يقلل الاستعلامات من 200+ إلى 3-5 استعلامات فقط
+        # ✅ تحسين: إضافة جميع العلاقات المستخدمة في القالب
         scheduled_query = (
             InstallationSchedule.objects.select_related(
                 "order",
@@ -511,44 +513,6 @@ def installation_list(request):
                 "driver",
             )
             .prefetch_related("team__technicians", "technicians")
-            .only(
-                "id",
-                "status",
-                "scheduled_date",
-                "created_at",
-                "location_type",
-                "order__id",
-                "order__order_number",
-                "order__contract_number",
-                "order__contract_number_2",
-                "order__contract_number_3",
-                "order__invoice_number",
-                "order__invoice_number_2",
-                "order__invoice_number_3",
-                "order__location_type",
-                "order__order_date",
-                "order__total_amount",
-                "order__final_price",
-                "order__paid_amount",
-                "order__discount_percentage",
-                "order__discount_amount",
-                "order__customer__id",
-                "order__customer__name",
-                "order__customer__phone",
-                "order__customer__address",
-                "order__customer__location_type",
-                "order__branch__id",
-                "order__branch__name",
-                "order__salesperson__id",
-                "order__salesperson__name",
-                "team__id",
-                "team__name",
-                "team__driver__id",
-                "team__driver__name",
-                "driver__id",
-                "driver__name",
-                "windows_count",
-            )
         )
         # تطبيق الفلترة الشهرية على التركيبات المجدولة (بناءً على تاريخ الطلب)
         scheduled_query, monthly_filter_context = apply_monthly_filter(
@@ -595,7 +559,8 @@ def installation_list(request):
             )
             scheduled_query = scheduled_query.filter(search_q)
 
-        # إضافة التركيبات المجدولة للقائمة - تحسين: استخدام list comprehension بدلاً من حلقة
+        # إضافة التركيبات المجدولة للقائمة
+        scheduled_query = scheduled_query.order_by("-scheduled_date", "-created_at")[:MAX_RESULTS]
         installation_items.extend(
             [
                 {
@@ -619,8 +584,6 @@ def installation_list(request):
     # 2. جلب الطلبات التي تحتاج جدولة (فقط أوامر التصنيع الجاهزة للتركيب أو المسلمة)
     if not status_filter or status_filter == "needs_scheduling":
         # أوامر التصنيع الجاهزة للتركيب أو المسلمة فقط
-        # ✅ تحسين: إضافة select_related + only لجميع العلاقات المستخدمة
-        # يقلل الاستعلامات من 100+ إلى 1 استعلام فقط
         ready_manufacturing_query = (
             ManufacturingOrder.objects.filter(
                 status__in=["ready_install", "delivered"],
@@ -633,32 +596,6 @@ def installation_list(request):
                 "order__branch",
                 "order__salesperson",
                 "production_line",
-            )
-            .only(
-                "id",
-                "created_at",
-                "status",
-                "order__id",
-                "order__order_number",
-                "order__contract_number",
-                "order__contract_number_2",
-                "order__contract_number_3",
-                "order__invoice_number",
-                "order__invoice_number_2",
-                "order__invoice_number_3",
-                "order__location_type",
-                "order__order_date",
-                "order__customer__id",
-                "order__customer__name",
-                "order__customer__phone",
-                "order__customer__address",
-                "order__customer__location_type",
-                "order__branch__id",
-                "order__branch__name",
-                "order__salesperson__id",
-                "order__salesperson__name",
-                "production_line__id",
-                "production_line__name",
             )
         )
 
@@ -685,7 +622,8 @@ def installation_list(request):
                 order__branch_id=branch_filter
             )
 
-        # إضافة أوامر التصنيع الجاهزة للتركيب - تحسين: استخدام list comprehension
+        # إضافة أوامر التصنيع الجاهزة للتركيب
+        ready_manufacturing_query = ready_manufacturing_query.order_by("-created_at")[:MAX_RESULTS]
         installation_items.extend(
             [
                 {
@@ -709,7 +647,7 @@ def installation_list(request):
 
     # 3. جلب الطلبات تحت التصنيع (للعرض فقط) - مفلترة بالسنة الافتراضية
     if not status_filter or status_filter == "under_manufacturing":
-        # ✅ تحسين: إضافة select_related + only لجميع العلاقات
+        # ✅ تحسين: إضافة select_related لجميع العلاقات
         under_manufacturing_query = (
             ManufacturingOrder.objects.filter(
                 status__in=[
@@ -729,22 +667,6 @@ def installation_list(request):
                 "order__salesperson",
                 "production_line",
             )
-            .only(
-                "id",
-                "created_at",
-                "status",
-                "order__id",
-                "order__order_number",
-                "order__customer__id",
-                "order__customer__name",
-                "order__customer__phone",
-                "order__branch__id",
-                "order__branch__name",
-                "order__salesperson__id",
-                "order__salesperson__name",
-                "production_line__id",
-                "production_line__name",
-            )
         )
 
         # تطبيق فلاتر البحث
@@ -756,7 +678,7 @@ def installation_list(request):
             )
             under_manufacturing_query = under_manufacturing_query.filter(search_q)
 
-        # تحسين: استخدام list comprehension بدلاً من حلقة
+        under_manufacturing_query = under_manufacturing_query.order_by("-created_at")[:MAX_RESULTS]
         installation_items.extend(
             [
                 {
@@ -822,19 +744,19 @@ def installation_list(request):
         page_number_str = page_number_str[0] if page_number_str else "1"
     page_obj = paginator.get_page(page_number_str)
 
-    # إحصائيات سريعة
+    # إحصائيات سريعة - حساب في مسح واحد بدلاً من 3 مسوحات
     total_count = len(installation_items)
-    needs_scheduling_count = sum(
-        1 for item in installation_items if item["status"] == "needs_scheduling"
-    )
-    scheduled_count = sum(
-        1
-        for item in installation_items
-        if item["status"] in ["scheduled", "in_installation"]
-    )
-    completed_count = sum(
-        1 for item in installation_items if item["status"] == "completed"
-    )
+    needs_scheduling_count = 0
+    scheduled_count = 0
+    completed_count = 0
+    for item in installation_items:
+        s = item["status"]
+        if s == "needs_scheduling":
+            needs_scheduling_count += 1
+        elif s in ("scheduled", "in_installation"):
+            scheduled_count += 1
+        elif s == "completed":
+            completed_count += 1
 
     # الحصول على السنوات المتاحة للفلترة الشهرية (بناءً على تاريخ الطلب)
     available_years = get_available_years(InstallationSchedule, "order__order_date")
