@@ -82,14 +82,16 @@ def stock_manager_handler(sender, instance, created, **kwargs):
         other_warehouse_trans = (
             StockTransaction.objects.filter(product=instance.product)
             .exclude(warehouse=instance.warehouse)
+            .select_related('warehouse')  # ✅ تحميل المستودع مسبقاً
             .order_by("-transaction_date")
             .first()
         )
 
         if other_warehouse_trans and other_warehouse_trans.running_balance > 0:
+            warehouse_name = other_warehouse_trans.warehouse.name if other_warehouse_trans.warehouse else "غير معروف"
             logger.warning(
                 f"⚠️ المنتج {instance.product.name} ({instance.product.code}) "
-                f"موجود بالفعل في مستودع {other_warehouse_trans.warehouse.name} "
+                f"موجود بالفعل في مستودع {warehouse_name} "
                 f"برصيد {other_warehouse_trans.running_balance}. "
                 f"يتم الآن إدخاله في مستودع {instance.warehouse.name}. "
                 f"يُفضل استخدام عملية نقل (transfer) بدلاً من الإدخال المباشر."
