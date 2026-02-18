@@ -903,7 +903,7 @@ def order_post_save(sender, instance, created, **kwargs):
                 existing = OrderModificationLog.objects.filter(
                     order=instance,
                     modification_type="تعديلات البيانات الأساسية",
-                    created_at__gte=recent_cutoff,
+                    modified_at__gte=recent_cutoff,
                 ).first()
                 if not existing:
                     OrderModificationLog.objects.create(
@@ -984,7 +984,7 @@ def order_post_save(sender, instance, created, **kwargs):
                 existing = OrderModificationLog.objects.filter(
                     order=instance,
                     modification_type="تعديل حقول الطلب الأساسية",
-                    created_at__gte=recent_cutoff,
+                    modified_at__gte=recent_cutoff,
                 ).first()
                 if not existing:
                     OrderModificationLog.objects.create(
