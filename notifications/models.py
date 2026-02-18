@@ -59,6 +59,11 @@ class Notification(models.Model):
         ("stock_shortage", _("نقص في المخزون")),
         ("fabric_received", _("استلام أقمشة")),
         ("cutting_ready_for_pickup", _("جاهز للاستلام من التقطيع")),
+        # إشعارات التحويلات المخزنية
+        ("transfer_cancelled", _("إلغاء تحويل مخزني")),
+        ("transfer_rejected", _("رفض تحويل مخزني")),
+        # إشعارات رفض الطلبات
+        ("order_rejected", _("رفض طلب")),
     ]
 
     PRIORITY_LEVELS = [
@@ -182,18 +187,21 @@ class Notification(models.Model):
             },
             "order_status_changed": {
                 "icon": "fas fa-exchange-alt",
-                "color": "#ff9800",
+                "color": "#e67e00",
                 "bg": "#fff3e0",
+                "header": "orange",
             },
             "order_completed": {
                 "icon": "fas fa-check-circle",
-                "color": "#4caf50",
-                "bg": "#e8f5e8",
+                "color": "#28a745",
+                "bg": "#d4edda",
+                "header": "green",
             },
             "order_delivered": {
                 "icon": "fas fa-truck",
-                "color": "#4caf50",
-                "bg": "#e8f5e8",
+                "color": "#28a745",
+                "bg": "#d4edda",
+                "header": "green",
             },
             # إشعارات المعاينات
             "inspection_created": {
@@ -203,8 +211,15 @@ class Notification(models.Model):
             },
             "inspection_status_changed": {
                 "icon": "fas fa-clipboard-check",
-                "color": "#9c27b0",
-                "bg": "#f3e5f5",
+                "color": "#e67e00",
+                "bg": "#fff3e0",
+                "header": "orange",
+            },
+            "inspection_completed": {
+                "icon": "fas fa-check-circle",
+                "color": "#28a745",
+                "bg": "#d4edda",
+                "header": "green",
             },
             "inspection_scheduled": {
                 "icon": "fas fa-calendar-check",
@@ -219,13 +234,15 @@ class Notification(models.Model):
             },
             "manufacturing_status_changed": {
                 "icon": "fas fa-cogs",
-                "color": "#607d8b",
-                "bg": "#eceff1",
+                "color": "#e67e00",
+                "bg": "#fff3e0",
+                "header": "orange",
             },
             "manufacturing_completed": {
                 "icon": "fas fa-check-double",
-                "color": "#607d8b",
-                "bg": "#eceff1",
+                "color": "#28a745",
+                "bg": "#d4edda",
+                "header": "green",
             },
             # إشعارات التركيب
             "installation_scheduled": {
@@ -235,8 +252,9 @@ class Notification(models.Model):
             },
             "installation_completed": {
                 "icon": "fas fa-home",
-                "color": "#795548",
-                "bg": "#efebe9",
+                "color": "#28a745",
+                "bg": "#d4edda",
+                "header": "green",
             },
             "installation_updated": {
                 "icon": "fas fa-wrench",
@@ -343,6 +361,24 @@ class Notification(models.Model):
                 "color": "#6f42c1",
                 "bg": "#e8daf5",
             },
+            # إشعارات التحويلات المخزنية
+            "transfer_cancelled": {
+                "icon": "fas fa-times-circle",
+                "color": "#dc3545",
+                "bg": "#f8d7da",
+            },
+            "transfer_rejected": {
+                "icon": "fas fa-ban",
+                "color": "#ffc107",
+                "bg": "#fff3cd",
+            },
+            # إشعارات رفض الطلبات
+            "order_rejected": {
+                "icon": "fas fa-times-circle",
+                "color": "#dc3545",
+                "bg": "#f8d7da",
+                "header": "red",
+            },
         }
 
         return icon_map.get(
@@ -363,6 +399,9 @@ class Notification(models.Model):
             "inspection_created": "fas fa-search",
             "inspection_status_changed": "fas fa-clipboard-check",
             "complaint_created": "fas fa-exclamation-triangle",
+            "transfer_cancelled": "fas fa-times-circle",
+            "transfer_rejected": "fas fa-ban",
+            "order_rejected": "fas fa-times-circle",
         }
         return icon_map.get(self.notification_type, "fas fa-bell")
 

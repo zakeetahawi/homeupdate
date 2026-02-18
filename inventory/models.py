@@ -1191,9 +1191,41 @@ class StockTransfer(models.Model):
             )
 
     def cancel(self, user, reason=""):
-        """إلغاء التحويل"""
+        """إلغاء التحويل - مع إرجاع المخزون إذا كان قد تم خصمه"""
         if not self.can_cancel:
             raise ValueError(_("لا يمكن إلغاء هذا التحويل"))
+
+        # إرجاع المخزون إذا كان التحويل في حالة approved أو in_transit
+        # (أي تم خصم المخزون من المستودع المصدر)
+        if self.status in ["approved", "in_transit"]:
+            for item in self.items.all():
+                # الحصول على آخر رصيد في المستودع المصدر
+                last_transaction = (
+                    StockTransaction.objects.filter(
+                        product=item.product, warehouse=self.from_warehouse
+                    )
+                    .order_by("-transaction_date", "-id")
+                    .first()
+                )
+
+                previous_balance = (
+                    last_transaction.running_balance if last_transaction else 0
+                )
+                new_balance = previous_balance + item.quantity
+
+                # إنشاء حركة مخزون لإرجاع الكمية
+                StockTransaction.objects.create(
+                    product=item.product,
+                    warehouse=self.from_warehouse,
+                    transaction_type="in",
+                    reason="return",
+                    quantity=item.quantity,
+                    reference=self.transfer_number,
+                    transaction_date=timezone.now(),
+                    notes=f"إرجاع بسبب إلغاء التحويل - {reason}" if reason else "إرجاع بسبب إلغاء التحويل",
+                    running_balance=new_balance,
+                    created_by=user,
+                )
 
         self.status = "cancelled"
         if reason:
@@ -1203,6 +1235,97 @@ class StockTransfer(models.Model):
                 else f"سبب الإلغاء: {reason}"
             )
         self.save()
+
+        # إنشاء إشعار لمنشئ التحويل باستخدام النظام الصحيح
+        try:
+            if self.created_by and self.created_by != user:
+                from notifications.signals import create_notification
+                create_notification(
+                    title=f'تم إلغاء التحويل المخزني {self.transfer_number}',
+                    message=f'تم إلغاء التحويلة رقم {self.transfer_number} من مستودع "{self.from_warehouse.name}" إلى مستودع "{self.to_warehouse.name}". السبب: {reason or "لم يذكر سبب"}',
+                    notification_type='transfer_cancelled',
+                    priority='high',
+                    recipients=[self.created_by],
+                    created_by=user,
+                    extra_data={
+                        'transfer_number': self.transfer_number,
+                        'from_warehouse': self.from_warehouse.name,
+                        'to_warehouse': self.to_warehouse.name,
+                        'reason': reason or '',
+                        'transfer_id': self.id,
+                        'notification_subtype': 'transfer_cancelled',
+                    }
+                )
+        except Exception:
+            pass
+
+    def reject(self, user, reason=""):
+        """رفض التحويل - مع إرجاع المخزون إذا كان قد تم خصمه"""
+        if self.status not in ["pending", "approved", "in_transit"]:
+            raise ValueError(_("لا يمكن رفض هذا التحويل"))
+
+        # إرجاع المخزون إذا كان التحويل في حالة approved أو in_transit
+        if self.status in ["approved", "in_transit"]:
+            for item in self.items.all():
+                # الحصول على آخر رصيد في المستودع المصدر
+                last_transaction = (
+                    StockTransaction.objects.filter(
+                        product=item.product, warehouse=self.from_warehouse
+                    )
+                    .order_by("-transaction_date", "-id")
+                    .first()
+                )
+
+                previous_balance = (
+                    last_transaction.running_balance if last_transaction else 0
+                )
+                new_balance = previous_balance + item.quantity
+
+                # إنشاء حركة مخزون لإرجاع الكمية
+                StockTransaction.objects.create(
+                    product=item.product,
+                    warehouse=self.from_warehouse,
+                    transaction_type="in",
+                    reason="return",
+                    quantity=item.quantity,
+                    reference=self.transfer_number,
+                    transaction_date=timezone.now(),
+                    notes=f"إرجاع بسبب رفض التحويل - {reason}" if reason else "إرجاع بسبب رفض التحويل",
+                    running_balance=new_balance,
+                    created_by=user,
+                )
+
+        self.status = "rejected"
+        if reason:
+            self.notes = (
+                f"{self.notes}\n\nسبب الرفض: {reason}"
+                if self.notes
+                else f"سبب الرفض: {reason}"
+            )
+        self.save()
+
+        # إنشاء إشعار لمنشئ التحويل باستخدام النظام الصحيح
+        try:
+            if self.created_by:
+                from notifications.signals import create_notification
+                create_notification(
+                    title=f'تم رفض التحويل المخزني {self.transfer_number}',
+                    message=f'تم رفض طلب التحويل رقم {self.transfer_number} من مستودع "{self.from_warehouse.name}" إلى مستودع "{self.to_warehouse.name}". السبب: {reason or "لم يذكر سبب"}',
+                    notification_type='transfer_rejected',
+                    priority='high',
+                    recipients=[self.created_by],
+                    created_by=user,
+                    extra_data={
+                        'transfer_number': self.transfer_number,
+                        'from_warehouse': self.from_warehouse.name,
+                        'to_warehouse': self.to_warehouse.name,
+                        'reason': reason or '',
+                        'transfer_id': self.id,
+                        'notification_subtype': 'transfer_rejected',
+                    }
+                )
+        except Exception:
+            pass
 
 
 class StockTransferItem(models.Model):

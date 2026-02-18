@@ -494,7 +494,29 @@ def stock_transfer_cancel(request, pk):
 
     try:
         transfer.cancel(request.user, reason)
-        messages.success(request, "تم إلغاء التحويل بنجاح")
+        messages.success(request, "تم إلغاء التحويل بنجاح وإرجاع المخزون")
+    except ValueError as e:
+        messages.error(request, str(e))
+    except Exception as e:
+        messages.error(request, f"حدث خطأ: {str(e)}")
+
+    return redirect("inventory:stock_transfer_detail", pk=pk)
+
+
+@login_required
+@require_POST
+def stock_transfer_reject(request, pk):
+    """رفض التحويل"""
+    transfer = get_object_or_404(StockTransfer, pk=pk)
+    reason = request.POST.get("reason", "")
+
+    if not reason:
+        messages.error(request, "يجب إدخال سبب الرفض")
+        return redirect("inventory:stock_transfer_detail", pk=pk)
+
+    try:
+        transfer.reject(request.user, reason)
+        messages.success(request, "تم رفض التحويل بنجاح وإرجاع المخزون")
     except ValueError as e:
         messages.error(request, str(e))
     except Exception as e:

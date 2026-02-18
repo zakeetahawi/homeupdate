@@ -78,6 +78,7 @@
         <link rel="stylesheet" href="{% static 'css/floating-button.css' %}">
         <!-- Base Layout CSS (extracted from inline) -->
         <link rel="stylesheet" href="{% static 'css/base-layout.css' %}">
+        <link rel="stylesheet" href="{% static 'css/transfer-alert-popup.css' %}">
         <!-- تطبيق فوري للثيم لتجنب الوميض -->
         <script>
         // تطبيق الثيم فوراً قبل رسم الصفحة - محسن لتجنب الوميض
@@ -939,6 +940,41 @@
 <a class="dropdown-item" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
 </div>
 <!-- User dropdown JS moved to base-utilities.js -->
+<!-- Transfer Alert Popup - مركزي وسط الشاشة -->
+<div id="transferAlertOverlay" class="transfer-alert-overlay" style="display:none;" onclick="if(event.target===this) closeTransferAlert()">
+    <div class="transfer-alert-modal" id="transferAlertModal" role="dialog" aria-modal="true">
+        <div class="transfer-alert-header" id="transferAlertHeader">
+            <div class="transfer-alert-icon" id="transferAlertIcon">
+                <i class="fas fa-exchange-alt"></i>
+            </div>
+            <div>
+                <h5 class="mb-0 fw-bold" id="transferAlertTitle">تنبيه تحويل مخزني</h5>
+                <small class="opacity-75" id="transferAlertSubtitle"></small>
+            </div>
+            <button type="button" class="btn-close btn-close-white ms-auto" onclick="closeTransferAlert()" aria-label="إغلاق"></button>
+        </div>
+        <div class="transfer-alert-body" id="transferAlertBody">
+            <!-- يتم ملؤه ديناميكياً -->
+        </div>
+        <div class="transfer-alert-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="dismissAllTransferAlerts()">
+                <i class="fas fa-times me-1"></i> إغلاق الكل
+            </button>
+            <a href="/inventory/stock-transfers/" class="btn btn-primary btn-sm" id="transferAlertViewBtn">
+                <i class="fas fa-list me-1"></i> عرض التحويلات
+            </a>
+        </div>
+        <div class="transfer-alert-pager" id="transferAlertPager" style="display:none;">
+            <button type="button" class="btn btn-sm btn-link text-muted" onclick="prevTransferAlert()">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <span id="transferAlertPagerText" class="small text-muted mx-2">1 / 1</span>
+            <button type="button" class="btn btn-sm btn-link text-muted" onclick="nextTransferAlert()">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </div>
+    </div>
+</div>
 <!-- Assigned Complaints Popup -->
 <div id="assignedComplaintsPopup"
      class="assigned-complaints-popup"

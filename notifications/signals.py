@@ -215,6 +215,96 @@ def order_created_notification(sender, instance, created, **kwargs):
 # تم تعطيل إشعارات الطلبات نهائياً لتجنب التكرار
 # الأقسام (معاينة، تصنيع، تركيب) تتولى إرسال الإشعارات
 # وتوجه المستخدم لتفاصيل الطلب مباشرة
+
+
+@receiver(pre_save, sender="orders.Order")
+def order_rejected_notification(sender, instance, **kwargs):
+    """إشعار فوري عند رفض طلب orders.Order - لإظهار popup للمستخدم المنشئ"""
+    if not instance.pk:
+        return
+    try:
+        old = sender.objects.get(pk=instance.pk)
+        # فقط عند الانتقال إلى حالة مرفوض
+        if old.status != "rejected" and instance.status == "rejected":
+            changed_by = getattr(instance, "_changed_by", None)
+            # لا نرسل إشعاراً إذا أنشأه المستخدم نفسه
+            if instance.created_by and instance.created_by != changed_by:
+                order_number = getattr(instance, "order_number", str(instance.pk))
+                customer_name = ""
+                if hasattr(instance, "customer") and instance.customer:
+                    customer_name = instance.customer.name
+                rejection_reason = getattr(instance, "rejection_reason", "") or ""
+
+                create_notification(
+                    title=f"تم رفض الطلب {order_number}",
+                    message=(
+                        f'تم رفض طلبك رقم {order_number}'
+                        + (f' للعميل {customer_name}' if customer_name else '')
+                        + (f'. السبب: {rejection_reason}' if rejection_reason else '')
+                    ),
+                    notification_type="order_rejected",
+                    related_object=instance,
+                    created_by=changed_by,
+                    priority="urgent",
+                    recipients=[instance.created_by],
+                    extra_data={
+                        "order_number": order_number,
+                        "customer_name": customer_name,
+                        "rejection_reason": rejection_reason,
+                        "order_id": instance.pk,
+                        "notification_subtype": "order_rejected",
+                    },
+                )
+    except sender.DoesNotExist:
+        pass
+
+
+@receiver(pre_save, sender="manufacturing.ManufacturingOrder")
+def manufacturing_order_rejected_notification(sender, instance, **kwargs):
+    """إشعار فوري عند رفض أمر التصنيع - popup لمنشئ الأمر"""
+    if not instance.pk:
+        return
+    try:
+        old = sender.objects.get(pk=instance.pk)
+        if old.status != "rejected" and instance.status == "rejected":
+            changed_by = getattr(instance, "_changed_by", None)
+            if instance.created_by and instance.created_by != changed_by:
+                # جلب بيانات الطلب الأصلي
+                order_number = str(instance.pk)
+                customer_name = ""
+                order_id = instance.pk
+                try:
+                    if instance.order:
+                        order_number = getattr(instance.order, "order_number", None) or str(instance.order.pk)
+                        order_id = instance.order.pk
+                        if hasattr(instance.order, "customer") and instance.order.customer:
+                            customer_name = instance.order.customer.name
+                except Exception:
+                    pass
+                rejection_reason = getattr(instance, "rejection_reason", "") or ""
+
+                create_notification(
+                    title=f"تم رفض أمر التصنيع للطلب {order_number}",
+                    message=(
+                        f'تم رفض أمر التصنيع للطلب رقم {order_number}'
+                        + (f' للعميل {customer_name}' if customer_name else '')
+                        + (f'. السبب: {rejection_reason}' if rejection_reason else '')
+                    ),
+                    notification_type="order_rejected",
+                    related_object=instance,
+                    created_by=changed_by,
+                    priority="urgent",
+                    recipients=[instance.created_by],
+                    extra_data={
+                        "order_number": order_number,
+                        "customer_name": customer_name,
+                        "rejection_reason": rejection_reason,
+                        "order_id": order_id,
+                        "notification_subtype": "order_rejected",
+                    },
+                )
+    except sender.DoesNotExist:
+        pass
 #
 # @receiver(pre_save, sender='orders.Order')
 # def order_status_changed_notification(sender, instance, **kwargs):

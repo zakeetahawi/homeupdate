@@ -465,21 +465,43 @@
         if (!popup || !content) return;
 
         var header = popup.querySelector('.system-popup-header');
-        var hasUrgent = notifications.some(function (n) { return n.priority === 'urgent' || n.priority === 'high'; });
-        if (hasUrgent) {
-            header.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
-        } else {
-            header.style.background = 'linear-gradient(135deg, #0d6efd, #0b5ed7)';
+
+        // لون header يعتمد على أنواع الإشعارات الموجودة (أولوية: أحمر > برتقالي > أخضر > أزرق)
+        var headerGradient = 'linear-gradient(135deg, #0d6efd, #0b5ed7)'; // افتراضي أزرق
+        var hasRed    = notifications.some(function(n) { return n.header_color === 'red'; });
+        var hasOrange = notifications.some(function(n) { return n.header_color === 'orange'; });
+        var hasGreen  = notifications.some(function(n) { return n.header_color === 'green'; });
+        if (hasRed) {
+            headerGradient = 'linear-gradient(135deg, #dc3545, #c82333)';
+        } else if (hasOrange) {
+            headerGradient = 'linear-gradient(135deg, #e67e00, #d35400)';
+        } else if (hasGreen) {
+            headerGradient = 'linear-gradient(135deg, #28a745, #1e7e34)';
+        } else if (notifications.some(function(n) { return n.priority === 'urgent' || n.priority === 'high'; })) {
+            headerGradient = 'linear-gradient(135deg, #dc3545, #c82333)';
         }
+        if (header) header.style.background = headerGradient;
 
         var html = '';
         notifications.forEach(function (notification) {
             var ago = getTimeAgo(notification.created_at);
-            var priorityBorderColor = {
-                'urgent': '#dc3545', 'high': '#dc3545', 'normal': '#ffc107', 'low': '#28a745'
-            }[notification.priority] || '#6c757d';
 
-            html += '<div class="notification-popup-item" style="border-right: 4px solid ' + priorityBorderColor + ';">' +
+            // لون border الإشعار: يعتمد على header_color أولاً ثم الأولوية
+            var borderColor;
+            if (notification.header_color === 'red') {
+                borderColor = '#dc3545';
+            } else if (notification.header_color === 'orange') {
+                borderColor = '#e67e00';
+            } else if (notification.header_color === 'green') {
+                borderColor = '#28a745';
+            } else {
+                borderColor = {
+                    'urgent': '#dc3545', 'high': '#dc3545',
+                    'normal': '#e67e00', 'low': '#28a745'
+                }[notification.priority] || '#6c757d';
+            }
+
+            html += '<div class="notification-popup-item" style="border-right: 4px solid ' + borderColor + ';">' +
                 '<div class="d-flex justify-content-between align-items-start mb-1">' +
                 '<div class="d-flex align-items-center">' +
                 '<span class="notification-popup-icon" style="color: ' + notification.icon_color + '; background: ' + notification.icon_bg + ';">' +
@@ -781,6 +803,7 @@
         setTimeout(checkAssignedComplaints, 2000);
         setTimeout(checkEscalatedComplaints, 3000);
         setTimeout(checkSystemNotifications, 4000);
+        setTimeout(checkTransferAlerts, 5000);  // فحص تنبيهات التحويلات
 
         // Test functions
         window.testEscalatedPopup = function () {
@@ -806,7 +829,194 @@
             checkAssignedComplaints();
             checkEscalatedComplaints();
             checkSystemNotifications();
+            checkTransferAlerts();
         }, 60000);
     });
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 17. Transfer Alert Popup — بوب أب تنبيهات التحويلات المركزي
+    // ═══════════════════════════════════════════════════════════════════
+
+    var _transferAlerts = [];
+    var _transferAlertIndex = 0;
+
+    window.checkTransferAlerts = function () {
+        fetch('/notifications/ajax/transfer-alerts/?_=' + Date.now())
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success && data.notifications && data.notifications.length > 0) {
+                    _transferAlerts = data.notifications;
+                    _transferAlertIndex = 0;
+                    renderTransferAlert(_transferAlertIndex);
+                    document.getElementById('transferAlertOverlay').style.display = 'flex';
+                }
+            })
+            .catch(function () {});
+    };
+
+    function renderTransferAlert(index) {
+        if (!_transferAlerts.length) return;
+        var n = _transferAlerts[index];
+        var isCancelled = n.type === 'transfer_cancelled';
+        var isOrderRejected = n.category === 'order';
+
+        // Header
+        var header = document.getElementById('transferAlertHeader');
+        if (header) {
+            header.className = 'transfer-alert-header ' +
+                (isOrderRejected ? 'order-rejected' : (isCancelled ? 'cancelled' : 'rejected'));
+        }
+        var icon = document.getElementById('transferAlertIcon');
+        if (icon) {
+            icon.innerHTML = isOrderRejected
+                ? '<i class="fas fa-file-times"></i>'
+                : (isCancelled ? '<i class="fas fa-times-circle"></i>' : '<i class="fas fa-ban"></i>');
+        }
+        var title = document.getElementById('transferAlertTitle');
+        if (title) {
+            title.textContent = isOrderRejected
+                ? 'تم رفض طلبك'
+                : (isCancelled ? 'تم إلغاء تحويل مخزني' : 'تم رفض تحويل مخزني');
+        }
+        var subtitle = document.getElementById('transferAlertSubtitle');
+        if (subtitle) {
+            subtitle.textContent = isOrderRejected
+                ? ('طلب رقم: ' + (n.order_number || ''))
+                : (n.transfer_number || '');
+        }
+
+        // Body
+        var body = document.getElementById('transferAlertBody');
+        if (body) {
+            var itemHtml = '';
+
+            if (isOrderRejected) {
+                // بطاقة الطلب المرفوض
+                itemHtml =
+                    '<div class="transfer-alert-item order-rejected-item">' +
+                    '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                    '<span class="transfer-number text-muted">رقم الطلب: ' + (n.order_number || '—') + '</span>' +
+                    '<span class="badge bg-danger">مرفوض</span>' +
+                    '</div>' +
+
+                    (n.customer_name
+                        ? '<div class="transfer-route"><i class="fas fa-user text-muted"></i><strong>' + n.customer_name + '</strong></div>'
+                        : '') +
+
+                    (n.reason
+                        ? '<div class="transfer-reason"><i class="fas fa-comment-alt me-1 text-muted"></i><strong>سبب الرفض:</strong> ' + n.reason + '</div>'
+                        : '<div class="transfer-reason text-muted"><i class="fas fa-info-circle me-1"></i>لم يُذكر سبب الرفض</div>') +
+
+                    (n.created_by ? '<div class="transfer-by"><i class="fas fa-user-times me-1"></i>رُفض بواسطة: ' + n.created_by + '</div>' : '') +
+
+                    '</div>' +
+
+                    '<a href="' + (n.url || '/orders/') + '" ' +
+                    'class="btn btn-sm w-100 btn-outline-danger" ' +
+                    'onclick="markNotifAndClose(' + n.id + ', \'' + (n.url || '/orders/') + '\')">' +
+                    '<i class="fas fa-eye me-1"></i> عرض تفاصيل الطلب' +
+                    '</a>';
+
+            } else {
+                // بطاقة التحويل الملغي/المرفوض
+                var badgeClass = isCancelled ? 'bg-danger' : 'bg-warning text-dark';
+                var badgeText = isCancelled ? 'ملغي' : 'مرفوض';
+
+                itemHtml =
+                    '<div class="transfer-alert-item' + (isCancelled ? '' : ' rejected-item') + '">' +
+                    '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                    '<span class="transfer-number text-muted">رقم التحويل: ' + (n.transfer_number || '—') + '</span>' +
+                    '<span class="badge ' + badgeClass + '">' + badgeText + '</span>' +
+                    '</div>' +
+
+                    '<div class="transfer-route">' +
+                    '<i class="fas fa-warehouse text-muted"></i>' +
+                    '<strong>' + (n.from_warehouse || '—') + '</strong>' +
+                    '<span class="arrow"><i class="fas fa-arrow-left"></i></span>' +
+                    '<strong>' + (n.to_warehouse || '—') + '</strong>' +
+                    '<i class="fas fa-warehouse text-muted"></i>' +
+                    '</div>' +
+
+                    (n.reason ? '<div class="transfer-reason"><i class="fas fa-comment-alt me-1 text-muted"></i><strong>السبب:</strong> ' + n.reason + '</div>' : '') +
+                    (n.created_by ? '<div class="transfer-by"><i class="fas fa-user me-1"></i>بواسطة: ' + n.created_by + '</div>' : '') +
+
+                    '</div>' +
+
+                    '<a href="' + (n.url || '/inventory/stock-transfers/') + '" ' +
+                    'class="btn btn-sm w-100 ' + (isCancelled ? 'btn-outline-danger' : 'btn-outline-warning') + '" ' +
+                    'onclick="markNotifAndClose(' + n.id + ', \'' + (n.url || '/inventory/stock-transfers/') + '\')">' +
+                    '<i class="fas fa-eye me-1"></i> عرض تفاصيل التحويل' +
+                    '</a>';
+            }
+
+            body.innerHTML = itemHtml;
+        }
+
+        // View button
+        var viewBtn = document.getElementById('transferAlertViewBtn');
+        if (viewBtn) {
+            viewBtn.href = n.url || (isOrderRejected ? '/orders/' : '/inventory/stock-transfers/');
+            viewBtn.innerHTML = isOrderRejected
+                ? '<i class="fas fa-list me-1"></i> عرض الطلبات'
+                : '<i class="fas fa-list me-1"></i> عرض التحويلات';
+        }
+
+        // Pager
+        var pager = document.getElementById('transferAlertPager');
+        var pagerText = document.getElementById('transferAlertPagerText');
+        if (pager && pagerText) {
+            if (_transferAlerts.length > 1) {
+                pager.style.display = 'flex';
+                pagerText.textContent = (index + 1) + ' / ' + _transferAlerts.length;
+            } else {
+                pager.style.display = 'none';
+            }
+        }
+    }
+
+    window.closeTransferAlert = function () {
+        var overlay = document.getElementById('transferAlertOverlay');
+        if (overlay) overlay.style.display = 'none';
+    };
+
+    window.dismissAllTransferAlerts = function () {
+        // تحديد جميع الإشعارات كمقروءة
+        _transferAlerts.forEach(function (n) {
+            fetch('/notifications/mark-read/' + n.id + '/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json'
+                }
+            }).catch(function () {});
+        });
+        _transferAlerts = [];
+        window.closeTransferAlert();
+        updateNotificationCount();
+    };
+
+    window.markNotifAndClose = function (notifId, url) {
+        fetch('/notifications/mark-read/' + notifId + '/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json' }
+        }).finally(function () {
+            window.closeTransferAlert();
+            window.location.href = url;
+        });
+    };
+
+    window.nextTransferAlert = function () {
+        if (_transferAlertIndex < _transferAlerts.length - 1) {
+            _transferAlertIndex++;
+            renderTransferAlert(_transferAlertIndex);
+        }
+    };
+
+    window.prevTransferAlert = function () {
+        if (_transferAlertIndex > 0) {
+            _transferAlertIndex--;
+            renderTransferAlert(_transferAlertIndex);
+        }
+    };
 
 })();

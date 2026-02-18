@@ -55,6 +55,7 @@ from .views_stock_transfer import (
     stock_transfer_edit,
     stock_transfer_list,
     stock_transfer_receive,
+    stock_transfer_reject,
     stock_transfer_submit,
 )
 from .views_warehouse_locations import (
@@ -268,6 +269,11 @@ urlpatterns = [
         "stock-transfer/<int:pk>/cancel/",
         stock_transfer_cancel,
         name="stock_transfer_cancel",
+    ),
+    path(
+        "stock-transfer/<int:pk>/reject/",
+        stock_transfer_reject,
+        name="stock_transfer_reject",
     ),
     path(
         "stock-transfer/<int:pk>/delete/",

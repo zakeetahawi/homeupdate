@@ -257,6 +257,13 @@
                                 </button>
                             </form>
                             <button type="button"
+                                    class="btn btn-warning w-100 mb-2"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#rejectModal">
+                                <i class="fas fa-ban"></i>
+                                رفض التحويل
+                            </button>
+                            <button type="button"
                                     class="btn btn-danger w-100"
                                     data-bs-toggle="modal"
                                     data-bs-target="#cancelModal">
@@ -481,6 +488,43 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
                         <button type="submit" class="btn btn-danger">تأكيد الإلغاء</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Modal للرفض -->
+    <div class="modal fade" id="rejectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="fas fa-ban"></i>
+                        رفض التحويل
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post"
+                      action="{% url 'inventory:stock_transfer_reject' transfer.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            سيتم إرجاع المخزون إلى المستودع المصدر وإشعار منشئ التحويل
+                        </div>
+                        <div class="form-group">
+                            <label for="reject-reason" class="form-label">سبب الرفض <span class="text-danger">*</span>:</label>
+                            <textarea name="reason"
+                                      id="reject-reason"
+                                      class="form-control"
+                                      rows="3"
+                                      required
+                                      placeholder="يرجى ذكر سبب رفض التحويل..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                        <button type="submit" class="btn btn-warning">تأكيد الرفض</button>
                     </div>
                 </form>
             </div>

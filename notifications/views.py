@@ -280,6 +280,83 @@ def notification_count_ajax(request):
 
 
 @login_required
+def transfer_notifications_api(request):
+    """
+    API للتحقق من إشعارات التحويلات المخزنية (الملغية/المرفوضة) والطلبات المرفوضة غير المقروءة
+    تُستخدم لإظهار popup مركزي في وسط الشاشة
+    """
+    try:
+        from .models import NotificationVisibility
+        notifications_qs = (
+            Notification.objects.filter(
+                notification_type__in=[
+                    "transfer_cancelled", "transfer_rejected", "order_rejected"
+                ],
+                visibility_records__user=request.user,
+                visibility_records__is_read=False,
+            )
+            .select_related("created_by")
+            .order_by("-created_at")[:10]
+        )
+
+        notifications_data = []
+        for notification in notifications_qs:
+            extra = notification.extra_data or {}
+            n_type = notification.notification_type
+
+            if n_type in ("transfer_cancelled", "transfer_rejected"):
+                url = (
+                    f"/inventory/stock-transfer/{extra.get('transfer_id', '')}/"
+                    if extra.get("transfer_id")
+                    else "/inventory/stock-transfers/"
+                )
+                notifications_data.append({
+                    "id": notification.pk,
+                    "category": "transfer",
+                    "title": notification.title,
+                    "message": notification.message,
+                    "type": n_type,
+                    "transfer_number": extra.get("transfer_number", ""),
+                    "from_warehouse": extra.get("from_warehouse", ""),
+                    "to_warehouse": extra.get("to_warehouse", ""),
+                    "reason": extra.get("reason", ""),
+                    "transfer_id": extra.get("transfer_id", ""),
+                    "created_at": notification.created_at.isoformat(),
+                    "created_by": (
+                        notification.created_by.get_full_name() or notification.created_by.username
+                    ) if notification.created_by else "",
+                    "url": url,
+                })
+            elif n_type == "order_rejected":
+                order_id = extra.get("order_id", "")
+                url = f"/orders/{order_id}/" if order_id else "/orders/"
+                notifications_data.append({
+                    "id": notification.pk,
+                    "category": "order",
+                    "title": notification.title,
+                    "message": notification.message,
+                    "type": n_type,
+                    "order_number": extra.get("order_number", ""),
+                    "customer_name": extra.get("customer_name", ""),
+                    "reason": extra.get("rejection_reason", ""),
+                    "order_id": order_id,
+                    "created_at": notification.created_at.isoformat(),
+                    "created_by": (
+                        notification.created_by.get_full_name() or notification.created_by.username
+                    ) if notification.created_by else "",
+                    "url": url,
+                })
+
+        return JsonResponse({
+            "success": True,
+            "notifications": notifications_data,
+            "count": len(notifications_data),
+        })
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@login_required
 def popup_notifications_api(request):
     """
     API endpoint للإشعارات المنبثقة - يعرض فقط الإشعارات العاجلة والعالية الأولوية
@@ -309,13 +386,54 @@ def popup_notifications_api(request):
                 "low": "منخفضة",
             }
 
-            # تحديد لون الأولوية
+            # تحديد لون الأولوية (badge)
+            # يعتمد على نوع الإشعار أولاً لإعطاء لون صحيح بصرياً
+            type_priority_color = {
+                "order_rejected": "danger", "transfer_cancelled": "danger",
+                "transfer_rejected": "danger", "cutting_item_rejected": "danger",
+                "complaint_escalated": "danger", "complaint_overdue": "danger",
+                "order_status_changed": "warning", "manufacturing_status_changed": "warning",
+                "inspection_status_changed": "warning", "complaint_status_changed": "warning",
+                "order_completed": "success", "order_delivered": "success",
+                "installation_completed": "success", "manufacturing_completed": "success",
+                "inspection_completed": "success", "cutting_completed": "success",
+                "complaint_resolved": "success",
+            }
             priority_color_map = {
                 "urgent": "danger",
-                "high": "danger",
-                "normal": "warning",
+                "high": "warning",
+                "normal": "secondary",
                 "low": "success",
             }
+
+            # تحديد لون header حسب نوع الإشعار (يتجاوز الأولوية)
+            # green = اكتمال/تسليم، orange = تبديل حالة، red = رفض، None = يعتمد على الأولوية
+            header_color_by_type = {
+                # أخضر: إتمام وتسليم
+                "order_completed": "green",
+                "order_delivered": "green",
+                "installation_completed": "green",
+                "manufacturing_completed": "green",
+                "inspection_completed": "green",
+                "cutting_completed": "green",
+                "complaint_resolved": "green",
+                # برتقالي: تبديل حالة
+                "order_status_changed": "orange",
+                "manufacturing_status_changed": "orange",
+                "inspection_status_changed": "orange",
+                "complaint_status_changed": "orange",
+                # أحمر: رفض وإلغاء
+                "order_rejected": "red",
+                "transfer_cancelled": "red",
+                "transfer_rejected": "red",
+                "cutting_item_rejected": "red",
+                "complaint_escalated": "red",
+                "complaint_overdue": "red",
+            }
+            header_color = header_color_by_type.get(
+                notification.notification_type,
+                icon_data.get("header", None)  # fallback من icon_map
+            )
 
             # الحصول على اسم المستخدم المنشئ
             created_by_name = None
@@ -333,7 +451,11 @@ def popup_notifications_api(request):
                     "type_display": notification.get_notification_type_display(),
                     "priority": notification.priority,
                     "priority_text": priority_map.get(notification.priority, "عادية"),
-                    "priority_color": priority_color_map.get(notification.priority, "secondary"),
+                    "priority_color": type_priority_color.get(
+                        notification.notification_type,
+                        priority_color_map.get(notification.priority, "secondary")
+                    ),
+                    "header_color": header_color,
                     "icon_class": icon_data.get("icon", "fas fa-bell"),
                     "icon_color": icon_data.get("color", "#6c757d"),
                     "icon_bg": icon_data.get("bg", "#f8f9fa"),
