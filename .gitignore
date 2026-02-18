@@ -111,6 +111,15 @@ media/
 **/generated/
 **/.generated/
 
+# Vendor libraries (third-party)
+static/vendor/chartjs/
+static/vendor/fontawesome/
+static/vendor/sweetalert2/
+
+# Temporary scripts
+drop_materialized_views.py
+recreate_materialized_views.py
+
 # Temporary files
 *.tmp
 *.temp
