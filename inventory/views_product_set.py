@@ -177,19 +177,39 @@ def sync_product_set(request, pk):
     """
     مزامنة مجموعة منتجات واحدة مع Cloudflare
     POST /inventory/product-sets/<pk>/sync/
+
+    يمزامن:
+    1. بيانات المجموعة (set_N key)
+    2. كل BaseProduct في المجموعة (لتضمين product_set في KV entry الخاصة به)
+       ← هذا ما يقرأه الـ Worker عند مسح QR
     """
     product_set = get_object_or_404(ProductSet, pk=pk)
     try:
         from accounting.cloudflare_sync import sync_product_sets_to_cloudflare
+        from public.cloudflare_sync import get_cloudflare_sync
+
+        # الخطوة 1: مزامنة بيانات المجموعة
         result = sync_product_sets_to_cloudflare([product_set])
-        if result.get("success"):
-            return JsonResponse({
-                "success": True,
-                "message": f"تمت مزامنة '{product_set.name}' بنجاح",
-                "dev_mode": result.get("dev_mode", False),
-            })
-        else:
+        if not result.get("success"):
             return JsonResponse({"success": False, "error": result.get("error", "فشل غير معروف")}, status=500)
+
+        # الخطوة 2: إعادة مزامنة كل BaseProduct في المجموعة
+        # حتى يتضمن KV entry الخاص به حقل product_set المحدّث
+        sync = get_cloudflare_sync()
+        if sync.is_configured():
+            bp_synced = 0
+            for bp in product_set.base_products.filter(is_active=True):
+                try:
+                    sync.sync_product(bp)
+                    bp_synced += 1
+                except Exception:
+                    pass
+
+        return JsonResponse({
+            "success": True,
+            "message": f"تمت مزامنة '{product_set.name}' و {bp_synced} منتج",
+            "dev_mode": result.get("dev_mode", False),
+        })
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
 
@@ -200,18 +220,46 @@ def sync_all_product_sets(request):
     """
     مزامنة جميع مجموعات المنتجات النشطة مع Cloudflare
     POST /inventory/product-sets/sync-all/
+
+    يمزامن:
+    1. بيانات جميع المجموعات (set_N keys)
+    2. كل BaseProduct في كل مجموعة (لتضمين product_set في KV entries)
     """
     try:
         from accounting.cloudflare_sync import sync_product_sets_to_cloudflare
+        from public.cloudflare_sync import get_cloudflare_sync
+        from .models import BaseProduct
+
+        # الخطوة 1: مزامنة بيانات المجموعات
         result = sync_product_sets_to_cloudflare()
-        if result.get("success"):
-            return JsonResponse({
-                "success": True,
-                "count": result.get("count", 0),
-                "message": result.get("message", "تمت المزامنة"),
-                "dev_mode": result.get("dev_mode", False),
-            })
-        else:
+        if not result.get("success"):
             return JsonResponse({"success": False, "error": result.get("error", "فشل غير معروف")}, status=500)
+
+        # الخطوة 2: إعادة مزامنة كل BaseProduct ينتمي لمجموعة نشطة
+        sync = get_cloudflare_sync()
+        bp_synced = 0
+        if sync.is_configured():
+            # جلب كل المنتجات المرتبطة بأي مجموعة نشطة
+            from .models import ProductSet
+            active_set_ids = ProductSet.objects.filter(is_active=True).values_list("id", flat=True)
+            products_in_sets = BaseProduct.objects.filter(
+                product_sets__id__in=active_set_ids,
+                is_active=True
+            ).distinct()
+
+            for bp in products_in_sets:
+                try:
+                    sync.sync_product(bp)
+                    bp_synced += 1
+                except Exception:
+                    pass
+
+        return JsonResponse({
+            "success": True,
+            "count": result.get("count", 0),
+            "bp_synced": bp_synced,
+            "message": f"تمت مزامنة {result.get('count', 0)} مجموعة و {bp_synced} منتج",
+            "dev_mode": result.get("dev_mode", False),
+        })
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
