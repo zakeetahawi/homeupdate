@@ -158,9 +158,9 @@ class VariantService:
         bp_created = False
 
         if not base_product:
-            # استخدام كود المنتج الأول (أول لون) كـ code للمنتج الأساسي
+            # استخدام كود أول لون (أصغر barcode رقمياً) كـ code للمنتج الأساسي
             # BORGO/C39 (code: 10100302461) → BaseProduct(code=10100302461, name=BORGO)
-            # BORGO/C40 (code: 10100302462) → نفس BaseProduct السابق
+            # BORGO/C40 (code: 10100302462) → نفس BaseProduct (code يبقى 10100302461)
             first_product_code = product.code or ""
             # تفادي التكرار إذا كان الكود مستخدماً بالفعل في BaseProduct آخر
             if first_product_code and BaseProduct.objects.filter(code=first_product_code).exists():
