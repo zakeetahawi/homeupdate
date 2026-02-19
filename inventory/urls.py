@@ -525,4 +525,6 @@ urlpatterns = [
     # API
     path("api/product-set/<int:pk>/", views_product_set.product_set_api, name="product_set_api"),
     path("product-sets/<int:pk>/reorder/", views_product_set.reorder_products, name="product_set_reorder"),
+    path("product-sets/<int:pk>/sync/", views_product_set.sync_product_set, name="product_set_sync"),
+    path("product-sets/sync-all/", views_product_set.sync_all_product_sets, name="product_set_sync_all"),
 ]

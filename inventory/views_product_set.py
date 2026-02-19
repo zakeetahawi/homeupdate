@@ -169,3 +169,49 @@ def reorder_products(request, pk):
         return JsonResponse({"success": True, "message": "تم إعادة الترتيب بنجاح"})
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def sync_product_set(request, pk):
+    """
+    مزامنة مجموعة منتجات واحدة مع Cloudflare
+    POST /inventory/product-sets/<pk>/sync/
+    """
+    product_set = get_object_or_404(ProductSet, pk=pk)
+    try:
+        from accounting.cloudflare_sync import sync_product_sets_to_cloudflare
+        result = sync_product_sets_to_cloudflare([product_set])
+        if result.get("success"):
+            return JsonResponse({
+                "success": True,
+                "message": f"تمت مزامنة '{product_set.name}' بنجاح",
+                "dev_mode": result.get("dev_mode", False),
+            })
+        else:
+            return JsonResponse({"success": False, "error": result.get("error", "فشل غير معروف")}, status=500)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def sync_all_product_sets(request):
+    """
+    مزامنة جميع مجموعات المنتجات النشطة مع Cloudflare
+    POST /inventory/product-sets/sync-all/
+    """
+    try:
+        from accounting.cloudflare_sync import sync_product_sets_to_cloudflare
+        result = sync_product_sets_to_cloudflare()
+        if result.get("success"):
+            return JsonResponse({
+                "success": True,
+                "count": result.get("count", 0),
+                "message": result.get("message", "تمت المزامنة"),
+                "dev_mode": result.get("dev_mode", False),
+            })
+        else:
+            return JsonResponse({"success": False, "error": result.get("error", "فشل غير معروف")}, status=500)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
