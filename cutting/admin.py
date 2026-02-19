@@ -58,6 +58,19 @@ class CuttingOrderItemInline(admin.TabularInline):
         "rejection_reason",
     )
 
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related(
+                "order_item",
+                "order_item__product",
+                "order_item__order",
+                "updated_by",
+                "inventory_transaction",
+            )
+        )
+
     def get_readonly_fields(self, request, obj=None):
         if obj and obj.status == "completed":
             return self.readonly_fields + (
@@ -90,6 +103,7 @@ class CuttingOrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
         "notes",
     ]
     readonly_fields = ["cutting_code", "created_at", "completion_progress"]
+    raw_id_fields = ("order",)
     inlines = [CuttingOrderItemInline]
 
     fieldsets = (
@@ -139,8 +153,11 @@ class CuttingOrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     status_badge.short_description = "الحالة"
 
     def completion_progress(self, obj):
-        """شريط تقدم الإنجاز"""
-        percentage = obj.completion_percentage
+        """شريط تقدم الإنجاز - query واحدة فقط"""
+        stats = obj._items_stats
+        total = stats["total"]
+        completed = stats["completed"]
+        percentage = (completed / total * 100) if total > 0 else 0
         color = (
             "success" if percentage == 100 else "info" if percentage > 50 else "warning"
         )
@@ -160,8 +177,8 @@ class CuttingOrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
             percentage,
             percentage,
             int(percentage),
-            obj.completed_items,
-            obj.total_items,
+            completed,
+            total,
         )
 
     completion_progress.short_description = "نسبة الإنجاز"

@@ -159,6 +159,17 @@ class CuttingOrder(SoftDeleteMixin, models.Model):
         super().save(*args, **kwargs)
 
     @property
+    def _items_stats(self):
+        """إحصائيات العناصر في query واحدة"""
+        from django.db.models import Count, Q
+        return self.items.aggregate(
+            total=Count("id"),
+            completed=Count("id", filter=Q(status="completed")),
+            pending=Count("id", filter=Q(status="pending")),
+            rejected=Count("id", filter=Q(status="rejected")),
+        )
+
+    @property
     def total_items(self):
         """إجمالي عدد العناصر"""
         return self.items.count()
@@ -180,10 +191,12 @@ class CuttingOrder(SoftDeleteMixin, models.Model):
 
     @property
     def completion_percentage(self):
-        """نسبة الإنجاز"""
-        if self.total_items == 0:
+        """نسبة الإنجاز - استخدام query واحدة بدلاً من 3"""
+        stats = self._items_stats
+        total = stats["total"]
+        if total == 0:
             return 0
-        return (self.completed_items / self.total_items) * 100
+        return (stats["completed"] / total) * 100
 
     @property
     def has_rejected_items(self):

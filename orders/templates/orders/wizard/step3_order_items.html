@@ -198,10 +198,18 @@
                class="btn btn-wizard btn-wizard-danger me-2">
                 <i class="fas fa-times me-2"></i>إلغاء
             </a>
+            {% if draft.original_order %}
+            {# وضع التعديل: الخطوة السابقة هي 1 لأن خطوة 2 محظورة #}
+            <a href="{% url 'orders:wizard_step' step=1 %}"
+               class="btn btn-wizard btn-wizard-secondary">
+                <i class="fas fa-arrow-right me-2"></i>السابق
+            </a>
+            {% else %}
             <a href="{% url 'orders:wizard_step' step=2 %}"
                class="btn btn-wizard btn-wizard-secondary">
                 <i class="fas fa-arrow-right me-2"></i>السابق
             </a>
+            {% endif %}
         </div>
         <div>
             <button type="button"

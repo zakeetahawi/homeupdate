@@ -599,28 +599,23 @@ def wizard_step_1_basic_info(request, draft):
 def wizard_step_2_order_type(request, draft):
     """
     الخطوة 2: نوع الطلب
+    ⛔ في وضع التعديل: هذه الخطوة محظورة كلياً - يُتجاوز مباشرة للخطوة 3
     """
-    # ⛔ في وضع التعديل، نوع الطلب لا يمكن تغييره أبداً
     is_editing = draft.original_order is not None
+
+    # ⛔ وضع التعديل: تجاوز الخطوة 2 كلياً - نوع الطلب محمي ولا يُعدَّل أبداً
+    if is_editing:
+        # التأكد أن الخطوة 2 مكتملة حتى لا يتوقف flow الويزارد
+        if 2 not in draft.completed_steps:
+            draft.mark_step_complete(2)
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse(
+                {"success": True, "next_step": 3, "message": "نوع الطلب ثابت لا يقبل التعديل"},
+            )
+        return redirect("orders:wizard_step", step=3)
 
     if request.method == "POST":
         old_selected_type = draft.selected_type
-        new_selected_type = request.POST.get("selected_type", old_selected_type)
-
-        # ⛔ منع تغيير النوع في وضع التعديل
-        if is_editing and new_selected_type != old_selected_type:
-            error_msg = "لا يمكن تغيير نوع الطلب بعد إنشائه. نوع الطلب ثابت ولا يقبل التعديل."
-            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return JsonResponse(
-                    {"success": False, "errors": {"selected_type": [error_msg]}, "message": error_msg},
-                    status=400,
-                )
-            messages.error(request, error_msg)
-            # إعادة تعيين النوع للقيمة الأصلية وإكمال الخطوة
-            draft.mark_step_complete(2)
-            draft.current_step = 3
-            draft.save(update_fields=["current_step"])
-            return redirect("orders:wizard_step", step=3)
 
         form = Step2OrderTypeForm(request.POST, instance=draft, customer=draft.customer)
         if form.is_valid():
@@ -3532,9 +3527,14 @@ def wizard_edit_options(request, order_pk):
 @login_required
 def wizard_edit_type(request, order_pk):
     """
-    تعديل نوع الطلب والخدمة - يستخدم أنواع الخدمات من نظام التخصيص
-    Edit order type and service - uses service types from customization system
+    ⛔ تعديل نوع الطلب - محظور كلياً
+    نوع الطلب ثابت ولا يقبل التعديل بعد إنشاء الطلب.
     """
+    order = get_object_or_404(Order, pk=order_pk)
+    messages.error(request, "⛔ لا يمكن تغيير نوع الطلب بعد إنشائه. نوع الطلب ثابت ولا يقبل التعديل.")
+    return redirect("orders:order_detail_by_number", order_number=order.order_number)
+
+    # الكود المحذوف - محفوظ للرجوع إليه إذا لزم
     order = get_object_or_404(Order, pk=order_pk)
 
     # منع البائع من تعديل الطلبات

@@ -209,18 +209,7 @@
                    color: #333;
                    font-size: 24px">اختر نوع التعديل المطلوب</h3>
         <div class="edit-options-grid">
-            <!-- خيار 1: تعديل النوع -->
-            <div class="edit-option-card type-edit">
-                <span class="option-icon">
-                    <i class="fas fa-exchange-alt"></i>
-                </span>
-                <h3 class="option-title">تعديل نوع الطلب</h3>
-                <p class="option-description">تبديل نوع الطلب بين (تركيب، تفصيل، تسليم، غسيل، إكسسوار) مع الحفاظ على جميع التفاصيل</p>
-                <a href="{% url 'orders:wizard_edit_type' order.pk %}"
-                   class="option-btn">
-                    <i class="fas fa-edit"></i> تعديل النوع
-                </a>
-            </div>
+            {# ⛔ تعديل نوع الطلب محظور - النوع ثابت لا يقبل التعديل بعد الإنشاء #}
             <!-- خيار 2: تعديل العناصر -->
             <div class="edit-option-card items-edit">
                 <span class="option-icon">
