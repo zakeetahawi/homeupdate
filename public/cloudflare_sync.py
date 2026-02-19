@@ -195,6 +195,17 @@ class CloudflareSync:
                 )
                 logger.info(f"✅ Updated DB: {product_or_base.code} marked as synced")
 
+                # ✅ حذف المدخل القديم المبني على الاسم وتحديث خريطة الأسماء
+                # المشكلة: النسخة القديمة من Worker كانت تحفظ KV["ROSE"] كـ alias
+                # هذا يؤدي إلى KV.get("ROSE") يعيد البيانات القديمة قبل nameMap
+                # الحل: حذف مدخل الاسم القديم + تحديث nameMap["ROSE"] → "10100301399"
+                name = product_or_base.name
+                code = product_or_base.code
+                if name and name != code:
+                    self.delete_product(name)          # حذف KV["ROSE"] القديم
+                    self.update_name_map({name: code}) # تأكيد nameMap["ROSE"] = "10100301399"
+                    logger.info(f"✅ Cleaned stale alias '{name}' → mapped to '{code}'")
+
             return result
 
         # Handle Standard Product
@@ -262,6 +273,14 @@ class CloudflareSync:
     def delete_product(self, code):
         """Delete a product from Cloudflare KV"""
         data = {"action": "delete_product", "code": code}
+        return self._send_request(data)
+
+    def update_name_map(self, entries: dict):
+        """
+        تحديث خريطة الأسماء (name → code) بشكل جزئي
+        يُستخدم لربط اسم المنتج بالكود الباركود الصحيح
+        """
+        data = {"action": "update_name_map", "entries": entries}
         return self._send_request(data)
 
 
