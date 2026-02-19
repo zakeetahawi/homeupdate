@@ -600,8 +600,27 @@ def wizard_step_2_order_type(request, draft):
     """
     الخطوة 2: نوع الطلب
     """
+    # ⛔ في وضع التعديل، نوع الطلب لا يمكن تغييره أبداً
+    is_editing = draft.original_order is not None
+
     if request.method == "POST":
         old_selected_type = draft.selected_type
+        new_selected_type = request.POST.get("selected_type", old_selected_type)
+
+        # ⛔ منع تغيير النوع في وضع التعديل
+        if is_editing and new_selected_type != old_selected_type:
+            error_msg = "لا يمكن تغيير نوع الطلب بعد إنشائه. نوع الطلب ثابت ولا يقبل التعديل."
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse(
+                    {"success": False, "errors": {"selected_type": [error_msg]}, "message": error_msg},
+                    status=400,
+                )
+            messages.error(request, error_msg)
+            # إعادة تعيين النوع للقيمة الأصلية وإكمال الخطوة
+            draft.mark_step_complete(2)
+            draft.current_step = 3
+            draft.save(update_fields=["current_step"])
+            return redirect("orders:wizard_step", step=3)
 
         form = Step2OrderTypeForm(request.POST, instance=draft, customer=draft.customer)
         if form.is_valid():
@@ -673,6 +692,7 @@ def wizard_step_2_order_type(request, draft):
         "total_steps": total_steps,
         "step_title": "نوع الطلب",
         "progress_percentage": round((2 / total_steps) * 100, 2),
+        "is_editing": is_editing,  # ⛔ لتعطيل تغيير النوع في القالب
     }
 
     return render(request, "orders/wizard/step2_order_type.html", context)
@@ -1202,13 +1222,36 @@ def wizard_step_4_invoice_payment(request, draft):
                 if "invoice_image" in form.changed_data:
                     form.changed_data.remove("invoice_image")
 
-            draft = form.save()
+            try:
+                draft = form.save()
+            except FileNotFoundError:
+                # الملف المؤقت لم يعد موجوداً (غالباً بسبب إعادة إرسال النموذج)
+                # نحفظ البيانات بدون الصورة ونطلب من المستخدم إعادة الرفع
+                form.cleaned_data.pop("invoice_image", None)
+                if hasattr(form.instance, "invoice_image"):
+                    form.instance.invoice_image = None
+                draft = form.save(commit=False)
+                draft.save(update_fields=[
+                    f for f in [
+                        "invoice_number", "invoice_number_2", "invoice_number_3",
+                        "paid_amount", "payment_method", "payment_date",
+                        "total_amount", "notes",
+                    ] if hasattr(draft, f)
+                ])
+                from django.contrib import messages
+                messages.warning(
+                    request,
+                    "تم حفظ البيانات، لكن فشل رفع الصورة (انتهت صلاحية الملف المؤقت). يرجى إعادة رفع صورة الفاتورة."
+                )
 
             # حفظ الصورة الجديدة كصورة إضافية بدلاً من استبدال الرئيسية
             if had_existing_main and new_main_file:
-                DraftOrderInvoiceImage.objects.create(
-                    draft_order=draft, image=new_main_file
-                )
+                try:
+                    DraftOrderInvoiceImage.objects.create(
+                        draft_order=draft, image=new_main_file
+                    )
+                except FileNotFoundError:
+                    pass  # تجاهل خطأ الملف المؤقت للصور الإضافية
 
             # تسجيل التعديلات
             if draft.created_by != request.user:
@@ -1235,9 +1278,12 @@ def wizard_step_4_invoice_payment(request, draft):
             for key in request.FILES:
                 if key.startswith("additional_invoice_image_"):
                     image = request.FILES[key]
-                    DraftOrderInvoiceImage.objects.create(
-                        draft_order=draft, image=image
-                    )
+                    try:
+                        DraftOrderInvoiceImage.objects.create(
+                            draft_order=draft, image=image
+                        )
+                    except FileNotFoundError:
+                        continue  # تخطي الصورة إذا انتهت صلاحية الملف المؤقت
 
                     # تسجيل إضافة صورة
                     if draft.created_by != request.user:

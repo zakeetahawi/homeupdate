@@ -1089,6 +1089,9 @@ def ajax_upload_to_google_drive(request):
 @login_required
 def inspection_detail_by_code(request, inspection_code):
     """عرض تفاصيل المعاينة باستخدام كود المعاينة"""
+    # منع الروابط المعطوبة مثل /inspections/None/
+    if not inspection_code or inspection_code in ("None", "null", "undefined", "0"):
+        raise Http404("رمز المعاينة غير صالح")
     # البحث بطريقة محسنة للأداء
     if "-I" in inspection_code:
         order_number = inspection_code.replace("-I", "")

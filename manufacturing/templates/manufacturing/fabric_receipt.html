@@ -772,10 +772,20 @@
                                         <tr>
                                             <td>{{ forloop.counter }}</td>
                                             <td>
-                                                <strong>{{ item.order_item.product.name|default:"منتج غير محدد" }}</strong>
+                                                {% if item.order_item and item.order_item.product %}
+                                                    <strong>{{ item.order_item.product.name }}</strong>
+                                                {% elif item.is_external and item.external_fabric_name %}
+                                                    <strong><span class="text-warning"><i class="fas fa-external-link-alt me-1"></i></span>{{ item.external_fabric_name }}</strong>
+                                                {% else %}
+                                                    <strong class="text-muted">منتج غير محدد</strong>
+                                                {% endif %}
                                             </td>
                                             <td class="text-center">
-                                                <span class="badge bg-primary">{{ item.order_item.quantity|add:item.additional_quantity }}</span>
+                                                {% if item.order_item %}
+                                                    <span class="badge bg-primary">{{ item.order_item.quantity|add:item.additional_quantity }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ item.quantity|floatformat:3 }}</span>
+                                                {% endif %}
                                             </td>
                                             <td class="text-center">{{ item.cutting_date|date:"Y-m-d"|default:"-" }}</td>
                                             <td class="text-center">
@@ -808,7 +818,7 @@
                                                     {% with mfg_item=item.manufacturing_items.first %}
                                                         {% if not mfg_item.fabric_received %}
                                                             <button class="btn btn-success btn-sm"
-                                                                    onclick="openItemReceiptModal({{ mfg_item.id }}, '{{ item.order_item.product.name|default:"منتج"|escapejs }}', '{{ order_data.cutting_order.cutting_code|escapejs }}', '{{ item.receiver_name|default:""|escapejs }}', '{{ item.permit_number|default:""|escapejs }}')">
+                                                                    onclick="openItemReceiptModal({{ mfg_item.id }}, '{% if item.order_item and item.order_item.product %}{{ item.order_item.product.name|escapejs }}{% elif item.external_fabric_name %}{{ item.external_fabric_name|escapejs }}{% else %}منتج{% endif %}', '{{ order_data.cutting_order.cutting_code|escapejs }}', '{{ item.receiver_name|default:""|escapejs }}', '{{ item.permit_number|default:""|escapejs }}')">
                                                                 <i class="fas fa-download"></i> استلام
                                                             </button>
                                                         {% else %}

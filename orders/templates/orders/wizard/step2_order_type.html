@@ -19,19 +19,33 @@
                 <i class="fas fa-tags me-2"></i>اختر نوع الطلب
                 <span class="text-danger">*</span>
             </h5>
+            {% if is_editing %}
+            <div class="alert alert-warning d-flex align-items-center mb-3" role="alert">
+                <i class="fas fa-lock me-2 fs-5"></i>
+                <div>
+                    <strong>نوع الطلب مقفل:</strong> لا يمكن تغيير نوع الطلب بعد إنشائه.
+                    النوع الحالي ثابت ولا يقبل التعديل.
+                </div>
+            </div>
+            {% endif %}
             {% if form.selected_type.errors %}<div class="alert alert-danger">{{ form.selected_type.errors }}</div>{% endif %}
             <div class="row g-3">
                 {% for choice in form.selected_type.field.choices %}
                     <div class="col-md-4 col-sm-6">
-                        <label for="type_{{ choice.0 }}" class="order-type-label">
-                            <div class="card h-100 order-type-card">
+                        <label for="type_{{ choice.0 }}" class="order-type-label {% if is_editing and form.selected_type.value != choice.0 %}opacity-50{% endif %}">
+                            <div class="card h-100 order-type-card {% if is_editing and form.selected_type.value != choice.0 %}bg-light{% endif %}">
                                 <div class="card-body text-center">
                                     <input type="radio"
                                            name="{{ form.selected_type.name }}"
                                            value="{{ choice.0 }}"
                                            id="type_{{ choice.0 }}"
                                            {% if form.selected_type.value == choice.0 %}checked{% endif %}
+                                           {% if is_editing %}disabled{% endif %}
                                            class="order-type-radio">
+                                    {% if is_editing and form.selected_type.value == choice.0 %}
+                                    {# حقل مخفي لإرسال القيمة المقفلة عند الـ POST #}
+                                    <input type="hidden" name="{{ form.selected_type.name }}" value="{{ choice.0 }}">
+                                    {% endif %}
                                     <div class="order-type-icon mb-3">
                                         {% if choice.0 == 'accessory' %}
                                             <i class="fas fa-gem fa-3x text-primary"></i>
@@ -204,6 +218,18 @@
     border-color: #198754;
     background: #f0fdf4;
     box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
+}
+
+/* تنسيق وضع القفل (وضع التعديل) */
+.opacity-50 {
+    pointer-events: none;
+    cursor: not-allowed;
+}
+.order-type-radio:disabled {
+    cursor: not-allowed;
+}
+.order-type-label:has(.order-type-radio:disabled) .order-type-card {
+    cursor: not-allowed;
 }
 
 /* تحسينات الموبايل */

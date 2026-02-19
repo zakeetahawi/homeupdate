@@ -225,21 +225,27 @@ class CuttingOrderItemAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
 
     def product_name(self, obj):
         """اسم المنتج"""
-        return obj.order_item.product.name if obj.order_item.product else "-"
+        if obj.order_item and obj.order_item.product:
+            return obj.order_item.product.name
+        if obj.is_external and obj.external_fabric_name:
+            return f"[خارجي] {obj.external_fabric_name}"
+        return "-"
 
     product_name.short_description = "المنتج"
 
     def quantity_display(self, obj):
         """عرض الكمية"""
-        original = obj.order_item.quantity
-        additional = obj.additional_quantity
-        total = obj.total_quantity
-
-        if additional > 0:
-            return format_html(
-                "{} + {} = <strong>{}</strong>", original, additional, total
-            )
-        return str(original)
+        if obj.order_item:
+            original = obj.order_item.quantity
+            additional = obj.additional_quantity
+            total = obj.total_quantity
+            if additional > 0:
+                return format_html(
+                    "{} + {} = <strong>{}</strong>", original, additional, total
+                )
+            return str(original)
+        # أقمشة خارجية - عرض الكمية مباشرة
+        return str(obj.quantity) if obj.quantity else "-"
 
     quantity_display.short_description = "الكمية"
 

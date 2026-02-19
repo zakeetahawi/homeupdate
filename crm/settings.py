@@ -561,7 +561,7 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD"),
         "HOST": os.environ.get("DB_HOST", "localhost"),
         "PORT": os.environ.get("DB_PORT", "5432"),
-        "CONN_MAX_AGE": 300,
+        "CONN_MAX_AGE": 60,  # تقليل من 300 إلى 60 ثانية لتجنب امتلاء pool الاتصالات
         "CONN_HEALTH_CHECKS": True,
         "OPTIONS": {
             "client_encoding": "UTF8",
