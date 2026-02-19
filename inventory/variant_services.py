@@ -187,6 +187,18 @@ class VariantService:
             base_product._skip_cloudflare_sync = True
             base_product._skip_qr_generation = True
 
+            # تحديث كود BaseProduct إذا كان barcode المنتج الحالي أصغر رقمياً
+            # (يضمن أن كود المنتج الأساسي = أصغر barcode من كل ألوانه)
+            if product.code and str(product.code).isdigit():
+                current_bp_code = str(base_product.code)
+                new_code = str(product.code)
+                is_smaller = (not current_bp_code.isdigit()) or int(new_code) < int(current_bp_code)
+                if is_smaller:
+                    code_conflict = BaseProduct.objects.filter(code=new_code).exclude(id=base_product.id).exists()
+                    if not code_conflict:
+                        BaseProduct.objects.filter(id=base_product.id).update(code=new_code)
+                        base_product.code = new_code
+
         # إنشاء أو الحصول على المتغير
         if not variant_code:
             variant_code = "DEFAULT"
@@ -258,12 +270,13 @@ class VariantService:
             "variants_created": 0,
         }
 
-        # المنتجات غير المرتبطة
+        # المنتجات غير المرتبطة — مرتبة بـ id لضمان معالجة ثابتة
+        # (الأقدم id أولاً → يُنشئ BaseProduct ← ثم الأحدث يحدّث الكود للأصغر)
         unlinked_products = Product.objects.exclude(
             id__in=ProductVariant.objects.filter(
                 legacy_product__isnull=False
             ).values_list("legacy_product_id", flat=True)
-        )
+        ).order_by("id")
 
         stats["total"] = unlinked_products.count()
 
@@ -293,6 +306,13 @@ class VariantService:
                 logger.error(f"خطأ في ترحيل المنتج {product.id}: {e}")
 
         logger.info(f"✅ اكتمل الترحيل: {stats['migrated']} منتج")
+
+        # مرحلة الدمج التلقائي: دمج BaseProducts المكررة بعد الترحيل
+        # يضمن عدم وجود BaseProducts مكررة بنفس الاسم الأساسي
+        try:
+            cls.consolidate_duplicate_base_products()
+        except Exception as e:
+            logger.error(f"خطأ في دمج المكررات: {e}")
 
         # المرحلة 2: توليد QR للمنتجات الأساسية
         if migrated_base_products:
@@ -369,7 +389,7 @@ class VariantService:
             id__in=ProductVariant.objects.filter(
                 legacy_product__isnull=False
             ).values_list("legacy_product_id", flat=True)
-        )
+        ).order_by("id")
 
         stats["total"] = unlinked_products.count()
         logger.info(f"🚀 المرحلة 1: بدء ترحيل {stats['total']} منتج")
@@ -390,7 +410,109 @@ class VariantService:
                 logger.error(f"خطأ في ترحيل المنتج {product.id}: {e}")
 
         logger.info(f"✅ المرحلة 1 اكتملت: {stats['migrated']} منتج")
+
+        # دمج تلقائي لأي BaseProducts مكررة نشأت أثناء الترحيل
+        try:
+            cls.consolidate_duplicate_base_products()
+        except Exception as e:
+            logger.error(f"خطأ في دمج المكررات: {e}")
+
         return stats
+
+    @classmethod
+    def consolidate_duplicate_base_products(cls):
+        """
+        دمج BaseProducts المكررة التي تشترك بنفس الاسم الأساسي.
+        يُستدعى تلقائياً بعد migrate_all_products و phase1_migrate_products.
+
+        القاعدة:
+          - BORGO/C1 و BORGO/C39 → كلاهما تحت BaseProduct واحد "BORGO"
+          - كود المنتج الأساسي = أصغر barcode رقمي من ألوانه
+          - يتجاهل ما هو صحيح بالفعل (آمن للتشغيل المتكرر)
+        """
+        import re as _re
+        from django.db import transaction as _tx
+        from .models import BaseProduct, ProductVariant
+        from django.db.models import Count
+
+        # بناء مجموعات: base_name → [BaseProduct ids]
+        all_bps = list(BaseProduct.objects.values("id", "name", "code"))
+        groups = {}
+        for bp in all_bps:
+            raw_name = (bp["name"] or "").strip()
+            base_name = _re.split(r'[/\\]', raw_name)[0].strip() or raw_name
+            if base_name not in groups:
+                groups[base_name] = []
+            groups[base_name].append(bp)
+
+        merged = 0
+        deleted = 0
+        moved = 0
+
+        for base_name, bps in groups.items():
+            if len(bps) <= 1:
+                continue  # لا يوجد تكرار
+
+            try:
+                bp_ids = [bp["id"] for bp in bps]
+                bp_objects = list(BaseProduct.objects.filter(id__in=bp_ids).order_by("id"))
+                main_bp = bp_objects[0]
+                duplicates = bp_objects[1:]
+
+                # أصغر barcode رقمي من كل variants
+                all_variants = list(
+                    ProductVariant.objects.filter(base_product_id__in=bp_ids)
+                    .values("id", "base_product_id", "variant_code", "barcode")
+                )
+                numeric_barcodes = [
+                    v["barcode"] for v in all_variants
+                    if v["barcode"] and str(v["barcode"]).isdigit()
+                ]
+                if numeric_barcodes:
+                    best_code = min(numeric_barcodes, key=lambda c: int(c))
+                else:
+                    best_code = main_bp.code
+
+                with _tx.atomic():
+                    # نقل variants من المكررات للرئيسي
+                    for dup_bp in duplicates:
+                        dup_vars = [v for v in all_variants if v["base_product_id"] == dup_bp.id]
+                        for v in dup_vars:
+                            vc = v["variant_code"]
+                            # تجنب تكرار variant_code في الرئيسي
+                            if any(
+                                ov["variant_code"] == vc and ov["base_product_id"] == main_bp.id
+                                for ov in all_variants
+                                if ov["id"] != v["id"]
+                            ):
+                                vc = f"{vc}_{v['id']}"
+                            ProductVariant.objects.filter(id=v["id"]).update(
+                                base_product_id=main_bp.id,
+                                variant_code=vc,
+                            )
+                            moved += 1
+
+                        BaseProduct.objects.filter(id=dup_bp.id).delete()
+                        deleted += 1
+
+                    # تحديث الكود والاسم للرئيسي (بدون signals)
+                    if not BaseProduct.objects.filter(code=best_code).exclude(id=main_bp.id).exists():
+                        BaseProduct.objects.filter(id=main_bp.id).update(
+                            code=best_code, name=base_name
+                        )
+                    else:
+                        BaseProduct.objects.filter(id=main_bp.id).update(name=base_name)
+
+                merged += 1
+
+            except Exception as e:
+                logger.error(f"خطأ في دمج '{base_name}': {e}")
+                continue
+
+        logger.info(
+            f"✅ الدمج التلقائي: {merged} مجموعة، {deleted} محذوف، {moved} variant منقول"
+        )
+        return {"merged_groups": merged, "deleted": deleted, "moved_variants": moved}
 
     @classmethod
     def phase2_generate_qr(cls, base_product_ids):
