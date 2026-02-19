@@ -147,35 +147,43 @@ class VariantService:
             base_name = product.name
             variant_code = "DEFAULT"
 
-        # القاعدة الجديدة:
-        # - الاسم = الكود المستخرج (base_name مثل DORIS)
-        # - الكود = باركود المنتج (product.code مثل 10100300253)
-        new_base_name = base_name  # استخدام base_name كاسم
-        new_base_code = product.code  # استخدام باركود المنتج كرمز
+        # القاعدة الصحيحة:
+        # - البحث عن المنتج الأساسي بالاسم (base_name مثل BORGO)
+        # - إذا لم يوجد، ننشئه بكود مولّد من قسيم الاسم
+        # - كل المتغيرات بنفس base_name تذهب لنفس BaseProduct
+        new_base_name = base_name
 
-        # إنشاء أو الحصول على المنتج الأساسي
-        # نبحث بالكود الجديد (الباركود)
-        base_product = BaseProduct.objects.filter(code=new_base_code).first()
+        # إنشاء أو الحصول على المنتج الأساسي بالاسم (وليس الكود الفردي)
+        base_product = BaseProduct.objects.filter(name__iexact=new_base_name).first()
         bp_created = False
 
         if not base_product:
-            # إنشاء يدوي مع تعيين الـ flags قبل save()
+            # استخدام كود المنتج الأول (أول لون) كـ code للمنتج الأساسي
+            # BORGO/C39 (code: 10100302461) → BaseProduct(code=10100302461, name=BORGO)
+            # BORGO/C40 (code: 10100302462) → نفس BaseProduct السابق
+            first_product_code = product.code or ""
+            # تفادي التكرار إذا كان الكود مستخدماً بالفعل في BaseProduct آخر
+            if first_product_code and BaseProduct.objects.filter(code=first_product_code).exists():
+                # كود موجود في BaseProduct آخر - نولّد كود فريد
+                import re as _re
+                first_product_code = _re.sub(r'[^A-Za-z0-9_\-]', '_', new_base_name).upper()[:50]
+                if BaseProduct.objects.filter(code=first_product_code).exists():
+                    first_product_code = f"{first_product_code}_{product.id}"
+
             base_product = BaseProduct(
-                code=new_base_code,  # باركود المنتج
-                name=new_base_name,  # الكود المستخرج (DORIS)
+                code=first_product_code,
+                name=new_base_name,
                 base_price=product.price,
                 currency=product.currency,
                 unit=product.unit,
                 category=product.category,
                 minimum_stock=product.minimum_stock,
             )
-            # تعيين الـ flags قبل save()
             base_product._skip_cloudflare_sync = True
             base_product._skip_qr_generation = True
             base_product.save()
             bp_created = True
         else:
-            # تعيين الـ flags على المنتج الموجود
             base_product._skip_cloudflare_sync = True
             base_product._skip_qr_generation = True
 
