@@ -203,6 +203,7 @@ class TechnicianShare(models.Model):
         verbose_name = _("حصة فني")
         verbose_name_plural = _("حصص الفنيين")
         ordering = ["card", "technician"]
+        unique_together = [("card", "technician")]  # منع تكرار نفس الفني في نفس البطاقة
         indexes = [
             models.Index(fields=["is_paid"], name="tech_share_paid_idx"),
             models.Index(
