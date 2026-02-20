@@ -5,7 +5,7 @@
             "ENGINE": "django.db.backends.postgresql",
             "HOST": "localhost",
             "NAME": "crm_system",
-            "PORT": "5432",
+            "PORT": "6432",
             "USER": "postgres",
             "PASSWORD": "5525"
         }

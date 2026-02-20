@@ -135,7 +135,9 @@ class BackupService:
             db_user = db_settings["USER"]
             db_password = db_settings["PASSWORD"]
             db_host = db_settings["HOST"] or "localhost"
-            db_port = db_settings["PORT"] or "5432"
+            # pg_dump يحتاج اتصالاً مباشراً بـ PostgreSQL (ليس عبر PgBouncer)
+            # لأن PgBouncer transaction mode يكسر consistency الـ snapshot الخاص بـ pg_dump
+            db_port = os.environ.get("DB_DIRECT_PORT", "5432")
 
             try:
                 # محاولة إنشاء النسخة الاحتياطية باستخدام pg_dump

@@ -560,18 +560,21 @@ DATABASES = {
         "USER": os.environ.get("DB_USER", "postgres"),
         "PASSWORD": os.environ.get("DB_PASSWORD"),
         "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
-        "CONN_MAX_AGE": 60,  # تقليل من 300 إلى 60 ثانية لتجنب امتلاء pool الاتصالات
-        "CONN_HEALTH_CHECKS": True,
+        # ⚡ يتصل عبر PgBouncer (port 6432) بدلاً من PostgreSQL مباشرة (5432)
+        # PgBouncer يُدير pool من 40 اتصال حقيقي تخدم آلاف الطلبات
+        "PORT": os.environ.get("DB_PORT", "6432"),
+        # CONN_MAX_AGE = 0 ضروري مع PgBouncer transaction mode
+        # لأن PgBouncer يُدير الـ pooling - لا داعي لـ Django تحتفظ بالاتصالات
+        "CONN_MAX_AGE": 0,
+        "CONN_HEALTH_CHECKS": False,  # غير ضروري - PgBouncer يفحص الاتصالات
         "OPTIONS": {
             "client_encoding": "UTF8",
-            "sslmode": "prefer",
             "connect_timeout": 10,
-            "options": " ".join([
-                "-c statement_timeout=30000",
-                "-c idle_in_transaction_session_timeout=60000",
-                "-c lock_timeout=10000",
-            ]),
+            # sslmode=disable للاتصال المحلي بـ PgBouncer (أسرع وأكثر استقراراً)
+            "sslmode": "disable",
+            # ملاحظة: تم نقل timeout settings إلى postgresql.conf مباشرة
+            # statement_timeout=30s, idle_in_transaction_session_timeout=60s, lock_timeout=10s
+            # (PgBouncer transaction mode يتجاهل options startup parameter)
         },
     }
 }
