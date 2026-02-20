@@ -9,6 +9,13 @@ from accounts.models import Department
 
 _NAVBAR_CACHE_TTL = 300  # 5 دقائق
 
+# روابط مخفية بشكل دائم من الناف بار — لا تتغير حتى لو تغيرت قاعدة البيانات
+_HIDDEN_NAVBAR_URLS = {
+    "/reports/production/",    # تقارير الإنتاج — أُزيلت بطلب المدير
+    "/reports/orders/",        # تقرير الطلبات — أُزيلت بطلب المدير
+    "/inventory/transfers/",   # تحويلات مخزنية — أُزيلت بطلب المدير
+}
+
 
 def navbar_departments(request):
     """
@@ -99,6 +106,9 @@ def navbar_departments(request):
     # إذا كان موظف، يرى كل شيء
     if user.is_staff:
         for unit in all_units:
+            # تخطي الروابط المحظورة بشكل دائم
+            if unit.url_name in _HIDDEN_NAVBAR_URLS:
+                continue
             # تحويل الوحدة إلى dictionary
             unit_dict = {
                 "name": unit.name,
@@ -154,6 +164,9 @@ def navbar_departments(request):
                     is_authorized = True
 
             if is_authorized:
+                # تخطي الروابط المحظورة بشكل دائم
+                if unit.url_name in _HIDDEN_NAVBAR_URLS:
+                    continue
                 # تحويل الوحدة إلى dictionary
                 unit_dict = {
                     "name": unit.name,
@@ -243,16 +256,6 @@ def navbar_departments(request):
                     "name": "جميع التحويلات",
                     "icon": "fa-list",
                     "url_name": "/inventory/stock-transfers/",
-                }
-            )
-
-        # Warehouse Management link for staff/superusers
-        if user.is_superuser or user.is_staff:
-            navbar_items["inventory"]["units"].append(
-                {
-                    "name": "إدارة المستودعات",
-                    "icon": "fa-warehouse",
-                    "url_name": "/inventory/warehouses/",
                 }
             )
 
