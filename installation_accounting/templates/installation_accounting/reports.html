@@ -70,6 +70,10 @@
                                        class="btn btn-outline-secondary">
                                         <i class="fas fa-redo me-1"></i> إعادة تعيين
                                     </a>
+                                    <a href="{% url 'installation_accounting:export_report' %}?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&payment_status={{ filters.payment_status }}&technician={{ filters.technician }}"
+                                       class="btn btn-success">
+                                        <i class="fas fa-file-excel me-1"></i> تصدير Excel
+                                    </a>
                                     <a href="{% url 'reports:ranking' %}?type=installations&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}"
                                        class="btn btn-warning">
                                         <i class="fas fa-trophy me-1"></i> ترتيب الفنيين
