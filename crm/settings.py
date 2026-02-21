@@ -82,7 +82,7 @@ MANAGERS = ADMINS
 SILENCED_SYSTEM_CHECKS = ["urls.W002", "models.W042", "security.W019"]
 
 # ======================================
-# 3. Jazzmin Admin Theme
+# 3. Admin Settings (Jazzmin removed - using default Django admin)
 # ======================================
 
 JAZZMIN_SETTINGS = {
@@ -348,39 +348,6 @@ JAZZMIN_SETTINGS = {
     "language_chooser": False,
 }
 
-JAZZMIN_UI_TWEAKS = {
-    "navbar_small_text": False,
-    "footer_small_text": True,
-    "body_small_text": False,
-    "brand_small_text": False,
-    "brand_colour": "navbar-white",
-    "accent": "accent-primary",
-    "navbar": "navbar-white navbar-light",
-    "no_navbar_border": False,
-    "navbar_fixed": True,
-    "layout_boxed": False,
-    "footer_fixed": False,
-    "sidebar_fixed": True,
-    "sidebar": "sidebar-light-primary",
-    "sidebar_nav_small_text": False,
-    "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": True,
-    "sidebar_nav_compact_style": False,
-    "sidebar_nav_legacy_style": False,
-    "sidebar_nav_flat_style": False,
-    "theme": "cosmo",
-    "dark_mode_theme": None,
-    "button_classes": {
-        "primary": "btn-primary",
-        "secondary": "btn-outline-secondary",
-        "info": "btn-info",
-        "warning": "btn-warning",
-        "danger": "btn-danger",
-        "success": "btn-success",
-    },
-    "actions_sticky_top": True,
-}
-
 # ======================================
 # 4. Installed Apps
 # ======================================
@@ -389,8 +356,6 @@ INSTALLED_APPS = [
     # ASGI/Channels
     "daphne",
     "channels",
-    # Admin interface (jazzmin)
-    "jazzmin",
     # Django core
     "django.contrib.admin",
     "django.contrib.auth",
@@ -538,7 +503,6 @@ TEMPLATES = [
                 "accounts.navbar_context.navbar_departments",
                 "notifications.context_processors.notifications_context",
                 "crm.context_processors.admin_stats",
-                "crm.context_processors.jazzmin_extras",
                 "inventory.context_processors.pending_transfers",
                 "cutting.context_processors.cutting_notifications",
             ],
