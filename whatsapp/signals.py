@@ -104,12 +104,19 @@ def send_template_notification(
             return None
 
     except Exception as e:
-        logger.error(f"❌ WhatsApp error: {template.meta_template_name} - {e}")
+        # استخراج تفاصيل Meta API إن وُجدت
+        error_detail = str(e)
+        if hasattr(e, "meta_response") and e.meta_response:
+            error_detail = f"{e} | Meta: {e.meta_response}"
+        elif hasattr(e, "response") and e.response is not None:
+            error_detail = f"{e} | Meta: {e.response.text}"
+
+        logger.error(f"❌ WhatsApp error: {template.meta_template_name} - {error_detail}")
         # محاولة تحديث الرسالة إذا تم إنشاؤها
         try:
             if "whatsapp_message" in locals():
                 whatsapp_message.status = "FAILED"
-                whatsapp_message.error_message = str(e)
+                whatsapp_message.error_message = error_detail[:500]
                 whatsapp_message.save()
         except Exception:
             pass

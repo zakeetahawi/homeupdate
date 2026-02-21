@@ -338,13 +338,38 @@ class WhatsAppService:
 
             logger.debug(f"Response: {response.status_code} - {response.text}")
 
+            # إذا فشل بسبب media_id منتهي الصلاحية → أعد الرفع وحاول مجدداً
+            if response.status_code == 400:
+                resp_data = response.json()
+                err_msg = resp_data.get("error", {}).get("message", "")
+                if "not a valid whatsapp business account media attachment ID" in err_msg:
+                    logger.warning("⚠️ Media ID منتهي الصلاحية - جاري إعادة الرفع تلقائياً...")
+                    # مسح الـ ID القديم وإعادة الرفع
+                    self.settings.header_media_id = ""
+                    self.settings.save(update_fields=["header_media_id"])
+                    new_media_id = self._get_or_upload_header_media()
+                    if new_media_id:
+                        logger.info(f"✅ تم رفع الصورة بنجاح، media_id جديد: {new_media_id}")
+                        # تحديث الـ payload بالـ ID الجديد
+                        for comp in payload.get("template", {}).get("components", []):
+                            if comp.get("type") == "header":
+                                for param in comp.get("parameters", []):
+                                    if param.get("type") == "image" and "image" in param:
+                                        param["image"] = {"id": new_media_id}
+                        # إعادة الإرسال
+                        response = requests.post(
+                            url, headers=self._get_headers(), json=payload, timeout=10
+                        )
+
             response.raise_for_status()
             return response.json()
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Error sending template: {e}")
             if hasattr(e, "response") and e.response:
-                logger.error(f"Response: {e.response.text}")
+                logger.error(f"Response body: {e.response.text}")
+                # إرفاق تفاصيل الاستجابة بالاستثناء لتُحفظ في DB
+                e.meta_response = e.response.text
             raise
 
     def send_message(
