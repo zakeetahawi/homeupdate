@@ -52,6 +52,6 @@ create_backup
 
 # Run backups every hour (3600 seconds). The script will run in background from run-production.sh
 while true; do
-	sleep 3600
-	create_backup
+        # sleep في الخلفية + wait حتى يكون قابلاً للمقاطعة بـ SIGTERM
+        sleep 3600 & wait $!
 done

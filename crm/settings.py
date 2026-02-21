@@ -567,6 +567,9 @@ DATABASES = {
         # لأن PgBouncer يُدير الـ pooling - لا داعي لـ Django تحتفظ بالاتصالات
         "CONN_MAX_AGE": 0,
         "CONN_HEALTH_CHECKS": False,  # غير ضروري - PgBouncer يفحص الاتصالات
+        # CRITICAL: PgBouncer transaction mode يدمر server-side cursors
+        # Django يستخدمها في iterator() و QuerySet كبيرة → InvalidCursorName
+        "DISABLE_SERVER_SIDE_CURSORS": True,
         "OPTIONS": {
             "client_encoding": "UTF8",
             "connect_timeout": 10,

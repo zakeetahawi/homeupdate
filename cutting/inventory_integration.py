@@ -12,6 +12,8 @@ from django.utils import timezone
 
 from inventory.models import Product, StockTransaction
 from inventory.models import Warehouse as InventoryWarehouse
+from django.contrib.contenttypes.models import ContentType
+
 from notifications.models import Notification
 
 from .models import CuttingOrderItem
@@ -293,39 +295,29 @@ class InventoryIntegrationService:
         try:
             order_creator = cutting_item.cutting_order.order.created_by
             if order_creator:
-                Notification.objects.create(
-                    user=order_creator,
+                ct = ContentType.objects.get_for_model(cutting_item)
+                notification = Notification.objects.create(
                     title="نقص في المخزون",
                     message=f"الصنف {cutting_item.order_item.product.name} غير متوفر بالكمية المطلوبة. "
-                    f"المطلوب: {required_quantity}, المتوفر: {current_stock}",
+                            f"المطلوب: {required_quantity}, المتوفر: {current_stock}",
                     notification_type="stock_shortage",
-                    related_object_type="cutting_order_item",
-                    related_object_id=cutting_item.id,
+                    content_type=ct,
+                    object_id=cutting_item.id,
+                    created_by=order_creator,
                 )
-        except Exception as e:
-            logger.error(f"خطأ في إرسال إشعار نقص المخزون: {str(e)}")
-
-    @staticmethod
-    def _send_deduction_success_notification(cutting_item, transaction, user):
-        """إرسال إشعار نجاح خصم المخزون"""
-        try:
-            order_creator = cutting_item.cutting_order.order.created_by
+                notification.visible_to.add(order_creator)
             if order_creator:
-                Notification.objects.create(
-                    user=order_creator,
+                ct = ContentType.objects.get_for_model(transaction)
+                notification = Notification.objects.create(
                     title="تم خصم المخزون",
                     message=f"تم خصم {transaction.quantity} من {cutting_item.order_item.product.name} "
-                    f"لأمر التقطيع {cutting_item.cutting_order.cutting_code}",
+                            f"لأمر التقطيع {cutting_item.cutting_order.cutting_code}",
                     notification_type="cutting_completed",
-                    related_object_type="stock_transaction",
-                    related_object_id=transaction.id,
+                    content_type=ct,
+                    object_id=transaction.id,
+                    created_by=order_creator,
                 )
-        except Exception as e:
-            logger.error(f"خطأ في إرسال إشعار نجاح الخصم: {str(e)}")
-
-
-# دوال مساعدة للاستخدام المباشر
-def deduct_inventory_for_cutting(cutting_item, user):
+                notification.visible_to.add(order_creator)
     """دالة مساعدة لخصم المخزون عند إكمال التقطيع"""
     return InventoryIntegrationService.process_cutting_completion(cutting_item, user)
 

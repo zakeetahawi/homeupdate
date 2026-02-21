@@ -5,6 +5,7 @@ Syncs product data from Django to Cloudflare KV
 
 import json
 import logging
+import time
 
 import requests
 from django.conf import settings
@@ -47,25 +48,38 @@ class CloudflareSync:
             calculated_timeout = 60 + (num_products // 10)
             
             # logger.info(f"Sending sync request to {self.worker_url}/sync")
-            response = requests.post(
-                f"{self.worker_url}/sync",
-                json=data,
-                headers={
-                    "Content-Type": "application/json",
-                    "X-Sync-API-Key": self.api_key,
-                },
-                timeout=calculated_timeout,  # Timeout ديناميكي للدفعات الكبيرة
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                # logger.info(f"Cloudflare sync successful: {result}")
-                return True
-            else:
-                logger.error(
-                    f"Cloudflare sync failed: {response.status_code} - {response.text}"
+            max_retries = 4
+            for attempt in range(max_retries):
+                response = requests.post(
+                    f"{self.worker_url}/sync",
+                    json=data,
+                    headers={
+                        "Content-Type": "application/json",
+                        "X-Sync-API-Key": self.api_key,
+                    },
+                    timeout=calculated_timeout,  # Timeout ديناميكي للدفعات الكبيرة
                 )
-                return False
+
+                if response.status_code == 200:
+                    # logger.info(f"Cloudflare sync successful")
+                    return True
+                elif response.status_code == 429:
+                    # Rate limit: exponential backoff (2, 4, 8, 16 ثانية)
+                    wait_time = 2 ** (attempt + 1)
+                    logger.warning(
+                        f"Cloudflare 429 rate limit محاولة {attempt + 1}/{max_retries}, انتظار {wait_time}s"
+                    )
+                    if attempt < max_retries - 1:
+                        time.sleep(wait_time)
+                    else:
+                        logger.error("Cloudflare sync فشل بعد جميع المحاولات (429)")
+                        return False
+                else:
+                    logger.error(
+                        f"Cloudflare sync failed: {response.status_code} - {response.text}"
+                    )
+                    return False
+            return False
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Cloudflare sync request failed: {e}")
