@@ -1,115 +1,51 @@
 #!/bin/bash
-# ═══════════════════════════════════════════════════════════════════════════════
-# سكربت النشر الشامل - نظام الخواجه
-# Comprehensive Deployment Script - El-Khawaga System
-# ═══════════════════════════════════════════════════════════════════════════════
-# التاريخ: 2026-02-11
-# الإصدار: يشمل المحاسبة + لوحة التحكم + الثيم + إصلاحات
-# ⚠️  ينشئ القيود المحاسبية من بداية 2026 فقط (2026-01-01)
-# ═══════════════════════════════════════════════════════════════════════════════
+# سكربت النشر - نظام الخواجه
+set -e
 
-set -e  # توقف عند أي خطأ
-
-# ألوان للطباعة
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
-
-# مسار المشروع
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJECT_DIR"
 
-echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
-echo -e "${CYAN}    سكربت نشر تحديثات نظام الخواجه${NC}"
-echo -e "${CYAN}    El-Khawaga System Deployment Script${NC}"
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
-echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
-echo ""
+echo -e "${BLUE}══════════════════════════════════════${NC}"
+echo -e "${BLUE}   نشر تحديثات نظام الخواجه${NC}"
+echo -e "${BLUE}══════════════════════════════════════${NC}"
 
-# ═══════════════════════════════════════════════════════════════════
-# المرحلة 1: سحب التحديثات من GitHub
-# ═══════════════════════════════════════════════════════════════════
-echo -e "${BLUE}[1/4] 📥 سحب التحديثات من GitHub...${NC}"
+# 1. سحب التحديثات
+echo -e "\n${BLUE}[1/4] سحب التحديثات من GitHub...${NC}"
 git pull origin main
-echo -e "${GREEN}  ✅ تم سحب التحديثات بنجاح${NC}"
-echo ""
+echo -e "${GREEN}  ✅ تم${NC}"
 
-# ═══════════════════════════════════════════════════════════════════
-# المرحلة 2: تثبيت المتطلبات الجديدة (إن وُجدت)
-# ═══════════════════════════════════════════════════════════════════
-echo -e "${BLUE}[2/4] 📦 تثبيت المتطلبات...${NC}"
+# 2. تثبيت المتطلبات فقط إذا تغيّر requirements.txt
+echo -e "\n${BLUE}[2/4] فحص المتطلبات...${NC}"
+REQ_HASH_FILE="$PROJECT_DIR/.req_hash"
+CURRENT_HASH=$(md5sum requirements.txt | cut -d' ' -f1)
+SAVED_HASH=$(cat "$REQ_HASH_FILE" 2>/dev/null || echo "")
 
-REQ_HASH_FILE=".requirements.md5"
-REQ_CURRENT=$(md5sum requirements.txt 2>/dev/null | cut -d' ' -f1)
-REQ_CACHED=$(cat "$REQ_HASH_FILE" 2>/dev/null || echo "")
-
-if [ "$REQ_CURRENT" = "$REQ_CACHED" ]; then
-    echo -e "${GREEN}  ✅ لم تتغير المتطلبات - تم التخطي${NC}"
-else
-    echo -e "${YELLOW}  ⚡ تغيّرت المتطلبات - يتم التثبيت...${NC}"
-    if [ -f "venv/bin/pip" ]; then
-        venv/bin/pip install -r requirements.txt --no-cache-dir 2>&1 | grep -E "^Collecting|^Installing|^Successfully|^ERROR|error" || true
-    elif [ -f ".venv/bin/pip" ]; then
-        .venv/bin/pip install -r requirements.txt --no-cache-dir 2>&1 | grep -E "^Collecting|^Installing|^Successfully|^ERROR|error" || true
-    else
-        pip install -r requirements.txt --no-cache-dir 2>&1 | grep -E "^Collecting|^Installing|^Successfully|^ERROR|error" || true
-    fi
-    echo "$REQ_CURRENT" > "$REQ_HASH_FILE"
+if [ "$CURRENT_HASH" != "$SAVED_HASH" ]; then
+    echo -e "${YELLOW}  تغيّرت المتطلبات - جاري التثبيت...${NC}"
+    pip install -r requirements.txt
+    echo "$CURRENT_HASH" > "$REQ_HASH_FILE"
     echo -e "${GREEN}  ✅ تم تثبيت المتطلبات${NC}"
+else
+    echo -e "${GREEN}  ✅ لا يوجد تغيير في المتطلبات${NC}"
 fi
-echo ""
 
-# ═══════════════════════════════════════════════════════════════════
-# المرحلة 3: تشغيل Migrations قواعد البيانات
-# ═══════════════════════════════════════════════════════════════════
-echo -e "${BLUE}[3/4] 🗄️  تشغيل Migrations قواعد البيانات...${NC}"
-echo -e "${YELLOW}  ⚡ Migrations جديدة:${NC}"
-echo -e "    📌 accounting: 0008 → 0013 (حسابات عملاء + فهارس + مرفقات + تحسينات)"
-echo -e "    📌 customers: 0020 (حد ائتمان + شروط دفع)"
-echo -e "    📌 orders: 0095-0096 (تخصيص مدفوعات + إزالة رصيد مستخدم)"
-echo ""
-
+# 3. تطبيق الـ Migrations
+echo -e "\n${BLUE}[3/4] تطبيق Migrations...${NC}"
 python manage.py migrate --noinput
-echo -e "${GREEN}  ✅ تم تشغيل جميع الـ Migrations بنجاح${NC}"
-echo ""
+echo -e "${GREEN}  ✅ تم${NC}"
 
-# ═══════════════════════════════════════════════════════════════════
-# المرحلة 4: جمع الملفات الثابتة + التحقق
-# ═══════════════════════════════════════════════════════════════════
-echo -e "${BLUE}[4/4] 📂 جمع الملفات الثابتة والتحقق النهائي...${NC}"
+# 4. إعادة تشغيل الخدمة
+echo -e "\n${BLUE}[4/4] إعادة تشغيل الخدمة...${NC}"
+bash "$PROJECT_DIR/لينكس/stop-service.sh" 2>/dev/null || true
+sleep 2
+bash "$PROJECT_DIR/لينكس/start-service.sh"
+echo -e "${GREEN}  ✅ تم${NC}"
 
-python manage.py collectstatic --noinput --clear 2>/dev/null || python manage.py collectstatic --noinput 2>/dev/null || true
-echo -e "${GREEN}  ✅ تم جمع الملفات الثابتة${NC}"
-
-echo ""
-echo -e "${YELLOW}  🔍 تشغيل التدقيق المحاسبي...${NC}"
-python manage.py audit_accounting 2>/dev/null || true
-echo ""
-
-# ═══════════════════════════════════════════════════════════════════
-# النتيجة النهائية
-# ═══════════════════════════════════════════════════════════════════
-echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}  ✅✅✅ تم النشر بنجاح! ✅✅✅${NC}"
-echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
-echo ""
-echo -e "${YELLOW}📋 ملخص ما تم:${NC}"
-echo -e "  1. ✅ سحب آخر التحديثات من GitHub"
-echo -e "  2. ✅ تثبيت المتطلبات الجديدة"
-echo -e "  3. ✅ تشغيل Migrations قواعد البيانات"
-echo -e "  4. ✅ جمع الملفات الثابتة + التدقيق"
-echo ""
-echo -e "${YELLOW}🔄 لإعادة تشغيل الخوادم:${NC}"
-echo -e "  sudo systemctl restart daphne gunicorn nginx"
-echo -e "  أو: ./لينكس/start-all.sh"
-echo ""
-echo -e "${YELLOW}📊 أوامر اختيارية للتحقق:${NC}"
-echo -e "  python manage.py trial_balance              # ميزان المراجعة"
-echo -e "  python manage.py verify_customer_balances    # تحقق أرصدة العملاء"
-echo -e "  python manage.py final_accounting_report     # تقرير محاسبي شامل"
-echo -e "  python manage.py check_orders_2026           # فحص قيود 2026"
-echo ""
-echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
+echo -e "\n${BLUE}══════════════════════════════════════${NC}"
+echo -e "${GREEN}  ✅ تم النشر بنجاح${NC}"
+echo -e "${BLUE}══════════════════════════════════════${NC}\n"
