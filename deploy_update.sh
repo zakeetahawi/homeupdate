@@ -41,14 +41,25 @@ echo ""
 # المرحلة 2: تثبيت المتطلبات الجديدة (إن وُجدت)
 # ═══════════════════════════════════════════════════════════════════
 echo -e "${BLUE}[2/4] 📦 تثبيت المتطلبات...${NC}"
-if [ -f "venv/bin/pip" ]; then
-    venv/bin/pip install -r requirements.txt --quiet 2>/dev/null || true
-elif [ -f ".venv/bin/pip" ]; then
-    .venv/bin/pip install -r requirements.txt --quiet 2>/dev/null || true
+
+REQ_HASH_FILE=".requirements.md5"
+REQ_CURRENT=$(md5sum requirements.txt 2>/dev/null | cut -d' ' -f1)
+REQ_CACHED=$(cat "$REQ_HASH_FILE" 2>/dev/null || echo "")
+
+if [ "$REQ_CURRENT" = "$REQ_CACHED" ]; then
+    echo -e "${GREEN}  ✅ لم تتغير المتطلبات - تم التخطي${NC}"
 else
-    pip install -r requirements.txt --quiet 2>/dev/null || true
+    echo -e "${YELLOW}  ⚡ تغيّرت المتطلبات - يتم التثبيت...${NC}"
+    if [ -f "venv/bin/pip" ]; then
+        venv/bin/pip install -r requirements.txt --no-cache-dir 2>&1 | grep -E "^Collecting|^Installing|^Successfully|^ERROR|error" || true
+    elif [ -f ".venv/bin/pip" ]; then
+        .venv/bin/pip install -r requirements.txt --no-cache-dir 2>&1 | grep -E "^Collecting|^Installing|^Successfully|^ERROR|error" || true
+    else
+        pip install -r requirements.txt --no-cache-dir 2>&1 | grep -E "^Collecting|^Installing|^Successfully|^ERROR|error" || true
+    fi
+    echo "$REQ_CURRENT" > "$REQ_HASH_FILE"
+    echo -e "${GREEN}  ✅ تم تثبيت المتطلبات${NC}"
 fi
-echo -e "${GREEN}  ✅ تم تثبيت المتطلبات${NC}"
 echo ""
 
 # ═══════════════════════════════════════════════════════════════════
