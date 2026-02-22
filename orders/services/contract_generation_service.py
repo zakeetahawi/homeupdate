@@ -320,12 +320,30 @@ class ContractGenerationService:
 
             # CSS أساسي للعقد - مناسب لصفحة عمودية
             base_css = """
+            @font-face {
+                font-family: 'Noto Naskh Arabic';
+                font-style: normal;
+                font-weight: 400;
+                src: url('/usr/share/fonts/noto/NotoNaskhArabic-Regular.ttf') format('truetype');
+            }
+            @font-face {
+                font-family: 'Noto Naskh Arabic';
+                font-style: normal;
+                font-weight: 700;
+                src: url('/usr/share/fonts/noto/NotoNaskhArabic-Bold.ttf') format('truetype');
+            }
+            @font-face {
+                font-family: 'Noto Naskh Arabic';
+                font-style: normal;
+                font-weight: 500;
+                src: url('/usr/share/fonts/noto/NotoNaskhArabic-Medium.ttf') format('truetype');
+            }
             @page {
                 size: A4 portrait;
                 margin: 1.5cm;
             }
             body {
-                font-family: 'Arial', 'Segoe UI', Tahoma, sans-serif;
+                font-family: 'Noto Naskh Arabic', 'Arial', Tahoma, sans-serif;
                 font-size: 9px;
                 direction: rtl;
                 text-align: right;

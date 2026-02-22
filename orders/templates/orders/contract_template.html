@@ -244,8 +244,7 @@
             font-size: 13px;
             color: #000;
             font-weight: 700;
-            overflow-wrap: break-word;
-            word-break: break-word;
+            overflow-wrap: anywhere;
             max-width: 100%;
         }
 
@@ -297,7 +296,7 @@
             page-break-inside: avoid;
             width: 100%;
             box-sizing: border-box;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* Subtle shadow for better distinction */
+            /* box-shadow removed: unsupported in WeasyPrint */
         }
 
         /* Curtain Header - Table Layout for PDF compatibility */
@@ -550,8 +549,7 @@
             padding: 1px 3px;
             border-radius: 3px;
             border-right: 2px solid #f39c12;
-            overflow-wrap: break-word;
-            word-break: break-word;
+            overflow-wrap: anywhere;
             white-space: normal;
             max-width: 100%;
         }
@@ -667,8 +665,7 @@
             font-size: 13px;
             color: #333;
             line-height: 1.4;
-            overflow-wrap: break-word;
-            word-break: break-word;
+            overflow-wrap: anywhere;
             white-space: normal;
             max-width: 100%;
             display: block;

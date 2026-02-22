@@ -1891,9 +1891,15 @@ from django.db.models.signals import post_save as oi_post_save
 
 def _recompute_order_totals(order_id):
     try:
+        from django.db import transaction
         from .tasks import calculate_order_totals_async
 
-        calculate_order_totals_async.delay(order_id)
+        # تأخير المهمة حتى بعد commit المعاملة لتجنب race condition
+        transaction.on_commit(
+            lambda: calculate_order_totals_async.apply_async(
+                (order_id,), countdown=2
+            )
+        )
     except Exception:
         try:
             order = Order.objects.get(pk=order_id)

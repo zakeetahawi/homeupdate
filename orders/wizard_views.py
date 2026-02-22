@@ -1233,7 +1233,6 @@ def wizard_step_4_invoice_payment(request, draft):
                         "total_amount", "notes",
                     ] if hasattr(draft, f)
                 ])
-                from django.contrib import messages
                 messages.warning(
                     request,
                     "تم حفظ البيانات، لكن فشل رفع الصورة (انتهت صلاحية الملف المؤقت). يرجى إعادة رفع صورة الفاتورة."

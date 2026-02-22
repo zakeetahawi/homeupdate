@@ -287,7 +287,7 @@ def calculate_order_totals_async(order_id):
         return {"success": True, "final_price": float(final_price)}
 
     except Order.DoesNotExist:
-        logger.warning(
+        logger.debug(
             f"تم تجاهل المهمة: الطلب {order_id} غير موجود (محذوف أو غير موجود)"
         )
         return {"success": True, "message": "تم تجاهل الطلب المحذوف"}
