@@ -306,18 +306,31 @@ class InventoryIntegrationService:
                     created_by=order_creator,
                 )
                 notification.visible_to.add(order_creator)
+        except Exception as e:
+            logger.error(f"خطأ في إرسال إشعار نقص المخزون: {str(e)}")
+
+    @staticmethod
+    def _send_deduction_success_notification(cutting_item, stock_transaction, user):
+        """إرسال إشعار نجاح خصم المخزون عند اكتمال التقطيع"""
+        try:
+            order_creator = cutting_item.cutting_order.order.created_by
             if order_creator:
-                ct = ContentType.objects.get_for_model(transaction)
+                ct = ContentType.objects.get_for_model(stock_transaction)
                 notification = Notification.objects.create(
                     title="تم خصم المخزون",
-                    message=f"تم خصم {transaction.quantity} من {cutting_item.order_item.product.name} "
+                    message=f"تم خصم {stock_transaction.quantity} من {cutting_item.order_item.product.name} "
                             f"لأمر التقطيع {cutting_item.cutting_order.cutting_code}",
                     notification_type="cutting_completed",
                     content_type=ct,
-                    object_id=transaction.id,
+                    object_id=stock_transaction.id,
                     created_by=order_creator,
                 )
                 notification.visible_to.add(order_creator)
+        except Exception as e:
+            logger.error(f"خطأ في إرسال إشعار خصم المخزون: {str(e)}")
+
+
+def complete_inventory_deduction(cutting_item, user):
     """دالة مساعدة لخصم المخزون عند إكمال التقطيع"""
     return InventoryIntegrationService.process_cutting_completion(cutting_item, user)
 

@@ -134,6 +134,12 @@ class AuditLog(models.Model):
         # حفظ اسم المستخدم كنص احتياطي
         if user and hasattr(user, "username") and "username" not in kwargs:
             kwargs["username"] = user.username
+
+        # التحقق من أن المستخدم موثق (ليس AnonymousUser)
+        if user and not getattr(user, "is_authenticated", False):
+            logger.debug(f"تخطي تسجيل التدقيق للمستخدم غير الموثق: {action}")
+            return None
+
         try:
             return cls.objects.create(
                 user=user, action=action, description=description, **kwargs
