@@ -44,7 +44,7 @@ from weasyprint import HTML
 from accounts.models import Department
 from accounts.utils import apply_default_year_filter
 from core.mixins import PaginationFixMixin
-from notifications.models import Notification
+from notifications.models import Notification, NotificationVisibility
 from orders.models import Order
 
 from .models import (
@@ -3054,12 +3054,17 @@ def send_reply(request, pk):
                     f"سبب الرفض الأصلي: {order.rejection_reason}"
                 )
 
-                Notification.objects.create(
-                    recipient=user,
+                notification = Notification.objects.create(
                     title=f"رد على رفض أمر التصنيع #{order.id}",
                     message=message,
+                    notification_type="manufacturing_status_changed",
                     priority="medium",
-                    link=order.get_absolute_url(),
+                    extra_data={"url": order.get_absolute_url()},
+                )
+                NotificationVisibility.objects.create(
+                    notification=notification,
+                    user=user,
+                    is_read=False,
                 )
                 logger.info(f"Reply notification sent to {user.username}")
             except Exception as e:
@@ -3171,12 +3176,17 @@ def send_reply_to_rejection_log(request, log_id):
                     f"سبب الرفض الأصلي: {rejection_log.rejection_reason}"
                 )
 
-                Notification.objects.create(
-                    recipient=user,
+                notification = Notification.objects.create(
                     title=f"رد على رفض أمر التصنيع {rejection_log.manufacturing_order.manufacturing_code}",
                     message=message,
+                    notification_type="manufacturing_status_changed",
                     priority="medium",
-                    link=rejection_log.manufacturing_order.get_absolute_url(),
+                    extra_data={"url": rejection_log.manufacturing_order.get_absolute_url()},
+                )
+                NotificationVisibility.objects.create(
+                    notification=notification,
+                    user=user,
+                    is_read=False,
                 )
                 logger.info(f"Reply notification sent to {user.username}")
             except Exception as e:
@@ -3284,12 +3294,17 @@ def re_approve_after_reply(request, pk):
                         f"رقم أمر التصنيع #{order.pk}."
                     )
 
-                    Notification.objects.create(
-                        recipient=order.order.created_by,
+                    notification = Notification.objects.create(
                         title=title,
                         message=message,
+                        notification_type="manufacturing_status_changed",
                         priority="high",
-                        link=order.get_absolute_url(),
+                        extra_data={"url": order.get_absolute_url()},
+                    )
+                    NotificationVisibility.objects.create(
+                        notification=notification,
+                        user=order.order.created_by,
+                        is_read=False,
                     )
                     logger.info(
                         f"Re-approval notification sent to "

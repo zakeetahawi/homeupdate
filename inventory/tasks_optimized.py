@@ -537,12 +537,6 @@ def bulk_upload_products_fast(
         # حفظ مسار ملف اللوج
         upload_log.options['log_file'] = log_file_path
         upload_log.save(update_fields=['options'])
-        
-        # إغلاق ملف اللوج
-        try:
-            log_file.close()
-        except Exception:
-            pass
 
         # 🚀 تشغيل خط الإنتاج التلقائي: ترحيل + QR + مزامنة Cloudflare
         if affected_product_ids:
@@ -562,11 +556,6 @@ def bulk_upload_products_fast(
         import traceback
         log_message(f"📍 Traceback:\n{traceback.format_exc()}")
         
-        try:
-            log_file.close()
-        except Exception:
-            pass
-            
         if "upload_log" in locals():
             upload_log.fail(error_message=str(e))
         raise
@@ -576,3 +565,8 @@ def bulk_upload_products_fast(
         post_save.receivers = original_post_save
         pre_save.receivers = original_pre_save
         log_message("⚡ تم إعادة تفعيل Signals")
+        # إغلاق ملف اللوج بعد آخر رسالة
+        try:
+            log_file.close()
+        except Exception:
+            pass
