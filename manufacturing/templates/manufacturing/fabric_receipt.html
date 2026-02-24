@@ -828,9 +828,12 @@
                                                         {% endif %}
                                                     {% endwith %}
                                                 {% else %}
-                                                    <span class="text-muted">
-                                                        <i class="fas fa-hourglass-half"></i> قيد المعالجة
-                                                    </span>
+                                                    {# لا يوجد ManufacturingOrderItem — نعرض زر الاستلام عبر الـ endpoint الجديد #}
+                                                    <button class="btn btn-warning btn-sm"
+                                                            onclick="openItemReceiptModalByCuttingItem({{ item.id }}, '{% if item.order_item and item.order_item.product %}{{ item.order_item.product.name|escapejs }}{% elif item.external_fabric_name %}{{ item.external_fabric_name|escapejs }}{% else %}قماش خارجي{% endif %}', '{{ order_data.cutting_order.cutting_code|escapejs }}', '{{ item.receiver_name|default:""|escapejs }}', '{{ item.permit_number|default:""|escapejs }}')"
+                                                            title="استلام قماش (ربط تلقائي)">
+                                                        <i class="fas fa-download"></i> استلام
+                                                    </button>
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -873,6 +876,8 @@
                     {% csrf_token %}
                     <div class="modal-body modern-modal-body">
                         <input type="hidden" id="cutting_order_id" name="cutting_order_id">
+                        <input type="hidden" id="cutting_item_fallback_id" name="cutting_item_fallback_id" value="">
+                        <input type="hidden" id="is_cutting_item_mode" name="is_cutting_item_mode" value="0">
                         <input type="hidden"
                                id="cutting_item_receiver_name"
                                name="cutting_item_receiver_name">
@@ -1094,8 +1099,22 @@
         toggleBagNumberInput();
     }
 
+    // فتح modal استلام عنصر فردي عبر cutting_item_id (لما لا يوجد ManufacturingOrderItem)
+    function openItemReceiptModalByCuttingItem(cuttingItemId, productName, cuttingCode, receiverName, permitNumber) {
+        // تفعيل الوضع البديل
+        document.getElementById('is_cutting_item_mode').value = '1';
+        document.getElementById('cutting_item_fallback_id').value = cuttingItemId;
+        // استدعاء نفس الـ modal مع itemId=0 (لا يُستخدم عند is_cutting_item_mode=1)
+        openItemReceiptModal(0, productName, cuttingCode, receiverName, permitNumber);
+    }
+
     // فتح modal استلام عنصر فردي
     function openItemReceiptModal(itemId, productName, cuttingCode, receiverName, permitNumber) {
+        // إعادة ضبط الوضع العادي إذا لم يكن تم تعيينه من openItemReceiptModalByCuttingItem
+        if (document.getElementById('is_cutting_item_mode').value !== '1') {
+            document.getElementById('is_cutting_item_mode').value = '0';
+            document.getElementById('cutting_item_fallback_id').value = '';
+        }
         console.log('فتح modal لاستلام العنصر:', itemId, productName, cuttingCode);
 
         // إزالة أي backdrop موجود
@@ -1286,7 +1305,12 @@
         };
 
         // إرسال البيانات لاستلام العنصر الفردي مباشرة
-        fetch(`/manufacturing/receive-item/${itemId}/`, {
+        const isCuttingItemMode = document.getElementById('is_cutting_item_mode').value === '1';
+        const cuttingFallbackId = document.getElementById('cutting_item_fallback_id').value;
+        const fetchUrl = isCuttingItemMode
+            ? `/manufacturing/fabric-receipt/cutting-item/${cuttingFallbackId}/receive/`
+            : `/manufacturing/receive-item/${itemId}/`;
+        fetch(fetchUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

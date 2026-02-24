@@ -122,6 +122,11 @@ urlpatterns = [
         name="receive_fabric_item",
     ),
     path(
+        "fabric-receipt/cutting-item/<int:cutting_item_id>/receive/",
+        views.receive_fabric_item_by_cutting_item,
+        name="receive_fabric_item_by_cutting_item",
+    ),
+    path(
         "fabric-receipt/order/<int:order_id>/bulk-receive/",
         views.bulk_receive_fabric,
         name="bulk_receive_fabric",

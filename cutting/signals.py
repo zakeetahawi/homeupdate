@@ -572,10 +572,25 @@ def create_manufacturing_item_on_cutting_completion(
     try:
         from manufacturing.models import ManufacturingOrder, ManufacturingOrderItem
 
-        # التحقق من وجود عنصر تصنيع مرتبط بهذا العنصر
+        # التحقق من وجود عنصر تصنيع مرتبط بهذا العنصر بالفعل
         if ManufacturingOrderItem.objects.filter(cutting_item=instance).exists():
             logger.info(f"✅ عنصر التصنيع موجود بالفعل لعنصر التقطيع {instance.id}")
             return
+
+        # حساب اسم المنتج والكمية بأمان بغض النظر عن نوع القماش
+        if instance.order_item and instance.order_item.product:
+            product_name = instance.order_item.product.name
+        elif instance.order_item:
+            product_name = "منتج غير محدد"
+        elif instance.is_external and instance.external_fabric_name:
+            product_name = instance.external_fabric_name
+        else:
+            product_name = "قماش خارجي"
+
+        if instance.order_item:
+            quantity = instance.order_item.quantity + instance.additional_quantity
+        else:
+            quantity = instance.quantity
 
         # البحث عن أمر تصنيع موجود فقط - لا ننشئ جديد
         try:
@@ -584,7 +599,7 @@ def create_manufacturing_item_on_cutting_completion(
             )
         except ManufacturingOrder.DoesNotExist:
             logger.warning(
-                f"⚠️ لا يوجد أمر تصنيع للطلب {instance.cutting_order.order.order_number} - سيتم إنشاؤه عند إنشاء الطلب"
+                f"⚠️ لا يوجد أمر تصنيع للطلب {instance.cutting_order.order.order_number} - لا يمكن ربط عنصر التقطيع {instance.id}"
             )
             return
         except ManufacturingOrder.MultipleObjectsReturned:
@@ -593,32 +608,51 @@ def create_manufacturing_item_on_cutting_completion(
                 order=instance.cutting_order.order
             ).first()
 
-        # إنشاء عنصر التصنيع مرتبط بعنصر التقطيع
+        # أولاً: محاولة ربط عنصر تصنيع موجود لنفس order_item (لتجنب التكرار)
+        if instance.order_item:
+            existing_unlinked = ManufacturingOrderItem.objects.filter(
+                manufacturing_order=manufacturing_order,
+                order_item=instance.order_item,
+                cutting_item__isnull=True,
+            ).first()
+
+            if existing_unlinked:
+                existing_unlinked.cutting_item = instance
+                existing_unlinked.receiver_name = instance.receiver_name or existing_unlinked.receiver_name
+                existing_unlinked.permit_number = instance.permit_number or existing_unlinked.permit_number
+                if instance.cutting_date:
+                    existing_unlinked.cutting_date = instance.cutting_date
+                existing_unlinked.save(update_fields=[
+                    "cutting_item", "receiver_name", "permit_number", "cutting_date"
+                ])
+                logger.info(
+                    f"✅ تم ربط عنصر التصنيع الموجود {existing_unlinked.id} بعنصر التقطيع {instance.id}"
+                )
+                return
+
+        # ثانياً: إنشاء عنصر تصنيع جديد مرتبط بعنصر التقطيع
         manufacturing_item = ManufacturingOrderItem.objects.create(
             manufacturing_order=manufacturing_order,
             cutting_item=instance,
             order_item=instance.order_item,
-            product_name=(
-                instance.order_item.product.name
-                if instance.order_item.product
-                else "منتج غير محدد"
-            ),
-            quantity=instance.order_item.quantity + instance.additional_quantity,
+            product_name=product_name,
+            quantity=quantity,
             receiver_name=instance.receiver_name,
             permit_number=instance.permit_number,
             cutting_date=instance.cutting_date,
             delivery_date=instance.delivery_date,
-            fabric_received=False,  # لم يتم الاستلام بعد
+            fabric_received=False,
             fabric_notes=f"تم ربطه من عنصر التقطيع {instance.id}",
         )
 
         logger.info(
-            f"✅ تم ربط عنصر التصنيع {manufacturing_item.id} بعنصر التقطيع {instance.id}"
+            f"✅ تم إنشاء عنصر تصنيع {manufacturing_item.id} وربطه بعنصر التقطيع {instance.id}"
         )
 
     except Exception as e:
         logger.error(
-            f"❌ خطأ في ربط عنصر التصنيع لعنصر التقطيع {instance.id}: {str(e)}"
+            f"❌ خطأ في ربط عنصر التصنيع لعنصر التقطيع {instance.id}: {str(e)}",
+            exc_info=True,
         )
 
 

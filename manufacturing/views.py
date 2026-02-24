@@ -19,6 +19,7 @@ from django.db import models, transaction
 from django.db.models import Case, Count, F, IntegerField, Q, Sum, Value, When
 from django.db.models.functions import ExtractMonth, ExtractYear, TruncDay, TruncMonth
 from django.http import (
+    Http404,
     HttpResponse,
     HttpResponseBadRequest,
     HttpResponseForbidden,
@@ -3438,6 +3439,119 @@ def receive_fabric_item(request, item_id):
             return JsonResponse({"success": False, "message": f"حدث خطأ: {str(e)}"})
 
     return JsonResponse({"success": False, "message": "طريقة غير مدعومة"})
+
+
+@login_required
+def receive_fabric_item_by_cutting_item(request, cutting_item_id):
+    """
+    استلام قماش عنصر تقطيع مباشرةً (بدون ManufacturingOrderItem مسبق).
+    يُنشئ ManufacturingOrderItem إذا لم يكن موجوداً ثم يُسجّل الاستلام.
+    يُستخدم عندما يفشل الـ signal في إنشاء الربط تلقائياً.
+    """
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "طريقة غير مدعومة"})
+
+    try:
+        from cutting.models import CuttingOrderItem
+
+        cutting_item = get_object_or_404(CuttingOrderItem, pk=cutting_item_id)
+
+        data = json.loads(request.body)
+        bag_number = data.get("bag_number", "").strip()
+        use_previous_bag = data.get("use_previous_bag", False)
+        notes = data.get("notes", "").strip()
+
+        if use_previous_bag:
+            previous_bag_number = data.get("previous_bag_number", "").strip()
+            if not previous_bag_number:
+                return JsonResponse({"success": False, "message": "يجب اختيار رقم الشنطة السابقة"})
+            bag_number = previous_bag_number
+        elif not bag_number:
+            return JsonResponse({"success": False, "message": "رقم الشنطة مطلوب"})
+
+        # البحث عن ManufacturingOrderItem موجود أو إنشاؤه
+        mfg_item = ManufacturingOrderItem.objects.filter(cutting_item=cutting_item).first()
+
+        if not mfg_item:
+            # محاولة إيجاد ManufacturingOrder للطلب
+            try:
+                manufacturing_order = ManufacturingOrder.objects.get(
+                    order=cutting_item.cutting_order.order
+                )
+            except ManufacturingOrder.DoesNotExist:
+                return JsonResponse({
+                    "success": False,
+                    "message": "لا يوجد أمر تصنيع مرتبط بهذا الطلب",
+                })
+            except ManufacturingOrder.MultipleObjectsReturned:
+                manufacturing_order = ManufacturingOrder.objects.filter(
+                    order=cutting_item.cutting_order.order
+                ).first()
+
+            # محاولة ربط ManufacturingOrderItem موجود بدون cutting_item
+            if cutting_item.order_item:
+                mfg_item = ManufacturingOrderItem.objects.filter(
+                    manufacturing_order=manufacturing_order,
+                    order_item=cutting_item.order_item,
+                    cutting_item__isnull=True,
+                ).first()
+
+            if mfg_item:
+                # ربط العنصر الموجود
+                mfg_item.cutting_item = cutting_item
+                mfg_item.receiver_name = cutting_item.receiver_name or mfg_item.receiver_name
+                mfg_item.permit_number = cutting_item.permit_number or mfg_item.permit_number
+                if cutting_item.cutting_date:
+                    mfg_item.cutting_date = cutting_item.cutting_date
+                mfg_item.save(update_fields=[
+                    "cutting_item", "receiver_name", "permit_number", "cutting_date"
+                ])
+            else:
+                # إنشاء عنصر جديد
+                if cutting_item.order_item and cutting_item.order_item.product:
+                    product_name = cutting_item.order_item.product.name
+                elif cutting_item.is_external and cutting_item.external_fabric_name:
+                    product_name = cutting_item.external_fabric_name
+                else:
+                    product_name = "قماش خارجي"
+
+                quantity = (
+                    (cutting_item.order_item.quantity + cutting_item.additional_quantity)
+                    if cutting_item.order_item
+                    else cutting_item.quantity
+                )
+
+                mfg_item = ManufacturingOrderItem.objects.create(
+                    manufacturing_order=manufacturing_order,
+                    cutting_item=cutting_item,
+                    order_item=cutting_item.order_item,
+                    product_name=product_name,
+                    quantity=quantity,
+                    receiver_name=cutting_item.receiver_name,
+                    permit_number=cutting_item.permit_number,
+                    cutting_date=cutting_item.cutting_date,
+                    delivery_date=cutting_item.delivery_date,
+                    fabric_received=False,
+                    fabric_notes=f"تم إنشاؤه تلقائياً عند الاستلام من عنصر التقطيع {cutting_item.id}",
+                )
+
+        # تسجيل الاستلام
+        mfg_item.mark_fabric_received(bag_number=bag_number, user=request.user, notes=notes)
+        mfg_item.refresh_from_db()
+
+        return JsonResponse({
+            "success": True,
+            "message": f"تم استلام القماش بنجاح - رقم الشنطة: {bag_number}",
+            "bag_number": bag_number,
+            "mfg_item_id": mfg_item.id,
+        })
+
+    except Http404:
+        raise
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ خطأ في استلام عنصر التقطيع {cutting_item_id}: {str(e)}\n{traceback.format_exc()}")
+        return JsonResponse({"success": False, "message": f"حدث خطأ: {str(e)}"})
 
 
 @login_required
