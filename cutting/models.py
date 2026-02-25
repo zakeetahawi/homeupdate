@@ -445,9 +445,11 @@ class CuttingOrderItem(SoftDeleteMixin, models.Model):
         # خصم المخزون التلقائي
         if auto_deduct_inventory and not self.inventory_deducted:
             try:
-                from .inventory_integration import deduct_inventory_for_cutting
+                # BUG-011 FIX: الدالة الصحيحة هي complete_inventory_deduction
+                # (deduct_inventory_for_cutting غير موجودة في inventory_integration)
+                from .inventory_integration import complete_inventory_deduction
 
-                transaction = deduct_inventory_for_cutting(self, user)
+                transaction = complete_inventory_deduction(self, user)
                 if transaction:
                     self.inventory_deduction_date = timezone.now()
                     self.save()
@@ -456,16 +458,21 @@ class CuttingOrderItem(SoftDeleteMixin, models.Model):
                 import logging
 
                 logger = logging.getLogger(__name__)
-                logger.error(f"خطأ في خصم المخزون للعنصر {self.id}: {str(e)}")
+                logger.error(f"خطأ في خصم المخزون للعنصر {self.id}: {str(e)}", exc_info=True)
 
                 # إرسال إشعار بالخطأ
                 try:
                     from notifications.models import Notification
 
+                    product_name = (
+                        self.order_item.product.name
+                        if self.order_item and self.order_item.product
+                        else "منتج غير محدد"
+                    )
                     Notification.objects.create(
                         user=user,
                         title="خطأ في خصم المخزون",
-                        message=f"فشل في خصم المخزون للعنصر {self.order_item.product.name}: {str(e)}",
+                        message=f"فشل في خصم المخزون للعنصر {product_name}: {str(e)}",
                         notification_type="stock_shortage",
                     )
                 except Exception:

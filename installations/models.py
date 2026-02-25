@@ -586,17 +586,24 @@ class InstallationSchedule(SoftDeleteMixin, models.Model):
             and old_status != "modification_completed"
         ):
             try:
-                # إنشاء أرشيف للتعديل المكتمل
-                InstallationArchive.objects.create(
+                # BUG-012 FIX: استخدام get_or_create بدل create لتجنب IntegrityError
+                # عند الاستدعاء المتكرر لنفس التركيب
+                archive, created = InstallationArchive.objects.get_or_create(
                     installation=self,
-                    archive_notes=f'تم إكمال التعديل مع تركيب مكتمل - {self.notes or ""}',
+                    defaults={
+                        'archive_notes': f'تم إكمال التعديل مع تركيب مكتمل - {self.notes or ""}',
+                    },
                 )
+                if not created:
+                    # تحديث الملاحظات إذا كان الأرشيف موجوداً مسبقاً
+                    archive.archive_notes = f'تم إكمال التعديل مع تركيب مكتمل - {self.notes or ""}'
+                    archive.save(update_fields=['archive_notes'])
             except Exception as e:
                 # لا نريد أن يفشل الحفظ بسبب الأرشفة
                 import logging
 
                 logger = logging.getLogger(__name__)
-                logger.error(f"خطأ في إنشاء أرشيف التعديل: {e}")
+                logger.error(f"خطأ في إنشاء أرشيف التعديل: {e}", exc_info=True)
 
         # تحديث تاريخ الجدولة عند بدء التركيب في يوم مختلف
         elif self.status == "in_installation" and old_status == "scheduled":
