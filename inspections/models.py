@@ -24,6 +24,55 @@ def validate_inspection_pdf_file(value):
             raise ValidationError("حجم الملف يجب أن يكون أقل من 50 ميجابايت")
 
 
+# ─── نمط تسمية الملفات الموحّد ───────────────────────────────────────────────
+# الرئيسي:  {عميل}_{فرع}_{تاريخ}_{طلب}_1.pdf
+# الإضافية: {عميل}_{فرع}_{تاريخ}_{طلب}_2.pdf  ,  _3.pdf  ...
+
+def _inspection_clean_name(name):
+    """تنظيف اسم العميل/الفرع/رقم الطلب من الرموز الخاصة"""
+    cleaned = re.sub(r"[^\w\u0600-\u06FF\s-]", "", str(name))
+    cleaned = re.sub(r"\s+", "_", cleaned)
+    return cleaned[:50]
+
+
+def _inspection_base_filename(inspection):
+    """بناء الجزء المشترك لاسم الملف من بيانات المعاينة"""
+    customer = _inspection_clean_name(
+        inspection.customer.name if inspection.customer else "عميل_جديد"
+    )
+    branch = _inspection_clean_name(
+        inspection.branch.name if inspection.branch else "فرع_غير_محدد"
+    )
+    date_str = (
+        inspection.scheduled_date.strftime("%Y-%m-%d")
+        if inspection.scheduled_date
+        else timezone.now().strftime("%Y-%m-%d")
+    )
+    order_num = _inspection_clean_name(
+        inspection.order.order_number
+        if inspection.order
+        else inspection.contract_number or "بدون_رقم"
+    )
+    return f"{customer}_{branch}_{date_str}_{order_num}"
+
+
+def inspection_main_file_upload_to(instance, filename):
+    """upload_to للملف الرئيسي للمعاينة – دائماً رقم 1"""
+    base = _inspection_base_filename(instance)
+    return f"inspections/files/{base}_1.pdf"
+
+
+def inspection_additional_file_upload_to(instance, filename):
+    """upload_to للملفات الإضافية للمعاينة – رقم 2 فصاعداً"""
+    inspection = instance.inspection
+    base = _inspection_base_filename(inspection)
+    # الرئيسي=1، أول إضافي=2، الثاني=3 …
+    existing_count = inspection.files.count()
+    file_number = existing_count + 2
+    return f"inspections/files/{base}_{file_number}.pdf"
+# ──────────────────────────────────────────────────────────────────────────────
+
+
 class InspectionEvaluation(models.Model):
     CRITERIA_CHOICES = [
         ("location", _("الموقع")),
@@ -254,7 +303,7 @@ class Inspection(SoftDeleteMixin, models.Model):
     windows_count = models.IntegerField(_("عدد الشبابيك"), null=True, blank=True)
     inspection_file = models.FileField(
         _("ملف المعاينة"),
-        upload_to="inspections/files/",
+        upload_to=inspection_main_file_upload_to,
         null=True,
         blank=True,
         validators=[validate_inspection_pdf_file],
@@ -519,42 +568,12 @@ class Inspection(SoftDeleteMixin, models.Model):
         return self.status == "pending" and self.scheduled_date < timezone.now().date()
 
     def generate_drive_filename(self):
-        """توليد اسم الملف للرفع على Google Drive"""
-        # اسم العميل (تنظيف الاسم من الرموز الخاصة)
-        if self.customer and self.customer.name:
-            customer_name = self.customer.name
-        elif hasattr(self, "customer_name") and self.customer_name:
-            customer_name = self.customer_name
-        else:
-            customer_name = "عميل_جديد"
-        customer_name = self._clean_filename(customer_name)
-        # الفرع
-        branch_name = self.branch.name if self.branch else "فرع_غير_محدد"
-        branch_name = self._clean_filename(branch_name)
-        # التاريخ
-        date_str = (
-            self.scheduled_date.strftime("%Y-%m-%d")
-            if self.scheduled_date
-            else timezone.now().strftime("%Y-%m-%d")
-        )
-        # رقم الطلب
-        order_number = (
-            self.order.order_number
-            if self.order
-            else self.contract_number or "بدون_رقم"
-        )
-        order_number = self._clean_filename(order_number)
-        # تجميع اسم الملف
-        filename = f"{customer_name}_{branch_name}_{date_str}_{order_number}.pdf"
-        return filename
+        """توليد اسم الملف الرئيسي للرفع على Google Drive – رقم 1"""
+        return f"{_inspection_base_filename(self)}_1.pdf"
 
     def _clean_filename(self, name):
         """تنظيف اسم الملف من الرموز الخاصة"""
-        # إزالة الرموز الخاصة والمسافات
-        cleaned = re.sub(r"[^\w\u0600-\u06FF\s-]", "", str(name))
-        # استبدال المسافات بـ underscore
-        cleaned = re.sub(r"\s+", "_", cleaned)
-        return cleaned[:50]  # تحديد الطول الأقصى
+        return _inspection_clean_name(name)
 
     def calculate_expected_delivery_date(self):
         """حساب تاريخ التسليم المتوقع للمعاينة"""
@@ -676,7 +695,7 @@ class InspectionFile(models.Model):
     )
     file = models.FileField(
         _("الملف"),
-        upload_to="inspections/files/",
+        upload_to=inspection_additional_file_upload_to,
         validators=[validate_inspection_pdf_file],
         help_text=_("يجب أن يكون الملف من نوع PDF وأقل من 50 ميجابايت"),
     )
@@ -732,16 +751,19 @@ class InspectionFile(models.Model):
         return f"ملف معاينة #{self.inspection_id} - {self.original_filename or self.file.name}"
 
     def save(self, *args, **kwargs):
-        # حفظ اسم الملف الأصلي
-        if self.file and not self.original_filename:
-            self.original_filename = os.path.basename(self.file.name)
-
-        # توليد اسم ملف Google Drive
+        # توليد اسم ملف Google Drive قبل الحفظ
         if self.file and not self.google_drive_file_name:
             self.google_drive_file_name = self.generate_drive_filename()
 
         is_new = self.pk is None
         super().save(*args, **kwargs)
+
+        # بعد الحفظ: تحديث original_filename من اسم الملف المحلي الفعلي (بعد تطبيق upload_to)
+        if self.file:
+            new_basename = os.path.basename(self.file.name)
+            if self.original_filename != new_basename:
+                self.original_filename = new_basename
+                type(self).objects.filter(pk=self.pk).update(original_filename=new_basename)
 
         # جدولة رفع الملف إلى Google Drive
         if is_new and self.file and not self.is_uploaded_to_drive:
@@ -749,37 +771,23 @@ class InspectionFile(models.Model):
 
     def generate_drive_filename(self):
         """
-        توليد اسم الملف للرفع على Google Drive
-        الصيغة: اسم_العميل + رقم_تسلسلي (مثال: زكي1، زكي2، محمد1، محمد2)
+        توليد اسم الملف الإضافي للرفع على Google Drive
+        النمط: {عميل}_{فرع}_{تاريخ}_{طلب}_{رقم}.pdf  (رقم 2 فصاعداً)
         """
         inspection = self.inspection
-        # اسم العميل
-        if inspection.customer and inspection.customer.name:
-            customer_name = inspection.customer.name
-        else:
-            customer_name = "عميل_جديد"
-        customer_name = self._clean_filename(customer_name)
-
-        # حساب الرقم التسلسلي الفريد لهذا العميل
-        # نحسب عدد الملفات الموجودة لهذا العميل في كل المعاينات
-        customer_files_count = (
-            InspectionFile.objects.filter(inspection__customer=inspection.customer)
-            .exclude(pk=self.pk)
-            .count()
+        base = _inspection_base_filename(inspection)
+        # الرقم = عدد الملفات الموجودة في هذه المعاينة (باستثناء النفس) + 2
+        existing_count = (
+            inspection.files.exclude(pk=self.pk).count()
+            if self.pk
+            else inspection.files.count()
         )
-
-        # الرقم التسلسلي = عدد الملفات الموجودة + 1
-        sequential_number = customer_files_count + 1
-
-        # تجميع اسم الملف: اسم_العميل + الرقم_التسلسلي
-        filename = f"{customer_name}{sequential_number}.pdf"
-        return filename
+        file_number = existing_count + 2
+        return f"{base}_{file_number}.pdf"
 
     def _clean_filename(self, name):
         """تنظيف اسم الملف من الرموز الخاصة"""
-        cleaned = re.sub(r"[^\w\u0600-\u06FF\s-]", "", str(name))
-        cleaned = re.sub(r"\s+", "_", cleaned)
-        return cleaned[:50]
+        return _inspection_clean_name(name)
 
     def schedule_upload_to_google_drive(self):
         """جدولة رفع الملف إلى Google Drive"""

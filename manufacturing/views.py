@@ -1007,6 +1007,23 @@ class ManufacturingOrderDetailView(
     context_object_name = "manufacturing_order"
     permission_required = "manufacturing.view_manufacturingorder"
 
+    def get_queryset(self):
+        from django.db.models import Prefetch
+        from inspections.models import InspectionFile
+
+        return ManufacturingOrder.objects.select_related(
+            "order",
+            "order__customer",
+            "order__branch",
+            "order__created_by",
+            "order__related_inspection",
+        ).prefetch_related(
+            Prefetch(
+                "order__related_inspection__files",
+                queryset=InspectionFile.objects.order_by("order"),
+            )
+        )
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 

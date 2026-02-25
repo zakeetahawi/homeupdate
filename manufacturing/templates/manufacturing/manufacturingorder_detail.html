@@ -425,25 +425,50 @@
                                                             <i class="fas fa-user-check"></i> معاينة طرف العميل
                                                         </span>
                                                     </div>
-                                                {% elif manufacturing_order.order.related_inspection and manufacturing_order.order.related_inspection.inspection_file %}
-                                                    <div class="mb-2">
-                                                        <a href="{{ manufacturing_order.order.related_inspection.inspection_file.url }}"
-                                                           target="_blank"
-                                                           class="btn btn-info">
-                                                            <i class="fas fa-file-alt"></i> {{ manufacturing_order.order.customer.name }} - ملف المعاينة
-                                                        </a>
-                                                    </div>
-                                                    {% if manufacturing_order.order.related_inspection.is_uploaded_to_drive and manufacturing_order.order.related_inspection.google_drive_file_url %}
-                                                        <div>
-                                                            <a href="{{ manufacturing_order.order.related_inspection.google_drive_file_url }}"
-                                                               target="_blank"
-                                                               class="btn btn-outline-info">
-                                                                <i class="fab fa-google-drive"></i> {{ manufacturing_order.order.customer.name }} - Google Drive
-                                                            </a>
-                                                        </div>
-                                                    {% endif %}
+                                                {% elif manufacturing_order.order.related_inspection %}
+                                                    {% with insp=manufacturing_order.order.related_inspection %}
+                                                        {% if insp.inspection_file %}
+                                                            <div class="mb-2">
+                                                                <a href="{{ insp.inspection_file.url }}"
+                                                                   target="_blank"
+                                                                   class="btn btn-info btn-sm">
+                                                                    <i class="fas fa-file-pdf"></i> {{ manufacturing_order.order.customer.name }} - ملف المعاينة
+                                                                </a>
+                                                            </div>
+                                                            {% if insp.is_uploaded_to_drive and insp.google_drive_file_url %}
+                                                                <div class="mb-1">
+                                                                    <a href="{{ insp.google_drive_file_url }}"
+                                                                       target="_blank"
+                                                                       class="btn btn-outline-info btn-sm">
+                                                                        <i class="fab fa-google-drive"></i> Google Drive
+                                                                    </a>
+                                                                </div>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                        {% for f in insp.files.all %}
+                                                            <div class="mb-1">
+                                                                <a href="{{ f.file.url }}"
+                                                                   target="_blank"
+                                                                   class="btn btn-info btn-sm">
+                                                                    <i class="fas fa-file-pdf"></i>
+                                                                    {% if f.original_filename %}{{ f.original_filename }}{% else %}ملف معاينة {{ forloop.counter }}{% endif %}
+                                                                </a>
+                                                                {% if f.is_uploaded_to_drive and f.google_drive_file_url %}
+                                                                    <a href="{{ f.google_drive_file_url }}"
+                                                                       target="_blank"
+                                                                       class="btn btn-outline-info btn-sm ms-1">
+                                                                        <i class="fab fa-google-drive"></i>
+                                                                    </a>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% empty %}
+                                                            {% if not insp.inspection_file %}
+                                                                <p class="text-muted">لم يتم رفع ملف المعاينة</p>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% endwith %}
                                                 {% else %}
-                                                    <p class="text-muted">لم يتم رفع ملف المعاينة</p>
+                                                    <p class="text-muted">لا توجد معاينة مرتبطة</p>
                                                 {% endif %}
                                             </div>
                                         </div>

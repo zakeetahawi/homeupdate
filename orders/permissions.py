@@ -112,9 +112,11 @@ def get_user_orders_queryset(user):
         else:
             return Order.objects.filter(created_by=user)
 
-    # البائع يرى طلباته الشخصية فقط
+    # البائع يرى طلباته الشخصية + الطلبات المُسندة إليه كبائع
     if hasattr(user, "is_salesperson") and user.is_salesperson:
-        return Order.objects.filter(created_by=user)
+        return Order.objects.filter(
+            Q(created_by=user) | Q(salesperson__user=user)
+        )
 
     # فني المعاينة يرى طلبات المعاينة فقط + طلباته الخاصة (إذا كان يمكنه إنشاء طلبات)
     if hasattr(user, "is_inspection_technician") and user.is_inspection_technician:
@@ -138,6 +140,21 @@ def can_user_view_order(user, order):
     # صاحب الطلب يمكنه دائمًا رؤية طلبه
     try:
         if order.created_by == user:
+            return True
+    except Exception:
+        pass
+
+    # البائع المُسند على الطلب يمكنه دائمًا رؤيته
+    try:
+        if order.salesperson and order.salesperson.user == user:
+            return True
+    except Exception:
+        pass
+
+    # أي مستخدم يستطيع رؤية بيانات العميل يستطيع رؤية طلباته
+    try:
+        from customers.permissions import can_user_view_customer
+        if order.customer and can_user_view_customer(user, order.customer):
             return True
     except Exception:
         pass
@@ -181,9 +198,16 @@ def can_user_view_order(user, order):
     if hasattr(user, "is_branch_manager") and user.is_branch_manager:
         return hasattr(user, "branch") and user.branch and order.branch == user.branch
 
-    # البائع يرى طلباته فقط
+    # البائع يرى طلباته + الطلبات المُسندة إليه كبائع
     if hasattr(user, "is_salesperson") and user.is_salesperson:
-        return order.created_by == user
+        if order.created_by == user:
+            return True
+        try:
+            if order.salesperson and order.salesperson.user == user:
+                return True
+        except Exception:
+            pass
+        return False
 
     # فني المعاينة يرى طلبات المعاينة فقط
     if hasattr(user, "is_inspection_technician") and user.is_inspection_technician:

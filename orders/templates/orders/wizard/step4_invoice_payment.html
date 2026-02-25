@@ -539,8 +539,8 @@
             markFieldAsError(paidAmountInput, 'المبلغ لا يمكن أن يكون سالباً');
         }
     } else {
-        // عميل عادي - يجب أن يكون أكبر من صفر
-        if (paidAmount <= 0) {
+        // عميل عادي - يجب أن يكون أكبر من صفر فقط إذا كان الإجمالي أكبر من صفر
+        if (paidAmount <= 0 && totalAmount > 0) {
             hasErrors = true;
             missingFields.push('المبلغ المدفوع');
             markFieldAsError(paidAmountInput, 'يرجى إدخال المبلغ المدفوع');
