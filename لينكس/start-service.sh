@@ -62,6 +62,21 @@ for i in {1..30}; do
 	sleep 1
 done
 
+# ✅ BUG-018: انتظار pgBouncer (port 6432) قبل بدء التشغيل
+# pgBouncer يحتاج ثواني بعد PostgreSQL ليصبح جاهزاً لاستقبال الاتصالات
+log "⏳ انتظار pgBouncer (port 6432)..."
+for i in {1..20}; do
+	if nc -z localhost 6432 2>/dev/null; then
+		log_success "pgBouncer جاهز على port 6432"
+		break
+	fi
+	if [ $i -eq 20 ]; then
+		log_error "pgBouncer غير متاح — المتابعة مع احتمالية اخطاء اتصال"
+	fi
+	sleep 1
+done
+
+
 # تطبيق التحديثات
 log "📦 تطبيق التحديثات..."
 python manage.py migrate --noinput >>"$STARTUP_LOG" 2>&1
@@ -122,7 +137,8 @@ celery -A crm worker \
 	--soft-time-limit=270 \
 	--detach >>"$STARTUP_LOG" 2>&1
 
-sleep 3
+# ✅ BUG-014: زيادة وقت الانتظار إلى 8 ثوان — Celery يحتاج وقتاً لكتابة PID file
+sleep 8
 if [ -f "$PIDS_DIR/celery_worker.pid" ] && kill -0 $(cat "$PIDS_DIR/celery_worker.pid") 2>/dev/null; then
 	log_success "تم تشغيل Celery Worker (PID: $(cat $PIDS_DIR/celery_worker.pid))"
 else
@@ -139,7 +155,8 @@ celery -A crm beat \
 	--schedule="$LOGS_DIR/celerybeat-schedule" \
 	--detach >>"$STARTUP_LOG" 2>&1
 
-sleep 3
+# ✅ BUG-014: زيادة وقت الانتظار إلى 8 ثوان — Celery يحتاج وقتاً لكتابة PID file
+sleep 8
 if [ -f "$PIDS_DIR/celery_beat.pid" ] && kill -0 $(cat "$PIDS_DIR/celery_beat.pid") 2>/dev/null; then
 	log_success "تم تشغيل Celery Beat (PID: $(cat $PIDS_DIR/celery_beat.pid))"
 else

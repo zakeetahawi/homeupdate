@@ -63,16 +63,22 @@ class CloudflareSync:
                 if response.status_code == 200:
                     # logger.info(f"Cloudflare sync successful")
                     return True
-                elif response.status_code == 429:
-                    # Rate limit: exponential backoff (2, 4, 8, 16 ثانية)
-                    wait_time = 2 ** (attempt + 1)
+                elif response.status_code == 429 or (
+                    response.status_code == 500 and "429" in response.text
+                ):
+                    # ✅ BUG-019: Rate limit سواء كان HTTP 429 مباشرة أو مُغلفاً في HTTP 500
+                    # Cloudflare Worker يُعيد 500 إذا كان KV API أعاد 429 داخلياً
+                    wait_time = 2 ** (attempt + 1)  # 2, 4, 8, 16 ثانية
                     logger.warning(
-                        f"Cloudflare 429 rate limit محاولة {attempt + 1}/{max_retries}, انتظار {wait_time}s"
+                        f"Cloudflare KV rate limit (429) — محاولة {attempt + 1}/{max_retries}, "
+                        f"انتظار {wait_time}s قبل إعادة المحاولة"
                     )
                     if attempt < max_retries - 1:
                         time.sleep(wait_time)
                     else:
-                        logger.error("Cloudflare sync فشل بعد جميع المحاولات (429)")
+                        logger.error(
+                            f"Cloudflare sync فشل بعد {max_retries} محاولات بسبب rate limiting"
+                        )
                         return False
                 else:
                     logger.error(
@@ -261,6 +267,10 @@ class CloudflareSync:
                 logger.info(
                     f"✅ Batch {i//batch_size + 1}: Synced {len(formatted)} products"
                 )
+            # ✅ BUG-019: تأخير بين الدفعات لتجنب تجاوز Cloudflare KV Rate Limit
+            # الحد: 1000 write/min — لذا نضيف 1.5 ثانية بين كل دفعة من 50 منتج
+            if i + batch_size < total_base:
+                time.sleep(1.5)
 
         # 2. Sync Standalone Products (Orphans)
         linked_ids = ProductVariant.objects.filter(

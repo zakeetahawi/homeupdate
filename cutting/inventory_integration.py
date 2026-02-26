@@ -29,6 +29,21 @@ class InventoryIntegrationService:
         """
         معالجة اكتمال التقطيع وخصم المخزون
         """
+        # ✅ BUG-017: التحقق من العناصر الخارجية (order_item = None)
+        # عناصر القماش الخارجي (is_external=True) ليس لها order_item → تخطي الخصم
+        if not cutting_item.order_item:
+            logger.info(
+                f"⏭️ تخطي خصم المخزون للعنصر {cutting_item.id} — "
+                f"قماش خارجي بدون order_item"
+            )
+            return None
+
+        if not cutting_item.order_item.product:
+            logger.warning(
+                f"⚠️ العنصر {cutting_item.id} — order_item موجود لكن بدون product، تخطي الخصم"
+            )
+            return None
+
         try:
             with transaction.atomic():
                 # التحقق من توفر الكمية في المخزون
@@ -118,6 +133,12 @@ class InventoryIntegrationService:
                     return None
 
                 original_transaction = cutting_item.inventory_transaction
+                # ✅ BUG-017: تحقق من order_item قبل الوصول إلى product
+                if not cutting_item.order_item or not cutting_item.order_item.product:
+                    logger.warning(
+                        f"⚠️ عكس خصم العنصر {cutting_item.id} — order_item أو product غير موجود"
+                    )
+                    return None
                 product = cutting_item.order_item.product
                 warehouse = original_transaction.warehouse
                 quantity = original_transaction.quantity
@@ -162,6 +183,22 @@ class InventoryIntegrationService:
         availability_report = {"all_available": True, "items": [], "total_shortage": 0}
 
         for item in cutting_order.items.all():
+            # ✅ BUG-017: تخطي العناصر الخارجية بدون order_item
+            if not item.order_item or not item.order_item.product:
+                availability_report["items"].append(
+                    {
+                        "item": item,
+                        "product": None,
+                        "required_quantity": item.additional_quantity,
+                        "current_stock": 0,
+                        "is_available": True,  # العناصر الخارجية لا تحتاج مخزون
+                        "shortage": 0,
+                        "warehouse": None,
+                        "note": "قماش خارجي — لا يُخصم من المخزون",
+                    }
+                )
+                continue
+
             product = item.order_item.product
             required_quantity = item.order_item.quantity + item.additional_quantity
             warehouse = InventoryIntegrationService._get_warehouse_for_cutting(item)
@@ -208,14 +245,63 @@ class InventoryIntegrationService:
 
     @staticmethod
     def _get_warehouse_for_cutting(cutting_item):
-        """تحديد المستودع المناسب للخصم"""
-        # استخدام المستودع المحدد في أمر التقطيع
+        """
+        ✅ BUG-013: تحديد المستودع المناسب للخصم مع البحث عن المستودع الذي يحتوي على مخزون
+        الأولوية:
+        1. المستودع المحدد في الأمر — إذا كان نشطاً وله مخزون
+        2. المستودع الذي يحتوي على أعلى رصيد للمنتج
+        3. أول مستودع نشط كاحتياطي
+        """
         try:
+            product = None
+            if cutting_item.order_item and cutting_item.order_item.product:
+                product = cutting_item.order_item.product
+
+            # 1. المستودع المحدد في الأمر
             if cutting_item.cutting_order and cutting_item.cutting_order.warehouse:
-                return cutting_item.cutting_order.warehouse
-            # في حالة عدم وجود مستودع محدد، استخدم أول مستودع متاح
+                wh = cutting_item.cutting_order.warehouse
+                if getattr(wh, 'is_active', True):
+                    if product:
+                        # تحقق من وجود رصيد فعلي في هذا المستودع
+                        last = (
+                            StockTransaction.objects.filter(
+                                product=product, warehouse=wh
+                            )
+                            .order_by("-transaction_date", "-id")
+                            .first()
+                        )
+                        if last and last.running_balance > 0:
+                            return wh
+                        # لا رصيد في المستودع المحدد — ابحث في مستودعات أخرى
+                        logger.warning(
+                            f"⚠️ المستودع المحدد ({wh.name}) لا يحتوي على رصيد للمنتج "
+                            f"{product.name} — البحث في مستودعات أخرى"
+                        )
+                    else:
+                        return wh  # للعناصر الخارجية: أعد مستودع الأمر مباشرة
+
+            # 2. البحث عن المستودع الذي يحتوي على أعلى رصيد للمنتج
+            if product:
+                best_wh_trans = (
+                    StockTransaction.objects.filter(
+                        product=product,
+                        warehouse__is_active=True,
+                    )
+                    .select_related("warehouse")
+                    .order_by("-running_balance", "-transaction_date")
+                    .first()
+                )
+                if best_wh_trans and best_wh_trans.running_balance > 0:
+                    logger.info(
+                        f"✅ تم اختيار المستودع {best_wh_trans.warehouse.name} "
+                        f"للمنتج {product.name} (رصيد: {best_wh_trans.running_balance})"
+                    )
+                    return best_wh_trans.warehouse
+
+            # 3. احتياطي: أول مستودع نشط
             return InventoryWarehouse.objects.filter(is_active=True).first()
-        except Exception:
+        except Exception as e:
+            logger.error(f"❌ خطأ في تحديد مستودع التقطيع: {e}")
             return None
 
     @staticmethod
@@ -296,9 +382,15 @@ class InventoryIntegrationService:
             order_creator = cutting_item.cutting_order.order.created_by
             if order_creator:
                 ct = ContentType.objects.get_for_model(cutting_item)
+                # ✅ BUG-017: استخدم product من المعامل (تم التحقق منه مسبقاً)
+                product_name = (
+                    cutting_item.order_item.product.name
+                    if cutting_item.order_item and cutting_item.order_item.product
+                    else f"عنصر #{cutting_item.id}"
+                )
                 notification = Notification.objects.create(
                     title="نقص في المخزون",
-                    message=f"الصنف {cutting_item.order_item.product.name} غير متوفر بالكمية المطلوبة. "
+                    message=f"الصنف {product_name} غير متوفر بالكمية المطلوبة. "
                             f"المطلوب: {required_quantity}, المتوفر: {current_stock}",
                     notification_type="stock_shortage",
                     content_type=ct,
@@ -316,9 +408,15 @@ class InventoryIntegrationService:
             order_creator = cutting_item.cutting_order.order.created_by
             if order_creator:
                 ct = ContentType.objects.get_for_model(stock_transaction)
+                # ✅ BUG-017: استخدم product_name بشكل آمن
+                product_name = (
+                    cutting_item.order_item.product.name
+                    if cutting_item.order_item and cutting_item.order_item.product
+                    else f"عنصر #{cutting_item.id}"
+                )
                 notification = Notification.objects.create(
                     title="تم خصم المخزون",
-                    message=f"تم خصم {stock_transaction.quantity} من {cutting_item.order_item.product.name} "
+                    message=f"تم خصم {stock_transaction.quantity} من {product_name} "
                             f"لأمر التقطيع {cutting_item.cutting_order.cutting_code}",
                     notification_type="cutting_completed",
                     content_type=ct,
