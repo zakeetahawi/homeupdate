@@ -267,10 +267,8 @@ class CloudflareSync:
                 logger.info(
                     f"✅ Batch {i//batch_size + 1}: Synced {len(formatted)} products"
                 )
-            # ✅ BUG-019: تأخير بين الدفعات لتجنب تجاوز Cloudflare KV Rate Limit
-            # الحد: 1000 write/min — لذا نضيف 1.5 ثانية بين كل دفعة من 50 منتج
-            if i + batch_size < total_base:
-                time.sleep(1.5)
+            # ✅ لا حاجة لتأخير — الـ Worker إصدار Queue يُعيد الاستجابة فوراً
+            # ويُعالج الكتابات في KV بشكل غير متزامن عبر elkhawaga-sync-queue
 
         # 2. Sync Standalone Products (Orphans)
         linked_ids = ProductVariant.objects.filter(

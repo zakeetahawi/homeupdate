@@ -16,6 +16,21 @@ workers_dev = true
 binding = "PRODUCTS_KV"
 id = "5dad2f4d72b246758bdafa17dfe4eb10"
 
+# ═══ Queue (Sync Queue) ═══════════════════════════════════════════
+# Producer: Worker يدفع رسائل المزامنة بدلاً من الكتابة المباشرة في KV
+# Consumer: نفس Worker يعالج الرسائل ويكتب في KV بشكل موثوق
+# إنشاء Queue: npx wrangler queues create elkhawaga-sync-queue
+
+[[queues.producers]]
+binding   = "SYNC_QUEUE"
+queue     = "elkhawaga-sync-queue"
+
+[[queues.consumers]]
+queue             = "elkhawaga-sync-queue"
+max_batch_size    = 25   # عدد الرسائل لكل batch
+max_batch_timeout = 5    # ثوان للانتظار قبل معالجة batch ناقص
+max_retries       = 3    # محاولات إعادة تلقائية عند الفشل
+
 # Environment variables
 [vars]
 SITE_NAME = "الخواجة"
@@ -32,6 +47,17 @@ route = { pattern = "qr.elkhawaga.uk/*", zone_name = "elkhawaga.uk" }
 [[env.production.kv_namespaces]]
 binding = "PRODUCTS_KV"
 id = "5dad2f4d72b246758bdafa17dfe4eb10"
+
+# Queue for production
+[[env.production.queues.producers]]
+binding   = "SYNC_QUEUE"
+queue     = "elkhawaga-sync-queue"
+
+[[env.production.queues.consumers]]
+queue             = "elkhawaga-sync-queue"
+max_batch_size    = 25
+max_batch_timeout = 5
+max_retries       = 3
 
 [env.production.vars]
 SITE_NAME = "الخواجة"

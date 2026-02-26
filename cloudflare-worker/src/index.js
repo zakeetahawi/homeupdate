@@ -934,6 +934,33 @@ async function generate404Page(code, env, design = null) {
 }
 
 /**
+ * معالجة الكتابة في KV — يُستدعى من Queue consumer أو مباشرة كـ fallback
+ */
+async function processKvWrite(data, env) {
+  if (data.action === 'sync_product') {
+    const product = data.product;
+    await env.PRODUCTS_KV.put(product.code, JSON.stringify(product));
+    return;
+  }
+
+  if (data.action === 'sync_all') {
+    // Promise.all: كتابة متوازية بدلاً من حلقة متسلسلة (أسرع بكثير)
+    await Promise.all(data.products.map(p => env.PRODUCTS_KV.put(p.code, JSON.stringify(p))));
+    return;
+  }
+
+  if (data.action === 'sync_product_sets') {
+    const setKeys = Object.keys(data.product_sets || {});
+    await Promise.all(setKeys.map(key =>
+      env.PRODUCTS_KV.put(key, JSON.stringify(data.product_sets[key]))
+    ));
+    return;
+  }
+
+  console.warn(`[Queue] Unknown action: ${data.action}`);
+}
+
+/**
  * API للمزامنة
  */
 async function handleSync(request, env) {
@@ -950,52 +977,11 @@ async function handleSync(request, env) {
   try {
     const data = await request.json();
 
-    if (data.action === 'sync_product') {
-      const product = data.product;
-      await env.PRODUCTS_KV.put(product.code, JSON.stringify(product));
+    // ── عمليات فورية (لا تنتظر Queue: تصميم، حذف، خرائط الأسماء) ──────────
+
+    if (data.action === 'sync_qr_design') {
+      await env.PRODUCTS_KV.put('__QR_DESIGN_SETTINGS__', JSON.stringify(data.design));
       return new Response(JSON.stringify({ success: true, mode: 'production' }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    if (data.action === 'sync_all') {
-      let synced = 0;
-      for (const p of data.products) {
-        await env.PRODUCTS_KV.put(p.code, JSON.stringify(p));
-        synced++;
-      }
-      return new Response(JSON.stringify({ success: true, count: synced, mode: 'production' }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // مزامنة خريطة الأسماء القديمة → الأكواد الجديدة (ملف واحد)
-    if (data.action === 'sync_name_map') {
-      await env.PRODUCTS_KV.put('__NAME_TO_CODE_MAP__', JSON.stringify(data.map));
-      return new Response(JSON.stringify({ success: true, count: Object.keys(data.map).length, mode: 'production' }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // تحديث جزئي لخريطة الأسماء (إضافة/تعديل إدخالات بدون مسح القديمة)
-    if (data.action === 'update_name_map') {
-      let existingMap = {};
-      try {
-        const existing = await env.PRODUCTS_KV.get('__NAME_TO_CODE_MAP__', 'json');
-        if (existing) existingMap = existing;
-      } catch (e) { /* ignore */ }
-      
-      // دمج الإدخالات الجديدة
-      const entries = data.entries || {};
-      Object.assign(existingMap, entries);
-      
-      await env.PRODUCTS_KV.put('__NAME_TO_CODE_MAP__', JSON.stringify(existingMap));
-      return new Response(JSON.stringify({ 
-        success: true, 
-        added: Object.keys(entries).length, 
-        total: Object.keys(existingMap).length, 
-        mode: 'production' 
-      }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
@@ -1007,37 +993,50 @@ async function handleSync(request, env) {
       });
     }
 
-    if (data.action === 'sync_qr_design') {
-      await env.PRODUCTS_KV.put('__QR_DESIGN_SETTINGS__', JSON.stringify(data.design));
-      return new Response(JSON.stringify({ success: true, mode: 'production' }), {
+    if (data.action === 'sync_name_map') {
+      await env.PRODUCTS_KV.put('__NAME_TO_CODE_MAP__', JSON.stringify(data.map));
+      return new Response(JSON.stringify({ success: true, count: Object.keys(data.map).length, mode: 'production' }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // 🎯 مزامنة مجموعات المنتجات
-    if (data.action === 'sync_product_sets') {
-      // After syncing product sets, we need to re-sync all products in those sets
-      // to ensure their product_set data is updated
-      const setKeys = Object.keys(data.product_sets || {});
-      const promises = setKeys.map(key => 
-        env.PRODUCTS_KV.put(key, JSON.stringify(data.product_sets[key]))
-      );
-      await Promise.all(promises);
-      
+    if (data.action === 'update_name_map') {
+      let existingMap = {};
+      try {
+        const existing = await env.PRODUCTS_KV.get('__NAME_TO_CODE_MAP__', 'json');
+        if (existing) existingMap = existing;
+      } catch (e) { /* ignore */ }
+      const entries = data.entries || {};
+      Object.assign(existingMap, entries);
+      await env.PRODUCTS_KV.put('__NAME_TO_CODE_MAP__', JSON.stringify(existingMap));
       return new Response(JSON.stringify({ 
         success: true, 
-        count: setKeys.length,
-        mode: 'production',
-        message: 'Product sets synced. Remember to re-sync affected products to update their product_set data.'
+        added: Object.keys(entries).length, 
+        total: Object.keys(existingMap).length, 
+        mode: 'production' 
       }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // 🎯 مزامنة التصميم مع Production
+    // ── عمليات ضخمة: ادفع للـ Queue بدلاً من الكتابة المباشرة ──────────────
+    // الفوائد: استجابة فورية لـ Django، إعادة محاولة تلقائية، لا rate limit مشاكل
+
+    if (['sync_product', 'sync_all', 'sync_product_sets'].includes(data.action)) {
+      if (env.SYNC_QUEUE) {
+        await env.SYNC_QUEUE.send(data);
+        return new Response(JSON.stringify({ success: true, queued: true, mode: 'production' }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      // Fallback: Queue غير متاح (بيئة تطوير محلية) — اكتب مباشرة
+      await processKvWrite(data, env);
+      return new Response(JSON.stringify({ success: true, mode: 'production' }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     if (data.action === 'deploy_to_production') {
-      // هنا يمكن استدعاء API لتحديث Worker الأساسي
-      // لكن الطريقة الأسهل: نسخ كود index-staging.js إلى index.js ونشره
       return new Response(JSON.stringify({ 
         success: true, 
         message: 'جاهز للنشر - انسخ الكود من index-staging.js إلى index.js ثم npx wrangler deploy --env production',
@@ -1118,5 +1117,22 @@ export default {
     return new Response(html, {
       headers: { 'Content-Type': 'text/html; charset=utf-8' }
     });
+  },
+
+  /**
+   * Queue Consumer — يُعالج رسائل المزامنة ويكتب في KV
+   * يُستدعى تلقائياً عندما تصل رسائل من elkhawaga-sync-queue
+   */
+  async queue(batch, env) {
+    for (const message of batch.messages) {
+      try {
+        await processKvWrite(message.body, env);
+        message.ack();
+      } catch (e) {
+        console.error(`[Queue] فشل معالجة الرسالة: ${e.message}`, message.body?.action);
+        message.retry();
+      }
+    }
+    console.log(`[Queue] ✅ عولجت ${batch.messages.length} رسالة مزامنة`);
   }
 };
