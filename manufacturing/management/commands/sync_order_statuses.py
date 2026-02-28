@@ -52,17 +52,6 @@ class Command(BaseCommand):
                         "cancelled": "cancelled",
                     }
 
-                    tracking_status_mapping = {
-                        "pending_approval": "factory",
-                        "pending": "factory",
-                        "in_progress": "factory",
-                        "ready_install": "ready",
-                        "completed": "ready",
-                        "delivered": "delivered",
-                        "rejected": "factory",
-                        "cancelled": "factory",
-                    }
-
                     installation_status_mapping = {
                         "pending_approval": "needs_scheduling",
                         "pending": "needs_scheduling",
@@ -75,7 +64,6 @@ class Command(BaseCommand):
                     }
 
                     new_order_status = order_status_mapping.get(mfg_order.status)
-                    new_tracking_status = tracking_status_mapping.get(mfg_order.status)
                     new_installation_status = installation_status_mapping.get(
                         mfg_order.status
                     )
@@ -84,7 +72,6 @@ class Command(BaseCommand):
                     needs_update = (
                         force
                         or order.order_status != new_order_status
-                        or order.tracking_status != new_tracking_status
                         or (
                             mfg_order.order_type == "installation"
                             and order.installation_status != new_installation_status
@@ -96,7 +83,6 @@ class Command(BaseCommand):
                             # تحديث الحالات
                             update_fields = {
                                 "order_status": new_order_status,
-                                "tracking_status": new_tracking_status,
                             }
 
                             if mfg_order.order_type == "installation":
@@ -124,8 +110,7 @@ class Command(BaseCommand):
 
                         self.stdout.write(
                             f"✅ {order.order_number}: "
-                            f"{order.order_status} → {new_order_status}, "
-                            f"{order.tracking_status} → {new_tracking_status}"
+                            f"{order.order_status} → {new_order_status}"
                             + (
                                 f", {order.installation_status} → {new_installation_status}"
                                 if mfg_order.order_type == "installation"

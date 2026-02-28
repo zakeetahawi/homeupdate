@@ -178,6 +178,8 @@ def get_status_badge(status, status_type="default", order=None):
         # حالات ملغية - أحمر داكن
         "cancelled": "#8B0000",
         "rejected": "#DC143C",
+        # أمر تصنيع محذوف - رمادي
+        "manufacturing_deleted": "#6c757d",
         # مؤجل من طرف العميل - رمادي
         "postponed_by_customer": "#6c757d",
     }
@@ -200,6 +202,7 @@ def get_status_badge(status, status_type="default", order=None):
         "modification_in_progress": "fas fa-wrench",
         "modification_completed": "fas fa-check-double",
         "postponed_by_customer": "fas fa-pause-circle",
+        "manufacturing_deleted": "fas fa-trash-alt",
     }
 
     status_texts = {
@@ -220,6 +223,7 @@ def get_status_badge(status, status_type="default", order=None):
         "modification_in_progress": "التعديل قيد التنفيذ",
         "modification_completed": "التعديل مكتمل",
         "postponed_by_customer": "مؤجل من طرف العميل",
+        "manufacturing_deleted": "أمر تصنيع محذوف",
     }
 
     color = status_colors.get(status, "#6c757d")

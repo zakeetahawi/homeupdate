@@ -556,7 +556,7 @@ class CuttingOrderItem(SoftDeleteMixin, models.Model):
                 return
 
             # التحقق من حالة الطلب الحالية
-            if order.tracking_status != "cutting":
+            if order.order_status not in ["in_progress", "pending"]:
                 return
 
             # التحقق من إكمال جميع عناصر التقطيع
@@ -566,9 +566,9 @@ class CuttingOrderItem(SoftDeleteMixin, models.Model):
 
             # إذا تم إكمال جميع العناصر، حدث حالة الطلب
             if total_items > 0 and total_items == completed_items:
-                old_status = order.tracking_status
-                order.tracking_status = "ready"
-                order.save()
+                old_status = order.order_status
+                order.order_status = "completed"
+                order.save(update_fields=["order_status"])
 
                 # تسجيل التغيير في السجل
                 from orders.models import OrderStatusLog
@@ -576,7 +576,7 @@ class CuttingOrderItem(SoftDeleteMixin, models.Model):
                 OrderStatusLog.objects.create(
                     order=order,
                     old_status=old_status,
-                    new_status="ready",
+                    new_status="completed",
                     changed_by=self.updated_by,
                     notes=f"تم تحديث الحالة تلقائياً بعد إكمال جميع عناصر التقطيع ({completed_items}/{total_items})",
                     change_type="cutting",
@@ -682,9 +682,8 @@ def update_products_order_status(sender, instance, **kwargs):
         # طلبات المنتجات لا تحتاج أمر تصنيع - تكتمل مباشرة بعد التقطيع
         old_status = instance.order.order_status
         instance.order.order_status = "completed"
-        instance.order.tracking_status = "completed"
         instance.order._updating_statuses = True  # تجنب الحلقة اللانهائية
-        instance.order.save()
+        instance.order.save(update_fields=["order_status"])
 
         # إنشاء سجل تغيير الحالة
         try:

@@ -309,7 +309,7 @@ def accessory_orders(request):
         )
 
     if status_filter:
-        orders = orders.filter(tracking_status=status_filter)
+        orders = orders.filter(order_status=status_filter)
 
     # ترتيب وتقسيم الصفحات
     orders = orders.order_by("-created_at")
@@ -329,9 +329,9 @@ def accessory_orders(request):
 
     # إحصائيات
     total_count = orders.count()
-    pending_count = orders.filter(tracking_status__in=["pending", "processing"]).count()
-    ready_count = orders.filter(tracking_status="ready").count()
-    delivered_count = orders.filter(tracking_status="delivered").count()
+    pending_count = orders.filter(order_status__in=["pending", "pending_approval"]).count()
+    ready_count = orders.filter(order_status__in=["ready_install", "completed"]).count()
+    delivered_count = orders.filter(order_status="delivered").count()
 
     # رمز العملة
     system_settings = SystemSettings.get_settings()
@@ -378,7 +378,7 @@ def tailoring_orders(request):
         )
 
     if status_filter:
-        orders = orders.filter(tracking_status=status_filter)
+        orders = orders.filter(order_status=status_filter)
 
     if delivery_type_filter:
         orders = orders.filter(delivery_type=delivery_type_filter)
@@ -405,10 +405,10 @@ def tailoring_orders(request):
     # إحصائيات
     total_count = orders.count()
     in_progress_count = orders.filter(
-        tracking_status__in=["warehouse", "factory", "cutting"]
+        order_status__in=["pending_approval", "pending", "in_progress"]
     ).count()
-    ready_count = orders.filter(tracking_status="ready").count()
-    delivered_count = orders.filter(tracking_status="delivered").count()
+    ready_count = orders.filter(order_status__in=["ready_install", "completed"]).count()
+    delivered_count = orders.filter(order_status="delivered").count()
 
     # رمز العملة
     system_settings = SystemSettings.get_settings()

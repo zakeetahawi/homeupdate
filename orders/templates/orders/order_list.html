@@ -726,6 +726,8 @@ function buildPageUrl(pageNumber) {
                                         {% with manufacturing_order=order.manufacturing_order %}
                                             {% get_status_badge manufacturing_order.status "manufacturing" %}
                                         {% endwith %}
+                                    {% elif order.order_status == 'manufacturing_deleted' %}
+                                        {% get_status_badge 'manufacturing_deleted' 'manufacturing' %}
                                     {% else %}
                                         <span style="color: var(--text-tertiary); font-size:.72rem;">—</span>
                                     {% endif %}

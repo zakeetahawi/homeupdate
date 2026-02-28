@@ -59,7 +59,7 @@ def test_inspection_creation_final():
         "status": "normal",
         "delivery_type": "branch",
         "delivery_address": "",
-        "tracking_status": "pending",
+        "order_status": "pending",
     }
 
     print(f"📋 بيانات الواجهة:")

@@ -118,8 +118,8 @@ def create_test_data():
                 service_types=json.dumps(
                     [random.choice(["installation", "tailoring", "inspection"])]
                 ),
-                tracking_status=random.choice(
-                    ["pending", "processing", "warehouse", "factory", "ready"]
+                order_status=random.choice(
+                    ["pending_approval", "pending", "in_progress", "ready_install", "completed"]
                 ),
                 invoice_number=f"INV-{random.randint(100, 999)}",
                 contract_number=f"CT-{random.randint(100, 999)}",

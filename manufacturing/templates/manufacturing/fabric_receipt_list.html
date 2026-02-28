@@ -22,6 +22,13 @@
         padding: 0.4rem 0.8rem;
     }
     
+    /* زر تبديل خط الإنتاج — أيقونة صغيرة مدمجة */
+    .change-line-btn:hover {
+        color: #3b82f6 !important;
+        background: rgba(59, 130, 246, 0.1);
+        transform: scale(1.2);
+    }
+    
     /* إصلاح عرض SweetAlert Modal على الهاتف المحمول */
     @media (max-width: 768px) {
         .swal2-popup {
@@ -332,16 +339,29 @@
                                         <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center" style="white-space: nowrap;">
                                     {% if item.delivered_to_production %}
-                                        <div>
-                                            <span class="badge bg-success mb-1">
-                                                <i class="fas fa-check"></i>
+                                        <div class="d-inline-flex align-items-center gap-1">
+                                            <span class="badge" style="font-size: 0.78rem; background-color: {{ item.production_line.badge_color|default:'#198754' }}; color: #fff;">
+                                                <i class="fas fa-check" style="font-size: 0.6rem;"></i>
                                                 {{ item.production_line.name }}
                                             </span>
-                                            <br>
-                                            <small class="text-muted">{{ item.production_delivery_date|date:"d/m/Y H:i" }}</small>
+                                            <a href="#" class="change-line-btn" style="font-size: 0.65rem; color: #9ca3af; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; transition: all 0.2s;"
+                                                    data-item-id="{{ item.id }}"
+                                                    data-order-id="{{ item.manufacturing_order.id }}"
+                                                    data-current-line="{{ item.production_line.name|default:'' }}"
+                                                    data-current-line-id="{{ item.production_line_id|default:'' }}"
+                                                    title="تبديل خط الإنتاج">
+                                                <i class="fas fa-exchange-alt"></i>
+                                            </a>
                                         </div>
+                                        <div style="font-size: 0.68rem; color: #999;">{{ item.production_delivery_date|date:"d/m H:i" }}</div>
+                                        {% if item.manufacturing_order.previous_production_line %}
+                                        <div style="font-size: 0.62rem; color: #d4a017; cursor: pointer;" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<b>التسليم السابق</b><br>الخط: {{ item.manufacturing_order.previous_production_line.name }}<br>تاريخ التبديل: {{ item.manufacturing_order.production_line_changed_at|date:'d/m/Y H:i' }}<br>بواسطة: {{ item.manufacturing_order.production_line_changed_by.get_full_name|default:'—' }}{% if item.production_delivery_notes %}<br>ملاحظات: {{ item.production_delivery_notes }}{% endif %}">
+                                            <i class="fas fa-history" style="font-size: 0.55rem;"></i>
+                                            {{ item.manufacturing_order.previous_production_line.name }}
+                                        </div>
+                                        {% endif %}
                                     {% else %}
                                         <select class="form-select form-select-sm production-line-select"
                                                 data-item-id="{{ item.id }}"
@@ -399,6 +419,103 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
+// تفعيل tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+tooltipTriggerList.forEach(function(el) { new bootstrap.Tooltip(el); });
+
+// معالجة زر تبديل خط الإنتاج للعناصر المسلّمة
+document.querySelectorAll('.change-line-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const itemId = this.dataset.itemId;
+        const orderId = this.dataset.orderId;
+        const currentLine = this.dataset.currentLine;
+        const currentLineId = this.dataset.currentLineId;
+
+        // بناء خيارات خطوط الإنتاج
+        let linesHtml = '';
+        {% for line in production_lines %}
+        linesHtml += `
+            <div class="form-check mt-2">
+                <input class="form-check-input" type="radio" name="newLineId" id="line_{{ line.id }}" value="{{ line.id }}"
+                    data-badge-color="{{ line.badge_color|default:'#0d6efd' }}"
+                    ${ '{{ line.id }}' === currentLineId ? 'disabled' : '' }>
+                <label class="form-check-label ${ '{{ line.id }}' === currentLineId ? 'text-muted' : '' }" for="line_{{ line.id }}">
+                    <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background-color:{{ line.badge_color|default:'#0d6efd' }};vertical-align:middle;margin-left:4px;"></span>
+                    {{ line.name|escapejs }}
+                    ${ '{{ line.id }}' === currentLineId ? ' (الحالي)' : '' }
+                </label>
+            </div>`;
+        {% endfor %}
+
+        Swal.fire({
+            title: 'تبديل خط الإنتاج',
+            html: `
+                <div style="direction: rtl; text-align: right;">
+                    <div class="alert alert-info py-2 mb-3">
+                        <small><i class="fas fa-industry me-1"></i>الخط الحالي: <strong>${currentLine}</strong></small>
+                    </div>
+                    <p class="fw-bold mb-1">اختر الخط الجديد:</p>
+                    ${linesHtml}
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-exchange-alt me-1"></i> تبديل',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#0d6efd',
+            cancelButtonColor: '#6c757d',
+            preConfirm: () => {
+                const selected = document.querySelector('input[name="newLineId"]:checked');
+                if (!selected) {
+                    Swal.showValidationMessage('يجب اختيار خط إنتاج جديد');
+                    return false;
+                }
+                return selected.value;
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const newLineId = result.value;
+                const newLineName = document.querySelector(`label[for="line_${newLineId}"]`).textContent.trim().replace(' (الحالي)', '');
+
+                fetch('{% url "manufacturing:deliver_to_production_line" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        item_id: itemId,
+                        order_id: orderId,
+                        production_line_id: newLineId,
+                        is_change: true,
+                        notes: ''
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'تم التبديل بنجاح',
+                            html: `<div style="direction: rtl;">${data.message}</div>`,
+                            confirmButtonColor: '#198754',
+                            timer: 2500,
+                            timerProgressBar: true
+                        }).then(() => { location.reload(); });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'خطأ', text: data.message });
+                    }
+                })
+                .catch(error => {
+                    console.error('خطأ:', error);
+                    Swal.fire({ icon: 'error', title: 'خطأ في الاتصال', text: 'حدث خطأ أثناء الاتصال بالخادم' });
+                });
+            }
+        });
+    });
+});
+
 // معالجة اختيار خط الإنتاج
 document.querySelectorAll('.production-line-select').forEach(select => {
     select.addEventListener('change', function() {

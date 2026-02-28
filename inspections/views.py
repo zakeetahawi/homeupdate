@@ -624,15 +624,15 @@ class InspectionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         try:
             if inspection.order:
                 if new_status == "completed":
-                    inspection.order.tracking_status = "processing"
+                    inspection.order.order_status = "pending"
                 elif new_status == "scheduled":
-                    inspection.order.tracking_status = "processing"
+                    inspection.order.order_status = "pending"
                 elif new_status == "cancelled":
-                    inspection.order.tracking_status = "pending"
+                    inspection.order.order_status = "cancelled"
                 else:  # pending
-                    inspection.order.tracking_status = "pending"
+                    inspection.order.order_status = "pending_approval"
 
-                inspection.order.save()
+                inspection.order.save(update_fields=["order_status"])
                 messages.success(self.request, "تم تحديث حالة الطلب المرتبط أيضاً")
                 return redirect("orders:order_detail", inspection.order.pk)
         except AttributeError:

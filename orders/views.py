@@ -22,10 +22,6 @@ from inspections.models import Inspection
 from inventory.models import Product
 
 from .forms import (
-    OrderEditForm,
-    OrderForm,
-    OrderItemEditFormSet,
-    OrderItemFormSet,
     PaymentForm,
 )
 from .models import Order, OrderItem, Payment
@@ -34,7 +30,6 @@ from .permissions import (
     can_user_edit_order,
     can_user_view_order,
     get_user_orders_queryset,
-    order_create_permission_required,
     order_delete_permission_required,
     order_edit_permission_required,
 )
@@ -191,7 +186,6 @@ def order_list(request):
             | Q(notes__icontains=search_query)
             | Q(selected_types__icontains=search_query)
             | Q(order_status__icontains=search_query)
-            | Q(tracking_status__icontains=search_query)
             | Q(order_date__icontains=search_query)
             | Q(expected_delivery_date__icontains=search_query)
         )
@@ -523,569 +517,24 @@ def order_detail(request, pk):
     return render(request, "orders/order_detail.html", context)
 
 
-@order_create_permission_required
+@login_required
 def order_create(request):
     """
-    View for creating a new order
+    تم إلغاء نظام الإنشاء التقليدي — إعادة توجيه للويزارد
+    Traditional order creation removed — redirect to wizard
     """
-    if request.method == "POST":
-        logger.info("POST DATA:", request.POST)
-        # الحصول على معرف العميل من POST أو GET
-        customer_param = request.POST.get("customer")
-        customer = None
-        if customer_param:
-            try:
-                # محاولة البحث بالـ ID أولاً (في حالة كان رقمي)
-                if customer_param.isdigit():
-                    customer = Customer.objects.get(id=customer_param)
-                else:
-                    # البحث بكود العميل إذا لم يكن رقمي
-                    customer = Customer.objects.get(code=customer_param)
-            except Customer.DoesNotExist:
-                customer = None
-
-        form = OrderForm(
-            request.POST, request.FILES, user=request.user, customer=customer
-        )
-
-        if form.is_valid():
-            logger.info("Form is valid. Proceeding to save.")
-            try:
-                # Save order
-                # 1. إنشاء كائن الطلب بدون حفظه
-                order = form.save(commit=False)
-                order.created_by = request.user
-
-                # 2. تعيين الفرع إذا لم يتم توفيره
-                if not order.branch:
-                    order.branch = request.user.branch
-
-                # 3. معالجة حقل المعاينة المرتبطة
-                related_inspection_value = form.cleaned_data.get("related_inspection")
-                if related_inspection_value == "customer_side":
-                    order.related_inspection_type = "customer_side"
-                    order.related_inspection = None
-                elif related_inspection_value and related_inspection_value != "":
-                    try:
-                        from inspections.models import Inspection
-
-                        inspection = Inspection.objects.get(id=related_inspection_value)
-                        order.related_inspection = inspection
-                        order.related_inspection_type = "inspection"
-                    except Inspection.DoesNotExist:
-                        order.related_inspection = None
-                        order.related_inspection_type = None
-                else:
-                    order.related_inspection = None
-                    order.related_inspection_type = None
-
-                # 4. حفظ الطلب في قاعدة البيانات للحصول على مفتاح أساسي
-                order.save()
-
-                # التأكد من أن الطلب تم حفظه بنجاح وله مفتاح أساسي
-                if not order.pk:
-                    raise Exception("فشل في حفظ الطلب: لم يتم إنشاء مفتاح أساسي")
-
-                # 4.5. معالجة الصور الإضافية للفاتورة
-                additional_images = request.FILES.getlist("additional_invoice_images")
-                if additional_images:
-                    from .models import OrderInvoiceImage
-
-                    for img in additional_images:
-                        OrderInvoiceImage.objects.create(order=order, image=img)
-
-                # 5. معالجة المنتجات المحددة إن وجدت
-                selected_products_json = request.POST.get("selected_products", "")
-                logger.info("selected_products_json:", selected_products_json)
-                subtotal = 0
-                total_discount_for_items = 0
-                if selected_products_json:
-                    try:
-                        selected_products = json.loads(selected_products_json)
-                        logger.info("selected_products:", selected_products)
-                        for product_data in selected_products:
-                            # تحسين معالجة القيم العشرية لحل مشكلة الاقتطاع في الهواتف المحمولة
-                            from decimal import Decimal, InvalidOperation
-
-                            # معالجة آمنة للكمية
-                            try:
-                                quantity = Decimal(str(product_data["quantity"]))
-                                if quantity < 0:
-                                    logger.info(f"تحذير: كمية سالبة تم تجاهلها: {quantity}")
-                                    continue
-                            except (InvalidOperation, ValueError, TypeError) as e:
-                                print(
-                                    f"خطأ في تحويل الكمية: {product_data.get('quantity', 'غير محدد')} - {e}"
-                                )
-                                continue
-
-                            # معالجة آمنة لسعر الوحدة
-                            try:
-                                unit_price = Decimal(str(product_data["unit_price"]))
-                                if unit_price < 0:
-                                    logger.info(f"تحذير: سعر سالب تم تجاهله: {unit_price}")
-                                    continue
-                            except (InvalidOperation, ValueError, TypeError) as e:
-                                print(
-                                    f"خطأ في تحويل سعر الوحدة: {product_data.get('unit_price', 'غير محدد')} - {e}"
-                                )
-                                continue
-
-                            # معالجة آمنة لنسبة الخصم
-                            try:
-                                discount_percentage = Decimal(
-                                    str(product_data.get("discount_percentage", 0))
-                                )
-                                if discount_percentage < 0 or discount_percentage > 100:
-                                    logger.info(
-                                        f"تحذير: نسبة خصم غير صالحة: {discount_percentage}% - تم تعيينها إلى 0%"
-                                    )
-                                    discount_percentage = Decimal("0")
-                            except (InvalidOperation, ValueError, TypeError) as e:
-                                print(
-                                    f"خطأ في تحويل نسبة الخصم: {product_data.get('discount_percentage', 'غير محدد')} - {e}"
-                                )
-                                discount_percentage = Decimal("0")
-
-                            logger.info(
-                                f"إنشاء عنصر طلب: المنتج={product_data['product_id']}, الكمية={quantity}, السعر={unit_price}, الخصم={discount_percentage}%"
-                            )
-                            item = OrderItem.objects.create(
-                                order=order,
-                                product_id=product_data["product_id"],
-                                quantity=quantity,
-                                unit_price=unit_price,
-                                discount_percentage=discount_percentage,
-                                item_type=product_data.get("item_type", "product"),
-                                notes=product_data.get("notes", ""),
-                            )
-                            logger.info("تم إنشاء عنصر:", item)
-                            # حساب المجموع قبل الخصم ومبلغ الخصم لكل عنصر بشكل منفصل
-                            item_total = item.quantity * item.unit_price
-                            item_discount = (
-                                item_total * (item.discount_percentage / 100)
-                                if item.discount_percentage
-                                else 0
-                            )
-                            subtotal += item_total
-                            total_discount_for_items += item_discount
-                            logger.info("subtotal حتى الآن:", subtotal)
-                    except Exception as e:
-                        logger.debug(f"Error creating order items: {e}")
-                # أعد حساب الإجماليات باستخدام ميثود الموديل لضمان الاتساق
-                order.calculate_final_price(force_update=True)
-                order.save(update_fields=["final_price", "total_amount"])
-
-                # --- معالجة الدفعة (بعد تحديث final_price) ---
-                paid_amount = request.POST.get("paid_amount")
-                payment_verified = request.POST.get("payment_verified")
-                payment_notes = request.POST.get("payment_notes", "")
-                payment_method = request.POST.get("payment_method", "cash")
-                # استخدام رقم الفاتورة كرقم مرجع للدفعة
-                payment_reference = order.invoice_number or ""
-                try:
-                    paid_amount = float(paid_amount or 0)
-                except Exception:
-                    paid_amount = 0
-                if paid_amount > 0:
-                    from .models import Payment
-
-                    Payment.objects.create(
-                        order=order,
-                        amount=paid_amount,
-                        payment_method=payment_method,
-                        created_by=request.user,
-                        notes=payment_notes,
-                        reference_number=payment_reference,
-                    )
-                if payment_verified == "1":
-                    order.payment_verified = True
-                    order.save(update_fields=["payment_verified"])
-
-                # 6. معالجة عناصر الطلب من النموذج
-                formset = OrderItemFormSet(request.POST, prefix="items", instance=order)
-                if formset.is_valid():
-                    formset.save()
-                    # إعادة حساب الإجماليات بعد إنشاء عناصر الطلب
-                    try:
-                        from .tasks import calculate_order_totals_async
-
-                        calculate_order_totals_async.delay(order.pk)
-                    except Exception:
-                        try:
-                            # Force recalculation locally when background tasks are not available
-                            order.calculate_final_price(force_update=True)
-                            order.total_amount = order.final_price
-                            order.save(update_fields=["final_price", "total_amount"])
-                        except Exception:
-                            pass
-                else:
-                    logger.debug("Formset errors:", formset.errors)
-                # تم إزالة نظام إنشاء العقد الإلكتروني من النموذج التقليدي
-                # يرجى استخدام نظام الويزارد لإنشاء العقود الإلكترونية
-                messages.success(request, "تم إنشاء الطلب بنجاح!")
-
-                # إذا كان الطلب AJAX، أرجع JSON response
-                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                    # تحديد رابط التوجيه
-                    if paid_amount > 0:
-                        redirect_url = f"/orders/{order.pk}/success/?show_print=1&paid_amount={paid_amount}"
-                    else:
-                        redirect_url = f"/orders/{order.pk}/success/"
-
-                    return JsonResponse(
-                        {
-                            "success": True,
-                            "message": "تم إنشاء الطلب بنجاح!",
-                            "order_id": order.pk,
-                            "order_number": order.order_number,
-                            "redirect_url": redirect_url,
-                        }
-                    )
-
-                # إعادة التوجيه بناءً على الدفعة
-                if paid_amount > 0:
-                    return redirect(
-                        f"/orders/{order.pk}/success/?show_print=1&paid_amount={paid_amount}"
-                    )
-                else:
-                    return redirect("orders:order_success", pk=order.pk)
-
-            except Exception as e:
-                logger.debug("حدث خطأ أثناء حفظ الطلب:", e)
-                print(traceback.format_exc())
-
-                # إذا كان الطلب AJAX، أرجع JSON response
-                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                    return JsonResponse(
-                        {
-                            "success": False,
-                            "message": f"حدث خطأ أثناء حفظ الطلب: {str(e)}",
-                            "error": str(e),
-                        },
-                        status=500,
-                    )
-
-                messages.error(request, f"حدث خطأ أثناء حفظ الطلب: {e}")
-        else:
-            logger.info("--- FORM IS INVALID ---")
-            logger.debug("Validation Errors:", form.errors)
-            # إذا كان الطلب AJAX، أرجع JSON response
-            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return JsonResponse(
-                    {
-                        "success": False,
-                        "errors": form.errors,
-                        "message": "يرجى تصحيح الأخطاء في النموذج.",
-                    },
-                    status=400,
-                )
-
-            messages.error(request, "يرجى تصحيح الأخطاء في النموذج.")
-    else:
-        # GET request - الحصول على معرف العميل من GET إذا كان موجوداً
-        customer_param = request.GET.get("customer")
-        customer = None
-        if customer_param:
-            try:
-                # محاولة البحث بالـ ID أولاً (في حالة كان رقمي) - محسن
-                if customer_param.isdigit():
-                    customer = Customer.objects.select_related(
-                        "branch", "category"
-                    ).get(id=customer_param)
-                else:
-                    # البحث بكود العميل إذا لم يكن رقمي - محسن
-                    customer = Customer.objects.select_related(
-                        "branch", "category"
-                    ).get(code=customer_param)
-            except Customer.DoesNotExist:
-                customer = None
-
-        form = OrderForm(user=request.user, customer=customer)
-
-    # Get currency symbol from system settings
-    from accounts.models import SystemSettings
-
-    system_settings = SystemSettings.get_settings()
-    currency_symbol = system_settings.currency_symbol if system_settings else "ج.م"
-
-    context = {
-        "form": form,
-        "customer": customer,  # إضافة العميل للسياق
-        "currency_symbol": currency_symbol,
-        "title": "إنشاء طلب جديد",
-    }
-
-    return render(request, "orders/order_form.html", context)
+    messages.info(request, "يرجى استخدام نظام الويزارد لإنشاء الطلبات")
+    return redirect("orders:wizard_start_new")
 
 
-@order_edit_permission_required
+@login_required
 def order_update(request, pk):
     """
-    View for updating an existing order
+    تم إلغاء نظام التعديل التقليدي — إعادة توجيه للويزارد
+    Traditional order editing removed — redirect to wizard
     """
-    order = get_object_or_404(Order, pk=pk)
-
-    # الصلاحيات يتم فحصها بواسطة الـ decorator
-
-    if request.method == "POST":
-        # الحصول على معرف العميل من POST
-        customer_param = request.POST.get("customer")
-        customer = None
-        if customer_param:
-            try:
-                # محاولة البحث بالـ ID أولاً (في حالة كان رقمي)
-                if customer_param.isdigit():
-                    customer = Customer.objects.get(id=customer_param)
-                else:
-                    # البحث بكود العميل إذا لم يكن رقمي
-                    customer = Customer.objects.get(code=customer_param)
-            except Customer.DoesNotExist:
-                customer = None
-
-        form = OrderForm(
-            request.POST,
-            request.FILES,
-            instance=order,
-            user=request.user,
-            customer=customer,
-        )
-
-        if form.is_valid():
-            try:
-                # تتبع التعديلات قبل الحفظ
-                modified_fields = {}
-
-                # تتبع تعديلات حقول الطلب
-                order_fields_to_track = [
-                    "contract_number",
-                    "contract_number_2",
-                    "contract_number_3",
-                    "invoice_number",
-                    "invoice_number_2",
-                    "invoice_number_3",
-                    "notes",
-                    "delivery_address",
-                    "location_address",
-                    "expected_delivery_date",
-                ]
-
-                for field_name in order_fields_to_track:
-                    old_value = getattr(order, field_name)
-                    new_value = form.cleaned_data.get(field_name)
-                    if old_value != new_value:
-                        modified_fields[field_name] = {
-                            "old": old_value,
-                            "new": new_value,
-                        }
-
-                # Save order
-                order = form.save(commit=False)
-
-                # معالجة حقل المعاينة المرتبطة
-                related_inspection_value = form.cleaned_data.get("related_inspection")
-                if related_inspection_value == "customer_side":
-                    order.related_inspection_type = "customer_side"
-                    order.related_inspection = None
-                elif related_inspection_value and related_inspection_value != "":
-                    try:
-                        from inspections.models import Inspection
-
-                        inspection = Inspection.objects.get(id=related_inspection_value)
-                        order.related_inspection = inspection
-                        order.related_inspection_type = "inspection"
-                    except Inspection.DoesNotExist:
-                        order.related_inspection = None
-                        order.related_inspection_type = None
-                else:
-                    order.related_inspection = None
-                    order.related_inspection_type = None
-
-                # تعيين المستخدم المعدل على الطلب قبل الحفظ
-                order._modified_by = request.user
-
-                # ⚠️ حماية من الكتابة فوق حالات تم تحديثها بواسطة signals أخرى
-                # (مثل sync_order_from_manufacturing). نقرأ أحدث قيم من قاعدة البيانات
-                # لأن الحالة قد تكون تغيرت منذ تحميل الصفحة.
-                db_order = Order.objects.filter(pk=order.pk).values(
-                    'order_status', 'tracking_status'
-                ).first()
-                if db_order:
-                    order.order_status = db_order['order_status']
-                    order.tracking_status = db_order['tracking_status']
-
-                # حفظ الطلب
-                order.save()
-
-                # التأكد من أن الطلب تم حفظه بنجاح وله مفتاح أساسي
-                if not order.pk:
-                    raise Exception("فشل في حفظ الطلب: لم يتم إنشاء مفتاح أساسي")
-
-                # Save order items
-                formset = OrderItemFormSet(request.POST, prefix="items", instance=order)
-                items_modified = False
-                if formset.is_valid():
-                    # تتبع التعديلات في العناصر
-                    for form_item in formset:
-                        if form_item.cleaned_data and not form_item.cleaned_data.get(
-                            "DELETE", False
-                        ):
-                            # عنصر جديد أو معدل
-                            if form_item.instance.pk:
-                                # عنصر موجود - تحقق من التعديلات
-                                item_fields_to_track = [
-                                    "quantity",
-                                    "unit_price",
-                                    "discount_percentage",
-                                    "product",
-                                ]
-                                for field_name in item_fields_to_track:
-                                    old_value = getattr(form_item.instance, field_name)
-                                    new_value = form_item.cleaned_data.get(field_name)
-                                    if str(old_value) != str(new_value):
-                                        if "order_items" not in modified_fields:
-                                            modified_fields["order_items"] = []
-                                        modified_fields["order_items"].append(
-                                            {
-                                                "item_id": form_item.instance.pk,
-                                                "product": str(
-                                                    form_item.instance.product
-                                                ),
-                                                "field": field_name,
-                                                "old": old_value,
-                                                "new": new_value,
-                                            }
-                                        )
-                                        items_modified = True
-                            else:
-                                # عنصر جديد
-                                if "new_order_items" not in modified_fields:
-                                    modified_fields["new_order_items"] = []
-                                modified_fields["new_order_items"].append(
-                                    {
-                                        "product": str(
-                                            form_item.cleaned_data.get("product")
-                                        ),
-                                        "quantity": form_item.cleaned_data.get(
-                                            "quantity"
-                                        ),
-                                        "unit_price": form_item.cleaned_data.get(
-                                            "unit_price"
-                                        ),
-                                        "discount_percentage": form_item.cleaned_data.get(
-                                            "discount_percentage", 0
-                                        ),
-                                    }
-                                )
-                                items_modified = True
-
-                    # التحقق من العناصر المحذوفة
-                    for form_item in formset.deleted_forms:
-                        if form_item.instance.pk:
-                            if "deleted_order_items" not in modified_fields:
-                                modified_fields["deleted_order_items"] = []
-                            modified_fields["deleted_order_items"].append(
-                                {
-                                    "item_id": form_item.instance.pk,
-                                    "product": str(form_item.instance.product),
-                                    "quantity": form_item.instance.quantity,
-                                    "unit_price": form_item.instance.unit_price,
-                                }
-                            )
-                            items_modified = True
-
-                    # تعيين المستخدم المعدل على جميع العناصر قبل الحفظ
-                    for form_item in formset:
-                        if form_item.instance.pk:  # عنصر موجود
-                            form_item.instance._modified_by = request.user
-
-                    formset.save()
-                    # إعادة حساب إجماليات الطلب فوراً لضمان دقة الأرقام
-                    try:
-                        order.calculate_final_price(force_update=True)
-                        order.save(update_fields=["final_price", "total_amount"])
-                    except Exception as e:
-                        logger.debug(
-                            f"Error in synchronous recalculation in order_update: {e}"
-                        )
-                else:
-                    logger.debug("UPDATE - Formset errors:", formset.errors)
-                    messages.warning(
-                        request, "تم تحديث الطلب ولكن هناك أخطاء في عناصر الطلب."
-                    )
-
-                # إنشاء سجل التعديل اليدوي إذا كانت هناك تعديلات
-                # تم تعطيل هذا لأن signals تقوم بإنشاء السجلات الآن
-                # if modified_fields:
-                #     from .models import OrderModificationLog
-                #
-                #     modification_details = []
-                #
-                #     # تفاصيل تعديلات حقول الطلب
-                #     field_labels = {
-                #         'contract_number': 'رقم العقد',
-                #         'contract_number_2': 'رقم العقد الإضافي 2',
-                #         'contract_number_3': 'رقم العقد الإضافي 3',
-                #         'invoice_number': 'رقم الفاتورة',
-                #         'invoice_number_2': 'رقم الفاتورة الإضافي 2',
-                #         'invoice_number_3': 'رقم الفاتورة الإضافي 3',
-                #         'notes': 'الملاحظات',
-                #         'delivery_address': 'عنوان التسليم',
-                #         'location_address': 'عنوان التركيب',
-                #         'expected_delivery_date': 'تاريخ التسليم المتوقع'
-                #     }
-                #
-                #     for field_name, values in modified_fields.items():
-                #         if field_name in field_labels:
-                #             old_val = values.get('old') or 'غير محدد'
-                #             new_val = values.get('new') or 'غير محدد'
-                #             modification_details.append(f"{field_labels[field_name]}: {old_val} → {new_val}")
-                #         elif field_name == 'order_items':
-                #             modification_details.append(f"تعديل {len(values)} عنصر من عناصر الطلب")
-                #         elif field_name == 'new_order_items':
-                #             modification_details.append(f"إضافة {len(values)} عنصر جديد للطلب")
-                #         elif field_name == 'deleted_order_items':
-                #             modification_details.append(f"حذف {len(values)} عنصر من الطلب")
-                #
-                #     OrderModificationLog.objects.create(
-                #         order=order,
-                #         modification_type='تعديل يدوي للطلب',
-                #         modified_by=request.user,
-                #         details=' | '.join(modification_details) if modification_details else 'تعديل على الطلب',
-                #         notes='تعديل يدوي من قبل المستخدم',
-                #         is_manual_modification=True,
-                #         modified_fields=modified_fields
-                #     )
-
-                messages.success(request, "تم تحديث الطلب بنجاح!")
-                return redirect("orders:order_detail", pk=order.pk)
-
-            except Exception as e:
-                logger.debug(f"Error updating order: {e}")
-                messages.error(request, f"حدث خطأ أثناء تحديث الطلب: {str(e)}")
-        else:
-            logger.info("--- UPDATE FORM IS INVALID ---")
-            logger.debug("Validation Errors:", form.errors)
-            messages.error(request, "يرجى تصحيح الأخطاء في النموذج.")
-    else:
-        # GET request - استخدام عميل الطلب الحالي
-        customer = order.customer
-        form = OrderForm(instance=order, user=request.user, customer=customer)
-
-    # Get currency symbol from system settings
-    from accounts.models import SystemSettings
-
-    system_settings = SystemSettings.get_settings()
-    currency_symbol = system_settings.currency_symbol if system_settings else "ج.م"
-
-    context = {
-        "form": form,
-        "order": order,
-        "currency_symbol": currency_symbol,
-        "title": f"تعديل الطلب: {order.order_number}",
-    }
-
-    return render(request, "orders/order_form.html", context)
+    messages.info(request, "يرجى استخدام نظام الويزارد لتعديل الطلبات")
+    return redirect("orders:wizard_edit_options", order_pk=pk)
 
 
 @order_delete_permission_required
@@ -1261,14 +710,14 @@ def update_order_status(request, order_id):
         new_status = request.POST.get("status")
         notes = request.POST.get("notes", "")
 
-        if new_status and new_status in dict(Order.TRACKING_STATUS_CHOICES).keys():
+        if new_status and new_status in dict(Order.ORDER_STATUS_CHOICES).keys():
             try:
                 # حفظ الحالة القديمة
-                old_status = order.tracking_status
+                old_status = order.order_status
 
                 # تحديث الحالة
-                order.tracking_status = new_status
-                order.save()
+                order.order_status = new_status
+                order.save(update_fields=["order_status"])
 
                 # تسجيل تغيير الحالة في السجل
                 from .models import OrderStatusLog
@@ -1283,7 +732,7 @@ def update_order_status(request, order_id):
 
                 messages.success(
                     request,
-                    f'تم تحديث حالة الطلب بنجاح من "{dict(Order.TRACKING_STATUS_CHOICES).get(old_status, old_status)}" إلى "{dict(Order.TRACKING_STATUS_CHOICES).get(new_status, new_status)}"',
+                    f'تم تحديث حالة الطلب بنجاح من "{dict(Order.ORDER_STATUS_CHOICES).get(old_status, old_status)}" إلى "{dict(Order.ORDER_STATUS_CHOICES).get(new_status, new_status)}"',
                 )
             except Exception as e:
                 messages.error(request, f"حدث خطأ أثناء تحديث حالة الطلب: {str(e)}")
@@ -1604,16 +1053,9 @@ def order_success_redirect(request, pk):
 
 @login_required
 def order_update_redirect(request, pk):
-    """إعادة توجيه من ID إلى صفحة تعديل الويزارد أو التعديل التقليدي حسب نوع الطلب"""
+    """إعادة توجيه من ID إلى صفحة تعديل الويزارد"""
     order = get_object_or_404(Order, pk=pk)
-
-    # إذا كان الطلب منشأ عبر الويزارد، نوجه لصفحة خيارات الويزارد
-    if order.creation_method == "wizard":
-        return redirect("orders:wizard_edit_options", order_pk=order.pk)
-
-    # غير ذلك، نرسله لصفحة التعديل التقليدية
-    # ملاحظة: نقوم باستدعاء الـ View مباشرة لأن URL 'order_update' يشير لهذه الدالة نفسها
-    return order_update(request, pk)
+    return redirect("orders:wizard_edit_options", order_pk=order.pk)
 
 
 @login_required

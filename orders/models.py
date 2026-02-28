@@ -444,7 +444,6 @@ class Order(SoftDeleteMixin, models.Model):
     modified_at = models.DateTimeField(auto_now=True, help_text="آخر تحديث للطلب")
     tracker = FieldTracker(
         fields=[
-            "tracking_status",
             "status",
             "notes",
             "contract_number",
@@ -467,11 +466,7 @@ class Order(SoftDeleteMixin, models.Model):
             # Existing indexes
             models.Index(fields=["customer"], name="order_customer_idx"),
             models.Index(fields=["salesperson"], name="order_salesperson_idx"),
-            models.Index(fields=["tracking_status"], name="order_tracking_status_idx"),
             models.Index(fields=["order_date"], name="order_date_idx"),
-            models.Index(
-                fields=["branch", "tracking_status"], name="order_branch_status_idx"
-            ),
             models.Index(
                 fields=["payment_verified"], name="order_payment_verified_idx"
             ),
@@ -501,9 +496,6 @@ class Order(SoftDeleteMixin, models.Model):
             models.Index(
                 fields=["is_fully_completed", "created_at"],
                 name="order_completed_crt_idx",
-            ),
-            models.Index(
-                fields=["tracking_status", "created_at"], name="order_track_created_idx"
             ),
             models.Index(fields=["order_number"], name="order_number_idx"),
             models.Index(fields=["invoice_number"], name="order_invoice_idx"),
@@ -619,7 +611,6 @@ class Order(SoftDeleteMixin, models.Model):
             # ⚡ تخطي جلب الحالات القديمة للطلبات الجديدة (تحسين الأداء)
             # متغيرات لتتبع تغيير الحالة - فقط للطلبات الموجودة
             old_order_status = None
-            old_tracking_status = None
 
             # ⚡ منع تغيير العميل بعد إنشاء الطلب (يسبب تضارب في رقم الطلب)
             if not is_new and not kwargs.pop("allow_customer_change", False):
@@ -718,7 +709,6 @@ class Order(SoftDeleteMixin, models.Model):
                 # طلبات المنتجات تبدأ بحالة "قيد الانتظار"
                 if is_new or not self.order_status:
                     self.order_status = "pending"
-                    self.tracking_status = "pending"
 
             # ⚡ تخطي تحديث payment_verified أثناء الإنشاء (سيتم لاحقاً)
             # تحديث حالة التحقق من الدفع تلقائياً - فقط للطلبات الموجودة
@@ -3012,11 +3002,9 @@ class OrderStatusLog(models.Model):
                     elif self.old_status != self.new_status:
                         self.change_type = "status"
 
-            # اختر المصدر Canonical: استخدم order_status إذا كان موجودًا، وإلا التراجع إلى tracking_status
+            # استخدم order_status كمصدر أساسي
             if not self.old_status and self.order:
-                self.old_status = getattr(self.order, "order_status", None) or getattr(
-                    self.order, "tracking_status", None
-                )
+                self.old_status = getattr(self.order, "order_status", None)
 
             super().save(*args, **kwargs)
 
@@ -3028,22 +3016,11 @@ class OrderStatusLog(models.Model):
                         self.order, "order_status", None
                     ):
                         # حدّث الحقل canonical
-                        try:
-                            self.order.order_status = self.new_status
-                            self.order.last_notification_date = timezone.now()
-                            self.order.save(
-                                update_fields=["order_status", "last_notification_date"]
-                            )
-                        except Exception:
-                            # في حالة عدم وجود الحقل، استخدام tracking_status القديم كاحتياط
-                            self.order.tracking_status = self.new_status
-                            self.order.last_notification_date = timezone.now()
-                            self.order.save(
-                                update_fields=[
-                                    "tracking_status",
-                                    "last_notification_date",
-                                ]
-                            )
+                        self.order.order_status = self.new_status
+                        self.order.last_notification_date = timezone.now()
+                        self.order.save(
+                            update_fields=["order_status", "last_notification_date"]
+                        )
                 except Exception as e:
                     pass
         except Exception as e:
@@ -3200,9 +3177,7 @@ class OrderStatusLog(models.Model):
                 new_status = new_value or getattr(order, "order_status", "")
             else:
                 # للتغييرات الأخرى، استخدم حالة الطلب الحالية
-                current_status = getattr(order, "order_status", None) or getattr(
-                    order, "tracking_status", ""
-                )
+                current_status = getattr(order, "order_status", None) or ""
                 old_status = current_status
                 new_status = current_status
 

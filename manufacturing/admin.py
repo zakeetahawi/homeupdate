@@ -20,41 +20,41 @@ from .models import (
     ManufacturingSettings,
     ManufacturingStatusLog,
     ProductionLine,
+    ProductionLineOrderTypeConfig,
 )
 
 
-class ProductionLineForm(forms.ModelForm):
-    """نموذج مخصص لخط الإنتاج مع widget لأنواع الطلبات"""
+class ColorPickerWidget(forms.Widget):
+    """ودجت اختيار لون باستخدام input color الأصلي"""
 
-    supported_order_types = forms.MultipleChoiceField(
-        choices=ProductionLine.ORDER_TYPE_CHOICES,
-        widget=forms.CheckboxSelectMultiple,
-        required=False,
-        label="أنواع الطلبات المدعومة",
-        help_text="حدد أنواع الطلبات التي يمكن لهذا الخط التعامل معها (اتركه فارغاً لدعم جميع الأنواع)",
+    def render(self, name, value, attrs=None, renderer=None):
+        from django.utils.safestring import mark_safe
+        value = value or '#0d6efd'
+        return mark_safe(
+            f'<input type="color" name="{name}" value="{value}" '
+            f'style="width:120px;height:36px;padding:2px;border:1px solid #ccc;border-radius:6px;cursor:pointer;">'
+        )
+
+    def value_from_datadict(self, data, files, name):
+        return data.get(name)
+
+    def value_from_datadict(self, data, files, name):
+        return data.get(name)
+
+
+class ProductionLineForm(forms.ModelForm):
+    """نموذج مخصص لخط الإنتاج"""
+
+    badge_color = forms.CharField(
+        widget=ColorPickerWidget(),
+        label="لون البادج",
+        help_text="اختر لون البادج الخاص بخط الإنتاج",
     )
 
     class Meta:
         model = ProductionLine
         fields = "__all__"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk and self.instance.supported_order_types:
-            self.fields["supported_order_types"].initial = (
-                self.instance.supported_order_types
-            )
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        # تحويل القائمة إلى JSON
-        instance.supported_order_types = self.cleaned_data.get(
-            "supported_order_types", []
-        )
-        if commit:
-            instance.save()
-            self.save_m2m()
-        return instance
+        exclude = ["branches", "supported_order_types"]
 
 
 class ManufacturingOrderItemInline(admin.TabularInline):
@@ -910,19 +910,29 @@ class ManufacturingOrderItemAdmin(admin.ModelAdmin):
 # The user management code has been moved to accounts/admin.py
 
 
+class ProductionLineOrderTypeConfigInline(admin.TabularInline):
+    """إعداد الفروع لكل نوع طلب في خط الإنتاج"""
+
+    model = ProductionLineOrderTypeConfig
+    extra = 0
+    filter_horizontal = ["branches"]
+    verbose_name = "إعداد نوع طلب"
+    verbose_name_plural = "إعدادات أنواع الطلبات والفروع"
+
+
 @admin.register(ProductionLine)
 class ProductionLineAdmin(admin.ModelAdmin):
     """إدارة خطوط الإنتاج"""
 
     form = ProductionLineForm
     list_per_page = 20
+    inlines = [ProductionLineOrderTypeConfigInline]
 
     list_display = [
         "name",
         "is_active",
         "priority",
-        "get_branches_display",
-        "get_supported_order_types_display",
+        "get_order_type_configs_display",
         "orders_count",
         "active_orders_count",
         "capacity_per_day",
@@ -930,27 +940,16 @@ class ProductionLineAdmin(admin.ModelAdmin):
         "created_at",
     ]
 
-    list_filter = ["is_active", "priority", "branches", "created_at", "created_by"]
+    list_filter = ["is_active", "priority", "created_at", "created_by"]
 
-    search_fields = ["name", "description", "branches__name"]
+    search_fields = ["name", "description"]
 
     ordering = ["-priority", "name"]
 
     fieldsets = (
         (
             "معلومات أساسية",
-            {"fields": ("name", "description", "is_active", "priority")},
-        ),
-        (
-            "الفروع المرتبطة",
-            {"fields": ("branches",), "description": "حدد الفروع التي يخدمها هذا الخط"},
-        ),
-        (
-            "أنواع الطلبات المدعومة",
-            {
-                "fields": ("supported_order_types",),
-                "description": "حدد أنواع الطلبات التي يمكن لهذا الخط التعامل معها (اتركه فارغاً لدعم جميع الأنواع)",
-            },
+            {"fields": ("name", "description", "badge_color", "is_active", "priority")},
         ),
         (
             "إعدادات الإنتاج",
@@ -961,25 +960,33 @@ class ProductionLineAdmin(admin.ModelAdmin):
         ),
     )
 
-    filter_horizontal = ["branches"]
-
     def save_model(self, request, obj, form, change):
         """حفظ النموذج مع تسجيل المستخدم المنشئ"""
         if not change:  # إذا كان إنشاء جديد
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
 
-    def get_branches_display(self, obj):
-        """عرض الفروع المرتبطة"""
-        return obj.get_branches_display()
+    def get_order_type_configs_display(self, obj):
+        """عرض أنواع الطلبات والفروع المرتبطة"""
+        configs = obj.order_type_configs.prefetch_related("branches").all()
+        if not configs:
+            return "لم يتم الإعداد"
+        parts = []
+        for config in configs:
+            branches = config.get_branches_display()
+            parts.append(f"{config.get_order_type_display()}: {branches}")
+        return " | ".join(parts)
 
-    get_branches_display.short_description = "الفروع المرتبطة"
+    get_order_type_configs_display.short_description = "أنواع الطلبات والفروع"
 
-    def get_supported_order_types_display(self, obj):
-        """عرض أنواع الطلبات المدعومة"""
-        return obj.get_supported_order_types_display()
-
-    get_supported_order_types_display.short_description = "أنواع الطلبات المدعومة"
+    @admin.display(description="لون البادج")
+    def badge_color_preview(self, obj):
+        from django.utils.html import format_html
+        return format_html(
+            '<span style="display:inline-block; padding: 3px 10px; border-radius: 4px; '
+            'color: #fff; background-color: {}; font-size: 0.8rem;">{}</span>',
+            obj.badge_color, obj.name
+        )
 
 
 class ManufacturingDisplaySettingsForm(forms.ModelForm):

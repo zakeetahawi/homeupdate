@@ -673,7 +673,7 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
                     if created_mfg:
                         # تحديث بدون إطلاق الإشارات لتجنب الrecursion
                         Order.objects.filter(pk=instance.pk).update(
-                            tracking_status="factory", order_status="pending_approval"
+                            order_status="pending_approval"
                         )
                         # print(f"SUCCESS: Created ManufacturingOrder PK: {mfg_order.pk} and updated Order PK: {instance.pk} tracking_status to 'factory'")
                     else:
@@ -686,7 +686,7 @@ def create_manufacturing_order_on_order_creation(sender, instance, created, **kw
 
 @receiver(post_save, sender="manufacturing.ManufacturingOrder", dispatch_uid='sync_order_from_manufacturing')
 def sync_order_from_manufacturing(sender, instance, created, **kwargs):
-    """Ensure the linked Order has its order_status and tracking_status updated
+    """Ensure the linked Order has its order_status updated
     when the ManufacturingOrder changes. This prevents display mismatches where
     manufacturing is completed but Order still shows an older manufacturing state.
     """
@@ -695,37 +695,16 @@ def sync_order_from_manufacturing(sender, instance, created, **kwargs):
         if not order:
             return
 
-        # Map manufacturing status to order.tracking_status (same mapping as management command)
-        status_mapping = {
-            "pending_approval": "factory",
-            "pending": "factory",
-            "in_progress": "factory",
-            "ready_install": "ready",
-            "completed": "ready",
-            "delivered": "delivered",
-            "rejected": "factory",
-            "cancelled": "factory",
-        }
-
         new_order_status = instance.status
-        new_tracking_status = status_mapping.get(instance.status, order.tracking_status)
 
         # Only update if something changed to avoid recursion/noise
-        update_fields = []
         if order.order_status != new_order_status:
-            order.order_status = new_order_status
-            update_fields.append("order_status")
-        if order.tracking_status != new_tracking_status:
-            order.tracking_status = new_tracking_status
-            update_fields.append("tracking_status")
-
-        if update_fields:
             # Use update to avoid triggering heavy save logic where appropriate
             from django.db import transaction
 
             with transaction.atomic():
                 Order.objects.filter(pk=order.pk).update(
-                    **{f: getattr(order, f) for f in update_fields}
+                    order_status=new_order_status
                 )
 
             # لا نقوم بإنشاء OrderStatusLog هنا لأننا نريد فقط السجلات الحقيقية
@@ -800,7 +779,7 @@ def create_inspection_on_order_creation(sender, instance, created, **kwargs):
                             f"✅ Inspection created for order {instance.order_number} (ID: {inspection.id})"
                         )
                         Order.objects.filter(pk=instance.pk).update(
-                            tracking_status="processing", order_status="pending"
+                            order_status="pending"
                         )
                 except Exception as e:
                     import traceback
@@ -873,18 +852,18 @@ def order_post_save(sender, instance, created, **kwargs):
     else:
         # التحقق من تغيير الحالة
         if (
-            hasattr(instance, "_tracking_status_changed")
-            and instance._tracking_status_changed
+            hasattr(instance, "_order_status_changed")
+            and instance._order_status_changed
         ):
             # الحصول على الحالة السابقة من tracker
-            old_status = instance.tracker.previous("tracking_status")
+            old_status = instance.tracker.previous("status")
             if old_status is None:
                 old_status = "pending"  # قيمة افتراضية إذا لم تكن موجودة
 
             OrderStatusLog.objects.create(
                 order=instance,
                 old_status=old_status,
-                new_status=getattr(instance, "order_status", instance.tracking_status),
+                new_status=instance.order_status,
                 changed_by=getattr(instance, "_modified_by", None),
                 notes="تم تغيير حالة الطلب",
             )
@@ -1326,6 +1305,14 @@ def update_order_manufacturing_status(sender, instance, created, **kwargs):
 
         # تجاهل التحديث إذا كان إنشاء جديد لتجنب التضارب
         if created:
+            return
+
+        # تجاهل التحديث إذا تم حذف أمر التصنيع (soft delete)
+        # لأن الحذف يضبط order_status إلى manufacturing_deleted ولا يجب الكتابة فوقه
+        if getattr(instance, 'is_deleted', False):
+            # إذا لم يتم ضبط حالة الطلب إلى manufacturing_deleted بعد، نضبطها الآن
+            if order.order_status != 'manufacturing_deleted':
+                Order.objects.filter(pk=order.pk).update(order_status='manufacturing_deleted')
             return
 
         # مطابقة مباشرة بين حالات التصنيع والطلب

@@ -39,17 +39,6 @@ class StatusSyncService:
         "cancelled": "cancelled",
     }
 
-    TRACKING_STATUS_MAPPING = {
-        "pending_approval": "factory",
-        "pending": "factory",
-        "in_progress": "factory",
-        "ready_install": "ready",
-        "completed": "ready",
-        "delivered": "delivered",
-        "rejected": "factory",
-        "cancelled": "factory",
-    }
-
     @classmethod
     def sync_order_to_manufacturing(cls, order, manufacturing_order):
         """مزامنة حالة الطلب مع التصنيع"""
@@ -67,17 +56,10 @@ class StatusSyncService:
         new_order_status = cls.MANUFACTURING_TO_ORDER_STATUS.get(
             manufacturing_order.status, "pending"
         )
-        new_tracking_status = cls.TRACKING_STATUS_MAPPING.get(
-            manufacturing_order.status, "factory"
-        )
 
-        if (
-            order.order_status != new_order_status
-            or order.tracking_status != new_tracking_status
-        ):
+        if order.order_status != new_order_status:
             order.order_status = new_order_status
-            order.tracking_status = new_tracking_status
-            order.save(update_fields=["order_status", "tracking_status"])
+            order.save(update_fields=["order_status"])
 
     @classmethod
     def validate_status_consistency(cls, order, manufacturing_order):
@@ -93,8 +75,6 @@ class StatusSyncService:
             "order_status_matches": order.order_status == expected_order_status,
             "manufacturing_status_matches": manufacturing_order.status
             == expected_manufacturing_status,
-            "tracking_status_matches": order.tracking_status
-            == cls.TRACKING_STATUS_MAPPING.get(manufacturing_order.status),
         }
 
 

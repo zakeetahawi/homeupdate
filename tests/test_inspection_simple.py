@@ -57,7 +57,7 @@ def test_inspection_creation_from_form():
         "status": "normal",
         "delivery_type": "branch",
         "delivery_address": "",
-        "tracking_status": "pending",
+        "order_status": "pending",
         # لا نحتاج invoice_number للمعاينة
     }
 
@@ -149,7 +149,7 @@ def test_non_inspection_order():
         "contract_number": "CONTRACT-001",  # مطلوب للتركيب
         "delivery_type": "branch",
         "delivery_address": "",
-        "tracking_status": "pending",
+        "order_status": "pending",
     }
 
     print(f"📋 بيانات طلب التركيب:")

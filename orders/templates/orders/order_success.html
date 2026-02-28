@@ -521,7 +521,7 @@
 {% block extra_js %}
     <script>
     // Auto-refresh page after 30 seconds if order is still processing
-    {% if order.tracking_status == 'pending' %}
+    {% if order.order_status == 'pending' or order.order_status == 'pending_approval' %}
     setTimeout(function() {
         location.reload();
     }, 30000);

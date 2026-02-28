@@ -233,8 +233,8 @@ def update_order_status_async(
         order = Order.objects.get(pk=order_id)
 
         # تحديث الحالة
-        order.tracking_status = new_status
-        order.save(update_fields=["tracking_status"])
+        order.order_status = new_status
+        order.save(update_fields=["order_status"])
 
         # إنشاء سجل تغيير الحالة
         from django.contrib.auth import get_user_model

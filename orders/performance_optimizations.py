@@ -261,7 +261,6 @@ def get_orders_list_optimized(user, filters=None, page_size=25):
             "order_date",
             "status",
             "order_status",
-            "tracking_status",
             "total_amount",
             "paid_amount",
             "created_at",

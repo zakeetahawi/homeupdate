@@ -229,6 +229,32 @@ class ManufacturingOrder(SoftDeleteMixin, models.Model):
         help_text="خط الإنتاج المسؤول عن هذا الطلب",
     )
 
+    # تتبع تغيير خط الإنتاج
+    previous_production_line = models.ForeignKey(
+        "ProductionLine",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="previous_manufacturing_orders",
+        verbose_name="خط الإنتاج السابق",
+        help_text="خط الإنتاج قبل آخر تغيير",
+    )
+
+    production_line_changed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="تاريخ تغيير خط الإنتاج",
+    )
+
+    production_line_changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="production_line_changes",
+        verbose_name="تم تغيير خط الإنتاج بواسطة",
+    )
+
     rejection_reason = models.TextField(blank=True, null=True, verbose_name="سبب الرفض")
 
     rejection_reply = models.TextField(
@@ -495,18 +521,6 @@ class ManufacturingOrder(SoftDeleteMixin, models.Model):
             "cancelled": "cancelled",
         }
 
-        # تحديث حالة التتبع للطلب
-        tracking_status_mapping = {
-            "pending_approval": "factory",
-            "pending": "factory",
-            "in_progress": "factory",
-            "ready_install": "ready",
-            "completed": "ready",
-            "delivered": "delivered",
-            "rejected": "factory",
-            "cancelled": "factory",
-        }
-
         # تحديث حالة التركيب للطلبات من نوع التركيب
         installation_status_mapping = {
             "pending_approval": "needs_scheduling",
@@ -519,12 +533,10 @@ class ManufacturingOrder(SoftDeleteMixin, models.Model):
         }
 
         new_order_status = order_status_mapping.get(self.status, self.status)
-        new_tracking_status = tracking_status_mapping.get(self.status, "factory")
 
         # إعداد البيانات للتحديث
         update_fields = {
             "order_status": new_order_status,
-            "tracking_status": new_tracking_status,
         }
 
         # إضافة حالة التركيب إذا كان طلب تركيب
@@ -579,7 +591,7 @@ class ManufacturingOrder(SoftDeleteMixin, models.Model):
 
         # تحديد خط الإنتاج المناسب
         self.production_line = ProductionLine.get_default_line_for_branch(
-            customer_branch
+            customer_branch, order_type=self.order_type
         )
 
     def _get_display_warehouses(self):
@@ -1181,7 +1193,6 @@ class ProductionLine(models.Model):
         ("installation", "تركيب"),
         ("custom", "تفصيل"),
         ("accessory", "اكسسوار"),
-        ("delivery", "تسليم"),
         ("inspection", "معاينة"),
     ]
 
@@ -1210,6 +1221,28 @@ class ProductionLine(models.Model):
         default=1,
         verbose_name="الأولوية",
         help_text="أولوية خط الإنتاج (الرقم الأعلى له أولوية أكبر)",
+    )
+
+    BADGE_COLOR_CHOICES = [
+        ("#0d6efd", "أزرق"),
+        ("#198754", "أخضر"),
+        ("#dc3545", "أحمر"),
+        ("#ffc107", "أصفر"),
+        ("#0dcaf0", "سماوي"),
+        ("#6f42c1", "بنفسجي"),
+        ("#fd7e14", "برتقالي"),
+        ("#d63384", "وردي"),
+        ("#20c997", "أخضر فاتح"),
+        ("#6c757d", "رمادي"),
+        ("#343a40", "أسود"),
+        ("#0b5394", "أزرق داكن"),
+    ]
+
+    badge_color = models.CharField(
+        max_length=7,
+        default="#0d6efd",
+        verbose_name="لون البادج",
+        help_text="لون البادج الخاص بخط الإنتاج في الصفحات",
     )
 
     # معلومات التتبع
@@ -1265,43 +1298,121 @@ class ProductionLine(models.Model):
 
     def get_supported_order_types_display(self):
         """عرض أنواع الطلبات المدعومة بشكل مقروء"""
-        if not self.supported_order_types:
-            return "جميع الأنواع"
+        configs = self.order_type_configs.prefetch_related("branches").all()
+        if not configs.exists():
+            # Fallback to old field
+            if not self.supported_order_types:
+                return "جميع الأنواع"
+            type_names = []
+            for order_type in self.supported_order_types:
+                for choice_value, choice_display in self.ORDER_TYPE_CHOICES:
+                    if choice_value == order_type:
+                        type_names.append(choice_display)
+                        break
+            return ", ".join(type_names) if type_names else "جميع الأنواع"
 
-        type_names = []
-        for order_type in self.supported_order_types:
-            for choice_value, choice_display in self.ORDER_TYPE_CHOICES:
-                if choice_value == order_type:
-                    type_names.append(choice_display)
-                    break
-
-        return ", ".join(type_names) if type_names else "جميع الأنواع"
+        parts = []
+        for config in configs:
+            parts.append(config.get_order_type_display())
+        return ", ".join(parts) if parts else "جميع الأنواع"
 
     def supports_order_type(self, order_type):
         """التحقق من دعم نوع طلب معين"""
-        if not self.supported_order_types:
-            return True  # إذا لم يتم تحديد أنواع، فهو يدعم جميع الأنواع
+        configs = self.order_type_configs.all()
+        if configs.exists():
+            return configs.filter(order_type=order_type).exists()
 
+        # Fallback to old field
+        if not self.supported_order_types:
+            return True
         return order_type in self.supported_order_types
 
     @classmethod
-    def get_default_line_for_branch(cls, branch):
-        """الحصول على خط الإنتاج الافتراضي للفرع"""
+    def get_default_line_for_branch(cls, branch, order_type=None):
+        """الحصول على خط الإنتاج الافتراضي للفرع ونوع الطلب"""
+        from manufacturing.models import ProductionLineOrderTypeConfig
+
         if not branch:
+            # بدون فرع: إرجاع أعلى أولوية يدعم نوع الطلب
+            if order_type:
+                config = ProductionLineOrderTypeConfig.objects.filter(
+                    production_line__is_active=True,
+                    order_type=order_type,
+                ).select_related("production_line").order_by(
+                    "-production_line__priority"
+                ).first()
+                if config:
+                    return config.production_line
             return cls.objects.filter(is_active=True).order_by("-priority").first()
 
-        # البحث عن خط إنتاج مرتبط بالفرع
-        line = (
-            cls.objects.filter(is_active=True, branches=branch)
-            .order_by("-priority")
-            .first()
+        # البحث عبر الموديل الجديد: فرع + نوع طلب
+        config_qs = ProductionLineOrderTypeConfig.objects.filter(
+            production_line__is_active=True,
+            branches=branch,
         )
+        if order_type:
+            config_qs = config_qs.filter(order_type=order_type)
 
-        if line:
-            return line
+        config = config_qs.select_related("production_line").order_by(
+            "-production_line__priority"
+        ).first()
 
-        # إذا لم يوجد خط مرتبط بالفرع، إرجاع الخط الافتراضي
+        if config:
+            return config.production_line
+
+        # لم يُعثر على تطابق مباشر: البحث عن أي خط يدعم نوع الطلب
+        if order_type:
+            config = ProductionLineOrderTypeConfig.objects.filter(
+                production_line__is_active=True,
+                order_type=order_type,
+            ).select_related("production_line").order_by(
+                "-production_line__priority"
+            ).first()
+            if config:
+                return config.production_line
+
+        # إذا لم يوجد أي تطابق، إرجاع الخط الافتراضي
         return cls.objects.filter(is_active=True).order_by("-priority").first()
+
+
+class ProductionLineOrderTypeConfig(models.Model):
+    """ربط نوع طلب بفروع محددة لخط إنتاج معين"""
+
+    production_line = models.ForeignKey(
+        ProductionLine,
+        on_delete=models.CASCADE,
+        related_name="order_type_configs",
+        verbose_name="خط الإنتاج",
+    )
+
+    order_type = models.CharField(
+        max_length=20,
+        choices=ProductionLine.ORDER_TYPE_CHOICES,
+        verbose_name="نوع الطلب",
+    )
+
+    branches = models.ManyToManyField(
+        "accounts.Branch",
+        blank=True,
+        related_name="order_type_configs",
+        verbose_name="الفروع",
+        help_text="الفروع المرتبطة بهذا النوع من الطلبات لهذا الخط",
+    )
+
+    class Meta:
+        verbose_name = "إعداد نوع طلب"
+        verbose_name_plural = "إعدادات أنواع الطلبات"
+        unique_together = [("production_line", "order_type")]
+        ordering = ["order_type"]
+
+    def __str__(self):
+        return f"{self.get_order_type_display()} — {self.production_line.name}"
+
+    def get_branches_display(self):
+        branches = self.branches.all()
+        if not branches.exists():
+            return "جميع الفروع"
+        return ", ".join([b.name for b in branches])
 
 
 class ManufacturingDisplaySettings(models.Model):

@@ -522,6 +522,33 @@
         border-bottom: none;
     }
 
+    /* زر تبديل خط الإنتاج — أيقونة صغيرة أنيقة */
+    .pl-switch-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        font-size: 0.6rem;
+        color: #9ca3af !important;
+        transition: all 0.2s ease;
+        text-decoration: none !important;
+    }
+    .pl-switch-btn:hover {
+        color: #3b82f6 !important;
+        background: rgba(59, 130, 246, 0.1);
+        transform: scale(1.15);
+    }
+
+    .dropdown-item.active {
+        background-color: #e8f5e9 !important;
+        color: #2e7d32 !important;
+    }
+    .dropdown-item:hover:not(.active) {
+        background-color: #f0f7ff;
+    }
+
     .status-badge {
         font-size: 0.8rem;
         padding: 0.4rem 0.8rem;
@@ -858,6 +885,53 @@
                             <span class="badge bg-light text-dark">{{ order_data.items|length }} عنصر جاهز</span>
                         </div>
                     </div>
+                    {# ===== عرض خط الإنتاج مع إمكانية التبديل ===== #}
+                    {% if order_data.manufacturing_order %}
+                    <div class="card-header bg-light py-1 border-top-0">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap">
+                            <div class="d-flex align-items-center gap-1">
+                                <i class="fas fa-industry text-primary" style="font-size: 0.7rem;"></i>
+                                <span class="badge production-line-badge" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background-color: {{ order_data.manufacturing_order.production_line.badge_color|default:'#0d6efd' }}; color: #fff;" id="pl-badge-{{ order_data.manufacturing_order.pk }}" data-badge-color="{{ order_data.manufacturing_order.production_line.badge_color|default:'#0d6efd' }}">
+                                    {{ order_data.manufacturing_order.production_line.name|default:"غير محدد" }}
+                                </span>
+                                {# زر تبديل — أيقونة صغيرة فقط #}
+                                <div class="dropdown d-inline-block">
+                                    <a href="#" class="text-muted pl-switch-btn" data-bs-toggle="dropdown" aria-expanded="false" title="تبديل خط الإنتاج">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width: 180px; font-size: 0.82rem;">
+                                        {% for line in production_lines %}
+                                        <li>
+                                            <a class="dropdown-item py-1 {% if order_data.manufacturing_order.production_line_id == line.id %}active{% endif %}"
+                                               href="#"
+                                               onclick="changeProductionLine({{ order_data.manufacturing_order.pk }}, {{ line.id }}, '{{ line.name|escapejs }}', '{{ line.badge_color|default:'#0d6efd' }}'); return false;">
+                                                <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:{{ line.badge_color|default:'#0d6efd' }}; margin-left:5px; vertical-align:middle;"></span>
+                                                {{ line.name }}
+                                                {% if order_data.manufacturing_order.production_line_id == line.id %}<i class="fas fa-check text-success ms-auto" style="font-size: 0.65rem;"></i>{% endif %}
+                                            </a>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {# الخط السابق — مدمج في نفس السطر #}
+                                {% if order_data.manufacturing_order.previous_production_line %}
+                                <span class="text-muted" style="font-size: 0.68rem; cursor: pointer;" id="pl-prev-{{ order_data.manufacturing_order.pk }}" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="<b>التسليم السابق</b><br>الخط: {{ order_data.manufacturing_order.previous_production_line.name }}<br>تاريخ التبديل: {{ order_data.manufacturing_order.production_line_changed_at|date:'d/m/Y H:i' }}<br>بواسطة: {{ order_data.manufacturing_order.production_line_changed_by.get_full_name|default:'—' }}">
+                                    <i class="fas fa-history text-warning" style="font-size: 0.6rem;"></i>
+                                    <span class="text-secondary">{{ order_data.manufacturing_order.previous_production_line.name }}</span>
+                                    {% if order_data.manufacturing_order.production_line_changed_at %}
+                                    <span class="text-muted">{{ order_data.manufacturing_order.production_line_changed_at|date:"m/d H:i" }}</span>
+                                    {% endif %}
+                                </span>
+                                {% else %}
+                                <span class="text-muted" style="font-size: 0.68rem; display: none;" id="pl-prev-{{ order_data.manufacturing_order.pk }}">
+                                    <i class="fas fa-history text-warning" style="font-size: 0.6rem;"></i>
+                                    <span class="text-secondary pl-prev-name"></span>
+                                    <span class="pl-prev-date"></span>
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-sm table-hover mb-0">
@@ -1171,6 +1245,10 @@
     <script>
     // التحقق من تحميل المكتبات بعد تحميل الصفحة بالكامل
     document.addEventListener('DOMContentLoaded', function() {
+        // تفعيل tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function(el) { new bootstrap.Tooltip(el); });
+
         // التحقق من وجود jQuery
         if (typeof $ === 'undefined') {
             console.error('jQuery غير محمل!');
@@ -1498,6 +1576,112 @@
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-check me-2"></i>تأكيد الاستلام';
             });
+    }
+
+    // تبديل خط الإنتاج لأمر تصنيع
+    function changeProductionLine(manufacturingOrderId, newLineId, newLineName, newLineColor) {
+        // تأكيد التبديل
+        const currentBadge = document.getElementById(`pl-badge-${manufacturingOrderId}`);
+        const currentLineName = currentBadge ? currentBadge.textContent.trim() : '';
+        const currentColor = currentBadge ? (currentBadge.dataset.badgeColor || '#0d6efd') : '#0d6efd';
+        newLineColor = newLineColor || '#0d6efd';
+
+        if (currentLineName === newLineName) {
+            Swal.fire({
+                icon: 'info',
+                title: 'نفس الخط',
+                text: 'خط الإنتاج المحدد هو نفس الخط الحالي',
+                confirmButtonText: 'حسناً',
+                timer: 2000,
+                timerProgressBar: true
+            });
+            return;
+        }
+
+        Swal.fire({
+            icon: 'question',
+            title: 'تبديل خط الإنتاج',
+            html: `
+                <div style="direction: rtl; text-align: right;">
+                    <p>هل تريد تبديل خط الإنتاج؟</p>
+                    <div class="alert alert-light border">
+                        <div class="mb-2"><strong>الخط الحالي:</strong> <span class="badge" style="background-color:${currentColor}; color:#fff;">${currentLineName}</span></div>
+                        <div><strong>الخط الجديد:</strong> <span class="badge" style="background-color:${newLineColor}; color:#fff;">${newLineName}</span></div>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-exchange-alt me-1"></i> تبديل',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#0d6efd',
+            cancelButtonColor: '#6c757d',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // إرسال طلب التبديل
+                fetch(`/manufacturing/api/change-production-line/${manufacturingOrderId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        production_line_id: newLineId,
+                        reason: 'تبديل من صفحة استلام الأقمشة'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // تحديث الشارة
+                        if (currentBadge) {
+                            currentBadge.textContent = newLineName;
+                            currentBadge.style.backgroundColor = newLineColor;
+                            currentBadge.dataset.badgeColor = newLineColor;
+                        }
+
+                        // تحديث/إظهار معلومات الخط السابق
+                        const prevDiv = document.getElementById(`pl-prev-${manufacturingOrderId}`);
+                        if (prevDiv) {
+                            prevDiv.style.display = '';
+                            const prevName = prevDiv.querySelector('.pl-prev-name, strong.text-secondary');
+                            const prevDate = prevDiv.querySelector('.pl-prev-date');
+                            const prevUser = prevDiv.querySelector('.pl-prev-user');
+                            if (prevName) prevName.textContent = data.old_line_name || currentLineName;
+                            if (prevDate) prevDate.textContent = new Date().toLocaleString('sv-SE', {hour12: false}).replace(' ', ' ');
+                            // اسم المستخدم لا يتوفر في الـ response لكن يمكن تحديث الصفحة
+                        }
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'تم التبديل بنجاح',
+                            html: `<div style="direction: rtl;">تم تبديل خط الإنتاج إلى <strong>${newLineName}</strong></div>`,
+                            confirmButtonText: 'حسناً',
+                            confirmButtonColor: '#198754',
+                            timer: 2500,
+                            timerProgressBar: true
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'خطأ',
+                            text: data.message,
+                            confirmButtonText: 'حسناً'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('خطأ:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'خطأ في الاتصال',
+                        text: 'حدث خطأ أثناء الاتصال بالخادم',
+                        confirmButtonText: 'حسناً'
+                    });
+                });
+            }
+        });
     }
 
     // تحديث الصفحة

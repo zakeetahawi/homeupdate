@@ -64,7 +64,7 @@ def test_form_submission():
         "status": "normal",
         "delivery_type": "branch",
         "delivery_address": "",
-        "tracking_status": "pending",
+        "order_status": "pending",
     }
 
     print(f"\n📋 بيانات النموذج:")
@@ -126,7 +126,7 @@ def test_form_submission():
         "status": "normal",
         "delivery_type": "branch",
         "delivery_address": "",
-        "tracking_status": "pending",
+        "order_status": "pending",
         # لا يوجد invoice_number
     }
 

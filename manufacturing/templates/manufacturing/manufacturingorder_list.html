@@ -822,6 +822,10 @@
         overflow: visible !important;
     }
 
+    .card-body {
+        overflow: visible !important;
+    }
+
     /* ─── تحسينات الجدول ─── */
 
     .manufacturing-table th {
@@ -872,11 +876,7 @@
         padding: 0.15rem 0.3rem;
     }
     
-    /* ألوان خطوط الإنتاج - 4 ألوان ثابتة */
-    .production-line-1 { background-color: #17a2b8 !important; } /* أزرق فاتح */
-    .production-line-2 { background-color: #28a745 !important; } /* أخضر */
-    .production-line-3 { background-color: #ffc107 !important; color: #000 !important; } /* أصفر */
-    .production-line-4 { background-color: #dc3545 !important; } /* أحمر */
+    /* ألوان خطوط الإنتاج — تُحدد ديناميكياً من badge_color في الموديل */
     .production-line-0 { background-color: #6c757d !important; } /* رمادي لغير محدد */
 
     /* تنسيق رابط اسم العميل */
@@ -1987,10 +1987,11 @@
             </div>
         {% endif %}
         <!-- الجدول الرئيسي -->
-        <div class="card" style="border-color: var(--border, #DED5CE); border-radius: var(--radius-large, 12px); overflow: hidden;">
+        <div class="card" style="border-color: var(--border, #DED5CE); border-radius: var(--radius-large, 12px); overflow: visible;">
             <div class="card-header"
                  style="background-color: var(--primary, #8B735A);
-                        color: white">
+                        color: white;
+                        border-radius: var(--radius-large, 12px) var(--radius-large, 12px) 0 0;">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-industry"></i> أوامر التصنيع
@@ -2191,14 +2192,15 @@
                                                 <span class="badge bg-secondary">-</span>
                                             {% elif perms.manufacturing.change_manufacturingorder %}
                                                 <div class="dropdown">
-                                                    <button class="btn btn-sm badge text-white dropdown-toggle production-line-{{ order.production_line.id|default:'0' }}"
+                                                    <button class="btn btn-sm badge text-white dropdown-toggle"
                                                             type="button"
                                                             id="prodLine{{ order.id }}"
                                                             data-bs-toggle="dropdown"
                                                             data-bs-auto-close="true"
                                                             aria-expanded="false"
                                                             style="border: none;
-                                                                   cursor: pointer">
+                                                                   cursor: pointer;
+                                                                   background-color: {{ order.production_line.badge_color|default:'#6c757d' }};">
                                                         {% if order.production_line %}
                                                             <i class="fas fa-industry me-1"></i>{{ order.production_line.name }}
                                                         {% else %}
@@ -2206,13 +2208,15 @@
                                                         {% endif %}
                                                     </button>
                                                     <ul class="dropdown-menu shadow-lg"
-                                                        aria-labelledby="prodLine{{ order.id }}">
+                                                        aria-labelledby="prodLine{{ order.id }}"
+                                                        style="z-index: 99999;">
                                                         {% for line in production_lines %}
                                                             <li>
                                                                 <a class="dropdown-item {% if order.production_line.id == line.id %}active{% endif %}"
                                                                    href="#"
                                                                    onclick="changeProductionLineBootstrap(event, {{ order.id }}, {{ line.id }}, '{{ line.name|escapejs }}', {{ order.production_line.id|default:'null' }})">
-                                                                    <i class="fas fa-industry me-2"></i>{{ line.name }}
+                                                                    <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background-color:{{ line.badge_color|default:'#6c757d' }};vertical-align:middle;margin-left:6px;"></span>
+                                                                    {{ line.name }}
                                                                     {% if order.production_line.id == line.id %}<i class="fas fa-check float-end text-success"></i>{% endif %}
                                                                 </a>
                                                             </li>
@@ -2221,7 +2225,7 @@
                                                 </div>
                                             {% else %}
                                                 {% if order.production_line %}
-                                                    <span class="badge text-white production-line-{{ order.production_line.id }}">
+                                                    <span class="badge text-white" style="background-color: {{ order.production_line.badge_color|default:'#6c757d' }};">
                                                         <i class="fas fa-industry me-1"></i>{{ order.production_line.name }}
                                                     </span>
                                                 {% else %}

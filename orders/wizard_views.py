@@ -3321,10 +3321,10 @@ def wizard_edit_order(request, order_pk):
 
     # التحقق من أن الطلب منشأ عبر الويزارد
     if order.creation_method != "wizard":
-        messages.warning(
-            request, "هذا الطلب لم ينشأ عبر الويزارد. سيتم توجيهك للتعديل التقليدي."
+        messages.info(
+            request, "سيتم تعديل الطلب عبر الويزارد."
         )
-        return redirect("orders:order_update", pk=order.pk)
+        return redirect("orders:wizard_edit_options", order_pk=order.pk)
 
     try:
         # إنشاء مسودة جديدة من الطلب الحالي للتعديل

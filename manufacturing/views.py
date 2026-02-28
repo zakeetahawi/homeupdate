@@ -1429,9 +1429,19 @@ class ChangeProductionLineView(LoginRequiredMixin, PermissionRequiredMixin, View
                 old_production_line.name if old_production_line else "غير محدد"
             )
 
+            # حفظ معلومات خط الإنتاج السابق في النموذج
+            manufacturing_order.previous_production_line = old_production_line
+            manufacturing_order.production_line_changed_at = timezone.now()
+            manufacturing_order.production_line_changed_by = request.user
+
             # تحديث خط الإنتاج
             manufacturing_order.production_line = new_production_line
-            manufacturing_order.save()
+            manufacturing_order.save(update_fields=[
+                "production_line",
+                "previous_production_line",
+                "production_line_changed_at",
+                "production_line_changed_by",
+            ])
 
             # تسجيل العملية في السجل
             from django.contrib.admin.models import CHANGE, LogEntry
@@ -1645,7 +1655,13 @@ class ProductionLinePrintView(LoginRequiredMixin, PermissionRequiredMixin, ListV
         # خيارات الفلاتر
         # الحصول على أنواع الطلبات المدعومة في هذا الخط
         supported_order_types = []
-        if (
+        configs = self.production_line.order_type_configs.all()
+        if configs.exists():
+            for config in configs:
+                for choice_code, choice_name in ManufacturingOrder.ORDER_TYPE_CHOICES:
+                    if choice_code == config.order_type:
+                        supported_order_types.append((choice_code, choice_name))
+        elif (
             hasattr(self.production_line, "supported_order_types")
             and self.production_line.supported_order_types
         ):
@@ -1906,8 +1922,7 @@ class ManufacturingOrderDeleteView(
 
             # تحديث حالة الطلب
             order.order_status = "manufacturing_deleted"
-            order.tracking_status = "processing"  # إعادة الطلب لحالة المعالجة
-            order.save(update_fields=["order_status", "tracking_status"])
+            order.save(update_fields=["order_status"])
 
             # حذف أمر التصنيع
             result = super().delete(request, *args, **kwargs)
@@ -2838,10 +2853,7 @@ def update_approval_status(request, pk):
 
                 # تم حذف نظام الإشعارات
 
-                # Update order tracking status to in_progress
-                if order.order:
-                    order.order.tracking_status = "in_progress"
-                    order.order.save(update_fields=["tracking_status"])
+                # Update order status is handled by sync_order_from_manufacturing signal
 
                 logger.info(f"Order {pk} approved by {request.user.username}")
                 return JsonResponse(
@@ -2877,21 +2889,12 @@ def update_approval_status(request, pk):
                 except Exception as e:
                     logger.error(f"Error creating status log: {str(e)}")
 
-                # Revert original order status if it was set to 'factory'
-                original_order = order.order
-                if (
-                    hasattr(original_order, "tracking_status")
-                    and original_order.tracking_status == "factory"
-                ):
-                    original_order.tracking_status = "processing"  # Or 'pending'
-                    original_order.save(update_fields=["tracking_status"])
+                # Revert original order status if it was set
+                # (handled by sync_order_from_manufacturing signal)
 
                 # تم حذف نظام الإشعارات
 
-                # Update order tracking status to rejected
-                if order.order:
-                    order.order.tracking_status = "rejected"
-                    order.order.save(update_fields=["tracking_status"])
+                # Update order status is handled by sync_order_from_manufacturing signal
 
                 logger.info(
                     f"Order {pk} rejected by {request.user.username}, reason: {reason}"
@@ -3278,10 +3281,7 @@ def re_approve_after_reply(request, pk):
             except Exception as e:
                 logger.error(f"Error creating status log: {str(e)}")
 
-            # Update order tracking status to in_progress
-            if order.order:
-                order.order.tracking_status = "factory"
-                order.order.save(update_fields=["tracking_status"])
+            # Update order status is handled by sync_order_from_manufacturing signal
 
             # Create notification for the order creator
             if order.order and order.order.created_by:
@@ -3786,6 +3786,25 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
         # حساب الإجمالي قبل الترقيم
         total_items_count = cutting_items.count()
 
+        # جلب أوامر التصنيع المرتبطة مسبقاً (لتفادي N+1 queries)
+        order_ids = set()
+        for item in cutting_items:
+            order_ids.add(item.cutting_order.order_id)
+
+        from .models import ManufacturingOrder as MO_Model
+        mfg_orders_qs = MO_Model.objects.filter(
+            order_id__in=order_ids
+        ).select_related(
+            "production_line",
+            "previous_production_line",
+            "production_line_changed_by",
+        )
+        # Map: order_id → ManufacturingOrder (أول أمر تصنيع)
+        mfg_orders_map = {}
+        for mo in mfg_orders_qs:
+            if mo.order_id not in mfg_orders_map:
+                mfg_orders_map[mo.order_id] = mo
+
         # تجميع العناصر حسب أمر التقطيع لعرض أفضل
         orders_dict = {}
         for item in cutting_items:
@@ -3794,6 +3813,7 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
                 orders_dict[order_id] = {
                     "cutting_order": item.cutting_order,
                     "items": [],
+                    "manufacturing_order": mfg_orders_map.get(item.cutting_order.order_id),
                 }
             orders_dict[order_id]["items"].append(item)
 
@@ -3834,6 +3854,11 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
         pending_stats = self.get_pending_items_stats()
         context["total_pending"] = pending_stats["total"]
         context["cut_and_received_count"] = pending_stats["cut_and_received"]
+
+        # خطوط الإنتاج النشطة (لقائمة التبديل)
+        context["production_lines"] = ProductionLine.objects.filter(
+            is_active=True
+        ).order_by("-priority", "name")
 
         return context
 
@@ -4342,33 +4367,12 @@ class FabricReceiptListView(LoginRequiredMixin, ListView):
                 "manufacturing_order",
                 "manufacturing_order__order",
                 "manufacturing_order__order__customer",
+                "manufacturing_order__production_line",
+                "manufacturing_order__previous_production_line",
+                "manufacturing_order__production_line_changed_by",
                 "fabric_received_by",
-            )
-            .only(
-                # حقول ManufacturingOrderItem
-                "id",
-                "product_name",
-                "quantity",
-                "permit_number",
-                "receiver_name",
-                "bag_number",
-                "fabric_received_date",
-                "fabric_received",
-                "manufacturing_order_id",
-                "fabric_received_by_id",
-                # حقول ManufacturingOrder
-                "manufacturing_order__id",
-                # حقول Order
-                "manufacturing_order__order__id",
-                "manufacturing_order__order__order_number",
-                # حقول Customer
-                "manufacturing_order__order__customer__id",
-                "manufacturing_order__order__customer__name",
-                # حقول User
-                "fabric_received_by__id",
-                "fabric_received_by__first_name",
-                "fabric_received_by__last_name",
-                "fabric_received_by__username",
+                "production_line",
+                "production_delivered_by",
             )
         )
 
@@ -4516,6 +4520,7 @@ def deliver_to_production_line(request):
     """تسليم عنصر أو جميع عناصر طلب لخط الإنتاج"""
     try:
         import json
+        from django.utils import timezone
 
         data = json.loads(request.body)
 
@@ -4524,6 +4529,7 @@ def deliver_to_production_line(request):
         production_line_id = data.get("production_line_id")
         delivery_type = data.get("delivery_type", "single")  # single أو all
         notes = data.get("notes", "")
+        is_change = data.get("is_change", False)  # تبديل خط إنتاج مسلّم
 
         if not all([item_id, production_line_id]):
             return JsonResponse({"success": False, "message": "بيانات غير كاملة"})
@@ -4537,7 +4543,52 @@ def deliver_to_production_line(request):
             return JsonResponse({"success": False, "message": "خط الإنتاج غير موجود"})
 
         # تحديد العناصر المراد تسليمها
-        if delivery_type == "all" and order_id:
+        if is_change:
+            # تبديل خط الإنتاج لعنصر مسلّم بالفعل
+            items = ManufacturingOrderItem.objects.filter(
+                id=item_id, fabric_received=True, delivered_to_production=True
+            )
+            if not items.exists():
+                return JsonResponse(
+                    {"success": False, "message": "العنصر غير موجود أو لم يُسلّم بعد"}
+                )
+            item = items.first()
+            old_line_name = item.production_line.name if item.production_line else "غير محدد"
+
+            # تحديث خط الإنتاج مع حفظ المعلومات السابقة
+            item.production_line = production_line
+            item.production_delivery_date = timezone.now()
+            item.production_delivered_by = request.user
+            item.production_delivery_notes = (
+                f"تبديل من '{old_line_name}' — {notes}" if notes
+                else f"تبديل من '{old_line_name}'"
+            )
+            item.save(update_fields=[
+                "production_line", "production_delivery_date",
+                "production_delivered_by", "production_delivery_notes",
+            ])
+
+            # تحديث أمر التصنيع أيضاً
+            mo = item.manufacturing_order
+            mo.previous_production_line = ProductionLine.objects.filter(
+                name=old_line_name
+            ).first()
+            mo.production_line = production_line
+            mo.production_line_changed_at = timezone.now()
+            mo.production_line_changed_by = request.user
+            mo.save(update_fields=[
+                "production_line", "previous_production_line",
+                "production_line_changed_at", "production_line_changed_by",
+            ])
+
+            return JsonResponse({
+                "success": True,
+                "message": f"تم تبديل خط الإنتاج من '{old_line_name}' إلى '{production_line.name}'",
+                "delivered_count": 1,
+                "old_line_name": old_line_name,
+            })
+
+        elif delivery_type == "all" and order_id:
             # تسليم جميع عناصر الطلب المستلمة وغير المسلمة لخطوط إنتاج
             items = ManufacturingOrderItem.objects.filter(
                 manufacturing_order_id=order_id,
@@ -4556,8 +4607,6 @@ def deliver_to_production_line(request):
             )
 
         # تحديث العناصر
-        from django.utils import timezone
-
         delivered_count = items.update(
             production_line=production_line,
             delivered_to_production=True,

@@ -230,6 +230,19 @@
     width: 100% !important;
 }
 
+/* التأكد من عدم قص Select2 dropdown */
+.wizard-card,
+.wizard-card-body,
+.wizard-card .card-body,
+.wizard-card .card,
+.wizard-card .card .card-body {
+    overflow: visible !important;
+}
+
+.select2-dropdown {
+    z-index: 99999 !important;
+}
+
 .select2-container .select2-selection--single {
     height: 48px !important;
     font-size: 16px !important;
@@ -370,6 +383,7 @@ $(document).ready(function() {
         allowClear: true,
         minimumInputLength: 2,
         dir: 'rtl',
+        dropdownParent: $('#product-select').closest('.card-body'),
         ajax: {
             url: '{% url "orders:products_search_api" %}',
             dataType: 'json',

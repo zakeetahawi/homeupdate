@@ -147,7 +147,6 @@ class QuerySetOptimizer:
                 "order_date",
                 "status",
                 "order_status",
-                "tracking_status",
                 "total_amount",
                 "paid_amount",
                 "final_price",

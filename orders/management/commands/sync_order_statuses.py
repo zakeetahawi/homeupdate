@@ -19,16 +19,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("بدء مزامنة حالات الطلبات..."))
 
         updated_count = 0
-        status_mapping = {
-            "pending_approval": "factory",
-            "pending": "factory",
-            "in_progress": "factory",
-            "ready_install": "ready",
-            "completed": "ready",
-            "delivered": "delivered",
-            "rejected": "factory",
-            "cancelled": "factory",
-        }
 
         # تحديث فقط أوامر التصنيع التي تختلف عن حالة الطلب
         mismatch_qs = ManufacturingOrder.objects.filter(
@@ -63,11 +53,6 @@ class Command(BaseCommand):
                 # فقط إذا اختلفت الحالة فعلاً
                 if o.order_status != new_status:
                     o.order_status = new_status
-                    if new_status in status_mapping:
-                        o.tracking_status = status_mapping[new_status]
-                    else:
-                        # لا تغيّر tracking_status إذا لم يكن في الخريطة
-                        pass
                     changed.append(o)
 
             if not changed:
@@ -77,7 +62,7 @@ class Command(BaseCommand):
                 continue
 
             with transaction.atomic():
-                Order.objects.bulk_update(changed, ["order_status", "tracking_status"])
+                Order.objects.bulk_update(changed, ["order_status"])
 
             updated_from_mfg += len(changed)
             self.stdout.write(

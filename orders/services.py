@@ -84,9 +84,9 @@ class OrderService(BaseService[Order]):
             total_count=Count("id"),
             total_amount=Sum("final_price"),
             paid_amount=Sum("paid_amount"),
-            pending_count=Count("id", filter=Q(tracking_status="pending")),
-            processing_count=Count("id", filter=Q(tracking_status="processing")),
-            delivered_count=Count("id", filter=Q(tracking_status="delivered")),
+            pending_count=Count("id", filter=Q(order_status="pending")),
+            processing_count=Count("id", filter=Q(order_status="in_progress")),
+            delivered_count=Count("id", filter=Q(order_status="delivered")),
         )
 
         # إحصائيات حسب نوع الطلب
@@ -232,9 +232,9 @@ class OrderService(BaseService[Order]):
         if not order:
             return False
 
-        old_status = order.tracking_status
-        order.tracking_status = new_status
-        order.save(update_fields=["tracking_status"])
+        old_status = order.order_status
+        order.order_status = new_status
+        order.save(update_fields=["order_status"])
 
         # إنشاء سجل لتغيير الحالة
         from .models import OrderStatusLog
