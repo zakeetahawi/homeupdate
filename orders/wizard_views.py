@@ -2510,40 +2510,42 @@ def wizard_add_curtain(request):
                 status=400,
             )
 
-        # الحصول على آخر sequence
-        last_curtain = (
-            ContractCurtain.objects.filter(draft_order=draft)
-            .order_by("-sequence")
-            .first()
-        )
-        next_sequence = (last_curtain.sequence + 1) if last_curtain else 1
+        # الحصول على آخر sequence - مع تأمين ضد التزامن (race condition)
+        with transaction.atomic():
+            last_curtain = (
+                ContractCurtain.objects.select_for_update()
+                .filter(draft_order=draft)
+                .order_by("-sequence")
+                .first()
+            )
+            next_sequence = (last_curtain.sequence + 1) if last_curtain else 1
 
-        # الحصول على نوع التركيب وبيانات بيت الستارة
-        installation_type = data.get("installation_type", "")
-        curtain_box_width = data.get("curtain_box_width")
-        curtain_box_depth = data.get("curtain_box_depth")
-        notes = data.get("notes", "").strip()
+            # الحصول على نوع التركيب وبيانات بيت الستارة
+            installation_type = data.get("installation_type", "")
+            curtain_box_width = data.get("curtain_box_width")
+            curtain_box_depth = data.get("curtain_box_depth")
+            notes = data.get("notes", "").strip()
 
-        # إنشاء الستارة
-        curtain = ContractCurtain.objects.create(
-            draft_order=draft,
-            sequence=next_sequence,
-            room_name=room_name,
-            width=width,
-            height=height,
-            installation_type=installation_type,
-            curtain_box_width=(
-                Decimal(str(round(float(curtain_box_width), 3)))
-                if curtain_box_width
-                else None
-            ),
-            curtain_box_depth=(
-                Decimal(str(round(float(curtain_box_depth), 3)))
-                if curtain_box_depth
-                else None
-            ),
-            notes=notes,
-        )
+            # إنشاء الستارة
+            curtain = ContractCurtain.objects.create(
+                draft_order=draft,
+                sequence=next_sequence,
+                room_name=room_name,
+                width=width,
+                height=height,
+                installation_type=installation_type,
+                curtain_box_width=(
+                    Decimal(str(round(float(curtain_box_width), 3)))
+                    if curtain_box_width
+                    else None
+                ),
+                curtain_box_depth=(
+                    Decimal(str(round(float(curtain_box_depth), 3)))
+                    if curtain_box_depth
+                    else None
+                ),
+                notes=notes,
+            )
 
         # إضافة الأقمشة
         for idx, fabric_data in enumerate(fabrics_data):

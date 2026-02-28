@@ -452,6 +452,8 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "axes.middleware.AxesMiddleware",
+    # SEC-001: حماية لوحة الإدارة من الوصول غير المصرح (IP restriction)
+    "accounts.middleware.admin_protection.AdminIPRestrictionMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "csp.middleware.CSPMiddleware",
@@ -1086,6 +1088,13 @@ ADMIN_URL = "admin/"
 ADMIN_SITE_HEADER = "نظام إدارة الخواجة"
 ADMIN_SITE_TITLE = "لوحة الإدارة"
 ADMIN_INDEX_TITLE = "مرحباً بك في نظام إدارة الخواجة"
+
+# SEC-001: قائمة IPs المسموح لها بالوصول إلى /admin/
+# اتركها فارغة [] للسماح لجميع IPs (الوضع الافتراضي — بدون قيود)
+# أضف IPs المصرح بها للتقييد، مثال:
+#   ADMIN_ALLOWED_IPS = ["203.0.113.1", "198.51.100.0/24"]
+# يستخدم CF-Connecting-IP header لتحديد الـ IP الحقيقي عبر Cloudflare Tunnel
+ADMIN_ALLOWED_IPS = []
 
 # ======================================
 # 25. Logging (Unified — NO DUPLICATES)

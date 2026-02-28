@@ -40,7 +40,6 @@ from django.views.generic import (
     UpdateView,
     View,
 )
-from weasyprint import HTML
 
 from accounts.models import Department
 from accounts.utils import apply_default_year_filter
@@ -1753,7 +1752,7 @@ class ProductionLinePDFView(ProductionLinePrintTemplateView):
 
             from django.http import HttpResponse
             from django.template.loader import render_to_string
-            from weasyprint import CSS, HTML
+            from core.utils.pdf import build_pdf
 
             # الحصول على البيانات
             context = self.get_context_data()
@@ -1761,26 +1760,12 @@ class ProductionLinePDFView(ProductionLinePrintTemplateView):
             # رندر HTML
             html_string = render_to_string(self.template_name, context, request=request)
 
-            # تحويل إلى PDF
-            html = HTML(string=html_string, base_url=request.build_absolute_uri())
-
-            # CSS إضافي للطباعة
-            css = CSS(
-                string="""
-                @page {
-                    size: A4;
-                    margin: 1.5cm;
-                }
-                body {
-                    font-family: 'Arial', sans-serif;
-                    -webkit-print-color-adjust: exact;
-                    print-color-adjust: exact;
-                }
-            """
+            # إنشاء PDF مع دعم الخطوط العربية
+            pdf_file = build_pdf(
+                html_string,
+                extra_css="-webkit-print-color-adjust: exact; print-color-adjust: exact;",
+                base_url=request.build_absolute_uri(),
             )
-
-            # إنشاء PDF
-            pdf_file = html.write_pdf(stylesheets=[css])
 
             # إنشاء الاستجابة
             response = HttpResponse(pdf_file, content_type="application/pdf")
@@ -1829,7 +1814,6 @@ class ProductionLinePDFView(ProductionLinePrintTemplateView):
         """إنتاج ملف PDF للطلبات المفلترة"""
         try:
             from django.template.loader import render_to_string
-            from weasyprint import HTML
 
             # الحصول على جميع الطلبات المفلترة (بدون صفحات للـ PDF)
             all_filtered_orders = self.get_queryset()
@@ -1846,8 +1830,8 @@ class ProductionLinePDFView(ProductionLinePrintTemplateView):
             html_string = render_to_string(
                 "manufacturing/production_line_print_pdf.html", context
             )
-            html = HTML(string=html_string)
-            pdf = html.write_pdf()
+            from core.utils.pdf import build_pdf
+            pdf = build_pdf(html_string)
 
             response = HttpResponse(pdf, content_type="application/pdf")
             filename = f"production_line_{self.production_line.name}_{timezone.now().strftime('%Y%m%d_%H%M')}.pdf"
@@ -2569,9 +2553,9 @@ def print_manufacturing_order(request, pk):
         },
     )
 
-    # Create PDF
-    html = HTML(string=html_string, base_url=request.build_absolute_uri("/"))
-    pdf = html.write_pdf()
+    # Create PDF with Arabic font support
+    from core.utils.pdf import build_pdf
+    pdf = build_pdf(html_string, base_url=request.build_absolute_uri("/"))
 
     # Create HTTP response with PDF
     response = HttpResponse(pdf, content_type="application/pdf")
