@@ -295,6 +295,16 @@ def move_items_to_correct_warehouse(items_by_warehouse, cutting_order):
             except Exception as e:
                 pass
 
+    # تحديث حالة أمر التقطيع الأصلي بعد نقل العناصر
+    cutting_order.update_status()
+    # تحديث حالة أوامر التقطيع الجديدة أيضاً
+    for order_data in new_orders_created + moved_to_existing:
+        try:
+            target = CuttingOrder.objects.get(cutting_code=order_data["code"])
+            target.update_status()
+        except CuttingOrder.DoesNotExist:
+            pass
+
     return {
         "moved_items": moved_items,
         "new_orders_created": new_orders_created,

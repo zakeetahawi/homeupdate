@@ -615,19 +615,23 @@ def bulk_update_items(request, order_id):
                     {"success": False, "message": "يجب ملء جميع البيانات المطلوبة"}
                 )
 
-            # تحديث جميع العناصر المعلقة
+            # تحديث جميع العناصر المعلقة - مع تعيين الحالة كمكتملة
             updated_count = 0
             for item in cutting_order.items.filter(status="pending"):
                 item.cutter_name = cutter_name
                 item.permit_number = permit_number
                 item.receiver_name = receiver_name
                 item.bag_number = bag_number
+                item.status = "completed"
+                item.cutting_date = timezone.now()
+                item.delivery_date = timezone.now()
+                item.exit_date = timezone.now().date()
                 item.updated_by = request.user
                 item.save()
                 updated_count += 1
 
             return JsonResponse(
-                {"success": True, "message": f"تم تحديث {updated_count} عنصر"}
+                {"success": True, "message": f"تم إكمال {updated_count} عنصر بنجاح"}
             )
 
         except Exception as e:
@@ -994,13 +998,21 @@ class CuttingReceiptView(LoginRequiredMixin, ListView):
                 warehouse__in=user_warehouses
             )
             .filter(
-                # أوامر التقطيع التي تحتوي على عناصر مكتملة وجاهزة للاستلام
-                items__status="completed",
+                # أوامر التقطيع التي تحتوي على عناصر جاهزة للاستلام
+                # (مكتملة أو لديها بيانات إكمال حتى لو الحالة لم تتغير)
+                Q(items__status="completed")
+                | Q(
+                    items__receiver_name__isnull=False,
+                    items__permit_number__isnull=False,
+                    items__cutting_date__isnull=False,
+                ),
                 items__receiver_name__isnull=False,
                 items__permit_number__isnull=False,
                 # التأكد من عدم استلامها في المصنع بعد
                 items__fabric_received=False,
             )
+            .exclude(items__receiver_name="")
+            .exclude(items__permit_number="")
             .filter(
                 # تضمين جميع أنواع الطلبات: تركيب، تسليم، إكسسوار، تصنيع
                 Q(order__selected_types__icontains="installation")
@@ -1108,9 +1120,30 @@ def receive_cutting_order_ajax(request, cutting_order_id):
                 item_notes=item.notes or "",
             )
 
-            # تحديث حالة العنصر
+            # تحديث حالة عنصر التقطيع
             item.fabric_received = True
-            item.save()
+            item.bag_number = bag_number
+            item.save(update_fields=["fabric_received", "bag_number"])
+
+            # مزامنة حالة الاستلام مع عنصر التصنيع المرتبط
+            try:
+                from manufacturing.models import ManufacturingOrderItem
+                mfg_item = ManufacturingOrderItem.objects.filter(
+                    cutting_item=item, fabric_received=False
+                ).first()
+                if mfg_item:
+                    from django.utils import timezone as tz
+                    mfg_item.fabric_received = True
+                    mfg_item.bag_number = bag_number
+                    mfg_item.fabric_received_date = tz.now()
+                    mfg_item.fabric_received_by = request.user
+                    mfg_item.save(update_fields=[
+                        "fabric_received", "bag_number",
+                        "fabric_received_date", "fabric_received_by"
+                    ])
+            except Exception:
+                pass  # لا نوقف العملية إذا فشل التزامن
+
             items_count += 1
 
         return JsonResponse(

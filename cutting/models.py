@@ -203,6 +203,56 @@ class CuttingOrder(SoftDeleteMixin, models.Model):
         """التحقق من وجود عناصر مرفوضة"""
         return self.items.filter(status="rejected").exists()
 
+    def update_status(self):
+        """تحديث حالة أمر التقطيع ديناميكياً بناءً على حالة العناصر
+        
+        يعالج الحالات التالية:
+        - جميع العناصر مكتملة → مكتمل
+        - بعض العناصر مكتملة → قيد التقطيع
+        - لا عناصر → مكتمل (أمر فارغ بسبب نقل العناصر)
+        - جميع العناصر معلقة → قيد الانتظار
+        """
+        from django.db.models import Q
+        
+        total_items = self.items.count()
+        
+        # أمر تقطيع فارغ (جميع العناصر تم نقلها) → مكتمل
+        if total_items == 0:
+            if self.status != 'completed':
+                self.status = 'completed'
+                self.completed_at = self.completed_at or timezone.now()
+                self.save(update_fields=['status', 'completed_at'])
+            return self.status
+        
+        # عناصر مكتملة: إما status=completed أو لديها بيانات إكمال كاملة
+        completed_items = self.items.filter(
+            Q(status='completed') | Q(
+                receiver_name__isnull=False,
+                permit_number__isnull=False,
+                cutting_date__isnull=False,
+            )
+        ).exclude(receiver_name='').exclude(permit_number='').count()
+        
+        rejected_items = self.items.filter(status='rejected').count()
+        non_pending = completed_items + rejected_items
+        
+        old_status = self.status
+        
+        if non_pending >= total_items:
+            # جميع العناصر مكتملة أو مرفوضة
+            self.status = 'completed'
+            if not self.completed_at:
+                self.completed_at = timezone.now()
+        elif completed_items > 0 or self.items.filter(status='in_progress').exists():
+            self.status = 'in_progress'
+        else:
+            self.status = 'pending'
+        
+        if old_status != self.status:
+            self.save(update_fields=['status', 'completed_at'])
+        
+        return self.status
+
     def is_order_deleted(self):
         """Check if the related order is soft-deleted"""
         return self.order and self.order.is_deleted
@@ -363,6 +413,25 @@ class CuttingOrderItem(SoftDeleteMixin, models.Model):
                 fields=["inventory_deducted", "status"], name="cut_item_inv_sts_idx"
             ),
         ]
+
+    def save(self, *args, **kwargs):
+        """حفظ عنصر التقطيع مع تصحيح الحالة تلقائياً"""
+        # تحويل الأرقام العربية
+        from core.utils import convert_model_arabic_numbers
+        convert_model_arabic_numbers(self, ['permit_number', 'bag_number', 'notes', 'cutter_name', 'receiver_name'])
+        
+        # حماية: إذا كانت بيانات الإكمال موجودة والحالة ليست مكتملة
+        # نحدث الحالة تلقائياً لمنع البيانات المعلقة
+        if (
+            self.status in ('pending', 'in_progress')
+            and self.cutter_name
+            and self.permit_number
+            and self.receiver_name
+            and self.cutting_date
+        ):
+            self.status = 'completed'
+        
+        super().save(*args, **kwargs)
 
     def __str__(self):
         if self.is_external:

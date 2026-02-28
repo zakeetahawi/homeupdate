@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
+{% load manufacturing_pagination %}
 {% block title %}استلام الأقمشة - المصنع{% endblock %}
 {% block extra_css %}
     <style>
@@ -667,6 +668,12 @@
                             <div class="h4 mb-0">{{ total_available_orders }}</div>
                             <small>أمر تقطيع</small>
                         </div>
+                        {% if is_paginated %}
+                        <div class="text-center">
+                            <div class="h4 mb-0">{{ total_items_in_page }}</div>
+                            <small>في هذه الصفحة</small>
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="d-flex justify-content-center gap-2">
                         <a href="{% url 'manufacturing:fabric_receipt_list' %}"
@@ -696,34 +703,133 @@
                 </a>
             </div>
         {% endif %}
-        <!-- فلتر البحث -->
+        <!-- فلتر البحث والفلاتر المتقدمة -->
         <div class="card shadow mb-4">
             <div class="card-body">
-                <form method="GET" class="row align-items-end">
-                    <div class="col-md-6">
-                        <label class="form-label">البحث</label>
-                        <input type="text"
-                               name="search"
-                               class="form-control"
-                               placeholder="رقم الإذن، كود التقطيع، رقم العقد، اسم العميل، اسم المستلم..."
-                               value="{{ request.GET.search }}">
+                <form method="GET" id="filterForm">
+                    <div class="row g-3 align-items-end">
+                        <!-- البحث النصي -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-search me-1 text-primary"></i> البحث
+                            </label>
+                            <input type="text"
+                                   name="search"
+                                   class="form-control"
+                                   placeholder="رقم الإذن، كود التقطيع، رقم العقد، اسم العميل..."
+                                   value="{{ search_query }}">
+                        </div>
+                        <!-- فلتر المستودع -->
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-warehouse me-1 text-success"></i> المستودع
+                            </label>
+                            <select name="warehouse" class="form-select">
+                                <option value="">جميع المستودعات</option>
+                                {% for wh in warehouses %}
+                                    <option value="{{ wh.id }}" {% if selected_warehouse == wh.id|stringformat:"d" %}selected{% endif %}>
+                                        {{ wh.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <!-- فلتر نوع الطلب -->
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-tags me-1 text-info"></i> نوع الطلب
+                            </label>
+                            <select name="order_type" class="form-select">
+                                <option value="">جميع الأنواع</option>
+                                <option value="installation" {% if selected_order_type == "installation" %}selected{% endif %}>تركيب</option>
+                                <option value="tailoring" {% if selected_order_type == "tailoring" %}selected{% endif %}>تفصيل</option>
+                                <option value="accessory" {% if selected_order_type == "accessory" %}selected{% endif %}>إكسسوار</option>
+                                <option value="manufacturing" {% if selected_order_type == "manufacturing" %}selected{% endif %}>تصنيع</option>
+                            </select>
+                        </div>
+                        <!-- فلتر التاريخ (من) -->
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-calendar-alt me-1 text-warning"></i> من تاريخ
+                            </label>
+                            <input type="date"
+                                   name="date_from"
+                                   class="form-control"
+                                   value="{{ selected_date_from }}">
+                        </div>
+                        <!-- فلتر التاريخ (إلى) -->
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-calendar-check me-1 text-warning"></i> إلى تاريخ
+                            </label>
+                            <input type="date"
+                                   name="date_to"
+                                   class="form-control"
+                                   value="{{ selected_date_to }}">
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> بحث
-                        </button>
-                        <a href="{% url 'manufacturing:fabric_receipt' %}"
-                           class="btn btn-secondary">
-                            <i class="fas fa-times"></i> مسح
-                        </a>
-                    </div>
-                    <div class="col-md-3 text-end">
-                        <button type="button" class="btn btn-success" onclick="refreshPage()">
-                            <i class="fas fa-sync"></i> تحديث
-                        </button>
+                    <div class="row g-3 mt-2 align-items-end">
+                        <!-- عدد العناصر في الصفحة -->
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-list-ol me-1 text-secondary"></i> عرض
+                            </label>
+                            <select name="page_size" class="form-select">
+                                <option value="10" {% if selected_page_size == "10" %}selected{% endif %}>10 لكل صفحة</option>
+                                <option value="20" {% if selected_page_size == "20" %}selected{% endif %}>20 لكل صفحة</option>
+                                <option value="50" {% if selected_page_size == "50" %}selected{% endif %}>50 لكل صفحة</option>
+                                <option value="100" {% if selected_page_size == "100" %}selected{% endif %}>100 لكل صفحة</option>
+                            </select>
+                        </div>
+                        <!-- أزرار الإجراءات -->
+                        <div class="col-md-10 d-flex gap-2 justify-content-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter me-1"></i> تطبيق الفلاتر
+                            </button>
+                            <a href="{% url 'manufacturing:fabric_receipt' %}"
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i> مسح الفلاتر
+                            </a>
+                            <button type="button" class="btn btn-success" onclick="refreshPage()">
+                                <i class="fas fa-sync me-1"></i> تحديث
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
+            <!-- شريط الفلاتر النشطة -->
+            {% if search_query or selected_warehouse or selected_order_type or selected_date_from or selected_date_to %}
+                <div class="card-footer bg-light py-2">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <small class="text-muted fw-bold"><i class="fas fa-filter me-1"></i>فلاتر نشطة:</small>
+                        {% if search_query %}
+                            <span class="badge bg-primary">بحث: {{ search_query }}</span>
+                        {% endif %}
+                        {% if selected_warehouse %}
+                            {% for wh in warehouses %}
+                                {% if wh.id|stringformat:"d" == selected_warehouse %}
+                                    <span class="badge bg-success">مستودع: {{ wh.name }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        {% if selected_order_type %}
+                            <span class="badge bg-info">
+                                نوع:
+                                {% if selected_order_type == "installation" %}تركيب
+                                {% elif selected_order_type == "tailoring" %}تفصيل
+                                {% elif selected_order_type == "accessory" %}إكسسوار
+                                {% elif selected_order_type == "manufacturing" %}تصنيع
+                                {% endif %}
+                            </span>
+                        {% endif %}
+                        {% if selected_date_from %}
+                            <span class="badge bg-warning text-dark">من: {{ selected_date_from }}</span>
+                        {% endif %}
+                        {% if selected_date_to %}
+                            <span class="badge bg-warning text-dark">إلى: {{ selected_date_to }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
         </div>
         <!-- قائمة العناصر المقطوعة الجاهزة للاستلام -->
         {% if cutting_orders_with_items %}
@@ -849,7 +955,27 @@
                 <i class="fas fa-info-circle fa-2x mb-3"></i>
                 <h5>لا توجد عناصر جاهزة للاستلام حالياً</h5>
                 <p class="mb-0">جميع العناصر المقطوعة تم استلامها أو لا توجد عناصر مكتملة بعد</p>
+                {% if search_query or selected_warehouse or selected_order_type or selected_date_from or selected_date_to %}
+                    <a href="{% url 'manufacturing:fabric_receipt' %}" class="btn btn-outline-primary mt-3">
+                        <i class="fas fa-times me-1"></i> إزالة الفلاتر وعرض الكل
+                    </a>
+                {% endif %}
             </div>
+        {% endif %}
+
+        <!-- ترقيم الصفحات -->
+        {% if is_paginated %}
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-4 mb-2">
+                <div class="text-muted">
+                    <small>
+                        <i class="fas fa-file-alt me-1"></i>
+                        عرض صفحة <strong>{{ page_obj.number }}</strong> من <strong>{{ paginator.num_pages }}</strong>
+                        — إجمالي <strong>{{ total_available_orders }}</strong> أمر تقطيع
+                        ({{ total_available_items }} عنصر)
+                    </small>
+                </div>
+            </div>
+            {% render_manufacturing_pagination page_obj %}
         {% endif %}
     </div>
     <!-- Modal استلام أوامر التقطيع - تصميم محسّن -->

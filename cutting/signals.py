@@ -2,7 +2,7 @@ import logging
 import threading
 
 from django.db import transaction
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -746,46 +746,33 @@ def create_missing_cutting_orders():
     return created_count
 
 
-@receiver(post_save, sender="cutting.CuttingOrderItem")
+# تم دمج هذا الـ signal مع update_cutting_order_status لتجنب التعارض
+# الدالة المركزية CuttingOrder.update_status() تعالج جميع الحالات
 def update_cutting_order_status_on_item_completion(sender, instance, **kwargs):
-    """تحديث حالة أمر التقطيع عند إكمال جميع العناصر"""
-    cutting_order = instance.cutting_order
+    """ملغي - تم الدمج مع update_cutting_order_status"""
+    pass  # المنطق انتقل إلى CuttingOrder.update_status()
 
-    # التحقق من حالة جميع العناصر
-    total_items = cutting_order.items.count()
-    completed_items = cutting_order.items.filter(status="completed").count()
-    in_progress_items = cutting_order.items.filter(status="in_progress").count()
 
-    if total_items == 0:
-        return
+@receiver(post_delete, sender=CuttingOrderItem)
+def update_cutting_order_status_on_item_delete(sender, instance, **kwargs):
+    """تحديث حالة أمر التقطيع عند حذف/نقل عنصر
 
-    # تحديد الحالة الجديدة
-    new_status = None
-
-    if completed_items == total_items:
-        # جميع العناصر مكتملة
-        new_status = "completed"
-        if not cutting_order.completed_at:
-            cutting_order.completed_at = timezone.now()
-    elif completed_items > 0 or in_progress_items > 0:
-        # بعض العناصر مكتملة أو قيد التنفيذ
-        new_status = "in_progress"
-    else:
-        # لم يبدأ أي عنصر
-        new_status = "pending"
-
-    # تحديث الحالة إذا تغيرت
-    if new_status and cutting_order.status != new_status:
+    عندما يتم نقل عناصر من أمر تقطيع، يجب إعادة حساب حالة الأمر.
+    إذا لم يتبق أي عناصر معلقة، يصبح الأمر مكتملاً.
+    """
+    try:
+        cutting_order = CuttingOrder.objects.get(id=instance.cutting_order_id)
         old_status = cutting_order.status
-        cutting_order.status = new_status
-        cutting_order.save()
-
-        logger.info(
-            f"🔄 تم تحديث حالة أمر التقطيع {cutting_order.cutting_code} من {old_status} إلى {new_status}"
-        )
-
-        # تحديث حالة الطلب الأساسي
-        update_order_status_based_on_cutting_orders(cutting_order.order)
+        new_status = cutting_order.update_status()
+        if old_status != new_status:
+            logger.info(
+                f"🔄 تحديث حالة أمر التقطيع {cutting_order.cutting_code} من {old_status} إلى {new_status} (بعد حذف عنصر)"
+            )
+            if new_status == 'completed':
+                send_completion_notification(cutting_order)
+            update_order_status_based_on_cutting_orders(cutting_order.order)
+    except CuttingOrder.DoesNotExist:
+        pass  # أمر التقطيع نفسه محذوف
 
 
 def update_order_status_based_on_cutting_orders(order):

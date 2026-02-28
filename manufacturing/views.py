@@ -3684,9 +3684,14 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
         from django.db.models import Q
 
         from cutting.models import CuttingOrderItem
+        from inventory.models import Warehouse
+
+        # الحصول على قائمة المستودعات النشطة للفلتر
+        all_warehouses = Warehouse.objects.filter(is_active=True).order_by("name")
 
         # الحصول على العناصر المقطوعة الفردية الجاهزة للاستلام
         # بغض النظر عن حالة أمر التقطيع الكامل
@@ -3700,10 +3705,17 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
                 "order_item__product",
             )
             .filter(
-                # العناصر المكتملة فقط
-                status="completed",
                 # لم يتم استلامها بعد (في نظام التقطيع)
                 fabric_received=False,
+            )
+            .filter(
+                # العناصر المكتملة أو لديها بيانات إكمال (حماية من عدم تحديث الحالة)
+                Q(status="completed")
+                | Q(
+                    receiver_name__isnull=False,
+                    permit_number__isnull=False,
+                    cutting_date__isnull=False,
+                )
             )
             .exclude(
                 # استبعاد العناصر بدون اسم مستلم أو رقم إذن
@@ -3717,7 +3729,7 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
                 manufacturing_items__fabric_received=True
             )
             .filter(
-                # تضمين جميع أنواع الطلبات
+                # تضمين جميع أنواع الطلبات المطلوبة
                 Q(cutting_order__order__selected_types__icontains="manufacturing")
                 | Q(cutting_order__order__selected_types__icontains="installation")
                 | Q(cutting_order__order__selected_types__icontains="tailoring")
@@ -3727,7 +3739,33 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
             .order_by("-cutting_date", "-cutting_order__created_at")
         )
 
-        # البحث (يشمل جميع أرقام الفواتير والعقود ورقم الإذن)
+        # ===== تطبيق الفلاتر =====
+
+        # 1. فلتر المستودع
+        warehouse_id = self.request.GET.get("warehouse", "").strip()
+        if warehouse_id:
+            cutting_items = cutting_items.filter(
+                cutting_order__warehouse_id=warehouse_id
+            )
+
+        # 2. فلتر تاريخ التقطيع (من)
+        date_from = self.request.GET.get("date_from", "").strip()
+        if date_from:
+            cutting_items = cutting_items.filter(cutting_date__date__gte=date_from)
+
+        # 3. فلتر تاريخ التقطيع (إلى)
+        date_to = self.request.GET.get("date_to", "").strip()
+        if date_to:
+            cutting_items = cutting_items.filter(cutting_date__date__lte=date_to)
+
+        # 4. فلتر نوع الطلب
+        order_type = self.request.GET.get("order_type", "").strip()
+        if order_type:
+            cutting_items = cutting_items.filter(
+                cutting_order__order__selected_types__icontains=order_type
+            )
+
+        # 5. البحث النصي (يشمل جميع أرقام الفواتير والعقود ورقم الإذن)
         search = self.request.GET.get("search", "").strip()
         if search:
             cutting_items = cutting_items.filter(
@@ -3742,7 +3780,11 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
                 | Q(order_item__product__name__icontains=search)
                 | Q(permit_number__icontains=search)
                 | Q(receiver_name__icontains=search)
+                | Q(cutting_order__order__order_number__icontains=search)
             )
+
+        # حساب الإجمالي قبل الترقيم
+        total_items_count = cutting_items.count()
 
         # تجميع العناصر حسب أمر التقطيع لعرض أفضل
         orders_dict = {}
@@ -3755,10 +3797,38 @@ class FabricReceiptView(LoginRequiredMixin, TemplateView):
                 }
             orders_dict[order_id]["items"].append(item)
 
-        context["cutting_orders_with_items"] = list(orders_dict.values())
-        context["total_available_items"] = cutting_items.count()
-        context["total_available_orders"] = len(orders_dict)
+        all_orders_list = list(orders_dict.values())
+        total_orders_count = len(all_orders_list)
+
+        # ===== ترقيم الصفحات =====
+        page_size = int(self.request.GET.get("page_size", 20))
+        paginator = Paginator(all_orders_list, page_size)
+        page_number = self.request.GET.get("page", 1)
+        try:
+            page_obj = paginator.get_page(page_number)
+        except (PageNotAnInteger, EmptyPage):
+            page_obj = paginator.get_page(1)
+
+        context["cutting_orders_with_items"] = page_obj.object_list
+        context["total_available_items"] = total_items_count
+        context["total_available_orders"] = total_orders_count
         context["search_query"] = search
+        context["page_obj"] = page_obj
+        context["paginator"] = paginator
+        context["is_paginated"] = paginator.num_pages > 1
+
+        # بيانات الفلاتر المحددة (لإعادة عرضها)
+        context["warehouses"] = all_warehouses
+        context["selected_warehouse"] = warehouse_id
+        context["selected_date_from"] = date_from
+        context["selected_date_to"] = date_to
+        context["selected_order_type"] = order_type
+        context["selected_page_size"] = str(page_size)
+
+        # إحصائيات تفصيلية
+        context["total_items_in_page"] = sum(
+            len(o["items"]) for o in page_obj.object_list
+        )
 
         # حساب النواقص (العناصر غير المسلمة لخط الإنتاج)
         pending_stats = self.get_pending_items_stats()
@@ -3880,9 +3950,25 @@ def receive_cutting_order_for_manufacturing(request, cutting_order_id):
                 item_notes=item.notes or "",
             )
 
-            # تحديث حالة العنصر
+            # تحديث حالة عنصر التقطيع
             item.fabric_received = True
-            item.save()
+            item.bag_number = bag_number
+            item.save(update_fields=["fabric_received", "bag_number"])
+
+            # مزامنة حالة الاستلام مع عنصر التصنيع المرتبط
+            mfg_item = ManufacturingOrderItem.objects.filter(
+                cutting_item=item, fabric_received=False
+            ).first()
+            if mfg_item:
+                mfg_item.fabric_received = True
+                mfg_item.bag_number = bag_number
+                mfg_item.fabric_received_date = timezone.now()
+                mfg_item.fabric_received_by = request.user
+                mfg_item.save(update_fields=[
+                    "fabric_received", "bag_number",
+                    "fabric_received_date", "fabric_received_by"
+                ])
+
             items_count += 1
 
         return JsonResponse(
@@ -3961,13 +4047,25 @@ def receive_all_fabric_items(request, order_id):
                 {"success": False, "message": "لا توجد عناصر جاهزة للاستلام"}
             )
 
-        # استلام جميع العناصر
+        # تحديد رقم الشنطة
+        data = {}
+        try:
+            data = json.loads(request.body)
+            bag_number = data.get("bag_number", "").strip()
+        except (json.JSONDecodeError, Exception):
+            bag_number = ""
+
+        if not bag_number:
+            bag_number = ManufacturingOrderItem.get_next_bag_number()
+
+        notes = data.get("notes", "").strip() if data else ""
+
+        # استلام جميع العناصر باستخدام mark_fabric_received لضمان المزامنة
         received_count = 0
         for item in ready_items:
-            item.fabric_received = True
-            item.fabric_received_date = timezone.now()
-            item.fabric_received_by = request.user
-            item.save()
+            item.mark_fabric_received(
+                bag_number=bag_number, user=request.user, notes=notes
+            )
             received_count += 1
 
         # إرسال إشعار
@@ -4088,39 +4186,83 @@ def receive_cutting_order(request, cutting_order_id):
         fabric_receipt.manufacturing_order = manufacturing_order
         fabric_receipt.save()
 
-        # إنشاء عناصر التصنيع وعناصر الاستلام
+        # إنشاء عناصر التصنيع وعناصر الاستلام (مع فحص التكرار)
         created_items = 0
         for cutting_item in cutting_order.items.all():
-            # إنشاء عنصر التصنيع
-            manufacturing_item = ManufacturingOrderItem.objects.create(
-                manufacturing_order=manufacturing_order,
-                order_item=cutting_item.order_item,
-                product_name=(
-                    cutting_item.order_item.product.name
-                    if cutting_item.order_item.product
-                    else "منتج غير محدد"
-                ),
-                quantity=cutting_item.order_item.quantity,
-                bag_number=bag_number,
-                fabric_received=True,
-                fabric_received_date=timezone.now(),
-                fabric_received_by=request.user,
-                fabric_notes=f"مستلم من أمر التقطيع {cutting_order.cutting_code}",
-            )
+            # التحقق من عدم وجود عنصر تصنيع مرتبط مسبقاً
+            existing_mfg_item = ManufacturingOrderItem.objects.filter(
+                cutting_item=cutting_item
+            ).first()
 
-            # إنشاء عنصر الاستلام
-            FabricReceiptItem.objects.create(
-                fabric_receipt=fabric_receipt,
-                order_item=cutting_item.order_item,
-                cutting_item=cutting_item,
-                product_name=(
-                    cutting_item.order_item.product.name
-                    if cutting_item.order_item.product
-                    else "منتج غير محدد"
-                ),
-                quantity_received=cutting_item.order_item.quantity,
-                item_notes=f"مستلم من عنصر التقطيع",
-            )
+            if existing_mfg_item:
+                # تحديث العنصر الموجود بدلاً من إنشاء جديد
+                if not existing_mfg_item.fabric_received:
+                    existing_mfg_item.mark_fabric_received(
+                        bag_number=bag_number, user=request.user,
+                        notes=f"مستلم من أمر التقطيع {cutting_order.cutting_code}"
+                    )
+                manufacturing_item = existing_mfg_item
+            else:
+                # محاولة ربط عنصر تصنيع موجود بدون cutting_item
+                unlinked_item = None
+                if cutting_item.order_item:
+                    unlinked_item = ManufacturingOrderItem.objects.filter(
+                        manufacturing_order=manufacturing_order,
+                        order_item=cutting_item.order_item,
+                        cutting_item__isnull=True,
+                    ).first()
+
+                if unlinked_item:
+                    unlinked_item.cutting_item = cutting_item
+                    unlinked_item.save(update_fields=["cutting_item"])
+                    if not unlinked_item.fabric_received:
+                        unlinked_item.mark_fabric_received(
+                            bag_number=bag_number, user=request.user,
+                            notes=f"مستلم من أمر التقطيع {cutting_order.cutting_code}"
+                        )
+                    manufacturing_item = unlinked_item
+                else:
+                    # إنشاء عنصر تصنيع جديد فقط إذا لم يوجد
+                    product_name = "منتج غير محدد"
+                    quantity = 0
+                    if cutting_item.order_item and cutting_item.order_item.product:
+                        product_name = cutting_item.order_item.product.name
+                        quantity = cutting_item.order_item.quantity
+                    elif cutting_item.is_external and cutting_item.external_fabric_name:
+                        product_name = cutting_item.external_fabric_name
+                        quantity = cutting_item.quantity
+
+                    manufacturing_item = ManufacturingOrderItem.objects.create(
+                        manufacturing_order=manufacturing_order,
+                        cutting_item=cutting_item,
+                        order_item=cutting_item.order_item,
+                        product_name=product_name,
+                        quantity=quantity,
+                        bag_number=bag_number,
+                        fabric_received=True,
+                        fabric_received_date=timezone.now(),
+                        fabric_received_by=request.user,
+                        fabric_notes=f"مستلم من أمر التقطيع {cutting_order.cutting_code}",
+                    )
+
+            # مزامنة حالة عنصر التقطيع
+            if not cutting_item.fabric_received:
+                cutting_item.fabric_received = True
+                cutting_item.bag_number = bag_number
+                cutting_item.save(update_fields=["fabric_received", "bag_number"])
+
+            # إنشاء عنصر الاستلام (مع فحص التكرار)
+            if not FabricReceiptItem.objects.filter(
+                fabric_receipt=fabric_receipt, cutting_item=cutting_item
+            ).exists():
+                FabricReceiptItem.objects.create(
+                    fabric_receipt=fabric_receipt,
+                    order_item=cutting_item.order_item,
+                    cutting_item=cutting_item,
+                    product_name=manufacturing_item.product_name,
+                    quantity_received=manufacturing_item.quantity,
+                    item_notes=f"مستلم من عنصر التقطيع",
+                )
 
             created_items += 1
 

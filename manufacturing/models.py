@@ -984,6 +984,12 @@ class ManufacturingOrderItem(models.Model):
                 self.fabric_notes = notes
             self.save()
 
+            # 1.5 مزامنة حالة الاستلام مع عنصر التقطيع لمنع الاستلام المزدوج
+            if self.cutting_item and not self.cutting_item.fabric_received:
+                self.cutting_item.fabric_received = True
+                self.cutting_item.bag_number = bag_number
+                self.cutting_item.save(update_fields=["fabric_received", "bag_number"])
+
             # 2. إنشاء أو تحديث FabricReceipt (النظام الجديد)
             # البحث عن سجل استلام موجود لنفس الطلب ورقم الشنطة
             from .models import FabricReceipt, FabricReceiptItem
