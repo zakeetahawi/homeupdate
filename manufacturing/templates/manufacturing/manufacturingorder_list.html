@@ -2140,6 +2140,13 @@
                                                     {{ order.order.order_number|default:order.order.id }}
                                                 </a>
                                                 {{ order.get_order_status_badge|safe }}
+                                                {% if order.order.contract_curtains.exists %}
+                                                    <a href="{% url 'manufacturing:interactive_contract' order.id %}"
+                                                       style="color: #a67c52; text-decoration: none; margin-right: 0.3rem;"
+                                                       title="العقد التفاعلي">
+                                                        <i class="fas fa-file-contract"></i>
+                                                    </a>
+                                                {% endif %}
                                             {% endif %}
                                         </td>
                                         <td class="column-order_type" data-column="order_type">

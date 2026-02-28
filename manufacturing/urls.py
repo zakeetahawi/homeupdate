@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from . import interactive_contract_views
 from .dashboard_view import ImprovedDashboardView
 
 app_name = "manufacturing"
@@ -213,5 +214,31 @@ urlpatterns = [
         "api/sync-items/<int:pk>/",
         views.sync_manufacturing_items,
         name="sync_mfg_items_api",
+    ),
+    # العقد التفاعلي
+    path(
+        "orders/<int:manufacturing_order_id>/interactive-contract/",
+        interactive_contract_views.interactive_contract_view,
+        name="interactive_contract",
+    ),
+    path(
+        "api/interactive-contract/update-fabric/",
+        interactive_contract_views.update_fabric_status,
+        name="update_fabric_status",
+    ),
+    path(
+        "api/interactive-contract/update-accessory/",
+        interactive_contract_views.update_accessory_status,
+        name="update_accessory_status",
+    ),
+    path(
+        "api/interactive-contract/stop-item/",
+        interactive_contract_views.stop_fabric_item,
+        name="stop_item",
+    ),
+    path(
+        "api/interactive-contract/add-note/",
+        interactive_contract_views.add_item_note,
+        name="add_item_note",
     ),
 ]

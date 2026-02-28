@@ -991,3 +991,261 @@ class ContractPrintLog(models.Model):
 
     def __str__(self):
         return f'طباعة عقد {self.order.order_number} - {self.printed_at.strftime("%Y-%m-%d %H:%M")}'
+
+
+class FabricManufacturingStatus(models.Model):
+    """
+    حالة تصنيع كل قماش في العقد التفاعلي
+    يتتبع 3 مراحل: القص، تصفية الارتفاع، الجودة
+    """
+
+    STATUS_CHOICES = [
+        ("active", "نشط"),
+        ("stopped", "متوقف - ناقص"),
+    ]
+
+    fabric = models.OneToOneField(
+        CurtainFabric,
+        on_delete=models.CASCADE,
+        related_name="manufacturing_status",
+        verbose_name="القماش",
+    )
+
+    # المراحل الثلاث
+    is_cut = models.BooleanField(
+        default=False,
+        verbose_name="تم القص",
+        help_text="هل تم قص القماش؟",
+    )
+    cut_at = models.DateTimeField(null=True, blank=True, verbose_name="تاريخ القص")
+    cut_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="fabric_cuts",
+        verbose_name="تم القص بواسطة",
+    )
+
+    is_height_filtered = models.BooleanField(
+        default=False,
+        verbose_name="تم تصفية الارتفاع",
+        help_text="هل تمت تصفية ارتفاع القماش؟",
+    )
+    height_filtered_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="تاريخ تصفية الارتفاع"
+    )
+    height_filtered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="fabric_height_filters",
+        verbose_name="تم تصفية الارتفاع بواسطة",
+    )
+
+    is_quality_checked = models.BooleanField(
+        default=False,
+        verbose_name="تم فحص الجودة",
+        help_text="هل تم فحص جودة القماش؟",
+    )
+    quality_checked_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="تاريخ فحص الجودة"
+    )
+    quality_checked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="fabric_quality_checks",
+        verbose_name="تم فحص الجودة بواسطة",
+    )
+
+    # حالة التوقف
+    item_status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default="active",
+        verbose_name="حالة الصنف",
+    )
+    stop_reason = models.TextField(
+        blank=True,
+        verbose_name="سبب التوقف",
+        help_text="سبب توقف الصنف أو نقصه",
+    )
+    stopped_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="تاريخ التوقف"
+    )
+    stopped_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="fabric_stops",
+        verbose_name="تم التوقف بواسطة",
+    )
+
+    # ملاحظات عامة
+    notes = models.TextField(blank=True, verbose_name="ملاحظات")
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الإنشاء")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث")
+
+    class Meta:
+        verbose_name = "حالة تصنيع قماش"
+        verbose_name_plural = "حالات تصنيع الأقمشة"
+        ordering = ["fabric__curtain__sequence", "fabric__sequence"]
+
+    def __str__(self):
+        return f"حالة تصنيع: {self.fabric.display_name} - {'مكتمل' if self.is_complete else 'قيد التنفيذ'}"
+
+    @property
+    def is_complete(self):
+        """هل اكتملت جميع المراحل؟"""
+        return (
+            self.is_cut
+            and self.is_height_filtered
+            and self.is_quality_checked
+            and self.item_status == "active"
+        )
+
+    @property
+    def completion_percentage(self):
+        """نسبة الإنجاز"""
+        if self.item_status == "stopped":
+            return 0
+        total = 3
+        done = sum([self.is_cut, self.is_height_filtered, self.is_quality_checked])
+        return int((done / total) * 100)
+
+    @property
+    def completed_steps(self):
+        """عدد الخطوات المكتملة"""
+        return sum([self.is_cut, self.is_height_filtered, self.is_quality_checked])
+
+
+class AccessoryManufacturingStatus(models.Model):
+    """
+    حالة تصنيع كل إكسسوار في العقد التفاعلي
+    يتتبع 3 مراحل: القص، تصفية الارتفاع، الجودة (نفس مراحل الأقمشة)
+    """
+
+    STATUS_CHOICES = [
+        ("active", "نشط"),
+        ("stopped", "متوقف - ناقص"),
+    ]
+
+    accessory = models.OneToOneField(
+        CurtainAccessory,
+        on_delete=models.CASCADE,
+        related_name="manufacturing_status",
+        verbose_name="الإكسسوار",
+    )
+
+    # المراحل الثلاث (نفس مراحل الأقمشة)
+    is_cut = models.BooleanField(
+        default=False,
+        verbose_name="تم القص/التجهيز",
+        help_text="هل تم تجهيز/قص الإكسسوار؟",
+    )
+    cut_at = models.DateTimeField(null=True, blank=True, verbose_name="تاريخ القص/التجهيز")
+    cut_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="accessory_cuts",
+        verbose_name="تم القص/التجهيز بواسطة",
+    )
+
+    is_height_filtered = models.BooleanField(
+        default=False,
+        verbose_name="تم تصفية الارتفاع",
+        help_text="هل تمت تصفية ارتفاع الإكسسوار؟",
+    )
+    height_filtered_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="تاريخ تصفية الارتفاع"
+    )
+    height_filtered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="accessory_height_filters",
+        verbose_name="تم تصفية الارتفاع بواسطة",
+    )
+
+    is_quality_checked = models.BooleanField(
+        default=False,
+        verbose_name="تم فحص الجودة",
+        help_text="هل تم فحص جودة الإكسسوار؟",
+    )
+    quality_checked_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="تاريخ فحص الجودة"
+    )
+    quality_checked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="accessory_quality_checks",
+        verbose_name="تم فحص الجودة بواسطة",
+    )
+
+    # حالة التوقف
+    item_status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default="active",
+        verbose_name="حالة الصنف",
+    )
+    stop_reason = models.TextField(
+        blank=True,
+        verbose_name="سبب التوقف",
+    )
+    stopped_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="تاريخ التوقف"
+    )
+    stopped_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="accessory_stops",
+        verbose_name="تم التوقف بواسطة",
+    )
+
+    notes = models.TextField(blank=True, verbose_name="ملاحظات")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الإنشاء")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث")
+
+    class Meta:
+        verbose_name = "حالة تصنيع إكسسوار"
+        verbose_name_plural = "حالات تصنيع الإكسسوارات"
+
+    def __str__(self):
+        return f"حالة تصنيع: {self.accessory.display_name} - {'مكتمل' if self.is_complete else 'قيد التنفيذ'}"
+
+    @property
+    def is_complete(self):
+        """هل اكتملت جميع المراحل؟"""
+        return (
+            self.is_cut
+            and self.is_height_filtered
+            and self.is_quality_checked
+            and self.item_status == "active"
+        )
+
+    @property
+    def completion_percentage(self):
+        """نسبة الإنجاز"""
+        if self.item_status == "stopped":
+            return 0
+        total = 3
+        done = sum([self.is_cut, self.is_height_filtered, self.is_quality_checked])
+        return int((done / total) * 100)
+
+    @property
+    def completed_steps(self):
+        """عدد الخطوات المكتملة"""
+        return sum([self.is_cut, self.is_height_filtered, self.is_quality_checked])

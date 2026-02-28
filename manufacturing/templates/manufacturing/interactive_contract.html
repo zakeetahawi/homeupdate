@@ -1,0 +1,1477 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}العقد التفاعلي - {{ order.order_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ===== متغيرات (نفس عقد PDF) ===== */
+:root {
+    --contract-primary: #a67c52;
+    --contract-primary-light: #d4a574;
+    --contract-bg: #f8f5f0;
+    --contract-accent: #8b6f47;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --stopped-color: #dc3545;
+    --stopped-bg: #fff5f5;
+    --info-color: #17a2b8;
+}
+
+/* ===== شريط التقدم العلوي (حصري للتفاعلي) ===== */
+#progressBarContainer {
+    background: white;
+    padding: 10px 16px;
+    border-bottom: 2px solid var(--contract-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.progress-bar-spacer {
+    height: 65px;
+}
+
+.progress-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.progress-stats .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.stat-item .stat-icon { font-size: 18px; }
+.stat-item .stat-num { font-size: 18px; font-weight: 800; }
+
+.global-progress-bar {
+    width: 100%;
+    height: 10px;
+    background: #e9ecef;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.global-progress-bar .fill {
+    height: 100%;
+    background: var(--success-color);
+    border-radius: 5px;
+    transition: width 0.4s ease;
+}
+
+/* ===== توست الحفظ ===== */
+.save-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: var(--success-color);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.save-toast.show { opacity: 1; transform: translateY(0); }
+
+/* ===== تنسيق العقد (منسوخ من PDF) ===== */
+.contract-page {
+    max-width: 900px;
+    margin: 0 auto;
+    background: white;
+    padding: 8px;
+    font-family: 'Noto Naskh Arabic', 'Arial', sans-serif;
+    font-size: 12px;
+    line-height: 1.3;
+    direction: rtl;
+}
+
+/* === HEADER (PDF) === */
+.header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0 4px 0;
+    border-bottom: 2px solid #a67c52;
+    margin-bottom: 4px;
+}
+
+.header-right {
+    flex: 1;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.header-center {
+    flex: 1;
+    text-align: center;
+}
+
+.header-left {
+    flex: 1;
+    text-align: left;
+}
+
+.contract-number-main {
+    font-size: 16px;
+    font-weight: 700;
+    color: #a67c52;
+    direction: ltr;
+    letter-spacing: 1px;
+}
+
+.service-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    margin-left: 4px;
+}
+
+.badge-tailoring { background: #16a085; }
+.badge-installation { background: #2980b9; }
+.badge-accessory { background: #d35400; }
+.badge-delivery { background: #8e44ad; }
+.badge-products { background: #27ae60; }
+.badge-inspection { background: #e74c3c; }
+
+.production-line-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    margin-left: 4px;
+}
+
+.order-status-text {
+    font-size: 14px;
+    font-weight: 700;
+    color: #666;
+}
+
+.vip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(135deg, #d4af37 0%, #f4e5a1 50%, #d4af37 100%);
+    border: 2px solid #f4e5a1;
+}
+
+/* === INFO CARDS (PDF) === */
+.cards-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+@media (max-width: 600px) {
+    .cards-row { grid-template-columns: 1fr; }
+}
+
+.info-card {
+    background: #f8f5f0;
+    border: 1.5px solid #a67c52;
+    border-radius: 4px;
+    padding: 4px 6px;
+}
+
+.card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #a67c52;
+    margin-bottom: 3px;
+    border-bottom: 1px solid #d4a574;
+    padding-bottom: 2px;
+}
+
+.card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2px;
+    gap: 4px;
+}
+
+.card-label {
+    font-size: 12px;
+    color: #888;
+    font-weight: 600;
+    display: block;
+}
+
+.card-value {
+    font-size: 12px;
+    color: #000;
+    font-weight: 700;
+}
+
+.curtain-count-badge {
+    background: #a67c52;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.customer-name-blue { color: #2980b9 !important; }
+.customer-phone-blue { color: #2980b9 !important; }
+
+/* === CURTAIN ROW (PDF) === */
+.section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #000;
+    margin: 4px 0 2px 0;
+    padding-right: 5px;
+    border-right: 3px solid #a67c52;
+}
+
+.curtain-row {
+    background: white;
+    border: 4px solid #a67c52;
+    border-radius: 4px;
+    padding: 5px;
+    margin-bottom: 20px;
+    transition: border-color 0.3s;
+}
+
+.curtain-row.curtain-complete {
+    border-color: var(--success-color);
+}
+
+.curtain-row.curtain-stopped {
+    border-color: var(--stopped-color);
+}
+
+/* Curtain Header - Table Layout (PDF) */
+.curtain-header {
+    background: white;
+    border: 2px solid #a67c52;
+    border-radius: 3px;
+    padding: 4px 6px;
+    margin-bottom: 3px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.curtain-header-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.curtain-number {
+    font-size: 13px;
+    font-weight: 700;
+    color: #a67c52;
+    white-space: nowrap;
+}
+
+.curtain-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #000;
+}
+
+.curtain-code-badge {
+    background: #f8f5f0;
+    border: 1.5px solid #a67c52;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #a67c52;
+    direction: ltr;
+    white-space: nowrap;
+}
+
+.curtain-header-dims {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.dim-item { white-space: nowrap; }
+
+.dim-label {
+    font-size: 13px;
+    color: #000;
+    font-weight: 600;
+    margin-left: 3px;
+}
+
+.dim-badge {
+    color: #8b6f47;
+    font-size: 14px;
+    font-weight: 900;
+    direction: ltr;
+}
+
+.curtain-header-info {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.curtain-type {
+    font-size: 11px;
+    color: #666;
+    background: #f0f0f0;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.box-dimensions {
+    background: transparent;
+    border: 1px solid #d4a574;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #8b6f47;
+    white-space: nowrap;
+}
+
+/* شريط تقدم الستارة (حصري - صغير في الهيدر) */
+.curtain-progress-mini {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.mini-bar {
+    width: 70px;
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.mini-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    background: var(--success-color);
+}
+
+.mini-text {
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* Curtain Content Grid - 2 COLUMNS (PDF) */
+.curtain-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+}
+
+@media (max-width: 600px) {
+    .curtain-content { grid-template-columns: 1fr; }
+}
+
+/* === ACCESSORIES SECTION (PDF - left column) === */
+.accessories-section {
+    background: #fafafa;
+    padding: 3px 4px;
+    border-radius: 4px;
+    border: 1.5px solid #d35400;
+}
+
+.acc-title-text {
+    font-size: 12px;
+    font-weight: 700;
+    color: #d35400;
+    padding-bottom: 2px;
+    border-bottom: 1px solid #f0a373;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.accessories-items {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.accessory-row {
+    background: white;
+    padding: 3px 4px;
+    border-radius: 3px;
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s;
+}
+
+.accessory-row.item-complete {
+    border-color: var(--success-color);
+    background: #f8fff8;
+}
+
+.accessory-row.item-stopped {
+    border-color: var(--stopped-color);
+    background: var(--stopped-bg);
+    opacity: 0.85;
+}
+
+.acc-main-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4px;
+}
+
+.acc-info-left {
+    flex: 1;
+    min-width: 0;
+}
+
+.acc-name-text {
+    font-weight: 700;
+    font-size: 12px;
+    color: #000;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.acc-type-badge {
+    background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%);
+    color: #333;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-right: 4px;
+    display: inline-block;
+}
+
+.acc-color-text {
+    font-size: 11px;
+    color: #666;
+    margin-top: 1px;
+}
+
+.acc-info-right {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.acc-size-pill {
+    background: #16a085;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.acc-qty-pill {
+    background: #d35400;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* === FABRIC SECTION (PDF - right column) === */
+.fabric-section {
+    background: #fafafa;
+    padding: 3px 4px;
+    border-radius: 4px;
+    border: 1.5px solid #a67c52;
+}
+
+.section-header {
+    font-size: 12px;
+    font-weight: 700;
+    color: #a67c52;
+    padding-bottom: 2px;
+    border-bottom: 1px solid #d4a574;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.fabric-block {
+    background: white;
+    padding: 3px 4px;
+    border-radius: 3px;
+    margin-bottom: 3px;
+    border: 1px solid #d4a574;
+    transition: all 0.3s;
+}
+
+.fabric-block.item-complete {
+    border-color: var(--success-color);
+    background: #f8fff8;
+}
+
+.fabric-block.item-stopped {
+    border-color: var(--stopped-color);
+    background: var(--stopped-bg);
+    opacity: 0.85;
+}
+
+.fabric-name-line {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: nowrap;
+    margin-bottom: 2px;
+}
+
+.fabric-type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.fabric-type-badge.light { background: linear-gradient(135deg, #f1c40f, #f9e79f); color: #333; }
+.fabric-type-badge.heavy { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+.fabric-type-badge.blackout { background: linear-gradient(135deg, #2c3e50, #34495e); }
+.fabric-type-badge.belt { background: linear-gradient(135deg, #17a2b8, #20c997); }
+.fabric-type-badge.extra { background: linear-gradient(135deg, #95a5a6, #bdc3c7); color: #333; }
+
+.fabric-name-bold {
+    font-size: 12px;
+    font-weight: 700;
+    color: #000;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.fabric-meters {
+    font-size: 12px;
+    font-weight: 700;
+    color: #2980b9;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.fabric-specs {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.fabric-spec-item {
+    background: #f8f5f0;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 11px;
+    border: 1px solid #d4a574;
+}
+
+.fabric-spec-item.large {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 5px;
+}
+
+.spec-label-text {
+    font-weight: 700;
+    color: #a67c52;
+}
+
+.fabric-notes-original {
+    margin-top: 2px;
+    font-size: 11px;
+    color: #333;
+    background: #fffbf0;
+    padding: 2px 4px;
+    border-radius: 3px;
+    border-right: 2px solid #f39c12;
+}
+
+/* === CURTAIN NOTES (PDF) === */
+.curtain-notes-section {
+    background: #fffbf0;
+    border: 1px solid #f39c12;
+    border-radius: 3px;
+    padding: 3px 5px;
+    margin-top: 3px;
+}
+
+.notes-header {
+    font-size: 13px;
+    font-weight: 700;
+    color: #f39c12;
+    margin-bottom: 2px;
+}
+
+.notes-content {
+    font-size: 12px;
+    color: #333;
+    line-height: 1.4;
+}
+
+/* ===== عناصر تفاعلية (حصري) ===== */
+.interactive-controls {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 3px;
+    padding-top: 3px;
+    border-top: 1px dashed #e0e0e0;
+    flex-wrap: wrap;
+}
+
+.checkboxes-group {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+}
+
+.check-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    cursor: pointer;
+    user-select: none;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    min-width: 42px;
+}
+
+.check-item:hover { background: #f0f0f0; }
+.check-item.disabled { pointer-events: none; opacity: 0.5; }
+
+.check-item .check-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #666;
+    text-align: center;
+    line-height: 1;
+}
+
+.check-item .check-box {
+    width: 22px;
+    height: 22px;
+    border: 2px solid #ccc;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s;
+    background: white;
+    font-size: 12px;
+}
+
+.check-item.checked .check-box {
+    background: var(--success-color);
+    border-color: var(--success-color);
+    color: white;
+}
+
+.check-item.checked .check-label {
+    color: var(--success-color);
+}
+
+.item-status-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: auto;
+}
+
+.completion-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+.completion-badge.complete { background: var(--success-color); color: white; }
+.completion-badge.in-progress { background: #e9ecef; color: #666; }
+.completion-badge.stopped { background: var(--stopped-color); color: white; }
+
+.btn-stop-item {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--stopped-color);
+    background: white;
+    color: var(--stopped-color);
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.btn-stop-item:hover { background: var(--stopped-color); color: white; }
+
+.btn-resume-item {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--success-color);
+    background: white;
+    color: var(--success-color);
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.btn-resume-item:hover { background: var(--success-color); color: white; }
+
+.stop-reason-display {
+    font-size: 11px;
+    background: #fff0f0;
+    border: 1px solid var(--stopped-color);
+    border-radius: 3px;
+    padding: 2px 6px;
+    color: var(--stopped-color);
+    margin-top: 3px;
+}
+
+.mfg-notes-display {
+    font-size: 11px;
+    background: #f0f4ff;
+    border: 1px solid #b8d4fe;
+    border-radius: 3px;
+    padding: 2px 6px;
+    color: #333;
+    margin-top: 2px;
+    white-space: pre-line;
+}
+
+/* ===== مودال ===== */
+#stopModal .modal-header { background: var(--stopped-color); color: white; }
+#noteModal .modal-header { background: var(--info-color); color: white; }
+
+/* ===== طباعة ===== */
+@media print {
+    .progress-bar-container,
+    .progress-bar-spacer,
+    .interactive-controls,
+    .save-toast,
+    .no-print {
+        display: none !important;
+    }
+    .curtain-row { break-inside: avoid; }
+    .contract-page { max-width: 100%; padding: 0; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- شريط التقدم العلوي (خارج أي حاوية) -->
+<div id="progressBarContainer" class="no-print">
+    <div class="progress-stats">
+        <div class="stat-item">
+            <span class="stat-icon">📋</span>
+            <span>الإجمالي: <span class="stat-num">{{ total_items }}</span></span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-icon" style="color: var(--success-color);">✅</span>
+            <span>مكتمل: <span class="stat-num" id="globalCompleted" style="color: var(--success-color);">{{ completed_items }}</span></span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-icon" style="color: var(--stopped-color);">🚫</span>
+            <span>متوقف: <span class="stat-num" id="globalStopped" style="color: var(--stopped-color);">{{ stopped_items }}</span></span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-icon">📊</span>
+            <span>الإنجاز: <span class="stat-num" id="globalPercentage" style="color: var(--contract-primary);">{{ completion_percentage }}</span>%</span>
+        </div>
+    </div>
+    <div class="global-progress-bar">
+        <div class="fill" id="globalProgressFill" style="width: {{ completion_percentage }}%;"></div>
+    </div>
+</div>
+<div class="progress-bar-spacer no-print"></div>
+
+<div class="container-fluid px-2">
+    <!-- توست الحفظ -->
+    <div class="save-toast" id="saveToast">
+        <i class="fas fa-check-circle me-1"></i> <span id="saveToastText">تم الحفظ</span>
+    </div>
+
+    <!-- ===== بداية العقد (نفس تنسيق PDF) ===== -->
+    <div class="contract-page">
+
+        <!-- HEADER -->
+        <div class="header-section">
+            <div class="header-right">
+                {% if order.order_type %}
+                    <span class="service-badge badge-{{ order.order_type }}">{{ order.get_order_type_display }}</span>
+                {% endif %}
+                {% if order.service_types and order.service_types|length > 0 %}
+                    {% for service in order.service_types %}
+                        <span class="service-badge badge-{{ service }}">
+                            {% if service == 'tailoring' %}تسليم
+                            {% elif service == 'installation' %}تركيب
+                            {% elif service == 'accessory' %}إكسسوار
+                            {% elif service == 'products' %}منتجات
+                            {% elif service == 'inspection' %}معاينة
+                            {% else %}{{ service }}
+                            {% endif %}
+                        </span>
+                    {% endfor %}
+                {% endif %}
+                {% if manufacturing_order.production_line %}
+                    <span class="production-line-badge" style="background-color: {{ manufacturing_order.production_line.badge_color|default:'#6c757d' }};">
+                        {{ manufacturing_order.production_line.name }}
+                    </span>
+                {% endif %}
+            </div>
+            <div class="header-center">
+                <span class="contract-number-main" dir="ltr">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</span>
+            </div>
+            <div class="header-left">
+                {% if order.status == 'vip' %}
+                    <span class="vip-badge">👑 VIP</span>
+                {% else %}
+                    <span class="order-status-text">عادي</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- INFO CARDS -->
+        <div class="cards-row">
+            <div class="info-card">
+                <div class="card-title">بيانات الطلب</div>
+                <div class="card-row">
+                    <div>
+                        <span class="card-label">رقم الفاتورة</span>
+                        <span class="card-value">{{ order.invoice_number|default:"--" }}</span>
+                    </div>
+                    <div>
+                        <span class="card-label">عدد الستائر</span>
+                        <span class="curtain-count-badge">{{ curtains.count }}</span>
+                    </div>
+                    <div style="text-align: left;">
+                        <span class="card-label">تاريخ الطلب</span>
+                        <span class="card-value">{{ order.created_at|date:"Y/m/d" }}</span>
+                    </div>
+                </div>
+                <div class="card-row">
+                    <div>
+                        <span class="card-label">عدد أيام التشغيل</span>
+                        <span class="card-value">{% if working_days %}{{ working_days }}{% else %}--{% endif %} يوم</span>
+                    </div>
+                    <div style="text-align: left;">
+                        <span class="card-label">التسليم المتوقع</span>
+                        <span class="card-value">{% if order.expected_delivery_date %}{{ order.expected_delivery_date|date:"Y/m/d" }}{% else %}غير محدد{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="info-card">
+                <div class="card-title">بيانات العميل</div>
+                <div class="card-row">
+                    <div>
+                        <span class="card-label">العميل</span>
+                        <span class="card-value customer-name-blue">{{ order.customer.name }}</span>
+                    </div>
+                    <div>
+                        <span class="card-label">الهاتف</span>
+                        <span class="card-value customer-phone-blue">{{ order.customer.phone|default:"--" }}</span>
+                    </div>
+                    <div style="text-align: left;">
+                        <span class="card-label">الفرع</span>
+                        <span class="card-value">{{ order.branch.name|default:"--" }}</span>
+                    </div>
+                </div>
+                <div class="card-row">
+                    <div>
+                        <span class="card-label">البائع</span>
+                        <span class="card-value">
+                            {% if order.salesperson %}{{ order.salesperson.name }}
+                            {% elif order.created_by.get_full_name %}{{ order.created_by.get_full_name }}
+                            {% else %}{{ order.created_by.username }}{% endif %}
+                        </span>
+                    </div>
+                    <div style="text-align: left;">
+                        <span class="card-label">هاتف البائع</span>
+                        <span class="card-value">{% if order.salesperson.phone %}{{ order.salesperson.phone }}{% else %}--{% endif %}</span>
+                    </div>
+                </div>
+                <div class="card-row">
+                    <div style="width: 100%; text-align: center;">
+                        <span class="card-label">العنوان</span>
+                        <span class="card-value">{{ order.customer.address|default:"غير محدد" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CURTAINS -->
+        <div class="section-title">تفاصيل الستائر</div>
+        {% for curtain in curtains %}
+        <div class="curtain-row" id="curtain-{{ curtain.id }}" data-curtain-id="{{ curtain.id }}">
+
+            <!-- CURTAIN HEADER -->
+            <div class="curtain-header">
+                <div class="curtain-header-name">
+                    <span class="curtain-number">ستارة {{ forloop.counter }}:</span>
+                    <span class="curtain-name">{{ curtain.room_name }}</span>
+                    <span class="curtain-code-badge">{{ order.order_number }}-{{ order.contract_number|default:"c1" }}</span>
+                </div>
+                <div class="curtain-header-dims">
+                    <span class="dim-item">
+                        <span class="dim-label">عرض:</span>
+                        <span class="dim-badge">{{ curtain.width }}م</span>
+                    </span>
+                    <span class="dim-item">
+                        <span class="dim-label">طول:</span>
+                        <span class="dim-badge">{{ curtain.height }}م</span>
+                    </span>
+                </div>
+                <div class="curtain-header-info">
+                    {% if curtain.installation_type %}
+                        <span class="curtain-type">{{ curtain.get_installation_type_display }}</span>
+                    {% endif %}
+                    {% if curtain.curtain_box_width or curtain.curtain_box_depth %}
+                        <span class="box-dimensions">
+                            {% if curtain.curtain_box_width %}عرض {{ curtain.curtain_box_width|floatformat:0 }}{% endif %}
+                            {% if curtain.curtain_box_width and curtain.curtain_box_depth %}-{% endif %}
+                            {% if curtain.curtain_box_depth %}عمق {{ curtain.curtain_box_depth|floatformat:0 }}{% endif %}
+                            سم
+                        </span>
+                    {% endif %}
+                    <!-- شريط تقدم مصغر -->
+                    <div class="curtain-progress-mini no-print" id="curtain-progress-{{ curtain.id }}">
+                        <div class="mini-bar">
+                            <div class="mini-fill" style="width: 0%;"></div>
+                        </div>
+                        <span class="mini-text">0/0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CURTAIN CONTENT - 2 عمود (أقمشة يمين | إكسسوارات يسار) -->
+            <div class="curtain-content">
+                <!-- العمود الأيمن: الأقمشة (تفاعلي) -->
+                <div class="fabric-section">
+                    <div class="section-header">
+                        <span>🎨</span> الأقمشة
+                    </div>
+                    {% if curtain.sorted_fabrics %}
+                        {% for fabric in curtain.sorted_fabrics %}
+                        {% with status=fabric.manufacturing_status %}
+                        <div class="fabric-block {% if status.is_complete %}item-complete{% elif status.item_status == 'stopped' %}item-stopped{% endif %}"
+                             id="fabric-{{ fabric.id }}"
+                             data-fabric-id="{{ fabric.id }}"
+                             data-curtain-id="{{ curtain.id }}">
+                            <!-- صف البيانات (نفس PDF) -->
+                            <div class="fabric-name-line">
+                                {% if fabric.fabric_type == 'light' %}
+                                    <span class="fabric-type-badge light">خفيف</span>
+                                {% elif fabric.fabric_type == 'heavy' %}
+                                    <span class="fabric-type-badge heavy">ثقيل</span>
+                                {% elif fabric.fabric_type == 'blackout' %}
+                                    <span class="fabric-type-badge blackout">بلاك أوت</span>
+                                {% elif fabric.fabric_type == 'belt' %}
+                                    <span class="fabric-type-badge belt">حزام</span>
+                                {% elif fabric.fabric_type == 'additional' or fabric.fabric_type == 'extra' %}
+                                    <span class="fabric-type-badge extra">إضافي</span>
+                                {% elif fabric.fabric_type %}
+                                    <span class="fabric-type-badge light">{{ fabric.get_fabric_type_display }}</span>
+                                {% endif %}
+                                <span class="fabric-name-bold">
+                                    {{ fabric.display_name }}
+                                    {% if not fabric.order_item and fabric.fabric_name and fabric.fabric_type in 'light,heavy,blackout' %}
+                                        <span style="background-color: #dc3545; color: white; padding: 1px 5px; border-radius: 3px; font-size: 9px; margin-right: 3px;">قماش خارجي</span>
+                                    {% endif %}
+                                </span>
+                                {% if 'حزام' in fabric.display_name or fabric.fabric_type == 'belt' or fabric.meters == 0 %}
+                                    <span class="fabric-meters">{{ fabric.pieces }} قطعة</span>
+                                {% else %}
+                                    <span class="fabric-meters">{{ fabric.meters }}م × {{ fabric.pieces }} قطعة</span>
+                                {% endif %}
+                            </div>
+                            {% if 'حزام' not in fabric.display_name %}
+                            <div class="fabric-specs">
+                                <div class="fabric-spec-item large">
+                                    <span class="spec-label-text">نوع التفصيل:</span> {{ fabric.get_tailoring_type_display }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if fabric.notes %}
+                            <div class="fabric-notes-original">
+                                <span style="background-color: #e74c3c; color: #fff; padding: 1px 6px; border-radius: 3px; font-weight: bold; font-size: 10px;">ملاحظات:</span>
+                                {{ fabric.notes }}
+                            </div>
+                            {% endif %}
+                            <!-- عناصر تفاعلية -->
+                            <div class="interactive-controls no-print">
+                                <div class="checkboxes-group">
+                                    <div class="check-item {% if status.is_cut %}checked{% endif %} {% if status.item_status == 'stopped' %}disabled{% endif %}"
+                                         onclick="toggleFabricCheck({{ fabric.id }}, 'is_cut', this)"
+                                         title="{% if status.cut_by %}{{ status.cut_by.get_full_name }} - {{ status.cut_at|date:'Y/m/d H:i' }}{% endif %}">
+                                        <span class="check-label">القص</span>
+                                        <div class="check-box">{% if status.is_cut %}<i class="fas fa-check"></i>{% endif %}</div>
+                                    </div>
+                                    <div class="check-item {% if status.is_height_filtered %}checked{% endif %} {% if status.item_status == 'stopped' %}disabled{% endif %}"
+                                         onclick="toggleFabricCheck({{ fabric.id }}, 'is_height_filtered', this)"
+                                         title="{% if status.height_filtered_by %}{{ status.height_filtered_by.get_full_name }} - {{ status.height_filtered_at|date:'Y/m/d H:i' }}{% endif %}">
+                                        <span class="check-label">الارتفاع</span>
+                                        <div class="check-box">{% if status.is_height_filtered %}<i class="fas fa-check"></i>{% endif %}</div>
+                                    </div>
+                                    <div class="check-item {% if status.is_quality_checked %}checked{% endif %} {% if status.item_status == 'stopped' %}disabled{% endif %}"
+                                         onclick="toggleFabricCheck({{ fabric.id }}, 'is_quality_checked', this)"
+                                         title="{% if status.quality_checked_by %}{{ status.quality_checked_by.get_full_name }} - {{ status.quality_checked_at|date:'Y/m/d H:i' }}{% endif %}">
+                                        <span class="check-label">الجودة</span>
+                                        <div class="check-box">{% if status.is_quality_checked %}<i class="fas fa-check"></i>{% endif %}</div>
+                                    </div>
+                                </div>
+                                <div class="item-status-actions">
+                                    {% if status.is_complete %}
+                                        <span class="completion-badge complete"><i class="fas fa-check-circle me-1"></i>مكتمل</span>
+                                    {% elif status.item_status == 'stopped' %}
+                                        <span class="completion-badge stopped"><i class="fas fa-ban me-1"></i>متوقف</span>
+                                        <button class="btn-resume-item" onclick="toggleStopItem('fabric', {{ fabric.id }}, 'resume')">
+                                            <i class="fas fa-play me-1"></i>استئناف
+                                        </button>
+                                    {% else %}
+                                        <span class="completion-badge in-progress">{{ status.completed_steps }}/3</span>
+                                        <button class="btn-stop-item" onclick="showStopModal('fabric', {{ fabric.id }}, '{{ fabric.display_name|escapejs }}')">
+                                            <i class="fas fa-ban me-1"></i>ناقص
+                                        </button>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-info py-0 px-1" style="font-size: 9px;"
+                                            onclick="showNoteModal('fabric', {{ fabric.id }}, '{{ fabric.display_name|escapejs }}')"
+                                            title="ملاحظة">
+                                        <i class="fas fa-comment"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% if status.item_status == 'stopped' and status.stop_reason %}
+                            <div class="stop-reason-display">
+                                <i class="fas fa-exclamation-triangle me-1"></i>{{ status.stop_reason }}
+                                {% if status.stopped_by %}<small class="ms-1">({{ status.stopped_by.get_full_name }})</small>{% endif %}
+                            </div>
+                            {% endif %}
+                            {% if status.notes %}
+                            <div class="mfg-notes-display" id="fabric-notes-{{ fabric.id }}">
+                                <i class="fas fa-sticky-note me-1" style="color: var(--info-color);"></i>{{ status.notes }}
+                            </div>
+                            {% else %}
+                            <div class="mfg-notes-display" id="fabric-notes-{{ fabric.id }}" style="display: none;"></div>
+                            {% endif %}
+                        </div>
+                        {% endwith %}
+                        {% endfor %}
+                    {% else %}
+                        <div style="text-align: center; padding: 8px; color: #999; font-size: 12px;">لا توجد أقمشة</div>
+                    {% endif %}
+                </div>
+
+                <!-- العمود الأيسر: الإكسسوارات (عرض فقط بدون تفاعل) -->
+                <div class="accessories-section">
+                    <div class="acc-title-text">
+                        <span>🔧</span> الإكسسوارات
+                    </div>
+                    {% if curtain.accessories.exists %}
+                        <div class="accessories-items">
+                            {% for accessory in curtain.accessories.all %}
+                            <div class="accessory-row">
+                                <div class="acc-main-line">
+                                    <div class="acc-info-left">
+                                        <span class="acc-name-text">{{ accessory.display_name }}</span>
+                                        {% if accessory.accessory_type %}
+                                            <span class="acc-type-badge">{{ accessory.accessory_type }}</span>
+                                        {% endif %}
+                                        {% if accessory.color %}
+                                            <div class="acc-color-text"><strong>اللون:</strong> {{ accessory.color }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="acc-info-right">
+                                        {% if accessory.size and accessory.size > 0 %}
+                                            <div style="text-align: center;">
+                                                <div style="font-size: 9px; color: #666;">مقاس</div>
+                                                <span class="acc-size-pill">{{ accessory.size|stringformat:"g" }}م</span>
+                                            </div>
+                                            <div style="text-align: center;">
+                                                <div style="font-size: 9px; color: #666;">عدد</div>
+                                                <span class="acc-qty-pill">{{ accessory.count }}</span>
+                                            </div>
+                                        {% else %}
+                                            <div style="text-align: center;">
+                                                <div style="font-size: 9px; color: #666;">العدد</div>
+                                                <span class="acc-qty-pill">{{ accessory.count }} قطعة</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div style="text-align: center; padding: 8px; color: #999; font-size: 12px;">لا توجد إكسسوارات</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ملاحظات الستارة (full-width أسفل العمودين - مثل PDF) -->
+            {% if curtain.notes %}
+            <div class="curtain-notes-section">
+                <div class="notes-header">
+                    📝 <span style="background-color: #CC0000; color: #fff; padding: 1px 6px; border-radius: 3px; font-weight: bold; font-size: 12px;">ملاحظة:</span>
+                </div>
+                <div class="notes-content">{{ curtain.notes }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div style="text-align: center; padding: 20px; color: #999;">لم يتم إضافة ستائر لهذا العقد</div>
+        {% endfor %}
+
+    </div><!-- /contract-page -->
+</div>
+
+<!-- مودال التوقف -->
+<div class="modal fade" id="stopModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-ban me-2"></i>تبليغ عن نقص</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>إيقاف: <strong id="stopItemName"></strong></p>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">سبب التوقف / النقص:</label>
+                    <textarea class="form-control" id="stopReason" rows="3" placeholder="اكتب السبب هنا..."></textarea>
+                </div>
+                <input type="hidden" id="stopItemType">
+                <input type="hidden" id="stopItemId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-danger" onclick="confirmStopItem()">
+                    <i class="fas fa-ban me-1"></i> تأكيد التوقف
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال الملاحظة -->
+<div class="modal fade" id="noteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-comment me-2"></i>إضافة ملاحظة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>ملاحظة على: <strong id="noteItemName"></strong></p>
+                <div class="mb-3">
+                    <textarea class="form-control" id="noteText" rows="3" placeholder="اكتب ملاحظتك هنا..."></textarea>
+                </div>
+                <input type="hidden" id="noteItemType">
+                <input type="hidden" id="noteItemId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-info text-white" onclick="confirmAddNote()">
+                    <i class="fas fa-plus me-1"></i> إضافة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const csrfToken = '{{ csrf_token }}';
+const urls = {
+    updateFabric: '{% url "manufacturing:update_fabric_status" %}',
+    stopItem: '{% url "manufacturing:stop_item" %}',
+    addNote: '{% url "manufacturing:add_item_note" %}',
+};
+
+let totalItems = {{ total_items }};
+let globalCompleted = {{ completed_items }};
+let globalStopped = {{ stopped_items }};
+
+function showToast(msg, isError) {
+    const toast = document.getElementById('saveToast');
+    const text = document.getElementById('saveToastText');
+    text.textContent = msg || 'تم الحفظ';
+    toast.style.background = isError ? 'var(--stopped-color)' : 'var(--success-color)';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function updateGlobalProgress() {
+    const pct = totalItems > 0 ? Math.round((globalCompleted / totalItems) * 100) : 0;
+    document.getElementById('globalCompleted').textContent = globalCompleted;
+    document.getElementById('globalStopped').textContent = globalStopped;
+    document.getElementById('globalPercentage').textContent = pct;
+    document.getElementById('globalProgressFill').style.width = pct + '%';
+}
+
+function updateCurtainProgress(curtainId, stats) {
+    const card = document.getElementById('curtain-' + curtainId);
+    const prog = document.getElementById('curtain-progress-' + curtainId);
+    if (!prog) return;
+
+    const fill = prog.querySelector('.mini-fill');
+    const text = prog.querySelector('.mini-text');
+    fill.style.width = stats.percentage + '%';
+    text.textContent = stats.completed + '/' + stats.total;
+
+    if (card) {
+        card.classList.remove('curtain-complete', 'curtain-stopped');
+        if (stats.completed === stats.total && stats.total > 0) {
+            card.classList.add('curtain-complete');
+        } else if (stats.stopped > 0) {
+            card.classList.add('curtain-stopped');
+        }
+    }
+}
+
+// ===== تبديل قماش =====
+function toggleFabricCheck(fabricId, field, el) {
+    if (el.classList.contains('disabled')) return;
+    const isChecked = el.classList.contains('checked');
+    const newValue = !isChecked;
+
+    el.classList.toggle('checked');
+    const box = el.querySelector('.check-box');
+    box.innerHTML = newValue ? '<i class="fas fa-check"></i>' : '';
+
+    fetch(urls.updateFabric, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ fabric_id: fabricId, field: field, value: newValue }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const fabricEl = document.getElementById('fabric-' + fabricId);
+            const curtainId = fabricEl.dataset.curtainId;
+            updateItemUI('fabric', fabricId, data);
+            updateCurtainProgress(curtainId, data.curtain_stats);
+            recalcGlobalStats();
+            showToast();
+            el.title = newValue ? (data.user_name + ' - ' + data.timestamp) : '';
+        } else {
+            el.classList.toggle('checked');
+            box.innerHTML = isChecked ? '<i class="fas fa-check"></i>' : '';
+            showToast(data.message || 'خطأ', true);
+        }
+    })
+    .catch(() => {
+        el.classList.toggle('checked');
+        box.innerHTML = isChecked ? '<i class="fas fa-check"></i>' : '';
+        showToast('خطأ في الاتصال', true);
+    });
+}
+
+// ===== تحديث واجهة الصنف (مشترك) =====
+function updateItemUI(type, id, data) {
+    const el = document.getElementById(type + '-' + id);
+    if (!el) return;
+
+    el.classList.remove('item-complete', 'item-stopped');
+    if (data.is_complete) el.classList.add('item-complete');
+
+    const statusActions = el.querySelector('.item-status-actions');
+    if (data.is_complete) {
+        statusActions.innerHTML = `
+            <span class="completion-badge complete"><i class="fas fa-check-circle me-1"></i>مكتمل</span>
+            <button class="btn btn-sm btn-outline-info py-0 px-1" style="font-size: 9px;"
+                    onclick="showNoteModal('${type}', ${id}, '')" title="ملاحظة">
+                <i class="fas fa-comment"></i>
+            </button>
+        `;
+    } else {
+        statusActions.innerHTML = `
+            <span class="completion-badge in-progress">${data.completed_steps}/3</span>
+            <button class="btn-stop-item" onclick="showStopModal('${type}', ${id}, '')">
+                <i class="fas fa-ban me-1"></i>ناقص
+            </button>
+            <button class="btn btn-sm btn-outline-info py-0 px-1" style="font-size: 9px;"
+                    onclick="showNoteModal('${type}', ${id}, '')" title="ملاحظة">
+                <i class="fas fa-comment"></i>
+            </button>
+        `;
+    }
+}
+
+// ===== إيقاف =====
+function showStopModal(type, id, name) {
+    document.getElementById('stopItemType').value = type;
+    document.getElementById('stopItemId').value = id;
+    document.getElementById('stopItemName').textContent = name || (type === 'fabric' ? 'قماش' : 'إكسسوار');
+    document.getElementById('stopReason').value = '';
+    new bootstrap.Modal(document.getElementById('stopModal')).show();
+}
+
+function confirmStopItem() {
+    const type = document.getElementById('stopItemType').value;
+    const id = document.getElementById('stopItemId').value;
+    const reason = document.getElementById('stopReason').value.trim();
+    if (!reason) { alert('يرجى كتابة سبب التوقف'); return; }
+    toggleStopItem(type, id, 'stop', reason);
+    bootstrap.Modal.getInstance(document.getElementById('stopModal')).hide();
+}
+
+function toggleStopItem(type, id, action, reason) {
+    fetch(urls.stopItem, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ item_type: type, item_id: id, action: action, reason: reason || '' }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) { location.reload(); }
+        else { showToast(data.message || 'خطأ', true); }
+    })
+    .catch(() => showToast('خطأ في الاتصال', true));
+}
+
+// ===== ملاحظات =====
+function showNoteModal(type, id, name) {
+    document.getElementById('noteItemType').value = type;
+    document.getElementById('noteItemId').value = id;
+    document.getElementById('noteItemName').textContent = name || (type === 'fabric' ? 'قماش' : 'إكسسوار');
+    document.getElementById('noteText').value = '';
+    new bootstrap.Modal(document.getElementById('noteModal')).show();
+}
+
+function confirmAddNote() {
+    const type = document.getElementById('noteItemType').value;
+    const id = document.getElementById('noteItemId').value;
+    const note = document.getElementById('noteText').value.trim();
+    if (!note) { alert('يرجى كتابة الملاحظة'); return; }
+
+    fetch(urls.addNote, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ item_type: type, item_id: id, note: note }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('noteModal')).hide();
+            const notesEl = document.getElementById(type + '-notes-' + id);
+            if (notesEl) {
+                notesEl.innerHTML = '<i class="fas fa-sticky-note me-1" style="color: var(--info-color);"></i>' + data.notes.replace(/\n/g, '<br>');
+                notesEl.style.display = 'block';
+            }
+            showToast('تم إضافة الملاحظة');
+        } else { showToast(data.message || 'خطأ', true); }
+    })
+    .catch(() => showToast('خطأ في الاتصال', true));
+}
+
+// ===== إحصائيات =====
+function recalcGlobalStats() {
+    let completed = 0, stopped = 0;
+    document.querySelectorAll('.fabric-block').forEach(el => {
+        if (el.classList.contains('item-complete')) completed++;
+        else if (el.classList.contains('item-stopped')) stopped++;
+    });
+    globalCompleted = completed;
+    globalStopped = stopped;
+    updateGlobalProgress();
+}
+
+// ===== تهيئة عند التحميل =====
+document.addEventListener('DOMContentLoaded', function() {
+    // تثبيت شريط التقدم - نقل إلى body واستخدام position:absolute + scrollY
+    const bar = document.getElementById('progressBarContainer');
+    if (bar) {
+        // نقل الشريط ليكون أول عنصر في body
+        document.body.insertBefore(bar, document.body.firstChild);
+        // ضبط body ليكون positioned ancestor
+        document.body.style.position = 'relative';
+
+        const spacer = document.querySelector('.progress-bar-spacer');
+        const barHeight = bar.offsetHeight;
+        if (spacer) spacer.style.height = barHeight + 'px';
+
+        // تطبيق الأنماط الأساسية
+        bar.style.position = 'absolute';
+        bar.style.left = '0';
+        bar.style.right = '0';
+        bar.style.zIndex = '99999';
+        bar.style.top = window.scrollY + 'px';
+
+        // تحديث الموقع مع كل scroll
+        let ticking = false;
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                requestAnimationFrame(function() {
+                    bar.style.top = window.scrollY + 'px';
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }, { passive: true });
+    }
+
+    document.querySelectorAll('.curtain-row').forEach(card => {
+        const curtainId = card.dataset.curtainId;
+        if (!curtainId) return;
+        let total = 0, completed = 0, stopped = 0;
+        card.querySelectorAll('.fabric-block[data-fabric-id]').forEach(el => {
+            total++;
+            if (el.classList.contains('item-complete')) completed++;
+            else if (el.classList.contains('item-stopped')) stopped++;
+        });
+        updateCurtainProgress(curtainId, {
+            total: total,
+            completed: completed,
+            stopped: stopped,
+            percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+        });
+    });
+});
+</script>
+{% endblock %}

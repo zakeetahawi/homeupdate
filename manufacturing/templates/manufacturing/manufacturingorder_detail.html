@@ -408,6 +408,12 @@
                                                             <i class="fas fa-file-pdf"></i> عرض العقد الإلكتروني (PDF)
                                                         </a>
                                                     </div>
+                                                    <div class="mb-2">
+                                                        <a href="{% url 'manufacturing:interactive_contract' manufacturing_order.id %}"
+                                                           class="btn btn-warning">
+                                                            <i class="fas fa-file-contract"></i> العقد التفاعلي
+                                                        </a>
+                                                    </div>
                                                     <small class="text-muted">عقد إلكتروني - {{ manufacturing_order.order.contract_curtains.count }} ستارة</small>
                                                 {% else %}
                                                     <p class="text-muted">لم يتم رفع ملف العقد</p>
