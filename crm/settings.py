@@ -925,6 +925,13 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(hour=9, minute=0),
         "options": {"queue": "default"},
     },
+    # ✅ تنظيف BulkUploadError أسبوعياً (الأحد الساعة 2 صباحاً)
+    "cleanup-bulk-upload-errors": {
+        "task": "inventory.tasks.cleanup_old_bulk_upload_errors",
+        "schedule": crontab(hour=2, minute=0, day_of_week=0),
+        "options": {"queue": "default"},
+        "kwargs": {"keep_days": 30, "keep_per_log": 100},
+    },
 }
 
 # ======================================

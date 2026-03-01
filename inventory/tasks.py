@@ -445,3 +445,64 @@ def sync_official_fabric_warehouses(self):
             updated.append(warehouse.name)
 
     return {"status": "success", "created": created, "updated": updated}
+
+
+@shared_task(
+    bind=True,
+    max_retries=1,
+    queue="default",
+    name="inventory.tasks.cleanup_old_bulk_upload_errors",
+)
+def cleanup_old_bulk_upload_errors(self, keep_days=30, keep_per_log=100):
+    """
+    تنظيف سجلات BulkUploadError القديمة والمكتظة.
+
+    - يحذف الأخطاء التابعة لسجلات أقدم من `keep_days` يوماً
+    - يحتفظ بأول `keep_per_log` خطأ لكل سجل رفع (للتشخيص)
+    - يُشغَّل أسبوعياً عبر Celery Beat
+
+    الإعدادات الافتراضية:
+        keep_days=30  → يحذف الأخطاء الأقدم من 30 يوم
+        keep_per_log=100 → يحتفظ بـ 100 خطأ لكل عملية رفع
+    """
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from .models import BulkUploadError, BulkUploadLog
+
+    cutoff = timezone.now() - timedelta(days=keep_days)
+    total_deleted = 0
+
+    # 1. حذف أخطاء السجلات القديمة بالكامل
+    old_logs = BulkUploadLog.objects.filter(created_at__lt=cutoff)
+    if old_logs.exists():
+        deleted, _ = BulkUploadError.objects.filter(upload_log__in=old_logs).delete()
+        total_deleted += deleted
+        logger.info(
+            f"✅ حُذف {deleted} خطأ رفع قديم (أقدم من {keep_days} يوم)"
+        )
+
+    # 2. للسجلات الحديثة: احتفظ بأول keep_per_log خطأ فقط
+    recent_logs = BulkUploadLog.objects.filter(created_at__gte=cutoff)
+    for log in recent_logs:
+        error_ids = (
+            BulkUploadError.objects.filter(upload_log=log)
+            .order_by("id")
+            .values_list("id", flat=True)
+        )
+        if error_ids.count() > keep_per_log:
+            ids_to_keep = list(error_ids[:keep_per_log])
+            deleted, _ = (
+                BulkUploadError.objects.filter(upload_log=log)
+                .exclude(id__in=ids_to_keep)
+                .delete()
+            )
+            total_deleted += deleted
+
+    if total_deleted:
+        logger.info(f"✅ إجمالي سجلات BulkUploadError المحذوفة: {total_deleted}")
+    else:
+        logger.info("ℹ️ لا توجد سجلات BulkUploadError تحتاج حذفاً")
+
+    return {"status": "success", "deleted": total_deleted}

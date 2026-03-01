@@ -1,8 +1,8 @@
 import logging
-from decimal import Decimal
 
 from django.contrib.contenttypes.models import ContentType
-from django.db import transaction
+from django.db import models, transaction
+from django.db.models import Sum
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -18,160 +18,99 @@ from .models import BaseProduct, Product, ProductVariant, StockAlert, StockTrans
 
 @receiver(post_save, sender=SystemSettings)
 def update_currency_on_settings_change(sender, instance, **kwargs):
-    """تحديث العملة لجميع المنتجات عند تغيير إعدادات النظام"""
+    """تحديث العملة لجميع المنتجات عند تغيير إعدادات النظام - فقط عند تغيير حقل currency"""
+    # تأكد أن التغيير طال حقل currency فعلاً
+    update_fields = kwargs.get("update_fields")
+    if update_fields and "currency" not in update_fields:
+        return
+
+    if not hasattr(instance, "currency") or not instance.currency:
+        return
 
     def update_products():
-        if hasattr(instance, "currency") and instance.currency:
-            Product.objects.all().update(currency=instance.currency)
+        Product.objects.all().update(currency=instance.currency)
 
     transaction.on_commit(update_products)
 
 
-@receiver(post_save, sender=Product)
-def protect_paid_orders_from_price_changes(sender, instance, created, **kwargs):
-    """حماية الطلبات المدفوعة من تغيير أسعار المنتجات"""
-    # ✅ تم تعطيل هذه الوظيفة مؤقتاً لأن Product model لا يحتوي على tracker
-    # إذا أردت تفعيلها، يجب إضافة FieldTracker من django-model-utils
-    # من المكتبة: from model_utils import FieldTracker
-    # ثم إضافة في Product model: tracker = FieldTracker()
-    pass
+# ملاحظة: protect_paid_orders_from_price_changes تم حذفها — كانت pass فقط
+# لتفعيلها مستقبلاً: أضف FieldTracker من django-model-utils إلى نموذج Product
 
 
 @receiver(post_save, sender=StockTransaction)
 def stock_manager_handler(sender, instance, created, **kwargs):
     """
-    المعالج الرئيسي لكل المعاملات المخزنية: تحديث الأرصدة والتنبيهات
+    المعالج الرئيسي لكل المعاملات المخزنية: التنبيهات فقط.
+    ملاحظة: حساب running_balance يتم في StockTransaction.save() بشكل ذري،
+    لذا لا يُعاد حسابه هنا تجنباً لتعارض البيانات (race condition).
     """
     if not created:
         return
 
-    current_balance = instance.running_balance
-
-    # ✅ حماية: منع السحب من مستودع فارغ
+    # ✅ تحقق: تسجيل تحذير في حالة السحب من رصيد غير كافٍ (لا حذف - الحذف من post_save خطر)
     if instance.transaction_type == "out":
-        last_trans = (
-            StockTransaction.objects.filter(
-                product=instance.product, warehouse=instance.warehouse
-            )
-            .exclude(id=instance.id)
-            .order_by("-transaction_date")
-            .first()
-        )
-
-        if not last_trans:
+        if instance.running_balance < 0:
+            warehouse_name = instance.warehouse.name if instance.warehouse else "غير معروف"
             logger.error(
-                f"❌ محاولة سحب من مستودع فارغ! "
+                f"❌ رصيد سالب بعد السحب! "
                 f"المنتج: {instance.product.name} ({instance.product.code}) "
-                f"المستودع: {instance.warehouse.name} "
-                f"الكمية: {instance.quantity}"
-            )
-            instance.delete()
-            return
-
-        if last_trans.running_balance < instance.quantity:
-            logger.error(
-                f"❌ رصيد غير كافٍ! "
-                f"المنتج: {instance.product.name} ({instance.product.code}) "
-                f"المستودع: {instance.warehouse.name} "
-                f"الرصيد المتاح: {last_trans.running_balance} "
-                f"الكمية المطلوبة: {instance.quantity}"
+                f"المستودع: {warehouse_name} "
+                f"الرصيد الجديد: {instance.running_balance} "
+                f"(يجب مراجعة هذه العملية)"
             )
 
-    # ✅ حماية: منع إدخال منتج في مستودع جديد إذا كان موجوداً في مستودع آخر
+    # ✅ تحقق: تحذير عند إدخال منتج موجود في مستودع آخر
     if instance.transaction_type == "in":
         other_warehouse_trans = (
             StockTransaction.objects.filter(product=instance.product)
             .exclude(warehouse=instance.warehouse)
-            .select_related('warehouse')  # ✅ تحميل المستودع مسبقاً
+            .select_related("warehouse")
             .order_by("-transaction_date")
             .first()
         )
-
         if other_warehouse_trans and other_warehouse_trans.running_balance > 0:
-            warehouse_name = other_warehouse_trans.warehouse.name if other_warehouse_trans.warehouse else "غير معروف"
+            warehouse_name = (
+                other_warehouse_trans.warehouse.name
+                if other_warehouse_trans.warehouse
+                else "غير معروف"
+            )
             logger.warning(
                 f"⚠️ المنتج {instance.product.name} ({instance.product.code}) "
                 f"موجود بالفعل في مستودع {warehouse_name} "
                 f"برصيد {other_warehouse_trans.running_balance}. "
-                f"يتم الآن إدخاله في مستودع {instance.warehouse.name}. "
                 f"يُفضل استخدام عملية نقل (transfer) بدلاً من الإدخال المباشر."
             )
 
-    def process_transaction():
+    def check_alerts():
+        """
+        يتحقق من مستويات المخزون ويُنشئ التنبيهات فقط.
+        يعمل في on_commit لضمان أن running_balance قد حُسب بالكامل.
+        """
         from decimal import Decimal
+
+        from django.db.models import OuterRef, Subquery
 
         from .models import Warehouse
 
-        # ✅ تحديث الأرصدة المتحركة - مع اعتبار المستودع
-        previous_balance = (
+        # ✅ حساب المخزون الكلي عبر استعلام واحد (بدلاً من N استعلام)
+        latest_balance_subq = (
             StockTransaction.objects.filter(
                 product=instance.product,
-                warehouse=instance.warehouse,  # إضافة فلتر المستودع
-                transaction_date__lt=instance.transaction_date,
+                warehouse=OuterRef("pk"),
             )
-            .exclude(id=instance.id)
             .order_by("-transaction_date", "-id")
-            .first()
+            .values("running_balance")[:1]
+        )
+        total_stock = float(
+            Warehouse.objects.filter(is_active=True)
+            .annotate(latest_balance=Subquery(latest_balance_subq))
+            .exclude(latest_balance__isnull=True)
+            .aggregate(total=models.Sum("latest_balance"))["total"]
+            or 0
         )
 
-        if previous_balance and previous_balance.running_balance is not None:
-            current_balance = Decimal(str(previous_balance.running_balance))
-        else:
-            current_balance = Decimal("0")
-
-        quantity_decimal = Decimal(str(instance.quantity))
-
-        if instance.transaction_type == "in":
-            new_balance = current_balance + quantity_decimal
-        else:
-            new_balance = current_balance - quantity_decimal
-
-        # تحديث الرصيد للمعاملة الحالية
-        StockTransaction.objects.filter(id=instance.id).update(
-            running_balance=new_balance
-        )
-
-        # ✅ تحديث الأرصدة اللاحقة - لنفس المستودع فقط
-        subsequent_transactions = (
-            StockTransaction.objects.filter(
-                product=instance.product,
-                warehouse=instance.warehouse,  # إضافة فلتر المستودع
-                transaction_date__gt=instance.transaction_date,
-            )
-            .exclude(id=instance.id)
-            .order_by("transaction_date", "id")
-        )
-
-        running_balance = new_balance
-        for trans in subsequent_transactions:
-            trans_quantity = Decimal(str(trans.quantity))
-            if trans.transaction_type == "in":
-                running_balance += trans_quantity
-            else:
-                running_balance -= trans_quantity
-            StockTransaction.objects.filter(id=trans.id).update(
-                running_balance=running_balance
-            )
-
-        # ✅ فحص مستويات المخزون وإنشاء/حل التنبيهات
-        # حساب المخزون الكلي من جميع المستودعات
-        total_stock = 0
-        for warehouse in Warehouse.objects.filter(is_active=True):
-            last_trans = (
-                StockTransaction.objects.filter(
-                    product=instance.product, warehouse=warehouse
-                )
-                .order_by("-transaction_date", "-id")
-                .first()
-            )
-
-            if last_trans and last_trans.running_balance:
-                total_stock += float(last_trans.running_balance)
-
-        # ✅ حل التنبيهات الخاطئة أولاً (إذا أصبح المنتج متوفراً)
+        # ✅ حل تنبيهات النفاذ إذا أصبح المنتج متوفراً
         if total_stock > 0:
-            from django.utils import timezone
-
             resolved_count = StockAlert.objects.filter(
                 product=instance.product, alert_type="out_of_stock", status="active"
             ).update(
@@ -181,12 +120,12 @@ def stock_manager_handler(sender, instance, created, **kwargs):
             )
             if resolved_count > 0:
                 logger.info(
-                    f"✅ تم حل {resolved_count} تنبيه نفاذ للمنتج {instance.product.name} (المخزون الجديد: {total_stock})"
+                    f"✅ تم حل {resolved_count} تنبيه نفاذ للمنتج "
+                    f"{instance.product.name} (المخزون الجديد: {total_stock})"
                 )
 
         # إنشاء تنبيه جديد إذا لزم الأمر
         alert_data = should_create_stock_alert(instance.product.id, total_stock)
-
         if alert_data:
             create_stock_alert_and_notification(
                 product=instance.product,
@@ -194,7 +133,7 @@ def stock_manager_handler(sender, instance, created, **kwargs):
                 user=getattr(instance, "created_by", None),
             )
 
-    transaction.on_commit(process_transaction)
+    transaction.on_commit(check_alerts)
 
 
 # ========== نظام التنبيهات التلقائية للمخزون ========== *

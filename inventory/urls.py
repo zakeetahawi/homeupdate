@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import api_views, views, views_product_set, views_variants, views_warehouse_cleanup
+from .views import feature_not_implemented
 from .dashboard_view_append import optimized_product_detail
 from .views import InventoryDashboardView
 from .views_bulk import bulk_stock_update, download_excel_template, product_bulk_upload
@@ -99,41 +100,41 @@ urlpatterns = [
     ),  # مؤقتاً يستخدم نفس صفحة المنتجات
     # Stock Adjustments
     path(
-        "adjustments/", views.product_list, name="adjustment_list"
-    ),  # مؤقتاً يستخدم نفس صفحة المنتجات
+        "adjustments/", feature_not_implemented, name="adjustment_list"
+    ),
     # Purchase Orders
     path("purchase-orders/", purchase_order_list, name="purchase_order_list"),
     path("purchase-order/create/", purchase_order_create, name="purchase_order_create"),
     path(
-        "purchase-order/<int:pk>/", views.product_list, name="purchase_order_detail"
-    ),  # مؤقتاً يستخدم نفس صفحة المنتجات
+        "purchase-order/<int:pk>/", feature_not_implemented, name="purchase_order_detail"
+    ),
     path(
         "purchase-order/<int:pk>/update/",
-        views.product_list,
+        feature_not_implemented,
         name="purchase_order_update",
-    ),  # مؤقتاً يستخدم نفس صفحة المنتجات
+    ),
     path(
         "purchase-order/<int:pk>/delete/",
-        views.product_list,
+        feature_not_implemented,
         name="purchase_order_delete",
-    ),  # مؤقتاً يستخدم نفس صفحة المنتجات
+    ),
     path(
         "purchase-order/<int:pk>/receive/",
-        views.product_list,
+        feature_not_implemented,
         name="purchase_order_receive",
-    ),  # مؤقتاً يستخدم نفس صفحة المنتجات
+    ),
     # Suppliers
     path("suppliers/", supplier_list, name="supplier_list"),
     path("supplier/create/", supplier_create, name="supplier_create"),
     path(
-        "supplier/<int:pk>/update/", views.product_list, name="supplier_update"
-    ),  # مؤقتاً يستخدم نفس صفحة المنتجات
+        "supplier/<int:pk>/update/", feature_not_implemented, name="supplier_update"
+    ),
     path(
-        "supplier/<int:pk>/delete/", views.product_list, name="supplier_delete"
-    ),  # مؤقتاً يستخدم نفس صفحة المنتجات
+        "supplier/<int:pk>/delete/", feature_not_implemented, name="supplier_delete"
+    ),
     path(
-        "supplier/<int:pk>/", views.product_list, name="supplier_detail"
-    ),  # مؤقتاً يستخدم نفس صفحة المنتجات
+        "supplier/<int:pk>/", feature_not_implemented, name="supplier_detail"
+    ),
     # Warehouses
     path("warehouses/", warehouse_list, name="warehouse_list"),
     path("warehouse/create/", warehouse_create, name="warehouse_create"),
@@ -237,8 +238,8 @@ urlpatterns = [
     path(
         "stock-transfer/create/", stock_transfer_bulk, name="stock_transfer_create"
     ),  # النموذج الجديد
-    # Aliases for compatibility/typos
-    path("stock-transfers/create/", stock_transfer_bulk),
+    # Aliases for compatibility
+    path("stock-transfers/create/", stock_transfer_bulk, name="stock_transfer_create_alias"),
     path(
         "stock-transfer/create/bulk/",
         stock_transfer_bulk_create,

@@ -1370,3 +1370,20 @@ def export_products_excel(request):
     wb.save(response)
 
     return response
+
+
+@login_required
+def feature_not_implemented(request, *args, **kwargs):
+    """
+    عرض مؤقت للميزات قيد التطوير.
+    يُستخدم بدلاً من إعادة توجيه stub URLs إلى قائمة المنتجات.
+    """
+    messages.info(
+        request,
+        "🚧 هذه الميزة قيد التطوير وستكون متاحة قريباً.",
+    )
+    # الرجوع إلى الصفحة السابقة أو لوحة التحكم
+    referer = request.META.get("HTTP_REFERER")
+    if referer:
+        return redirect(referer)
+    return redirect("inventory:dashboard")

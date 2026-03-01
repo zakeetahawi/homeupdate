@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
@@ -161,14 +162,14 @@ class Product(SoftDeleteMixin, models.Model):
         verbose_name_plural = _("منتجات")
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["name", "code"]),
-            models.Index(fields=["category"]),
-            models.Index(fields=["created_at"]),
-            # NEW Performance Indexes
-            models.Index(fields=["code"], name="product_code_idx"),
-            models.Index(fields=["name"], name="product_name_idx"),
+            # فهرس مركّب (name, code) يغطي الاثنين معاً
+            models.Index(fields=["name", "code"], name="product_name_code_idx"),
+            # فهرس (category, created_at) يغطي كلاهما
             models.Index(fields=["category", "created_at"], name="product_cat_crt_idx"),
+            # فهرس السعر للتصفية
             models.Index(fields=["price"], name="product_price_idx"),
+            # فهرس التاريخ للترتيب
+            models.Index(fields=["created_at"], name="product_created_at_idx"),
         ]
 
     def __str__(self):
@@ -211,26 +212,31 @@ class Product(SoftDeleteMixin, models.Model):
 
     @property
     def warehouses_with_stock(self):
-        """الحصول على أسماء المستودعات التي تحتوي على المنتج"""
-        from django.db.models import Max
+        """الحصول على أسماء المستودعات التي تحتوي على المنتج — استعلام واحد بدلاً من N"""
+        from django.db.models import OuterRef, Subquery
 
-        # الحصول على المستودعات النشطة
-        warehouses = []
-        from .models import Warehouse
-
-        for warehouse in Warehouse.objects.filter(is_active=True):
-            last_trans = (
-                self.transactions.filter(warehouse=warehouse)
-                .order_by("-transaction_date", "-id")
-                .first()
+        latest_balance_subq = (
+            StockTransaction.objects.filter(
+                product=self,
+                warehouse=OuterRef("pk"),
             )
+            .order_by("-transaction_date", "-id")
+            .values("running_balance")[:1]
+        )
 
-            if last_trans and last_trans.running_balance > 0:
-                warehouses.append(warehouse.name)
+        warehouses = (
+            Warehouse.objects.filter(is_active=True)
+            .annotate(latest_balance=Subquery(latest_balance_subq))
+            .filter(latest_balance__gt=0)
+            .values_list("name", flat=True)
+        )
 
-        if warehouses:
-            return ", ".join(warehouses[:3]) + ("..." if len(warehouses) > 3 else "")
-        return ""
+        names = list(warehouses[:4])
+        if not names:
+            return ""
+        if len(names) == 4:
+            return ", ".join(names[:3]) + "..."
+        return ", ".join(names)
 
     def get_unit_display(self):
         """إرجاع عرض الوحدة"""
@@ -582,7 +588,12 @@ class StockTransaction(models.Model):
     date = models.DateTimeField(_("تاريخ التسجيل"), auto_now_add=True)
     notes = models.TextField(_("ملاحظات"), blank=True)
     running_balance = models.DecimalField(
-        _("الرصيد المتحرك"), max_digits=18, decimal_places=2, default=0
+        _("الرصيد المتحرك"),
+        max_digits=18,
+        decimal_places=2,
+        default=0,
+        db_index=True,  # ✅ فهرس للبحث السريع عن آخر رصيد
+        validators=[MinValueValidator(0, message=_("الرصيد لا يمكن أن يكون سالباً"))],
     )
     created_by = models.ForeignKey(
         User,
