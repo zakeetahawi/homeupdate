@@ -621,7 +621,25 @@ function finalizeOrder() {
                     'X-CSRFToken': '{{ csrf_token }}'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                // اكتشاف انتهاء الجلسة: Django يُعيد HTML بدل JSON
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('text/html')) {
+                    // الجلسة انتهت — إعادة التوجيه لتسجيل الدخول
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'انتهت الجلسة',
+                        text: 'لقد انتهت جلستك. سيتم توجيهك لتسجيل الدخول مجدداً.',
+                        confirmButtonText: 'تسجيل الدخول',
+                        confirmButtonColor: '#0d6efd',
+                        allowOutsideClick: false,
+                    }).then(() => {
+                        window.location.href = '/accounts/login/?next=' + encodeURIComponent(window.location.pathname);
+                    });
+                    return Promise.reject(new Error('session_expired'));
+                }
+                return response.json();
+            })
             .then(data => {
                 if (!data.success) {
                     throw new Error(data.message);
@@ -629,7 +647,9 @@ function finalizeOrder() {
                 return data;
             })
             .catch(error => {
-                Swal.showValidationMessage(`حدث خطأ: ${error.message}`);
+                if (error.message !== 'session_expired') {
+                    Swal.showValidationMessage(`حدث خطأ: ${error.message}`);
+                }
             });
         },
         allowOutsideClick: () => !Swal.isLoading()

@@ -438,6 +438,54 @@
 {% block extra_js %}
     <script>
 // ============================================
+// معترض Fetch العالمي — كشف انتهاء الجلسة
+// ============================================
+(function () {
+    const _originalFetch = window.fetch;
+    let _sessionAlertShown = false;
+
+    window.fetch = function (input, init) {
+        return _originalFetch(input, init).then(function (response) {
+            // اكتشاف انتهاء الجلسة: 401 JSON أو HTML بدلاً من JSON
+            const contentType = response.headers.get('content-type') || '';
+            const isXhr = (init && init.headers && (
+                init.headers['X-Requested-With'] === 'XMLHttpRequest' ||
+                init.headers['X-CSRFToken']
+            ));
+
+            const isSessionExpired = isXhr && !_sessionAlertShown && (
+                (response.status === 401 && contentType.includes('application/json')) ||
+                (contentType.includes('text/html'))
+            );
+
+            if (isSessionExpired) {
+                _sessionAlertShown = true;
+                const loginUrl = '/accounts/login/?next=' + encodeURIComponent(window.location.pathname);
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'انتهت الجلسة',
+                        text: 'لقد انتهت جلستك. سيتم توجيهك لتسجيل الدخول مجدداً.',
+                        confirmButtonText: 'تسجيل الدخول',
+                        confirmButtonColor: '#0d6efd',
+                        allowOutsideClick: false,
+                    }).then(function () {
+                        window.location.href = loginUrl;
+                    });
+                } else {
+                    alert('انتهت جلستك. سيتم توجيهك لتسجيل الدخول.');
+                    window.location.href = loginUrl;
+                }
+                // إعادة الرد كما هو — سيتعامل معه الـ caller
+                return response;
+            }
+            return response;
+        });
+    };
+})();
+
+// ============================================
 // دوال التحقق من الحقول الإلزامية
 // ============================================
 
@@ -761,7 +809,13 @@ function submitWizardStep(formElement, nextStepUrl) {
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        const contentType = response.headers.get('content-type') || '';
+        if (!response.ok && contentType.includes('text/html')) {
+            return Promise.reject(new Error('session_expired'));
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             // الانتقال للخطوة التالية
@@ -773,8 +827,10 @@ function submitWizardStep(formElement, nextStepUrl) {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('حدث خطأ أثناء الحفظ');
+        if (error.message !== 'session_expired') {
+            console.error('Error:', error);
+            alert('حدث خطأ أثناء الحفظ');
+        }
     });
 }
 

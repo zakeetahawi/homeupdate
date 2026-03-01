@@ -457,6 +457,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "csp.middleware.CSPMiddleware",
+    "accounts.middleware.ajax_auth.AjaxAuthMiddleware",  # ✅ JSON 401 لطلبات AJAX عند انتهاء الجلسة
     "accounts.middleware.current_user.CurrentUserMiddleware",
     "user_activity.middleware.UserSessionTrackingMiddleware",
     "core.audit.AuditLoggingMiddleware",
@@ -694,9 +695,9 @@ SESSION_COOKIE_NAME = "elkhawaga_sessionid"
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_DOMAIN = None
 SESSION_COOKIE_PATH = "/"
-SESSION_COOKIE_AGE = 3600  # ساعة واحدة
-SESSION_SAVE_EVERY_REQUEST = False
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 86400 * 7  # أسبوع كامل — الجلسة تنتهي فقط عند إغلاق المتصفح أو بعد أسبوع
+SESSION_SAVE_EVERY_REQUEST = True   # تجديد الجلسة تلقائياً مع كل طلب نشط
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # إلغاء الجلسة عند إغلاق المتصفح
 
 # -- الإعدادات حسب البيئة --
 if not DEBUG:
