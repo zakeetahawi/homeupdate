@@ -13,6 +13,7 @@ from accounts.models import Branch, User
 
 from .models import (
     Category,
+    InventoryAdjustment,
     Product,
     PurchaseOrder,
     PurchaseOrderItem,
@@ -841,6 +842,134 @@ def purchase_order_create(request):
             return redirect("inventory:purchase_order_list")
 
     return redirect("inventory:purchase_order_list")
+
+
+@login_required
+def purchase_order_detail(request, pk):
+    """عرض تفاصيل طلب الشراء"""
+    purchase_order = get_object_or_404(
+        PurchaseOrder.objects.select_related("supplier", "warehouse", "created_by")
+        .prefetch_related("items__product"),
+        pk=pk,
+    )
+    # حركات المخزون المرتبطة بهذا الطلب
+    stock_transactions = StockTransaction.objects.filter(
+        reference=purchase_order.order_number
+    ).select_related("product", "warehouse").order_by("-transaction_date")
+
+    context = {
+        "purchase_order": purchase_order,
+        "stock_transactions": stock_transactions,
+    }
+    return render(request, "inventory/purchase_order_detail.html", context)
+
+
+@login_required
+def purchase_order_receive(request, pk):
+    """
+    ✅ BUG-001 FIX: استلام طلب الشراء وإنشاء حركات مخزون وارد تلقائياً.
+    يدعم الاستلام الكلي (سريع) أو الجزئي (كميات مخصصة لكل صنف).
+    """
+    from django.db import transaction as db_transaction
+
+    purchase_order = get_object_or_404(
+        PurchaseOrder.objects.select_related("supplier", "warehouse")
+        .prefetch_related("items__product"),
+        pk=pk,
+    )
+
+    # لا يمكن استلام طلب ملغي أو مكتمل
+    if purchase_order.status in ("received", "cancelled"):
+        messages.error(
+            request,
+            f"لا يمكن استلام هذا الطلب — الحالة الحالية: "
+            f"{purchase_order.get_status_display()}",
+        )
+        return redirect("inventory:purchase_order_detail", pk=pk)
+
+    warehouse = purchase_order.warehouse
+    if not warehouse:
+        warehouse = Warehouse.objects.filter(is_active=True).first()
+
+    if not warehouse:
+        messages.error(request, "لا يوجد مستودع نشط لاستلام الطلب")
+        return redirect("inventory:purchase_order_detail", pk=pk)
+
+    if request.method == "POST":
+        quick_receive = request.POST.get("quick_receive", "false") == "true"
+
+        try:
+            with db_transaction.atomic():
+                received_count = 0
+                total_qty = 0
+
+                for item in purchase_order.items.all():
+                    if quick_receive:
+                        qty_to_receive = item.quantity - item.received_quantity
+                    else:
+                        raw = request.POST.get(f"item_{item.id}_qty", "0")
+                        try:
+                            qty_to_receive = int(raw)
+                        except (ValueError, TypeError):
+                            qty_to_receive = 0
+
+                    if qty_to_receive <= 0:
+                        continue
+
+                    # إنشاء حركة وارد للمخزون
+                    last_trans = (
+                        StockTransaction.objects.filter(
+                            product=item.product, warehouse=warehouse
+                        )
+                        .order_by("-transaction_date", "-id")
+                        .first()
+                    )
+                    prev_balance = last_trans.running_balance if last_trans else 0
+                    new_balance = prev_balance + qty_to_receive
+
+                    StockTransaction.objects.create(
+                        product=item.product,
+                        warehouse=warehouse,
+                        transaction_type="in",
+                        reason="purchase",
+                        quantity=qty_to_receive,
+                        reference=purchase_order.order_number,
+                        transaction_date=timezone.now(),
+                        notes=f"استلام من طلب شراء — المورد: {purchase_order.supplier.name}",
+                        running_balance=new_balance,
+                        created_by=request.user,
+                    )
+
+                    item.received_quantity = item.received_quantity + qty_to_receive
+                    item.save(update_fields=["received_quantity"])
+                    received_count += 1
+                    total_qty += qty_to_receive
+
+                # تحديث حالة طلب الشراء
+                total_ordered = sum(i.quantity for i in purchase_order.items.all())
+                total_received = sum(i.received_quantity for i in purchase_order.items.all())
+
+                if total_received >= total_ordered:
+                    purchase_order.status = "received"
+                elif total_received > 0:
+                    purchase_order.status = "partial"
+                purchase_order.save(update_fields=["status"])
+
+                messages.success(
+                    request,
+                    f"تم استلام {received_count} صنف بإجمالي {total_qty} وحدة — "
+                    f"الحالة: {purchase_order.get_status_display()}",
+                )
+                return redirect("inventory:purchase_order_detail", pk=pk)
+
+        except Exception as e:
+            messages.error(request, f"حدث خطأ أثناء الاستلام: {e}")
+
+    context = {
+        "purchase_order": purchase_order,
+        "warehouse": warehouse,
+    }
+    return render(request, "inventory/purchase_order_receive.html", context)
 
 
 # Alert Views

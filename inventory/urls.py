@@ -26,7 +26,9 @@ from .views_extended import (
     category_list,
     category_update,
     purchase_order_create,
+    purchase_order_detail,
     purchase_order_list,
+    purchase_order_receive,
     supplier_create,
     supplier_list,
     warehouse_create,
@@ -105,9 +107,7 @@ urlpatterns = [
     # Purchase Orders
     path("purchase-orders/", purchase_order_list, name="purchase_order_list"),
     path("purchase-order/create/", purchase_order_create, name="purchase_order_create"),
-    path(
-        "purchase-order/<int:pk>/", feature_not_implemented, name="purchase_order_detail"
-    ),
+    path("purchase-order/<int:pk>/", purchase_order_detail, name="purchase_order_detail"),
     path(
         "purchase-order/<int:pk>/update/",
         feature_not_implemented,
@@ -120,7 +120,7 @@ urlpatterns = [
     ),
     path(
         "purchase-order/<int:pk>/receive/",
-        feature_not_implemented,
+        purchase_order_receive,
         name="purchase_order_receive",
     ),
     # Suppliers

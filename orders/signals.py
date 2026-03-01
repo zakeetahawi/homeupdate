@@ -1069,6 +1069,77 @@ def deduct_inventory_on_order_creation(sender, instance, created, **kwargs):
         transaction.on_commit(process_inventory_deduction)
 
 
+# ✅ BUG-003 FIX: إعادة المخزون عند إلغاء الطلب
+
+
+@receiver(pre_save, sender=Order, dispatch_uid='inventory_track_order_pre_save')
+def inventory_track_order_status_pre_save(sender, instance, **kwargs):
+    """تتبع حالة الطلب السابقة لاكتشاف الإلغاء وإعادة المخزون"""
+    if instance.pk:
+        try:
+            instance._inventory_old_order_status = (
+                Order.objects.only("order_status").get(pk=instance.pk).order_status
+            )
+        except Order.DoesNotExist:
+            instance._inventory_old_order_status = None
+    else:
+        instance._inventory_old_order_status = None
+
+
+@receiver(post_save, sender=Order, dispatch_uid='reverse_inventory_on_order_cancel')
+def reverse_inventory_on_order_cancel(sender, instance, created, **kwargs):
+    """
+    ✅ BUG-003 FIX: عند إلغاء طلب منتجات، يُعاد المخزون المخصوم تلقائياً.
+    يمنع وجود خصم مخزون لطلبات ملغاة.
+    """
+    if created:
+        return
+
+    old_status = getattr(instance, "_inventory_old_order_status", None)
+    new_status = instance.order_status
+
+    if old_status == new_status or new_status != "cancelled":
+        return
+
+    # فقط طلبات المنتجات تُخصم منها المخزون
+    try:
+        order_types = instance.get_selected_types_list()
+        if "products" not in order_types:
+            return
+    except Exception:
+        return
+
+    def do_reversal():
+        try:
+            from .inventory_integration import OrderInventoryService
+
+            result = OrderInventoryService.reverse_stock_for_order(
+                instance,
+                getattr(instance, "_modified_by", None),
+                "إلغاء الطلب",
+            )
+            if result["success"]:
+                restored = len(result.get("restored", []))
+                logger.info(
+                    f"✅ تم إعادة مخزون الطلب الملغى {instance.order_number} "
+                    f"({restored} منتج)"
+                )
+            else:
+                logger.warning(
+                    f"⚠️ فشل جزئي في إعادة مخزون الطلب الملغى "
+                    f"{instance.order_number}: {result.get('error', '')}"
+                )
+        except Exception as e:
+            logger.error(
+                f"❌ خطأ في إعادة المخزون للطلب الملغى {instance.order_number}: {e}",
+                exc_info=True,
+            )
+
+    from django.db import transaction
+
+    transaction.on_commit(do_reversal)
+
+
 @receiver(post_save, sender=OrderItem, dispatch_uid='order_item_post_save')
 def order_item_post_save(sender, instance, created, **kwargs):
     """معالج حفظ عنصر الطلب"""

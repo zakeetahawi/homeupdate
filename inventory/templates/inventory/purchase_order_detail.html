@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}طلب الشراء — {{ purchase_order.order_number }}{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">
+            <i class="fas fa-file-invoice text-primary"></i>
+            تفاصيل طلب الشراء: <strong>{{ purchase_order.order_number }}</strong>
+        </h4>
+        <div>
+            {% if purchase_order.status not in "received,cancelled" %}
+            <a href="{% url 'inventory:purchase_order_receive' purchase_order.pk %}"
+               class="btn btn-success btn-sm me-1">
+                <i class="fas fa-truck-loading"></i> استلام
+            </a>
+            {% endif %}
+            <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-right"></i> قائمة الطلبات
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- بطاقة المعلومات الأساسية -->
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> معلومات الطلب</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <th>رقم الطلب</th>
+                            <td><code>{{ purchase_order.order_number }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>المورد</th>
+                            <td>{{ purchase_order.supplier.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>المستودع</th>
+                            <td>{{ purchase_order.warehouse.name|default:"—" }}</td>
+                        </tr>
+                        <tr>
+                            <th>الحالة</th>
+                            <td>
+                                {% if purchase_order.status == "received" %}
+                                    <span class="badge bg-success">{{ purchase_order.get_status_display }}</span>
+                                {% elif purchase_order.status == "partial" %}
+                                    <span class="badge bg-warning text-dark">{{ purchase_order.get_status_display }}</span>
+                                {% elif purchase_order.status == "cancelled" %}
+                                    <span class="badge bg-danger">{{ purchase_order.get_status_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ purchase_order.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>تاريخ الطلب</th>
+                            <td>{{ purchase_order.order_date }}</td>
+                        </tr>
+                        {% if purchase_order.expected_date %}
+                        <tr>
+                            <th>التسليم المتوقع</th>
+                            <td>{{ purchase_order.expected_date }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>إجمالي المبلغ</th>
+                            <td><strong>{{ purchase_order.total_amount|floatformat:2 }} ريال</strong></td>
+                        </tr>
+                        <tr>
+                            <th>تم بواسطة</th>
+                            <td>{{ purchase_order.created_by.get_full_name|default:purchase_order.created_by.username|default:"—" }}</td>
+                        </tr>
+                    </table>
+                    {% if purchase_order.notes %}
+                    <div class="alert alert-light border mt-2 mb-0">
+                        <strong>ملاحظات:</strong> {{ purchase_order.notes }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- عناصر الطلب -->
+        <div class="col-md-8 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="fas fa-boxes"></i> أصناف الطلب</h6>
+                    <span class="badge bg-white text-info">{{ purchase_order.items.count }} صنف</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>المنتج</th>
+                                    <th>الكمية المطلوبة</th>
+                                    <th>المستلم</th>
+                                    <th>التكلفة</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in purchase_order.items.all %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ item.product.name }}</strong>
+                                        <br><small class="text-muted">{{ item.product.code }}</small>
+                                    </td>
+                                    <td><span class="badge bg-secondary">{{ item.quantity }}</span></td>
+                                    <td>
+                                        <span class="badge {% if item.received_quantity >= item.quantity %}bg-success{% elif item.received_quantity > 0 %}bg-warning text-dark{% else %}bg-light text-dark{% endif %}">
+                                            {{ item.received_quantity }} / {{ item.quantity }}
+                                        </span>
+                                    </td>
+                                    <td>{{ item.unit_price|floatformat:2 }} ريال</td>
+                                    <td>
+                                        {% if item.received_quantity >= item.quantity %}
+                                            <span class="badge bg-success">مكتمل</span>
+                                        {% elif item.received_quantity > 0 %}
+                                            <span class="badge bg-warning text-dark">جزئي</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">لم يُستلم</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="6" class="text-center text-muted">لا توجد أصناف</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- حركات المخزون المرتبطة -->
+    {% if stock_transactions %}
+    <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+            <h6 class="mb-0">
+                <i class="fas fa-exchange-alt"></i>
+                حركات المخزون الناتجة عن هذا الطلب
+                <span class="badge bg-white text-success ms-2">{{ stock_transactions.count }}</span>
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>المنتج</th>
+                            <th>المستودع</th>
+                            <th>الكمية</th>
+                            <th>الرصيد بعد</th>
+                            <th>ملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trans in stock_transactions %}
+                        <tr>
+                            <td>{{ trans.transaction_date|date:"Y-m-d H:i" }}</td>
+                            <td>{{ trans.product.name }}</td>
+                            <td>{{ trans.warehouse.name|default:"—" }}</td>
+                            <td>
+                                <span class="badge bg-success">
+                                    +{{ trans.quantity }}
+                                </span>
+                            </td>
+                            <td><strong>{{ trans.running_balance }}</strong></td>
+                            <td><small class="text-muted">{{ trans.notes|truncatechars:50 }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

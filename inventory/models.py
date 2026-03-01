@@ -818,6 +818,15 @@ class InventoryAdjustment(models.Model):
         related_name="adjustments",
         verbose_name=_("الدفعة"),
     )
+    warehouse = models.ForeignKey(
+        "Warehouse",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="inventory_adjustments",
+        verbose_name=_("المستودع"),
+        help_text=_("المستودع الذي تُطبّق عليه التسوية — إذا لم يُحدَّد يُستخدم المستودع الافتراضي"),
+    )
     adjustment_type = models.CharField(
         _("نوع التسوية"), max_length=10, choices=ADJUSTMENT_TYPES
     )

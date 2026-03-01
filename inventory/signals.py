@@ -13,7 +13,15 @@ logger = logging.getLogger(__name__)
 from accounts.models import SystemSettings, User
 from notifications.models import Notification
 
-from .models import BaseProduct, Product, ProductVariant, StockAlert, StockTransaction
+from .models import (
+    BaseProduct,
+    InventoryAdjustment,
+    Product,
+    ProductVariant,
+    StockAlert,
+    StockTransaction,
+    VariantStock,
+)
 
 
 @receiver(post_save, sender=SystemSettings)
@@ -135,8 +143,97 @@ def stock_manager_handler(sender, instance, created, **kwargs):
 
     transaction.on_commit(check_alerts)
 
+    # ✅ BUG-004 FIX: مزامنة VariantStock مع StockTransaction
+    def sync_variant_stock():
+        """
+        تحديث VariantStock.current_quantity لتعكس running_balance في StockTransaction.
+        يضمن أن جدولَي المخزون (القديم والجديد) متزامنان دائماً.
+        """
+        try:
+            if not instance.warehouse:
+                return
+            variant = getattr(instance.product, "variant_link", None)
+            if not variant:
+                return
+            VariantStock.objects.update_or_create(
+                variant=variant,
+                warehouse=instance.warehouse,
+                defaults={
+                    "current_quantity": max(instance.running_balance, 0),
+                    "last_updated": timezone.now(),
+                },
+            )
+            logger.debug(
+                f"✅ تم تحديث VariantStock — المتغير: {variant.variant_code}, "
+                f"المستودع: {instance.warehouse.name}, "
+                f"الكمية: {max(instance.running_balance, 0)}"
+            )
+        except Exception as e:
+            logger.warning(
+                f"⚠️ فشل تحديث VariantStock للمنتج {instance.product.name}: {e}"
+            )
 
-# ========== نظام التنبيهات التلقائية للمخزون ========== *
+    transaction.on_commit(sync_variant_stock)
+
+
+# ========== إشارة تسوية المخزون ========== #
+
+
+@receiver(post_save, sender=InventoryAdjustment)
+def create_transaction_from_adjustment(sender, instance, created, **kwargs):
+    """
+    ✅ BUG-002 FIX: إنشاء StockTransaction تلقائياً عند تسجيل تسوية مخزون.
+    يضمن انعكاس التسويات في سجل الحركات وحساب running_balance الصحيح.
+    """
+    if not created:
+        return
+
+    def do_create():
+        try:
+            from .models import Warehouse
+
+            warehouse = instance.warehouse
+            if not warehouse:
+                # استخدام المستودع الافتراضي إذا لم يُحدَّد
+                warehouse = Warehouse.objects.filter(is_active=True).first()
+            if not warehouse:
+                logger.error(
+                    f"❌ لا يوجد مستودع نشط لتسجيل تسوية المنتج {instance.product.name}"
+                )
+                return
+
+            transaction_type = "in" if instance.adjustment_type == "increase" else "out"
+            qty = abs(instance.quantity_after - instance.quantity_before)
+
+            if qty == 0:
+                logger.info(f"ℹ️ تسوية بكمية صفر — لا تُنشأ حركة. المنتج: {instance.product.name}")
+                return
+
+            StockTransaction.objects.create(
+                product=instance.product,
+                warehouse=warehouse,
+                transaction_type=transaction_type,
+                reason="adjustment",
+                quantity=qty,
+                reference=f"تسوية-{instance.id}",
+                transaction_date=instance.date,
+                notes=f"تسوية مخزون تلقائية — {instance.get_adjustment_type_display()}: {instance.reason}",
+                created_by=instance.created_by,
+            )
+            logger.info(
+                f"✅ تسوية مخزون → حركة مخزون: {instance.product.name}, "
+                f"نوع: {transaction_type}, كمية: {qty}, مستودع: {warehouse.name}"
+            )
+        except Exception as e:
+            logger.error(
+                f"❌ فشل إنشاء StockTransaction من تسوية {instance.id}: {e}",
+                exc_info=True,
+            )
+
+    transaction.on_commit(do_create)
+
+
+# ========== نظام التنبيهات التلقائية للمخزون ========== #
 
 
 def should_create_stock_alert(product_id, new_balance):
