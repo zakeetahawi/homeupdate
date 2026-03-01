@@ -141,3 +141,7 @@ tmp/
 dump.rdb
 .env
 *.rdb
+
+# Deploy one-time fix flags
+.fix_duplicate_transactions_done
+.req_hash

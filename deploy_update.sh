@@ -39,6 +39,17 @@ echo -e "\n${BLUE}[3/4] تطبيق Migrations...${NC}"
 python manage.py migrate --noinput
 echo -e "${GREEN}  ✅ تم${NC}"
 
+# 3b. إصلاح المعاملات المكررة (يعمل مرة واحدة فقط)
+FIX_FLAG="$PROJECT_DIR/.fix_duplicate_transactions_done"
+if [ ! -f "$FIX_FLAG" ]; then
+    echo -e "\n${YELLOW}[3b] إصلاح المعاملات المخزنية المكررة (مرة واحدة)...${NC}"
+    python manage.py fix_duplicate_transactions --fix
+    touch "$FIX_FLAG"
+    echo -e "${GREEN}  ✅ تم إصلاح التكرارات${NC}"
+else
+    echo -e "\n${GREEN}[3b] ✅ إصلاح التكرارات تم مسبقاً${NC}"
+fi
+
 # 4. إعادة تشغيل الخدمة
 echo -e "\n${BLUE}[4/4] إعادة تشغيل الخدمة...${NC}"
 bash "$PROJECT_DIR/لينكس/stop-service.sh" 2>/dev/null || true
