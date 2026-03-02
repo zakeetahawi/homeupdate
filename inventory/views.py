@@ -187,22 +187,24 @@ def product_list(request):
     sort_by = request.GET.get("sort", "-created_at")
 
     # الحصول على المنتجات مع حساب المخزون الحالي
-    # استخدام Subquery للحصول على آخر رصيد من جدول StockTransaction
-    from django.db.models import IntegerField, OuterRef, Subquery
-    from django.db.models.functions import Coalesce
-
-    latest_balance = (
-        StockTransaction.objects.filter(product=OuterRef("pk"))
-        .order_by("-transaction_date", "-id")
-        .values("running_balance")[:1]
-    )
+    # ✅ FIX: حساب المخزون الكلي بجمع آخر رصيد من كل مستودع (DISTINCT ON)
+    from django.db.models import DecimalField, OuterRef
+    from django.db.models.expressions import RawSQL
 
     products = (
         Product.objects.select_related("category")
         .annotate(
-            current_stock_calc=Coalesce(
-                Subquery(latest_balance, output_field=IntegerField()), 0
-            )
+            current_stock_calc=RawSQL("""
+                COALESCE((
+                    SELECT SUM(latest.running_balance)
+                    FROM (
+                        SELECT DISTINCT ON (st.warehouse_id) st.running_balance
+                        FROM inventory_stocktransaction st
+                        WHERE st.product_id = inventory_product.id
+                        ORDER BY st.warehouse_id, st.transaction_date DESC, st.id DESC
+                    ) latest
+                ), 0)
+            """, [], output_field=DecimalField())
         )
         .only("id", "name", "code", "price", "category", "created_at", "minimum_stock")
     )
@@ -226,8 +228,8 @@ def product_list(request):
         # المنتجات التي المخزون الحالي أقل من الحد الأدنى
         products = products.filter(current_stock_calc__lt=F('minimum_stock'))
     elif filter_type == "out_of_stock":
-        # المنتجات التي المخزون = 0
-        products = products.filter(current_stock_calc=0)
+        # ✅ FIX: المنتجات التي المخزون = 0 أو أقل (سالب)
+        products = products.filter(current_stock_calc__lte=0)
     elif filter_type == "in_stock":
         # المنتجات المتوفرة في المخزون
         products = products.filter(current_stock_calc__gt=0)
@@ -696,6 +698,7 @@ def transaction_create(request, product_pk):
         "transaction_types": transaction_types,
         "transaction_reasons": transaction_reasons,
         "current_stock": current_stock,
+        "warehouses": warehouses_list,  # ✅ FIX: تمرير قائمة المستودعات للقالب
         "alerts_count": alerts_count,
         "recent_alerts": recent_alerts,
         "current_year": current_year,

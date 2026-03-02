@@ -55,8 +55,12 @@ def stock_manager_handler(sender, instance, created, **kwargs):
     if not created:
         return
 
-    # ✅ تحقق: تسجيل تحذير في حالة السحب من رصيد غير كافٍ (لا حذف - الحذف من post_save خطر)
-    if instance.transaction_type == "out":
+    # ✅ FIX: تجاهل التنبيهات أثناء التحويلات المخزنية (transfer)
+    # التنبيهات ستصدر فقط بعد اكتمال التحويل
+    is_transfer = instance.reason == "transfer"
+
+    # ✅ تحقق: تسجيل تحذير في حالة السحب من رصيد غير كافٍ (فقط إذا لم تكن تحويلة)
+    if instance.transaction_type == "out" and not is_transfer:
         if instance.running_balance < 0:
             warehouse_name = instance.warehouse.name if instance.warehouse else "غير معروف"
             logger.error(
@@ -67,8 +71,8 @@ def stock_manager_handler(sender, instance, created, **kwargs):
                 f"(يجب مراجعة هذه العملية)"
             )
 
-    # ✅ تحقق: تحذير عند إدخال منتج موجود في مستودع آخر
-    if instance.transaction_type == "in":
+    # ✅ تحقق: تحذير عند إدخال منتج موجود في مستودع آخر (فقط للعمليات غير التحويلية)
+    if instance.transaction_type == "in" and not is_transfer:
         other_warehouse_trans = (
             StockTransaction.objects.filter(product=instance.product)
             .exclude(warehouse=instance.warehouse)
@@ -93,7 +97,12 @@ def stock_manager_handler(sender, instance, created, **kwargs):
         """
         يتحقق من مستويات المخزون ويُنشئ التنبيهات فقط.
         يعمل في on_commit لضمان أن running_balance قد حُسب بالكامل.
+        ملاحظة: يتم تخطي التنبيهات أثناء التحويلات (out) لتجنب التنبيهات المؤقتة.
         """
+        # ✅ FIX: تخطي التنبيهات لحركات السحب من التحويلات
+        # لأن البضاعة ستصل للمستودع الآخر عند الاكتمال
+        if is_transfer and instance.transaction_type == "out":
+            return
         from decimal import Decimal
 
         from django.db.models import OuterRef, Subquery
