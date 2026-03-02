@@ -116,9 +116,8 @@ static/vendor/chartjs/
 static/vendor/fontawesome/
 static/vendor/sweetalert2/
 
-# Temporary scripts
-drop_materialized_views.py
-recreate_materialized_views.py
+# Archived one-time scripts
+scripts/archived/
 
 # Temporary files
 *.tmp
