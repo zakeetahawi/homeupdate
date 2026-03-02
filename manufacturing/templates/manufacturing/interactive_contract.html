@@ -19,53 +19,121 @@
     --info-color: #17a2b8;
 }
 
-/* ===== شريط التقدم العلوي (حصري للتفاعلي) ===== */
+/* ===== شريط التقدم العلوي (بطاقة منفصلة مصغّرة) ===== */
+
+/* تثبيت الناف بار في هذه الصفحة */
+nav.navbar {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1030 !important;
+}
+
+/* إزالة الهامش العلوي للمحتوى في هذه الصفحة */
+#main-content {
+    margin-top: 0 !important;
+    padding-top: 8px;
+}
+
 #progressBarContainer {
-    background: white;
-    padding: 10px 16px;
-    border-bottom: 2px solid var(--contract-primary);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    position: sticky;
+    top: 0; /* يتم تحديثه بواسطة JS بعد قياس الناف بار */
+    z-index: 1029;
+    background: var(--contract-bg, #f8f5f0);
+    border-bottom: 1px solid #e8ddd4;
     width: 100%;
     box-sizing: border-box;
+    padding: 6px 16px;
+    margin-top: 0;
 }
 
-.progress-bar-spacer {
-    height: 65px;
+/* ===== البطاقة الأفقية المصغّرة ===== */
+.prog-card {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+    direction: rtl;
+    height: 42px;
+    background: #fff;
+    border: 1px solid #e0cfc0;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(166,124,82,0.12);
+    overflow: hidden;
+    max-width: 900px;
+    margin: 0 auto;
 }
 
-.progress-stats {
+.prog-stat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    flex: 1;
+    border-left: 1px solid #ede0d4;
+    gap: 5px;
+    min-width: 60px;
+    height: 100%;
+}
+.prog-stat:last-child { border-left: none; }
+
+.prog-stat .ps-icon {
+    font-size: 14px;
+    line-height: 1;
+}
+.prog-stat .ps-num {
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1;
+}
+.prog-stat .ps-label {
+    font-size: 11px;
+    color: #888;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.prog-stat.stat-total  .ps-num { color: #495057; }
+.prog-stat.stat-done   .ps-num { color: var(--success-color); }
+.prog-stat.stat-stop   .ps-num { color: var(--stopped-color); }
+.prog-stat.stat-pct    .ps-num { color: var(--contract-primary); }
+
+/* شريط التقدم الأفقي */
+.prog-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 14px;
+    flex: 4;
+    gap: 3px;
+    border-left: 1px solid #ede0d4;
+    height: 100%;
+}
+.prog-bar-wrap .pb-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #666;
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 6px;
-    flex-wrap: wrap;
-    gap: 8px;
+    line-height: 1;
 }
-
-.progress-stats .stat-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.stat-item .stat-icon { font-size: 18px; }
-.stat-item .stat-num { font-size: 18px; font-weight: 800; }
-
-.global-progress-bar {
+.prog-bar-wrap .global-progress-bar {
     width: 100%;
-    height: 10px;
+    height: 8px;
     background: #e9ecef;
-    border-radius: 5px;
+    border-radius: 4px;
     overflow: hidden;
 }
-
-.global-progress-bar .fill {
+.prog-bar-wrap .global-progress-bar .fill {
     height: 100%;
-    background: var(--success-color);
-    border-radius: 5px;
+    background: linear-gradient(90deg, var(--success-color), #5cb85c);
+    border-radius: 4px;
     transition: width 0.4s ease;
+}
+
+@media (max-width: 576px) {
+    .prog-stat { padding: 0 7px; }
+    .prog-stat .ps-label { display: none; }
+    .prog-bar-wrap { padding: 0 8px; }
 }
 
 /* ===== توست الحفظ ===== */
@@ -791,12 +859,19 @@
 
 /* ===== طباعة ===== */
 @media print {
-    .progress-bar-container,
+    nav.navbar,
+    footer,
+    #main-footer,
+    #progressBarContainer,
     .progress-bar-spacer,
+    .no-print,
     .interactive-controls,
-    .save-toast,
-    .no-print {
+    .save-toast {
         display: none !important;
+    }
+    #main-content {
+        margin: 0 !important;
+        padding: 0 !important;
     }
     .curtain-row { break-inside: avoid; }
     .contract-page { max-width: 100%; padding: 0; }
@@ -804,41 +879,56 @@
 </style>
 {% endblock %}
 
-{% block content %}
-<!-- شريط التقدم العلوي (خارج أي حاوية) -->
+{% block above_main %}
+<!-- شريط التقدم - بطاقة أفقية ثابتة -->
 <div id="progressBarContainer" class="no-print">
-    <div class="progress-stats">
-        <div class="stat-item">
-            <span class="stat-icon">📋</span>
-            <span>الإجمالي: <span class="stat-num">{{ total_items }}</span></span>
+    <div class="prog-card">
+        <!-- الإجمالي -->
+        <div class="prog-stat stat-total">
+            <span class="ps-icon">📋</span>
+            <span class="ps-num">{{ total_items }}</span>
+            <span class="ps-label">إجمالي البنود</span>
         </div>
-        <div class="stat-item">
-            <span class="stat-icon" style="color: var(--success-color);">✅</span>
-            <span>مكتمل: <span class="stat-num" id="globalCompleted" style="color: var(--success-color);">{{ completed_items }}</span></span>
+        <!-- مكتمل -->
+        <div class="prog-stat stat-done">
+            <span class="ps-icon">✅</span>
+            <span class="ps-num" id="globalCompleted">{{ completed_items }}</span>
+            <span class="ps-label">مكتمل</span>
         </div>
-        <div class="stat-item">
-            <span class="stat-icon" style="color: var(--stopped-color);">🚫</span>
-            <span>متوقف: <span class="stat-num" id="globalStopped" style="color: var(--stopped-color);">{{ stopped_items }}</span></span>
+        <!-- متوقف -->
+        <div class="prog-stat stat-stop">
+            <span class="ps-icon">🚫</span>
+            <span class="ps-num" id="globalStopped">{{ stopped_items }}</span>
+            <span class="ps-label">متوقف</span>
         </div>
-        <div class="stat-item">
-            <span class="stat-icon">📊</span>
-            <span>الإنجاز: <span class="stat-num" id="globalPercentage" style="color: var(--contract-primary);">{{ completion_percentage }}</span>%</span>
+        <!-- نسبة الإنجاز + شريط -->
+        <div class="prog-bar-wrap">
+            <div class="pb-label">
+                <span>نسبة الإنجاز</span>
+                <span><span id="globalPercentage">{{ completion_percentage }}</span>%</span>
+            </div>
+            <div class="global-progress-bar">
+                <div class="fill" id="globalProgressFill" style="width: {{ completion_percentage }}%;"></div>
+            </div>
         </div>
-    </div>
-    <div class="global-progress-bar">
-        <div class="fill" id="globalProgressFill" style="width: {{ completion_percentage }}%;"></div>
+        <!-- نسبة رقمية كبيرة -->
+        <div class="prog-stat stat-pct">
+            <span class="ps-icon">📊</span>
+            <span class="ps-num"><span id="globalPercentageBig">{{ completion_percentage }}</span>%</span>
+            <span class="ps-label">الإنجاز الكلي</span>
+        </div>
     </div>
 </div>
-<div class="progress-bar-spacer no-print"></div>
+{% endblock %}
 
-<div class="container-fluid px-2">
+{% block content %}
     <!-- توست الحفظ -->
     <div class="save-toast" id="saveToast">
         <i class="fas fa-check-circle me-1"></i> <span id="saveToastText">تم الحفظ</span>
     </div>
 
     <!-- ===== بداية العقد (نفس تنسيق PDF) ===== -->
-    <div class="contract-page">
+    <div class="contract-page" id="contractPage">
 
         <!-- HEADER -->
         <div class="header-section">
@@ -1246,11 +1336,45 @@ function showToast(msg, isError) {
     setTimeout(() => toast.classList.remove('show'), 2000);
 }
 
+function printContract() {
+    // إضافة style مؤقت: إخفاء كل شيء ماعدا العقد
+    const style = document.createElement('style');
+    style.id = '__print_only_contract__';
+    style.textContent = `
+        @media print {
+            body > *:not(#__print_wrapper__) { display: none !important; }
+            #main-content > *:not(#contractPage),
+            #progressBarContainer,
+            .progress-bar-spacer,
+            .no-print,
+            .interactive-controls,
+            .save-toast,
+            nav.navbar,
+            footer,
+            #main-footer { display: none !important; }
+            #contractPage { display: block !important; }
+            .contract-page { max-width: 100% !important; padding: 0 !important; }
+        }
+    `;
+    document.head.appendChild(style);
+
+    window.print();
+
+    // إزالة الـ style بعد الطباعة
+    window.addEventListener('afterprint', function cleanup() {
+        const s = document.getElementById('__print_only_contract__');
+        if (s) s.remove();
+        window.removeEventListener('afterprint', cleanup);
+    });
+}
+
 function updateGlobalProgress() {
     const pct = totalItems > 0 ? Math.round((globalCompleted / totalItems) * 100) : 0;
     document.getElementById('globalCompleted').textContent = globalCompleted;
     document.getElementById('globalStopped').textContent = globalStopped;
     document.getElementById('globalPercentage').textContent = pct;
+    const bigEl = document.getElementById('globalPercentageBig');
+    if (bigEl) bigEl.textContent = pct;
     document.getElementById('globalProgressFill').style.width = pct + '%';
 }
 
@@ -1424,36 +1548,11 @@ function recalcGlobalStats() {
 
 // ===== تهيئة عند التحميل =====
 document.addEventListener('DOMContentLoaded', function() {
-    // تثبيت شريط التقدم - نقل إلى body واستخدام position:absolute + scrollY
+    // ضبط top لشريط التقدم بناءً على ارتفاع الناف بار
+    const navbar = document.querySelector('nav.navbar');
     const bar = document.getElementById('progressBarContainer');
-    if (bar) {
-        // نقل الشريط ليكون أول عنصر في body
-        document.body.insertBefore(bar, document.body.firstChild);
-        // ضبط body ليكون positioned ancestor
-        document.body.style.position = 'relative';
-
-        const spacer = document.querySelector('.progress-bar-spacer');
-        const barHeight = bar.offsetHeight;
-        if (spacer) spacer.style.height = barHeight + 'px';
-
-        // تطبيق الأنماط الأساسية
-        bar.style.position = 'absolute';
-        bar.style.left = '0';
-        bar.style.right = '0';
-        bar.style.zIndex = '99999';
-        bar.style.top = window.scrollY + 'px';
-
-        // تحديث الموقع مع كل scroll
-        let ticking = false;
-        window.addEventListener('scroll', function() {
-            if (!ticking) {
-                requestAnimationFrame(function() {
-                    bar.style.top = window.scrollY + 'px';
-                    ticking = false;
-                });
-                ticking = true;
-            }
-        }, { passive: true });
+    if (bar && navbar) {
+        bar.style.top = navbar.offsetHeight + 'px';
     }
 
     document.querySelectorAll('.curtain-row').forEach(card => {
