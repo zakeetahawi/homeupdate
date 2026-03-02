@@ -62,19 +62,7 @@ for i in {1..30}; do
 	sleep 1
 done
 
-# ✅ BUG-018: انتظار pgBouncer (port 6432) قبل بدء التشغيل
-# pgBouncer يحتاج ثواني بعد PostgreSQL ليصبح جاهزاً لاستقبال الاتصالات
-log "⏳ انتظار pgBouncer (port 6432)..."
-for i in {1..20}; do
-	if nc -z localhost 6432 2>/dev/null; then
-		log_success "pgBouncer جاهز على port 6432"
-		break
-	fi
-	if [ $i -eq 20 ]; then
-		log_error "pgBouncer غير متاح — المتابعة مع احتمالية اخطاء اتصال"
-	fi
-	sleep 1
-done
+# ملاحظة: pgBouncer غير مثبت حالياً - تمت إزالة فحص port 6432
 
 
 # تطبيق التحديثات

@@ -14,7 +14,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -2307,6 +2307,12 @@ def wizard_finalize(request):
             }
         )
 
+    except ValidationError as ve:
+        logger.warning(f"Validation error finalizing draft order: {ve}")
+        error_msg = "; ".join(ve.messages) if hasattr(ve, 'messages') else str(ve)
+        return JsonResponse(
+            {"success": False, "message": f"خطأ في البيانات: {error_msg}"}, status=400
+        )
     except Exception as e:
         logger.error(f"Error finalizing draft order: {e}", exc_info=True)
         return JsonResponse(
@@ -2511,41 +2517,49 @@ def wizard_add_curtain(request):
             )
 
         # الحصول على آخر sequence - مع تأمين ضد التزامن (race condition)
-        with transaction.atomic():
-            last_curtain = (
-                ContractCurtain.objects.select_for_update()
-                .filter(draft_order=draft)
-                .order_by("-sequence")
-                .first()
-            )
-            next_sequence = (last_curtain.sequence + 1) if last_curtain else 1
+        for _attempt in range(3):
+            try:
+                with transaction.atomic():
+                    last_curtain = (
+                        ContractCurtain.objects.select_for_update()
+                        .filter(draft_order=draft)
+                        .order_by("-sequence")
+                        .first()
+                    )
+                    next_sequence = (last_curtain.sequence + 1) if last_curtain else 1
 
-            # الحصول على نوع التركيب وبيانات بيت الستارة
-            installation_type = data.get("installation_type", "")
-            curtain_box_width = data.get("curtain_box_width")
-            curtain_box_depth = data.get("curtain_box_depth")
-            notes = data.get("notes", "").strip()
+                    # الحصول على نوع التركيب وبيانات بيت الستارة
+                    installation_type = data.get("installation_type", "")
+                    curtain_box_width = data.get("curtain_box_width")
+                    curtain_box_depth = data.get("curtain_box_depth")
+                    notes = data.get("notes", "").strip()
 
-            # إنشاء الستارة
-            curtain = ContractCurtain.objects.create(
-                draft_order=draft,
-                sequence=next_sequence,
-                room_name=room_name,
-                width=width,
-                height=height,
-                installation_type=installation_type,
-                curtain_box_width=(
-                    Decimal(str(round(float(curtain_box_width), 3)))
-                    if curtain_box_width
-                    else None
-                ),
-                curtain_box_depth=(
-                    Decimal(str(round(float(curtain_box_depth), 3)))
-                    if curtain_box_depth
-                    else None
-                ),
-                notes=notes,
-            )
+                    # إنشاء الستارة
+                    curtain = ContractCurtain.objects.create(
+                        draft_order=draft,
+                        sequence=next_sequence,
+                        room_name=room_name,
+                        width=width,
+                        height=height,
+                        installation_type=installation_type,
+                        curtain_box_width=(
+                            Decimal(str(round(float(curtain_box_width), 3)))
+                            if curtain_box_width
+                            else None
+                        ),
+                        curtain_box_depth=(
+                            Decimal(str(round(float(curtain_box_depth), 3)))
+                            if curtain_box_depth
+                            else None
+                        ),
+                        notes=notes,
+                    )
+                break  # نجاح - الخروج من حلقة المحاولات
+            except IntegrityError:
+                # unique_draft_order_sequence constraint violation - إعادة المحاولة بتسلسل جديد
+                if _attempt == 2:
+                    raise  # آخر محاولة - رفع الخطأ
+                continue
 
         # إضافة الأقمشة
         for idx, fabric_data in enumerate(fabrics_data):

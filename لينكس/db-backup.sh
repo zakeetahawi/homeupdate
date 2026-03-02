@@ -14,7 +14,13 @@ if [ -f "$PIDFILE" ]; then
 	fi
 fi
 echo $$ >"$PIDFILE"
-trap 'rm -f "$PIDFILE"' EXIT INT TERM
+SLEEP_PID=""
+cleanup() {
+	[ -n "$SLEEP_PID" ] && kill "$SLEEP_PID" 2>/dev/null
+	rm -f "$PIDFILE"
+	exit 0
+}
+trap cleanup EXIT INT TERM
 
 TARGET_DIR="/home/zakee/homeupdate/media/backups"
 mkdir -p "$TARGET_DIR"
@@ -53,5 +59,9 @@ create_backup
 # Run backups every hour (3600 seconds). The script will run in background from run-production.sh
 while true; do
         # sleep في الخلفية + wait حتى يكون قابلاً للمقاطعة بـ SIGTERM
-        sleep 3600 & wait $!
+        sleep 3600 &
+        SLEEP_PID=$!
+        wait $SLEEP_PID
+        SLEEP_PID=""
+        create_backup
 done

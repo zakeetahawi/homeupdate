@@ -281,7 +281,7 @@ def login_view(request):
                                         f"🎫 Device token provided: {device_token_str[:8]}..."
                                     )
                                 else:
-                                    logger.warning(f"⚠️ No device token provided")
+                                    logger.debug(f"No device token provided")
                                     # سياسة مرنة: إذا لم يكن للفرع أجهزة مسجلة، السماح بالدخول
                                     if not device_restriction_enabled:
                                         device_authorized = True
