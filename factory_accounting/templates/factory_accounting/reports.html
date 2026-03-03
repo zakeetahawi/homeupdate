@@ -149,7 +149,6 @@
                                         <th>العميل</th>
                                         <th>تاريخ الإنتاج</th>
                                         <th>الأمتار</th>
-                                        <th>مضاعف</th>
                                         <th>القصاص</th>
                                         <th>تكلفة القصاص</th>
                                         <th style="min-width: 280px;">الخياطين (التفاصيل)</th>
@@ -193,13 +192,6 @@
                                             <td class="fw-bold">{{ card.customer_name }}</td>
                                             <td>{{ card.production_date|date:"Y-m-d"|default:"-" }}</td>
                                             <td class="fw-bold">{{ card.total_billable_meters }}</td>
-                                            <td>
-                                                {% if card.total_double_meters > 0 %}
-                                                    <span class="badge bg-info text-dark">{{ card.total_double_meters }}</span>
-                                                {% else %}
-                                                    -
-                                                {% endif %}
-                                            </td>
                                             <td>{{ card.cutter_name }}</td>
                                             <td>{{ card.total_cutter_cost|floatformat:2 }}</td>
                                             <td class="text-start">
@@ -242,13 +234,13 @@
                                         </tr>
                                     {% empty %}
                                         <tr>
-                                            <td colspan="12" class="text-center py-4 text-muted">لا توجد سجلات</td>
+                                            <td colspan="11" class="text-center py-4 text-muted">لا توجد سجلات</td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
                                 <tfoot class="table-light fw-bold text-center">
                                     <tr>
-                                        <td colspan="7" class="text-end">الإجمالي:</td>
+                                        <td colspan="6" class="text-end">الإجمالي:</td>
                                         <td id="total-cutter-cost">{{ total_cutter_cost|floatformat:2 }}</td>
                                         <td></td>
                                         <td id="total-tailor-cost">{{ total_tailor_cost|floatformat:2 }}</td>

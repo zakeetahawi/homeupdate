@@ -15,12 +15,13 @@ from .models import (
     FactoryCard,
     ProductionStatusLog,
     Tailor,
+    TailoringTypePricing,
 )
 
 
 @admin.register(FactoryAccountingSettings)
 class FactoryAccountingSettingsAdmin(admin.ModelAdmin):
-    filter_horizontal = ["excluded_fabric_types", "double_meter_tailoring_types"]
+    filter_horizontal = ["excluded_fabric_types"]
 
     fieldsets = (
         (
@@ -31,17 +32,10 @@ class FactoryAccountingSettingsAdmin(admin.ModelAdmin):
             },
         ),
         (
-            _("الأمتار المضاعفة"),
-            {
-                "fields": ("double_meter_tailoring_types",),
-                "description": "حدد أنواع التفصيل التي يجب مضاعفة أمتارها في الحساب",
-            },
-        ),
-        (
             _("التسعير"),
             {
                 "fields": ("default_rate_per_meter", "default_cutter_rate"),
-                "description": "السعر الافتراضي للمتر للخياطين والقصاصين",
+                "description": "السعر الافتراضي للمتر للخياطين والقصاصين. لتسعير كل نوع تفصيل بشكل مخصص استخدم 'تسعير أنواع التفصيل'",
             },
         ),
         (_("معلومات"), {"fields": ("updated_at",), "classes": ("collapse",)}),
@@ -324,3 +318,34 @@ class CardMeasurementSplitAdmin(admin.ModelAdmin):
             return format_html('<span style="color: orange;">{} ج.م (حالي - سيتم التحديث)</span>', current_value)
     
     current_value_display.short_description = _("القيمة المالية الحالية")
+
+
+@admin.register(TailoringTypePricing)
+class TailoringTypePricingAdmin(admin.ModelAdmin):
+    list_display = [
+        "tailoring_type",
+        "rate",
+        "get_calc_method_display",
+        "is_active",
+        "updated_at",
+    ]
+    list_editable = ["rate", "is_active"]
+    list_filter = ["calc_method", "is_active"]
+    search_fields = ["tailoring_type__display_name", "tailoring_type__value"]
+
+    fieldsets = (
+        (_("نوع التفصيل"), {"fields": ("tailoring_type",)}),
+        (
+            _("التسعير"),
+            {
+                "fields": ("rate", "calc_method"),
+                "description": "بالمتر: التكلفة = الأمتار × السعر | بالعدد: التكلفة = عدد القطع (pieces) × السعر",
+            },
+        ),
+        (_("إعدادات"), {"fields": ("is_active", "notes")}),
+    )
+
+    def get_calc_method_display(self, obj):
+        return obj.get_calc_method_display()
+
+    get_calc_method_display.short_description = _("طريقة الحساب")

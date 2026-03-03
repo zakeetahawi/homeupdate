@@ -1031,8 +1031,7 @@
             if (splits) {
                 splits.forEach(split => totalAssigned += split.share_amount);
             }
-            // Fix: Use double meters if available
-            const totalMetersHelper = factory_card.total_double_meters > 0 ? factory_card.total_double_meters : factory_card.total_billable_meters;
+            const totalMetersHelper = factory_card.total_billable_meters;
             const remainingMeters = totalMetersHelper - totalAssigned;
             const showAddButton = remainingMeters > 0.01;
 
@@ -1042,7 +1041,6 @@
                         <h6 class="mb-2">
                             <i class="fas fa-ruler me-2"></i>إجمالي الأمتار المستحقة
                             <span class="badge bg-primary fs-5 ms-2">${factory_card.total_billable_meters} متر</span>
-                            ${factory_card.total_double_meters > 0 ? `<span class="badge bg-info fs-5 ms-2" title="الضعف">${factory_card.total_double_meters} متر (مضاعف)</span>` : ''}
                             ${assignmentBadges}
                         </h6>
                         <small class="text-muted">يتم حسابها تلقائياً من بيانات العقد</small>
@@ -1142,9 +1140,8 @@
             const index = container.children.length;
             
             // Calculate remaining meters
-            // Use double meters if available, otherwise standard meters
             const factory_card = window.factoryCardData.factory_card;
-            const totalMeters = factory_card.total_double_meters > 0 ? factory_card.total_double_meters : factory_card.total_billable_meters;
+            const totalMeters = factory_card.total_billable_meters;
             
             let assignedMeters = 0;
             document.querySelectorAll('.meters-input').forEach(input => {
@@ -1201,7 +1198,7 @@
         
             // Get total billable meters from the badge
             const factory_card = window.factoryCardData.factory_card;
-            const totalMeters = factory_card.total_double_meters > 0 ? factory_card.total_double_meters : factory_card.total_billable_meters;
+            const totalMeters = factory_card.total_billable_meters;
             
             // Validate totals
             if (Math.abs(totalAssigned - totalMeters) > 0.01) {

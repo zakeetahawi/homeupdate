@@ -602,6 +602,15 @@ class StockTransaction(models.Model):
         related_name="stock_transactions",
         verbose_name=_("تم بواسطة"),
     )
+    original_warehouse = models.ForeignKey(
+        "Warehouse",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="migrated_transactions",
+        verbose_name=_("المستودع الأصلي"),
+        help_text=_("المستودع الذي تمت فيه المعاملة أصلاً قبل النقل الكامل"),
+    )
 
     class Meta:
         verbose_name = _("حركة مخزون")
@@ -661,11 +670,39 @@ class StockTransaction(models.Model):
             # تحويل الكمية إلى Decimal بشكل آمن
             quantity_decimal = Decimal(str(self.quantity))
 
+            # توحيد نوع الحركة إلى أحرف صغيرة
+            if self.transaction_type != self.transaction_type.lower():
+                self.transaction_type = self.transaction_type.lower()
+
             # Update running balance for this transaction
             if self.transaction_type == "in":
                 self.running_balance = current_balance + quantity_decimal
             else:  # out, transfer, or adjustment
                 self.running_balance = current_balance - quantity_decimal
+
+                # ⚠️ حماية: تحذير عند خصم من مستودع يؤدي لرصيد سالب
+                # مع وجود المنتج في مستودع آخر
+                if self.running_balance < 0 and self.reason != "transfer":
+                    import logging
+                    _logger = logging.getLogger(__name__)
+                    # البحث عن المستودع الصحيح
+                    better_wh = (
+                        StockTransaction.objects.filter(
+                            product=self.product,
+                            warehouse__is_active=True,
+                        )
+                        .exclude(warehouse=self.warehouse)
+                        .order_by("-running_balance", "-transaction_date")
+                        .first()
+                    )
+                    if better_wh and better_wh.running_balance > 0:
+                        _logger.error(
+                            f"❌ خصم يؤدي لرصيد سالب! المنتج: {self.product.name} "
+                            f"المستودع: {self.warehouse.name if self.warehouse else '?'} "
+                            f"الرصيد سيكون: {self.running_balance}. "
+                            f"المنتج متوفر في: {better_wh.warehouse.name} "
+                            f"(رصيد: {better_wh.running_balance})"
+                        )
 
             # Save this transaction
             super().save(*args, **kwargs)
@@ -686,7 +723,7 @@ class StockTransaction(models.Model):
             current_balance = Decimal(str(self.running_balance))
             for trans in next_transactions:
                 trans_quantity = Decimal(str(trans.quantity))
-                if trans.transaction_type == "in":
+                if trans.transaction_type.lower() == "in":
                     current_balance += trans_quantity
                 else:  # out, transfer, or adjustment
                     current_balance -= trans_quantity
@@ -1130,7 +1167,7 @@ class StockTransfer(models.Model):
             )
 
     def complete(self, user):
-        """إكمال التحويل"""
+        """إكمال التحويل — مع كشف النقل الكامل تلقائياً"""
         if not self.can_complete:
             raise ValueError(_("لا يمكن إكمال هذا التحويل"))
 
@@ -1140,36 +1177,68 @@ class StockTransfer(models.Model):
         self.actual_arrival_date = timezone.now()
         self.save()
 
-        # إنشاء حركات مخزون للدخول إلى المستودع المستهدف
+        from decimal import Decimal
+
+        fully_migrated_products = []
+
         for item in self.items.all():
             qty = item.received_quantity or item.quantity
 
-            # الحصول على آخر رصيد في المستودع المستهدف
-            last_transaction = (
+            # كشف النقل الكامل: هل رصيد المنتج في المصدر = 0 بعد الخصم؟
+            source_balance_txn = (
                 StockTransaction.objects.filter(
-                    product=item.product, warehouse=self.to_warehouse
+                    product=item.product, warehouse=self.from_warehouse
                 )
                 .order_by("-transaction_date", "-id")
                 .first()
             )
+            source_balance = Decimal(str(
+                source_balance_txn.running_balance if source_balance_txn else 0
+            ))
 
-            previous_balance = (
-                last_transaction.running_balance if last_transaction else 0
-            )
-            new_balance = previous_balance + qty
+            if source_balance == Decimal("0"):
+                # ===== نقل كامل: نقل جميع المعاملات للمستودع الجديد =====
+                self._migrate_product_history(
+                    item.product, self.from_warehouse, self.to_warehouse, user
+                )
+                fully_migrated_products.append(item.product.name)
+            else:
+                # ===== نقل جزئي: السلوك العادي =====
+                last_transaction = (
+                    StockTransaction.objects.filter(
+                        product=item.product, warehouse=self.to_warehouse
+                    )
+                    .order_by("-transaction_date", "-id")
+                    .first()
+                )
 
-            StockTransaction.objects.create(
-                product=item.product,
-                warehouse=self.to_warehouse,
-                transaction_type="in",
-                reason="transfer",
-                quantity=qty,
-                reference=self.transfer_number,
-                transaction_date=timezone.now(),
-                notes=f"تحويل من {self.from_warehouse.name}",
-                running_balance=new_balance,
-                created_by=user,
-            )
+                previous_balance = (
+                    last_transaction.running_balance if last_transaction else 0
+                )
+                new_balance = previous_balance + qty
+
+                StockTransaction.objects.create(
+                    product=item.product,
+                    warehouse=self.to_warehouse,
+                    transaction_type="in",
+                    reason="transfer",
+                    quantity=qty,
+                    reference=self.transfer_number,
+                    transaction_date=timezone.now(),
+                    notes=f"تحويل من {self.from_warehouse.name}",
+                    running_balance=new_balance,
+                    created_by=user,
+                )
+
+        # تسجيل النقل الكامل في ملاحظات التحويل
+        if fully_migrated_products:
+            import logging
+            logger = logging.getLogger(__name__)
+            names = ", ".join(fully_migrated_products)
+            msg = f"✅ نقل كامل: تم نقل تاريخ المعاملات بالكامل من {self.from_warehouse.name} إلى {self.to_warehouse.name} للمنتجات: {names}"
+            logger.info(msg)
+            self.notes = f"{self.notes}\n{msg}" if self.notes else msg
+            self.save(update_fields=["notes"])
 
         # تحديث أوامر التقطيع للمنتجات المنقولة
         try:
@@ -1209,6 +1278,100 @@ class StockTransfer(models.Model):
             logger.warning(
                 f"⚠️ تعذر تحديث أوامر التقطيع للتحويل {self.transfer_number}: {e}"
             )
+
+    def _migrate_product_history(self, product, from_warehouse, to_warehouse, user):
+        """
+        نقل كامل لتاريخ المعاملات من المستودع المصدر إلى المستهدف.
+        يُستدعى تلقائياً عند إكمال تحويل أفرغ المستودع المصدر بالكامل.
+
+        الخطوات:
+        1. كل معاملة في المصدر → warehouse = الجديد، original_warehouse = القديم
+        2. حذف معاملات التحويل نفسها (out في المصدر + in في المستهدف)
+        3. إعادة حساب running_balance للمستودع الجديد (دمج التاريخين)
+        """
+        from decimal import Decimal
+        from django.db import transaction as db_transaction
+
+        with db_transaction.atomic():
+            from_name = from_warehouse.name
+
+            # 1. حذف معاملات التحويل (الخروج من المصدر + الدخول للمستهدف)
+            # هذه المعاملات لم تعد ضرورية لأن التاريخ كله سينتقل
+            StockTransaction.objects.filter(
+                product=product,
+                reason="transfer",
+                reference=self.transfer_number,
+            ).delete()
+
+            # 2. نقل جميع المعاملات من المستودع القديم إلى الجديد
+            old_transactions = StockTransaction.objects.filter(
+                product=product,
+                warehouse=from_warehouse,
+            )
+
+            migrated_count = old_transactions.update(
+                warehouse=to_warehouse,
+                original_warehouse=from_warehouse,
+            )
+
+            # 3. تحديث الملاحظات للمعاملات المُنقولة (إضافة إشارة المستودع الأصلي)
+            for txn in StockTransaction.objects.filter(
+                product=product,
+                warehouse=to_warehouse,
+                original_warehouse=from_warehouse,
+            ):
+                marker = f"⇐ تمت على ذمة مستودع: {from_name}"
+                if marker not in (txn.notes or ""):
+                    txn.notes = f"{txn.notes}\n{marker}" if txn.notes else marker
+                    super(StockTransaction, txn).save(update_fields=["notes"])
+
+            # 4. إعادة حساب running_balance للمستودع المستهدف بالكامل
+            self._recalculate_product_balance(product, to_warehouse)
+
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(
+                f"✅ نقل كامل: {migrated_count} معاملة لـ {product.name} "
+                f"من {from_name} إلى {to_warehouse.name} "
+                f"(تحويل {self.transfer_number})"
+            )
+
+    @staticmethod
+    def _recalculate_product_balance(product, warehouse):
+        """
+        إعادة حساب running_balance لجميع معاملات منتج في مستودع معين.
+        يُستخدم بعد دمج المعاملات من مستودعين.
+        """
+        from decimal import Decimal
+
+        all_txns = (
+            StockTransaction.objects.filter(
+                product=product,
+                warehouse=warehouse,
+            )
+            .order_by("transaction_date", "id")
+            .select_for_update()
+        )
+
+        balance = Decimal("0")
+        for txn in all_txns:
+            qty = Decimal(str(txn.quantity))
+            if txn.transaction_type.lower() == "in":
+                balance += qty
+            else:  # out, transfer, adjustment
+                balance -= qty
+
+            changed = False
+            if txn.transaction_type != txn.transaction_type.lower():
+                txn.transaction_type = txn.transaction_type.lower()
+                changed = True
+            if txn.running_balance != balance:
+                txn.running_balance = balance
+                changed = True
+            if changed:
+                super(StockTransaction, txn).save(
+                    update_fields=["running_balance", "transaction_type"]
+                )
 
     def cancel(self, user, reason=""):
         """إلغاء التحويل - مع إرجاع المخزون إذا كان قد تم خصمه"""

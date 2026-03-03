@@ -112,16 +112,8 @@ def save_factory_card_splits(request, factory_card_id):
             )
 
         with transaction.atomic():
-            # Get target meters (double meters if available)
-            total_double = factory_card.total_double_meters or 0
-
-            # Use Decimal for precision
-            total_double = Decimal(str(total_double))
-            billable = Decimal(str(factory_card.total_billable_meters or 0))
-
-            target_meters = total_double if total_double > 0 else billable
-
-            print(f"DEBUG: Target Meters: {target_meters}")
+            # Use actual billable meters as the target
+            target_meters = Decimal(str(factory_card.total_billable_meters or 0))
 
             total_assigned = sum(
                 Decimal(str(s.get("share_amount", 0))) for s in splits_data
@@ -265,7 +257,8 @@ def get_factory_card_data(request, manufacturing_order_id):
             "id": factory_card.id,
             "status": factory_card.status,
             "total_billable_meters": float(factory_card.total_billable_meters),
-            "total_double_meters": float(factory_card.total_double_meters),
+            "total_tailoring_cost": float(factory_card.total_tailoring_cost),
+            "tailoring_cost_breakdown": factory_card.tailoring_cost_breakdown,
             "production_date": (
                 factory_card.production_date.isoformat()
                 if factory_card.production_date

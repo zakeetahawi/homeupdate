@@ -28,6 +28,11 @@ class Command(BaseCommand):
             help='إعادة حساب تكاليف الخياطين فقط',
         )
         parser.add_argument(
+            '--tailoring-cost',
+            action='store_true',
+            help='إعادة حساب تكلفة التفصيل لكل البطاقات (نظام التسعير الجديد)',
+        )
+        parser.add_argument(
             '--dry-run',
             action='store_true',
             help='عرض ما سيتم تحديثه دون تطبيق التغييرات',
@@ -39,6 +44,12 @@ class Command(BaseCommand):
         dry_run = options.get('dry_run', False)
         cutters_only = options.get('cutters', False)
         tailors_only = options.get('tailors', False)
+        tailoring_cost = options.get('tailoring_cost', False)
+        
+        # If --tailoring-cost specified, only do that
+        if tailoring_cost:
+            cutters_only = False
+            tailors_only = True  # skip cutter section
         
         if dry_run:
             self.stdout.write(self.style.WARNING('🔍 وضع المعاينة - لن يتم تطبيق أي تغييرات'))
@@ -111,6 +122,41 @@ class Command(BaseCommand):
                     self.style.SUCCESS(f'✅ تم تحديث {tailor_count} تقسيم خياط')
                 )
             total_updated += tailor_count
+        
+        # Recalculate tailoring cost using new TailoringTypePricing system
+        if tailoring_cost or (not cutters_only and not tailors_only):
+            self.stdout.write('\n🧮 إعادة حساب تكلفة التفصيل (نظام التسعير الجديد)...')
+            all_cards = FactoryCard.objects.exclude(status='paid')
+            
+            cost_count = 0
+            for card in all_cards:
+                old_cost = card.total_tailoring_cost
+                if dry_run:
+                    # Preview only - don't save
+                    from factory_accounting.models import TailoringTypePricing
+                    pricing_map = {}
+                    for tp in TailoringTypePricing.objects.filter(is_active=True).select_related('tailoring_type'):
+                        pricing_map[tp.tailoring_type.value] = tp
+                    # Just estimate without saving
+                    order_num = getattr(card.manufacturing_order, 'order_number', card.id)
+                    self.stdout.write(f'  • البطاقة {order_num}: سيتم إعادة الحساب')
+                    cost_count += 1
+                else:
+                    card.calculate_total_meters()
+                    card.refresh_from_db()
+                    new_cost = card.total_tailoring_cost
+                    if old_cost != new_cost:
+                        cost_count += 1
+            
+            if dry_run:
+                self.stdout.write(
+                    self.style.SUCCESS(f'✓ سيتم تحديث {cost_count} بطاقة (تكلفة التفصيل)')
+                )
+            else:
+                self.stdout.write(
+                    self.style.SUCCESS(f'✅ تم تحديث {cost_count} بطاقة (تكلفة التفصيل)')
+                )
+            total_updated += cost_count
         
         # Final summary
         self.stdout.write('\n' + '='*60)

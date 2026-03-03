@@ -325,7 +325,6 @@ def export_production_report(request):
         "العميل",
         "تاريخ الإنتاج",
         "إجمالي الأمتار",
-        "مضاعف",
         "القصاص",
         "تكلفة القصاص",
         "الخياطين",
@@ -341,14 +340,13 @@ def export_production_report(request):
         2: 25,  # Customer
         3: 15,  # Date
         4: 15,  # Meters
-        5: 12,  # Double
-        6: 20,  # Cutter
-        7: 15,  # Cutter Cost
-        8: 30,  # Tailors (can be long)
-        9: 15,  # Tailor Cost
-        10: 15,  # Status
-        11: 15,  # Pay Status
-        12: 18,  # Payment Date
+        5: 20,  # Cutter
+        6: 15,  # Cutter Cost
+        7: 30,  # Tailors (can be long)
+        8: 15,  # Tailor Cost
+        9: 15,  # Status
+        10: 15,  # Pay Status
+        11: 18,  # Payment Date
     }
 
     for col, header in enumerate(headers, 1):
@@ -363,7 +361,7 @@ def export_production_report(request):
         ws.column_dimensions[col_letter].width = col_widths.get(col, 15)
 
     # Enable AutoFilter
-    ws.auto_filter.ref = f"A{start_row}:L{start_row}"
+    ws.auto_filter.ref = f"A{start_row}:K{start_row}"
 
     # 2. Main Table Data
     sum_meters = Decimal("0.00")
@@ -406,10 +404,9 @@ def export_production_report(request):
             card.customer_name,
             card.production_date.strftime("%Y-%m-%d") if card.production_date else "-",
             float(card.total_billable_meters),
-            float(card.total_double_meters) if card.total_double_meters > 0 else "-",
             cutter_name,
-            float(card.get_current_cutter_cost()),  # Use dynamic calculation
-            tailors_details,  # Use detailed split information
+            float(card.get_current_cutter_cost()),
+            tailors_details,
             float(card_tailor_cost),
             card.manufacturing_order.get_status_display(),
             "مدفوع" if card.status == "paid" else "غير مدفوع",
@@ -441,7 +438,7 @@ def export_production_report(request):
     total_label_cell.border = thin_border
 
     # Fill empty cells with light grey and apply border/alignment
-    for col in range(4, 12):
+    for col in range(4, 11):
         cell = ws.cell(row=current_row, column=col)
         cell.fill = total_val_fill
         cell.border = thin_border
@@ -449,15 +446,15 @@ def export_production_report(request):
         cell.font = Font(bold=True, size=11)
 
     ws.cell(row=current_row, column=4).value = float(sum_meters)
-    ws.cell(row=current_row, column=7).value = float(sum_cutter_cost)
-    ws.cell(row=current_row, column=9).value = float(sum_tailor_cost)
+    ws.cell(row=current_row, column=6).value = float(sum_cutter_cost)
+    ws.cell(row=current_row, column=8).value = float(sum_tailor_cost)
 
     # 4. SIDE CARDS (Vertical Layout)
-    # Gap Column: L (12)
-    ws.column_dimensions["L"].width = 3
+    # Gap Column: K (11)
+    ws.column_dimensions["K"].width = 3
 
-    # Cards Start Column: M(13)
-    side_col = 13
+    # Cards Start Column: L(12)
+    side_col = 12
     card_width_cols = 4  # M, N, O, P
 
     # Set width for card columns

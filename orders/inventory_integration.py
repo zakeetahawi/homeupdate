@@ -44,16 +44,22 @@ class OrderInventoryService:
                     product = item.product
                     quantity = item.quantity
 
+                    # ✅ تحديد المستودع الذكي: البحث عن المستودع الذي يحتوي
+                    # على رصيد فعلي للمنتج بدلاً من استخدام الافتراضي دائماً
+                    warehouse = OrderInventoryService._get_best_warehouse(
+                        product, default_warehouse
+                    )
+
                     # التحقق من المخزون الحالي
                     current_stock = OrderInventoryService._get_current_stock(
-                        product, default_warehouse
+                        product, warehouse
                     )
 
                     # إنشاء حركة صادر
                     try:
                         stock_transaction = StockTransaction.objects.create(
                             product=product,
-                            warehouse=default_warehouse,
+                            warehouse=warehouse,
                             transaction_type="out",
                             reason="sale",
                             quantity=quantity,
@@ -195,6 +201,49 @@ class OrderInventoryService:
                 availability["total_shortage"] += shortage
 
         return availability
+
+    @staticmethod
+    def _get_best_warehouse(product, default_warehouse):
+        """
+        ✅ تحديد المستودع الذكي: البحث عن المستودع الذي يحتوي على رصيد فعلي للمنتج.
+        الأولوية:
+        1. المستودع الافتراضي — إذا كان فيه رصيد
+        2. المستودع ذو أعلى رصيد للمنتج
+        3. المستودع الافتراضي كاحتياطي
+        """
+        from inventory.models import StockTransaction, Warehouse
+
+        # 1. فحص المستودع الافتراضي أولاً
+        default_last = (
+            StockTransaction.objects.filter(
+                product=product, warehouse=default_warehouse
+            )
+            .order_by("-transaction_date", "-id")
+            .first()
+        )
+        if default_last and default_last.running_balance > 0:
+            return default_warehouse
+
+        # 2. البحث عن المستودع ذو أعلى رصيد
+        best = (
+            StockTransaction.objects.filter(
+                product=product,
+                warehouse__is_active=True,
+            )
+            .select_related("warehouse")
+            .order_by("-running_balance", "-transaction_date")
+            .first()
+        )
+        if best and best.running_balance > 0:
+            logger.info(
+                f"📦 طلبات: اختيار مستودع {best.warehouse.name} "
+                f"للمنتج {product.name} (رصيد: {best.running_balance}) "
+                f"بدلاً من {default_warehouse.name}"
+            )
+            return best.warehouse
+
+        # 3. احتياطي
+        return default_warehouse
 
     @staticmethod
     def _get_current_stock(product, warehouse):

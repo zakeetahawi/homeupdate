@@ -29,18 +29,6 @@ class FactoryAccountingSettings(models.Model):
         ),
     )
 
-    # Double meter tailoring types - which tailoring types trigger double meter calculation
-    double_meter_tailoring_types = models.ManyToManyField(
-        "orders.WizardFieldOption",
-        verbose_name=_("أنواع التفصيل بأمتار مضاعفة"),
-        blank=True,
-        limit_choices_to={"field_type": "tailoring_type", "is_active": True},
-        related_name="double_meter_settings",
-        help_text=_(
-            "حدد أنواع التفصيل التي يجب مضاعفة أمتارها في الحساب (مثل: كابتونيه، بليسيه)"
-        ),
-    )
-
     # Default pricing
     default_rate_per_meter = models.DecimalField(
         _("السعر الافتراضي للمتر (خياط)"),
@@ -357,12 +345,19 @@ class FactoryCard(models.Model):
         help_text=_("إجمالي الأمتار الفعلية × سعر القصاص"),
     )
 
-    total_double_meters = models.DecimalField(
-        _("إجمالي الأمتار (مضاعف)"),
-        max_digits=12,
+    total_tailoring_cost = models.DecimalField(
+        _("إجمالي تكلفة التفصيل المقدّرة"),
+        max_digits=15,
         decimal_places=2,
         default=Decimal("0.00"),
-        help_text=_("مجموع الأمتار بعد تطبيق المضاعفة لأنواع التفصيل المحددة"),
+        help_text=_("مجموع تكاليف كل الأقمشة حسب تسعير نوع التفصيل"),
+    )
+
+    tailoring_cost_breakdown = models.JSONField(
+        _("تفاصيل تكلفة التفصيل"),
+        default=dict,
+        blank=True,
+        help_text=_("تفصيل التكلفة لكل نوع تفصيل"),
     )
 
     production_date = models.DateTimeField(
@@ -463,94 +458,105 @@ class FactoryCard(models.Model):
 
     def calculate_total_meters(self):
         """
-        Calculate total billable meters from contract materials
-        حساب إجمالي الأمتار من مواد العقد
+        Calculate total billable meters and tailoring costs from contract materials.
+        حساب إجمالي الأمتار وتكاليف التفصيل من مواد العقد.
+        كل نوع تفصيل له سعر مخصص (بالمتر أو بالعدد).
         """
         try:
             from orders.contract_models import ContractCurtain
 
-            # Get all curtains for this order
             curtains = ContractCurtain.objects.filter(
                 order=self.manufacturing_order.order
             ).prefetch_related("fabrics")
 
-            # Get exclusion settings from admin
-            settings = FactoryAccountingSettings.get_settings()
+            acct_settings = FactoryAccountingSettings.get_settings()
+
+            # 1. Excluded fabric types
             excluded_fabric_type_values = set(
-                settings.excluded_fabric_types.values_list("value", flat=True)
+                acct_settings.excluded_fabric_types.values_list("value", flat=True)
             )
-
-            # Get double meter settings - Comprehensive List
-            double_meter_tailoring_values = list(
-                settings.double_meter_tailoring_types.values_list("value", flat=True)
-            ) + list(
-                settings.double_meter_tailoring_types.values_list(
-                    "display_name", flat=True
-                )
-            )
-
-            # Always exclude belts and accessories (hardcoded)
-            # Note: 'additional' removed - can be controlled via admin settings
             ALWAYS_EXCLUDED = {"belt", "accessory"}
             excluded_fabric_type_values.update(ALWAYS_EXCLUDED)
 
-            total_actual = Decimal("0.00")
-            total_double_calc = Decimal("0.00")
+            # 2. Load all tailoring type pricing in one query
+            pricing_map = {}
+            for p in TailoringTypePricing.objects.filter(
+                is_active=True
+            ).select_related("tailoring_type"):
+                pricing_map[p.tailoring_type.value] = p
+                pricing_map[p.tailoring_type.display_name] = p
 
-            # Sum up meters from all fabrics
+            default_rate = acct_settings.default_rate_per_meter
+
+            total_actual = Decimal("0.00")
+            total_tailoring_cost = Decimal("0.00")
+            breakdown = {}
+
+            # 3. Iterate all curtains → all fabrics
             for curtain in curtains:
                 for fabric in curtain.fabrics.all():
-                    # Skip if fabric type is in excluded list
                     if fabric.fabric_type in excluded_fabric_type_values:
                         continue
 
-                    meters = Decimal("0.00")
-                    if fabric.meters:
-                        meters = Decimal(str(fabric.meters))
-                        total_actual += meters
+                    meters = (
+                        Decimal(str(fabric.meters))
+                        if fabric.meters
+                        else Decimal("0.00")
+                    )
+                    pieces = int(fabric.pieces) if fabric.pieces else 1
+                    total_actual += meters
 
-                    # Check if this specific fabric needs double metering based on ITS tailoring type
-                    is_double = False
+                    # Look up tailoring type pricing
+                    t_type = fabric.tailoring_type or ""
+                    t_display = fabric.get_tailoring_type_display() or t_type
 
-                    t_type_val = fabric.tailoring_type
-                    t_type_display = fabric.get_tailoring_type_display()
+                    pricing = pricing_map.get(t_type) or pricing_map.get(t_display)
 
-                    if (t_type_val and t_type_val in double_meter_tailoring_values) or (
-                        t_type_display
-                        and t_type_display in double_meter_tailoring_values
-                    ):
-                        is_double = True
-
-                    if is_double:
-                        total_double_calc += meters * 2
+                    if pricing:
+                        rate = pricing.rate
+                        method = pricing.calc_method
+                        if method == "per_piece":
+                            cost = Decimal(str(pieces)) * rate
+                        else:  # per_meter
+                            cost = meters * rate
                     else:
-                        total_double_calc += meters
+                        # Fallback: default rate × meters
+                        rate = default_rate
+                        method = "per_meter"
+                        cost = meters * rate
 
+                    total_tailoring_cost += cost
+
+                    # Aggregate into breakdown
+                    key = t_type or "unspecified"
+                    if key not in breakdown:
+                        breakdown[key] = {
+                            "display": t_display or "بدون تفصيل",
+                            "method": method,
+                            "rate": float(rate),
+                            "meters": 0.0,
+                            "pieces": 0,
+                            "cost": 0.0,
+                        }
+                    breakdown[key]["meters"] += float(meters)
+                    breakdown[key]["pieces"] += pieces
+                    breakdown[key]["cost"] += float(cost)
+
+            # 4. Save results
             self.total_billable_meters = total_actual
-            self.total_double_meters = total_double_calc
+            self.total_tailoring_cost = total_tailoring_cost
+            self.tailoring_cost_breakdown = breakdown
 
-            # Calculate cutter cost
-            # 1. Try to get rate from production line
-            cutter_rate = None
-            if (
-                hasattr(self.manufacturing_order, "production_line")
-                and self.manufacturing_order.production_line
-            ):
-                # Assuming production_line has a cutter_rate field, otherwise use default
-                # Since we don't know if ProductionLine has specific rates, we might need to check
-                pass
-
-            # 2. If no specific rate, use default from settings supply
-            if not cutter_rate:
-                cutter_rate = settings.default_cutter_rate
-
+            # 5. Cutter cost (unchanged — actual meters × cutter rate)
+            cutter_rate = acct_settings.default_cutter_rate
             self.cutter_price = cutter_rate
             self.total_cutter_cost = total_actual * cutter_rate
 
             self.save(
                 update_fields=[
                     "total_billable_meters",
-                    "total_double_meters",
+                    "total_tailoring_cost",
+                    "tailoring_cost_breakdown",
                     "cutter_price",
                     "total_cutter_cost",
                     "updated_at",
@@ -559,12 +565,12 @@ class FactoryCard(models.Model):
             return total_actual
 
         except Exception as e:
-            print(f"Error calculating total meters: {e}")
-            # Log error for debugging
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.error(f"Error calculating total meters for {self.order_number}: {e}")
+            logger.error(
+                f"Error calculating total meters for {self.order_number}: {e}"
+            )
             return self.total_billable_meters
 
     def get_production_user_info(self):
@@ -722,3 +728,55 @@ class CardMeasurementSplit(models.Model):
         # Calculate: meters × rate
         self.monetary_value = self.share_amount * self.unit_rate
         super().save(*args, **kwargs)
+
+
+class TailoringTypePricing(models.Model):
+    """
+    تسعير مخصص لكل نوع تفصيل
+    Custom pricing per tailoring type
+    بالمتر: التكلفة = الأمتار × السعر
+    بالعدد: التكلفة = عدد القطع (pieces) × السعر
+    """
+
+    CALC_METHOD_CHOICES = [
+        ("per_meter", "بالمتر"),
+        ("per_piece", "بالعدد (قطعة)"),
+    ]
+
+    tailoring_type = models.OneToOneField(
+        "orders.WizardFieldOption",
+        on_delete=models.CASCADE,
+        limit_choices_to={"field_type": "tailoring_type", "is_active": True},
+        related_name="factory_pricing",
+        verbose_name=_("نوع التفصيل"),
+    )
+
+    rate = models.DecimalField(
+        _("السعر"),
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+        help_text=_("السعر لكل متر أو لكل قطعة حسب طريقة الحساب"),
+    )
+
+    calc_method = models.CharField(
+        _("طريقة الحساب"),
+        max_length=20,
+        choices=CALC_METHOD_CHOICES,
+        default="per_meter",
+    )
+
+    is_active = models.BooleanField(_("نشط"), default=True)
+    notes = models.TextField(_("ملاحظات"), blank=True)
+
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("تسعير نوع التفصيل")
+        verbose_name_plural = _("تسعير أنواع التفصيل")
+        ordering = ["tailoring_type__sequence", "tailoring_type__display_name"]
+
+    def __str__(self):
+        method = "متر" if self.calc_method == "per_meter" else "قطعة"
+        return f"{self.tailoring_type.display_name}: {self.rate} /{method}"
