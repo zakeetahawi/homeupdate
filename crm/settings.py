@@ -63,6 +63,8 @@ ALLOWED_HOSTS = [
     "elkhawaga.uk",
     "www.elkhawaga.uk",
     ".elkhawaga.uk",
+    "localhost",
+    "127.0.0.1",
 ]
 
 if DEBUG:
