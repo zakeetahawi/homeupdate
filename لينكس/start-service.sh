@@ -3,7 +3,8 @@
 # يعمل تلقائياً عند إقلاع الجهاز
 # آخر تحديث: 2026-03-03 — إصلاح ترتيب التنظيف ومنع تعارض المنافذ
 
-set -euo pipefail
+# لا نستخدم set -e لأنه يسبب خروج مفاجئ + trap cleanup = قتل daphne
+set -uo pipefail
 
 PROJECT_DIR="/home/zakee/homeupdate"
 LOGS_DIR="$PROJECT_DIR/logs"
@@ -40,7 +41,7 @@ cleanup() {
 	rm -f "$PIDS_DIR"/*.pid 2>/dev/null
 	log "🛑 تم إيقاف جميع الخدمات وتحرير المنفذ 8000"
 }
-trap cleanup SIGTERM SIGINT EXIT
+trap cleanup SIGTERM SIGINT  # بدون EXIT — exec daphne يحل محل bash فلا حاجة لـ EXIT
 
 # بدء التسجيل
 echo "========================================" >>"$STARTUP_LOG"
