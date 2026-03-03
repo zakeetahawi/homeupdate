@@ -212,15 +212,13 @@
                                                 {% endfor %}
                                             </td>
                                             <td class="fw-bold">
-                                                {% if filtered_tailor_id %}
-                                                    {# Show only filtered tailor's cost #}
-                                                    {% for split in card.splits.all %}
-                                                        {% if split.tailor_id == filtered_tailor_id %}{{ split.get_current_monetary_value|floatformat:2 }}{% endif %}
-                                                    {% endfor %}
-                                                {% else %}
-                                                    {# Show total cost for all tailors #}
-                                                    {{ card.total_cost|floatformat:2 }}
-                                                {% endif %}
+                                                <span class="tailoring-cost-tip" data-bs-toggle="tooltip" data-bs-html="true"
+                                                      title="{% for key, entry in card.tailoring_cost_breakdown.items %}{% if entry.method == 'per_piece' %}<strong>{{ entry.display }}</strong>: {{ entry.pieces }} قطعة × {{ entry.rate }} = {{ entry.cost }}<br>{% else %}<strong>{{ entry.display }}</strong>: {{ entry.meters }}م × {{ entry.rate }} = {{ entry.cost }}<br>{% endif %}{% endfor %}">
+                                                    {{ card.total_tailoring_cost|floatformat:2 }}
+                                                    {% if card.tailoring_cost_breakdown %}
+                                                        <i class="fas fa-info-circle text-muted ms-1" style="font-size: 0.75rem;"></i>
+                                                    {% endif %}
+                                                </span>
                                             </td>
                                             <td>
                                                 <span class="badge bg-secondary mb-1">{{ card.manufacturing_order.get_status_display }}</span>
@@ -327,6 +325,12 @@
                 }
             });
         }
+
+        // Initialize Bootstrap tooltips for tailoring cost breakdown
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function(el) {
+            new bootstrap.Tooltip(el, { placement: 'top', trigger: 'hover focus' });
+        });
 
         // Sync Logic
         document.querySelectorAll('.btn-sync-card').forEach(btn => {

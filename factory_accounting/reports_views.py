@@ -117,17 +117,13 @@ def production_reports(request):
         splits = splits.filter(is_paid=False)
         cards = cards.exclude(status="paid")
 
-    # Calculate tailor cost dynamically
+    # Calculate tailoring cost from pricing system (card-level total_tailoring_cost)
     total_amount = Decimal("0.00")
-    for split in splits:
-        total_amount += split.get_current_monetary_value()
-    # total_amount here represents TOTAL TAILOR COST because splits are tailor payments
+    for card in cards:
+        total_amount += card.total_tailoring_cost or Decimal("0.00")
 
     paid_amount = Decimal("0.00")
-    for split in splits.filter(is_paid=True):
-        paid_amount += split.get_current_monetary_value()
-
-    unpaid_amount = total_amount - paid_amount
+    unpaid_amount = Decimal("0.00")
 
     # Get filter lists
     tailors = Tailor.objects.filter(is_active=True).order_by("name")
@@ -246,17 +242,10 @@ def export_production_report(request):
     for card in cards:
         total_cutter_cost += card.get_current_cutter_cost()
 
-    # Get tailor splits for total tailor cost
-    splits_totals = CardMeasurementSplit.objects.filter(factory_card__in=cards)
-    if payment_status == "paid":
-        splits_totals = splits_totals.filter(is_paid=True)
-    elif payment_status == "unpaid":
-        splits_totals = splits_totals.filter(is_paid=False)
-
-    # Calculate tailor cost dynamically
+    # Calculate tailoring cost from pricing system (card-level total_tailoring_cost)
     total_tailor_cost = Decimal("0.00")
-    for split in splits_totals:
-        total_tailor_cost += split.get_current_monetary_value()
+    for card in cards:
+        total_tailor_cost += card.total_tailoring_cost or Decimal("0.00")
 
     # Create workbook
     wb = Workbook()
@@ -378,18 +367,27 @@ def export_production_report(request):
             card_splits = [s for s in card_splits if s.tailor_id == tailor_id_int]
 
         # Build detailed tailor information
-        tailors_details = (
-            "\n".join(
-                [f"{s.tailor.name}: {float(s.share_amount)} متر" for s in card_splits]
-            )
-            if card_splits
-            else "-"
-        )
+        tailor_lines = [f"{s.tailor.name}: {float(s.share_amount)} متر" for s in card_splits]
 
-        # Calculate tailor cost dynamically
-        card_tailor_cost = Decimal("0.00")
-        for split in card_splits:
-            card_tailor_cost += split.get_current_monetary_value()
+        # Add pricing breakdown from tailoring_cost_breakdown
+        breakdown = card.tailoring_cost_breakdown or {}
+        if breakdown:
+            tailor_lines.append("---")
+            tailor_lines.append("تفاصيل التسعير:")
+            for key, entry in breakdown.items():
+                if entry.get('method') == 'per_piece':
+                    tailor_lines.append(
+                        f"{entry['display']}: {int(entry.get('pieces', 0))} قطعة × {entry['rate']} = {entry['cost']}"
+                    )
+                else:
+                    tailor_lines.append(
+                        f"{entry['display']}: {entry['meters']}م × {entry['rate']} = {entry['cost']}"
+                    )
+
+        tailors_details = "\n".join(tailor_lines) if tailor_lines else "-"
+
+        # Use pricing-system-based tailoring cost
+        card_tailor_cost = card.total_tailoring_cost or Decimal("0.00")
 
         # Cutter
         cutter_name = "-"
