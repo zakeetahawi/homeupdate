@@ -9,9 +9,17 @@ set -uo pipefail
 PROJECT_DIR="/home/zakee/homeupdate"
 LOGS_DIR="$PROJECT_DIR/logs"
 PIDS_DIR="$LOGS_DIR/pids"
+LOCK_FILE="$LOGS_DIR/.start-service.lock"
 
 # إنشاء المجلدات
 mkdir -p "$LOGS_DIR" "$PIDS_DIR"
+
+# ======== منع التشغيل المتزامن (Race condition protection) ========
+exec 200>"$LOCK_FILE"
+if ! flock -n 200; then
+	echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚠️ نسخة أخرى من start-service.sh تعمل بالفعل - إنهاء" >>"$LOGS_DIR/startup.log"
+	exit 0
+fi
 
 # ملف سجل بدء التشغيل
 STARTUP_LOG="$LOGS_DIR/startup.log"
@@ -141,7 +149,7 @@ python manage.py cleanup_notifications >>"$STARTUP_LOG" 2>&1 || true
 log "⚙️ تشغيل Celery Worker..."
 celery -A crm worker \
 	--loglevel=warning \
-	--queues=celery,file_uploads \
+	--queues=celery,file_uploads,calculations,status_updates,maintenance \
 	--pidfile="$PIDS_DIR/celery_worker.pid" \
 	--logfile="$LOGS_DIR/celery_worker.log" \
 	--pool=solo \
@@ -226,8 +234,22 @@ fi
 
 # ======== الخطوة 5: تشغيل Daphne (Foreground) ========
 log "🚀 تشغيل خادم Daphne (ASGI)..."
-# تأكيد نهائي أن المنفذ 8000 متاح
-fuser -k 8000/tcp 2>/dev/null || true
+# تأكيد نهائي أن المنفذ 8000 متاح مع إعادة المحاولة
+for attempt in 1 2 3 4 5; do
+	if ! fuser 8000/tcp >/dev/null 2>&1; then
+		break
+	fi
+	log "⏳ المنفذ 8000 مشغول - محاولة $attempt/5 لتحريره..."
+	fuser -k 8000/tcp 2>/dev/null || true
+	sleep 3
+done
+
+# فحص نهائي - إذا المنفذ لازال مشغول نخرج
+if fuser 8000/tcp >/dev/null 2>&1; then
+	log_error "المنفذ 8000 لا يمكن تحريره بعد 5 محاولات!"
+	exit 1
+fi
+
 sleep 1
 
 # تشغيل Daphne في الواجهة (Foreground)

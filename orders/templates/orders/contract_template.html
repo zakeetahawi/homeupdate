@@ -6,19 +6,19 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>عقد رقم {{ order.order_number }}-{{ order.contract_number|default:"c1" }}</title>
         <style>
-        /* تحميل خط Noto Naskh Arabic - محسّن (Regular و Bold فقط لتحسين الأداء) */
+        /* تحميل خط Noto Naskh Arabic - مسارات مباشرة للنظام */
         @font-face {
             font-family: 'Noto Naskh Arabic';
             font-style: normal;
             font-weight: 400;
-            src: url('/static/vendor/fonts/noto-naskh/NotoNaskhArabic-Regular.ttf') format('truetype');
+            src: url('file:///usr/share/fonts/noto/NotoNaskhArabic-Regular.ttf') format('truetype');
         }
 
         @font-face {
             font-family: 'Noto Naskh Arabic';
             font-style: normal;
             font-weight: 700;
-            src: url('/static/vendor/fonts/noto-naskh/NotoNaskhArabic-Bold.ttf') format('truetype');
+            src: url('file:///usr/share/fonts/noto/NotoNaskhArabic-Bold.ttf') format('truetype');
         }
 
         * {

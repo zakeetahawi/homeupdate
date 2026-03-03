@@ -50,12 +50,22 @@ else
     echo -e "\n${GREEN}[3b] ✅ إصلاح التكرارات تم مسبقاً${NC}"
 fi
 
-# 4. إعادة تشغيل الخدمة
+# 4. إعادة تشغيل الخدمة عبر systemd
 echo -e "\n${BLUE}[4/4] إعادة تشغيل الخدمة...${NC}"
-bash "$PROJECT_DIR/لينكس/stop-service.sh" 2>/dev/null || true
-sleep 2
-bash "$PROJECT_DIR/لينكس/start-service.sh"
-echo -e "${GREEN}  ✅ تم${NC}"
+if systemctl is-active --quiet run-production.service 2>/dev/null; then
+    echo -e "${YELLOW}  إعادة تشغيل عبر systemctl...${NC}"
+    sudo systemctl restart run-production.service
+else
+    echo -e "${YELLOW}  تشغيل الخدمة عبر systemctl...${NC}"
+    sudo systemctl start run-production.service
+fi
+# انتظار بدء التشغيل
+sleep 5
+if systemctl is-active --quiet run-production.service 2>/dev/null; then
+    echo -e "${GREEN}  ✅ الخدمة تعمل بنجاح${NC}"
+else
+    echo -e "${YELLOW}  ⚠️ الخدمة لم تبدأ بعد - تحقق بـ: journalctl -u run-production.service -n 20${NC}"
+fi
 
 echo -e "\n${BLUE}══════════════════════════════════════${NC}"
 echo -e "${GREEN}  ✅ تم النشر بنجاح${NC}"
