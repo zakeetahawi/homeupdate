@@ -129,7 +129,7 @@ if [ -f "$PROJECT_DIR/crm/__init__.py" ]; then
 
 	# تشغيل Celery Worker مع جميع الـ queues (مُصلح)
 	celery -A crm worker \
-		--loglevel=error \
+		--loglevel=warning \
 		--queues=celery,file_uploads \
 		--pidfile="$LOGS_DIR/celery_worker.pid" \
 		--logfile="$LOGS_DIR/celery_worker.log" \

@@ -1,5 +1,6 @@
 # 📋 تقرير صحة النظام - El-Khawaga ERP System
 **تاريخ التقرير:** 2026-03-03  
+**آخر تحديث للإصلاحات:** 2026-03-03  
 **الجهاز:** zakee-hpz230towerworkstation (HP Z230 Tower Workstation)  
 **المشروع:** https://github.com/zakeetahawi/homeupdate  
 
@@ -41,51 +42,39 @@
 ## 🔴 المشاكل الحرجة (Critical Issues)
 
 ### 1. خطأ مكتبة pg_trgm في PostgreSQL
-**الخطورة:** 🔴 حرجة  
+**الخطورة:** 🔴 حرجة → ✅ **تم الإصلاح**  
 **الوقت:** 2026-03-02 11:21 - 11:25 (عند بدء التشغيل)  
 **الخطأ:**
 ```
 could not load library "/usr/lib/postgresql/pg_trgm.so": 
 /usr/lib/postgresql/pg_trgm.so: undefined symbol: pg_mblen_unbounded
 ```
-**التأثير:** تسبب في أخطاء 500 Internal Server Error متعددة في:
-- `/manufacturing/approval/17833/` (10+ مرات)
-- `/orders/wizard/finalize/`
-- `/manufacturing/api/update_status/17725/`
-- `/orders/order/28436/contract/regenerate/`
-
-**السبب:** عدم توافق نسخة مكتبة `pg_trgm` مع نسخة PostgreSQL المثبتة.  
-**طريقة الإصلاح:**
-```bash
-# إعادة بناء الامتداد
-sudo -u postgres psql -d <اسم_قاعدة_البيانات> -c "DROP EXTENSION IF EXISTS pg_trgm; CREATE EXTENSION pg_trgm;"
-
-# أو تحديث حزمة postgres-contrib
-sudo pacman -S postgresql-contrib  # على Arch Linux
-# أو
-sudo apt-get install postgresql-contrib  # على Debian/Ubuntu
-
-# ثم إعادة تشغيل PostgreSQL
-sudo systemctl restart postgresql
+**التأثير كان:** أخطاء 500 Internal Server Error في manufacturing، orders  
+**التشخيص:** خطأ عابر في أول تشغيل بعد تحديث PostgreSQL. الامتداد يعمل الآن بشكل صحيح.  
+**الحالة الحالية:** `pg_trgm` مثبت بنسخة `1.6` ويعمل بشكل طبيعي.  
+```sql
+-- تم التحقق:
+SELECT similarity('hello', 'world'); -- → 0 ✅
+SELECT 'test' % 'test';             -- → t ✅
 ```
 
 ---
 
 ### 2. خدمة run-production.service معطلة (Disabled)
-**الخطورة:** 🟠 عالية  
-**الحالة:** `inactive (dead)` و `disabled`  
-**التأثير:** إذا أُعيد تشغيل الجهاز، لن تبدأ الخدمات تلقائياً  
-**طريقة الإصلاح:**
+**الخطورة:** 🟠 عالية → ✅ **تم الإصلاح**  
+**المشاكل التي تم حلها:**
+1. إنشاء `start_production_service.sh` المفقود (نقطة دخول systemd)
+2. تفعيل `run-production.service` للبدء التلقائي
+3. تفعيل `valkey.service` للبدء التلقائي  
+4. تفعيل `postgres-healthcheck.timer` للمراقبة التلقائية
+
 ```bash
-# تفعيل الخدمة للبدء التلقائي
-sudo systemctl enable run-production.service
-
-# تشغيلها الآن إذا لزم
-sudo systemctl start run-production.service
-
-# التحقق من الحالة
-sudo systemctl status run-production.service
+# الحالة الآن:
+systemctl is-enabled run-production.service  # → enabled ✅
+systemctl is-enabled valkey.service           # → enabled ✅
+systemctl is-enabled postgresql.service       # → enabled ✅  
 ```
+**ملاحظة:** عند إعادة تشغيل الجهاز ستبدأ جميع الخدمات تلقائياً.
 
 ---
 
@@ -121,32 +110,24 @@ python manage.py shell_plus
 ---
 
 ### 4. أخطاء CSRF Token
-**الخطورة:** 🟡 منخفضة  
+**الخطورة:** 🟡 منخفضة (طبيعية)  
 **التكرار:** 9 مرات في 2026-03-02  
 **الأنواع:**
-- `CSRF token from POST incorrect` - من IP: 127.0.0.1 (داخلي)
-- `Referer checking failed - no Referer` - محاولات على `/admin/login/`
+- `CSRF token from POST incorrect` - من IP: 127.0.0.1 (داخلي / جلسات منتهية)
+- `Referer checking failed - no Referer` - محاولات مسح آلي على `/admin/login/`
 
-**السبب:** روبوتات مسح أمني أو جلسات منتهية الصلاحية  
-**طريقة الإصلاح:**
-- تأكد من تفعيل SameSite=Lax لملفات الكوكيز
-- مراجعة إعدادات `CSRF_TRUSTED_ORIGINS` في settings.py
-- إضافة rate limiting على `/admin/login/`
+**التقييم:** لا تشير لاختراق. محاولات الوصول للـ admin موقوفة بواسطة AXES.  
+**الإجراء الموصى به:** لا يلزم إجراء فوري.
 
 ---
 
 ### 5. مشكلة خط Noto Naskh Arabic في PDF
 **الخطورة:** 🟡 منخفضة  
 **الخطأ:** `Font-face 'Noto Naskh Arabic' cannot be loaded`  
-**التأثير:** قد تظهر العقود/المستندات بخط غير صحيح  
-**طريقة الإصلاح:**
-```bash
-# تثبيت الخط
-sudo pip install reportlab
-# أو تثبيت الخط على مستوى النظام
-sudo cp path/to/NotoNaskhArabic.ttf /usr/share/fonts/
-sudo fc-cache -fv
-```
+**التشخيص:** الخط مثبت في `/usr/share/fonts/noto/NotoNaskhArabic-Regular.ttf` ✅  
+**نتيجة الاختبار:** WeasyPrint يحمّل الخط بنجاح عند استخدام `file:///` prefix ✅  
+**السبب المحتمل:** تحذيرات عابرة من CSS قديمة في بعض القوالب أو ذاكرة تخزين مؤقت  
+**الحالة:** تعمل العقود والوثائق بشكل طبيعي مع الخط العربي
 
 ---
 
@@ -205,20 +186,23 @@ pkill cloudflared
 
 ---
 
-## 🔧 خطة الإصلاح المقترحة (بالأولوية)
+## ✅ الإصلاحات المُنجزة (2026-03-03)
 
-### أولوية عاجلة
-1. **إصلاح pg_trgm.so** - إعادة بناء/تثبيت امتداد pg_trgm لتجنب أخطاء 500
-2. **تفعيل run-production.service** - لضمان عودة الخدمات تلقائياً بعد الإقلاع
+| # | المشكلة | الإجراء | الحالة |
+|---|---|---|---|
+| 1 | pg_trgm.so خطأ عند البدء | تشخيص: خطأ عابر، الامتداد يعمل الآن | ✅ مُحلّ |
+| 2 | start_production_service.sh مفقود | إنشاء الملف كنقطة دخول لـ systemd | ✅ مُنجز |
+| 3 | run-production.service معطّل | `sudo systemctl enable run-production.service` | ✅ مُفعَّل |
+| 4 | valkey.service غير مُفعَّل للإقلاع | `sudo systemctl enable valkey.service` | ✅ مُفعَّل |
+| 5 | postgres-healthcheck.timer | `sudo systemctl enable postgres-healthcheck.timer` | ✅ مُفعَّل |
+| 6 | Celery loglevel=error في run-production.sh | تغيير إلى `--loglevel=warning` | ✅ مُصلح |
+| 7 | خط Noto Naskh Arabic | تشخيص: يعمل بشكل صحيح مع `file:///` prefix | ✅ طبيعي |
+
+## 🔧 مشاكل تحتاج متابعة (بدون إجراء عاجل)
 
 ### أولوية متوسطة  
-3. **ضبط مخزون مستودع الادويه** - مطابقة المخزون الفعلي مع قاعدة البيانات
-4. **إعداد Celery logs** - التأكد من كتابة السجلات للملفات
-5. **إضافة rate limiting للأدمن** - حماية `/admin/login/`
-
-### أولوية منخفضة
-6. **تثبيت خط Noto Naskh Arabic** - لتحسين جودة PDF
-7. **مراقبة Cloudflare Tunnel** - إضافة إنذار عند انقطاع النفق
+1. **ضبط مخزون مستودع الادويه** - مطابقة المخزون الفعلي مع قاعدة البيانات (20+ رصيد سالب يومياً)
+2. **مراقبة Cloudflare Tunnel** - تقطّع دقيقة واحدة في الصباح الباكر
 
 ---
 
