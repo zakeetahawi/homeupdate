@@ -19,6 +19,7 @@ urlpatterns = [
     path("ajax/recent/", views.recent_notifications_ajax, name="ajax_recent"),
     path("ajax/popup/", views.popup_notifications_api, name="ajax_popup"),
     path("ajax/transfer-alerts/", views.transfer_notifications_api, name="ajax_transfer_alerts"),
+    path("ajax/activity-summary/", views.activity_summary_api, name="ajax_activity_summary"),
     # API endpoints
     path("", include(router.urls)),
 ]

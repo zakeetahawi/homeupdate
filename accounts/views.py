@@ -532,7 +532,11 @@ def login_view(request):
                             attempts_key = f"login_attempts_{ip}"
                             cache.delete(attempts_key)
 
+                            # حفظ آخر تسجيل دخول سابق قبل أن يكتبه login()
+                            previous_last_login = user.last_login
                             login(request, user)
+                            if previous_last_login:
+                                request.session["previous_last_login"] = previous_last_login.isoformat()
                             logger.info(
                                 f"✅ Successful login for user: {username} from IP: {ip}"
                             )

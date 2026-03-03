@@ -79,6 +79,8 @@
         <!-- Base Layout CSS (extracted from inline) -->
         <link rel="stylesheet" href="{% static 'css/base-layout.css' %}">
         <link rel="stylesheet" href="{% static 'css/transfer-alert-popup.css' %}">
+        <!-- Activity Summary Popup -->
+        <link rel="stylesheet" href="{% static 'css/activity-summary.css' %}">
         <!-- تطبيق فوري للثيم لتجنب الوميض -->
         <script>
         // تطبيق الثيم فوراً قبل رسم الصفحة - محسن لتجنب الوميض
@@ -122,6 +124,7 @@
     </head>
     <body id="main-body"
           data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}"
+          data-session-id="{{ request.session.session_key|default:'' }}"
           {% if user.is_authenticated %}data-notifications-count-url="{% url 'notifications:ajax_count' %}"
           data-notifications-recent-url="{% url 'notifications:ajax_recent' %}"
           data-notifications-mark-all-url="{% url 'notifications:mark_all_read' %}"
@@ -1155,6 +1158,7 @@
 <!-- Notifications JS (extracted to external file) -->
 {% if user.is_authenticated %}
     <script src="{% static 'js/base-notifications.js' %}"></script>
+    <script src="{% static 'js/activity-summary.js' %}"></script>
 {% endif %}
 <!-- CSRF Token للإشعارات -->
 {% csrf_token %}

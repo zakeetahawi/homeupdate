@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
@@ -533,6 +534,169 @@ def recent_notifications_ajax(request):
             "count": len(notifications_data),
         }
     )
+
+
+# ===== Activity Summary API =====
+
+
+@login_required
+def activity_summary_api(request):
+    """
+    ملخص النشاط منذ آخر تسجيل دخول — حسب صلاحيات المستخدم
+    يظهر مرة واحدة فقط عند الدخول ثم لا يظهر ثانية.
+    """
+    import logging
+    from datetime import timedelta
+    from dateutil.parser import parse as parse_date
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        user = request.user
+
+        # --- تحديد "منذ متى" ---
+        previous_login_iso = request.session.get("previous_last_login")
+        if previous_login_iso:
+            try:
+                since = parse_date(previous_login_iso)
+            except Exception:
+                since = timezone.now() - timedelta(hours=24)
+        else:
+            # أول دخول أو لا يوجد سجل — عرض آخر 24 ساعة
+            since = timezone.now() - timedelta(hours=24)
+
+        # تحميل النماذج ديناميكياً لتجنب الاستيراد الدائري
+        from orders.models import Order
+        from manufacturing.models import ManufacturingOrder
+        from installations.models import InstallationSchedule
+
+        items = []  # [{icon, label, count, color, url}]
+        role = user.get_user_role() if hasattr(user, "get_user_role") else ""
+
+        # --- 1. طلبات جديدة ---
+        new_orders_qs = Order.objects.filter(created_at__gte=since)
+        if user.branch and not user.is_superuser:
+            new_orders_qs = new_orders_qs.filter(branch=user.branch)
+        new_orders = new_orders_qs.count()
+        if new_orders:
+            items.append({
+                "icon": "fas fa-plus-circle",
+                "label": "طلبات جديدة",
+                "count": new_orders,
+                "color": "#3b82f6",
+                "url": "/orders/",
+            })
+
+        # --- 2. طلبات مكتملة ---
+        completed_qs = Order.objects.filter(
+            order_status="completed", updated_at__gte=since
+        )
+        if user.branch and not user.is_superuser:
+            completed_qs = completed_qs.filter(branch=user.branch)
+        completed = completed_qs.count()
+        if completed:
+            items.append({
+                "icon": "fas fa-check-circle",
+                "label": "طلبات مكتملة",
+                "count": completed,
+                "color": "#10b981",
+                "url": "/orders/?status=completed",
+            })
+
+        # --- 3. تصنيع ---
+        if role in (
+            "admin", "factory_manager", "factory_accountant",
+            "factory_receiver", "branch_manager", "sales_manager", ""
+        ) or user.is_superuser:
+            mfg_completed = ManufacturingOrder.objects.filter(
+                status__in=["ready_install", "completed"],
+                updated_at__gte=since,
+            ).count()
+            if mfg_completed:
+                items.append({
+                    "icon": "fas fa-industry",
+                    "label": "أوامر تصنيع مكتملة",
+                    "count": mfg_completed,
+                    "color": "#8b5cf6",
+                    "url": "/manufacturing/",
+                })
+
+            mfg_new = ManufacturingOrder.objects.filter(
+                status="pending", created_at__gte=since
+            ).count()
+            if mfg_new:
+                items.append({
+                    "icon": "fas fa-cogs",
+                    "label": "أوامر تصنيع جديدة",
+                    "count": mfg_new,
+                    "color": "#6366f1",
+                    "url": "/manufacturing/",
+                })
+
+        # --- 4. تركيبات ---
+        if role in (
+            "admin", "installation_manager", "traffic_manager",
+            "branch_manager", "sales_manager", ""
+        ) or user.is_superuser:
+            install_completed = InstallationSchedule.objects.filter(
+                status="completed", updated_at__gte=since
+            ).count()
+            if install_completed:
+                items.append({
+                    "icon": "fas fa-tools",
+                    "label": "تركيبات مكتملة",
+                    "count": install_completed,
+                    "color": "#f59e0b",
+                    "url": "/installations/",
+                })
+
+            install_scheduled = InstallationSchedule.objects.filter(
+                status="scheduled", created_at__gte=since
+            ).count()
+            if install_scheduled:
+                items.append({
+                    "icon": "fas fa-calendar-check",
+                    "label": "تركيبات مجدولة جديدة",
+                    "count": install_scheduled,
+                    "color": "#06b6d4",
+                    "url": "/installations/",
+                })
+
+        # --- 5. إشعارات غير مقروءة ---
+        unread = NotificationVisibility.objects.filter(
+            user=user, is_read=False,
+            notification__created_at__gte=since,
+        ).count()
+        if unread:
+            items.append({
+                "icon": "fas fa-bell",
+                "label": "إشعارات جديدة",
+                "count": unread,
+                "color": "#ef4444",
+                "url": "/notifications/",
+            })
+
+        # --- حساب المدة بالنص ---
+        diff = timezone.now() - since
+        hours = int(diff.total_seconds() // 3600)
+        if hours < 1:
+            since_text = "أقل من ساعة"
+        elif hours < 24:
+            since_text = f"{hours} ساعة"
+        else:
+            days = hours // 24
+            since_text = f"{days} يوم" if days < 11 else f"{days} يوماً"
+
+        return JsonResponse({
+            "success": True,
+            "items": items,
+            "since_text": since_text,
+            "total": sum(i["count"] for i in items),
+        })
+
+    except Exception as e:
+        logger.error(f"Error in activity_summary_api: {e}")
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
 # ===== API Views =====

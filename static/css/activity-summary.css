@@ -1,0 +1,215 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Activity Summary Popup — ملخص النشاط
+   تصميم glass-morphism بنافذة مركزية
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Overlay خلفية */
+.activity-summary-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 10050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity .35s ease;
+}
+.activity-summary-overlay.show {
+    opacity: 1;
+}
+
+/* البطاقة الرئيسية */
+.activity-summary-card {
+    width: 440px;
+    max-width: 92vw;
+    max-height: 85vh;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, .25);
+    overflow: hidden;
+    transform: translateY(30px) scale(.96);
+    transition: transform .4s cubic-bezier(.34, 1.56, .64, 1), opacity .35s ease;
+    opacity: 0;
+    display: flex;
+    flex-direction: column;
+}
+.activity-summary-overlay.show .activity-summary-card {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+/* Header gradient */
+.activity-summary-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 24px 28px 20px;
+    position: relative;
+    overflow: hidden;
+}
+.activity-summary-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,.08) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.activity-summary-greeting {
+    color: rgba(255,255,255,.75);
+    font-size: .85rem;
+    margin-bottom: 4px;
+}
+.activity-summary-title {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 6px;
+}
+.activity-summary-since {
+    color: rgba(255,255,255,.6);
+    font-size: .78rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.activity-summary-since i {
+    font-size: .7rem;
+}
+
+/* Close button */
+.activity-summary-close {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,.15);
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .2s;
+}
+.activity-summary-close:hover {
+    background: rgba(255,255,255,.3);
+}
+
+/* Body — قائمة العناصر */
+.activity-summary-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.activity-summary-empty {
+    text-align: center;
+    padding: 30px 20px;
+    color: #94a3b8;
+}
+.activity-summary-empty i {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    display: block;
+    opacity: .4;
+}
+
+/* Single item row */
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    text-decoration: none;
+    color: inherit;
+    transition: all .2s ease;
+    cursor: pointer;
+}
+.activity-item:hover {
+    background: #f1f5f9;
+    transform: translateX(-3px);
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+.activity-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Icon circle */
+.activity-item-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+/* Text */
+.activity-item-text {
+    flex: 1;
+    min-width: 0;
+}
+.activity-item-label {
+    font-size: .88rem;
+    font-weight: 600;
+    color: #334155;
+    margin: 0;
+}
+.activity-item-count {
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1;
+    margin: 0;
+}
+
+/* Footer */
+.activity-summary-footer {
+    padding: 14px 24px;
+    border-top: 1px solid #f1f5f9;
+    background: #fafbfc;
+    border-radius: 0 0 20px 20px;
+    display: flex;
+    justify-content: center;
+}
+.activity-summary-footer button {
+    border: none;
+    background: none;
+    color: #64748b;
+    font-size: .82rem;
+    cursor: pointer;
+    padding: 6px 16px;
+    border-radius: 8px;
+    transition: all .2s;
+}
+.activity-summary-footer button:hover {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .activity-summary-card {
+        width: 95vw;
+        border-radius: 16px;
+    }
+    .activity-summary-header {
+        padding: 20px;
+    }
+    .activity-summary-body {
+        padding: 16px;
+    }
+}
