@@ -1,17 +1,35 @@
 [Unit]
-Description=Homeupdate production launcher
-After=network.target postgresql.service redis.service
-Wants=postgresql.service redis.service
+Description=CRM Production Service - Complete System
+After=network.target postgresql.service valkey.service
+Wants=postgresql.service valkey.service
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
 User=zakee
+Group=zakee
 WorkingDirectory=/home/zakee/homeupdate
-ExecStart=/bin/bash /home/zakee/homeupdate/لينكس/run-production.sh
-Restart=on-failure
-RestartSec=5
+Environment=PATH=/home/zakee/homeupdate/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=DJANGO_SETTINGS_MODULE=crm.settings
+Environment=PYTHONUNBUFFERED=1
+Environment=DEBUG=False
+Environment=PYTHONPATH=/home/zakee/homeupdate
+ExecStart=/home/zakee/homeupdate/start_production_service.sh
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=30
+TimeoutStartSec=300
+TimeoutStopSec=60
 StandardOutput=journal
 StandardError=journal
+KillMode=mixed
+KillSignal=SIGTERM
+
+# إعدادات الموارد
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=2G
+MemoryHigh=1.5G
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

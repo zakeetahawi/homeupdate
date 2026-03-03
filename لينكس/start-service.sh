@@ -1,6 +1,9 @@
 #!/bin/bash
 # 🚀 سكريبت تشغيل النظام كخدمة systemd
 # يعمل تلقائياً عند إقلاع الجهاز
+# آخر تحديث: 2026-03-03 — إصلاح ترتيب التنظيف ومنع تعارض المنافذ
+
+set -euo pipefail
 
 PROJECT_DIR="/home/zakee/homeupdate"
 LOGS_DIR="$PROJECT_DIR/logs"
@@ -24,6 +27,20 @@ log_error() {
 log_success() {
 	echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ $1" >>"$STARTUP_LOG"
 }
+
+# ======== تنظيف عند الإيقاف (SIGTERM/SIGINT) ========
+cleanup() {
+	log "🛑 بدء إيقاف نظام HomeUpdate..."
+	# إيقاف العمليات الفرعية
+	for proc in daphne "celery.*worker" "celery.*beat" cloudflared "db-backup.sh"; do
+		pkill -f "$proc" 2>/dev/null && sleep 1
+	done
+	# تحرير المنفذ
+	fuser -k 8000/tcp 2>/dev/null
+	rm -f "$PIDS_DIR"/*.pid 2>/dev/null
+	log "🛑 تم إيقاف جميع الخدمات وتحرير المنفذ 8000"
+}
+trap cleanup SIGTERM SIGINT EXIT
 
 # بدء التسجيل
 echo "========================================" >>"$STARTUP_LOG"
@@ -52,65 +69,73 @@ export DEBUG=False
 export DJANGO_LOG_LEVEL=WARNING
 export PYTHONUNBUFFERED=1
 
-# انتظار قاعدة البيانات
+# ======== الخطوة 1: تنظيف أولاً (قبل أي شيء آخر) ========
+log "🧹 تنظيف العمليات القديمة والمنافذ..."
+pkill -f "daphne" 2>/dev/null || true
+pkill -f "celery.*worker" 2>/dev/null || true
+pkill -f "celery.*beat" 2>/dev/null || true
+pkill -f "cloudflared" 2>/dev/null || true
+pkill -f "monitor-service.sh" 2>/dev/null || true
+fuser -k 8000/tcp 2>/dev/null || true
+sleep 3
+
+rm -f "$PIDS_DIR"/*.pid 2>/dev/null
+rm -f "$LOGS_DIR/celerybeat-schedule"* 2>/dev/null
+log_success "تم التنظيف وتحرير المنفذ 8000"
+
+# ======== الخطوة 2: انتظار الخدمات الأساسية ========
 log "⏳ انتظار قاعدة البيانات..."
+DB_READY=false
 for i in {1..30}; do
 	if pg_isready -q 2>/dev/null; then
 		log_success "قاعدة البيانات جاهزة"
+		DB_READY=true
 		break
 	fi
 	sleep 1
 done
+if [ "$DB_READY" = false ]; then
+	log_error "قاعدة البيانات غير جاهزة بعد 30 ثانية!"
+fi
 
-# ملاحظة: pgBouncer غير مثبت حالياً - تمت إزالة فحص port 6432
+# فحص Redis/Valkey
+log "🔴 فحص Redis/Valkey..."
+if ! pgrep -x "redis-server\|valkey-server" >/dev/null 2>&1; then
+	# محاولة تشغيل valkey أولاً ثم redis
+	if command -v valkey-server >/dev/null 2>&1; then
+		valkey-server --daemonize yes --port 6379 --dir /tmp >>"$STARTUP_LOG" 2>&1
+		log_success "تم تشغيل Valkey"
+	elif command -v redis-server >/dev/null 2>&1; then
+		redis-server --daemonize yes --port 6379 --dir /tmp >>"$STARTUP_LOG" 2>&1
+		log_success "تم تشغيل Redis"
+	else
+		log_error "لا يوجد Redis أو Valkey!"
+	fi
+else
+	log_success "Redis/Valkey يعمل بالفعل"
+fi
 
-
-# تطبيق التحديثات
+# ======== الخطوة 3: تطبيق التحديثات ========
 log "📦 تطبيق التحديثات..."
-python manage.py migrate --noinput >>"$STARTUP_LOG" 2>&1
-if [ $? -eq 0 ]; then
+if python manage.py migrate --noinput >>"$STARTUP_LOG" 2>&1; then
 	log_success "تم تطبيق التحديثات"
 else
-	log_error "فشل في تطبيق التحديثات"
+	log_error "فشل في تطبيق التحديثات (المتابعة رغم ذلك)"
 fi
 
 # تجميع الملفات الثابتة
 log "📁 تجميع الملفات الثابتة..."
-python manage.py collectstatic --noinput --clear >>"$STARTUP_LOG" 2>&1
-if [ $? -eq 0 ]; then
+if python manage.py collectstatic --noinput --clear >>"$STARTUP_LOG" 2>&1; then
 	log_success "تم تجميع الملفات الثابتة"
 else
 	log_error "فشل في تجميع الملفات الثابتة"
 fi
 
-
-
 # تنظيف الإشعارات القديمة
 log "🧹 تنظيف الإشعارات القديمة..."
-python manage.py cleanup_notifications >>"$STARTUP_LOG" 2>&1
+python manage.py cleanup_notifications >>"$STARTUP_LOG" 2>&1 || true
 
-# تشغيل Redis إذا لم يكن يعمل
-log "🔴 فحص Redis..."
-if ! pgrep -x "redis-server" >/dev/null; then
-	redis-server --daemonize yes --port 6379 --dir /tmp >>"$STARTUP_LOG" 2>&1
-	log_success "تم تشغيل Redis"
-else
-	log_success "Redis يعمل بالفعل"
-fi
-
-# تنظيف ملفات PID القديمة والعمليات المتبقية
-log "🧹 تنظيف العمليات القديمة..."
-pkill -f "daphne" 2>/dev/null
-pkill -f "celery.*worker" 2>/dev/null
-pkill -f "celery.*beat" 2>/dev/null
-pkill -f "cloudflared" 2>/dev/null
-pkill -f "monitor-service.sh" 2>/dev/null
-sleep 2
-
-rm -f "$PIDS_DIR"/*.pid 2>/dev/null
-rm -f "$LOGS_DIR/celerybeat-schedule"* 2>/dev/null
-log_success "تم التنظيف"
-
+# ======== الخطوة 4: تشغيل الخدمات الفرعية ========
 # تشغيل Celery Worker
 log "⚙️ تشغيل Celery Worker..."
 celery -A crm worker \
@@ -198,14 +223,12 @@ PY
 	log_success "تم تشغيل خدمة النسخ الاحتياطي"
 fi
 
-# تشغيل Daphne
+# ======== الخطوة 5: تشغيل Daphne (Foreground) ========
 log "🚀 تشغيل خادم Daphne (ASGI)..."
-# التأكد من أن المنفذ 8000 متاح
-fuser -k 8000/tcp 2>/dev/null
+# تأكيد نهائي أن المنفذ 8000 متاح
+fuser -k 8000/tcp 2>/dev/null || true
+sleep 1
 
 # تشغيل Daphne في الواجهة (Foreground)
-# لكي يستطيع Systemd مراقبة العملية
-daphne -b 0.0.0.0 -p 8000 crm.asgi:application --access-log "$LOGS_DIR/daphne_access.log" --verbosity 1
-
-# لا نحتاج لسكريبت المراقبة لأن systemd سيعيد تشغيل الخدمة بالكامل إذا توقفت
-exit 0
+# لكي يستطيع systemd مراقبة العملية الرئيسية
+exec daphne -b 0.0.0.0 -p 8000 crm.asgi:application --access-log "$LOGS_DIR/daphne_access.log" --verbosity 1
