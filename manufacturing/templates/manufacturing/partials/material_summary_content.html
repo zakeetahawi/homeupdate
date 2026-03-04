@@ -63,29 +63,28 @@
                                    font-weight: bold;
                                    font-size: 13px;
                                    color: #333">
-                            <!-- الكمية المضاعفة -->
+                            <!-- القيمة النهائية = سعر التفصيل × الكمية -->
                             {{ item.sewing_quantity|floatformat:2 }} {{ item.unit }}
                             <!-- بادجات أنواع التفصيل -->
-                            {% if item.tailoring_types_list %}
+                            {% if item.tailoring_types_custom_list or item.tailoring_types_default_list %}
                                 <div style="margin-top: 4px;
                                             display: flex;
                                             flex-wrap: wrap;
                                             justify-content: center;
                                             gap: 4px">
-                                    {% for t_type in item.tailoring_types_list %}
-                                        {% if t_type in double_meter_types %}
-                                            <span style="font-size: 9px;
-                                                         background: #e74c3c;
-                                                         color: white;
-                                                         padding: 2px 5px;
-                                                         border-radius: 3px">{{ t_type }}</span>
-                                        {% else %}
-                                            <span style="font-size: 9px;
-                                                         background: #95a5a6;
-                                                         color: white;
-                                                         padding: 2px 5px;
-                                                         border-radius: 3px">{{ t_type }}</span>
-                                        {% endif %}
+                                    {% for t_type in item.tailoring_types_custom_list %}
+                                        <span style="font-size: 9px;
+                                                     background: #e74c3c;
+                                                     color: white;
+                                                     padding: 2px 5px;
+                                                     border-radius: 3px">{{ t_type }}</span>
+                                    {% endfor %}
+                                    {% for t_type in item.tailoring_types_default_list %}
+                                        <span style="font-size: 9px;
+                                                     background: #95a5a6;
+                                                     color: white;
+                                                     padding: 2px 5px;
+                                                     border-radius: 3px">{{ t_type }}</span>
                                     {% endfor %}
                                 </div>
                             {% endif %}

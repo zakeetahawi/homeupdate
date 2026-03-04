@@ -5396,9 +5396,9 @@ def material_summary_view(request, pk):
             else ""
         ),
         "tailors_display": tailors_display,  # تم إضافة أسماء الخياطين
-        "double_meter_types": summary_context.get(
-            "double_meter_types", []
-        ),  # تمرير أنواع الضعف للقالب
+        "custom_priced_types": summary_context.get(
+            "custom_priced_types", set()
+        ),  # أنواع التفصيل ذات السعر المخصص
     }
 
     # Check if partial render requested (for Modal)
