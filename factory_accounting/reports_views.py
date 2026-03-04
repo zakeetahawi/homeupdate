@@ -117,10 +117,16 @@ def production_reports(request):
         splits = splits.filter(is_paid=False)
         cards = cards.exclude(status="paid")
 
-    # Calculate tailoring cost from pricing system (card-level total_tailoring_cost)
+    # Calculate tailoring cost
     total_amount = Decimal("0.00")
-    for card in cards:
-        total_amount += card.total_tailoring_cost or Decimal("0.00")
+    if tailor_id and tailor_id.isdigit():
+        # عند فلترة خياط: نحسب فقط حصة هذا الخياط من splits
+        for split in splits:
+            total_amount += split.monetary_value or Decimal("0.00")
+    else:
+        # بدون فلتر خياط: نحسب من تكلفة البطاقة الكاملة
+        for card in cards:
+            total_amount += card.total_tailoring_cost or Decimal("0.00")
 
     paid_amount = Decimal("0.00")
     unpaid_amount = Decimal("0.00")
