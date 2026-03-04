@@ -107,11 +107,10 @@ class FactoryAccountingSettings(models.Model):
             old_price = card.cutter_price
             old_cost = card.total_cutter_cost
 
-            # Update with current rate
+            # Update with current rate × actual meters (not billable meters)
+            actual_meters = card.get_actual_meters()
             card.cutter_price = self.default_cutter_rate
-            card.total_cutter_cost = (
-                card.total_billable_meters * self.default_cutter_rate
-            )
+            card.total_cutter_cost = actual_meters * self.default_cutter_rate
             card.save(update_fields=["cutter_price", "total_cutter_cost"])
             updated_count += 1
 
@@ -543,11 +542,12 @@ class FactoryCard(models.Model):
                     breakdown[key]["cost"] += float(cost)
 
             # 4. Save results
-            self.total_billable_meters = total_actual
+            # إجمالي الأمتار المستحقة = مجموع أمتار الخياط (سعر التفصيل × الكمية)
+            self.total_billable_meters = total_tailoring_cost
             self.total_tailoring_cost = total_tailoring_cost
             self.tailoring_cost_breakdown = breakdown
 
-            # 5. Cutter cost (unchanged — actual meters × cutter rate)
+            # 5. Cutter cost — الأمتار الفعلية × سعر القصاص
             cutter_rate = acct_settings.default_cutter_rate
             self.cutter_price = cutter_rate
             self.total_cutter_cost = total_actual * cutter_rate
@@ -562,7 +562,7 @@ class FactoryCard(models.Model):
                     "updated_at",
                 ]
             )
-            return total_actual
+            return total_tailoring_cost
 
         except Exception as e:
             import logging
@@ -615,6 +615,25 @@ class FactoryCard(models.Model):
         settings = FactoryAccountingSettings.get_settings()
         return settings.default_cutter_rate
 
+    def get_actual_meters(self):
+        """
+        الحصول على الأمتار الفعلية (الخام) من تفاصيل التكلفة
+        Used for cutter cost calculation
+        """
+        if self.tailoring_cost_breakdown:
+            return Decimal(
+                str(
+                    sum(
+                        v.get("meters", 0)
+                        for v in self.tailoring_cost_breakdown.values()
+                    )
+                )
+            )
+        # Fallback: total_cutter_cost / cutter_price if available
+        if self.cutter_price and self.cutter_price > 0:
+            return self.total_cutter_cost / self.cutter_price
+        return self.total_billable_meters
+
     def get_current_cutter_cost(self):
         """
         Calculate current cutter cost based on payment status
@@ -624,9 +643,10 @@ class FactoryCard(models.Model):
             # Preserve original cost for paid items
             return self.total_cutter_cost
 
-        # Recalculate using current price for unpaid items
+        # Recalculate using current price × actual meters for unpaid items
         current_price = self.get_current_cutter_price()
-        return self.total_billable_meters * current_price
+        actual_meters = self.get_actual_meters()
+        return actual_meters * current_price
 
 
 class CardMeasurementSplit(models.Model):
