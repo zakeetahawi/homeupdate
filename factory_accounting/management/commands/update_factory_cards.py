@@ -14,12 +14,25 @@ from factory_accounting.models import FactoryCard
 class Command(BaseCommand):
     help = "Update existing factory cards with calculated meter and cutter cost data"
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--all",
+            action="store_true",
+            help="إعادة حساب كل البطاقات (وليس فقط ذات الأمتار الصفرية)",
+        )
+
     def handle(self, *args, **options):
         self.stdout.write("Starting factory cards update...")
         self.stdout.write("=" * 60)
         
-        # Get all cards with zero meters (likely not calculated)
-        cards_to_update = FactoryCard.objects.filter(total_billable_meters=0)
+        if options.get("all"):
+            # إعادة حساب كل البطاقات
+            cards_to_update = FactoryCard.objects.all()
+            self.stdout.write("Mode: Recalculate ALL cards (--all)")
+        else:
+            # Get all cards with zero meters (likely not calculated)
+            cards_to_update = FactoryCard.objects.filter(total_billable_meters=0)
+            self.stdout.write("Mode: Only zero-meter cards (use --all for full recalc)")
         total_cards = cards_to_update.count()
         
         self.stdout.write(f"Found {total_cards} cards with zero meters to update")
