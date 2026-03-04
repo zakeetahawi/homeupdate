@@ -1030,37 +1030,7 @@
         </div>
     </div>
 </div>
-<!-- General System Notifications Popup -->
-<div id="systemNotificationsPopup"
-     class="system-notifications-popup"
-     style="display: none">
-    <div class="popup-content">
-        <div class="popup-header system-popup-header">
-            <h5>
-                <i class="fas fa-bell text-white me-2"></i>إشعارات جديدة
-            </h5>
-            <div class="popup-controls">
-                <button class="btn btn-sm btn-outline-light me-2"
-                        onclick="snoozeSystemPopup()">
-                    <i class="fas fa-clock"></i> تأجيل
-                </button>
-                <button class="btn btn-sm btn-outline-light" onclick="hideSystemPopup()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
-        <div class="popup-body" id="systemNotificationsContent">
-            <div class="text-center">
-                <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
-            </div>
-        </div>
-        <div class="popup-footer text-center p-2 border-top">
-            <a href="/notifications/" class="btn btn-sm btn-outline-primary">
-                <i class="fas fa-list me-1"></i>عرض جميع الإشعارات
-            </a>
-        </div>
-    </div>
-</div>
+
 <!-- Main Content -->
 {% block above_main %}{% endblock %}
 <main class="container-fluid mt-4 flex-grow" id="main-content">

@@ -437,125 +437,7 @@
     };
 
     // ═══════════════════════════════════════════════════════════════════
-    // 9. Popup الإشعارات العامة
-    // ═══════════════════════════════════════════════════════════════════
-
-    window.checkSystemNotifications = function () {
-        var snoozedUntil = localStorage.getItem('systemPopupSnoozed');
-        if (snoozedUntil && new Date() < new Date(snoozedUntil)) return;
-
-        var complaintsPopup = document.getElementById('assignedComplaintsPopup');
-        var escalatedPopup = document.getElementById('escalatedComplaintsPopup');
-        if ((complaintsPopup && complaintsPopup.style.display !== 'none') ||
-            (escalatedPopup && escalatedPopup.style.display !== 'none')) return;
-
-        fetch('/notifications/ajax/popup/?_=' + Date.now())
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
-                if (data.success && data.notifications && data.notifications.length > 0) {
-                    showSystemNotificationsPopup(data.notifications);
-                }
-            })
-            .catch(function () {});
-    };
-
-    function showSystemNotificationsPopup(notifications) {
-        var popup = document.getElementById('systemNotificationsPopup');
-        var content = document.getElementById('systemNotificationsContent');
-        if (!popup || !content) return;
-
-        var header = popup.querySelector('.system-popup-header');
-
-        // لون header يعتمد على أنواع الإشعارات الموجودة (أولوية: أحمر > برتقالي > أخضر > أزرق)
-        var headerGradient = 'linear-gradient(135deg, #0d6efd, #0b5ed7)'; // افتراضي أزرق
-        var hasRed    = notifications.some(function(n) { return n.header_color === 'red'; });
-        var hasOrange = notifications.some(function(n) { return n.header_color === 'orange'; });
-        var hasGreen  = notifications.some(function(n) { return n.header_color === 'green'; });
-        if (hasRed) {
-            headerGradient = 'linear-gradient(135deg, #dc3545, #c82333)';
-        } else if (hasOrange) {
-            headerGradient = 'linear-gradient(135deg, #e67e00, #d35400)';
-        } else if (hasGreen) {
-            headerGradient = 'linear-gradient(135deg, #28a745, #1e7e34)';
-        } else if (notifications.some(function(n) { return n.priority === 'urgent' || n.priority === 'high'; })) {
-            headerGradient = 'linear-gradient(135deg, #dc3545, #c82333)';
-        }
-        if (header) header.style.background = headerGradient;
-
-        var html = '';
-        notifications.forEach(function (notification) {
-            var ago = getTimeAgo(notification.created_at);
-
-            // لون border الإشعار: يعتمد على header_color أولاً ثم الأولوية
-            var borderColor;
-            if (notification.header_color === 'red') {
-                borderColor = '#dc3545';
-            } else if (notification.header_color === 'orange') {
-                borderColor = '#e67e00';
-            } else if (notification.header_color === 'green') {
-                borderColor = '#28a745';
-            } else {
-                borderColor = {
-                    'urgent': '#dc3545', 'high': '#dc3545',
-                    'normal': '#e67e00', 'low': '#28a745'
-                }[notification.priority] || '#6c757d';
-            }
-
-            html += '<div class="notification-popup-item" style="border-right: 4px solid ' + borderColor + ';">' +
-                '<div class="d-flex justify-content-between align-items-start mb-1">' +
-                '<div class="d-flex align-items-center">' +
-                '<span class="notification-popup-icon" style="color: ' + notification.icon_color + '; background: ' + notification.icon_bg + ';">' +
-                '<i class="' + notification.icon_class + '"></i></span>' +
-                '<div class="me-2"><h6 class="mb-0 small fw-bold">' +
-                '<a href="' + notification.url + '" class="text-decoration-none text-dark" onclick="markNotifAndGo(' + notification.id + ', \'' + notification.url + '\'); return false;">' +
-                notification.title + '</a></h6></div></div>' +
-                '<span class="badge bg-' + notification.priority_color + ' badge-sm">' + notification.priority_text + '</span>' +
-                '</div>' +
-                '<p class="mb-1 small text-muted pe-3">' + notification.message + '</p>' +
-                '<div class="d-flex justify-content-between align-items-center">' +
-                (notification.created_by ? '<small class="text-primary"><i class="fas fa-user-edit me-1"></i>' + notification.created_by + '</small>' : '<small></small>') +
-                '<small class="text-muted">' + ago + '</small>' +
-                '</div></div>';
-        });
-
-        content.innerHTML = html;
-        popup.style.display = 'block';
-    }
-
-    window.hideSystemPopup = function () {
-        var popup = document.getElementById('systemNotificationsPopup');
-        if (popup) popup.style.display = 'none';
-    };
-
-    window.snoozeSystemPopup = function () {
-        var hours = prompt('كم ساعة تريد تأجيل الإشعارات المنبثقة؟ (افتراضي: 1 ساعة)', '1');
-        if (hours && !isNaN(hours)) {
-            var snoozeUntil = new Date();
-            snoozeUntil.setHours(snoozeUntil.getHours() + parseInt(hours));
-            localStorage.setItem('systemPopupSnoozed', snoozeUntil.toISOString());
-            hideSystemPopup();
-            showNotificationMessage('تم تأجيل الإشعارات المنبثقة لمدة ' + hours + ' ساعة', 'info');
-        }
-    };
-
-    // ═══════════════════════════════════════════════════════════════════
-    // 10. Mark Notification & Navigate
-    // ═══════════════════════════════════════════════════════════════════
-
-    window.markNotifAndGo = function (notifId, url) {
-        fetch('/notifications/mark-read/' + notifId + '/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
-                'Content-Type': 'application/json',
-            },
-        }).finally(function () {
-            window.location.href = url;
-        });
-    };
-
-    // ═══════════════════════════════════════════════════════════════════
-    // 11. Dropdown Notification Management
+    // 9. Dropdown Notification Management
     // ═══════════════════════════════════════════════════════════════════
 
     window.markDropdownNotificationAsRead = function (notificationId, targetUrl) {
@@ -802,7 +684,6 @@
 
         setTimeout(checkAssignedComplaints, 2000);
         setTimeout(checkEscalatedComplaints, 3000);
-        setTimeout(checkSystemNotifications, 4000);
         setTimeout(checkTransferAlerts, 5000);  // فحص تنبيهات التحويلات
 
         // Test functions
@@ -828,7 +709,6 @@
             updateRecentNotifications();
             checkAssignedComplaints();
             checkEscalatedComplaints();
-            checkSystemNotifications();
             checkTransferAlerts();
         }, 60000);
     });
