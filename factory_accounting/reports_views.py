@@ -91,13 +91,11 @@ def production_reports(request):
     # Calculate totals DYNAMICALLY based on payment status
     # For unpaid items: use current settings
     # For paid items: preserve original prices
-    total_meters = cards.aggregate(total=Sum("total_billable_meters"))[
-        "total"
-    ] or Decimal("0.00")
-
-    # Calculate cutter cost dynamically
+    # إجمالي الأمتار = الأمتار الفعلية (الخام) وليس تكلفة الخياطة
+    total_meters = Decimal("0.00")
     total_cutter_cost = Decimal("0.00")
     for card in cards:
+        total_meters += card.get_actual_meters()
         total_cutter_cost += card.get_current_cutter_cost()
 
     # Get splits for payment status filtering
@@ -277,12 +275,11 @@ def export_production_report(request):
         card_splits_map.setdefault(sp.factory_card_id, []).append(sp)
 
     # ── 4. TOTALS (identical to production_reports) ──
-    total_meters = cards.aggregate(total=Sum("total_billable_meters"))[
-        "total"
-    ] or Decimal("0.00")
-
+    # إجمالي الأمتار = الأمتار الفعلية (الخام)
+    total_meters = Decimal("0.00")
     total_cutter_cost = Decimal("0.00")
     for card in cards:
+        total_meters += card.get_actual_meters()
         total_cutter_cost += card.get_current_cutter_cost()
 
     # Tailoring cost - mirrors the view logic exactly
@@ -516,7 +513,7 @@ def export_production_report(request):
             card.order_number,
             card.customer_name,
             card.production_date.strftime("%Y-%m-%d") if card.production_date else "-",
-            float(card.total_billable_meters),
+            float(card.get_actual_meters()),
             cutter_name,
             float(card.get_current_cutter_cost()),
             tailors_details,
@@ -530,7 +527,7 @@ def export_production_report(request):
             cell = ws.cell(row=current_row, column=col_idx, value=val)
             apply_row_style(cell)
 
-        sum_meters += card.total_billable_meters
+        sum_meters += card.get_actual_meters()
         sum_cutter_cost += card.get_current_cutter_cost()
         sum_tailor_cost += card_tailor_cost
 

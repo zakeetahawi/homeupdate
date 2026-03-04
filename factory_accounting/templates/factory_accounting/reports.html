@@ -197,7 +197,7 @@
                                             </td>
                                             <td class="fw-bold">{{ card.customer_name }}</td>
                                             <td>{{ card.production_date|date:"Y-m-d"|default:"-" }}</td>
-                                            <td class="fw-bold">{{ card.total_billable_meters }}</td>
+                                            <td class="fw-bold">{{ card.get_actual_meters|floatformat:2 }}</td>
                                             <td>{{ card.cutter_name }}</td>
                                             <td>{{ card.total_cutter_cost|floatformat:2 }}</td>
                                             <td class="text-start">
