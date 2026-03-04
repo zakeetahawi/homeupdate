@@ -14,7 +14,13 @@ from django.views.decorators.http import require_http_methods
 
 from manufacturing.models import ManufacturingOrder
 
-from .models import CardMeasurementSplit, FactoryAccountingSettings, FactoryCard, Tailor
+from .models import (
+    CardMeasurementSplit,
+    FactoryAccountingSettings,
+    FactoryCard,
+    ReadyCurtainEntry,
+    Tailor,
+)
 
 
 @login_required
@@ -396,6 +402,114 @@ def api_bulk_pay_cards(request):
             else f"تم إتمام الدفع لـ {updated_count} بطاقة بالكامل"
         )
         return JsonResponse({"success": True, "message": msg})
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def add_ready_curtain(request):
+    """
+    إضافة ستائر جاهزة - API endpoint
+    Add ready-made curtains entry
+    """
+    import json
+
+    try:
+        data = json.loads(request.body)
+        tailor_id = data.get("tailor_id")
+        quantity = data.get("quantity")
+        price_per_piece = data.get("price_per_piece")
+        description = data.get("description", "")
+        production_date = data.get("production_date")
+
+        # Validation
+        if not tailor_id:
+            return JsonResponse(
+                {"success": False, "error": "يجب اختيار الخياط"}, status=400
+            )
+        if not quantity or int(quantity) < 1:
+            return JsonResponse(
+                {"success": False, "error": "يجب إدخال عدد الستائر (1 على الأقل)"},
+                status=400,
+            )
+        if not price_per_piece or Decimal(str(price_per_piece)) <= 0:
+            return JsonResponse(
+                {"success": False, "error": "يجب إدخال سعر القطعة"},
+                status=400,
+            )
+
+        tailor = get_object_or_404(Tailor, id=tailor_id, is_active=True)
+
+        entry = ReadyCurtainEntry.objects.create(
+            tailor=tailor,
+            quantity=int(quantity),
+            price_per_piece=Decimal(str(price_per_piece)),
+            description=description,
+            production_date=production_date or timezone.now().date(),
+            created_by=request.user,
+        )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": f"تم إضافة {entry.quantity} ستارة للخياط {tailor.name} - التكلفة: {entry.total_cost}",
+                "entry_id": entry.id,
+            }
+        )
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_ready_curtain(request, entry_id):
+    """
+    حذف إدخال ستائر جاهزة
+    """
+    try:
+        entry = get_object_or_404(ReadyCurtainEntry, id=entry_id)
+        if entry.is_paid:
+            return JsonResponse(
+                {"success": False, "error": "لا يمكن حذف إدخال مدفوع"},
+                status=400,
+            )
+        entry.delete()
+        return JsonResponse({"success": True, "message": "تم الحذف بنجاح"})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def pay_ready_curtains(request):
+    """
+    دفع ستائر جاهزة - دفع جماعي
+    """
+    import json
+
+    try:
+        data = json.loads(request.body)
+        entry_ids = data.get("entry_ids", [])
+
+        if not entry_ids:
+            return JsonResponse(
+                {"success": False, "error": "لم يتم تحديد أي إدخالات"}, status=400
+            )
+
+        now = timezone.now()
+        updated = ReadyCurtainEntry.objects.filter(
+            id__in=entry_ids, is_paid=False
+        ).update(is_paid=True, payment_date=now)
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": f"تم إتمام الدفع لـ {updated} إدخال ستائر جاهزة",
+            }
+        )
 
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=400)

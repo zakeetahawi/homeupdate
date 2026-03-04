@@ -23,6 +23,22 @@ urlpatterns = [
     ),
     path("api/tailors/", views.get_tailors_list, name="tailors_list"),
     path("api/bulk-pay/", views.api_bulk_pay_cards, name="bulk_pay"),
+    # Ready Curtains API
+    path(
+        "api/ready-curtain/add/",
+        views.add_ready_curtain,
+        name="add_ready_curtain",
+    ),
+    path(
+        "api/ready-curtain/<int:entry_id>/delete/",
+        views.delete_ready_curtain,
+        name="delete_ready_curtain",
+    ),
+    path(
+        "api/ready-curtain/pay/",
+        views.pay_ready_curtains,
+        name="pay_ready_curtains",
+    ),
     # Reports
     path("reports/", reports_views.production_reports, name="reports"),
     path(

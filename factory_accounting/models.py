@@ -800,3 +800,81 @@ class TailoringTypePricing(models.Model):
     def __str__(self):
         method = "متر" if self.calc_method == "per_meter" else "قطعة"
         return f"{self.tailoring_type.display_name}: {self.rate} /{method}"
+
+
+class ReadyCurtainEntry(models.Model):
+    """
+    ستائر جاهزة - إدخال يدوي لأعمال الخياطة بدون أمر تصنيع
+    Ready-made curtains entry - manual tailor work without manufacturing order
+    """
+
+    tailor = models.ForeignKey(
+        Tailor,
+        on_delete=models.PROTECT,
+        related_name="ready_curtain_entries",
+        verbose_name=_("الخياط"),
+        limit_choices_to={"is_active": True, "role": "tailor"},
+    )
+
+    quantity = models.PositiveIntegerField(
+        _("عدد الستائر"),
+        validators=[MinValueValidator(1)],
+    )
+
+    price_per_piece = models.DecimalField(
+        _("سعر القطعة"),
+        max_digits=15,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+
+    total_cost = models.DecimalField(
+        _("التكلفة الإجمالية"),
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text=_("يتم حسابها تلقائياً: عدد الستائر × سعر القطعة"),
+    )
+
+    description = models.CharField(
+        _("وصف / ملاحظات"),
+        max_length=500,
+        blank=True,
+    )
+
+    production_date = models.DateField(
+        _("تاريخ الإنتاج"),
+        default=timezone.now,
+        db_index=True,
+    )
+
+    is_paid = models.BooleanField(_("مدفوع"), default=False, db_index=True)
+
+    payment_date = models.DateTimeField(
+        _("تاريخ الدفع"),
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_ready_curtains",
+        verbose_name=_("تم الإنشاء بواسطة"),
+    )
+
+    class Meta:
+        verbose_name = _("ستائر جاهزة")
+        verbose_name_plural = _("ستائر جاهزة")
+        ordering = ["-production_date", "-created_at"]
+
+    def __str__(self):
+        return f"{self.tailor.name} - {self.quantity} ستارة × {self.price_per_piece}"
+
+    def save(self, *args, **kwargs):
+        self.total_cost = Decimal(str(self.quantity)) * self.price_per_piece
+        super().save(*args, **kwargs)

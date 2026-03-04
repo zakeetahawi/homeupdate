@@ -14,7 +14,7 @@ from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-from .models import CardMeasurementSplit, FactoryCard, Tailor
+from .models import CardMeasurementSplit, FactoryCard, ReadyCurtainEntry, Tailor
 
 
 @login_required
@@ -140,6 +140,37 @@ def production_reports(request):
     if tailor_id and tailor_id.isdigit():
         filtered_tailor_id = int(tailor_id)
 
+    # Ready Curtains - ستائر جاهزة
+    ready_curtains = ReadyCurtainEntry.objects.select_related(
+        "tailor", "created_by"
+    ).order_by("-production_date")
+
+    # Apply same date filters
+    if date_from:
+        ready_curtains = ready_curtains.filter(production_date__gte=date_from)
+    if date_to:
+        ready_curtains = ready_curtains.filter(production_date__lte=date_to)
+
+    # Filter by tailor
+    if tailor_id and tailor_id.isdigit():
+        ready_curtains = ready_curtains.filter(tailor_id=tailor_id)
+    elif tailor_id == "without":
+        ready_curtains = ready_curtains.none()
+
+    # Filter by payment status
+    if payment_status == "paid":
+        ready_curtains = ready_curtains.filter(is_paid=True)
+    elif payment_status == "unpaid":
+        ready_curtains = ready_curtains.filter(is_paid=False)
+
+    # Calculate ready curtain totals
+    ready_curtain_total = ready_curtains.aggregate(
+        total=Sum("total_cost")
+    )["total"] or Decimal("0.00")
+
+    # Add ready curtain cost to tailor total
+    total_amount += ready_curtain_total
+
     context = {
         "cards": cards.order_by("-production_date"),  # Show all records
         "total_meters": total_meters,
@@ -150,6 +181,8 @@ def production_reports(request):
         "unpaid_amount": unpaid_amount,
         "tailors": tailors,
         "cutters": cutters,
+        "ready_curtains": ready_curtains,
+        "ready_curtain_total": ready_curtain_total,
         "filters": {
             "date_from": date_from,
             "date_to": date_to,

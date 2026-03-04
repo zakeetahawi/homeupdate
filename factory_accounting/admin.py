@@ -14,6 +14,7 @@ from .models import (
     FactoryAccountingSettings,
     FactoryCard,
     ProductionStatusLog,
+    ReadyCurtainEntry,
     Tailor,
     TailoringTypePricing,
 )
@@ -349,3 +350,21 @@ class TailoringTypePricingAdmin(admin.ModelAdmin):
         return obj.get_calc_method_display()
 
     get_calc_method_display.short_description = _("طريقة الحساب")
+
+
+@admin.register(ReadyCurtainEntry)
+class ReadyCurtainEntryAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "tailor",
+        "quantity",
+        "price_per_piece",
+        "total_cost",
+        "production_date",
+        "is_paid",
+        "created_by",
+    ]
+    list_filter = ["is_paid", "tailor", "production_date"]
+    search_fields = ["tailor__name", "description"]
+    date_hierarchy = "production_date"
+    readonly_fields = ["total_cost", "created_at", "updated_at"]

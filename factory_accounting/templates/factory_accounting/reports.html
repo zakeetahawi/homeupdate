@@ -94,6 +94,12 @@
                                        class="btn btn-warning">
                                         <i class="fas fa-trophy"></i> ترتيب الخياطين
                                     </a>
+                                    <button type="button"
+                                            class="btn btn-info text-white"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#addReadyCurtainModal">
+                                        <i class="fas fa-plus-circle"></i> ستائر جاهزة
+                                    </button>
                                 </div>
                             </div>
                         </form>
@@ -248,6 +254,92 @@
                                 </tfoot>
                             </table>
                         </div>
+
+                        <!-- Ready Curtains Section - ستائر جاهزة -->
+                        {% if ready_curtains %}
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-cut text-info me-2"></i>ستائر جاهزة
+                                    <span class="badge bg-info">{{ ready_curtains|length }}</span>
+                                </h5>
+                                <button type="button"
+                                        class="btn btn-sm btn-success"
+                                        id="btn-bulk-pay-ready"
+                                        style="display: none">
+                                    <i class="fas fa-check-double me-1"></i> إتمام الدفع للمحدد
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover align-middle">
+                                    <thead class="table-info text-center align-middle">
+                                        <tr>
+                                            <th style="width: 40px;">
+                                                <input type="checkbox" class="form-check-input" id="check-all-ready">
+                                            </th>
+                                            <th>التاريخ</th>
+                                            <th>الخياط</th>
+                                            <th>عدد الستائر</th>
+                                            <th>سعر القطعة</th>
+                                            <th>تكلفة الخياط</th>
+                                            <th>وصف</th>
+                                            <th>الحالة</th>
+                                            <th>إجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for entry in ready_curtains %}
+                                        <tr class="{% if entry.is_paid %}table-success{% endif %} text-center">
+                                            <td>
+                                                {% if not entry.is_paid %}
+                                                    <input type="checkbox"
+                                                           class="form-check-input ready-check"
+                                                           value="{{ entry.id }}">
+                                                {% else %}
+                                                    <i class="fas fa-check-circle text-success"></i>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ entry.production_date|date:"Y-m-d" }}</td>
+                                            <td class="fw-bold">{{ entry.tailor.name }}</td>
+                                            <td>{{ entry.quantity }}</td>
+                                            <td>{{ entry.price_per_piece|floatformat:2 }}</td>
+                                            <td class="fw-bold">{{ entry.total_cost|floatformat:2 }}</td>
+                                            <td class="text-start small">{{ entry.description|default:"-" }}</td>
+                                            <td>
+                                                <span class="badge bg-success mb-1">مكتمل</span>
+                                                {% if entry.is_paid %}
+                                                    <div class="text-success small fw-bold">مدفوع</div>
+                                                {% else %}
+                                                    <div class="text-muted small">غير مدفوع</div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if not entry.is_paid %}
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-danger btn-delete-ready"
+                                                            data-id="{{ entry.id }}"
+                                                            title="حذف">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot class="table-light fw-bold text-center">
+                                        <tr>
+                                            <td colspan="5" class="text-end">إجمالي الستائر الجاهزة:</td>
+                                            <td>{{ ready_curtain_total|floatformat:2 }}</td>
+                                            <td colspan="3"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+
                     </div>
                 </div>
             </div>
@@ -451,6 +543,193 @@
                 printWindow.close();
             }, 500);
         };
+    });
+    </script>
+
+    <!-- Ready Curtain Modal - ستائر جاهزة -->
+    <div class="modal fade" id="addReadyCurtainModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>إضافة ستائر جاهزة</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الخياط <span class="text-danger">*</span></label>
+                        <select id="ready-tailor" class="form-select" required>
+                            <option value="">اختر الخياط...</option>
+                            {% for tailor in tailors %}
+                                <option value="{{ tailor.id }}">{{ tailor.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">عدد الستائر <span class="text-danger">*</span></label>
+                            <input type="number" id="ready-quantity" class="form-control" min="1" value="1" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">سعر القطعة <span class="text-danger">*</span></label>
+                            <input type="number" id="ready-price" class="form-control" min="0.01" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">تاريخ الإنتاج</label>
+                        <input type="date" id="ready-date" class="form-control" value="{{ filters.date_from|default_if_none:'' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">وصف / ملاحظات</label>
+                        <input type="text" id="ready-description" class="form-control" placeholder="اختياري...">
+                    </div>
+                    <div class="alert alert-light border text-center" id="ready-total-preview">
+                        <strong>التكلفة الإجمالية: <span id="ready-total-calc">0.00</span></strong>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-info text-white" id="btn-save-ready-curtain">
+                        <i class="fas fa-save me-1"></i> حفظ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Ready Curtain - حساب التكلفة المباشر
+        const qtyInput = document.getElementById('ready-quantity');
+        const priceInput = document.getElementById('ready-price');
+        const totalCalc = document.getElementById('ready-total-calc');
+
+        function updateReadyTotal() {
+            const qty = parseFloat(qtyInput?.value) || 0;
+            const price = parseFloat(priceInput?.value) || 0;
+            if (totalCalc) totalCalc.textContent = (qty * price).toFixed(2);
+        }
+
+        if (qtyInput) qtyInput.addEventListener('input', updateReadyTotal);
+        if (priceInput) priceInput.addEventListener('input', updateReadyTotal);
+
+        // Save Ready Curtain
+        const saveBtn = document.getElementById('btn-save-ready-curtain');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                const tailorId = document.getElementById('ready-tailor').value;
+                const quantity = document.getElementById('ready-quantity').value;
+                const price = document.getElementById('ready-price').value;
+                const date = document.getElementById('ready-date').value;
+                const description = document.getElementById('ready-description').value;
+
+                if (!tailorId) { alert('يجب اختيار الخياط'); return; }
+                if (!quantity || quantity < 1) { alert('يجب إدخال عدد الستائر'); return; }
+                if (!price || price <= 0) { alert('يجب إدخال سعر القطعة'); return; }
+
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الحفظ...';
+
+                fetch("{% url 'factory_accounting:add_ready_curtain' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        tailor_id: tailorId,
+                        quantity: quantity,
+                        price_per_piece: price,
+                        production_date: date,
+                        description: description
+                    })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('خطأ: ' + data.error);
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fas fa-save me-1"></i> حفظ';
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('حدث خطأ في الاتصال');
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save me-1"></i> حفظ';
+                });
+            });
+        }
+
+        // Delete Ready Curtain
+        document.querySelectorAll('.btn-delete-ready').forEach(btn => {
+            btn.addEventListener('click', function () {
+                if (!confirm('هل أنت متأكد من حذف هذا الإدخال؟')) return;
+                const entryId = this.getAttribute('data-id');
+
+                fetch(`/factory-accounting/api/ready-curtain/${entryId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) { location.reload(); }
+                    else { alert('خطأ: ' + data.error); }
+                })
+                .catch(err => { console.error(err); alert('حدث خطأ'); });
+            });
+        });
+
+        // Bulk Pay Ready Curtains
+        const checkAllReady = document.getElementById('check-all-ready');
+        const readyCheckboxes = document.querySelectorAll('.ready-check');
+        const bulkPayReadyBtn = document.getElementById('btn-bulk-pay-ready');
+
+        function updateReadyBulkBtn() {
+            const checked = document.querySelectorAll('.ready-check:checked');
+            if (bulkPayReadyBtn) {
+                if (checked.length > 0) {
+                    bulkPayReadyBtn.style.display = 'inline-block';
+                    bulkPayReadyBtn.innerHTML = `<i class="fas fa-check-double me-1"></i> إتمام الدفع (${checked.length})`;
+                } else {
+                    bulkPayReadyBtn.style.display = 'none';
+                }
+            }
+        }
+
+        if (checkAllReady) {
+            checkAllReady.addEventListener('change', function () {
+                readyCheckboxes.forEach(cb => cb.checked = checkAllReady.checked);
+                updateReadyBulkBtn();
+            });
+        }
+        readyCheckboxes.forEach(cb => cb.addEventListener('change', updateReadyBulkBtn));
+
+        if (bulkPayReadyBtn) {
+            bulkPayReadyBtn.addEventListener('click', function () {
+                const selected = Array.from(document.querySelectorAll('.ready-check:checked')).map(cb => cb.value);
+                if (!confirm('هل أنت متأكد من إتمام الدفع لـ ' + selected.length + ' إدخال؟')) return;
+
+                fetch("{% url 'factory_accounting:pay_ready_curtains' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ entry_ids: selected })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) { alert(data.message); location.reload(); }
+                    else { alert('خطأ: ' + data.error); }
+                })
+                .catch(err => { console.error(err); alert('حدث خطأ'); });
+            });
+        }
     });
     </script>
 {% endblock %}
