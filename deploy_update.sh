@@ -50,6 +50,11 @@ else
     echo -e "\n${GREEN}[3b] ✅ إصلاح التكرارات تم مسبقاً${NC}"
 fi
 
+# 3c. مزامنة إعدادات الناف بار للأقسام (يعمل دائماً عند كل deployment)
+echo -e "\n${BLUE}[3c] مزامنة إعدادات الناف بار...${NC}"
+python manage.py sync_department_navbar
+echo -e "${GREEN}  ✅ تم${NC}"
+
 # 4. إعادة تشغيل الخدمة عبر systemd
 echo -e "\n${BLUE}[4/4] إعادة تشغيل الخدمة...${NC}"
 if systemctl is-active --quiet run-production.service 2>/dev/null; then
