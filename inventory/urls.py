@@ -358,6 +358,11 @@ urlpatterns = [
         name="bulk_price_update",
     ),
     path(
+        "bulk-price-update/",
+        views_variants.global_bulk_price_update,
+        name="global_bulk_price_update",
+    ),
+    path(
         "variant/<int:pk>/update-price/",
         views_variants.update_variant_price,
         name="update_variant_price",

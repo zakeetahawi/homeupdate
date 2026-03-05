@@ -1,0 +1,787 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}تحديث الأسعار الجماعي العالمي{% endblock %}
+
+{% block content %}
+<div class="container-fluid" dir="rtl">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'inventory:base_product_list' %}">المنتجات الأساسية</a>
+            </li>
+            <li class="breadcrumb-item active">تحديث الأسعار الجماعي</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h3 class="mb-1 fw-bold">
+                <i class="fas fa-tags text-warning me-2"></i>
+                تحديث الأسعار الجماعي العالمي
+            </h3>
+            <p class="text-muted mb-0 small">رفع أو تخفيض أسعار جميع المنتجات دفعة واحدة حسب المستودع ونوع السعر</p>
+        </div>
+        <a href="{% url 'inventory:base_product_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-right me-1"></i> رجوع
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Alert container for JS-triggered alerts -->
+    <div id="js-alerts-container"></div>
+
+    <!-- Steps Progress Bar -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body py-3 px-4">
+            <div class="d-flex align-items-center justify-content-between" id="stepsProgress">
+                <div class="step-item text-center" data-step="1">
+                    <div class="step-circle active" id="circle-1">1</div>
+                    <small class="d-block mt-1 text-muted">المستودع</small>
+                </div>
+                <div class="step-line flex-grow-1 mx-2" id="line-1"></div>
+                <div class="step-item text-center" data-step="2">
+                    <div class="step-circle" id="circle-2">2</div>
+                    <small class="d-block mt-1 text-muted">نوع السعر</small>
+                </div>
+                <div class="step-line flex-grow-1 mx-2" id="line-2"></div>
+                <div class="step-item text-center" data-step="3">
+                    <div class="step-circle" id="circle-3">3</div>
+                    <small class="d-block mt-1 text-muted">طريقة الحساب</small>
+                </div>
+                <div class="step-line flex-grow-1 mx-2" id="line-3"></div>
+                <div class="step-item text-center" data-step="4">
+                    <div class="step-circle" id="circle-4">4</div>
+                    <small class="d-block mt-1 text-muted">الاتجاه</small>
+                </div>
+                <div class="step-line flex-grow-1 mx-2" id="line-4"></div>
+                <div class="step-item text-center" data-step="5">
+                    <div class="step-circle" id="circle-5">5</div>
+                    <small class="d-block mt-1 text-muted">القيمة</small>
+                </div>
+                <div class="step-line flex-grow-1 mx-2" id="line-5"></div>
+                <div class="step-item text-center" data-step="6">
+                    <div class="step-circle" id="circle-6">6</div>
+                    <small class="d-block mt-1 text-muted">المراجعة</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form id="bulkPriceForm" method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" id="formAction" value="preview">
+
+        <!-- ========== STEP 1: Warehouse ========== -->
+        <div class="card shadow-sm border-0 mb-3 step-card" id="step-1-card">
+            <div class="card-header bg-dark text-white d-flex align-items-center">
+                <span class="badge bg-warning text-dark me-2 fs-6">1</span>
+                <h6 class="mb-0 fw-bold">تحديد المستودع</h6>
+            </div>
+            <div class="card-body">
+                <!-- All warehouses toggle -->
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="all_warehouses" name="all_warehouses">
+                    <label class="form-check-label fw-semibold" for="all_warehouses">
+                        تطبيق على جميع المستودعات
+                    </label>
+                </div>
+
+                <!-- Individual warehouses -->
+                <div id="warehouseListSection">
+                    <p class="text-muted small mb-2">أو اختر مستودعاً أو أكثر:</p>
+                    <div class="row g-2">
+                        {% for wh in warehouses %}
+                            <div class="col-md-4 col-sm-6">
+                                <div class="form-check border rounded p-2 warehouse-check-item h-100 d-flex align-items-center">
+                                    <input class="form-check-input warehouse-checkbox ms-0 me-2"
+                                           type="checkbox"
+                                           name="warehouse_ids"
+                                           value="{{ wh.id }}"
+                                           id="wh_{{ wh.id }}">
+                                    <label class="form-check-label w-100 cursor-pointer" for="wh_{{ wh.id }}">
+                                        <i class="fas fa-warehouse text-secondary me-1"></i>
+                                        {{ wh.name }}
+                                    </label>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="col-12">
+                                <div class="alert alert-warning py-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    لا توجد مستودعات نشطة — سيتم التطبيق على جميع المنتجات
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mt-3 d-flex justify-content-end">
+                    <button type="button" class="btn btn-dark btn-sm px-4" id="confirmStep1" disabled>
+                        التالي <i class="fas fa-arrow-left ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== STEP 2: Price Type ========== -->
+        <div class="card shadow-sm border-0 mb-3 step-card d-none" id="step-2-card">
+            <div class="card-header bg-dark text-white d-flex align-items-center">
+                <span class="badge bg-warning text-dark me-2 fs-6">2</span>
+                <h6 class="mb-0 fw-bold">نوع السعر</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">هل تريد تحديث سعر الجملة أم السعر القطاعي (التجزئة)؟</p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="price-type-option card border-2 p-3 cursor-pointer h-100"
+                               for="price_type_retail">
+                            <div class="d-flex align-items-center">
+                                <input class="form-check-input me-3" type="radio"
+                                       name="price_type" id="price_type_retail" value="retail">
+                                <div>
+                                    <div class="fw-bold">
+                                        <i class="fas fa-shopping-cart text-primary me-2"></i>
+                                        سعر قطاعي (التجزئة)
+                                    </div>
+                                    <small class="text-muted">يطبق على عملاء التجزئة العاديين</small>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="price-type-option card border-2 p-3 cursor-pointer h-100"
+                               for="price_type_wholesale">
+                            <div class="d-flex align-items-center">
+                                <input class="form-check-input me-3" type="radio"
+                                       name="price_type" id="price_type_wholesale" value="wholesale">
+                                <div>
+                                    <div class="fw-bold">
+                                        <i class="fas fa-boxes text-success me-2"></i>
+                                        سعر جملة
+                                    </div>
+                                    <small class="text-muted">يطبق على عملاء الجملة</small>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== STEP 3: Operation Type ========== -->
+        <div class="card shadow-sm border-0 mb-3 step-card d-none" id="step-3-card">
+            <div class="card-header bg-dark text-white d-flex align-items-center">
+                <span class="badge bg-warning text-dark me-2 fs-6">3</span>
+                <h6 class="mb-0 fw-bold">طريقة الحساب</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">هل التغيير بنسبة مئوية أم بقيمة ثابتة؟</p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="op-type-option card border-2 p-3 cursor-pointer h-100"
+                               for="op_percentage">
+                            <div class="d-flex align-items-center">
+                                <input class="form-check-input me-3" type="radio"
+                                       name="operation_type" id="op_percentage" value="percentage">
+                                <div>
+                                    <div class="fw-bold">
+                                        <i class="fas fa-percent text-info me-2"></i>
+                                        نسبة مئوية (%)
+                                    </div>
+                                    <small class="text-muted">مثال: زيادة 10% من السعر الحالي</small>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="op-type-option card border-2 p-3 cursor-pointer h-100"
+                               for="op_fixed">
+                            <div class="d-flex align-items-center">
+                                <input class="form-check-input me-3" type="radio"
+                                       name="operation_type" id="op_fixed" value="fixed">
+                                <div>
+                                    <div class="fw-bold">
+                                        <i class="fas fa-coins text-warning me-2"></i>
+                                        قيمة ثابتة
+                                    </div>
+                                    <small class="text-muted">مثال: إضافة 50 جنيه ثابتة</small>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== STEP 4: Direction ========== -->
+        <div class="card shadow-sm border-0 mb-3 step-card d-none" id="step-4-card">
+            <div class="card-header bg-dark text-white d-flex align-items-center">
+                <span class="badge bg-warning text-dark me-2 fs-6">4</span>
+                <h6 class="mb-0 fw-bold">اتجاه التغيير</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">زيادة في الأسعار أم تخفيض؟</p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="direction-option card border-2 p-3 cursor-pointer h-100"
+                               for="dir_increase">
+                            <div class="d-flex align-items-center">
+                                <input class="form-check-input me-3" type="radio"
+                                       name="direction" id="dir_increase" value="increase">
+                                <div>
+                                    <div class="fw-bold">
+                                        <i class="fas fa-arrow-trend-up text-danger me-2"></i>
+                                        زيادة الأسعار
+                                    </div>
+                                    <small class="text-muted">رفع الأسعار بالقيمة المحددة</small>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="direction-option card border-2 p-3 cursor-pointer h-100"
+                               for="dir_decrease">
+                            <div class="d-flex align-items-center">
+                                <input class="form-check-input me-3" type="radio"
+                                       name="direction" id="dir_decrease" value="decrease">
+                                <div>
+                                    <div class="fw-bold">
+                                        <i class="fas fa-arrow-trend-down text-success me-2"></i>
+                                        تخفيض الأسعار
+                                    </div>
+                                    <small class="text-muted">خفض الأسعار بالقيمة المحددة</small>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== STEP 5: Value ========== -->
+        <div class="card shadow-sm border-0 mb-3 step-card d-none" id="step-5-card">
+            <div class="card-header bg-dark text-white d-flex align-items-center">
+                <span class="badge bg-warning text-dark me-2 fs-6">5</span>
+                <h6 class="mb-0 fw-bold" id="valueStepTitle">القيمة</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold" id="valueLabelText">
+                            أدخل النسبة المئوية
+                        </label>
+                        <div class="input-group input-group-lg">
+                            <input type="number"
+                                   name="value"
+                                   id="valueInput"
+                                   class="form-control"
+                                   min="0"
+                                   step="0.01"
+                                   placeholder="0.00">
+                            <span class="input-group-text fw-bold" id="valueSuffix">%</span>
+                        </div>
+                        <div class="form-text" id="valueHint">
+                            أدخل قيمة موجبة للتطبيق
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">ملاحظات (اختياري)</label>
+                        <textarea name="notes" class="form-control" rows="2"
+                                  placeholder="سبب التغيير أو أي ملاحظات..."></textarea>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-warning w-100 py-2 fw-bold" id="previewBtn">
+                            <i class="fas fa-eye me-2"></i>
+                            معاينة
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Summary badge -->
+                <div class="mt-3 d-none" id="selectionSummary">
+                    <div class="alert alert-secondary py-2 mb-0">
+                        <small>
+                            <i class="fas fa-info-circle me-2"></i>
+                            <span id="summaryText"></span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== STEP 6: Preview ========== -->
+        <div class="card shadow-sm border-0 mb-3 step-card d-none" id="step-6-card">
+            <div class="card-header d-flex align-items-center justify-content-between"
+                 style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color:#fff;">
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-warning text-dark me-2 fs-6">6</span>
+                    <h6 class="mb-0 fw-bold">
+                        معاينة التغييرات
+                        <span class="badge bg-info text-dark me-2" id="previewCount">0</span>
+                        منتج سيتأثر
+                    </h6>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-outline-light btn-sm" id="exportPreviewBtn">
+                        <i class="fas fa-file-export me-1"></i> تصدير
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Loading -->
+                <div id="previewLoading" class="text-center py-5">
+                    <div class="spinner-border text-warning" role="status"></div>
+                    <p class="mt-2 text-muted">جارٍ حساب الأسعار...</p>
+                </div>
+
+                <!-- Table -->
+                <div class="table-responsive d-none" id="previewTableWrapper">
+                    <table class="table table-hover table-sm mb-0" id="previewTable">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th style="width:40px">
+                                    <input type="checkbox" id="previewSelectAll"
+                                           class="form-check-input" checked title="تحديد الكل">
+                                </th>
+                                <th>#</th>
+                                <th>اسم المنتج</th>
+                                <th>الكود</th>
+                                <th>الفئة</th>
+                                <th class="text-center">السعر الحالي</th>
+                                <th class="text-center">السعر بعد التغيير</th>
+                                <th class="text-center">الفرق</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewTableBody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- No results -->
+                <div class="text-center py-5 d-none" id="previewEmpty">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">لا توجد منتجات متأثرة بهذه التصفية</p>
+                </div>
+            </div>
+
+            <!-- Apply bar -->
+            <div class="card-footer bg-light d-none" id="previewActions">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="text-muted small">
+                        <i class="fas fa-exclamation-circle text-warning me-1"></i>
+                        هذه العملية <strong>لا يمكن التراجع عنها</strong> — تأكد من المراجعة قبل التطبيق
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="rePreviewBtn">
+                            <i class="fas fa-redo me-1"></i> تحديث المعاينة
+                        </button>
+                        <button type="submit" class="btn btn-success btn-sm px-4 fw-bold" id="applyBtn">
+                            <i class="fas fa-check me-2"></i>
+                            تطبيق التغييرات
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </form><!-- end form -->
+</div>
+
+<style>
+/* warehouse disabled state */
+.warehouse-section-disabled {
+    opacity: .4;
+    pointer-events: none;
+}
+.step-circle {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: #dee2e6;
+    color: #6c757d;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: .9rem;
+    margin: 0 auto;
+    transition: all .3s ease;
+}
+.step-circle.active {
+    background: #ffc107;
+    color: #212529;
+    box-shadow: 0 0 0 4px rgba(255,193,7,.3);
+}
+.step-circle.done {
+    background: #198754;
+    color: #fff;
+}
+.step-line {
+    height: 3px;
+    background: #dee2e6;
+    transition: background .3s ease;
+    margin-top: -16px;
+}
+.step-line.done { background: #198754; }
+
+.price-type-option, .op-type-option, .direction-option {
+    cursor: pointer; transition: border-color .2s, background .2s;
+}
+.price-type-option:has(input:checked),
+.op-type-option:has(input:checked),
+.direction-option:has(input:checked) {
+    border-color: #ffc107 !important;
+    background: rgba(255,193,7,.08);
+}
+
+.warehouse-check-item {
+    cursor: pointer; transition: border-color .2s, background .2s;
+}
+.warehouse-check-item:has(input:checked) {
+    border-color: #0d6efd !important;
+    background: rgba(13,110,253,.06);
+}
+
+.cursor-pointer { cursor: pointer; }
+.step-card { transition: opacity .3s ease; }
+
+/* Price change colors */
+.price-increase { color: #dc3545; font-weight: 600; }
+.price-decrease { color: #198754; font-weight: 600; }
+.price-unchanged { color: #6c757d; }
+.step-done-icon { font-size: .75rem; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ────── State ──────
+    let currentStep = 1;
+    let previewData = [];
+
+    // ────── Refs ──────
+    const allWarehousesChk = document.getElementById('all_warehouses');
+    const warehouseListSection = document.getElementById('warehouseListSection');
+    const confirmStep1Btn = document.getElementById('confirmStep1');
+    const previewBtn = document.getElementById('previewBtn');
+    const rePreviewBtn = document.getElementById('rePreviewBtn');
+    const applyBtn = document.getElementById('applyBtn');
+    const formAction = document.getElementById('formAction');
+    const form = document.getElementById('bulkPriceForm');
+    const valueSuffix = document.getElementById('valueSuffix');
+    const valueLabelText = document.getElementById('valueLabelText');
+    const valueHint = document.getElementById('valueHint');
+    const valueInput = document.getElementById('valueInput');
+    const summaryDiv = document.getElementById('selectionSummary');
+    const summaryText = document.getElementById('summaryText');
+    const previewSelectAll = document.getElementById('previewSelectAll');
+
+    // ────── Step helpers ──────
+    function showStep(n) {
+        document.getElementById('step-' + n + '-card').classList.remove('d-none');
+        activateCircle(n);
+    }
+
+    function activateCircle(n) {
+        const circle = document.getElementById('circle-' + n);
+        if (circle) { circle.classList.add('active'); }
+    }
+
+    function markDone(n) {
+        const circle = document.getElementById('circle-' + n);
+        if (circle) {
+            circle.classList.remove('active');
+            circle.classList.add('done');
+            circle.innerHTML = '<i class="fas fa-check step-done-icon"></i>';
+        }
+        const line = document.getElementById('line-' + n);
+        if (line) { line.classList.add('done'); }
+    }
+
+    // ────── Step 1: Warehouse ──────
+    function checkStep1Valid() {
+        const allChecked = allWarehousesChk.checked;
+        const anyWHChecked = document.querySelectorAll('.warehouse-checkbox:checked').length > 0;
+        confirmStep1Btn.disabled = !(allChecked || anyWHChecked);
+    }
+
+    allWarehousesChk.addEventListener('change', function () {
+        if (this.checked) {
+            warehouseListSection.classList.add('warehouse-section-disabled');
+        } else {
+            warehouseListSection.classList.remove('warehouse-section-disabled');
+        }
+        checkStep1Valid();
+    });
+
+    document.querySelectorAll('.warehouse-checkbox').forEach(cb => {
+        cb.addEventListener('change', checkStep1Valid);
+    });
+
+    // Also: if no warehouses exist, enable the button automatically
+    if (document.querySelectorAll('.warehouse-checkbox').length === 0) {
+        confirmStep1Btn.disabled = false;
+    }
+
+    confirmStep1Btn.addEventListener('click', function () {
+        markDone(1);
+        currentStep = 2;
+        showStep(2);
+        document.getElementById('step-2-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    // ────── Step 2: Price Type ──────
+    document.querySelectorAll('input[name="price_type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            markDone(2);
+            currentStep = 3;
+            showStep(3);
+            updateValueSuffix();
+            setTimeout(() => {
+                document.getElementById('step-3-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        });
+    });
+
+    // ────── Step 3: Operation Type ──────
+    document.querySelectorAll('input[name="operation_type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            markDone(3);
+            currentStep = 4;
+            showStep(4);
+            updateValueSuffix();
+            setTimeout(() => {
+                document.getElementById('step-4-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        });
+    });
+
+    // ────── Step 4: Direction ──────
+    document.querySelectorAll('input[name="direction"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            markDone(4);
+            currentStep = 5;
+            showStep(5);
+            updateValueSuffix();
+            updateSummary();
+            setTimeout(() => {
+                document.getElementById('step-5-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        });
+    });
+
+    // ────── Update suffix / label based on selections ──────
+    function updateValueSuffix() {
+        const opType = document.querySelector('input[name="operation_type"]:checked');
+        const dir = document.querySelector('input[name="direction"]:checked');
+
+        if (opType && opType.value === 'percentage') {
+            valueSuffix.textContent = '%';
+            valueLabelText.textContent = 'النسبة المئوية';
+            valueHint.textContent = 'أدخل رقماً موجباً (مثال: 10 = 10%)';
+        } else {
+            valueSuffix.textContent = 'ج.م';
+            valueLabelText.textContent = 'القيمة الثابتة';
+            valueHint.textContent = 'أدخل القيمة المراد إضافتها أو خصمها من السعر';
+        }
+
+        if (dir) {
+            valueSuffix.className = 'input-group-text fw-bold';
+            valueSuffix.classList.add(dir.value === 'increase' ? 'text-danger' : 'text-success');
+        }
+    }
+
+    function updateSummary() {
+        const priceType = document.querySelector('input[name="price_type"]:checked');
+        const opType = document.querySelector('input[name="operation_type"]:checked');
+        const dir = document.querySelector('input[name="direction"]:checked');
+        const allWH = allWarehousesChk.checked;
+        const selWH = document.querySelectorAll('.warehouse-checkbox:checked').length;
+
+        if (!priceType || !opType || !dir) return;
+
+        const ptLabel = priceType.value === 'retail' ? 'قطاعي' : 'جملة';
+        const opLabel = opType.value === 'percentage' ? 'نسبة مئوية' : 'قيمة ثابتة';
+        const dirLabel = dir.value === 'increase' ? 'زيادة ↑' : 'تخفيض ↓';
+        const whLabel = allWH ? 'جميع المستودعات' : selWH + ' مستودع';
+
+        summaryText.textContent = `المستودع: ${whLabel} | السعر: ${ptLabel} | الطريقة: ${opLabel} | الاتجاه: ${dirLabel}`;
+        summaryDiv.classList.remove('d-none');
+    }
+
+    // ────── Step 5: Value & Preview ──────
+    valueInput.addEventListener('input', function () {
+        updateSummary();
+    });
+
+    function doPreview() {
+        const val = parseFloat(valueInput.value);
+        if (!val || val <= 0) {
+            valueInput.classList.add('is-invalid');
+            valueInput.focus();
+            return;
+        }
+        valueInput.classList.remove('is-invalid');
+
+        markDone(5);
+        currentStep = 6;
+        showStep(6);
+
+        const step6 = document.getElementById('step-6-card');
+        step6.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // Show loading, hide others
+        document.getElementById('previewLoading').classList.remove('d-none');
+        document.getElementById('previewTableWrapper').classList.add('d-none');
+        document.getElementById('previewEmpty').classList.add('d-none');
+        document.getElementById('previewActions').classList.add('d-none');
+
+        // Build form data for preview
+        const fd = new FormData(form);
+        fd.set('action', 'preview');
+
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            body: fd,
+        })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('previewLoading').classList.add('d-none');
+
+            if (!data.success) {
+                showAlert('حدث خطأ أثناء المعاينة', 'danger');
+                return;
+            }
+
+            previewData = data.data || [];
+            document.getElementById('previewCount').textContent = data.count;
+
+            if (data.count === 0) {
+                document.getElementById('previewEmpty').classList.remove('d-none');
+                return;
+            }
+
+            renderPreviewTable(previewData);
+            document.getElementById('previewTableWrapper').classList.remove('d-none');
+            document.getElementById('previewActions').classList.remove('d-none');
+            markDone(6);
+        })
+        .catch(err => {
+            document.getElementById('previewLoading').classList.add('d-none');
+            showAlert('خطأ في الاتصال: ' + err.message, 'danger');
+        });
+    }
+
+    previewBtn.addEventListener('click', doPreview);
+    rePreviewBtn.addEventListener('click', doPreview);
+
+    function renderPreviewTable(rows) {
+        const dir = document.querySelector('input[name="direction"]:checked');
+        const tbody = document.getElementById('previewTableBody');
+        tbody.innerHTML = '';
+
+        rows.forEach((row, idx) => {
+            const oldP = parseFloat(row.old_price);
+            const newP = parseFloat(row.new_price);
+            const diff = newP - oldP;
+            const isInc = diff > 0;
+            const diffClass = diff > 0 ? 'price-increase' : (diff < 0 ? 'price-decrease' : 'price-unchanged');
+            const diffIcon = diff > 0 ? '▲' : (diff < 0 ? '▼' : '—');
+            const diffStr = diff !== 0 ? `${diffIcon} ${Math.abs(diff).toFixed(2)}` : '—';
+
+            const tr = document.createElement('tr');
+            tr.dataset.id = row.id;
+            tr.innerHTML = `
+                <td>
+                    <input type="checkbox" class="form-check-input preview-row-chk" checked>
+                </td>
+                <td class="text-muted small">${idx + 1}</td>
+                <td class="fw-semibold">${escHtml(row.name)}</td>
+                <td><code class="text-secondary">${escHtml(row.code)}</code></td>
+                <td><span class="badge bg-light text-dark border">${escHtml(row.category)}</span></td>
+                <td class="text-center fw-bold">${oldP.toFixed(2)}</td>
+                <td class="text-center fw-bold ${isInc ? 'text-danger' : 'text-success'}">${newP.toFixed(2)}</td>
+                <td class="text-center ${diffClass}">${diffStr}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Update select-all
+        previewSelectAll.checked = true;
+    }
+
+    // Select all in preview
+    if (previewSelectAll) {
+        previewSelectAll.addEventListener('change', function () {
+            document.querySelectorAll('.preview-row-chk').forEach(cb => cb.checked = this.checked);
+        });
+    }
+
+    // ────── Apply (submit the form with action=apply) ──────
+    applyBtn.addEventListener('click', function () {
+        if (!confirm('هل أنت متأكد من تطبيق هذه التغييرات؟ لا يمكن التراجع عنها.')) return;
+        formAction.value = 'apply';
+        form.submit();
+    });
+
+    // ────── Export preview to CSV ──────
+    document.getElementById('exportPreviewBtn').addEventListener('click', function () {
+        if (!previewData.length) return;
+        let csv = 'اسم المنتج,الكود,الفئة,السعر الحالي,السعر الجديد,الفرق\n';
+        previewData.forEach(r => {
+            const diff = (parseFloat(r.new_price) - parseFloat(r.old_price)).toFixed(2);
+            csv += `"${r.name}","${r.code}","${r.category}",${r.old_price},${r.new_price},${diff}\n`;
+        });
+        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'preview_prices.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    // ────── Utility: HTML escape ──────
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // ────── Utility: CSRF cookie ──────
+    function getCookie(name) {
+        let c = null;
+        document.cookie.split(';').forEach(part => {
+            const [k, v] = part.trim().split('=');
+            if (k === name) c = decodeURIComponent(v);
+        });
+        return c;
+    }
+
+    // ────── Utility: show alert ──────
+    function showAlert(msg, type = 'danger') {
+        const container = document.getElementById('js-alerts-container');
+        const div = document.createElement('div');
+        div.className = `alert alert-${type} alert-dismissible fade show`;
+        div.innerHTML = escHtml(msg) + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        container.appendChild(div);
+        container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Init: show step 1
+    showStep(1);
+});
+</script>
+{% endblock %}

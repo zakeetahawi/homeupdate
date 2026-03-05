@@ -3,10 +3,12 @@ Views لنظام المتغيرات والتسعير
 """
 
 import json
+from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, F, Prefetch, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -474,6 +476,212 @@ def bulk_price_update(request, base_product_id):
     }
 
     return render(request, "inventory/variants/bulk_price_update.html", context)
+
+
+# ==================== Global Bulk Pricing ====================
+
+
+@login_required
+@permission_required("inventory.bulk_price_update", raise_exception=True)
+def global_bulk_price_update(request):
+    """
+    تحديث الأسعار الجماعي العالمي - يشمل جميع المنتجات الأساسية
+    مع إمكانية التصفية حسب المستودع ونوع السعر والعملية
+    """
+    warehouses = Warehouse.objects.filter(is_active=True).order_by("name")
+
+    if request.method == "POST":
+        action = request.POST.get("action", "apply")
+
+        # --- Parse form inputs ---
+        all_warehouses_flag = request.POST.get("all_warehouses") == "on"
+        warehouse_ids = request.POST.getlist("warehouse_ids")
+        price_type = request.POST.get("price_type", "retail")   # retail | wholesale
+        operation_type = request.POST.get("operation_type", "percentage")  # percentage | fixed
+        direction = request.POST.get("direction", "increase")    # increase | decrease
+        notes = request.POST.get("notes", "")
+
+        try:
+            value = Decimal(request.POST.get("value", "0").replace(",", "."))
+        except (InvalidOperation, TypeError):
+            value = Decimal("0")
+
+        # --- Identify affected base products by warehouse filter ---
+        if all_warehouses_flag or not warehouse_ids:
+            # جميع المنتجات الأساسية النشطة بدون تصفية على المستودع
+            base_products = BaseProduct.objects.filter(
+                is_active=True
+            ).select_related("category").order_by("name")
+        else:
+            affected_variant_ids = VariantStock.objects.filter(
+                warehouse_id__in=warehouse_ids,
+            ).values_list("variant_id", flat=True)
+
+            affected_bp_ids = (
+                ProductVariant.objects.filter(id__in=affected_variant_ids)
+                .values_list("base_product_id", flat=True)
+                .distinct()
+            )
+
+            base_products = BaseProduct.objects.filter(
+                id__in=affected_bp_ids, is_active=True
+            ).select_related("category").order_by("name")
+
+        # --- فلتر إضافي لسعر الجملة: فقط المنتجات التي لها سعر جملة حقيقي (> 0 وأقل من القطاعي) ---
+        if price_type == "wholesale":
+            base_products = base_products.filter(
+                wholesale_price__gt=0,
+                wholesale_price__lt=F("base_price"),
+            )
+
+        # --- Helper: compute new price ---
+        def compute_new_price(old_price):
+            # معالجة None: اعتبره 0
+            if old_price is None:
+                old_price = Decimal("0")
+            old_price = Decimal(str(old_price))
+            if operation_type == "percentage":
+                change = (old_price * value / Decimal("100")).quantize(Decimal("0.01"))
+            else:
+                change = value.quantize(Decimal("0.01"))
+            if direction == "increase":
+                return max(Decimal("0"), old_price + change)
+            else:
+                return max(Decimal("0"), old_price - change)
+
+        # ---- PREVIEW mode (AJAX) ----
+        if action == "preview":
+            preview_rows = []
+            for bp in base_products:
+                if price_type == "retail":
+                    old_price = bp.base_price or Decimal("0")
+                else:
+                    # سعر الجملة: استخدم سعر الأساس كبديل إذا لم يكن محدداً
+                    old_price = bp.wholesale_price if bp.wholesale_price is not None else bp.base_price
+                new_price = compute_new_price(old_price)
+                preview_rows.append(
+                    {
+                        "id": bp.id,
+                        "name": bp.name,
+                        "code": bp.code,
+                        "category": bp.category.name if bp.category else "—",
+                        "old_price": str(old_price),
+                        "new_price": str(new_price.quantize(Decimal("0.01"))),
+                    }
+                )
+            return JsonResponse(
+                {"success": True, "count": len(preview_rows), "data": preview_rows}
+            )
+
+        # ---- APPLY mode ----
+        updated_count = 0
+        errors = []
+        auto_notes = (
+            notes
+            or f"تحديث جماعي عالمي — {get_price_type_display(price_type)} — {get_direction_display(direction)} {value} ({get_operation_type_display(operation_type)})"
+        )
+
+        with transaction.atomic():
+            # --- Pre-fetch variants بدلاً من N استعلام لكل منتج ---
+            if price_type == "retail":
+                variants_prefetch_qs = ProductVariant.objects.filter(
+                    is_active=True, price_override__isnull=False
+                )
+                bp_update_field = "base_price"
+                variant_update_field = "price_override"
+            else:
+                variants_prefetch_qs = ProductVariant.objects.filter(
+                    is_active=True, wholesale_price_override__isnull=False
+                )
+                bp_update_field = "wholesale_price"
+                variant_update_field = "wholesale_price_override"
+
+            base_products = base_products.prefetch_related(
+                Prefetch("variants", queryset=variants_prefetch_qs, to_attr="_override_variants")
+            )
+
+            now = timezone.now()
+            bps_to_update = []
+            variants_to_update = []
+            history_list = []
+
+            for bp in base_products:
+                try:
+                    bp_old = getattr(bp, bp_update_field)
+                    bp_new = compute_new_price(bp_old)
+                    setattr(bp, bp_update_field, bp_new)
+                    bp.updated_at = now
+                    bps_to_update.append(bp)
+
+                    for variant in bp._override_variants:
+                        v_old = getattr(variant, variant_update_field)
+                        v_new = compute_new_price(v_old)
+                        setattr(variant, variant_update_field, v_new)
+                        variant.updated_at = now
+                        variants_to_update.append(variant)
+                        history_list.append(
+                            PriceHistory(
+                                variant=variant,
+                                old_price=v_old,
+                                new_price=v_new,
+                                change_type="bulk",
+                                change_value=value,
+                                changed_by=request.user,
+                                notes=auto_notes,
+                            )
+                        )
+                    updated_count += 1
+                except Exception as exc:
+                    errors.append(f"{bp.name}: {exc}")
+
+            # --- دفعة واحدة لكل عملية بدلاً من آلاف الاستعلامات ---
+            if bps_to_update:
+                BaseProduct.objects.bulk_update(
+                    bps_to_update, [bp_update_field, "updated_at"], batch_size=500
+                )
+            if variants_to_update:
+                ProductVariant.objects.bulk_update(
+                    variants_to_update, [variant_update_field, "updated_at"], batch_size=500
+                )
+            if history_list:
+                PriceHistory.objects.bulk_create(history_list, batch_size=500)
+
+        if errors:
+            messages.warning(
+                request,
+                f"تم تحديث {updated_count} منتج. أخطاء في {len(errors)} منتج.",
+            )
+        else:
+            op_label = get_operation_type_display(operation_type)
+            dir_label = get_direction_display(direction)
+            pt_label = get_price_type_display(price_type)
+            messages.success(
+                request,
+                f"✓ تم تحديث أسعار {updated_count} منتج بنجاح — {pt_label} | {dir_label} {value} ({op_label})",
+            )
+        return redirect("inventory:base_product_list")
+
+    context = {
+        "warehouses": warehouses,
+        "title": "تحديث الأسعار الجماعي العالمي",
+        "active_menu": "variants",
+    }
+    return render(
+        request, "inventory/variants/global_bulk_price_update.html", context
+    )
+
+
+# --- Helper label functions ---
+def get_price_type_display(code):
+    return {"retail": "قطاعي", "wholesale": "جملة"}.get(code, code)
+
+
+def get_direction_display(code):
+    return {"increase": "زيادة", "decrease": "تخفيض"}.get(code, code)
+
+
+def get_operation_type_display(code):
+    return {"percentage": "نسبة مئوية", "fixed": "قيمة ثابتة"}.get(code, code)
 
 
 @login_required
