@@ -1290,9 +1290,10 @@ def invoice_print(request, order_number):
         # إدراج عناصر الطلب داخل tbody إن وجد، أو ضمن عنصر بديل
         tbody_pattern = r"<tbody[^>]*>.*?</tbody>"
         if re.search(tbody_pattern, html_content, re.DOTALL):
+            _replacement = f"<tbody>{items_html}</tbody>"
             html_content = re.sub(
                 tbody_pattern,
-                f"<tbody>{items_html}</tbody>",
+                lambda _: _replacement,
                 html_content,
                 flags=re.DOTALL,
             )
