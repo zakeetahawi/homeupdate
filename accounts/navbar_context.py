@@ -132,9 +132,7 @@ def navbar_departments(request):
             if unit.show_complaints and "complaints" in navbar_items:
                 navbar_items["complaints"]["units"].append(unit_dict)
             if unit.show_reports and "reports" in navbar_items:
-                # Restrict reports to superusers only as per request
-                if user.is_superuser:
-                    navbar_items["reports"]["units"].append(unit_dict)
+                navbar_items["reports"]["units"].append(unit_dict)
             if unit.show_accounting and "accounting" in navbar_items:
                 navbar_items["accounting"]["units"].append(unit_dict)
             if unit.show_database and "database" in navbar_items:
@@ -189,10 +187,7 @@ def navbar_departments(request):
                 if unit.show_complaints and "complaints" in navbar_items:
                     navbar_items["complaints"]["units"].append(unit_dict)
                 if unit.show_reports and "reports" in navbar_items:
-                    # Restrict reports to superusers only to match the manager's request
-                    # Even if the department has show_reports=True, only superusers see it
-                    if user.is_superuser:
-                        navbar_items["reports"]["units"].append(unit_dict)
+                    navbar_items["reports"]["units"].append(unit_dict)
                 if unit.show_accounting and "accounting" in navbar_items:
                     navbar_items["accounting"]["units"].append(unit_dict)
                 if unit.show_database and "database" in navbar_items:

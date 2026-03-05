@@ -47,7 +47,7 @@ NAVBAR_CONFIG = {
     "/manufacturing/":                  {"manufacturing": True},
     "/manufacturing/fabric-receipt/":   {"manufacturing": True},
     "/manufacturing/product-receipt/":  {"inventory": True},
-    "/factory-accounting/reports/":     {"manufacturing": True},   # ← تقرير إنتاج المصنع
+    "/factory-accounting/reports/":     {"reports": True},          # ← تقرير إنتاج (تقارير فقط)
 
     # ── التقطيع ──────────────────────────────────────────────────────
     "/cutting/":                        {"inventory": True},
