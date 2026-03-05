@@ -6,7 +6,7 @@ Factory Accounting Reports Views
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Count, Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import render
@@ -18,6 +18,7 @@ from .models import CardMeasurementSplit, FactoryCard, ReadyCurtainEntry, Tailor
 
 
 @login_required
+@permission_required("factory_accounting.view_factory_reports", raise_exception=True)
 def production_reports(request):
     """
     Production reports with filtering
@@ -202,6 +203,7 @@ def production_reports(request):
 
 
 @login_required
+@permission_required("factory_accounting.view_factory_reports", raise_exception=True)
 def export_production_report(request):
     """
     Export production report to Excel - mirrors production_reports filters exactly

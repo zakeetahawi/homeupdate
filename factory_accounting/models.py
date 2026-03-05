@@ -397,6 +397,9 @@ class FactoryCard(models.Model):
             models.Index(fields=["production_date"], name="factcard_proddate_idx"),
             models.Index(fields=["-created_at"], name="factcard_created_idx"),
         ]
+        permissions = [
+            ("view_factory_reports", _("عرض تقارير حسابات المصنع")),
+        ]
 
     def __str__(self):
         return f"بطاقة {self.manufacturing_order.order.order_number}"

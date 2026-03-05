@@ -259,6 +259,20 @@ def navbar_departments(request):
                 }
             )
 
+    # Inject Factory Accounting Reports for factory accountant and manager
+    if "manufacturing" in navbar_items and (
+        user.is_superuser
+        or getattr(user, "is_factory_accountant", False)
+        or getattr(user, "is_factory_manager", False)
+    ):
+        navbar_items["manufacturing"]["units"].append(
+            {
+                "name": "تقارير حسابات المصنع",
+                "icon": "fa-file-invoice-dollar",
+                "url_name": "/factory-accounting/reports/",
+            }
+        )
+
     # Inject Installation Accounting Report in Reports section
     # Restrict to Superusers only
     if "reports" in navbar_items and user.is_superuser:
