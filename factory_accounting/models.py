@@ -95,12 +95,9 @@ class FactoryAccountingSettings(models.Model):
 
     def recalculate_unpaid_cutter_costs(self):
         """إعادة حساب تكاليف القصاص للعناصر غير المدفوعة"""
-        from django.db.models import Q
 
-        # Get all unpaid factory cards
-        unpaid_cards = FactoryCard.objects.filter(
-            Q(status="pending") | Q(status="in_production")
-        ).exclude(status="paid")
+        # Get all unpaid factory cards (الحالات الصحيحة: new, reviewing, completed)
+        unpaid_cards = FactoryCard.objects.exclude(status="paid")
 
         updated_count = 0
         for card in unpaid_cards:

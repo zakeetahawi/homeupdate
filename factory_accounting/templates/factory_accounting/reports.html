@@ -199,7 +199,7 @@
                                             <td>{{ card.production_date|date:"Y-m-d"|default:"-" }}</td>
                                             <td class="fw-bold">{{ card.get_actual_meters|floatformat:2 }}</td>
                                             <td>{{ card.cutter_name }}</td>
-                                            <td>{{ card.total_cutter_cost|floatformat:2 }}</td>
+                                            <td>{{ card.get_current_cutter_cost|floatformat:2 }}</td>
                                             <td class="text-start">
                                                 {% for split in card.splits.all %}
                                                     {% if not filtered_tailor_id or split.tailor_id == filtered_tailor_id %}
