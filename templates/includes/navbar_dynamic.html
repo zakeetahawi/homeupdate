@@ -53,6 +53,14 @@
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="{{ key }}Dropdown">
                         {% for unit in item.units %}
+                            {% if unit.disabled %}
+                            <li>
+                                <span class="dropdown-item text-muted" style="opacity:.5; cursor:default;">
+                                    {% if unit.icon %}<i class="fas {{ unit.icon }}"></i>{% endif %}
+                                    {{ unit.name }}
+                                </span>
+                            </li>
+                            {% else %}
                             <li>
                                 <a class="dropdown-item"
                                    href="{{ unit.url_name }}{% if 'cutting' in unit.url_name %}?needs_fix=true{% endif %}">
@@ -60,6 +68,7 @@
                                     {{ unit.name }}
                                 </a>
                             </li>
+                            {% endif %}
                             {% if not forloop.last and forloop.counter|divisibleby:3 %}
                                 <li>
                                     <hr class="dropdown-divider">

@@ -1,0 +1,94 @@
+{% extends "external_sales/base_dept.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item"><a href="{% url 'external_sales:index' %}">المبيعات الخارجية</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:decorator_dashboard' %}">مهندسو الديكور</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:engineer_detail' profile.pk %}">{{ profile.customer.name }}</a></li>
+<li class="breadcrumb-item active">سجل التواصل</li>
+{% endblock %}
+
+{% block dept_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="fas fa-history me-2"></i>سجل التواصل — {{ profile.customer.name }}</h4>
+    <a href="{% url 'external_sales:add_contact' profile.pk %}" class="btn btn-primary btn-sm">
+        <i class="fas fa-plus me-1"></i>تسجيل تواصل
+    </a>
+</div>
+
+{% if logs %}
+<div class="timeline">
+    {% for log in logs %}
+    <div class="timeline-item {% if log.next_followup_date and log.next_followup_date < today %}overdue{% elif log.next_followup_date %}upcoming{% endif %}">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="fw-bold">
+                            {% if log.contact_type == 'call' %}<i class="fas fa-phone text-primary"></i>
+                            {% elif log.contact_type == 'whatsapp' %}<i class="fab fa-whatsapp text-success"></i>
+                            {% elif log.contact_type == 'meeting' %}<i class="fas fa-handshake text-info"></i>
+                            {% elif log.contact_type == 'appointment' %}<i class="fas fa-calendar-check text-purple"></i>
+                            {% elif log.contact_type == 'visit' %}<i class="fas fa-map-marker-alt text-warning"></i>
+                            {% elif log.contact_type == 'email' %}<i class="fas fa-envelope text-secondary"></i>
+                            {% else %}<i class="fas fa-comment text-muted"></i>{% endif %}
+                            {{ log.get_contact_type_display }}
+                        </span>
+                        <span class="badge bg-secondary ms-1">{{ log.get_outcome_display }}</span>
+                    </div>
+                    <small class="text-muted">{{ log.contact_date|date:"Y-m-d H:i" }}</small>
+                </div>
+                {% if log.notes %}
+                <p class="mb-1 mt-2 text-muted">{{ log.notes }}</p>
+                {% endif %}
+                {% if log.next_followup_date %}
+                <div class="small mt-1 {% if log.next_followup_date < today %}text-danger fw-bold{% else %}text-info{% endif %}">
+                    <i class="fas fa-bell me-1"></i>متابعة: {{ log.next_followup_date|date:"Y-m-d" }}
+                    {% if log.next_followup_notes %} — {{ log.next_followup_notes }}{% endif %}
+                </div>
+                {% endif %}
+                {% if log.appointment_datetime %}
+                <div class="small text-primary mt-1">
+                    <i class="fas fa-calendar-check me-1"></i>موعد: {{ log.appointment_datetime|date:"Y-m-d H:i" }}
+                    {% if log.appointment_location %} في {{ log.appointment_location }}{% endif %}
+                    {% if log.appointment_confirmed %}<span class="badge bg-success ms-1">مؤكد</span>{% endif %}
+                </div>
+                {% endif %}
+                <div class="mt-1"><small class="text-muted">بواسطة: {{ log.created_by.get_full_name|default:"-" }}</small></div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{# Pagination #}
+{% if is_paginated %}
+<nav class="d-flex justify-content-center py-3">
+    <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+            {% if num == page_obj.number %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="fas fa-comments fa-3x mb-3 d-block"></i>
+    <h5>لم يتم تسجيل أي تواصل بعد</h5>
+    <a href="{% url 'external_sales:add_contact' profile.pk %}" class="btn btn-primary btn-sm mt-2">
+        <i class="fas fa-plus me-1"></i>تسجيل أول تواصل
+    </a>
+</div>
+{% endif %}
+{% endblock %}

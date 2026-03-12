@@ -64,6 +64,8 @@ class Notification(models.Model):
         ("transfer_rejected", _("رفض تحويل مخزني")),
         # إشعارات رفض الطلبات
         ("order_rejected", _("رفض طلب")),
+        # إشعارات المبيعات الخارجية
+        ("decorator_engineer_added", _("مهندس ديكور جديد")),
     ]
 
     PRIORITY_LEVELS = [

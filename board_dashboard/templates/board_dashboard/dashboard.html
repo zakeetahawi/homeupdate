@@ -670,6 +670,52 @@
     text-align: left;
     direction: ltr;
 }
+
+/* External Sales Tab */
+.board-main-tabs .nav-link {
+    color: rgba(255,255,255,0.6);
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    background: transparent;
+}
+.board-main-tabs .nav-link:hover {
+    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.06);
+}
+.board-main-tabs .nav-link.active {
+    color: #fff;
+    border-bottom-color: #3b82f6;
+    background: rgba(59,130,246,0.1);
+}
+.board-main-tabs {
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 0 !important;
+}
+.badge-new {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    vertical-align: middle;
+    animation: pulse-badge 2s infinite;
+}
+@keyframes pulse-badge {
+    0%,100% { opacity:1; } 50% { opacity:0.5; }
+}
+.skeleton-card {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 12px;
+    min-height: 90px;
+}
+@keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
 </style>
 {% endblock %}
 
@@ -731,6 +777,24 @@
             </button>
         </div>
     </div>
+
+    <!-- ═══════ Top-Level Tab Navigation ═══════ -->
+    <ul class="nav nav-tabs mb-3 mt-2" id="boardTopTabs" role="tablist" style="border-bottom: 2px solid #dee2e6;">
+        <li class="nav-item">
+            <a class="nav-link active fw-bold" id="tab-main-link" data-bs-toggle="tab" href="#tab-main" role="tab">
+                <i class="fas fa-tachometer-alt me-1"></i> الرئيسية
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link fw-bold" id="tab-ext-sales-link" data-bs-toggle="tab" href="#tab-ext-sales" role="tab">
+                <i class="fas fa-handshake me-1"></i> المبيعات الخارجية
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="boardTopTabContent">
+    <!-- Main Dashboard Tab -->
+    <div class="tab-pane fade show active" id="tab-main" role="tabpanel">
 
     <!-- ═══════ ROW 1: KPI Cards ═══════ -->
     <div class="row g-3 mb-3">
@@ -989,6 +1053,14 @@
             </div>
         </div>
     </div>
+    </div> {# end tab-main #}
+
+    <!-- External Sales Tab -->
+    <div class="tab-pane fade" id="tab-ext-sales" role="tabpanel">
+        {% include "board_dashboard/partials/external_sales_tab.html" %}
+    </div>
+
+    </div> {# end tab-content #}
 
 </div>
 {% endblock %}
@@ -1589,6 +1661,203 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Initial Load ---
     updateDashboard();
+});
+</script>
+
+{# ── External Sales / Decorator Board JS ──────────────────── #}
+<script>
+const PRIORITY_LABELS = {vip:'VIP',active:'نشط',regular:'عادي',cold:'فاتر'};
+const PRIORITY_COLORS = {vip:'#dc2626',active:'#16a34a',regular:'#2563eb',cold:'#9ca3af'};
+const CONTACT_LABELS  = ['تواصل خلال 30 يوم','31-60 يوم','60+ يوم','لم يُتواصل معه'];
+const CONTACT_COLORS  = ['#16a34a','#f59e0b','#dc2626','#9ca3af'];
+
+const PRIORITY_BADGE = {
+  vip:     '<span class="badge bg-danger">VIP</span>',
+  active:  '<span class="badge bg-success">نشط</span>',
+  regular: '<span class="badge bg-primary">عادي</span>',
+  cold:    '<span class="badge bg-secondary">فاتر</span>',
+};
+const CONTACT_BADGE = {
+  contacted:     '<span class="badge bg-success">تم التواصل</span>',
+  not_contacted: '<span class="badge bg-danger">لم يُتواصل</span>',
+};
+
+function loadDecoratorBoardData(btn) {
+  if (btn.dataset.loaded === 'true') return;
+  btn.dataset.loaded = 'true';
+
+  fetch('{% url "board_dashboard:api_decorator" %}')
+    .then(r => r.json())
+    .then(data => {
+      renderDecoratorKPIs(data.kpis);
+      renderDecoratorCharts(data);
+      renderDecoratorTables(data);
+
+      document.getElementById('decorator-board-skeleton').classList.add('d-none');
+      document.getElementById('decorator-board-content').classList.remove('d-none');
+    })
+    .catch(() => {
+      document.getElementById('decorator-board-container').innerHTML =
+        '<div class="alert alert-danger">تعذّر تحميل البيانات. يرجى إعادة المحاولة.</div>';
+    });
+}
+
+function renderDecoratorKPIs(kpis) {
+  document.getElementById('kpi-total').textContent      = kpis.total_engineers;
+  document.getElementById('kpi-active').textContent     = kpis.active_engineers;
+  document.getElementById('kpi-new').textContent        = kpis.new_this_month;
+  document.getElementById('kpi-never').textContent      = kpis.never_contacted;
+  document.getElementById('kpi-inactive60').textContent = kpis.inactive_60d;
+  document.getElementById('kpi-commission').textContent =
+    Number(kpis.pending_commission).toLocaleString('ar-SA', {maximumFractionDigits:0});
+}
+
+function renderDecoratorCharts(data) {
+  // Contact status donut
+  new Chart(document.getElementById('decContactDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: CONTACT_LABELS,
+      datasets: [{
+        data: [
+          data.contact_breakdown.contacted_30d,
+          data.contact_breakdown.inactive_31_60d,
+          data.contact_breakdown.inactive_60d_plus,
+          data.contact_breakdown.never_contacted,
+        ],
+        backgroundColor: CONTACT_COLORS,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: {legend: {position:'bottom', labels:{font:{size:11}}}}
+    }
+  });
+
+  // Priority donut
+  const prLabels = data.priority_breakdown.map(p => PRIORITY_LABELS[p.priority] || p.priority);
+  const prColors = data.priority_breakdown.map(p => PRIORITY_COLORS[p.priority] || '#6b7280');
+  new Chart(document.getElementById('decPriorityDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: prLabels,
+      datasets: [{data: data.priority_breakdown.map(p=>p.count), backgroundColor: prColors, borderWidth:2}]
+    },
+    options: {responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}
+  });
+
+  // Monthly trend line
+  const months = [...new Set([
+    ...data.monthly_trend.new.map(r=>r.month),
+    ...data.monthly_trend.orders.map(r=>r.month)
+  ])].sort();
+  const newMap   = Object.fromEntries(data.monthly_trend.new.map(r=>[r.month, r.count]));
+  const ordMap   = Object.fromEntries(data.monthly_trend.orders.map(r=>[r.month, r.count]));
+  new Chart(document.getElementById('decMonthlyTrend'), {
+    type: 'line',
+    data: {
+      labels: months.map(m => {const d=new Date(m+'-01');
+        return d.toLocaleDateString('ar-SA',{month:'short',year:'2-digit'});}),
+      datasets: [
+        {label:'مهندسون جدد', data: months.map(m=>newMap[m]||0),
+          borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.1)', tension:0.4, fill:true},
+        {label:'طلبات مرتبطة', data: months.map(m=>ordMap[m]||0),
+          borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', tension:0.4, fill:true},
+      ]
+    },
+    options: {responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{position:'bottom'}},
+      scales:{y:{beginAtZero:true, ticks:{precision:0}}}}
+  });
+}
+
+function renderDecoratorTables(data) {
+  // New engineers table
+  const newTbody = document.querySelector('#decNewEngTable tbody');
+  newTbody.innerHTML = data.new_engineers.length === 0
+    ? '<tr><td colspan="5" class="text-center text-muted py-3">لا يوجد مهندسون جدد</td></tr>'
+    : data.new_engineers.map(e => `
+        <tr>
+          <td><a href="/external-sales/decorator/engineers/${e.pk}/" class="text-decoration-none fw-semibold">
+            ${e['customer__name']}</a>
+            <div class="text-muted" style="font-size:0.7rem">${e.designer_code}</div>
+          </td>
+          <td>${e['customer__branch__name'] || '—'}</td>
+          <td>${e.created_at}</td>
+          <td>${CONTACT_BADGE[e.contact_status] || '—'}</td>
+          <td>${(e['assigned_staff__first_name']||'')+' '+(e['assigned_staff__last_name']||'')||'غير محدد'}</td>
+        </tr>`).join('');
+
+  // Inactive engineers table
+  const inactTbody = document.querySelector('#decInactiveTable tbody');
+  inactTbody.innerHTML = data.inactive_list.length === 0
+    ? '<tr><td colspan="5" class="text-center text-muted py-3">جميع المهندسين نشطون</td></tr>'
+    : data.inactive_list.map(e => `
+        <tr class="${e.days_since_contact > 90 ? 'table-danger' : 'table-warning'}">
+          <td><a href="/external-sales/decorator/engineers/${e.pk}/" class="text-decoration-none fw-semibold">
+            ${e['customer__name']}</a></td>
+          <td><span class="badge bg-danger">${e.days_since_contact} يوم</span></td>
+          <td>${PRIORITY_BADGE[e.priority] || e.priority}</td>
+          <td>${(e['assigned_staff__first_name']||'')+' '+(e['assigned_staff__last_name']||'')||'غير محدد'}</td>
+          <td><a href="/external-sales/decorator/engineers/${e.pk}/contact/add/"
+                 class="btn btn-warning btn-sm" target="_blank">
+            <i class="fas fa-phone"></i> تواصل</a></td>
+        </tr>`).join('');
+
+  // Top performers table
+  const topTbody = document.querySelector('#decTopTable tbody');
+  topTbody.innerHTML = data.top_engineers.length === 0
+    ? '<tr><td colspan="7" class="text-center text-muted py-3">لا توجد بيانات هذا الشهر</td></tr>'
+    : data.top_engineers.map((e, i) => `
+        <tr>
+          <td><span class="badge bg-dark">${i+1}</span></td>
+          <td><span class="fw-semibold">${e['customer__name']}</span>
+            <div class="text-muted" style="font-size:0.7rem">${e.designer_code}</div></td>
+          <td>${PRIORITY_BADGE[e.priority] || e.priority}</td>
+          <td><span class="badge bg-info text-dark">${e.month_orders || 0}</span></td>
+          <td class="fw-bold text-success">
+            ${Number(e.month_value || 0).toLocaleString('ar-SA',{maximumFractionDigits:0})} ريال</td>
+          <td>${e.last_contact_date || '<span class="text-danger">لم يُتواصل</span>'}</td>
+          <td><a href="/external-sales/decorator/engineers/${e.pk}/"
+                 class="btn btn-outline-primary btn-sm" target="_blank">
+            <i class="fas fa-eye"></i></a></td>
+        </tr>`).join('');
+}
+
+// Load overview chart when external-sales tab is first opened
+document.addEventListener('DOMContentLoaded', function() {
+  const extTabBtn = document.getElementById('tab-ext-sales-link');
+  if (extTabBtn) {
+    extTabBtn.addEventListener('shown.bs.tab', function () {
+      if (this.dataset.overviewLoaded) return;
+      this.dataset.overviewLoaded = 'true';
+      fetch('{% url "board_dashboard:api_decorator" %}')
+        .then(r => r.json())
+        .then(data => {
+          const canvas = document.getElementById('extSalesOverviewChart');
+          if (!canvas) return;
+          const months = data.monthly_trend.orders.map(r => r.month);
+          const values = data.monthly_trend.orders.map(r => Number(r.value || 0));
+          new Chart(canvas, {
+            type: 'bar',
+            data: {
+              labels: months.map(m => {const d=new Date(m+'-01');
+                return d.toLocaleDateString('ar-SA',{month:'short',year:'2-digit'});}),
+              datasets: [{
+                label: 'إيرادات مهندسي الديكور (ريال)',
+                data: values,
+                backgroundColor: 'rgba(59,130,246,0.7)',
+                borderRadius: 6,
+              }]
+            },
+            options: {responsive:true, plugins:{legend:{display:false}},
+              scales:{y:{beginAtZero:true}}}
+          });
+        });
+    });
+  }
 });
 </script>
 {% endblock %}

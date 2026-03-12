@@ -1,0 +1,104 @@
+{% extends "external_sales/base_dept.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item"><a href="{% url 'external_sales:index' %}">المبيعات الخارجية</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:engineer_detail' profile.pk %}">{{ profile.customer.name }}</a></li>
+<li class="breadcrumb-item active">ربط طلب</li>
+{% endblock %}
+
+{% block dept_css %}
+<link href="{% static 'vendor/select2/css/select2.min.css' %}" rel="stylesheet" />
+<link href="{% static 'vendor/select2/css/select2-bootstrap-5-theme.min.css' %}" rel="stylesheet" />
+{% endblock %}
+
+{% block dept_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold">
+                <i class="fas fa-link me-1"></i> ربط طلب بـ {{ profile.customer.name }}
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                            {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="id_order" class="form-label fw-bold">الطلب <span class="text-danger">*</span></label>
+                        {{ form.order }}
+                        <div class="form-text">ابحث برقم الطلب أو اسم العميل</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_commission_type" class="form-label">نوع العمولة</label>
+                        {{ form.commission_type }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_commission_rate" class="form-label">نسبة العمولة %</label>
+                        {{ form.commission_rate }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_commission_value" class="form-label">قيمة العمولة (يدوي)</label>
+                        {{ form.commission_value }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_notes" class="form-label">ملاحظات</label>
+                        {{ form.notes }}
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'external_sales:engineer_detail' profile.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right me-1"></i>إلغاء
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-link me-1"></i>ربط
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block dept_js %}
+<script src="{% static 'vendor/select2/js/select2.min.js' %}"></script>
+<script>
+$(document).ready(function() {
+    $('#id_order').select2({
+        theme: 'bootstrap-5',
+        dir: 'rtl',
+        language: {
+            inputTooShort: function() { return 'اكتب حرفين على الأقل للبحث...'; },
+            noResults: function() { return 'لا توجد نتائج'; },
+            searching: function() { return 'جاري البحث...'; },
+            errorLoading: function() { return 'خطأ في تحميل النتائج'; }
+        },
+        placeholder: 'ابحث برقم الطلب أو اسم العميل...',
+        allowClear: true,
+        minimumInputLength: 2,
+        ajax: {
+            url: '{% url "external_sales:api_order_search" %}',
+            dataType: 'json',
+            delay: 300,
+            data: function(params) { return { q: params.term }; },
+            processResults: function(data) { return { results: data.results }; },
+            cache: true
+        }
+    });
+});
+</script>
+{% endblock %}

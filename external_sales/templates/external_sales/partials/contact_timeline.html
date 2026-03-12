@@ -1,0 +1,32 @@
+{# Reusable contact timeline - pass contact_logs from context #}
+<div class="timeline">
+    {% for log in contact_logs %}
+    <div class="timeline-item {% if log.next_followup_date and log.next_followup_date < today %}overdue{% elif log.next_followup_date %}upcoming{% endif %}">
+        <div class="d-flex justify-content-between">
+            <div>
+                <span class="fw-bold">
+                    {% if log.contact_type == 'call' %}<i class="fas fa-phone text-primary"></i>
+                    {% elif log.contact_type == 'whatsapp' %}<i class="fab fa-whatsapp text-success"></i>
+                    {% elif log.contact_type == 'meeting' %}<i class="fas fa-handshake text-info"></i>
+                    {% elif log.contact_type == 'appointment' %}<i class="fas fa-calendar-check text-purple"></i>
+                    {% elif log.contact_type == 'visit' %}<i class="fas fa-map-marker-alt text-warning"></i>
+                    {% elif log.contact_type == 'email' %}<i class="fas fa-envelope text-secondary"></i>
+                    {% else %}<i class="fas fa-comment text-muted"></i>{% endif %}
+                    {{ log.get_contact_type_display }}
+                </span>
+                <span class="badge bg-secondary ms-1">{{ log.get_outcome_display }}</span>
+            </div>
+            <small class="text-muted">{{ log.contact_date|date:"Y-m-d H:i" }}</small>
+        </div>
+        {% if log.notes %}<p class="mb-1 mt-1 text-muted small">{{ log.notes|truncatechars:100 }}</p>{% endif %}
+        {% if log.next_followup_date %}
+        <div class="small {% if log.next_followup_date < today %}text-danger fw-bold{% else %}text-info{% endif %}">
+            <i class="fas fa-bell me-1"></i>متابعة: {{ log.next_followup_date|date:"Y-m-d" }}
+        </div>
+        {% endif %}
+        <small class="text-muted">بواسطة: {{ log.created_by.get_full_name|default:"-" }}</small>
+    </div>
+    {% empty %}
+    <div class="text-center text-muted py-3">لا توجد سجلات تواصل</div>
+    {% endfor %}
+</div>

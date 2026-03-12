@@ -112,6 +112,8 @@ urlpatterns = [
     path("board-level/", include("board_dashboard.urls", namespace="board_dashboard")),
     # سجل التدقيق الشامل
     path("audit/", include("core.urls", namespace="audit")),
+    # المبيعات الخارجية
+    path("external-sales/", include("external_sales.urls", namespace="external_sales")),
     # لوحة مراقبة النظام
     path("monitoring/", views.monitoring_dashboard, name="monitoring_dashboard"),
     # API مراقبة النظام وقاعدة البيانات

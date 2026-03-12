@@ -1,0 +1,131 @@
+{% extends "external_sales/base_dept.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item"><a href="{% url 'external_sales:index' %}">المبيعات الخارجية</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:decorator_dashboard' %}">مهندسو الديكور</a></li>
+<li class="breadcrumb-item active">{{ title }}</li>
+{% endblock %}
+
+{% block dept_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold">
+                <i class="fas fa-user-plus me-1"></i> {{ title }}
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if is_new %}
+                    <div class="mb-3">
+                        <label for="id_customer" class="form-label fw-bold">العميل <span class="text-danger">*</span></label>
+                        {{ form.customer }}
+                        {% if form.customer.help_text %}<div class="form-text">{{ form.customer.help_text }}</div>{% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_company_office_name" class="form-label">اسم المكتب / الشركة</label>
+                            <input type="text" name="company_office_name" id="id_company_office_name" class="form-control" value="{{ form.company_office_name.value|default:'' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_city" class="form-label">المدينة</label>
+                            <input type="text" name="city" id="id_city" class="form-control" value="{{ form.city.value|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4 mb-3">
+                            <label for="id_years_of_experience" class="form-label">سنوات الخبرة</label>
+                            <input type="number" name="years_of_experience" id="id_years_of_experience" class="form-control" min="0" value="{{ form.years_of_experience.value|default:'' }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_priority" class="form-label">الأولوية</label>
+                            {{ form.priority }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_price_segment" class="form-label">شريحة الأسعار</label>
+                            {{ form.price_segment }}
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_area_of_operation" class="form-label">نطاق العمل</label>
+                            <input type="text" name="area_of_operation" id="id_area_of_operation" class="form-control" value="{{ form.area_of_operation.value|default:'' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_design_style" class="form-label">النمط التصميمي</label>
+                            <input type="text" name="design_style" id="id_design_style" class="form-control" value="{{ form.design_style.value|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4 mb-3">
+                            <label for="id_instagram_handle" class="form-label"><i class="fab fa-instagram text-danger"></i> Instagram</label>
+                            <input type="text" name="instagram_handle" id="id_instagram_handle" class="form-control" dir="ltr" value="{{ form.instagram_handle.value|default:'' }}" placeholder="@username">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_linkedin_url" class="form-label"><i class="fab fa-linkedin text-primary"></i> LinkedIn</label>
+                            <input type="url" name="linkedin_url" id="id_linkedin_url" class="form-control" dir="ltr" value="{{ form.linkedin_url.value|default:'' }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_portfolio_url" class="form-label"><i class="fas fa-globe"></i> Portfolio</label>
+                            <input type="url" name="portfolio_url" id="id_portfolio_url" class="form-control" dir="ltr" value="{{ form.portfolio_url.value|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_assigned_staff" class="form-label">موظف المتابعة</label>
+                        {{ form.assigned_staff }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_preferred_colors" class="form-label">الألوان المفضلة</label>
+                        <textarea name="preferred_colors" id="id_preferred_colors" class="form-control" rows="2">{{ form.preferred_colors.value|default:'' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_project_types" class="form-label">أنواع المشاريع</label>
+                        <input type="text" name="project_types" id="id_project_types" class="form-control" value="{{ form.project_types.value|default:'' }}" placeholder="فلل، شقق، مكاتب...">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_interests_notes" class="form-label">ملاحظات الاهتمامات</label>
+                        <textarea name="interests_notes" id="id_interests_notes" class="form-control" rows="3">{{ form.interests_notes.value|default:'' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_internal_notes" class="form-label">ملاحظات داخلية</label>
+                        <textarea name="internal_notes" id="id_internal_notes" class="form-control" rows="3">{{ form.internal_notes.value|default:'' }}</textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% if is_new %}{% url 'external_sales:engineer_list' %}{% else %}{% url 'external_sales:engineer_detail' object.pk %}{% endif %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right me-1"></i>إلغاء
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>{% if is_new %}إنشاء الملف{% else %}حفظ التعديلات{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

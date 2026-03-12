@@ -95,6 +95,12 @@ def navbar_departments(request):
             "url": None,
             "units": [],
         },
+        "external_sales": {
+            "name": "المبيعات الخارجية",
+            "icon": "fa-handshake",
+            "url": None,
+            "units": [],
+        },
         "database": {
             "name": "إدارة البيانات",
             "icon": "fa-database",
@@ -270,6 +276,34 @@ def navbar_departments(request):
                 "icon": "fa-trophy",
                 "url_name": "/reports/ranking/",
             }
+        )
+
+    # Inject External Sales sub-departments for authorized users
+    if (
+        user.is_superuser
+        or getattr(user, "is_decorator_dept_manager", False)
+        or getattr(user, "is_decorator_dept_staff", False)
+    ) and "external_sales" in navbar_items:
+        navbar_items["external_sales"]["units"].extend(
+            [
+                {
+                    "name": "مهندسين الديكور",
+                    "icon": "fa-paint-brush",
+                    "url_name": "/external-sales/decorator/",
+                },
+                {
+                    "name": "البيع بالجملة (قريباً)",
+                    "icon": "fa-boxes",
+                    "url_name": "#",
+                    "disabled": True,
+                },
+                {
+                    "name": "المشاريع (قريباً)",
+                    "icon": "fa-project-diagram",
+                    "url_name": "#",
+                    "disabled": True,
+                },
+            ]
         )
 
     # إزالة العناصر الفارغة

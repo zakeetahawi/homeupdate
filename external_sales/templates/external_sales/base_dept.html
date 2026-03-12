@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title|default:"المبيعات الخارجية" }} - نظام الخواجه{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dept-header {
+        background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+        color: #fff;
+        padding: 1.2rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+    .dept-header h2 { margin: 0; font-size: 1.4rem; font-weight: 700; }
+    .dept-header .dept-subtitle { opacity: .8; font-size: .85rem; margin-top: .25rem; }
+
+    .dept-breadcrumb {
+        background: transparent;
+        padding: 0;
+        margin-bottom: 1rem;
+    }
+    .dept-breadcrumb .breadcrumb-item a { color: #1a237e; text-decoration: none; }
+    .dept-breadcrumb .breadcrumb-item.active { color: #666; }
+
+    .kpi-card {
+        border-radius: 12px;
+        padding: 1.2rem;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        transition: transform .2s;
+        border-right: 4px solid transparent;
+    }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .kpi-card .kpi-value { font-size: 1.8rem; font-weight: 700; line-height: 1; }
+    .kpi-card .kpi-label { font-size: .82rem; color: #666; margin-top: .4rem; }
+    .kpi-card .kpi-icon { font-size: 2rem; opacity: .25; }
+
+    .kpi-primary { border-right-color: #1a237e; }
+    .kpi-success { border-right-color: #2e7d32; }
+    .kpi-warning { border-right-color: #f57f17; }
+    .kpi-info    { border-right-color: #0277bd; }
+    .kpi-danger  { border-right-color: #c62828; }
+
+    .timeline { position: relative; padding-right: 30px; }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        right: 8px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #dee2e6;
+    }
+    .timeline-item {
+        position: relative;
+        padding-bottom: 1.2rem;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        right: -26px;
+        top: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #1a237e;
+        border: 2px solid #fff;
+    }
+    .timeline-item.overdue::before { background: #c62828; }
+    .timeline-item.upcoming::before { background: #f57f17; }
+
+    .priority-badge { font-size: .75rem; padding: .25em .6em; border-radius: 6px; }
+    .priority-vip { background: #ffd600; color: #333; }
+    .priority-active { background: #2e7d32; color: #fff; }
+    .priority-regular { background: #90a4ae; color: #fff; }
+    .priority-cold { background: #546e7a; color: #fff; }
+
+    .status-badge-pending { background: #fff3e0; color: #e65100; }
+    .status-badge-approved { background: #e8f5e9; color: #2e7d32; }
+    .status-badge-paid { background: #e3f2fd; color: #0d47a1; }
+
+    .quick-action-btn {
+        font-size: .75rem;
+        padding: .2rem .5rem;
+        border-radius: 6px;
+    }
+</style>
+{% block dept_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    {# Breadcrumb #}
+    <nav class="dept-breadcrumb" aria-label="breadcrumb">
+        <ol class="breadcrumb mb-2">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}"><i class="fas fa-home"></i> الرئيسية</a></li>
+            {% block breadcrumbs %}
+            <li class="breadcrumb-item active">المبيعات الخارجية</li>
+            {% endblock %}
+        </ol>
+    </nav>
+
+    {% block dept_content %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Arabic number converter for formatted displays
+function formatArabicNumber(num) {
+    if (num === null || num === undefined) return '٠';
+    return num.toLocaleString('ar-EG');
+}
+</script>
+{% block dept_js %}{% endblock %}
+{% endblock %}

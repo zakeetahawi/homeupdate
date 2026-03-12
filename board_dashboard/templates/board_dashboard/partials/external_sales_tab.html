@@ -1,0 +1,59 @@
+{# board_dashboard/partials/external_sales_tab.html #}
+<div dir="rtl">
+
+  {# ── Dept sub-tabs ──────────────────────────────────────── #}
+  <ul class="nav nav-pills mb-4 gap-2" id="extSalesDeptTabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" id="dept-overview-btn"
+              data-bs-toggle="pill" data-bs-target="#dept-overview" type="button">
+        <i class="fas fa-globe me-1"></i> نظرة عامة
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="dept-decorator-btn"
+              data-bs-toggle="pill" data-bs-target="#dept-decorator" type="button"
+              data-loaded="false" onclick="loadDecoratorBoardData(this)">
+        <i class="fas fa-paint-brush me-1"></i> مهندسو الديكور
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link disabled" type="button" title="قريباً">
+        <i class="fas fa-boxes me-1"></i> الجملة
+        <span class="badge bg-secondary ms-1">قريباً</span>
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link disabled" type="button" title="قريباً">
+        <i class="fas fa-building me-1"></i> المشاريع
+        <span class="badge bg-secondary ms-1">قريباً</span>
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+
+    {# ── Sub-tab 1: General Overview (static summary) ─── #}
+    <div class="tab-pane fade show active" id="dept-overview">
+      {% include "board_dashboard/partials/ext_sales_overview.html" %}
+    </div>
+
+    {# ── Sub-tab 2: Decorator Engineers ───────────────── #}
+    <div class="tab-pane fade" id="dept-decorator">
+      <div id="decorator-board-container">
+        {# Skeleton loader shown before AJAX loads #}
+        <div id="decorator-board-skeleton" class="row g-3">
+          {% for i in "12345" %}
+          <div class="col-lg-2 col-md-4 col-6">
+            <div class="card skeleton-card"><div class="card-body p-4"></div></div>
+          </div>
+          {% endfor %}
+        </div>
+        {# Static HTML — JS populates values after AJAX fetch #}
+        <div id="decorator-board-content" class="d-none">
+          {% include "board_dashboard/partials/decorator_board.html" %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

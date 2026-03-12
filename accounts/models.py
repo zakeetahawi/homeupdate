@@ -123,6 +123,28 @@ ROLE_HIERARCHY = {
         "inherits_from": [],
         "permissions": ["view_assigned_inspections", "update_inspection_status"],
     },
+    "decorator_dept_manager": {
+        "level": 3,
+        "display": "مدير قسم مهندسي الديكور",
+        "inherits_from": ["decorator_dept_staff"],
+        "permissions": [
+            "view_decorator_profiles",
+            "manage_decorator_profiles",
+            "view_decorator_commissions",
+            "manage_decorator_commissions",
+            "view_all_customers",
+            "view_all_orders",
+        ],
+    },
+    "decorator_dept_staff": {
+        "level": 4,
+        "display": "موظف قسم مهندسي الديكور",
+        "inherits_from": [],
+        "permissions": [
+            "view_decorator_profiles",
+            "manage_decorator_profiles",
+        ],
+    },
     "user": {
         "level": 6,
         "display": "مستخدم عادي",
@@ -178,6 +200,12 @@ class User(AbstractUser):
     )
     is_wholesale = models.BooleanField(default=False, verbose_name=_("عمليات جملة"))
     is_retail = models.BooleanField(default=True, verbose_name=_("عمليات قطاعي"))
+    is_decorator_dept_manager = models.BooleanField(
+        default=False, verbose_name=_("مدير قسم مهندسي الديكور")
+    )
+    is_decorator_dept_staff = models.BooleanField(
+        default=False, verbose_name=_("موظف قسم مهندسي الديكور")
+    )
     assigned_warehouse = models.ForeignKey(
         "inventory.Warehouse",
         on_delete=models.SET_NULL,
@@ -262,6 +290,8 @@ class User(AbstractUser):
             self.is_installation_manager,
             self.is_traffic_manager,
             self.is_warehouse_staff,
+            self.is_decorator_dept_manager,
+            self.is_decorator_dept_staff,
         ]
 
         active_roles = sum(roles)
@@ -307,6 +337,10 @@ class User(AbstractUser):
             return "traffic_manager"
         elif self.is_warehouse_staff:
             return "warehouse_staff"
+        elif self.is_decorator_dept_manager:
+            return "decorator_dept_manager"
+        elif self.is_decorator_dept_staff:
+            return "decorator_dept_staff"
         elif self.is_salesperson:
             return "salesperson"
         elif self.is_inspection_technician:
