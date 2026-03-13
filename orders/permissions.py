@@ -76,6 +76,24 @@ def get_user_orders_queryset(user):
             Q(selected_types__icontains="installation") | Q(created_by=user)
         )
 
+    # المبيعات الخارجية — طلبات العملاء المرتبطين بالمهندسين + طلبات عملاء الجملة والمهندسين
+    _es_roles = (
+        getattr(user, "is_external_sales_director", False)
+        or getattr(user, "is_decorator_dept_manager", False)
+        or getattr(user, "is_decorator_dept_staff", False)
+    )
+    if _es_roles:
+        from external_sales.models import EngineerLinkedOrder, EngineerLinkedCustomer
+        linked_order_ids = EngineerLinkedOrder.objects.values_list("order_id", flat=True)
+        linked_customer_ids = EngineerLinkedCustomer.objects.filter(
+            is_active=True
+        ).values_list("customer_id", flat=True)
+        return Order.objects.filter(
+            Q(id__in=linked_order_ids)
+            | Q(customer_id__in=linked_customer_ids)
+            | Q(customer__customer_type__in=["wholesale", "designer"])
+        )
+
     # مدير المنطقة يرى طلبات الفروع المُدارة + طلباته الخاصة
     if hasattr(user, "is_region_manager") and user.is_region_manager:
         managed_branches = user.managed_branches.all()

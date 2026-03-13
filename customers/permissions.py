@@ -24,6 +24,17 @@ def get_user_customers_queryset(user, search_term=None):
     if hasattr(user, "is_installation_manager") and user.is_installation_manager:
         return Customer.objects.all()
 
+    # المبيعات الخارجية — فقط عملاء الجملة ومهندسي الديكور
+    _es_roles = (
+        getattr(user, "is_external_sales_director", False)
+        or getattr(user, "is_decorator_dept_manager", False)
+        or getattr(user, "is_decorator_dept_staff", False)
+    )
+    if _es_roles:
+        return Customer.objects.filter(
+            customer_type__in=["wholesale", "designer"]
+        )
+
     # مدير المنطقة يرى عملاء الفروع المُدارة
     if hasattr(user, "is_region_manager") and user.is_region_manager:
         managed_branches = user.managed_branches.all()
