@@ -1,6 +1,12 @@
 from django.urls import path
 
 from . import api_views, views
+from .views_user_management import (
+    user_manage_edit,
+    user_manage_list,
+    user_permissions_api,
+    user_toggle_role_api,
+)
 from .activity_views import (
     activity_logs_list,
     login_history_list,
@@ -124,6 +130,11 @@ urlpatterns = [
     path("roles/<int:pk>/update/", views.role_update, name="role_update"),
     path("roles/<int:pk>/delete/", views.role_delete, name="role_delete"),
     path("roles/<int:pk>/assign/", views.role_assign, name="role_assign"),
+    # User Management (Custom Page)
+    path("manage/users/", user_manage_list, name="user_manage_list"),
+    path("manage/users/<int:pk>/edit/", user_manage_edit, name="user_manage_edit"),
+    path("manage/users/<int:pk>/toggle-role/", user_toggle_role_api, name="user_toggle_role_api"),
+    path("manage/users/<int:pk>/permissions/", user_permissions_api, name="user_permissions_api"),
     # Theme Management
     path("save-theme/", views.set_default_theme, name="set_default_theme"),
     # 🎨 نظام الإشعارات - تم إزالته

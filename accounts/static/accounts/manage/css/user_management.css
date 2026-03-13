@@ -1,0 +1,24 @@
+/* ─── User Management Styles ─── */
+.role-chips-container { display:flex; flex-wrap:wrap; gap:8px; }
+.role-chip {
+    display:inline-flex; align-items:center; padding:6px 14px;
+    border-radius:20px; cursor:pointer; font-size:13px; font-weight:500;
+    border:2px solid #dee2e6; background:#fff; color:#495057;
+    transition: all .2s ease; user-select:none;
+}
+.role-chip:hover { border-color:#90caf9; background:#e3f2fd; }
+.role-chip-active {
+    border-color:#1976d2; background:#e3f2fd; color:#1565c0;
+}
+.role-chip-active .role-icon { color:#1976d2; }
+.role-icon { font-size:12px; color:#adb5bd; transition: color .2s; }
+
+/* Section badges */
+.role-section[data-section="sales"] .role-chip-active { border-color:#1565c0; background:#e3f2fd; color:#1565c0; }
+.role-section[data-section="factory"] .role-chip-active { border-color:#e65100; background:#fff3e0; color:#e65100; }
+.role-section[data-section="inspections"] .role-chip-active { border-color:#2e7d32; background:#e8f5e9; color:#2e7d32; }
+.role-section[data-section="warehouse"] .role-chip-active { border-color:#7b1fa2; background:#f3e5f5; color:#7b1fa2; }
+.role-section[data-section="external_sales"] .role-chip-active { border-color:#c62828; background:#fce4ec; color:#c62828; }
+
+/* Permissions panel */
+#permissions-panel code { font-size:11px; background:#f5f5f5; padding:1px 4px; border-radius:3px; }

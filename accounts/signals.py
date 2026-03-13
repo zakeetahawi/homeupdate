@@ -281,3 +281,33 @@ def track_user_permissions_changed(sender, instance, action, pk_set, **kwargs):
             )
     except Exception as e:
         print(f"❌ خطأ في تسجيل تغيير الصلاحيات: {e}")
+
+
+# ─── Phase 4: مزامنة Boolean fields ↔ UserRole M2M ──────────────
+
+_SYNCING_ROLES = False  # منع التكرار اللامتناهي
+
+
+@receiver(post_save, sender=User)
+def sync_boolean_roles_to_userrole(sender, instance, **kwargs):
+    """مزامنة حقول الأدوار البولينية إلى UserRole M2M عند الحفظ"""
+    global _SYNCING_ROLES
+    if _SYNCING_ROLES:
+        return
+    _SYNCING_ROLES = True
+    try:
+        active_role_keys = instance.get_active_roles()
+        for field_name, role_key in User.ROLE_FIELD_MAP.items():
+            role_obj, _created = Role.objects.get_or_create(
+                name=role_key,
+                defaults={"description": f"دور {role_key} (تلقائي)", "is_system_role": True},
+            )
+            if role_key in active_role_keys:
+                UserRole.objects.get_or_create(user=instance, role=role_obj)
+            else:
+                UserRole.objects.filter(user=instance, role=role_obj).delete()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"خطأ في مزامنة أدوار {instance.username}: {e}")
+    finally:
+        _SYNCING_ROLES = False

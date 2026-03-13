@@ -1,136 +1,213 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}{{ title }}{% endblock %}
+{% block extra_css %}
+<style>
+.level-badge { display:inline-block; width:28px; height:28px; border-radius:50%; text-align:center; line-height:28px; font-weight:700; font-size:12px; color:#fff; }
+.level-0 { background:#b71c1c; } .level-1 { background:#e65100; } .level-2 { background:#ff8f00; }
+.level-3 { background:#2e7d32; } .level-4 { background:#1565c0; } .level-5 { background:#6a1b9a; } .level-6 { background:#546e7a; }
+.perm-matrix th { font-size:11px; writing-mode:vertical-rl; text-orientation:mixed; max-width:30px; padding:4px 2px!important; }
+.perm-matrix td { text-align:center; padding:2px!important; font-size:14px; }
+.perm-matrix .perm-yes { color:#2e7d32; }
+.perm-matrix .perm-no { color:#e0e0e0; }
+.hierarchy-card { border-right:4px solid transparent; transition: border-color .2s; }
+.hierarchy-card:hover { border-right-color:#1976d2; }
+.inherits-list { font-size:11px; color:#888; }
+.nav-tabs .nav-link.active { font-weight:600; }
+</style>
+{% endblock %}
 {% block content %}
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-12">
-                <h1 class="page-header">{{ title }}</h1>
-                <!-- الإحصائيات -->
-                <div class="row mb-4">
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">إجمالي الأدوار</h5>
-                                <h2 class="card-text">{{ total_roles }}</h2>
+    <div class="container-fluid py-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0"><i class="fas fa-user-shield me-2"></i>{{ title }}</h4>
+            <div>
+                <a href="{% url 'accounts:user_manage_list' %}" class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-users-cog me-1"></i>إدارة المستخدمين</a>
+                <a href="{% url 'accounts:role_create' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus me-1"></i>دور جديد</a>
+            </div>
+        </div>
+
+        <!-- الإحصائيات -->
+        <div class="row g-2 mb-3">
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm"><div class="card-body text-center py-2">
+                    <div class="fs-3 fw-bold text-primary">{{ total_roles }}</div><small class="text-muted">إجمالي الأدوار</small>
+                </div></div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm"><div class="card-body text-center py-2">
+                    <div class="fs-3 fw-bold text-success">{{ total_users }}</div><small class="text-muted">المستخدمين النشطين</small>
+                </div></div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm"><div class="card-body text-center py-2">
+                    <div class="fs-3 fw-bold text-info">{{ hierarchy_data|length }}</div><small class="text-muted">أدوار النظام</small>
+                </div></div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm"><div class="card-body text-center py-2">
+                    <div class="fs-3 fw-bold text-warning">{{ all_perms_sorted|length }}</div><small class="text-muted">صلاحيات فريدة</small>
+                </div></div>
+            </div>
+        </div>
+
+        <!-- التبويبات -->
+        <ul class="nav nav-tabs mb-3" id="roleTabs">
+            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-hierarchy">التسلسل الهرمي</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-matrix">مصفوفة الصلاحيات</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-roles">الأدوار (DB)</a></li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- التسلسل الهرمي -->
+            <div class="tab-pane fade show active" id="tab-hierarchy">
+                <div class="row g-2">
+                    {% for rd in hierarchy_data %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-0 shadow-sm hierarchy-card h-100">
+                            <div class="card-body py-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <div>
+                                        <span class="level-badge level-{{ rd.level }}">{{ rd.level }}</span>
+                                        <strong class="ms-2">{{ rd.display }}</strong>
+                                    </div>
+                                    <span class="badge bg-light text-dark">{{ rd.user_count }} <i class="fas fa-user fa-xs"></i></span>
+                                </div>
+                                <div class="small text-muted"><code>{{ rd.key }}</code></div>
+                                {% if rd.inherits_from %}
+                                <div class="inherits-list mt-1">
+                                    <i class="fas fa-arrow-alt-circle-down me-1"></i>يرث:
+                                    {% for parent in rd.inherits_from %}
+                                    <span class="badge bg-light text-dark">{{ parent }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <div class="mt-1">
+                                    <small class="text-muted">{{ rd.permissions|length }} صلاحية</small>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">المستخدمين النشطين</h5>
-                                <h2 class="card-text">{{ total_users }}</h2>
-                            </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- مصفوفة الصلاحيات -->
+            <div class="tab-pane fade" id="tab-matrix">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-2">
+                        <div class="table-responsive" style="max-height:65vh;">
+                            <table class="table table-bordered table-sm perm-matrix mb-0">
+                                <thead class="sticky-top bg-white">
+                                    <tr>
+                                        <th style="writing-mode:initial; min-width:120px">الدور</th>
+                                        {% for perm in all_perms_sorted %}
+                                        <th title="{{ perm }}">{{ perm|truncatechars:20 }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rd in hierarchy_data %}
+                                    <tr>
+                                        <td class="text-nowrap fw-bold" style="writing-mode:initial">
+                                            <span class="level-badge level-{{ rd.level }} me-1" style="width:20px; height:20px; line-height:20px; font-size:10px;">{{ rd.level }}</span>
+                                            {{ rd.display }}
+                                        </td>
+                                        {% for perm in all_perms_sorted %}
+                                        <td>
+                                            {% if perm in rd.permissions or 'all' in rd.permissions %}
+                                            <i class="fas fa-check perm-yes"></i>
+                                            {% else %}
+                                            <i class="fas fa-minus perm-no"></i>
+                                            {% endif %}
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- الأدوار في DB -->
+            <div class="tab-pane fade" id="tab-roles">
                 <!-- أدوات التصفية -->
-                <div class="card mb-4">
-                    <div class="card-body">
-                        <form method="get" class="row g-3">
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-body py-2">
+                        <form method="get" class="row g-2 align-items-center">
                             <div class="col-auto">
-                                <select name="type" class="form-select" onchange="this.form.submit()">
+                                <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
                                     <option value="">كل الأدوار</option>
                                     <option value="system" {% if role_type == 'system' %}selected{% endif %}>أدوار النظام</option>
                                     <option value="custom" {% if role_type == 'custom' %}selected{% endif %}>أدوار مخصصة</option>
                                 </select>
                             </div>
-                            <div class="col-auto">
-                                <a href="{% url 'accounts:role_create' %}" class="btn btn-primary">
-                                    <i class="fas fa-plus"></i> إضافة دور جديد
-                                </a>
-                            </div>
                         </form>
                     </div>
                 </div>
-                <!-- قائمة الأدوار -->
-                <div class="card">
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>الدور</th>
-                                        <th>الوصف</th>
-                                        <th>نوع الدور</th>
-                                        <th>عدد المستخدمين</th>
-                                        <th>تاريخ الإنشاء</th>
-                                        <th>الإجراءات</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for role in page_obj %}
-                                        <tr>
-                                            <td>{{ role.name }}</td>
-                                            <td>{{ role.description|default:"-" }}</td>
-                                            <td>
-                                                {% if role.is_system_role %}
-                                                    <span class="badge bg-info">دور نظام</span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary">دور مخصص</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>{{ role.user_roles.count }}</td>
-                                            <td>{{ role.created_at|date:"Y-m-d" }}</td>
-                                            <td>
-                                                <div class="btn-group" role="group">
-                                                    <a href="{% url 'accounts:role_update' role.pk %}"
-                                                       class="btn btn-sm btn-outline-primary">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                    <a href="{% url 'accounts:role_assign' role.pk %}"
-                                                       class="btn btn-sm btn-outline-success">
-                                                        <i class="fas fa-user-plus"></i>
-                                                    </a>
-                                                    {% if not role.is_system_role %}
-                                                        <a href="{% url 'accounts:role_delete' role.pk %}"
-                                                           class="btn btn-sm btn-outline-danger">
-                                                            <i class="fas fa-trash"></i>
-                                                        </a>
-                                                    {% endif %}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    {% empty %}
-                                        <tr>
-                                            <td colspan="6" class="text-center">لا توجد أدوار.</td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% if page_obj.has_other_pages %}
-                            <nav aria-label="Page navigation" class="mt-4">
-                                <ul class="pagination justify-content-center">
-                                    {% if page_obj.has_previous %}
-                                        <li class="page-item">
-                                            <a class="page-link"
-                                               href="?page={{ page_obj.previous_page_number }}{% if role_type %}&type={{ role_type }}{% endif %}"
-                                               aria-label="Previous">
-                                                <span aria-hidden="true">&laquo;</span>
-                                            </a>
-                                        </li>
-                                    {% endif %}
-                                    {% for num in page_obj.paginator.page_range %}
-                                        <li class="page-item {% if num == page_obj.number %}active{% endif %}">
-                                            <a class="page-link"
-                                               href="?page={{ num }}{% if role_type %}&type={{ role_type }}{% endif %}">{{ num }}</a>
-                                        </li>
-                                    {% endfor %}
-                                    {% if page_obj.has_next %}
-                                        <li class="page-item">
-                                            <a class="page-link"
-                                               href="?page={{ page_obj.next_page_number }}{% if role_type %}&type={{ role_type }}{% endif %}"
-                                               aria-label="Next">
-                                                <span aria-hidden="true">&raquo;</span>
-                                            </a>
-                                        </li>
-                                    {% endif %}
-                                </ul>
-                            </nav>
-                        {% endif %}
+                <div class="card border-0 shadow-sm">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>الدور</th>
+                                    <th>الوصف</th>
+                                    <th>النوع</th>
+                                    <th>المستخدمين</th>
+                                    <th>الإنشاء</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for role in page_obj %}
+                                <tr>
+                                    <td><strong>{{ role.name }}</strong></td>
+                                    <td class="text-muted small">{{ role.description|default:"-" }}</td>
+                                    <td>
+                                        {% if role.is_system_role %}
+                                        <span class="badge bg-info">نظام</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">مخصص</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ role.user_roles.count }}</td>
+                                    <td class="small text-muted">{{ role.created_at|date:"Y-m-d" }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'accounts:role_update' role.pk %}" class="btn btn-outline-primary"><i class="fas fa-edit"></i></a>
+                                            <a href="{% url 'accounts:role_assign' role.pk %}" class="btn btn-outline-success"><i class="fas fa-user-plus"></i></a>
+                                            {% if not role.is_system_role %}
+                                            <a href="{% url 'accounts:role_delete' role.pk %}" class="btn btn-outline-danger"><i class="fas fa-trash"></i></a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="6" class="text-center text-muted py-3">لا توجد أدوار</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                    {% if page_obj.has_other_pages %}
+                    <div class="card-footer bg-white">
+                        <nav><ul class="pagination pagination-sm justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if role_type %}&type={{ role_type }}{% endif %}">السابق</a></li>
+                            {% endif %}
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                                {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                                <li class="page-item"><a class="page-link" href="?page={{ num }}{% if role_type %}&type={{ role_type }}{% endif %}">{{ num }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if page_obj.has_next %}
+                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if role_type %}&type={{ role_type }}{% endif %}">التالي</a></li>
+                            {% endif %}
+                        </ul></nav>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

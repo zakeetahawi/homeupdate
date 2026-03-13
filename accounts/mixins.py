@@ -95,3 +95,54 @@ class StaffRequiredMixin(UserPassesTestMixin):
     def handle_no_permission(self):
         messages.error(self.request, self.permission_denied_message)
         return redirect(reverse_lazy("home"))
+
+
+class RoleRequiredMixin(UserPassesTestMixin):
+    """
+    مخلط للتحقق من أن المستخدم يملك دوراً معيناً أو أكثر.
+    يدعم الأدوار المتعددة ويفحص Boolean fields + UserRole M2M.
+
+    الاستخدام:
+        class MyView(RoleRequiredMixin, ListView):
+            required_roles = ["sales_manager", "branch_manager"]  # أي دور منهم
+    """
+
+    required_roles = []  # قائمة الأدوار المطلوبة (يكفي امتلاك أحدها)
+    permission_denied_message = _("ليس لديك الدور المطلوب للوصول لهذه الصفحة")
+
+    def test_func(self):
+        user = self.request.user
+        if user.is_superuser:
+            return True
+        if not self.required_roles:
+            return True
+        return any(user.has_role(role) for role in self.required_roles)
+
+    def handle_no_permission(self):
+        messages.error(self.request, self.permission_denied_message)
+        return redirect(reverse_lazy("home"))
+
+
+class RolePermissionRequiredMixin(UserPassesTestMixin):
+    """
+    مخلط للتحقق من صلاحية ROLE_HIERARCHY (وليس Django permissions).
+
+    الاستخدام:
+        class MyView(RolePermissionRequiredMixin, ListView):
+            required_role_permission = "view_all_orders"
+    """
+
+    required_role_permission = None
+    permission_denied_message = _("ليس لديك الصلاحية المطلوبة")
+
+    def test_func(self):
+        user = self.request.user
+        if user.is_superuser:
+            return True
+        if not self.required_role_permission:
+            return True
+        return user.has_role_permission(self.required_role_permission)
+
+    def handle_no_permission(self):
+        messages.error(self.request, self.permission_denied_message)
+        return redirect(reverse_lazy("home"))

@@ -273,31 +273,27 @@ class User(AbstractUser):
         """
         return self.default_theme or "default"
 
+    # ─── خريطة حقول الأدوار ────────────────────────────────────
+    ROLE_FIELD_MAP = {
+        "is_salesperson": "salesperson",
+        "is_branch_manager": "branch_manager",
+        "is_region_manager": "region_manager",
+        "is_sales_manager": "sales_manager",
+        "is_factory_manager": "factory_manager",
+        "is_factory_accountant": "factory_accountant",
+        "is_factory_receiver": "factory_receiver",
+        "is_inspection_technician": "inspection_technician",
+        "is_inspection_manager": "inspection_manager",
+        "is_installation_manager": "installation_manager",
+        "is_traffic_manager": "traffic_manager",
+        "is_warehouse_staff": "warehouse_staff",
+        "is_decorator_dept_manager": "decorator_dept_manager",
+        "is_decorator_dept_staff": "decorator_dept_staff",
+    }
+
     def clean(self):
-        """التحقق من صحة البيانات"""
+        """التحقق من صحة البيانات — يسمح بتعدد الأدوار"""
         super().clean()
-
-        # التحقق من أن المستخدم لديه دور واحد فقط
-        roles = [
-            self.is_salesperson,
-            self.is_branch_manager,
-            self.is_region_manager,
-            self.is_sales_manager,
-            self.is_factory_manager,
-            self.is_factory_accountant,
-            self.is_factory_receiver,
-            self.is_inspection_manager,
-            self.is_installation_manager,
-            self.is_traffic_manager,
-            self.is_warehouse_staff,
-            self.is_decorator_dept_manager,
-            self.is_decorator_dept_staff,
-        ]
-
-        active_roles = sum(roles)
-        # السماح بتعدد الأدوار إذا كان أحدهم Wholesale أو Retail (هذه حقول نوع تعامل وليست أدوار وظيفية)
-        if active_roles > 1:
-            raise ValidationError(_("لا يمكن اختيار أكثر من دور وظيفي واحد للمستخدم"))
 
         # التحقق من أن موظف المستودع لديه مستودع مخصص
         # ملاحظة: التحقق من M2M يتم بعد الحفظ، هنا نتحقق فقط من الحقل القديم
@@ -313,45 +309,48 @@ class User(AbstractUser):
         self.clean()
         super().save(*args, **kwargs)
 
+    def get_active_roles(self):
+        """إرجاع قائمة بكل الأدوار المفعّلة من الحقول البولينية"""
+        roles = []
+        for field, role_key in self.ROLE_FIELD_MAP.items():
+            if getattr(self, field, False):
+                roles.append(role_key)
+        return roles
+
     def get_user_role(self):
-        """الحصول على دور المستخدم"""
+        """الحصول على الدور الأساسي (الأعلى مستوى) — للتوافق مع الكود القديم"""
         if self.is_superuser:
             return "system_admin"
-        elif self.is_sales_manager:
-            return "sales_manager"
-        elif self.is_region_manager:
-            return "region_manager"
-        elif self.is_branch_manager:
-            return "branch_manager"
-        elif self.is_factory_manager:
-            return "factory_manager"
-        elif self.is_factory_accountant:
-            return "factory_accountant"
-        elif self.is_factory_receiver:
-            return "factory_receiver"
-        elif self.is_inspection_manager:
-            return "inspection_manager"
-        elif self.is_installation_manager:
-            return "installation_manager"
-        elif self.is_traffic_manager:
-            return "traffic_manager"
-        elif self.is_warehouse_staff:
-            return "warehouse_staff"
-        elif self.is_decorator_dept_manager:
-            return "decorator_dept_manager"
-        elif self.is_decorator_dept_staff:
-            return "decorator_dept_staff"
-        elif self.is_salesperson:
-            return "salesperson"
-        elif self.is_inspection_technician:
-            return "inspection_technician"
-        else:
+        roles = self.get_active_roles()
+        if not roles:
             return "user"
+        # إرجاع الدور ذو أقل level (الأعلى سلطة)
+        return min(roles, key=lambda r: ROLE_HIERARCHY.get(r, {}).get("level", 99))
 
     def get_user_role_display(self):
-        """الحصول على اسم الدور للعرض"""
+        """الحصول على اسم الدور الأساسي للعرض"""
         role = self.get_user_role()
         return ROLE_HIERARCHY.get(role, {}).get("display", "غير محدد")
+
+    def get_active_roles_display(self):
+        """إرجاع أسماء كل الأدوار المفعّلة بالعربي"""
+        roles = self.get_active_roles()
+        if not roles:
+            return "مستخدم عادي"
+        displays = [ROLE_HIERARCHY.get(r, {}).get("display", r) for r in roles]
+        return "، ".join(displays)
+
+    def has_role(self, role_key):
+        """فحص هل المستخدم يملك دور معين (من البولينية أو UserRole M2M)"""
+        if self.is_superuser:
+            return True
+        # فحص الحقول البولينية
+        if role_key in self.get_active_roles():
+            return True
+        # فحص UserRole M2M
+        if self.pk and self.user_roles.filter(role__name=role_key).exists():
+            return True
+        return False
 
     def get_all_assigned_warehouses(self):
         """
@@ -376,13 +375,15 @@ class User(AbstractUser):
         return Warehouse.objects.none()
 
     def get_role_level(self):
-        """الحصول على مستوى الدور في التسلسل الهرمي"""
+        """الحصول على مستوى الدور في التسلسل الهرمي (الأعلى سلطة)"""
         role = self.get_user_role()
         return ROLE_HIERARCHY.get(role, {}).get("level", 999)
 
     def get_inherited_roles(self):
-        """الحصول على الأدوار التي يرثها هذا المستخدم"""
-        role = self.get_user_role()
+        """الحصول على الأدوار الموروثة من كل الأدوار المفعّلة"""
+        active = self.get_active_roles()
+        if self.is_superuser:
+            active = ["system_admin"]
         inherited = []
 
         def collect_inherited(role_key):
@@ -393,17 +394,22 @@ class User(AbstractUser):
                     inherited.append(inherited_role)
                     collect_inherited(inherited_role)
 
-        collect_inherited(role)
+        for role in active:
+            collect_inherited(role)
         return inherited
 
     def get_role_permissions(self):
-        """الحصول على جميع صلاحيات الدور بما في ذلك الموروثة"""
-        role = self.get_user_role()
+        """الحصول على جميع صلاحيات كل الأدوار المفعّلة بما في ذلك الموروثة"""
         all_permissions = set()
 
-        # إضافة صلاحيات الدور الحالي
-        current_perms = ROLE_HIERARCHY.get(role, {}).get("permissions", [])
-        all_permissions.update(current_perms)
+        active = self.get_active_roles()
+        if self.is_superuser:
+            active = ["system_admin"]
+
+        # جمع صلاحيات كل الأدوار المفعّلة
+        for role in active:
+            perms = ROLE_HIERARCHY.get(role, {}).get("permissions", [])
+            all_permissions.update(perms)
 
         # إضافة صلاحيات الأدوار الموروثة
         for inherited_role in self.get_inherited_roles():
@@ -415,7 +421,7 @@ class User(AbstractUser):
         return list(all_permissions)
 
     def has_role_permission(self, permission):
-        """التحقق من امتلاك المستخدم لصلاحية معينة (بما في ذلك الموروثة)"""
+        """التحقق من امتلاك المستخدم لصلاحية من أي من أدواره (بما في ذلك الموروثة)"""
         if self.is_superuser:
             return True
 
