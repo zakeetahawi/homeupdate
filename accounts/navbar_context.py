@@ -19,8 +19,8 @@ _HIDDEN_NAVBAR_URLS = {
 # خريطة مسارات URL → الأدوار المطلوبة (أحد المذكورين يكفي)
 # إذا لم يكن المسار هنا أو المستخدم staff/superuser: يُمرَّر بدون قيد
 _URL_ROLE_MAP = {
-    "/customers/": ["is_salesperson", "is_branch_manager", "is_region_manager", "is_sales_manager"],
-    "/orders/": ["is_salesperson", "is_branch_manager", "is_region_manager", "is_sales_manager"],
+    "/customers/": ["is_salesperson", "is_branch_manager", "is_region_manager", "is_sales_manager", "is_external_sales_director"],
+    "/orders/": ["is_salesperson", "is_branch_manager", "is_region_manager", "is_sales_manager", "is_external_sales_director"],
     "/inventory/": ["is_warehouse_staff", "is_sales_manager", "is_branch_manager"],
     "/inspections/": ["is_inspection_technician", "is_inspection_manager"],
     "/installations/": ["is_installation_manager", "is_traffic_manager"],
@@ -356,6 +356,7 @@ def navbar_departments(request):
         user.is_superuser
         or getattr(user, "is_sales_manager", False)
         or getattr(user, "is_region_manager", False)
+        or getattr(user, "is_external_sales_director", False)
     )
     if can_manage:
         # Create a "settings" section if needed or add to database
