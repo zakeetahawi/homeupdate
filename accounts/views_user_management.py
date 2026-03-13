@@ -28,7 +28,6 @@ def _can_manage_users(user):
         user.is_superuser
         or user.is_sales_manager
         or user.is_region_manager
-        or user.is_external_sales_director
         or user.has_perm("accounts.change_user")
     )
 

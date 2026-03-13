@@ -132,9 +132,6 @@ ROLE_HIERARCHY = {
             "manage_decorator_profiles",
             "view_decorator_commissions",
             "manage_decorator_commissions",
-            "view_all_customers",
-            "view_all_orders",
-            "manage_all_customers",
         ],
     },
     "decorator_dept_manager": {
