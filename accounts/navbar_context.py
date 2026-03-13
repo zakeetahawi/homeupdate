@@ -306,6 +306,36 @@ def navbar_departments(request):
             ]
         )
 
+    # Inject User & Role Management for managers/superusers
+    can_manage = (
+        user.is_superuser
+        or getattr(user, "is_sales_manager", False)
+        or getattr(user, "is_region_manager", False)
+    )
+    if can_manage:
+        # Create a "settings" section if needed or add to database
+        if "database" not in navbar_items:
+            navbar_items["database"] = {
+                "name": "إدارة البيانات",
+                "icon": "fa-database",
+                "url": "/database/",
+                "units": [],
+            }
+        navbar_items["database"]["units"].extend(
+            [
+                {
+                    "name": "إدارة المستخدمين",
+                    "icon": "fa-users-cog",
+                    "url_name": "/accounts/manage/users/",
+                },
+                {
+                    "name": "لوحة الأدوار",
+                    "icon": "fa-user-shield",
+                    "url_name": "/accounts/roles/",
+                },
+            ]
+        )
+
     # إزالة العناصر الفارغة
     navbar_items_filtered = {
         key: value for key, value in navbar_items.items() if value["units"]
