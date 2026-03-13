@@ -16,6 +16,34 @@ _HIDDEN_NAVBAR_URLS = {
     "/inventory/transfers/",   # تحويلات مخزنية — أُزيلت بطلب المدير
 }
 
+# خريطة مسارات URL → الأدوار المطلوبة (أحد المذكورين يكفي)
+# إذا لم يكن المسار هنا أو المستخدم staff/superuser: يُمرَّر بدون قيد
+_URL_ROLE_MAP = {
+    "/customers/": ["is_salesperson", "is_branch_manager", "is_region_manager", "is_sales_manager"],
+    "/orders/": ["is_salesperson", "is_branch_manager", "is_region_manager", "is_sales_manager"],
+    "/inventory/": ["is_warehouse_staff", "is_sales_manager", "is_branch_manager"],
+    "/inspections/": ["is_inspection_technician", "is_inspection_manager"],
+    "/installations/": ["is_installation_manager", "is_traffic_manager"],
+    "/manufacturing/": ["is_factory_manager", "is_factory_accountant", "is_factory_receiver"],
+    "/cutting/": ["is_factory_manager", "is_factory_accountant"],
+    "/complaints/": ["is_salesperson", "is_branch_manager", "is_sales_manager"],
+    "/reports/": ["is_sales_manager", "is_branch_manager", "is_region_manager"],
+    "/accounting/": ["is_sales_manager"],
+    "/factory-accounting/": ["is_factory_accountant", "is_factory_manager"],
+    "/external-sales/": ["is_decorator_dept_manager", "is_decorator_dept_staff"],
+    "/database/": ["is_sales_manager", "is_region_manager"],
+}
+
+
+def _is_url_restricted(user, url_name):
+    """هل المستخدم محدود الصلاحية لهذا المسار؟"""
+    if not url_name or user.is_superuser or user.is_staff:
+        return False
+    for prefix, roles in _URL_ROLE_MAP.items():
+        if url_name.startswith(prefix):
+            return not any(getattr(user, r, False) for r in roles)
+    return False
+
 
 def navbar_departments(request):
     """
@@ -171,11 +199,13 @@ def navbar_departments(request):
                 # تخطي الروابط المحظورة بشكل دائم
                 if unit.url_name in _HIDDEN_NAVBAR_URLS:
                     continue
-                # تحويل الوحدة إلى dictionary
+                # تحويل الوحدة إلى dictionary — مع تحقق الصلاحية
+                restricted = _is_url_restricted(user, unit.url_name)
                 unit_dict = {
                     "name": unit.name,
                     "icon": unit.icon,
                     "url_name": unit.url_name,
+                    "restricted": restricted,
                 }
 
                 if unit.show_customers and "customers" in navbar_items:

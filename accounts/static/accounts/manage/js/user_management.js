@@ -198,6 +198,38 @@ function initUserManagement(config) {
         });
     }
 
+    // ─── Department root checkboxes → toggle all children ───
+    document.querySelectorAll('.dept-root-cb').forEach(rootCb => {
+        rootCb.addEventListener('change', function() {
+            const rootId = this.dataset.root;
+            const children = document.querySelectorAll(`.dept-child-cb[data-root="${rootId}"]`);
+            children.forEach(cb => { cb.checked = this.checked; });
+            updateDeptCount();
+        });
+    });
+    // Child checkbox → update root state
+    document.querySelectorAll('.dept-child-cb').forEach(childCb => {
+        childCb.addEventListener('change', function() {
+            const rootId = this.dataset.root;
+            const rootCb = document.querySelector(`.dept-root-cb[data-root="${rootId}"]`);
+            const siblings = document.querySelectorAll(`.dept-child-cb[data-root="${rootId}"]`);
+            const allChecked = Array.from(siblings).every(cb => cb.checked);
+            const someChecked = Array.from(siblings).some(cb => cb.checked);
+            if (rootCb) {
+                rootCb.checked = allChecked;
+                rootCb.indeterminate = someChecked && !allChecked;
+            }
+            updateDeptCount();
+        });
+    });
+    function updateDeptCount() {
+        const el = document.getElementById('dept-count');
+        if (el) {
+            const count = document.querySelectorAll('input[name="departments"]:checked').length;
+            el.textContent = count;
+        }
+    }
+
     // ─── Toast notification ───
     function showToast(message, type) {
         let container = document.getElementById('toast-container');

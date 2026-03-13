@@ -8,6 +8,7 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
@@ -147,6 +148,10 @@ def user_manage_edit(request, pk):
     managed_branch_ids = list(user_obj.managed_branches.values_list("id", flat=True))
     assigned_warehouse_ids = list(user_obj.assigned_warehouses.values_list("id", flat=True))
 
+    # بناء أقسام المشروع مع الأقسام الفرعية
+    department_sections = _build_department_sections(user_obj)
+    user_department_ids = set(user_obj.departments.values_list("id", flat=True))
+
     context = {
         "user_obj": user_obj,
         "role_sections": role_sections,
@@ -157,6 +162,8 @@ def user_manage_edit(request, pk):
         "managed_branch_ids": managed_branch_ids,
         "assigned_warehouse_ids": assigned_warehouse_ids,
         "role_hierarchy": ROLE_HIERARCHY,
+        "department_sections": department_sections,
+        "user_department_ids": user_department_ids,
     }
     return render(request, "accounts/manage/user_form.html", context)
 
@@ -209,6 +216,14 @@ def _handle_user_edit_post(request, user_obj):
         user_obj.assigned_warehouses.set(wh_ids)
     else:
         user_obj.assigned_warehouses.clear()
+
+    # Departments M2M
+    dept_ids = request.POST.getlist("departments")
+    user_obj.departments.set(dept_ids)
+
+    # مسح كاش الناف بار لهذا المستخدم
+    for suffix in [f"{user_obj.is_staff}_{user_obj.is_superuser}", "True_True", "True_False", "False_False"]:
+        cache.delete(f"ctx_navbar_{user_obj.pk}_{suffix}")
 
     messages.success(request, _(f"تم تحديث بيانات {user_obj.get_full_name() or user_obj.username} بنجاح"))
     return redirect("accounts:user_manage_edit", pk=user_obj.pk)
@@ -401,3 +416,49 @@ def _get_permissions_with_source(user_obj):
                 )
 
     return result
+
+
+# ─── Department icons map ─────────────────────────────────────
+_DEPT_ICONS = {
+    "customers": "fa-users",
+    "orders": "fa-shopping-cart",
+    "inventory": "fa-boxes",
+    "inspections": "fa-clipboard-check",
+    "installations": "fa-tools",
+    "factory": "fa-industry",
+    "manufacturing": "fa-industry",
+    "complaints": "fa-exclamation-triangle",
+    "reports": "fa-chart-bar",
+    "accounting": "fa-calculator",
+    "cutting": "fa-cut",
+    "data_management": "fa-database",
+    "database": "fa-database",
+}
+
+
+def _build_department_sections(user_obj):
+    """بناء أقسام المشروع — أقسام رئيسية وفرعية مع حالة التعيين"""
+    from accounts.models import Department
+
+    roots = (
+        Department.objects.filter(parent__isnull=True, is_active=True)
+        .prefetch_related("children")
+        .order_by("order")
+    )
+
+    user_dept_ids = set(user_obj.departments.values_list("id", flat=True))
+
+    sections = []
+    for root in roots:
+        children = list(root.children.filter(is_active=True).order_by("order"))
+        assigned_count = sum(1 for c in children if c.id in user_dept_ids)
+        # Include root in checked too
+        root_assigned = root.id in user_dept_ids
+        sections.append({
+            "root": root,
+            "icon": root.icon or _DEPT_ICONS.get(root.code, "fa-folder"),
+            "children": children,
+            "assigned_count": assigned_count,
+            "root_assigned": root_assigned,
+        })
+    return sections
