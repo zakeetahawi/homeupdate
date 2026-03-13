@@ -105,9 +105,14 @@
 .dept-group { background:#fafbfc; transition: box-shadow .2s; }
 .dept-group:hover { box-shadow:0 1px 4px rgba(0,0,0,.08); }
 .dept-icon { font-size:14px; color:#5c6bc0; min-width:16px; text-align:center; }
+.dept-header { cursor:pointer; padding:2px 0; border-radius:4px; user-select:none; }
+.dept-header:hover { background:#f0f2f5; }
 .dept-children { margin-right:10px; }
+.dept-pages-panel { animation: deptSlide .2s ease; }
+@keyframes deptSlide { from { opacity:0; max-height:0; } to { opacity:1; max-height:500px; } }
 .dept-child-label { cursor:pointer; padding:2px 4px; border-radius:4px; transition: background .15s; }
 .dept-child-label:hover { background:#e8eaf6; }
+.dept-chevron { transition: transform .2s ease; }
 .form-check-input-sm { width:14px; height:14px; }
 
 /* ─── Filter bar ─── */

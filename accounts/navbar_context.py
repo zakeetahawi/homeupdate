@@ -171,19 +171,25 @@ def navbar_departments(request):
                 navbar_items["accounting"]["units"].append(unit_dict)
             if unit.show_database and "database" in navbar_items:
                 navbar_items["database"]["units"].append(unit_dict)
+            if unit.show_external_sales and "external_sales" in navbar_items:
+                navbar_items["external_sales"]["units"].append(unit_dict)
     else:
-        # المستخدمون العاديون يرون فقط وحدات أقسامهم
-        user_dept_ids = user_departments.values_list("id", "parent_id")
-        user_dept_ids_flat = set()
-        for dept_id, parent_id in user_dept_ids:
-            user_dept_ids_flat.add(dept_id)
-            if parent_id:
-                user_dept_ids_flat.add(parent_id)
+        # المستخدمون العاديون — صلاحيات على مستوى الصفحة
+        # Root مُعيَّن مباشرة → كل أبنائه ظاهرون
+        # Child مُعيَّن بلا root → هذا الـ Child فقط ظاهر
+        direct_root_ids = set()
+        direct_child_ids = set()
+        for dept_id, parent_id in user_departments.values_list("id", "parent_id"):
+            if parent_id is None:
+                direct_root_ids.add(dept_id)
+            else:
+                direct_child_ids.add(dept_id)
 
         for unit in all_units:
-            # التحقق من أن المستخدم ينتمي لهذا القسم
+            # التحقق: root مُعيَّن أو child مُعيَّن مباشرة
             is_authorized = (
-                unit.id in user_dept_ids_flat or unit.parent_id in user_dept_ids_flat
+                unit.parent_id in direct_root_ids
+                or unit.id in direct_child_ids
             )
 
             # صلاحيات خاصة لمدير التركيبات لرؤية أقسام التركيبات والمصنع
@@ -228,6 +234,8 @@ def navbar_departments(request):
                     navbar_items["accounting"]["units"].append(unit_dict)
                 if unit.show_database and "database" in navbar_items:
                     navbar_items["database"]["units"].append(unit_dict)
+                if unit.show_external_sales and "external_sales" in navbar_items:
+                    navbar_items["external_sales"]["units"].append(unit_dict)
 
     # Inject Traffic Management for authorized users
     if (
@@ -308,12 +316,16 @@ def navbar_departments(request):
             }
         )
 
-    # Inject External Sales sub-departments for authorized users
+    # Inject External Sales — فقط إذا لم تأتي من الأقسام في قاعدة البيانات
     if (
-        user.is_superuser
-        or getattr(user, "is_decorator_dept_manager", False)
-        or getattr(user, "is_decorator_dept_staff", False)
-    ) and "external_sales" in navbar_items:
+        not navbar_items.get("external_sales", {}).get("units")
+        and (
+            user.is_superuser
+            or getattr(user, "is_decorator_dept_manager", False)
+            or getattr(user, "is_decorator_dept_staff", False)
+        )
+        and "external_sales" in navbar_items
+    ):
         navbar_items["external_sales"]["units"].extend(
             [
                 {

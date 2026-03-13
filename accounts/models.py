@@ -532,6 +532,9 @@ class Department(models.Model):
     show_database = models.BooleanField(
         default=False, verbose_name="عرض إدارة البيانات"
     )
+    show_external_sales = models.BooleanField(
+        default=False, verbose_name="عرض المبيعات الخارجية"
+    )
 
     def get_full_path(self):
         """إرجاع المسار الكامل للقسم من الأعلى إلى الأسفل"""

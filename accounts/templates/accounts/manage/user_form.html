@@ -165,26 +165,32 @@
                     <div class="card-body">
                         <p class="small text-muted mb-3">
                             <i class="fas fa-info-circle me-1"></i>
-                            الأقسام المختارة ستظهر في القائمة الرئيسية للمستخدم. إذا لم يملك صلاحية القسم ستظهر رسالة تقييد.
+                            انقر مرتان على القسم أو السهم لعرض صفحاته الداخلية. تحديد صفحات معيّنة يعطي صلاحية على مستوى الصفحة فقط.
                         </p>
                         <div class="row g-3">
                             {% for sec in department_sections %}
                             <div class="col-md-6">
-                                <div class="dept-group border rounded p-2">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <label class="form-check d-flex align-items-center gap-2 mb-0 fw-bold">
+                                <div class="dept-group border rounded p-2" data-dept-id="{{ sec.root.id }}">
+                                    <div class="d-flex align-items-center justify-content-between mb-0 dept-header" data-root="{{ sec.root.id }}">
+                                        <label class="form-check d-flex align-items-center gap-2 mb-0 fw-bold" onclick="event.stopPropagation()">
                                             <input type="checkbox" name="departments" value="{{ sec.root.id }}"
                                                    class="form-check-input dept-root-cb" data-root="{{ sec.root.id }}"
                                                    {% if sec.root.id in user_department_ids %}checked{% endif %}>
                                             <i class="fas {{ sec.icon }} dept-icon"></i>
                                             <span class="small">{{ sec.root.name }}</span>
                                         </label>
-                                        {% if sec.assigned_count %}
-                                        <span class="badge bg-info" style="font-size:10px">{{ sec.assigned_count }}</span>
-                                        {% endif %}
+                                        <div class="d-flex align-items-center gap-1">
+                                            {% if sec.assigned_count %}
+                                            <span class="badge bg-info" style="font-size:10px">{{ sec.assigned_count }}</span>
+                                            {% endif %}
+                                            {% if sec.children %}
+                                            <i class="fas fa-chevron-down dept-chevron text-muted" style="font-size:10px;transition:transform .2s;cursor:pointer"></i>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                     {% if sec.children %}
-                                    <div class="dept-children pe-3" style="border-right:2px solid #e9ecef">
+                                    <div class="dept-children pe-3 dept-pages-panel" data-root="{{ sec.root.id }}" style="display:none;border-right:2px solid #e9ecef;margin-top:8px">
+                                        <div class="small text-muted mb-1 fw-bold" style="font-size:10px"><i class="fas fa-file-alt me-1"></i>الصفحات الداخلية:</div>
                                         {% for child in sec.children %}
                                         <label class="form-check d-flex align-items-center gap-2 mb-1 dept-child-label" data-root="{{ sec.root.id }}">
                                             <input type="checkbox" name="departments" value="{{ child.id }}"

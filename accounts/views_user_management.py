@@ -425,7 +425,6 @@ _DEPT_ICONS = {
     "inventory": "fa-boxes",
     "inspections": "fa-clipboard-check",
     "installations": "fa-tools",
-    "factory": "fa-industry",
     "manufacturing": "fa-industry",
     "complaints": "fa-exclamation-triangle",
     "reports": "fa-chart-bar",
@@ -433,6 +432,7 @@ _DEPT_ICONS = {
     "cutting": "fa-cut",
     "data_management": "fa-database",
     "database": "fa-database",
+    "external_sales": "fa-handshake",
 }
 
 

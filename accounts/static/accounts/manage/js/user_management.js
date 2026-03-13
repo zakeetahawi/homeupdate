@@ -198,12 +198,62 @@ function initUserManagement(config) {
         });
     }
 
+    // ─── Department double-click → expand/collapse pages ───
+    document.querySelectorAll('.dept-header').forEach(header => {
+        header.addEventListener('dblclick', function(e) {
+            // تجاهل النقر على الـ checkbox نفسه
+            if (e.target.closest('.form-check-input')) return;
+            const rootId = this.dataset.root;
+            toggleDeptPanel(rootId);
+        });
+        // أيضاً النقر على السهم
+        const chevron = header.querySelector('.dept-chevron');
+        if (chevron) {
+            chevron.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const rootId = header.dataset.root;
+                toggleDeptPanel(rootId);
+            });
+        }
+    });
+
+    function toggleDeptPanel(rootId) {
+        const panel = document.querySelector(`.dept-pages-panel[data-root="${rootId}"]`);
+        const chevron = document.querySelector(`.dept-header[data-root="${rootId}"] .dept-chevron`);
+        if (!panel) return;
+        const isHidden = panel.style.display === 'none';
+        panel.style.display = isHidden ? '' : 'none';
+        if (chevron) {
+            chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+        }
+    }
+
+    // Auto-expand departments that have assigned children
+    document.querySelectorAll('.dept-pages-panel').forEach(panel => {
+        const rootId = panel.dataset.root;
+        const hasChecked = panel.querySelector('.dept-child-cb:checked');
+        if (hasChecked) {
+            panel.style.display = '';
+            const chevron = document.querySelector(`.dept-header[data-root="${rootId}"] .dept-chevron`);
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+        }
+    });
+
     // ─── Department root checkboxes → toggle all children ───
     document.querySelectorAll('.dept-root-cb').forEach(rootCb => {
         rootCb.addEventListener('change', function() {
             const rootId = this.dataset.root;
             const children = document.querySelectorAll(`.dept-child-cb[data-root="${rootId}"]`);
             children.forEach(cb => { cb.checked = this.checked; });
+            // Auto-expand when root is checked
+            if (this.checked) {
+                const panel = document.querySelector(`.dept-pages-panel[data-root="${rootId}"]`);
+                const chevron = document.querySelector(`.dept-header[data-root="${rootId}"] .dept-chevron`);
+                if (panel && panel.style.display === 'none') {
+                    panel.style.display = '';
+                    if (chevron) chevron.style.transform = 'rotate(180deg)';
+                }
+            }
             updateDeptCount();
         });
     });
