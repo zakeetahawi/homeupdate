@@ -364,6 +364,11 @@ def _build_role_sections(user_obj):
             "icon": "fa-handshake",
             "roles": [
                 (
+                    "is_external_sales_director",
+                    "مدير عام المبيعات الخارجية",
+                    user_obj.is_external_sales_director,
+                ),
+                (
                     "is_decorator_dept_manager",
                     "مدير قسم الديكور",
                     user_obj.is_decorator_dept_manager,
@@ -375,7 +380,7 @@ def _build_role_sections(user_obj):
                 ),
             ],
             "has_active": any(
-                [user_obj.is_decorator_dept_manager, user_obj.is_decorator_dept_staff]
+                [user_obj.is_external_sales_director, user_obj.is_decorator_dept_manager, user_obj.is_decorator_dept_staff]
             ),
         },
     }

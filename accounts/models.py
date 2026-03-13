@@ -123,6 +123,20 @@ ROLE_HIERARCHY = {
         "inherits_from": [],
         "permissions": ["view_assigned_inspections", "update_inspection_status"],
     },
+    "external_sales_director": {
+        "level": 2,
+        "display": "مدير عام المبيعات الخارجية",
+        "inherits_from": ["decorator_dept_manager"],
+        "permissions": [
+            "view_decorator_profiles",
+            "manage_decorator_profiles",
+            "view_decorator_commissions",
+            "manage_decorator_commissions",
+            "view_all_customers",
+            "view_all_orders",
+            "manage_all_customers",
+        ],
+    },
     "decorator_dept_manager": {
         "level": 3,
         "display": "مدير قسم مهندسي الديكور",
@@ -200,6 +214,9 @@ class User(AbstractUser):
     )
     is_wholesale = models.BooleanField(default=False, verbose_name=_("عمليات جملة"))
     is_retail = models.BooleanField(default=True, verbose_name=_("عمليات قطاعي"))
+    is_external_sales_director = models.BooleanField(
+        default=False, verbose_name=_("مدير عام المبيعات الخارجية")
+    )
     is_decorator_dept_manager = models.BooleanField(
         default=False, verbose_name=_("مدير قسم مهندسي الديكور")
     )
@@ -287,6 +304,7 @@ class User(AbstractUser):
         "is_installation_manager": "installation_manager",
         "is_traffic_manager": "traffic_manager",
         "is_warehouse_staff": "warehouse_staff",
+        "is_external_sales_director": "external_sales_director",
         "is_decorator_dept_manager": "decorator_dept_manager",
         "is_decorator_dept_staff": "decorator_dept_staff",
     }

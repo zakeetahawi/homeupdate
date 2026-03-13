@@ -30,7 +30,7 @@ _URL_ROLE_MAP = {
     "/reports/": ["is_sales_manager", "is_branch_manager", "is_region_manager"],
     "/accounting/": ["is_sales_manager"],
     "/factory-accounting/": ["is_factory_accountant", "is_factory_manager"],
-    "/external-sales/": ["is_decorator_dept_manager", "is_decorator_dept_staff"],
+    "/external-sales/": ["is_external_sales_director", "is_decorator_dept_manager", "is_decorator_dept_staff"],
     "/database/": ["is_sales_manager", "is_region_manager"],
 }
 
@@ -148,6 +148,7 @@ def navbar_departments(request):
                 "name": unit.name,
                 "icon": unit.icon,
                 "url_name": unit.url_name,
+                "disabled": unit.url_name in (None, "", "#"),
             }
 
             # تحديد أي عنصر navbar يجب أن تظهر فيه هذه الوحدة
@@ -212,6 +213,7 @@ def navbar_departments(request):
                     "icon": unit.icon,
                     "url_name": unit.url_name,
                     "restricted": restricted,
+                    "disabled": unit.url_name in (None, "", "#"),
                 }
 
                 if unit.show_customers and "customers" in navbar_items:
@@ -321,6 +323,7 @@ def navbar_departments(request):
         not navbar_items.get("external_sales", {}).get("units")
         and (
             user.is_superuser
+            or getattr(user, "is_external_sales_director", False)
             or getattr(user, "is_decorator_dept_manager", False)
             or getattr(user, "is_decorator_dept_staff", False)
         )
