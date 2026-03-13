@@ -32,7 +32,7 @@ class DecoratorEngineerProfileForm(forms.ModelForm):
             "assigned_staff",
         ]
         widgets = {
-            "customer": forms.Select(attrs={"class": "form-control select2"}),
+            "customer": forms.Select(attrs={"class": "form-control"}),
             "company_office_name": forms.TextInput(attrs={"class": "form-control"}),
             "years_of_experience": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
             "area_of_operation": forms.TextInput(attrs={"class": "form-control"}),
@@ -48,6 +48,19 @@ class DecoratorEngineerProfileForm(forms.ModelForm):
             "priority": forms.Select(attrs={"class": "form-select"}),
             "assigned_staff": forms.Select(attrs={"class": "form-control select2"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["customer"].queryset = self.fields["customer"].queryset.none()
+        if self.data.get("customer"):
+            from customers.models import Customer
+
+            try:
+                self.fields["customer"].queryset = Customer.objects.filter(
+                    pk=int(self.data["customer"])
+                )
+            except (ValueError, TypeError):
+                pass
 
 
 class EngineerProfileEditForm(forms.ModelForm):

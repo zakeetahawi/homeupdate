@@ -32,9 +32,9 @@
 
                     {% if is_new %}
                     <div class="mb-3">
-                        <label for="id_customer" class="form-label fw-bold">العميل <span class="text-danger">*</span></label>
+                        <label for="id_customer" class="form-label fw-bold">العميل (مهندس ديكور) <span class="text-danger">*</span></label>
                         {{ form.customer }}
-                        {% if form.customer.help_text %}<div class="form-text">{{ form.customer.help_text }}</div>{% endif %}
+                        <div class="form-text">ابحث بالاسم أو رقم الهاتف أو الكود — يظهر فقط عملاء نوع "مهندس ديكور" الذين ليس لديهم ملف</div>
                     </div>
                     {% endif %}
 
@@ -128,4 +128,35 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block dept_js %}
+{% if is_new %}
+<link href="/static/vendor/select2/select2.min.css" rel="stylesheet">
+<link href="/static/vendor/select2/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+<script src="/static/vendor/select2/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#id_customer').select2({
+        theme: 'bootstrap-5',
+        dir: 'rtl',
+        placeholder: 'ابحث عن مهندس ديكور بالاسم أو الهاتف أو الكود...',
+        allowClear: true,
+        minimumInputLength: 2,
+        ajax: {
+            url: '{% url "external_sales:api_designer_customer_search" %}',
+            dataType: 'json',
+            delay: 300,
+            data: function(params) { return { q: params.term }; },
+            processResults: function(data) { return { results: data.results }; }
+        },
+        language: {
+            inputTooShort: function() { return 'اكتب حرفين على الأقل للبحث...'; },
+            noResults: function() { return 'لا توجد نتائج'; },
+            searching: function() { return 'جارٍ البحث...'; }
+        }
+    });
+});
+</script>
+{% endif %}
 {% endblock %}

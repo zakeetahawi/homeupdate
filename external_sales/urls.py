@@ -105,6 +105,11 @@ urlpatterns = [
         name="api_customer_search",
     ),
     path(
+        "decorator/api/designer-customer-search/",
+        views_decorator.DesignerCustomerSearchAjax.as_view(),
+        name="api_designer_customer_search",
+    ),
+    path(
         "decorator/api/order-search/",
         views_decorator.OrderSearchAjax.as_view(),
         name="api_order_search",

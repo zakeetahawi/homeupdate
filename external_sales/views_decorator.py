@@ -558,6 +558,40 @@ class CustomerSearchAjax(DecoratorDeptRequiredMixin, View):
         return JsonResponse({"results": results})
 
 
+class DesignerCustomerSearchAjax(DecoratorDeptRequiredMixin, View):
+    """AJAX search for designer customers without profiles (for create-profile)."""
+
+    def get(self, request):
+        from customers.models import Customer
+
+        q = request.GET.get("q", "").strip()
+        if len(q) < 2:
+            return JsonResponse({"results": []})
+        # Only designer customers who don't already have a profile
+        customers = (
+            Customer.objects.filter(
+                customer_type="designer",
+            )
+            .exclude(decorator_profile__isnull=False)
+            .filter(
+                Q(name__icontains=q)
+                | Q(phone__icontains=q)
+                | Q(code__icontains=q)
+            )
+            .select_related("branch")
+            .only("pk", "name", "phone", "code", "branch__name")
+            .order_by("name")[:20]
+        )
+        results = [
+            {
+                "id": c.pk,
+                "text": f"{c.name} — {c.phone or ''} ({c.branch.name if c.branch else ''})",
+            }
+            for c in customers
+        ]
+        return JsonResponse({"results": results})
+
+
 class OrderSearchAjax(DecoratorDeptRequiredMixin, View):
     """AJAX endpoint for Select2 order search."""
 
