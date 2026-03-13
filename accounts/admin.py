@@ -139,6 +139,10 @@ class UserRoleInline(admin.TabularInline):
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
+
+    class Media:
+        js = ("accounts/admin/js/dynamic_user_admin.js",)
+        css = {"all": ("accounts/admin/css/dynamic_user_admin.css",)}
     list_display = (
         "username",
         "email",
@@ -260,7 +264,6 @@ class CustomUserAdmin(UserAdmin):
                     "is_factory_receiver",
                 ),
                 "description": _("أدوار التصنيع والإنتاج"),
-                "classes": ("collapse",),
             },
         ),
         (
@@ -272,7 +275,6 @@ class CustomUserAdmin(UserAdmin):
                     "is_installation_manager",
                 ),
                 "description": _("أدوار المعاينة والتركيب"),
-                "classes": ("collapse",),
             },
         ),
         (
@@ -280,7 +282,6 @@ class CustomUserAdmin(UserAdmin):
             {
                 "fields": ("is_warehouse_staff", "assigned_warehouse", "assigned_warehouses"),
                 "description": _("تحديد موظفي المستودع والمستودعات المخصصة لهم"),
-                "classes": ("collapse",),
             },
         ),
         (
