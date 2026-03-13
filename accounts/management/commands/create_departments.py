@@ -142,16 +142,6 @@ class Command(BaseCommand):
                     "description": "إدارة المخزون والمستودعات",
                     "parent": admin_departments["operations"],
                 },
-                "factory": {
-                    "name": "المصنع",
-                    "code": "factory",
-                    "department_type": "department",
-                    "url_name": "factory:factory_list",  # تحديث
-                    "icon": "fas fa-industry",
-                    "order": 2,
-                    "description": "إدارة عمليات التصنيع والإنتاج",
-                    "parent": admin_departments["operations"],
-                },
                 "inspections": {
                     "name": "المعاينات",
                     "code": "inspections",

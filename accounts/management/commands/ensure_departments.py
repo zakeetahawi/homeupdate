@@ -40,12 +40,6 @@ class Command(BaseCommand):
                 "order": 5,
             },
             {
-                "name": "المصنع",
-                "url": "/factory/",
-                "icon": "fa fa-industry",
-                "order": 6,
-            },
-            {
                 "name": "التقارير",
                 "url": "/reports/",
                 "icon": "fa fa-chart-bar",
