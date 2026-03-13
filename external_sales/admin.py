@@ -14,6 +14,10 @@ class LinkedCustomerInline(admin.TabularInline):
     extra = 0
     fields = ("customer", "linked_by", "default_commission_rate", "is_active", "linked_at")
     readonly_fields = ("linked_by", "linked_at")
+    raw_id_fields = ("customer",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("customer", "linked_by")
 
 
 class LinkedOrderInline(admin.TabularInline):
@@ -28,6 +32,10 @@ class LinkedOrderInline(admin.TabularInline):
         "linked_at",
     )
     readonly_fields = ("linked_at",)
+    raw_id_fields = ("order",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("order")
 
 
 class ContactLogInline(admin.TabularInline):
@@ -36,6 +44,9 @@ class ContactLogInline(admin.TabularInline):
     ordering = ["-contact_date"]
     fields = ("contact_type", "contact_date", "outcome", "next_followup_date", "created_by")
     readonly_fields = ("created_by",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("created_by")
 
 
 class MaterialInterestInline(admin.TabularInline):
@@ -65,10 +76,21 @@ class DecoratorEngineerProfileAdmin(admin.ModelAdmin):
         "company_office_name",
         "city",
     )
+    list_select_related = ("customer", "assigned_staff")
+    raw_id_fields = ("customer", "assigned_staff")
     readonly_fields = ("designer_code", "created_at", "updated_at")
+    list_per_page = 25
+    show_full_result_count = False
     inlines = [
         LinkedCustomerInline,
         LinkedOrderInline,
         ContactLogInline,
         MaterialInterestInline,
     ]
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("customer", "assigned_staff")
+        )

@@ -165,7 +165,9 @@ class DecoratorEngineerProfile(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.designer_code} - {self.customer.name}"
+        if 'customer' in self._state.fields_cache:
+            return f"{self.designer_code} - {self.customer.name}"
+        return self.designer_code or f"DEC-{self.pk}"
 
     def save(self, *args, **kwargs):
         if not self.designer_code:
@@ -231,7 +233,9 @@ class EngineerLinkedCustomer(models.Model):
         indexes = [models.Index(fields=["engineer", "is_active"])]
 
     def __str__(self):
-        return f"{self.engineer.designer_code} → {self.customer.name}"
+        eng_code = self.engineer.designer_code if 'engineer' in self._state.fields_cache else f"ENG#{self.engineer_id}"
+        cust_name = self.customer.name if 'customer' in self._state.fields_cache else f"C#{self.customer_id}"
+        return f"{eng_code} → {cust_name}"
 
 
 class EngineerLinkedOrder(models.Model):
@@ -323,7 +327,9 @@ class EngineerLinkedOrder(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.engineer.designer_code} — Order #{self.order.order_number}"
+        eng_code = self.engineer.designer_code if 'engineer' in self._state.fields_cache else f"ENG#{self.engineer_id}"
+        order_num = self.order.order_number if 'order' in self._state.fields_cache else f"#{self.order_id}"
+        return f"{eng_code} — Order {order_num}"
 
     def calculate_commission(self):
         """احسب قيمة العمولة تلقائياً"""
@@ -415,7 +421,8 @@ class EngineerContactLog(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.engineer.designer_code} — {self.get_contact_type_display()} ({self.contact_date:%Y-%m-%d})"
+        eng_code = self.engineer.designer_code if 'engineer' in self._state.fields_cache else f"ENG#{self.engineer_id}"
+        return f"{eng_code} — {self.get_contact_type_display()} ({self.contact_date:%Y-%m-%d})"
 
 
 class EngineerMaterialInterest(models.Model):
@@ -473,4 +480,5 @@ class EngineerMaterialInterest(models.Model):
         unique_together = [("engineer", "material_name")]
 
     def __str__(self):
-        return f"{self.engineer.designer_code} — {self.material_name}"
+        eng_code = self.engineer.designer_code if 'engineer' in self._state.fields_cache else f"ENG#{self.engineer_id}"
+        return f"{eng_code} — {self.material_name}"

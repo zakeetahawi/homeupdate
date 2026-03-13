@@ -99,11 +99,15 @@ class OrderStatusLogInline(admin.TabularInline):
     def has_delete_permission(self, request, obj=None):
         return False
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("changed_by")
+
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 1
     readonly_fields = ("total_price",)
+    raw_id_fields = ("product",)
 
     def get_formset(self, request, obj=None, **kwargs):
         if obj is None:
@@ -185,6 +189,10 @@ class PaymentInline(admin.TabularInline):
     model = Payment
     extra = 1
     readonly_fields = ("payment_date",)
+    raw_id_fields = ("created_by",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("created_by")
 
     def get_formset(self, request, obj=None, **kwargs):
         if obj is None:
@@ -305,15 +313,6 @@ class OrderAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
     raw_id_fields = ("customer", "salesperson", "branch", "related_inspection")
     date_hierarchy = "order_date"
     actions = ["mark_as_paid", "create_manufacturing_order", "export_orders"]
-
-    def get_queryset(self, request):
-        """تحسين الاستعلامات باستخدام select_related و prefetch_related"""
-        return (
-            super()
-            .get_queryset(request)
-            .select_related("customer", "salesperson", "branch")
-            .prefetch_related("items__product", "payments")
-        )
 
     def mark_as_paid(self, request, queryset):
         updated = 0
