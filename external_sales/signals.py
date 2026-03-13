@@ -1,5 +1,6 @@
 import logging
 from datetime import date
+from decimal import Decimal
 
 from django.db.models import Max
 from django.db.models.signals import post_save
@@ -178,3 +179,233 @@ def update_profile_customer_cache(sender, instance, **kwargs):
         profile.save(update_fields=["total_clients_count"])
     except Exception as e:
         logger.error(f"Error updating customer cache: {e}")
+
+
+# ═══════════════════════════════════════════════════════════════
+#  COMMISSION → ACCOUNTING JOURNAL ENTRIES (Phase 2)
+# ═══════════════════════════════════════════════════════════════
+
+def _get_commission_reference(instance):
+    """Build a unique reference for commission transactions."""
+    return f"COMM-{instance.engineer.designer_code}-{instance.order.order_number}"
+
+
+def _create_commission_approval_transaction(instance):
+    """
+    عند اعتماد العمولة: قيد محاسبي
+    مدين: 5230 عمولات المبيعات (مصروف)
+    دائن: 2124 مصروفات مستحقة أخرى (التزام)
+    """
+    from django.db import transaction as db_transaction
+
+    from accounting.models import Account, Transaction, TransactionLine
+
+    try:
+        commission_expense = Account.objects.get(code="5230")
+        accrued_expenses = Account.objects.get(code="2124")
+    except Account.DoesNotExist:
+        logger.error("Commission accounts not found (5230 or 2124)")
+        return None
+
+    amount = instance.commission_value
+    if not amount or amount <= 0:
+        return None
+
+    reference = _get_commission_reference(instance)
+    eng_name = instance.engineer.customer.name
+    order_num = instance.order.order_number
+
+    try:
+        with db_transaction.atomic():
+            txn = Transaction.objects.create(
+                transaction_type="expense",
+                date=timezone.now().date(),
+                description=f"عمولة مهندس ديكور: {eng_name} — طلب {order_num}",
+                reference=reference,
+                customer=instance.engineer.customer,
+                order=instance.order,
+                status="posted",
+            )
+            TransactionLine.objects.create(
+                transaction=txn,
+                account=commission_expense,
+                debit=amount,
+                credit=Decimal("0"),
+                description=f"عمولة المهندس {eng_name}",
+            )
+            TransactionLine.objects.create(
+                transaction=txn,
+                account=accrued_expenses,
+                debit=Decimal("0"),
+                credit=amount,
+                description=f"عمولة مستحقة — المهندس {eng_name}",
+            )
+            txn.calculate_totals()
+            logger.info(f"Commission approval transaction created: {txn.transaction_number}")
+            return txn
+    except Exception as e:
+        logger.error(f"Error creating commission approval transaction: {e}", exc_info=True)
+        return None
+
+
+def _create_commission_payment_transaction(instance):
+    """
+    عند دفع العمولة: قيد محاسبي
+    مدين: 2124 مصروفات مستحقة أخرى (إقفال الالتزام)
+    دائن: 1110 النقدية (خروج نقد)
+    """
+    from django.db import transaction as db_transaction
+
+    from accounting.models import Account, AccountingSettings, Transaction, TransactionLine
+
+    try:
+        accrued_expenses = Account.objects.get(code="2124")
+        settings = AccountingSettings.objects.first()
+        cash_account = settings.default_cash_account if settings else None
+        if not cash_account:
+            cash_account = Account.objects.get(code="1110")
+    except Account.DoesNotExist:
+        logger.error("Payment accounts not found (2124 or 1110)")
+        return None
+
+    amount = instance.commission_value
+    if not amount or amount <= 0:
+        return None
+
+    reference = _get_commission_reference(instance)
+    eng_name = instance.engineer.customer.name
+    order_num = instance.order.order_number
+
+    try:
+        with db_transaction.atomic():
+            txn = Transaction.objects.create(
+                transaction_type="payment",
+                date=timezone.now().date(),
+                description=f"دفع عمولة مهندس ديكور: {eng_name} — طلب {order_num}",
+                reference=f"{reference}-PAID",
+                customer=instance.engineer.customer,
+                order=instance.order,
+                status="posted",
+            )
+            TransactionLine.objects.create(
+                transaction=txn,
+                account=accrued_expenses,
+                debit=amount,
+                credit=Decimal("0"),
+                description=f"إقفال عمولة مستحقة — المهندس {eng_name}",
+            )
+            TransactionLine.objects.create(
+                transaction=txn,
+                account=cash_account,
+                debit=Decimal("0"),
+                credit=amount,
+                description=f"دفع عمولة المهندس {eng_name}",
+            )
+            txn.calculate_totals()
+            logger.info(f"Commission payment transaction created: {txn.transaction_number}")
+            return txn
+    except Exception as e:
+        logger.error(f"Error creating commission payment transaction: {e}", exc_info=True)
+        return None
+
+
+@receiver(post_save, sender=EngineerLinkedOrder)
+def create_commission_accounting_entry(sender, instance, created, **kwargs):
+    """Create accounting journal entries when commission status changes."""
+    if created:
+        return
+
+    reference = _get_commission_reference(instance)
+
+    if instance.commission_status == "approved":
+        from accounting.models import Transaction
+        if Transaction.objects.filter(reference=reference).exists():
+            return
+        _create_commission_approval_transaction(instance)
+
+    elif instance.commission_status == "paid":
+        from accounting.models import Transaction
+        if Transaction.objects.filter(reference=f"{reference}-PAID").exists():
+            return
+        _create_commission_payment_transaction(instance)
+
+
+# ═══════════════════════════════════════════════════════════════
+#  WHATSAPP APPOINTMENT CONFIRMATION (Phase 1.5)
+# ═══════════════════════════════════════════════════════════════
+
+@receiver(post_save, sender=EngineerContactLog)
+def send_appointment_whatsapp(sender, instance, **kwargs):
+    """
+    عند تحديد appointment_datetime في سجل التواصل،
+    يُرسل تأكيد عبر واتساب لرقم المهندس.
+    """
+    if not instance.appointment_datetime:
+        return
+
+    # Skip if already confirmed
+    if instance.appointment_confirmed:
+        return
+
+    phone = getattr(instance.engineer.customer, "phone", None)
+    if not phone:
+        return
+
+    try:
+        from whatsapp.signals import get_whatsapp_settings, get_template, send_template_notification
+
+        settings = get_whatsapp_settings()
+        if not settings or not settings.is_active:
+            return
+
+        template = get_template(settings, "APPOINTMENT_CONFIRMED")
+
+        if template:
+            # Send via approved template
+            appt_date = instance.appointment_datetime.strftime("%Y-%m-%d")
+            appt_time = instance.appointment_datetime.strftime("%H:%M")
+            variables = {
+                "customer_name": instance.engineer.customer.name,
+                "appointment_date": appt_date,
+                "appointment_time": appt_time,
+                "appointment_location": instance.appointment_location or "",
+            }
+            send_template_notification(
+                phone=phone,
+                template=template,
+                variables=variables,
+                customer=instance.engineer.customer,
+            )
+        else:
+            # Fallback: send as plain text message
+            from whatsapp.services import WhatsAppService
+
+            service = WhatsAppService()
+            appt_date = instance.appointment_datetime.strftime("%Y-%m-%d")
+            appt_time = instance.appointment_datetime.strftime("%H:%M")
+            location = instance.appointment_location
+            msg = (
+                f"مرحباً {instance.engineer.customer.name}،\n"
+                f"تم تأكيد موعدكم:\n"
+                f"📅 التاريخ: {appt_date}\n"
+                f"🕐 الوقت: {appt_time}\n"
+            )
+            if location:
+                msg += f"📍 المكان: {location}\n"
+            msg += "\nشكراً لتعاملكم معنا — الخواجه"
+
+            service.send_message(
+                customer=instance.engineer.customer,
+                message_text=msg,
+                message_type="APPOINTMENT_CONFIRMED",
+            )
+
+        # Mark as confirmed
+        EngineerContactLog.objects.filter(pk=instance.pk).update(
+            appointment_confirmed=True
+        )
+        logger.info(
+            f"WhatsApp appointment confirmation sent to {instance.engineer.customer.name}"
+        )
+    except Exception as e:
+        logger.error(f"Error sending WhatsApp appointment confirmation: {e}")
