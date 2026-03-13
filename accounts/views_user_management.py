@@ -12,6 +12,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
@@ -88,14 +89,24 @@ def user_manage_list(request):
         if key not in ("system_admin", "user")
     ]
 
+    # بناء بيانات الأدوار لكل مستخدم — لعرض الأسماء العربية
+    role_display_map = {k: v.get("display", k) for k, v in ROLE_HIERARCHY.items()}
+
+    # إحصائيات
+    total_active = User.objects.filter(is_active=True).count()
+    total_with_roles = sum(1 for u in qs if u.get_active_roles())
+
     context = {
         "page_obj": page,
         "branches": branches,
         "role_choices": role_choices,
+        "role_display_map": role_display_map,
         "q": q,
         "branch_id": branch_id,
         "role_filter": role_filter,
-        "total_users": User.objects.filter(is_active=True).count(),
+        "total_users": total_active,
+        "total_with_roles": total_with_roles,
+        "show_inactive": show_inactive,
     }
     return render(request, "accounts/manage/user_list.html", context)
 
@@ -130,12 +141,21 @@ def user_manage_edit(request, pk):
     all_permissions = user_obj.get_role_permissions()
     permissions_with_source = _get_permissions_with_source(user_obj)
 
+    # جلب بيانات المستودعات
+    from inventory.models import Warehouse
+    all_warehouses = Warehouse.objects.filter(is_active=True).order_by("name")
+    managed_branch_ids = list(user_obj.managed_branches.values_list("id", flat=True))
+    assigned_warehouse_ids = list(user_obj.assigned_warehouses.values_list("id", flat=True))
+
     context = {
         "user_obj": user_obj,
         "role_sections": role_sections,
         "all_permissions": all_permissions,
         "permissions_with_source": permissions_with_source,
         "branches": Branch.objects.filter(is_active=True).order_by("name"),
+        "all_warehouses": all_warehouses,
+        "managed_branch_ids": managed_branch_ids,
+        "assigned_warehouse_ids": assigned_warehouse_ids,
         "role_hierarchy": ROLE_HIERARCHY,
     }
     return render(request, "accounts/manage/user_form.html", context)
@@ -169,7 +189,12 @@ def _handle_user_edit_post(request, user_obj):
     warehouse_id = request.POST.get("assigned_warehouse", "")
     user_obj.assigned_warehouse_id = int(warehouse_id) if warehouse_id else None
 
-    user_obj.save()
+    try:
+        user_obj.save()
+    except ValidationError as e:
+        for msg in e.messages:
+            messages.error(request, msg)
+        return redirect("accounts:user_manage_edit", pk=user_obj.pk)
 
     # Managed branches M2M
     branch_ids = request.POST.getlist("managed_branches")
@@ -206,8 +231,12 @@ def user_toggle_role_api(request, pk):
         return JsonResponse({"error": "دور غير صالح"}, status=400)
 
     current_value = getattr(user_obj, role_field)
-    setattr(user_obj, role_field, not current_value)
-    user_obj.save(update_fields=[role_field])
+    new_value = not current_value
+
+    # استخدام update مباشرة لتجاوز clean() — الدور يُحفظ فوراً
+    # التحقق من المستودع يتم عند الحفظ النهائي من النموذج
+    User.objects.filter(pk=user_obj.pk).update(**{role_field: new_value})
+    user_obj.refresh_from_db()
 
     active_roles = user_obj.get_active_roles()
     all_perms = user_obj.get_role_permissions()
@@ -216,7 +245,7 @@ def user_toggle_role_api(request, pk):
         {
             "success": True,
             "field": role_field,
-            "value": not current_value,
+            "value": new_value,
             "active_roles": active_roles,
             "active_roles_display": user_obj.get_active_roles_display(),
             "permissions": all_perms,
