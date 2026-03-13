@@ -1,9 +1,10 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import Q, Sum
+from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncMonth
 
-from .models import EngineerContactLog, EngineerMaterialInterest
+from .models import EngineerContactLog, EngineerLinkedOrder, EngineerMaterialInterest
 
 
 def compute_engineer_analytics(profile):
@@ -49,6 +50,30 @@ def compute_engineer_analytics(profile):
     )
     last_activity = max(filter(None, [last_contact, last_order]), default=None)
 
+    # Per-engineer monthly data for charts (last 6 months)
+    contacts_by_month = list(
+        EngineerContactLog.objects.filter(
+            engineer=profile, contact_date__gte=six_months_ago
+        )
+        .annotate(month=TruncMonth("contact_date"))
+        .values("month")
+        .annotate(cnt=Count("id"))
+        .order_by("month")
+    )
+    orders_by_month = list(
+        EngineerLinkedOrder.objects.filter(
+            engineer=profile, linked_at__gte=six_months_ago
+        )
+        .annotate(month=TruncMonth("linked_at"))
+        .values("month")
+        .annotate(cnt=Count("id"))
+        .order_by("month")
+    )
+
+    monthly_months = [str(r["month"])[:7] for r in contacts_by_month]
+    monthly_contacts = [r["cnt"] for r in contacts_by_month]
+    monthly_orders = [r["cnt"] for r in orders_by_month]
+
     return {
         "total_linked_customers": total_linked_customers,
         "total_linked_orders": total_linked_orders,
@@ -59,4 +84,15 @@ def compute_engineer_analytics(profile):
         "avg_monthly_orders": avg_monthly,
         "top_materials": top_materials,
         "last_activity": last_activity,
+        # Aliases used in templates
+        "total_clients": total_linked_customers,
+        "total_orders": total_linked_orders,
+        "total_value": order_aggregates["total_value"] or Decimal("0"),
+        "pending_commission": order_aggregates["pending"] or Decimal("0"),
+        "approved_commission": order_aggregates["approved"] or Decimal("0"),
+        "paid_commission": order_aggregates["paid"] or Decimal("0"),
+        # Monthly chart data
+        "monthly_months": monthly_months,
+        "monthly_contacts": monthly_contacts,
+        "monthly_orders": monthly_orders,
     }

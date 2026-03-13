@@ -260,4 +260,146 @@
         </div>
     </div>
 </div>
+
+{# ── Performance Charts ── #}
+<h5 class="fw-bold mt-4 mb-3"><i class="fas fa-chart-bar me-2"></i>تحليلات الأداء</h5>
+<div class="row g-3 mb-3">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">أعلى 10 مهندسين بالإيرادات</div>
+            <div class="card-body"><canvas id="chartTopRevenue" height="280"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">أعلى 10 مهندسين بعدد الطلبات</div>
+            <div class="card-body"><canvas id="chartTopOrders" height="280"></canvas></div>
+        </div>
+    </div>
+</div>
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">أكثر الخامات طلباً</div>
+            <div class="card-body"><canvas id="chartMaterials" height="280"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">النشاط الشهري (آخر 6 أشهر)</div>
+            <div class="card-body"><canvas id="chartMonthly" height="280"></canvas></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block dept_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const COLORS = ['#1a237e','#2e7d32','#f57c00','#0288d1','#c62828','#6a1b9a','#00838f','#558b2f','#e65100','#ad1457'];
+
+    function loadChart(url, canvasId, config) {
+        fetch(url)
+            .then(r => r.json())
+            .then(data => config(data, document.getElementById(canvasId)))
+            .catch(err => console.warn('Chart load error:', err));
+    }
+
+    // Top by Revenue (horizontal bar)
+    loadChart("{% url 'external_sales:chart_top_revenue' %}", 'chartTopRevenue', function(data, ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels || [],
+                datasets: [{
+                    label: 'الإيرادات (ر.س)',
+                    data: data.values || [],
+                    backgroundColor: COLORS
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true } }
+            }
+        });
+    });
+
+    // Top by Orders (bar)
+    loadChart("{% url 'external_sales:chart_top_orders' %}", 'chartTopOrders', function(data, ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels || [],
+                datasets: [{
+                    label: 'عدد الطلبات',
+                    data: data.values || [],
+                    backgroundColor: '#1a237e'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    });
+
+    // Top Materials (horizontal bar)
+    loadChart("{% url 'external_sales:chart_materials' %}", 'chartMaterials', function(data, ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels || [],
+                datasets: [{
+                    label: 'عدد الطلبات',
+                    data: data.values || [],
+                    backgroundColor: COLORS
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    });
+
+    // Monthly Activity (line - dual dataset)
+    loadChart("{% url 'external_sales:chart_monthly_activity' %}", 'chartMonthly', function(data, ctx) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.months || [],
+                datasets: [
+                    {
+                        label: 'التواصل',
+                        data: data.contacts || [],
+                        borderColor: '#2e7d32',
+                        backgroundColor: 'rgba(46,125,50,.1)',
+                        fill: true, tension: .3
+                    },
+                    {
+                        label: 'الطلبات المرتبطة',
+                        data: data.orders || [],
+                        borderColor: '#1a237e',
+                        backgroundColor: 'rgba(26,35,126,.1)',
+                        fill: true, tension: .3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

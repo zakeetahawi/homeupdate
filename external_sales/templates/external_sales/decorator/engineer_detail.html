@@ -392,24 +392,35 @@
     <div class="tab-pane fade" id="tab-analytics">
         <h5 class="tab-section-title">تحليلات الأداء</h5>
         <div class="row g-3 mb-4">
-            <div class="col-md-4"><div class="kpi-card kpi-primary text-center"><div class="kpi-value">{{ analytics.total_clients }}</div><div class="kpi-label">إجمالي العملاء</div></div></div>
-            <div class="col-md-4"><div class="kpi-card kpi-success text-center"><div class="kpi-value">{{ analytics.total_orders }}</div><div class="kpi-label">إجمالي الطلبات</div></div></div>
-            <div class="col-md-4"><div class="kpi-card kpi-info text-center"><div class="kpi-value">{{ analytics.total_value|floatformat:0 }}</div><div class="kpi-label">إجمالي الإيرادات (ر.س)</div></div></div>
+            <div class="col-md-3"><div class="kpi-card kpi-primary text-center"><div class="kpi-value">{{ analytics.total_clients }}</div><div class="kpi-label">إجمالي العملاء</div></div></div>
+            <div class="col-md-3"><div class="kpi-card kpi-success text-center"><div class="kpi-value">{{ analytics.total_orders }}</div><div class="kpi-label">إجمالي الطلبات</div></div></div>
+            <div class="col-md-3"><div class="kpi-card kpi-info text-center"><div class="kpi-value">{{ analytics.total_value|floatformat:0 }}</div><div class="kpi-label">إجمالي الإيرادات (ر.س)</div></div></div>
+            <div class="col-md-3"><div class="kpi-card kpi-warning text-center"><div class="kpi-value">{{ analytics.avg_monthly_orders|floatformat:1 }}</div><div class="kpi-label">متوسط شهري</div></div></div>
         </div>
+        <div class="row g-3 mb-3">
+            <div class="col-lg-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white fw-bold">النشاط الشهري (آخر 6 أشهر)</div>
+                    <div class="card-body"><canvas id="monthlyActivityChart" height="250"></canvas></div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white fw-bold">توزيع العمولات</div>
+                    <div class="card-body"><canvas id="commissionPieChart" height="250"></canvas></div>
+                </div>
+            </div>
+        </div>
+        {% if analytics.top_materials %}
         <div class="row g-3">
-            <div class="col-lg-6">
+            <div class="col-12">
                 <div class="card shadow-sm">
-                    <div class="card-header bg-white fw-bold">اتجاه الطلبات الشهري</div>
-                    <div class="card-body"><canvas id="monthlyOrdersChart" height="250"></canvas></div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-white fw-bold">نمو العملاء الشهري</div>
-                    <div class="card-body"><canvas id="monthlyClientsChart" height="250"></canvas></div>
+                    <div class="card-header bg-white fw-bold">أكثر الخامات المطلوبة</div>
+                    <div class="card-body"><canvas id="materialsBarChart" height="200"></canvas></div>
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
@@ -430,6 +441,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Per-engineer data from context
+    const monthlyMonths = {{ analytics.monthly_months|safe }};
+    const monthlyContacts = {{ analytics.monthly_contacts|safe }};
+    const monthlyOrders = {{ analytics.monthly_orders|safe }};
+    const commPending = {{ analytics.pending_commission|floatformat:0|default:"0" }};
+    const commApproved = {{ analytics.approved_commission|floatformat:0|default:"0" }};
+    const commPaid = {{ analytics.paid_commission|floatformat:0|default:"0" }};
+
     // Analytics charts (lazy loaded when tab shown)
     let chartsLoaded = false;
     document.querySelector('a[href="#tab-analytics"]').addEventListener('shown.bs.tab', function() {
@@ -438,47 +457,81 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const chartOpts = {
             responsive: true,
-            plugins: { legend: { display: false } },
+            plugins: { legend: { position: 'top' } },
             scales: {
                 y: { beginAtZero: true, ticks: { stepSize: 1 } },
                 x: { grid: { display: false } }
             }
         };
 
-        // Monthly Orders
-        fetch("{% url 'external_sales:chart_monthly_activity' %}")
-            .then(r => r.json())
-            .then(data => {
-                new Chart(document.getElementById('monthlyOrdersChart'), {
-                    type: 'line',
-                    data: {
-                        labels: data.months || [],
-                        datasets: [{
-                            label: 'الطلبات',
-                            data: data.orders || [],
-                            borderColor: '#1a237e',
-                            backgroundColor: 'rgba(26,35,126,.1)',
-                            fill: true, tension: .3
-                        }]
+        // Monthly Activity (per-engineer)
+        new Chart(document.getElementById('monthlyActivityChart'), {
+            type: 'line',
+            data: {
+                labels: monthlyMonths,
+                datasets: [
+                    {
+                        label: 'التواصل',
+                        data: monthlyContacts,
+                        borderColor: '#2e7d32',
+                        backgroundColor: 'rgba(46,125,50,.1)',
+                        fill: true, tension: .3
                     },
-                    options: chartOpts
-                });
-                new Chart(document.getElementById('monthlyClientsChart'), {
-                    type: 'line',
-                    data: {
-                        labels: data.months || [],
-                        datasets: [{
-                            label: 'التواصل',
-                            data: data.contacts || [],
-                            borderColor: '#2e7d32',
-                            backgroundColor: 'rgba(46,125,50,.1)',
-                            fill: true, tension: .3
-                        }]
-                    },
-                    options: chartOpts
-                });
-            })
-            .catch(err => console.warn('Chart error:', err));
+                    {
+                        label: 'الطلبات',
+                        data: monthlyOrders,
+                        borderColor: '#1a237e',
+                        backgroundColor: 'rgba(26,35,126,.1)',
+                        fill: true, tension: .3
+                    }
+                ]
+            },
+            options: chartOpts
+        });
+
+        // Commission Pie
+        if (commPending + commApproved + commPaid > 0) {
+            new Chart(document.getElementById('commissionPieChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['معلقة', 'معتمدة', 'مدفوعة'],
+                    datasets: [{
+                        data: [commPending, commApproved, commPaid],
+                        backgroundColor: ['#f57c00', '#2e7d32', '#1a237e']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        } else {
+            document.getElementById('commissionPieChart').parentElement.innerHTML =
+                '<div class="text-center text-muted py-5"><i class="fas fa-chart-pie fa-2x mb-2 d-block"></i>لا توجد عمولات بعد</div>';
+        }
+
+        // Materials bar (if data exists)
+        {% if analytics.top_materials %}
+        const matLabels = [{% for m in analytics.top_materials %}"{{ m.material_name }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+        const matValues = [{% for m in analytics.top_materials %}{{ m.request_count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+        new Chart(document.getElementById('materialsBarChart'), {
+            type: 'bar',
+            data: {
+                labels: matLabels,
+                datasets: [{
+                    label: 'عدد الطلبات',
+                    data: matValues,
+                    backgroundColor: ['#1a237e','#2e7d32','#f57c00','#0288d1','#c62828']
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+        {% endif %}
     });
 });
 </script>
