@@ -130,16 +130,27 @@
 </div>
 {% endblock %}
 
+{% block dept_css %}
+{% if is_new %}
+<link href="{% static 'vendor/select2/css/select2.min.css' %}" rel="stylesheet" />
+<link href="{% static 'vendor/select2/css/select2-bootstrap-5-theme.min.css' %}" rel="stylesheet" />
+{% endif %}
+{% endblock %}
+
 {% block dept_js %}
 {% if is_new %}
-<link href="/static/vendor/select2/select2.min.css" rel="stylesheet">
-<link href="/static/vendor/select2/select2-bootstrap-5-theme.min.css" rel="stylesheet">
-<script src="/static/vendor/select2/select2.min.js"></script>
+<script src="{% static 'vendor/select2/js/select2.min.js' %}"></script>
 <script>
 $(document).ready(function() {
     $('#id_customer').select2({
         theme: 'bootstrap-5',
         dir: 'rtl',
+        language: {
+            inputTooShort: function() { return 'اكتب حرفين على الأقل للبحث...'; },
+            noResults: function() { return 'لا توجد نتائج'; },
+            searching: function() { return 'جاري البحث...'; },
+            errorLoading: function() { return 'خطأ في تحميل النتائج'; }
+        },
         placeholder: 'ابحث عن مهندس ديكور بالاسم أو الهاتف أو الكود...',
         allowClear: true,
         minimumInputLength: 2,
@@ -148,12 +159,8 @@ $(document).ready(function() {
             dataType: 'json',
             delay: 300,
             data: function(params) { return { q: params.term }; },
-            processResults: function(data) { return { results: data.results }; }
-        },
-        language: {
-            inputTooShort: function() { return 'اكتب حرفين على الأقل للبحث...'; },
-            noResults: function() { return 'لا توجد نتائج'; },
-            searching: function() { return 'جارٍ البحث...'; }
+            processResults: function(data) { return { results: data.results }; },
+            cache: true
         }
     });
 });
