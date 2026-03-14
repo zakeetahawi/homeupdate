@@ -260,11 +260,10 @@ class RestoreService:
 
             # تعطيل فحص المفاتيح الخارجية مؤقتاً
             with connection.cursor() as cursor:
-                # PostgreSQL compatibility
-                if "mysql" in connection.settings_dict["ENGINE"].lower():
+                if "postgresql" in connection.settings_dict["ENGINE"].lower():
+                    cursor.execute("SET CONSTRAINTS ALL DEFERRED;")
+                elif "mysql" in connection.settings_dict["ENGINE"].lower():
                     cursor.execute("SET foreign_key_checks = 0;")
-                elif "postgresql" in connection.settings_dict["ENGINE"].lower():
-                    cursor.execute("SET session_replication_role = replica;")
 
             try:
                 for i, item in enumerate(sorted_data):
@@ -292,11 +291,10 @@ class RestoreService:
             finally:
                 # إعادة تفعيل فحص المفاتيح الخارجية
                 with connection.cursor() as cursor:
-                    # PostgreSQL compatibility
-                    if "mysql" in connection.settings_dict["ENGINE"].lower():
+                    if "postgresql" in connection.settings_dict["ENGINE"].lower():
+                        cursor.execute("SET CONSTRAINTS ALL IMMEDIATE;")
+                    elif "mysql" in connection.settings_dict["ENGINE"].lower():
                         cursor.execute("SET foreign_key_checks = 1;")
-                    elif "postgresql" in connection.settings_dict["ENGINE"].lower():
-                        cursor.execute("SET session_replication_role = DEFAULT;")
 
             job.update_progress(95, "إنهاء الاستعادة...")
 

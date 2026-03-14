@@ -158,6 +158,7 @@ def wizard_start(request):
             branch=user_branch,
         )
         request.session["wizard_draft_id"] = draft.id
+        request.session.pop("editing_order_id", None)
         return redirect("orders:wizard_step", step=1)
 
 
@@ -236,8 +237,9 @@ def wizard_start_new(request):
         created_by=request.user, current_step=1, customer=customer, branch=user_branch
     )
 
-    # تخزين معرف المسودة في الجلسة
+    # تخزين معرف المسودة في الجلسة ومسح وضع التعديل القديم
     request.session["wizard_draft_id"] = draft.id
+    request.session.pop("editing_order_id", None)
 
     return redirect("orders:wizard_step", step=1)
 
@@ -2340,8 +2342,10 @@ def wizard_continue_draft(request, draft_id):
                 f"تقوم بمتابعة مسودة {draft.created_by.get_full_name() or draft.created_by.username}",
             )
 
-        # تخزين معرف المسودة في الجلسة
+        # تخزين معرف المسودة في الجلسة ومسح وضع التعديل إذا لم تكن المسودة مرتبطة بطلب
         request.session["wizard_draft_id"] = draft.id
+        if not draft.original_order:
+            request.session.pop("editing_order_id", None)
 
         # التوجيه للخطوة الحالية
         return redirect("orders:wizard_step", step=draft.current_step)
