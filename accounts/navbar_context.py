@@ -35,13 +35,58 @@ _URL_ROLE_MAP = {
 }
 
 
+# خريطة المسار → صلاحيات Django المرتبطة (codename)
+# إذا المستخدم يملك أي صلاحية django مرتبطة بالقسم، يُسمح له
+_URL_DJANGO_PERM_MAP = {
+    "/customers/": ["view_customer", "add_customer", "change_customer"],
+    "/orders/": ["view_order", "add_order", "change_order"],
+    "/inventory/": ["view_product", "change_product", "view_warehouse"],
+    "/inspections/": ["view_inspection", "add_inspection", "change_inspection"],
+    "/installations/": ["view_installation", "change_installation"],
+    "/manufacturing/": ["view_manufacturingorder", "change_manufacturingorder", "can_approve_orders"],
+    "/cutting/": ["view_cuttingorder", "change_cuttingorder"],
+    "/complaints/": ["view_complaint", "add_complaint"],
+    "/reports/": ["view_order", "view_customer"],
+    "/accounting/": ["view_transaction", "view_account"],
+    "/factory-accounting/": ["view_tailorpayment", "view_cutterpayment"],
+    "/external-sales/": ["view_decoratorprofile", "change_decoratorprofile"],
+    "/database/": ["change_user", "view_user"],
+}
+
+
 def _is_url_restricted(user, url_name):
     """هل المستخدم محدود الصلاحية لهذا المسار؟"""
     if not url_name or user.is_superuser or user.is_staff:
         return False
     for prefix, roles in _URL_ROLE_MAP.items():
         if url_name.startswith(prefix):
-            return not any(getattr(user, r, False) for r in roles)
+            # 1) فحص الحقول البولينية (الأدوار الأساسية)
+            if any(getattr(user, r, False) for r in roles):
+                return False
+            # 2) فحص أدوار UserRole M2M
+            if hasattr(user, "user_roles"):
+                for ur in getattr(user, "_prefetched_user_roles", []) or []:
+                    role_key = ur.role.name
+                    if role_key in roles or f"is_{role_key}" in roles:
+                        return False
+                # fallback: DB query
+                if user.pk:
+                    mapped_keys = [r.replace("is_", "") for r in roles]
+                    if user.user_roles.filter(role__name__in=mapped_keys).exists():
+                        return False
+            # 3) فحص صلاحيات Django الفردية / المجموعات
+            django_perms = _URL_DJANGO_PERM_MAP.get(prefix, [])
+            for perm_codename in django_perms:
+                if user.has_perm(f"accounts.{perm_codename}") or user.has_perm(perm_codename):
+                    return False
+                # Try with common app labels
+                for app in ["customers", "orders", "inventory", "inspections",
+                            "installations", "manufacturing", "cutting",
+                            "complaints", "accounting", "factory_accounting",
+                            "external_sales"]:
+                    if user.has_perm(f"{app}.{perm_codename}"):
+                        return False
+            return True
     return False
 
 

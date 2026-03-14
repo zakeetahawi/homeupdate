@@ -404,13 +404,15 @@ def _build_role_sections(user_obj):
 
 
 def _get_permissions_with_source(user_obj):
-    """إرجاع قائمة الصلاحيات مع مصدر كل صلاحية"""
+    """إرجاع قائمة الصلاحيات مع مصدر كل صلاحية — تشمل كل المصادر"""
     result = []
     active_roles = user_obj.get_active_roles()
     if user_obj.is_superuser:
         active_roles = ["system_admin"]
 
     seen = set()
+
+    # 1) صلاحيات ROLE_HIERARCHY (من الحقول البولينية)
     for role_key in active_roles:
         role_data = ROLE_HIERARCHY.get(role_key, {})
         role_display = role_data.get("display", role_key)
@@ -421,7 +423,7 @@ def _get_permissions_with_source(user_obj):
                     {"permission": perm, "source": role_display, "type": "direct"}
                 )
 
-    # صلاحيات موروثة
+    # 2) صلاحيات موروثة من ROLE_HIERARCHY
     for inherited_role in user_obj.get_inherited_roles():
         role_data = ROLE_HIERARCHY.get(inherited_role, {})
         role_display = role_data.get("display", inherited_role)
@@ -436,14 +438,50 @@ def _get_permissions_with_source(user_obj):
                     }
                 )
 
-    # صلاحيات Django الفردية (user_permissions)
-    for perm in user_obj.user_permissions.select_related("content_type").all():
-        full_perm = f"{perm.content_type.app_label}.{perm.codename}"
-        if full_perm not in seen:
-            seen.add(full_perm)
-            result.append(
-                {"permission": full_perm, "source": "صلاحية فردية", "type": "direct"}
-            )
+    # 3) صلاحيات من نموذج Role (M2M عبر UserRole)
+    if user_obj.pk and not user_obj.is_superuser:
+        for user_role in user_obj.user_roles.select_related("role").all():
+            role = user_role.role
+            for perm in role.permissions.values_list("codename", flat=True):
+                perm_key = f"role:{perm}"
+                if perm_key not in seen:
+                    seen.add(perm_key)
+                    result.append(
+                        {
+                            "permission": perm,
+                            "source": f"دور: {role.name}",
+                            "type": "role_model",
+                        }
+                    )
+
+    # 4) صلاحيات Django الفردية (user_permissions)
+    if user_obj.pk and not user_obj.is_superuser:
+        for perm in user_obj.user_permissions.select_related("content_type").all():
+            perm_key = f"django:{perm.codename}"
+            if perm_key not in seen:
+                seen.add(perm_key)
+                result.append(
+                    {
+                        "permission": f"{perm.content_type.app_label}.{perm.codename}",
+                        "source": "صلاحية فردية",
+                        "type": "django_perm",
+                    }
+                )
+
+    # 5) صلاحيات المجموعات (groups)
+    if user_obj.pk and not user_obj.is_superuser:
+        for group in user_obj.groups.prefetch_related("permissions__content_type").all():
+            for perm in group.permissions.select_related("content_type").all():
+                perm_key = f"group:{perm.codename}"
+                if perm_key not in seen:
+                    seen.add(perm_key)
+                    result.append(
+                        {
+                            "permission": f"{perm.content_type.app_label}.{perm.codename}",
+                            "source": f"مجموعة: {group.name}",
+                            "type": "group",
+                        }
+                    )
 
     return result
 

@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.db.models import Q
-from django.db.models.signals import m2m_changed, post_save
+from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 
 from .models import Department, Role, UserRole
@@ -311,3 +311,48 @@ def sync_boolean_roles_to_userrole(sender, instance, **kwargs):
         logging.getLogger(__name__).warning(f"خطأ في مزامنة أدوار {instance.username}: {e}")
     finally:
         _SYNCING_ROLES = False
+
+
+# ─── Phase 5: مزامنة صلاحيات Role → user_permissions عند إسناد/إزالة دور ──────
+
+@receiver(post_save, sender=UserRole)
+def sync_role_permissions_on_assign(sender, instance, created, **kwargs):
+    """عند إسناد دور لمستخدم، نسخ صلاحيات الدور إلى user_permissions"""
+    if not created:
+        return
+    try:
+        role = instance.role
+        user = instance.user
+        for permission in role.permissions.all():
+            user.user_permissions.add(permission)
+        # مسح كاش الصلاحيات
+        from django.core.cache import cache
+        cache.delete(f"user_permissions_{user.id}")
+        for suffix in [f"{user.is_staff}_{user.is_superuser}", "True_True", "True_False", "False_False"]:
+            cache.delete(f"ctx_navbar_{user.pk}_{suffix}")
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"خطأ في مزامنة صلاحيات الدور: {e}")
+
+
+@receiver(post_delete, sender=UserRole)
+def sync_role_permissions_on_remove(sender, instance, **kwargs):
+    """عند إزالة دور من مستخدم، حذف الصلاحيات الفريدة لهذا الدور"""
+    try:
+        role = instance.role
+        user = instance.user
+        # نزيل فقط الصلاحيات غير موجودة في أدوار أخرى للمستخدم
+        for permission in role.permissions.all():
+            other_roles_have = UserRole.objects.filter(
+                user=user, role__permissions=permission
+            ).exists()
+            if not other_roles_have:
+                user.user_permissions.remove(permission)
+        # مسح كاش الصلاحيات
+        from django.core.cache import cache
+        cache.delete(f"user_permissions_{user.id}")
+        for suffix in [f"{user.is_staff}_{user.is_superuser}", "True_True", "True_False", "False_False"]:
+            cache.delete(f"ctx_navbar_{user.pk}_{suffix}")
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"خطأ في إزالة صلاحيات الدور: {e}")
